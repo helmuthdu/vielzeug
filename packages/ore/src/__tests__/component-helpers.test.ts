@@ -1,4 +1,4 @@
-import { define, html, inject, prop, ref } from '../index';
+import { define, html, inject, prop, ref, getHost, provide } from '../index';
 import { onCleanup } from '../runtime';
 import { mount } from '../testing';
 
@@ -45,9 +45,11 @@ describe('component helpers and exports', () => {
   it('exposes core utilities during setup', async () => {
     let elementInstance: HTMLElement | undefined;
 
-    const { element } = await mount((_props, { el, provide: ctxProvide }) => {
-      elementInstance = el;
+    const { element } = await mount((_props) => {
+      const el = getHost();
+      const ctxProvide = provide;
 
+      elementInstance = el;
       expect(onCleanup).toBeDefined();
       expect(ctxProvide).toBeDefined();
       expect(inject).toBeDefined();

@@ -1,8 +1,7 @@
 import { signal } from '@vielzeug/ripple';
 
-import { type FormController, createFormContext, FORM_CONTEXT_KEY } from '../form-context';
-import { useField } from '../form-field';
-import { html } from '../index';
+import { type FormController, createFormContext, FORM_CONTEXT_KEY, useField } from '../forms';
+import { html, inject, provide } from '../index';
 import { mount } from '../testing';
 
 describe('createFormContext()', () => {
@@ -186,15 +185,15 @@ describe('createFormContext()', () => {
   });
 });
 
-describe('ctx.inject(FORM_CONTEXT_KEY)', () => {
+describe('inject(FORM_CONTEXT_KEY)', () => {
   it('returns the form context when provided by an ancestor', async () => {
     let captured: FormController | undefined;
 
-    await mount((_props, ctx) => {
+    await mount((_props) => {
       const form = createFormContext();
 
-      ctx.provide(FORM_CONTEXT_KEY, form);
-      captured = ctx.inject(FORM_CONTEXT_KEY) as FormController | undefined;
+      provide(FORM_CONTEXT_KEY, form);
+      captured = inject(FORM_CONTEXT_KEY) as FormController | undefined;
 
       return html`<div></div>`;
     });
@@ -206,8 +205,8 @@ describe('ctx.inject(FORM_CONTEXT_KEY)', () => {
   it('returns undefined when no form context is provided', async () => {
     let captured: FormController | undefined;
 
-    await mount((_props, ctx) => {
-      captured = ctx.inject(FORM_CONTEXT_KEY) as FormController | undefined;
+    await mount((_props) => {
+      captured = inject(FORM_CONTEXT_KEY) as FormController | undefined;
 
       return html`<div></div>`;
     });

@@ -1,5 +1,5 @@
 // noinspection HtmlUnknownAttribute
-import { html, ref } from '../index';
+import { html, ref, onMounted } from '../index';
 import { intersectionObserver } from '../observers';
 import { mount } from '../testing';
 
@@ -7,10 +7,10 @@ describe('intersectionObserver()', () => {
   it('initialises the signal to null', async () => {
     let capturedEntry!: ReturnType<typeof intersectionObserver>;
 
-    await mount((_props, ctx) => {
+    await mount((_props) => {
       const divRef = ref<HTMLDivElement>();
 
-      ctx.onMounted(() => {
+      onMounted(() => {
         capturedEntry = intersectionObserver(divRef.value!);
       });
 
@@ -31,10 +31,10 @@ describe('intersectionObserver()', () => {
     } as unknown as typeof IntersectionObserver;
 
     try {
-      await mount((_props, ctx) => {
+      await mount((_props) => {
         const divRef = ref<HTMLDivElement>();
 
-        ctx.onMounted(() => {
+        onMounted(() => {
           intersectionObserver(divRef.value!);
         });
 
@@ -62,10 +62,10 @@ describe('intersectionObserver()', () => {
     try {
       let capturedEntry!: ReturnType<typeof intersectionObserver>;
 
-      await mount((_props, ctx) => {
+      await mount((_props) => {
         const divRef = ref<HTMLDivElement>();
 
-        ctx.onMounted(() => {
+        onMounted(() => {
           capturedEntry = intersectionObserver(divRef.value!);
         });
 
@@ -96,10 +96,10 @@ describe('intersectionObserver()', () => {
     } as unknown as typeof IntersectionObserver;
 
     try {
-      const { dispose } = await mount((_props, ctx) => {
+      const { dispose } = await mount((_props) => {
         const divRef = ref<HTMLDivElement>();
 
-        ctx.onMounted(() => {
+        onMounted(() => {
           intersectionObserver(divRef.value!);
         });
 

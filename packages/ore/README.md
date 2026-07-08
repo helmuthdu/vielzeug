@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/ore` &nbsp;·&nbsp; **Category:** UI Primitives
 
-**Key exports:** `define`, `html`, `css`, `prop`, `ref`, `signal`, `computed`, `watch`, `each`, `when`, `model`, `live`, `provide`, `inject`, `defineField`, `withAria`
+**Key exports:** `define`, `html`, `css`, `prop`, `ref`, `onMounted`, `onCleanup`, `onEvent`, `onElement`, `watch`, `bind`, `aria`, `provide`, `inject`, `useEmit`, `useSlots`, `getHost`, `each`, `when`, `model`, `live`
 
 **When to use:** Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, observers, and testing utilities.
 
@@ -30,7 +30,7 @@ yarn add @vielzeug/ore
 ## Quick Start
 
 ```ts
-import { computed, css, define, html, prop, signal } from '@vielzeug/ore';
+import { bind, computed, css, define, html, onMounted, prop, signal } from '@vielzeug/ore';
 
 define('my-counter', {
   props: {
@@ -45,7 +45,7 @@ define('my-counter', {
       }
     `,
   ],
-  setup(props, { bind, onMounted }) {
+  setup(props) {
     const count = signal(0);
     const doubled = computed(() => count.value * 2);
 
@@ -60,6 +60,8 @@ define('my-counter', {
   },
 });
 ```
+
+`setup()` takes only `props`. Everything else — lifecycle hooks (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watch`), host bindings (`bind`, `aria`), context (`inject`/`injectStrict`/`provide`), and per-instance factories (`useEmit<Emits>()`, `useSlots<SlotNames>()`) — are plain functions imported from `@vielzeug/ore`, resolved through the current component while `setup()` (or a composable it calls) is running. Form-association helpers (`useField`, `createFormContext`) live under `@vielzeug/ore/forms`.
 
 ## Documentation
 

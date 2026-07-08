@@ -5,7 +5,7 @@ package: ore
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, refine, orbit]
-exports: [define, prop, html, css, ref, createContext, inject, injectStrict, useField, createFormContext, FORM_CONTEXT_KEY, createId, createStableId, resetIdCounter, setRawSanitizer, OreError, BindOptions]
+exports: [define, prop, html, css, ref, createContext, inject, injectStrict, provide, onMounted, onCleanup, useEmit, useSlots, getHost, bind, aria, createId, createStableId, resetIdCounter, setRawSanitizer, OreError, BindOptions]
 environments: [browser]
 ---
 
@@ -87,7 +87,7 @@ yarn add @vielzeug/ore
 
 ```ts
 import { computed, signal } from '@vielzeug/ripple';
-import { css, define, html, prop } from '@vielzeug/ore';
+import { bind, css, define, html, onMounted, prop } from '@vielzeug/ore';
 
 define('my-counter', {
   props: {
@@ -102,7 +102,7 @@ define('my-counter', {
       }
     `,
   ],
-  setup(props, { bind, onMounted }) {
+  setup(props) {
     const count = signal(0);
     const doubled = computed(() => count.value * 2);
 
@@ -125,12 +125,13 @@ define('my-counter', {
 - Signal-first runtime with `signal`, `computed`, `watch`, `batch` from `@vielzeug/ripple` — import them directly
 - Functional component authoring via `define(tag, { props, setup, styles, formAssociated })`
 - Props via `prop.*` helpers (`prop.string`, `prop.number`, `prop.bool`, `prop.oneOf`, `prop.json`, `prop.data`) or raw `PropDef` objects
-- Setup returns an `HTMLResult` directly: `return html\`...\``
-- Lifecycle hooks — `onMounted`, `onCleanup`, `onEvent`, `onElement`, `effect` — accessed through the setup context bag (`ctx`)
+- `setup(props)` takes only props and returns an `HTMLResult` directly: `return html\`...\``
+- Lifecycle hooks — `onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect` — plain functions imported from `@vielzeug/ore`, called directly from `setup()` or any composable it calls
 - Directives: `each` (keyed reactive list rendering), `classMap`, `styleMap`, `when`, `model`, `raw`
-- Host bindings via `ctx.bind({ attr, class, style, on })` — pass `{ target: el }` to bind any off-host element
-- Reactive ARIA sync via `ctx.aria(target, config)` — applies `aria-*` attributes reactively to any element, auto-cleanup on disconnect
-- Form-associated helpers: `useField()`, `createFormContext()` — first-class public APIs for form-aware components
+- Host bindings via `bind({ attr, class, style, on })` — pass `{ target: el }` to bind any off-host element
+- Reactive ARIA sync via `aria(target, config)` — applies `aria-*` attributes reactively to any element, auto-cleanup on disconnect
+- Context via `provide(key, value)` / `inject(key)`; typed emit/slots via `useEmit<Emits>()` / `useSlots<SlotNames>()`
+- Form-associated helpers (`@vielzeug/ore/forms`): `useField()`, `createFormContext()`
 - Observers (`@vielzeug/ore/observers`)
 - Testing utilities (`@vielzeug/ore/testing`) — `mount`, `renderHook`, `fire`, `user`, `waitFor`, `cleanup`
 - Debug utilities (`@vielzeug/ore/devtools`) — `debugFlush()` for diagnosing update timing
@@ -141,9 +142,10 @@ define('my-counter', {
 
 | Import                      | Purpose                                                                       |
 | --------------------------- | ----------------------------------------------------------------------------- |
-| `@vielzeug/ore`            | Core component API and utilities (`define`, `prop`, `html`, `css`, context, forms) |
+| `@vielzeug/ore`            | Core component API and utilities (`define`, `prop`, `html`, `css`, context)  |
 | `@vielzeug/ore/devtools`   | `debugFlush` — verbose flush for timing diagnostics (dev only)                |
 | `@vielzeug/ore/directives` | `each`, `when`, `model`, `live`, `raw`, `classMap`, `styleMap`                |
+| `@vielzeug/ore/forms`      | `useField`, `createFormContext`, `FORM_CONTEXT_KEY`                          |
 | `@vielzeug/ore/observers`  | `resizeObserver`, `intersectionObserver`, `mediaObserver`, `mutationObserver` |
 | `@vielzeug/ore/testing`    | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers                    |
 

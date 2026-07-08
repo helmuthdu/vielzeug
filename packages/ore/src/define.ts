@@ -24,30 +24,30 @@ export type { HostBindFn } from './host-bind';
  * `HTMLResult`. All reactive behaviour is expressed through reactive directives
  * inside the template — not by re-evaluating setup itself.
  *
- * Pass a `SlotNames` type parameter to get typed `ctx.slots` access:
- * ```ts
- * define<Record<never, never>, Record<never, never>, 'header' | 'footer'>('my-card', {
- *   setup(_props, { slots }) {
- *     const hasHeader = slots.has('header'); // typed ✓
- *   },
- * });
- * ```
+ * Everything besides `props` — lifecycle hooks, host bindings, context, slots,
+ * emit — is a free function imported from `@vielzeug/ore` and called directly
+ * from inside `setup()` (or from a composable it calls):
  *
- * @example
  * ```ts
- * define('my-counter', {
+ * import { define, html, prop, onMounted, useEmit, useSlots } from '@vielzeug/ore';
+ *
+ * define<{ count?: number }>('my-counter', {
  *   props: { count: prop.number(0) },
  *   setup(props) {
- *     return html`<button @click=${() => props.count.value++}>${props.count}</button>`;
+ *     const emit = useEmit<{ increment: number }>();
+ *     const slots = useSlots<'header' | 'footer'>();
+ *
+ *     onMounted(() => console.log('mounted'));
+ *
+ *     return html`<button @click=${() => emit('increment', props.count.value + 1)}>${props.count}</button>`;
  *   },
  * });
  * ```
  */
-export function define<
-  Props extends Record<string, unknown> = Record<never, never>,
-  Emits extends Record<string, unknown> = Record<string, never>,
-  const SlotNames extends string = string,
->(tag: string, definition: ComponentDefinition<Props, Emits, SlotNames>): void {
+export function define<Props extends Record<string, unknown> = Record<never, never>>(
+  tag: string,
+  definition: ComponentDefinition<Props>,
+): void {
   if (!tag) throw new OreApiError(ORE_ERRORS.defineRequiresTag);
 
   if (customElements.get(tag)) throw new OreApiError(ORE_ERRORS.defineDuplicate(tag));
@@ -74,7 +74,7 @@ export function define<
 
   // Named class for DevTools and error messages
   const ComponentClass = class extends BaseElement {
-    static override _definition = definition as ComponentDefinition<any, any, any>;
+    static override _definition = definition as ComponentDefinition<any>;
     static override _normalizedPropDefs = normalizedPropDefs as PropsDef<Record<never, never>> | undefined;
     static override formAssociated = definition.formAssociated ?? false;
     static override observedAttributes = observedAttrs;

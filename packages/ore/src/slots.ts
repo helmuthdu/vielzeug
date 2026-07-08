@@ -7,7 +7,7 @@
 
 import { type Readable, signal, type Signal } from '@vielzeug/ripple';
 
-import { onCleanup, onMounted } from './runtime';
+import { onCleanup, onMounted, type RuntimeContext, requireSetupContext } from './runtime';
 
 export type ComponentSlots<SlotNames extends string = string> = {
   elements: (name?: SlotNames) => Readable<Element[]>;
@@ -17,7 +17,7 @@ export type ComponentSlots<SlotNames extends string = string> = {
 const SLOT_DEFAULT = 'default';
 const normalizeSlotName = (slotName: string | null | undefined): string => slotName || SLOT_DEFAULT;
 
-export const createSlots = (host: HTMLElement): ComponentSlots<string> => {
+const createSlots = (host: HTMLElement): ComponentSlots<string> => {
   type SlotEntry = {
     elements: Signal<Element[]>;
     presence: Signal<boolean>;
@@ -163,4 +163,30 @@ export const createSlots = (host: HTMLElement): ComponentSlots<string> => {
     elements: (name?: string) => ensureSlotEntry(normalizeSlotName(name)).elements,
     has: (name?: string) => ensureSlotEntry(normalizeSlotName(name)).presence,
   };
+};
+
+/** One slot registry per component instance — reused across repeated `useSlots()` calls. */
+const slotsByContext = new WeakMap<RuntimeContext, ComponentSlots<string>>();
+
+/**
+ * Returns reactive slot presence / element signals for the current component.
+ * Safe to call multiple times during `setup()` — the underlying slot registry
+ * (MutationObserver + `slotchange` listeners) is created once per instance.
+ *
+ * Pass a `SlotNames` type parameter for typed slot names:
+ * ```ts
+ * const slots = useSlots<'header' | 'footer'>();
+ * slots.has('header'); // typed ✓
+ * ```
+ */
+export const useSlots = <SlotNames extends string = string>(): ComponentSlots<SlotNames> => {
+  const ctx = requireSetupContext('useSlots');
+  let entry = slotsByContext.get(ctx);
+
+  if (!entry) {
+    entry = createSlots(ctx.element);
+    slotsByContext.set(ctx, entry);
+  }
+
+  return entry as ComponentSlots<SlotNames>;
 };

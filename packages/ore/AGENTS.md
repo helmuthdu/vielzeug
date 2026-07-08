@@ -11,10 +11,11 @@ Functional web-component authoring primitives built on `ripple`. The foundation 
 
 ## Local Contracts
 
-- **Multiple public entry points** — `.`, `./devtools`, `./observers`, `./testing`. Each maps to a `source`/`import`/`require`/`types` block in `package.json` `exports`. When adding or moving an entry point, update `package.json` `exports` to match.
+- **Multiple public entry points** — `.`, `./devtools`, `./directives`, `./forms`, `./observers`, `./testing`. Each maps to a `source`/`import`/`require`/`types` block in `package.json` `exports`. When adding or moving an entry point, update `package.json` `exports` and `vite.config.ts`'s `entry` map to match.
 - `src/_dev.ts` is private — never re-exported from `index.ts` or any sub-path.
 - Prop definitions use the `prop.*` factory in `src/props.ts` (`prop.string|bool|number|oneOf|json|data`). `prop.data` is the JS-only escape hatch for objects, arrays, callbacks, and any non-serialisable value; `prop.json` is for attribute-serialisable data. `prop.fn` has been removed — use `prop.data<FnType>()` instead.
-- Lifecycle hooks (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watch`) are accessed exclusively through the `SetupContextBag` passed to `setup()`. They are not module-level exports.
+- **No setup context bag.** `setup(props)` takes only `props`. Lifecycle hooks (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect`), host bindings (`bind`, `aria`), context (`inject`/`injectStrict`/`provide`), and per-instance factories (`useEmit<Emits>()`, `useSlots<SlotNames>()`) are all plain functions imported from `@vielzeug/ore`, resolved through the implicit current-component context (`runtime.ts`). This keeps them composable — any helper function called (transitively) from `setup()` can call them without a context object threaded through. `watchEffect` (not `watch`) avoids shadowing `@vielzeug/ripple`'s differently-shaped `watch(source, callback)`.
+- Form-association helpers (`useField`, `createFormContext`) live under `./forms`, not the core export — most components don't need `ElementInternals` wiring.
 - **DOM-output package** — excluded from the REPL (no preview container). Do not add `docs/.vitepress/.../repl/examples/ore/`.
 
 ## Accessibility testing

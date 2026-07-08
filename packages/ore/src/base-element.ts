@@ -3,7 +3,6 @@ import { scope as _scope, type Scope, untrack } from '@vielzeug/ripple';
 import type { ComponentDefinition } from './component-types';
 
 import { warn } from './_dev';
-import { createContextBag } from './context-bag';
 import { type OreErrorPhase, OreLifecycleError, reportRuntimeError } from './errors';
 import { createProps, getPropMeta, type InferProps, type PropInputDefs, type PropsDef } from './props';
 import { type OnMountedCallback, onCleanup, type RuntimeContext, runWithContext } from './runtime';
@@ -33,7 +32,7 @@ const createComponentState = (): ComponentState => ({
 // ─── BaseElement ──────────────────────────────────────────────────────────────
 
 export class BaseElement extends HTMLElement {
-  static _definition: ComponentDefinition<any, any, any>;
+  static _definition: ComponentDefinition<any>;
   static _normalizedPropDefs: PropsDef<Record<never, never>> | undefined;
   static formAssociated = false;
   static observedAttributes: string[] = [];
@@ -126,9 +125,8 @@ export class BaseElement extends HTMLElement {
           const setupProps = normalizedPropDefs
             ? createProps(this, normalizedPropDefs)
             : ({} as InferProps<PropInputDefs>);
-          const contextBag = createContextBag(this);
 
-          return def.setup(setupProps as InferProps<PropInputDefs>, contextBag);
+          return def.setup(setupProps as InferProps<PropInputDefs>);
         });
       });
       this._component.mountCallbacks.push(...ctx.mountCallbacks);

@@ -7,23 +7,30 @@ description: Complete API reference for @vielzeug/ore, @vielzeug/ore/observers, 
 
 ## API Overview
 
-| Symbol                     | Purpose                                              | Execution mode | Common gotcha                                                          |
-| -------------------------- | ---------------------------------------------------- | -------------- | ---------------------------------------------------------------------- |
-| `define()`                 | Register a custom element with reactive setup        | Sync           | Tag must contain a hyphen; call before first use                       |
-| `html`                     | Tagged template literal returning HTMLResult         | Sync           | Expressions must be signals, functions, or primitives                  |
-| `prop.*`                   | Typed prop helpers (string, bool, number, …)         | Sync           | Prop values are signals — read `.value`                                |
-| `ctx.provide/inject`       | Context API for parent-to-descendant sharing         | Setup only     | Must be called synchronously during `setup()`                          |
-| `ref()`                    | Reactive reference to a DOM element                  | Sync           | Value is null until after first mount                                  |
-| `createContext()`          | Create a typed injection key                         | Sync           | Context is scoped to the component tree                                |
-| `each()`                   | Keyed list rendering with DOM diffing                | Sync           | Duplicate keys warn in dev; plain `T[]` treated as one-time static render |
-| `when()`                   | Conditional branch rendering                         | Sync           | Getter-fn computed disposed on cleanup; static bool skips subscription |
-| `model(signal)`            | Two-way binding for input/select/textarea            | Sync           | `<select multiple>` uses `Signal<string[]>`; `select` uses `change`    |
-| `live(signal)`             | One-way binding that skips stale writes during input | Sync           | Use for controlled inputs alongside a manual `@input` handler          |
-| `ctx.onMounted(fn)`        | DOM-ready callback                                   | Setup only     | Must be called synchronously during `setup()`                          |
-| `ctx.onCleanup(fn)`        | Register teardown                                    | Setup only     | Called on component disconnect                                         |
-| `ctx.onEvent(target, …)`   | Scoped event listener with auto-cleanup              | Setup only     | No-ops on null target; removed on disconnect                           |
-| `useField(options)`        | Wire signal to form `ElementInternals`               | Setup only     | Requires `formAssociated: true` on the component definition            |
-| `ctx.aria(target, config)` | Reactively sync ARIA attributes to any element       | Setup only     | Static values applied once; getter functions tracked as effects; auto-cleanup on disconnect |
+All symbols below (except `useField`/`createFormContext`, under `@vielzeug/ore/forms`) are plain functions imported from `@vielzeug/ore`. Lifecycle/context/binding functions (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect`, `bind`, `aria`, `provide`, `useEmit`, `useSlots`, `getHost`) resolve the active component through an implicit "current component" context — they work when called synchronously during `setup()`, or from any composable function `setup()` calls (transitively), but throw if called outside that window.
+
+> `watchEffect` is not named `watch` — `@vielzeug/ripple` already exports a `watch(source, callback)` with different semantics (explicit source + old/new value pair), and the two are frequently imported in the same file.
+
+| Symbol                | Purpose                                              | Execution mode | Common gotcha                                                             |
+| ---------------------- | ----------------------------------------------------- | -------------- | -------------------------------------------------------------------------- |
+| `define()`             | Register a custom element with reactive setup         | Sync           | Tag must contain a hyphen; call before first use                          |
+| `html`                 | Tagged template literal returning HTMLResult          | Sync           | Expressions must be signals, functions, or primitives                     |
+| `prop.*`               | Typed prop helpers (string, bool, number, …)          | Sync           | Prop values are signals — read `.value`                                   |
+| `provide()`/`inject()` | Context API for parent-to-descendant sharing          | Setup only     | Must be called synchronously during `setup()`                             |
+| `ref()`                | Reactive reference to a DOM element                   | Sync           | Value is null until after first mount                                     |
+| `createContext()`      | Create a typed injection key                          | Sync           | Context is scoped to the component tree                                   |
+| `each()`               | Keyed list rendering with DOM diffing                 | Sync           | Duplicate keys warn in dev; plain `T[]` treated as one-time static render  |
+| `when()`               | Conditional branch rendering                          | Sync           | Getter-fn computed disposed on cleanup; static bool skips subscription    |
+| `model(signal)`        | Two-way binding for input/select/textarea             | Sync           | `<select multiple>` uses `Signal<string[]>`; `select` uses `change`       |
+| `live(signal)`         | One-way binding that skips stale writes during input  | Sync           | Use for controlled inputs alongside a manual `@input` handler             |
+| `onMounted(fn)`        | DOM-ready callback                                    | Setup only     | Must be called synchronously during `setup()`                             |
+| `onCleanup(fn)`        | Register teardown                                     | Setup only     | Called on component disconnect                                            |
+| `onEvent(target, …)`   | Scoped event listener with auto-cleanup               | Setup only     | No-ops on null target; removed on disconnect                              |
+| `useField(options)`    | Wire signal to form `ElementInternals`                | Setup only     | Requires `formAssociated: true` on the component definition; `@vielzeug/ore/forms` |
+| `aria(target, config)` | Reactively sync ARIA attributes to any element        | Setup only     | Static values applied once; getter functions tracked as effects; auto-cleanup on disconnect |
+| `useEmit<Emits>()`     | Typed `emit()` bound to the current host              | Setup only     | Call once per component; the `Emits` generic maps event → payload type    |
+| `useSlots<SlotNames>()`| Reactive slot presence/element signals                | Setup only     | Safe to call more than once — the underlying registry is created once    |
+| `getHost()`            | The current component's host element                 | Setup only     | Prefer a higher-level helper (`bind`, `aria`, …) when one exists          |
 
 ## Package Entry Points
 
@@ -32,6 +39,7 @@ description: Complete API reference for @vielzeug/ore, @vielzeug/ore/observers, 
 | `@vielzeug/ore`            | Core authoring/runtime API                                         |
 | `@vielzeug/ore/devtools`   | `debugFlush` — verbose flush for timing diagnostics                |
 | `@vielzeug/ore/directives` | Standalone directive imports (`each`, `when`, `classMap`, …)       |
+| `@vielzeug/ore/forms`      | Form-association helpers (`useField`, `createFormContext`)        |
 | `@vielzeug/ore/observers`  | Resize, intersection, mutation, and media observers                |
 | `@vielzeug/ore/testing`    | DOM-oriented test helpers                                          |
 
@@ -40,64 +48,48 @@ description: Complete API reference for @vielzeug/ore, @vielzeug/ore/observers, 
 ### `define(tag, definition)`
 
 ```ts
-define<Props, Emits, SlotNames>(tag: string, definition: ComponentDefinition<Props, Emits, SlotNames>): void;
+define<Props>(tag: string, definition: ComponentDefinition<Props>): void;
 ```
 
-The `setup()` function receives typed prop signals and a context bag:
+The `setup()` function receives only typed prop signals:
 
 ```ts
-type SetupContextBag<Emits, SlotNames> = {
-  aria: (target: Element, config: AriaConfig) => () => void; // Reactive ARIA attr sync; auto-cleanup on disconnect
-  bind: HostBindFn; // Apply reactive bindings to the host or any target element
-  el: HTMLElement; // The host element
-  emit: EmitFn<Emits>; // Dispatch typed custom events
-  inject: <T>(key: InjectionKey<T>, fallback?: T) => T | undefined; // Resolve context from nearest ancestor
-  onCleanup: (fn: CleanupFn) => void; // Register teardown; called on disconnect
-  onElement: <T extends HTMLElement>(ref, cb) => void; // Run callback when a ref resolves to an element
-  onEvent: (target, event, listener, options?) => void; // Scoped event listener; auto-removed on disconnect
-  onMounted: (fn: OnMountedCallback) => void; // DOM-ready callback
-  provide: <T>(key: InjectionKey<T>, value: T) => void; // Register context on the host element
-  slots: ComponentSlots<SlotNames>; // Reactive slot signals
-  watch: (fn: EffectCallback) => () => void; // Scoped reactive effect; auto-cleaned on disconnect
-};
-```
-
-Lifecycle hooks (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watch`) are accessed exclusively through the setup context bag. They must be called synchronously during `setup()`.
-
-`setup()` returns an `HTMLResult` directly (not a function):
-
-```ts
-setup(props, ctx) {
+setup(props) {
   return html`<div>${props.label}</div>`;
 }
 ```
 
+Everything else — lifecycle hooks, host bindings, context, slots, emit — is a plain function imported from `@vielzeug/ore`, called directly from `setup()` (or a composable it calls):
+
+```ts
+import { define, html, onMounted, useEmit, useSlots } from '@vielzeug/ore';
+
+define('my-card', {
+  setup(_props) {
+    const emit = useEmit<{ close: undefined }>();
+    const slots = useSlots<'header' | 'footer'>();
+
+    onMounted(() => console.log('mounted'));
+
+    return html`${when(slots.has('header'), () => html`<slot name="header"></slot>`)}`;
+  },
+});
+```
+
+`useEmit<Emits>()` and `useSlots<SlotNames>()` are factory hooks — call them once per component to get a typed `emit`/`slots` bound to the current host. `useSlots()` is safe to call more than once (the underlying slot registry is created once per instance and reused).
+
 ### ComponentDefinition
 
 ```ts
-type ComponentDefinition<Props, Emits, SlotNames> = {
+type ComponentDefinition<Props> = {
   formAssociated?: boolean;
   loading?: () => HTMLResult; // Template shown while async setup is pending
   onError?: (error: OreLifecycleError, element: HTMLElement) => HTMLResult | void;
   props?: PropsDef<Props>;
-  setup: (
-    props: InferProps<PropsDef<Props>>,
-    ctx: SetupContextBag<Emits, SlotNames>,
-  ) => HTMLResult | Promise<HTMLResult>;
+  setup: (props: InferProps<PropsDef<Props>>) => HTMLResult | Promise<HTMLResult>;
   shadow?: Partial<ShadowRootInit> | false; // false = light DOM (no shadow root)
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
-```
-
-Pass `SlotNames` as a type parameter to `define()` to get typed `ctx.slots` access:
-
-```ts
-define<Record<never, never>, Record<never, never>, 'header' | 'footer'>('my-card', {
-  setup(_props, { slots }) {
-    const hasHeader = slots.has('header'); // typed ✓
-    return html`...`;
-  },
-});
 ```
 
 #### Async setup
@@ -118,10 +110,12 @@ define('user-profile', {
 
 ## Runtime Helpers
 
-`onMounted`, `onCleanup`, `onEvent`, `onElement`, and `watch` are available on the setup context bag. Destructure them from the second argument to `setup()`.
+`onMounted`, `onCleanup`, `onEvent`, `onElement`, and `watchEffect` are plain functions imported from `@vielzeug/ore`. Call them directly during `setup()`.
 
 ```ts
-setup(props, { onMounted, onCleanup, onEvent, onElement, watch }) {
+import { html, onCleanup, onEvent, onMounted } from '@vielzeug/ore';
+
+setup(props) {
   onMounted(() => {
     // DOM is ready; return a function for mount-scoped cleanup
     return () => { /* cleanup on unmount */ };
@@ -135,20 +129,18 @@ setup(props, { onMounted, onCleanup, onEvent, onElement, watch }) {
 }
 ```
 
-When writing composable helpers called from inside `setup()`, thread the hooks explicitly via function parameters rather than relying on a shared context:
+Because these resolve the active component through an implicit context (rather than a value threaded through parameters), composable helper functions can call them directly too — no need to pass hooks in as options:
 
 ```ts
-type MyHelperOptions = {
-  onCleanup: (fn: () => void) => void;
-};
+import { onCleanup } from '@vielzeug/ore';
 
-function useMyHelper(options: MyHelperOptions) {
-  options.onCleanup(() => { /* teardown */ });
+function useMyHelper() {
+  onCleanup(() => { /* teardown */ });
 }
 
 // In setup:
-setup(_props, { onCleanup }) {
-  useMyHelper({ onCleanup });
+setup(_props) {
+  useMyHelper();
   return html`...`;
 }
 ```
@@ -230,7 +222,7 @@ Event bindings support dot-separated modifiers: `@click.prevent.stop=${handler}`
 
 ## Host Bindings
 
-The setup context provides `bind: HostBindFn`:
+`bind(config, options?)` is a plain function imported from `@vielzeug/ore`:
 
 ```ts
 bind({
@@ -256,9 +248,9 @@ bind(
 
 Event listener options (`once`, `capture`, `passive`) are also accepted in the second argument. Cleanup is auto-registered with the component scope when called during setup.
 
-### ctx.aria()
+### aria()
 
-For reactive ARIA attribute syncing, use `ctx.aria(target, config)`. Shorthand keys are normalised to `aria-*` automatically (`expanded` → `aria-expanded`; `role` is passed verbatim):
+For reactive ARIA attribute syncing, use `aria(target, config)`. Shorthand keys are normalised to `aria-*` automatically (`expanded` → `aria-expanded`; `role` is passed verbatim):
 
 ```ts
 // Inside setup — cleanup auto-registered
@@ -285,12 +277,12 @@ Slot signals update reactively when assigned content changes, including when slo
 ## Context API
 
 - `createContext<T>(description?)` — Create a typed injection key
-- `ctx.provide(key, value)` — Provide a value to descendants; called via the setup context bag
+- `provide(key, value)` — Provide a value to descendants
 - `inject(key)` — Resolve from nearest ancestor; returns `undefined` if not found
 - `inject(key, fallback)` — Resolve with a fallback value
 - `injectStrict(key)` — Resolve or throw if absent
 
-`ctx.provide()` and `inject()` must be called synchronously during `setup()`. Calling them outside a setup context throws `'Lifecycle hooks must be called synchronously during component setup'`. Context resolution walks the ancestor chain including shadow DOM boundaries.
+`provide()` and `inject()` must be called synchronously during `setup()`. Calling them outside a setup context throws `'Lifecycle hooks must be called synchronously during component setup'`. Context resolution walks the ancestor chain including shadow DOM boundaries. `inject()` resolves and caches its result once per consumer — provide a `Readable` (signal/computed) rather than a raw value if descendants need to observe later changes; re-calling `provide()` with a new raw value afterward is not seen by consumers that already resolved it (a dev-mode warning fires when a key is provided twice on the same element).
 
 ## Utilities
 
@@ -300,6 +292,8 @@ Slot signals update reactively when assigned content changes, including when slo
 - `resetIdCounter()` — Reset the `createStableId()` counter to 0. Call in test `beforeEach` for deterministic IDs.
 
 ## Form-Associated API
+
+Import from `@vielzeug/ore/forms`.
 
 ### `useField(options)`
 
@@ -332,7 +326,7 @@ type FormFieldHandle = {
 
 Coordinate form state across child field components:
 
-- `createFormContext(options?)` — Create a `FormController`; call `ctx.provide(FORM_CONTEXT_KEY, ctrl)` to make it available to descendants
+- `createFormContext(options?)` — Create a `FormController`; call `provide(FORM_CONTEXT_KEY, ctrl)` to make it available to descendants
 - `FORM_CONTEXT_KEY` — the `InjectionKey` used to provide/inject the form context
 
 ```ts
@@ -402,11 +396,11 @@ interface Fixture<T extends HTMLElement = HTMLElement> {
 
 #### `renderHook`
 
-Useful for testing composable lifecycle hooks (`onMounted`, `effect`, `inject`, etc.) without a template:
+Useful for testing composable lifecycle hooks (`onMounted`, `watchEffect`, `inject`, etc.) without a template. `onMounted`/`onCleanup`/`watchEffect`/... work exactly as inside a real `setup()`, since they resolve the same implicit current-component context:
 
 ```ts
 // Without props
-const { result, flush, dispose } = await renderHook((_props, { onMounted }) => {
+const { result, flush, dispose } = await renderHook(() => {
   const count = signal(0);
   onMounted(() => {
     count.value = 1;
@@ -455,49 +449,31 @@ type InferProps<D extends PropInputDefs> = {
   readonly [K in keyof D]-?: Readable<InferPropValue<D[K]>>;
 };
 
-type SetupContextBag<
-  Emits extends Record<string, unknown> = Record<string, never>,
-  SlotNames extends string = string,
-> = {
-  aria: (target: Element, config: AriaConfig) => () => void; // Reactive ARIA attr sync; auto-cleanup on disconnect
-  bind: (config: HostBindConfig, options?: BindOptions) => () => void; // Bindings for host or any target element
-  el: HTMLElement; // The host element
-  emit: EmitFn<Emits>; // Dispatch typed custom events
-  inject: {
-    <T>(key: InjectionKey<T>): T | undefined;
-    <T>(key: InjectionKey<T>, fallback: T): T;
-  };
-  onCleanup: (fn: CleanupFn) => void; // Register teardown; called on disconnect
-  onElement: <T extends HTMLElement>(ref: Readable<T | null>, cb: (el: T) => CleanupFn | void) => () => void;
-  onEvent: {
-    <K extends keyof HTMLElementEventMap>(
-      target: EventTarget | null | undefined,
-      event: K,
-      listener: (e: HTMLElementEventMap[K]) => void,
-      options?: AddEventListenerOptions,
-    ): void;
-    (
-      target: EventTarget | null | undefined,
-      event: string,
-      listener: EventListener,
-      options?: AddEventListenerOptions,
-    ): void;
-  };
-  onMounted: (fn: OnMountedCallback) => void; // DOM-ready callback; runs after first render
-  provide: <T>(key: InjectionKey<T>, value: T) => void; // Register a context value on the host element
-  slots: ComponentSlots<SlotNames>; // Reactive slot signals
-  watch: (fn: EffectCallback) => () => void; // Scoped reactive effect; auto-cleaned on disconnect
-};
+// Runtime hooks — all plain functions imported from '@vielzeug/ore', not fields on an object.
+declare function onMounted(fn: OnMountedCallback): void; // DOM-ready callback; runs after first render
+declare function onCleanup(fn: CleanupFn): void; // Register teardown; called on disconnect
+declare function onElement<T extends HTMLElement>(ref: Readable<T | null>, cb: (el: T) => CleanupFn | void): () => void;
+declare function onEvent(
+  target: EventTarget | null | undefined,
+  event: string,
+  listener: EventListener,
+  options?: AddEventListenerOptions,
+): void;
+declare function watchEffect(fn: EffectCallback): () => void; // Scoped reactive effect; auto-cleaned on disconnect
+declare function bind(config: HostBindConfig, options?: BindOptions): () => void; // Bindings for host or any target element
+declare function aria(target: Element, config: AriaConfig): () => void; // Reactive ARIA attr sync; auto-cleanup on disconnect
+declare function provide<T>(key: InjectionKey<T>, value: T): void; // Register a context value on the host element
+declare function inject<T>(key: InjectionKey<T>, fallback?: T): T | undefined;
+declare function getHost(): HTMLElement; // The current component's host element
+declare function useEmit<Emits extends Record<string, unknown> = Record<string, never>>(): EmitFn<Emits>;
+declare function useSlots<SlotNames extends string = string>(): ComponentSlots<SlotNames>;
 
-type ComponentDefinition<Props, Emits, SlotNames extends string> = {
+type ComponentDefinition<Props> = {
   formAssociated?: boolean;
   loading?: () => HTMLResult; // Shown while async setup is pending
   onError?: (error: OreLifecycleError, el: HTMLElement) => HTMLResult | void;
   props?: PropsDef<Props>;
-  setup: (
-    props: InferProps<PropsDef<Props>>,
-    ctx: SetupContextBag<Emits, SlotNames>,
-  ) => HTMLResult | Promise<HTMLResult>;
+  setup: (props: InferProps<PropsDef<Props>>) => HTMLResult | Promise<HTMLResult>;
   shadow?: Partial<ShadowRootInit> | false; // false = light DOM
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };

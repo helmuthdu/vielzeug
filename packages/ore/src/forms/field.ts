@@ -1,8 +1,8 @@
 import { type Readable, type Signal } from '@vielzeug/ripple';
 
-import { warn } from './_dev';
-import { OreApiError, ORE_ERRORS } from './errors';
-import { effect, getCurrentElement, onCleanup } from './runtime';
+import { warn } from '../_dev';
+import { OreApiError, ORE_ERRORS } from '../errors';
+import { getHost, onCleanup, watchEffect } from '../runtime';
 
 /** @internal */
 const internalsRegistry = new WeakMap<HTMLElement, ElementInternals>();
@@ -11,7 +11,7 @@ export type FormFieldOptions<T = unknown> = {
   disabled?: Readable<boolean>;
   /**
    * The host element to attach `ElementInternals` to.
-   * Defaults to the element currently being set up via `getCurrentElement()`.
+   * Defaults to the element currently being set up via `getHost()`.
    * Pass this explicitly when calling `useField` from a composable that is
    * not called directly during `setup()` (e.g. a helper factory function).
    */
@@ -38,7 +38,7 @@ export type FormFieldHandle = {
 };
 
 export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHandle => {
-  const host = options.el ?? getCurrentElement();
+  const host = options.el ?? getHost();
   const ctor = host.constructor as typeof HTMLElement & { formAssociated?: boolean };
 
   if (!ctor.formAssociated) {
@@ -64,7 +64,7 @@ export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHa
       return String(v);
     });
 
-  effect(() => {
+  watchEffect(() => {
     internals.setFormValue(toFormValue(options.value.value));
   });
 
@@ -78,7 +78,7 @@ export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHa
     } else {
       const states = internals.states as CustomStateSet;
 
-      effect(() => {
+      watchEffect(() => {
         if (disabled.value) states.add('disabled');
         else states.delete('disabled');
       });

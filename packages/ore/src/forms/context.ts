@@ -1,6 +1,6 @@
 import { computed, type Readable, signal } from '@vielzeug/ripple';
 
-import { createContext } from './context';
+import { createContext } from '../context';
 
 /**
  * Context shape injected by child field components.
@@ -42,14 +42,14 @@ export const FORM_CONTEXT_KEY = createContext<FormFieldContext>('ore:form-contex
 
 /**
  * Create a `FormController` for coordinating form state across child field components.
- * Call `ctx.provide(FORM_CONTEXT_KEY, form)` to make it available to descendants.
+ * Call `provide(FORM_CONTEXT_KEY, form)` to make it available to descendants.
  *
  * @example
  * ```ts
  * define('my-form', {
- *   setup(_props, ctx) {
+ *   setup(_props) {
  *     const form = createFormContext({ onSubmit: async (e) => { ... } });
- *     ctx.provide(FORM_CONTEXT_KEY, form);
+ *     provide(FORM_CONTEXT_KEY, form);
  *     return html`<form @submit=${form.submit}><slot></slot></form>`;
  *   }
  * });

@@ -1,13 +1,25 @@
 import { effect, type Readable, signal } from '@vielzeug/ripple';
 
-import { createContext, html, inject, type InjectionKey, injectStrict } from '../index';
+import {
+  createContext,
+  html,
+  inject,
+  type InjectionKey,
+  injectStrict,
+  aria,
+  bind,
+  onCleanup,
+  onMounted,
+  provide,
+  useSlots,
+} from '../index';
 import { mount } from '../testing';
 import { register } from './test-utils';
 
 describe('core/host.ts', () => {
   describe('Host bind API', () => {
     it('applies host attrs and classes from object-style config', async () => {
-      const { element, flush } = await mount((_props, { bind, el: _el }) => {
+      const { element, flush } = await mount((_props) => {
         const open = signal(false);
 
         bind({
@@ -38,7 +50,7 @@ describe('core/host.ts', () => {
     });
 
     it('applies class records with static and reactive values', async () => {
-      const { element, flush } = await mount((_props, { bind, el: _el }) => {
+      const { element, flush } = await mount((_props) => {
         const open = signal(false);
         const active = signal(true);
 
@@ -49,7 +61,6 @@ describe('core/host.ts', () => {
             ready: true,
           },
         });
-
         open.value = true;
         active.value = false;
 
@@ -65,7 +76,7 @@ describe('core/host.ts', () => {
 
     it('auto-registers cleanup so reactive bindings stop after disconnect', async () => {
       let clickCount = 0;
-      const { dispose, element, flush } = await mount((_props, { bind }) => {
+      const { dispose, element, flush } = await mount((_props) => {
         bind({
           on: { click: () => clickCount++ },
         });
@@ -86,7 +97,7 @@ describe('core/host.ts', () => {
     it('supports listener options for host event bindings', async () => {
       let clicks = 0;
 
-      const { element } = await mount((_props, { bind, el: _el }) => {
+      const { element } = await mount((_props) => {
         bind(
           {
             on: {
@@ -108,7 +119,7 @@ describe('core/host.ts', () => {
     });
 
     it('applies static host style bindings', async () => {
-      const { element } = await mount((_props, { bind }) => {
+      const { element } = await mount((_props) => {
         bind({ style: { color: 'red', fontSize: '14px' } });
 
         return html`<div></div>`;
@@ -120,7 +131,7 @@ describe('core/host.ts', () => {
 
     it('applies reactive host style bindings and updates on signal change', async () => {
       const color = signal('blue');
-      const { element, flush } = await mount((_props, { bind }) => {
+      const { element, flush } = await mount((_props) => {
         bind({ style: { color } });
 
         return html`<div></div>`;
@@ -135,7 +146,7 @@ describe('core/host.ts', () => {
     });
 
     it('sets CSS custom properties (--var) on the host via style binding', async () => {
-      const { element } = await mount((_props, { bind }) => {
+      const { element } = await mount((_props) => {
         bind({ style: { '--theme-color': '#ff0000' } });
 
         return html`<div></div>`;
@@ -146,7 +157,7 @@ describe('core/host.ts', () => {
 
     it('removes the style property when value becomes null/undefined', async () => {
       const color = signal<string | null>('red');
-      const { element, flush } = await mount((_props, { bind }) => {
+      const { element, flush } = await mount((_props) => {
         bind({ style: { color } });
 
         return html`<div></div>`;
@@ -161,7 +172,7 @@ describe('core/host.ts', () => {
     });
 
     it('strips semicolons from style values to prevent CSS injection', async () => {
-      const { element } = await mount((_props, { bind }) => {
+      const { element } = await mount((_props) => {
         bind({ style: { color: 'red; display:none' } });
 
         return html`<div></div>`;
@@ -171,7 +182,7 @@ describe('core/host.ts', () => {
     });
 
     it('strips braces from style values', async () => {
-      const { element } = await mount((_props, { bind }) => {
+      const { element } = await mount((_props) => {
         bind({ style: { color: 'red} body{display:none' } });
 
         return html`<div></div>`;
@@ -184,7 +195,7 @@ describe('core/host.ts', () => {
     });
 
     it('skips style property when name reduces to empty after sanitization', async () => {
-      const { element } = await mount((_props, { bind }) => {
+      const { element } = await mount((_props) => {
         bind({ style: { ';{}': 'red' } });
 
         return html`<div></div>`;
@@ -199,7 +210,7 @@ describe('core/host.ts', () => {
 
       document.body.appendChild(externalEl);
 
-      await mount((_props, { bind, onCleanup }) => {
+      await mount((_props) => {
         onCleanup(() => externalEl.remove());
         bind({ attr: { 'aria-pressed': () => String(visible.value) } }, { target: externalEl });
 
@@ -215,13 +226,13 @@ describe('core/host.ts', () => {
     });
   });
 
-  describe('ctx.aria()', () => {
+  describe('aria()', () => {
     it('applies static ARIA attributes to a target element', async () => {
       const externalEl = document.createElement('div');
 
       document.body.appendChild(externalEl);
 
-      await mount((_props, { aria, onCleanup }) => {
+      await mount((_props) => {
         onCleanup(() => externalEl.remove());
         aria(externalEl, { label: 'Close dialog', role: 'dialog' });
 
@@ -238,7 +249,7 @@ describe('core/host.ts', () => {
 
       document.body.appendChild(externalEl);
 
-      await mount((_props, { aria, onCleanup }) => {
+      await mount((_props) => {
         onCleanup(() => externalEl.remove());
         aria(externalEl, { expanded: () => expanded.value });
 
@@ -259,7 +270,7 @@ describe('core/host.ts', () => {
 
       document.body.appendChild(externalEl);
 
-      await mount((_props, { aria, onCleanup }) => {
+      await mount((_props) => {
         onCleanup(() => externalEl.remove());
         aria(externalEl, { label: () => label.value });
 
@@ -279,7 +290,7 @@ describe('core/host.ts', () => {
 
       document.body.appendChild(externalEl);
 
-      await mount((_props, { aria, onCleanup }) => {
+      await mount((_props) => {
         onCleanup(() => externalEl.remove());
         aria(externalEl, { expanded: 'true' });
 
@@ -294,7 +305,7 @@ describe('core/host.ts', () => {
 
       document.body.appendChild(externalEl);
 
-      await mount((_props, { aria, onCleanup }) => {
+      await mount((_props) => {
         onCleanup(() => externalEl.remove());
         aria(externalEl, { 'aria-label': 'Fully qualified' });
 
@@ -312,7 +323,7 @@ describe('core/host.ts', () => {
 
       let cleanup!: () => void;
 
-      await mount((_props, { aria, onCleanup }) => {
+      await mount((_props) => {
         onCleanup(() => externalEl.remove());
         cleanup = aria(externalEl, { expanded: () => expanded.value });
 
@@ -336,8 +347,8 @@ describe('core/host.ts', () => {
         const ThemeKey = Symbol('theme') as InjectionKey<string>;
         let received: string | undefined;
 
-        await mount((_p, ctx) => {
-          ctx.provide(ThemeKey, 'dark');
+        await mount((_p) => {
+          provide(ThemeKey, 'dark');
           received = inject(ThemeKey);
 
           return html`<div></div>`;
@@ -384,13 +395,13 @@ describe('core/host.ts', () => {
 
           return html`<div class="v">${consumerValue}</div>`;
         });
-        register(innerTag, (_p, c) => {
-          c.provide(CountKey, 2);
+        register(innerTag, (_p) => {
+          provide(CountKey, 2);
 
           return html`<${consumerTag}></${consumerTag}>`;
         });
-        register(outerTag, (_p, c) => {
-          c.provide(CountKey, 1);
+        register(outerTag, (_p) => {
+          provide(CountKey, 1);
 
           return html`<${innerTag}></${innerTag}>`;
         });
@@ -412,8 +423,8 @@ describe('core/host.ts', () => {
         const ThemeKey = Symbol('theme') as InjectionKey<string>;
         let received!: string;
 
-        await mount((_p, ctx) => {
-          ctx.provide(ThemeKey, 'dark');
+        await mount((_p) => {
+          provide(ThemeKey, 'dark');
           received = injectStrict(ThemeKey);
 
           return html`<div></div>`;
@@ -459,8 +470,8 @@ describe('core/host.ts', () => {
           return html`<div class="info">${user?.name} (${user?.role})</div>`;
         });
 
-        const { element, flush } = await mount((_p, ctx) => {
-          ctx.provide(UserCtx, { name: 'Alice', role: 'admin' });
+        const { element, flush } = await mount((_p) => {
+          provide(UserCtx, { name: 'Alice', role: 'admin' });
 
           return html`<${childTag}></${childTag}>`;
         });
@@ -481,7 +492,9 @@ describe('core/host.ts', () => {
       let defaultAssigned!: Readable<boolean>;
 
       const { flush } = await mount(
-        (_props, { slots }) => {
+        (_props) => {
+          const slots = useSlots();
+
           headerAssigned = slots.has('header');
           defaultAssigned = slots.has();
 
@@ -500,7 +513,9 @@ describe('core/host.ts', () => {
       let triggerElements!: Readable<Element[]>;
 
       const { flush } = await mount(
-        (_props, { slots }) => {
+        (_props) => {
+          const slots = useSlots();
+
           triggerElements = slots.elements('trigger');
 
           return html`<slot name="trigger"></slot>`;
@@ -517,7 +532,9 @@ describe('core/host.ts', () => {
     it('supports reactive side effects from namedElements without accidental dependency loops', async () => {
       const callback = vi.fn();
 
-      const { flush } = await mount((_props, { slots }) => {
+      const { flush } = await mount((_props) => {
+        const slots = useSlots();
+
         effect(() => {
           callback(slots.elements('nonexistent').value);
         });
@@ -533,7 +550,9 @@ describe('core/host.ts', () => {
     it('updates slot signals when assigned light-DOM content changes', async () => {
       let defaultElements!: Readable<Element[]>;
 
-      const { element, flush } = await mount((_props, { slots }) => {
+      const { element, flush } = await mount((_props) => {
+        const slots = useSlots();
+
         defaultElements = slots.elements();
 
         return html`<slot></slot>`;
@@ -563,10 +582,10 @@ describe('mount slot timing', () => {
   it('mount callbacks run after slot assignment', async () => {
     const mountFn = vi.fn();
 
-    register('test-slot-timing-element', (_props, ctx) => {
+    register('test-slot-timing-element', (_props) => {
       const host = el;
 
-      ctx.onMounted(() => {
+      onMounted(() => {
         mountFn();
 
         const slot = host.shadowRoot?.querySelector('slot');
@@ -597,9 +616,11 @@ describe('mount slot timing', () => {
   it('slot signals receive assigned elements by mount time', async () => {
     const slotFn = vi.fn();
 
-    register('test-slot-change-element', (_props, ctx) => {
-      ctx.onMounted(() => {
-        slotFn(ctx.slots.elements().value.length);
+    register('test-slot-change-element', (_props) => {
+      const slots = useSlots();
+
+      onMounted(() => {
+        slotFn(slots.elements().value.length);
       });
 
       return html`<slot></slot>`;

@@ -9,17 +9,17 @@ description: Practical lifecycle patterns for setup, cleanup, refs, and host wir
 
 ## Prefer Setup-Scope Reactivity
 
-Most component logic should live directly in `setup()` using signals and `watch()`.
+Most component logic should live directly in `setup()` using signals and `watchEffect()`.
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { define, html } from '@vielzeug/ore';
+import { define, html, watchEffect } from '@vielzeug/ore';
 
 define('counter-title', {
-  setup(_props, { watch }) {
+  setup(_props) {
     const count = signal(0);
 
-    watch(() => {
+    watchEffect(() => {
       document.title = 'Count: ' + count.value;
     });
 
@@ -34,12 +34,13 @@ Use `onMounted(fn)` for DOM-dependent initialization. Multiple `onMounted()` cal
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { define, html, ref } from '@vielzeug/ore';
+import { define, html, onMounted, ref, useSlots } from '@vielzeug/ore';
 
 define('my-tabs', {
-  setup(_props, { onMounted, slots }) {
+  setup(_props) {
     const activeTab = signal(0);
     const containerRef = ref<HTMLElement>();
+    const slots = useSlots<'tabs' | 'panels'>();
 
     onMounted(() => {
       const panels = slots.elements('panels').value;
@@ -63,10 +64,10 @@ define('my-tabs', {
 `onElement(ref, callback)` is ideal for imperative DOM logic tied to a specific referenced element.
 
 ```ts
-import { define, html, ref } from '@vielzeug/ore';
+import { define, html, onElement, ref } from '@vielzeug/ore';
 
 define('focus-input', {
-  setup(_props, { onElement }) {
+  setup(_props) {
     const inputRef = ref<HTMLInputElement>();
 
     onElement(inputRef, (input) => {
@@ -88,14 +89,14 @@ define('focus-input', {
 
 ## Keep Host Wiring Explicit
 
-Use `bind()` from the setup context for host bindings.
+Use `bind()` for host bindings.
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { define, html } from '@vielzeug/ore';
+import { bind, define, html, onEvent } from '@vielzeug/ore';
 
 define('toggle-host', {
-  setup(_props, { bind, onEvent }) {
+  setup(_props) {
     const open = signal(false);
 
     bind({
@@ -115,7 +116,7 @@ define('toggle-host', {
 
 ## Pick the Right Cleanup Primitive
 
-- Use `ctx.onCleanup(fn)` for component-owned teardown (intervals, WebSockets, subscriptions).
-- Use `ctx.onElement()` for per-element teardown tied to a specific ref.
-- Return a cleanup function from `ctx.onMounted()` when cleanup belongs to mount-time initialization.
-- Use `ctx.onEvent()` for event listeners that should auto-cleanup on disconnect.
+- Use `onCleanup(fn)` for component-owned teardown (intervals, WebSockets, subscriptions).
+- Use `onElement()` for per-element teardown tied to a specific ref.
+- Return a cleanup function from `onMounted()` when cleanup belongs to mount-time initialization.
+- Use `onEvent()` for event listeners that should auto-cleanup on disconnect.

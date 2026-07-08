@@ -1,4 +1,4 @@
-import { html } from '../index';
+import { html, onMounted } from '../index';
 import { mediaObserver } from '../observers';
 import { mount } from '../testing';
 
@@ -11,8 +11,8 @@ describe('mediaObserver()', () => {
     window.matchMedia = vi.fn().mockReturnValue(mockMql);
 
     try {
-      await mount((_props, ctx) => {
-        ctx.onMounted(() => {
+      await mount((_props) => {
+        onMounted(() => {
           capturedMatches = mediaObserver('(prefers-color-scheme: dark)');
         });
 
@@ -41,8 +41,8 @@ describe('mediaObserver()', () => {
     window.matchMedia = vi.fn().mockReturnValue(mockMql);
 
     try {
-      await mount((_props, ctx) => {
-        ctx.onMounted(() => {
+      await mount((_props) => {
+        onMounted(() => {
           capturedMatches = mediaObserver('(max-width: 768px)');
         });
 
@@ -73,8 +73,8 @@ describe('mediaObserver()', () => {
     window.matchMedia = vi.fn().mockReturnValue(mockMql);
 
     try {
-      const { dispose } = await mount((_props, ctx) => {
-        ctx.onMounted(() => {
+      const { dispose } = await mount((_props) => {
+        onMounted(() => {
           mediaObserver('(prefers-reduced-motion: reduce)');
         });
 

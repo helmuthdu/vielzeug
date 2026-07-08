@@ -1,4 +1,4 @@
-import { html, ref } from '../index';
+import { html, ref, onMounted } from '../index';
 import { mutationObserver } from '../observers';
 import { mount } from '../testing';
 
@@ -6,10 +6,10 @@ describe('mutationObserver()', () => {
   it('captures child-list mutations', async () => {
     let observed!: ReturnType<typeof mutationObserver>;
 
-    const { flush, query } = await mount((_props, ctx) => {
+    const { flush, query } = await mount((_props) => {
       const hostRef = ref<HTMLDivElement>();
 
-      ctx.onMounted(() => {
+      onMounted(() => {
         if (!hostRef.value) throw new Error('Expected host ref');
 
         observed = mutationObserver(hostRef.value, { childList: true });
@@ -45,10 +45,10 @@ describe('mutationObserver()', () => {
     globalThis.MutationObserver = MockMutationObserver;
 
     try {
-      const { dispose } = await mount((_props, ctx) => {
+      const { dispose } = await mount((_props) => {
         const hostRef = ref<HTMLDivElement>();
 
-        ctx.onMounted(() => {
+        onMounted(() => {
           if (!hostRef.value) throw new Error('Expected host ref');
 
           mutationObserver(hostRef.value);

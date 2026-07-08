@@ -1,8 +1,9 @@
 /**
- * Reactive ARIA attribute sync — internal implementation.
+ * Reactive ARIA attribute sync.
  *
- * Public surface: `ctx.aria(target, config)` on the SetupContextBag.
- * For off-component usage (e.g. floating trigger callbacks), use `ctx.bind({ attr: {...} }, { target: el })`.
+ * Public surface: `aria(target, config)`. For simple static/reactive attribute
+ * bindings, `bind({ attr: {...} }, { target: el })` also works — `aria()` exists
+ * separately because it normalizes bare ARIA property names (`expanded` → `aria-expanded`).
  */
 
 import { effect as rawEffect, isReactive, type Readable } from '@vielzeug/ripple';
@@ -57,16 +58,13 @@ const applyAriaConfig = (target: Element, config: AriaConfig): (() => void) => {
 };
 
 /**
- * Create an `aria()` function scoped to a component's lifecycle.
- * Cleanup is auto-registered with `onCleanup` when inside a setup context.
- * @internal — consumed by context-bag.ts to produce `ctx.aria(target, config)`.
+ * Reactively sync ARIA attributes on any element, auto-cleanup on component
+ * disconnect. Returns a cleanup function that removes all reactive bindings.
  */
-export const createAriaFn =
-  () =>
-  (target: Element, config: AriaConfig): (() => void) => {
-    const cleanup = applyAriaConfig(target, config);
+export const aria = (target: Element, config: AriaConfig): (() => void) => {
+  const cleanup = applyAriaConfig(target, config);
 
-    tryRegisterCleanup(cleanup);
+  tryRegisterCleanup(cleanup);
 
-    return cleanup;
-  };
+  return cleanup;
+};

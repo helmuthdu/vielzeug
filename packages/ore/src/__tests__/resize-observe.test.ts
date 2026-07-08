@@ -1,5 +1,5 @@
 // noinspection HtmlUnknownAttribute
-import { html, ref } from '../index';
+import { html, ref, onMounted } from '../index';
 import { resizeObserver } from '../observers';
 import { mount } from '../testing';
 
@@ -7,10 +7,10 @@ describe('resizeObserver()', () => {
   it('initialises the signal to { height: 0, width: 0 }', async () => {
     let capturedSize!: ReturnType<typeof resizeObserver>;
 
-    await mount((_props, ctx) => {
+    await mount((_props) => {
       const divRef = ref<HTMLDivElement>();
 
-      ctx.onMounted(() => {
+      onMounted(() => {
         capturedSize = resizeObserver(divRef.value!);
       });
 
@@ -31,10 +31,10 @@ describe('resizeObserver()', () => {
     } as unknown as typeof ResizeObserver;
 
     try {
-      await mount((_props, ctx) => {
+      await mount((_props) => {
         const divRef = ref<HTMLDivElement>();
 
-        ctx.onMounted(() => {
+        onMounted(() => {
           resizeObserver(divRef.value!);
         });
 
@@ -62,10 +62,10 @@ describe('resizeObserver()', () => {
     try {
       let capturedSize!: ReturnType<typeof resizeObserver>;
 
-      await mount((_props, ctx) => {
+      await mount((_props) => {
         const divRef = ref<HTMLDivElement>();
 
-        ctx.onMounted(() => {
+        onMounted(() => {
           capturedSize = resizeObserver(divRef.value!);
         });
 
@@ -96,10 +96,10 @@ describe('resizeObserver()', () => {
     } as unknown as typeof ResizeObserver;
 
     try {
-      const { dispose } = await mount((_props, ctx) => {
+      const { dispose } = await mount((_props) => {
         const divRef = ref<HTMLDivElement>();
 
-        ctx.onMounted(() => {
+        onMounted(() => {
           resizeObserver(divRef.value!);
         });
 

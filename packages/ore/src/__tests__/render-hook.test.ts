@@ -1,6 +1,6 @@
 import { signal } from '@vielzeug/ripple';
 
-import { prop } from '../index';
+import { prop, onCleanup, onMounted, watchEffect } from '../index';
 import { renderHook } from '../testing';
 
 describe('renderHook()', () => {
@@ -15,9 +15,9 @@ describe('renderHook()', () => {
   it('runs onMounted callbacks after setup', async () => {
     const log: string[] = [];
 
-    await renderHook((_props, ctx) => {
+    await renderHook((_props) => {
       log.push('setup');
-      ctx.onMounted(() => {
+      onMounted(() => {
         log.push('mounted');
       });
     });
@@ -28,10 +28,10 @@ describe('renderHook()', () => {
   it('supports reactive effects tracking signal changes', async () => {
     const log: number[] = [];
 
-    const { flush, result } = await renderHook((_props, ctx) => {
+    const { flush, result } = await renderHook((_props) => {
       const count = signal(0);
 
-      ctx.watch(() => {
+      watchEffect(() => {
         log.push(count.value);
       });
 
@@ -50,8 +50,8 @@ describe('renderHook()', () => {
   it('runs onCleanup when dispose() is called', async () => {
     const cleanupSpy = vi.fn();
 
-    const { dispose } = await renderHook((_props, ctx) => {
-      ctx.onCleanup(cleanupSpy);
+    const { dispose } = await renderHook((_props) => {
+      onCleanup(cleanupSpy);
     });
 
     expect(cleanupSpy).not.toHaveBeenCalled();
@@ -82,11 +82,11 @@ describe('renderHook()', () => {
     expect(result.label.value).toBe('hi');
   });
 
-  it('prop-defs overload: ctx bag is passed alongside props', async () => {
+  it('prop-defs overload: lifecycle hooks work alongside props', async () => {
     const log: string[] = [];
 
-    await renderHook({ name: prop.string('world') }, (_props, ctx) => {
-      ctx.onMounted(() => {
+    await renderHook({ name: prop.string('world') }, (_props) => {
+      onMounted(() => {
         log.push('mounted');
       });
     });
@@ -97,10 +97,10 @@ describe('renderHook()', () => {
   it('dispose() disposes the scope, stopping effects', async () => {
     const effectSpy = vi.fn();
 
-    const { dispose, flush, result } = await renderHook((_props, ctx) => {
+    const { dispose, flush, result } = await renderHook((_props) => {
       const s = signal(0);
 
-      ctx.watch(() => {
+      watchEffect(() => {
         void s.value;
         effectSpy();
       });

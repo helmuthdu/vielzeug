@@ -5,7 +5,7 @@
 
 import { isReactive, type Readable } from '@vielzeug/ripple';
 
-import { effect, tryRegisterCleanup } from './runtime';
+import { getHost, tryRegisterCleanup, watchEffect } from './runtime';
 import { normalizeHostAttrKey } from './utils/aria';
 import { listen, setAttr, toKebab } from './utils/dom';
 
@@ -40,7 +40,7 @@ export type HostBindConfig = {
 export type BindOptions = AddEventListenerOptions & {
   /**
    * Target element to bind to. Defaults to the host element when called
-   * via `ctx.bind()`. Pass an explicit element to bind to any other element
+   * via `bind()`. Pass an explicit element to bind to any other element
    * (e.g. a slotted trigger or an internally-referenced child element).
    * When a target is provided, cleanup is always auto-registered with the
    * component scope if one is active.
@@ -50,54 +50,56 @@ export type BindOptions = AddEventListenerOptions & {
 
 export type HostBindFn = (config: HostBindConfig, options?: BindOptions) => () => void;
 
-export const createBind = (host: HTMLElement): HostBindFn => {
-  const bind: HostBindFn = (config: HostBindConfig, options?: BindOptions): (() => void) => {
-    const el = (options?.target as HTMLElement | undefined) ?? host;
-    const disposers: Array<() => void> = [];
+/**
+ * Apply reactive or static bindings to an element's attributes, classes, styles,
+ * and events. Defaults to the current component's host element; pass
+ * `options.target` to bind to any other element (e.g. a slotted trigger, an
+ * internally-referenced child).
+ */
+export const bind: HostBindFn = (config: HostBindConfig, options?: BindOptions): (() => void) => {
+  const el = (options?.target as HTMLElement | undefined) ?? getHost();
+  const disposers: Array<() => void> = [];
 
-    if (config.attr) {
-      for (const [key, value] of Object.entries(config.attr)) {
-        const name = toHostAttr(key);
-        const dispose = applyAttribute(el, name, value);
+  if (config.attr) {
+    for (const [key, value] of Object.entries(config.attr)) {
+      const name = toHostAttr(key);
+      const dispose = applyAttribute(el, name, value);
 
-        if (dispose) disposers.push(dispose);
-      }
+      if (dispose) disposers.push(dispose);
     }
+  }
 
-    if (config.class) {
-      disposers.push(applyClassMap(el, config.class));
+  if (config.class) {
+    disposers.push(applyClassMap(el, config.class));
+  }
+
+  if (config.style) {
+    for (const [key, value] of Object.entries(config.style)) {
+      const dispose = applyStyle(el, key, value);
+
+      if (dispose) disposers.push(dispose);
     }
+  }
 
-    if (config.style) {
-      for (const [key, value] of Object.entries(config.style)) {
-        const dispose = applyStyle(el, key, value);
+  if (config.on) {
+    const { target: _t, ...listenerOptions } = options ?? {};
 
-        if (dispose) disposers.push(dispose);
-      }
+    for (const event of Object.keys(config.on) as Array<keyof typeof config.on>) {
+      const listener = config.on[event];
+
+      if (!listener) continue;
+
+      disposers.push(listen(el, event as string, listener as EventListener, listenerOptions));
     }
+  }
 
-    if (config.on) {
-      const { target: _t, ...listenerOptions } = options ?? {};
-
-      for (const event of Object.keys(config.on) as Array<keyof typeof config.on>) {
-        const listener = config.on[event];
-
-        if (!listener) continue;
-
-        disposers.push(listen(el, event as string, listener as EventListener, listenerOptions));
-      }
-    }
-
-    const cleanup = (): void => {
-      for (const dispose of disposers) dispose();
-    };
-
-    tryRegisterCleanup(cleanup);
-
-    return cleanup;
+  const cleanup = (): void => {
+    for (const dispose of disposers) dispose();
   };
 
-  return bind;
+  tryRegisterCleanup(cleanup);
+
+  return cleanup;
 };
 
 const toHostAttr = normalizeHostAttrKey;
@@ -107,11 +109,11 @@ const applyReactiveBinding = (
   updater: (next: string | number | boolean | null | undefined) => void,
 ): (() => void) | void => {
   if (typeof value === 'function') {
-    return effect(() => updater(value()));
+    return watchEffect(() => updater(value()));
   }
 
   if (isReactive(value)) {
-    return effect(() => updater(value.value));
+    return watchEffect(() => updater(value.value));
   }
 
   updater(value);
@@ -158,7 +160,7 @@ function applyClassMap(
 
   let prev = new Set<string>();
 
-  const sub = effect(() => {
+  const sub = watchEffect(() => {
     const next = new Set<string>();
 
     for (const [cls, active] of Object.entries(getMap())) {

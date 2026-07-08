@@ -1,7 +1,7 @@
 import { signal } from '@vielzeug/ripple';
 
 import { when } from '../directives/index';
-import { define, html, prop } from '../index';
+import { define, html, prop, useEmit, useSlots } from '../index';
 import { onMounted } from '../runtime';
 import { mount, waitForEvent } from '../testing';
 import { expectType, uniqueTag } from './test-utils';
@@ -21,7 +21,9 @@ describe('component slots and emit', () => {
     let triggerAssigned = false;
 
     const { flush } = await mount(
-      (_props, { slots }) => {
+      (_props) => {
+        const slots = useSlots();
+
         onMounted(() => {
           defaultAssigned = slots.has().value;
           triggerAssigned = slots.has('trigger').value;
@@ -41,11 +43,8 @@ describe('component slots and emit', () => {
   it('supports typed setup emit usage', async () => {
     const pingSpy = vi.fn();
     const closeSpy = vi.fn();
-    const { element, flush, query } = await mount((_props, { emit }) => {
-      const typedEmit = emit as unknown as import('../index').SetupContextBag<{
-        close: undefined;
-        ping: { ok: boolean };
-      }>['emit'];
+    const { element, flush, query } = await mount((_props) => {
+      const typedEmit = useEmit<{ close: undefined; ping: { ok: boolean } }>();
 
       return html`<button
         @click=${() => {
@@ -68,8 +67,14 @@ describe('component slots and emit', () => {
   it('infers event payloads from event schema generics', async () => {
     const tag = uniqueTag('test-object-emits');
 
-    define<Record<string, never>, { change: { value: string }; retry: void }>(tag, {
-      setup: (_props, { emit }) => {
+    define<Record<string, never>>(tag, {
+      setup: (_props) => {
+        const emit = useEmit<{
+          change: {
+            value: string;
+          };
+          retry: void;
+        }>();
         const fire = () => {
           emit('change', { value: 'ok' });
           emit('retry');
@@ -93,7 +98,9 @@ describe('component slots and emit', () => {
   });
 
   it('dispatches bubbling (non-composed) custom events from setup emit', async () => {
-    const { element } = await mount(((_props, { emit }) => {
+    const { element } = await mount(((_props) => {
+      const emit = useEmit();
+
       setTimeout(() => emit('ping', { ok: true }), 30);
 
       return html`<div></div>`;
@@ -113,11 +120,17 @@ describe('component slots and emit', () => {
       label: prop.string('Toggle'),
     };
 
-    define<{ checked?: boolean; label?: string }, { toggle: { checked: boolean } }>(tag, {
+    define<{ checked?: boolean; label?: string }>(tag, {
       props: toggleProps,
-      setup: (props, { emit }) => {
-        expectType<import('@vielzeug/ripple').Reactive<boolean | undefined>>(props.checked);
-        expectType<import('@vielzeug/ripple').Reactive<string | undefined>>(props.label);
+      setup: (props) => {
+        const emit = useEmit<{
+          toggle: {
+            checked: boolean;
+          };
+        }>();
+
+        expectType<import('@vielzeug/ripple').Readable<boolean | undefined>>(props.checked);
+        expectType<import('@vielzeug/ripple').Readable<string | undefined>>(props.label);
 
         return html`<button @click=${() => emit('toggle', { checked: !props.checked.value })}>${props.label}</button>`;
       },
@@ -137,10 +150,12 @@ describe('component slots and emit', () => {
 describe('slots: stale slot cleanup (C1)', () => {
   it('slot presence signal reflects false after a conditional slot is removed from shadow DOM', async () => {
     const showSlot = signal(true);
-    let hasDefault!: import('@vielzeug/ripple').Reactive<boolean>;
+    let hasDefault!: import('@vielzeug/ripple').Readable<boolean>;
 
     const { flush } = await mount(
-      (_props, { slots }) => {
+      (_props) => {
+        const slots = useSlots();
+
         hasDefault = slots.has();
 
         return html`<div>${when(showSlot, () => html`<slot></slot>`)}</div>`;
@@ -158,10 +173,12 @@ describe('slots: stale slot cleanup (C1)', () => {
 
   it('slot presence signal returns true when slot is re-added after removal', async () => {
     const showSlot = signal(true);
-    let hasDefault!: import('@vielzeug/ripple').Reactive<boolean>;
+    let hasDefault!: import('@vielzeug/ripple').Readable<boolean>;
 
     const { flush } = await mount(
-      (_props, { slots }) => {
+      (_props) => {
+        const slots = useSlots();
+
         hasDefault = slots.has();
 
         return html`<div>${when(showSlot, () => html`<slot></slot>`)}</div>`;

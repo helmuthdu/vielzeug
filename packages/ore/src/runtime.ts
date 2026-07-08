@@ -1,3 +1,15 @@
+/**
+ * Component runtime — implicit "current component" context plus every lifecycle
+ * hook a `setup()` function can call.
+ *
+ * Design note: hooks are plain module-level functions (not a bag/context object
+ * passed into `setup`). They resolve the active component through a single
+ * module-level pointer (`currentContext`), set for the duration of `setup()` and
+ * of each queued `onMounted` callback. This is the same mechanism React/Vue/Solid
+ * use for their composable hooks — it lets any helper function (not just the
+ * top-level `setup()` body) call `onMounted`/`onCleanup`/`bind`/... directly,
+ * with no context object to thread through every layer of a composable.
+ */
 import {
   type CleanupFn,
   effect as _effect,
@@ -50,10 +62,10 @@ export const requireSetupContext = (api: string): RuntimeContext => {
 
 /**
  * Returns the current component's host element.
- * Only valid synchronously during component `setup()`.
- * @internal — consumers should use `ctx.el` from the setup context bag.
+ * Only valid synchronously during component `setup()` (or inside a composable
+ * called from it) — throws otherwise.
  */
-export const getCurrentElement = (): HTMLElement => {
+export const getHost = (): HTMLElement => {
   if (currentContext) return currentContext.element;
 
   throw new OreApiError(ORE_ERRORS.lifecycleOutsideSetup);
@@ -87,8 +99,12 @@ export const onMounted = (fn: OnMountedCallback): void => {
  * Create a reactive effect scoped to the component lifecycle.
  * Automatically cleaned up on component disconnect.
  * Returns a stop function that disposes the effect immediately.
+ *
+ * Named `watchEffect` (not `watch`) to avoid shadowing `@vielzeug/ripple`'s
+ * `watch(source, callback)`, which has different semantics (explicit source,
+ * old/new value pair) — the two are commonly imported in the same file.
  */
-export const effect = (fn: EffectCallback): (() => void) => {
+export const watchEffect = (fn: EffectCallback): (() => void) => {
   const sub = _effect(fn);
   const stop = (): void => sub.dispose();
 
@@ -130,7 +146,7 @@ export const onElement = <T extends HTMLElement>(
   ref: Readable<T | null>,
   callback: (el: T) => CleanupFn | undefined | void,
 ): (() => void) => {
-  return effect(() => {
+  return watchEffect(() => {
     const el = ref.value;
 
     if (el) return callback(el);

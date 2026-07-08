@@ -14,11 +14,11 @@ You need to observe element size, intersection, or media queries, but the observ
 Call observer helpers inside `onMounted()` after refs have resolved.
 
 ```ts
-import { define, html, ref } from '@vielzeug/ore';
+import { define, html, onMounted, ref, watchEffect } from '@vielzeug/ore';
 import { mediaObserver, resizeObserver } from '@vielzeug/ore/observers';
 
 define('observed-panel', {
-  setup(_props, { onMounted, watch }) {
+  setup(_props) {
     const panel = ref<HTMLDivElement>();
 
     onMounted(() => {
@@ -29,8 +29,8 @@ define('observed-panel', {
       const size = resizeObserver(element);
       const dark = mediaObserver('(prefers-color-scheme: dark)');
 
-      // watch() is the setup-context effect — auto-cleaned up on disconnect.
-      watch(() => {
+      // watchEffect() is a component-scoped effect — auto-cleaned up on disconnect.
+      watchEffect(() => {
         console.log('panel width', size.value.width, 'dark mode', dark.value);
       });
     });

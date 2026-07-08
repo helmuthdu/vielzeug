@@ -28,6 +28,12 @@
       "import": "./dist/directives.js",
       "require": "./dist/directives.cjs"
     },
+    "./forms": {
+      "source": "./src/forms/index.ts",
+      "types": "./dist/forms/index.d.ts",
+      "import": "./dist/forms.js",
+      "require": "./dist/forms.cjs"
+    },
     "./observers": {
       "source": "./src/observers/index.ts",
       "types": "./dist/observers/index.d.ts",

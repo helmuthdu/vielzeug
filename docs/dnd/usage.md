@@ -488,19 +488,22 @@ Use Dnd in custom web components by attaching behavior in component lifecycle ho
 
 ```ts
 import { createSortable } from '@vielzeug/dnd';
-import { define, onMounted, html } from '@vielzeug/ore';
+import { define, getHost, html, onMounted } from '@vielzeug/ore';
 
 define('task-list', {
-  setup(_props, { host }) {
+  setup(_props) {
+    const el = getHost();
+
     onMounted(() => {
       const sortable = createSortable({
-        element: host.el,
+        element: el,
         getKey: (el) => el.dataset.sortId!,
         onReorder: ({ ids }) => save(ids),
       });
       return () => sortable.dispose();
     });
-    return () => html`<slot></slot>`;
+
+    return html`<slot></slot>`;
   },
 });
 ```

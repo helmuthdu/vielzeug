@@ -4,15 +4,15 @@
 
 import { signal } from '@vielzeug/ripple';
 
-import { createContext, html, ref } from '../index';
+import { createContext, html, ref, inject, onCleanup, onElement, onEvent, onMounted, provide } from '../index';
 import { mount } from '../testing';
 
 describe('runtime lifecycle: onMounted', () => {
   it('runs mount callback after component renders', async () => {
     const spy = vi.fn();
 
-    await mount((_props, ctx) => {
-      ctx.onMounted(spy);
+    await mount((_props) => {
+      onMounted(spy);
 
       return html`<div>Test</div>`;
     });
@@ -22,8 +22,8 @@ describe('runtime lifecycle: onMounted', () => {
   it('provides DOM access when mount callback runs', async () => {
     let hasElement = false;
 
-    await mount((_props, ctx) => {
-      ctx.onMounted(() => {
+    await mount((_props) => {
+      onMounted(() => {
         hasElement = true;
       });
 
@@ -35,8 +35,8 @@ describe('runtime lifecycle: onMounted', () => {
   it('runs mount cleanup on unmount', async () => {
     const spy = vi.fn();
 
-    const { dispose } = await mount((_props, ctx) => {
-      ctx.onMounted(() => spy);
+    const { dispose } = await mount((_props) => {
+      onMounted(() => spy);
 
       return html`<div>Test</div>`;
     });
@@ -50,10 +50,9 @@ describe('runtime lifecycle: onMounted', () => {
 describe('runtime lifecycle: execution order', () => {
   it('executes setup -> mount -> unmount in order', async () => {
     const order: string[] = [];
-    const { dispose } = await mount((_props, ctx) => {
+    const { dispose } = await mount((_props) => {
       order.push('setup');
-
-      ctx.onMounted(() => {
+      onMounted(() => {
         order.push('mount');
 
         return () => order.push('unmount');
@@ -70,8 +69,8 @@ describe('runtime lifecycle: execution order', () => {
 describe('runtime lifecycle: onCleanup', () => {
   it('runs callbacks when component unmounts', async () => {
     const spy = vi.fn();
-    const { dispose } = await mount((_props, ctx) => {
-      ctx.onCleanup(spy);
+    const { dispose } = await mount((_props) => {
+      onCleanup(spy);
 
       return html`<div>Test</div>`;
     });
@@ -83,8 +82,8 @@ describe('runtime lifecycle: onCleanup', () => {
 
   it('supports resource cleanup side effects', async () => {
     let cleaned = false;
-    const { dispose } = await mount((_props, ctx) => {
-      ctx.onCleanup(() => {
+    const { dispose } = await mount((_props) => {
+      onCleanup(() => {
         cleaned = true;
       });
 
@@ -97,9 +96,9 @@ describe('runtime lifecycle: onCleanup', () => {
 
   it('runs multiple cleanup callbacks in LIFO order', async () => {
     const calls: number[] = [];
-    const { dispose } = await mount((_props, ctx) => {
-      ctx.onCleanup(() => calls.push(1));
-      ctx.onCleanup(() => calls.push(2));
+    const { dispose } = await mount((_props) => {
+      onCleanup(() => calls.push(1));
+      onCleanup(() => calls.push(2));
 
       return html`<div>Test</div>`;
     });
@@ -112,10 +111,10 @@ describe('runtime lifecycle: onCleanup', () => {
 describe('runtime lifecycle: mount + cleanup integration', () => {
   it('stops mount-owned async work on unmount', async () => {
     let effectRuns = 0;
-    const { dispose } = await mount((_props, ctx) => {
+    const { dispose } = await mount((_props) => {
       const count = signal(0);
 
-      ctx.onMounted(() => {
+      onMounted(() => {
         const interval = setInterval(() => {
           count.value++;
           effectRuns++;
@@ -137,12 +136,12 @@ describe('runtime lifecycle: mount + cleanup integration', () => {
   });
 });
 
-describe('ctx.onEvent()', () => {
+describe('onEvent()', () => {
   it('does not throw when target is null or undefined', async () => {
     await expect(
-      mount((_props, ctx) => {
-        ctx.onEvent(null, 'click', () => {});
-        ctx.onEvent(undefined, 'click', () => {});
+      mount((_props) => {
+        onEvent(null, 'click', () => {});
+        onEvent(undefined, 'click', () => {});
 
         return html`<div></div>`;
       }),
@@ -153,11 +152,11 @@ describe('ctx.onEvent()', () => {
     let clickCount = 0;
     let btn!: HTMLButtonElement;
 
-    const { dispose } = await mount((_props, ctx) => {
-      ctx.onMounted(() => {
+    const { dispose } = await mount((_props) => {
+      onMounted(() => {
         btn = document.createElement('button');
         document.body.appendChild(btn);
-        ctx.onEvent(btn, 'click', () => {
+        onEvent(btn, 'click', () => {
           clickCount++;
         });
 
@@ -177,13 +176,13 @@ describe('ctx.onEvent()', () => {
   });
 });
 
-describe('ctx.onElement()', () => {
+describe('onElement()', () => {
   it('calls callback with element when ref becomes non-null', async () => {
     const elRef = ref<HTMLButtonElement>();
     const seen: (HTMLButtonElement | null)[] = [];
 
-    await mount((_props, ctx) => {
-      ctx.onElement(elRef, (el) => {
+    await mount((_props) => {
+      onElement(elRef, (el) => {
         seen.push(el);
       });
 
@@ -199,8 +198,8 @@ describe('ctx.onElement()', () => {
     const cleanupSpy = vi.fn();
     const show = signal(true);
 
-    const { act } = await mount((_props, ctx) => {
-      ctx.onElement(elRef, () => cleanupSpy);
+    const { act } = await mount((_props) => {
+      onElement(elRef, () => cleanupSpy);
 
       return html`<div>${() => (show.value ? html`<button ref=${elRef}>Btn</button>` : html``)}</div>`;
     });
@@ -294,10 +293,9 @@ describe('imperative cleanup pattern', () => {
   it('disposes previous cleanup when replaced and latest cleanup on unmount', async () => {
     let disposed = 0;
 
-    const { dispose } = await mount((_props, ctx) => {
-      ctx.onMounted(() => {
+    const { dispose } = await mount((_props) => {
+      onMounted(() => {
         let cleanup: (() => void) | null = null;
-
         const setCleanup = (next: (() => void) | null) => {
           cleanup?.();
           cleanup = next;
@@ -306,12 +304,10 @@ describe('imperative cleanup pattern', () => {
         setCleanup(() => {
           disposed += 1;
         });
-
         setCleanup(() => {
           disposed += 10;
         });
-
-        ctx.onCleanup(() => {
+        onCleanup(() => {
           cleanup?.();
           cleanup = null;
         });
@@ -336,10 +332,10 @@ describe('inject() inside onMounted (C3)', () => {
     let resolved: string | undefined;
 
     await mount(
-      (_props, ctx) => {
-        ctx.provide(KEY, 'hello-from-provider');
-        ctx.onMounted(() => {
-          resolved = ctx.inject(KEY);
+      (_props) => {
+        provide(KEY, 'hello-from-provider');
+        onMounted(() => {
+          resolved = inject(KEY);
         });
 
         return html`<div></div>`;
@@ -351,12 +347,12 @@ describe('inject() inside onMounted (C3)', () => {
   });
 });
 
-describe('SetupContextBag lifecycle aliases (R9)', () => {
-  it('ctx.onMounted fires after mount', async () => {
+describe('lifecycle hook aliases (R9)', () => {
+  it('onMounted fires after mount', async () => {
     const spy = vi.fn();
 
-    await mount((_props, ctx) => {
-      ctx.onMounted(spy);
+    await mount((_props) => {
+      onMounted(spy);
 
       return html`<div></div>`;
     });
@@ -364,11 +360,11 @@ describe('SetupContextBag lifecycle aliases (R9)', () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  it('ctx.onCleanup fires on dispose', async () => {
+  it('onCleanup fires on dispose', async () => {
     const spy = vi.fn();
 
-    const { dispose } = await mount((_props, ctx) => {
-      ctx.onCleanup(spy);
+    const { dispose } = await mount((_props) => {
+      onCleanup(spy);
 
       return html`<div></div>`;
     });
@@ -378,14 +374,14 @@ describe('SetupContextBag lifecycle aliases (R9)', () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  it('ctx.inject resolves a provided context value', async () => {
+  it('inject resolves a provided context value', async () => {
     const KEY = createContext<number>('ctx-inject-test');
     let resolved: number | undefined;
 
     await mount(
-      (_props, ctx) => {
-        ctx.provide(KEY, 42);
-        resolved = ctx.inject(KEY);
+      (_props) => {
+        provide(KEY, 42);
+        resolved = inject(KEY);
 
         return html`<div></div>`;
       },

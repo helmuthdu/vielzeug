@@ -1,6 +1,8 @@
 /**
- * Type-safe custom event emission factory for components.
+ * Type-safe custom event emission for components.
  */
+
+import { getHost } from '../runtime';
 
 type NoDetail = void | undefined | never;
 type KeysWithoutDetail<T extends Record<string, unknown>> = {
@@ -18,10 +20,28 @@ export type EmitFn<T extends Record<string, unknown>> = StrictEmitFn<T> & LooseE
 
 const DEFAULT_FIRE_OPTIONS = { bubbles: true, cancelable: true, composed: false };
 
-export const createEmitFn = <T extends Record<string, unknown>>(el: HTMLElement): EmitFn<T> => {
+/**
+ * Returns a typed `emit()` function bound to the current component's host element.
+ * Call once during `setup()` — the `Emits` type parameter maps event names to
+ * their `detail` payload type.
+ *
+ * @example
+ * ```ts
+ * type Events = { close: undefined; change: { value: string } };
+ *
+ * setup(props) {
+ *   const emit = useEmit<Events>();
+ *   emit('close');
+ *   emit('change', { value: 'ok' });
+ * }
+ * ```
+ */
+export const useEmit = <T extends Record<string, unknown> = Record<string, never>>(): EmitFn<T> => {
+  const host = getHost();
+
   return ((event: keyof T, ...rest: unknown[]) => {
     const customEventInit = rest.length > 0 ? { ...DEFAULT_FIRE_OPTIONS, detail: rest[0] } : DEFAULT_FIRE_OPTIONS;
 
-    el.dispatchEvent(new CustomEvent<unknown>(String(event), customEventInit));
+    host.dispatchEvent(new CustomEvent<unknown>(String(event), customEventInit));
   }) as EmitFn<T>;
 };

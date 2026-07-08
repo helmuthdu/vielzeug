@@ -5,9 +5,6 @@
 
 import { onCleanup as _onCleanup, scope as _scope } from '@vielzeug/ripple';
 
-import type { SetupContextBag } from '../component-types';
-
-import { createContextBag } from '../context-bag';
 import { createProps, type InferProps, type PropInputDefs } from '../props';
 import { runWithContext } from '../runtime';
 import { flush } from './flush';
@@ -27,13 +24,14 @@ export interface HookFixture<T> {
 
 /**
  * Run a setup function in a component-like context and return the result.
- * The callback receives the same `SetupContextBag` as a real `setup()` function.
+ * `onMounted`/`onCleanup`/`bind`/... work exactly as they would inside a real
+ * `setup()`, since they resolve the same implicit current-component context.
  *
  * @example No props
  * ```ts
- * const { result, flush } = await renderHook((_props, ctx) => {
+ * const { result, flush } = await renderHook(() => {
  *   const count = signal(0);
- *   ctx.onMounted(() => { count.value = 1; });
+ *   onMounted(() => { count.value = 1; });
  *   return count;
  * });
  * expect(result.value).toBe(1);
@@ -48,23 +46,21 @@ export interface HookFixture<T> {
  * expect(result.value).toBe('hello');
  * ```
  */
-export async function renderHook<T>(
-  setup: (_props: Record<never, never>, ctx: SetupContextBag) => T,
-): Promise<HookFixture<T>>;
+export async function renderHook<T>(setup: (_props: Record<never, never>) => T): Promise<HookFixture<T>>;
 export async function renderHook<D extends PropInputDefs, T>(
   propDefs: D,
-  setup: (props: InferProps<D>, ctx: SetupContextBag) => T,
+  setup: (props: InferProps<D>) => T,
 ): Promise<HookFixture<T>>;
 export async function renderHook<D extends PropInputDefs, T>(
-  setupOrDefs: ((_props: Record<never, never>, ctx: SetupContextBag) => T) | D,
-  maybeSetup?: (props: InferProps<D>, ctx: SetupContextBag) => T,
+  setupOrDefs: ((_props: Record<never, never>) => T) | D,
+  maybeSetup?: (props: InferProps<D>) => T,
 ): Promise<HookFixture<T>> {
   const hasPropDefs = typeof setupOrDefs !== 'function';
   const propDefs = hasPropDefs ? (setupOrDefs as D) : undefined;
-  const setup = hasPropDefs ? maybeSetup! : (setupOrDefs as (_props: Record<never, never>, ctx: SetupContextBag) => T);
+  const setup = hasPropDefs ? maybeSetup! : (setupOrDefs as (_props: Record<never, never>) => T);
 
   const hostScope = _scope();
-  // Minimal host element so getCurrentElement() works inside setup
+  // Minimal host element so getHost() works inside setup
   const hostEl = document.createElement('div');
 
   document.body.appendChild(hostEl);
@@ -77,10 +73,9 @@ export async function renderHook<D extends PropInputDefs, T>(
   try {
     hostScope.run(() => {
       runWithContext(ctx, () => {
-        const contextBag = createContextBag(hostEl);
         const props = propDefs ? createProps(hostEl, propDefs as PropInputDefs) : ({} as Record<never, never>);
 
-        result = setup(props as InferProps<D>, contextBag);
+        result = setup(props as InferProps<D>);
       });
     });
 

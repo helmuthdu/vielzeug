@@ -26,15 +26,19 @@ define('status-chip', {
 });
 ```
 
-The setup context bag provides `el`, `aria`, `bind`, `emit`, `slots`, `onMounted`, `onCleanup`, `onEvent`, `onElement`, and `watch`:
+Everything besides `props` — lifecycle hooks, host bindings, context, slots, emit — is a plain function imported from `@vielzeug/ore`, called directly from `setup()` (or a composable it calls):
 
 ```ts
+import { define, getHost, html, bind, useEmit, useSlots } from '@vielzeug/ore';
+
 define('my-widget', {
-  setup(_props, { el, bind, emit, slots }) {
-    // el — the host HTMLElement
-    // bind — host binding helper (attr, class, style, on)
-    // emit — typed event emitter
-    // slots — reactive slot observation
+  setup(_props) {
+    const el = getHost(); // the host HTMLElement
+    const emit = useEmit<{ close: undefined }>(); // typed event emitter
+    const slots = useSlots<'header'>(); // reactive slot observation
+
+    bind({ attr: { role: 'group' } }); // host binding helper (attr, class, style, on)
+
     return html`<slot></slot>`;
   },
 });
@@ -66,16 +70,17 @@ batch(() => {
 
 ## onMounted and lifecycle
 
-Use `ctx.onMounted()` for DOM-dependent initialization that must run after the template is mounted. Use `ctx.onElement(ref, cb)` for work tied to a specific DOM node. `ctx.onEvent()` attaches a listener that is automatically removed on disconnect.
+Use `onMounted()` for DOM-dependent initialization that must run after the template is mounted. Use `onElement(ref, cb)` for work tied to a specific DOM node. `onEvent()` attaches a listener that is automatically removed on disconnect.
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { define, html, ref } from '@vielzeug/ore';
+import { define, html, onElement, onEvent, onMounted, ref, useSlots } from '@vielzeug/ore';
 
 define('deferred-init', {
-  setup(_props, { slots, onMounted, onElement, onEvent }) {
+  setup(_props) {
     const tabIndex = signal(0);
     const inputRef = ref<HTMLInputElement>();
+    const slots = useSlots<'items'>();
 
     onMounted(() => {
       const items = slots.elements('items').value;
@@ -219,14 +224,14 @@ define('live-search', {
 
 ## host bindings
 
-The setup context provides `bind` for wiring the host element.
+`bind()` wires reactive attrs, classes, styles, and events to the host element.
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { define, html } from '@vielzeug/ore';
+import { bind, define, html } from '@vielzeug/ore';
 
 define('x-toggle', {
-  setup(_props, { bind }) {
+  setup(_props) {
     const open = signal(false);
 
     bind({
@@ -244,14 +249,14 @@ The `bind` config supports `attr`, `class`, `style`, and `on` sections.
 
 ## ARIA bindings
 
-Use `ctx.aria(target, config)` to reactively sync ARIA attributes to any element. Shorthand keys are normalised to `aria-*` automatically — `expanded` becomes `aria-expanded`, `role` is set verbatim.
+Use `aria(target, config)` to reactively sync ARIA attributes to any element. Shorthand keys are normalised to `aria-*` automatically — `expanded` becomes `aria-expanded`, `role` is set verbatim.
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { define, html } from '@vielzeug/ore';
+import { aria, bind, define, html, onMounted } from '@vielzeug/ore';
 
 define('x-disclosure', {
-  setup(_props, { aria, bind, onMounted }) {
+  setup(_props) {
     const open = signal(false);
     const panelId = 'disclosure-panel';
 
@@ -297,10 +302,10 @@ Pass `{ target: el }` as a second argument to bind attributes, classes, styles, 
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { define, html, ref } from '@vielzeug/ore';
+import { bind, define, html, onMounted, ref } from '@vielzeug/ore';
 
 define('button-wrapper', {
-  setup(_props, { bind, onMounted }) {
+  setup(_props) {
     const visible = signal(false);
     const btnRef = ref<HTMLButtonElement>();
 
@@ -326,10 +331,13 @@ define('button-wrapper', {
 
 ```ts
 import { when } from '@vielzeug/ore/directives';
-import { define, html } from '@vielzeug/ore';
+import { define, html, useEmit, useSlots } from '@vielzeug/ore';
 
-define<Record<never, never>, Record<never, never>, 'header' | 'footer'>('card-with-footer', {
-  setup(_props, { slots, emit }) {
+define('card-with-footer', {
+  setup(_props) {
+    const slots = useSlots<'header' | 'footer'>();
+    const emit = useEmit<{ action: undefined }>();
+
     return html`
       <div class="card">
         <slot name="header"></slot>
@@ -342,18 +350,18 @@ define<Record<never, never>, Record<never, never>, 'header' | 'footer'>('card-wi
 });
 ```
 
-Pass `SlotNames` as a type parameter to `define()` to get typed `slots.has()` and `slots.elements()` calls.
+Pass a `SlotNames` type parameter to `useSlots<SlotNames>()` to get typed `slots.has()` and `slots.elements()` calls.
 
 ## context provide/inject
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { createContext, define, html, injectStrict } from '@vielzeug/ore';
+import { createContext, define, html, injectStrict, provide } from '@vielzeug/ore';
 
 const COUNT_CTX = createContext<ReturnType<typeof signal<number>>>('count');
 
 define('count-provider', {
-  setup(_props, { provide }) {
+  setup(_props) {
     const count = signal(0);
     provide(COUNT_CTX, count);
 
@@ -374,7 +382,8 @@ define('count-consumer', {
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { define, html, prop, useField } from '@vielzeug/ore';
+import { define, html, prop } from '@vielzeug/ore';
+import { useField } from '@vielzeug/ore/forms';
 
 define('rating-input', {
   formAssociated: true,
@@ -414,15 +423,15 @@ define('user-profile', {
 
 ## platform observers
 
-Observer helpers from `@vielzeug/ore/observers` require real DOM nodes, so call them inside `ctx.onMounted()`.
+Observer helpers from `@vielzeug/ore/observers` require real DOM nodes, so call them inside `onMounted()`.
 
 ```ts
 import { effect } from '@vielzeug/ripple';
-import { define, html, ref } from '@vielzeug/ore';
+import { define, html, onMounted, ref } from '@vielzeug/ore';
 import { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/ore/observers';
 
 define('x-observed', {
-  setup(_props, { onMounted }) {
+  setup(_props) {
     const boxRef = ref<HTMLDivElement>();
 
     onMounted(() => {
@@ -548,10 +557,11 @@ Use `@vielzeug/forge` for typed form state alongside Ore's `useField()` for form
 ```ts
 import { createForm } from '@vielzeug/forge';
 import { s } from '@vielzeug/spell';
-import { createFormContext, define, html, FORM_CONTEXT_KEY } from '@vielzeug/ore';
+import { define, html, provide } from '@vielzeug/ore';
+import { createFormContext, FORM_CONTEXT_KEY } from '@vielzeug/ore/forms';
 
 define('signup-form', {
-  setup(_props, { provide }) {
+  setup(_props) {
     const formCtx = createFormContext({
       onSubmit: async (e) => {
         e?.preventDefault();
@@ -573,11 +583,11 @@ define('signup-form', {
 ## Best Practices
 
 - Setup returns `html\`...\`` directly — not a function wrapping the template.
-- Use `ctx.watch()` for reactive subscriptions tied to component lifetime — it auto-registers cleanup on disconnect.
-- Use `ctx.onElement(ref, cb)` instead of `ctx.onMounted` when the work is tied to a single DOM node.
-- Bind host attributes and classes via `ctx.bind()` rather than mutating the element directly.
+- Use `watchEffect()` for reactive subscriptions tied to component lifetime — it auto-registers cleanup on disconnect.
+- Use `onElement(ref, cb)` instead of `onMounted` when the work is tied to a single DOM node.
+- Bind host attributes and classes via `bind()` rather than mutating the element directly.
 - Provide context at the nearest ancestor — avoid global context singletons.
-- Call `ctx.onCleanup()` for every resource allocated in `setup()` (WebSockets, intervals, external subscriptions).
+- Call `onCleanup()` for every resource allocated in `setup()` (WebSockets, intervals, external subscriptions).
 - Use `live(signal)` for form inputs to prevent clobbering user-in-progress edits.
-- Thread lifecycle hooks explicitly into composable helpers via function parameters — do not rely on implicit module-level context.
+- Extract composable helper functions freely — `onMounted`/`onCleanup`/`bind`/... resolve the active component through implicit context, so they work from any function called (transitively) during `setup()`, with no need to pass them in as parameters.
 - Test with `@vielzeug/ore/testing` helpers (`mount`, `flush`, `waitFor`) rather than direct DOM manipulation.

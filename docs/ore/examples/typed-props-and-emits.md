@@ -7,15 +7,15 @@ description: 'Typed props and emits example for @vielzeug/ore.'
 
 ### Problem
 
-You need both prop and event contracts checked at the type level. Ore's `define<Props, Events>()` generic ensures prop shapes and emitted event payloads are fully typed.
+You need both prop and event contracts checked at the type level. Ore's `define<Props>()` generic types prop shapes; `useEmit<Events>()` types emitted event payloads.
 
 ### Solution
 
-Combine `prop.*` helpers with the `Events` type parameter on `define()`.
+Combine `prop.*` helpers on `define()` with a typed `useEmit<Events>()` call in `setup()`.
 
 ```ts
 import { when } from '@vielzeug/ore/directives';
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, useEmit } from '@vielzeug/ore';
 
 type AlertBoxProps = {
   message: string;
@@ -28,13 +28,14 @@ type AlertBoxEvents = {
   change: { open: boolean };
 };
 
-define<AlertBoxProps, AlertBoxEvents>('alert-box', {
+define<AlertBoxProps>('alert-box', {
   props: {
     message: prop.string('Saved successfully'),
     open: prop.bool(true),
     variant: prop.oneOf(['primary', 'danger'] as const, 'primary'),
   },
-  setup(props, { emit }) {
+  setup(props) {
+    const emit = useEmit<AlertBoxEvents>();
     const close = () => {
       if (!props.open.value) return;
 

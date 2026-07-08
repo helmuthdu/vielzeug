@@ -4,7 +4,7 @@
 
 import type { Readable } from '@vielzeug/ripple';
 
-import { type ComponentDefinition, type SetupContextBag } from '../component-types';
+import { type ComponentDefinition } from '../component-types';
 import { define } from '../define';
 import { _resetLiveSignals } from '../directives/live';
 import { _resetRawSanitizer } from '../directives/raw';
@@ -59,14 +59,14 @@ export interface MountOptions {
   /** Parent container (default: document.body) */
   container?: HTMLElement;
   /** Extra component options when passing an inline setup function */
-  componentOptions?: Omit<ComponentDefinition<any, any>, 'setup'>;
+  componentOptions?: Omit<ComponentDefinition<any>, 'setup'>;
 }
 
 type MountProps = { readonly [x: string]: Readable<unknown> };
 
-// Bivariant callback type keeps inline test callbacks ergonomic across varying setup context specializations.
+// Bivariant callback type keeps inline test callbacks ergonomic across varying prop specializations.
 export type MountSetup = {
-  bivarianceHack: (props: MountProps, ctx: SetupContextBag<any>) => HTMLResult | null | Promise<HTMLResult | null>;
+  bivarianceHack: (props: MountProps) => HTMLResult | null | Promise<HTMLResult | null>;
 }['bivarianceHack'];
 
 // ─── Test environment state ───────────────────────────────────────────────────
@@ -154,7 +154,7 @@ export async function mount<T extends HTMLElement = HTMLElement>(
   const { attrs = {}, componentOptions, container = document.body, html, props = {} } = options;
 
   let tagName: string;
-  let inlineDefinition: ComponentDefinition<any, any> | undefined;
+  let inlineDefinition: ComponentDefinition<any> | undefined;
 
   if (typeof tagOrSetup === 'string') {
     tagName = tagOrSetup;
@@ -162,7 +162,7 @@ export async function mount<T extends HTMLElement = HTMLElement>(
     tagName = `trial-${++_componentTagCounter}-${Math.random().toString(36).slice(2, 7)}`;
     inlineDefinition = {
       ...(componentOptions ?? {}),
-      setup: tagOrSetup as ComponentDefinition<any, any>['setup'],
+      setup: tagOrSetup as ComponentDefinition<any>['setup'],
     };
   }
 
@@ -271,7 +271,7 @@ export async function mount<T extends HTMLElement = HTMLElement>(
  */
 export async function mountComponent<T extends HTMLElement = HTMLElement>(
   tag: string,
-  definition: ComponentDefinition<any, any>,
+  definition: ComponentDefinition<any>,
   options?: MountOptions,
 ): Promise<Fixture<T>> {
   define(tag, definition);

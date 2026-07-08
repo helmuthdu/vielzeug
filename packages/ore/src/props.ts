@@ -2,7 +2,7 @@ import { type Readable, type Signal, signal } from '@vielzeug/ripple';
 
 import { warn } from './_dev';
 import { OreApiError, ORE_ERRORS } from './errors';
-import { effect } from './runtime';
+import { watchEffect } from './runtime';
 import { isStructuredValue, setAttr, toKebab } from './utils/dom';
 
 export type PropsDef<T extends Record<string, unknown>> = {
@@ -262,7 +262,7 @@ const registerProp = <T>(el: HTMLElement, propName: string, attrName: string, pr
   });
 
   if (reflect) {
-    effect(() => {
+    watchEffect(() => {
       const v = s.value;
 
       if (v == null) {
