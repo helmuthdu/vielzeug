@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 08 Jul 2026 17:19:00 GMT and should not be manually modified.
+This log was last generated on Thu, 09 Jul 2026 15:05:53 GMT and should not be manually modified.
+
+## 1.3.1
+Thu, 09 Jul 2026 15:05:53 GMT
+
+### Patches
+
+- fix: light-dark() shadow tokens computed to none in spec-compliant browsers, breaking hover/focus/halo effects across every component; fix button effect/frost mixin selectors matching a nonexistent <button> tag; move refine's internal build scripts into scripts/
 
 ## 1.3.0
 Wed, 08 Jul 2026 17:19:00 GMT
