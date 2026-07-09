@@ -120,7 +120,7 @@
     padding-inline-start: calc(var(--_width) + var(--size-2-5));
     font-size: var(--text-xs);
     line-height: var(--leading-tight);
-    color: var(--color-contrast-500);
+    color: color-mix(in oklch, var(--color-contrast-500) 80%, var(--color-canvas));
   }
 
   .helper-text[role='alert'] {

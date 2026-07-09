@@ -18,14 +18,14 @@
   :host([data-mode='sticky']) {
     position: sticky;
     top: 0;
-    z-index: var(--z-sticky, 40);
+    z-index: var(--z-sticky);
   }
 
   :host([data-mode='floating']) {
     position: fixed;
     inset-inline: var(--_navbar-offset);
     top: var(--_navbar-offset);
-    z-index: var(--z-sticky, 40);
+    z-index: var(--z-sticky);
   }
 
   /* Preview mode: use absolute positioning so component stays within container bounds */

@@ -48,7 +48,15 @@ export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
     `*, *::before, *::after { box-sizing: border-box; }`,
     `html { color-scheme: ${dark ? 'dark' : 'light'}; height: fit-content; }`,
     `html, body { margin: 0; padding: 0; overflow: visible; background: transparent; font-family: var(--font-sans, system-ui, sans-serif); touch-action: manipulation; }`,
-    `body { display: flex; flex-direction: ${flexDirection}; flex-wrap: wrap; gap: 1rem; padding: 2rem; padding-bottom: 0; align-items: center; justify-content: center; min-height: ${bodyMinHeight}; background: ${bodyBackground}; }`,
+    // Symmetric padding on all sides — the sandbox iframe auto-resizes to
+    // document.body's border-box height (see @vielzeug/sandbox's bridge
+    // ResizeObserver), which never includes box-shadow spread. A halo/glow
+    // effect (e.g. ore-button's hover/active box-shadow, which is offset
+    // downward) that reaches past body's own layout box gets hard-clipped at
+    // the iframe's edge with no room below to render into — this used to be
+    // `padding-bottom: 0`, which is exactly why those effects showed outside
+    // the preview (real page, natural space below) but not inside it.
+    `body { display: flex; flex-direction: ${flexDirection}; flex-wrap: wrap; gap: 1rem; padding: 2rem; align-items: center; justify-content: center; min-height: ${bodyMinHeight}; background: ${bodyBackground}; }`,
   ].join(' ');
 
   // `buildDocument()` (from @vielzeug/sandbox) only supports `<html lang="...">` — it has no

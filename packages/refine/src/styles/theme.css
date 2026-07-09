@@ -114,6 +114,23 @@
     --grid-12: repeat(12, minmax(0, 1fr));
 
     /* ========================================
+       Z-Index Scale
+       A page only has one stacking context to reason about — every layer
+       (sticky headers, dropdowns, overlays, modals, popovers, tooltips,
+       toasts) needs one shared, monotonic scale, not ad-hoc literals
+       scattered across components and page code alike.
+       ======================================== */
+    --z-base: 0;
+    --z-sticky: 40;
+    --z-dropdown: 100;
+    --z-fixed: 300;
+    --z-overlay: 500;
+    --z-modal: 600;
+    --z-popover: 1000;
+    --z-tooltip: 1100;
+    --z-toast: 9999;
+
+    /* ========================================
        Border Widths
        ======================================== */
     --border-0: 0;
@@ -161,21 +178,30 @@
        All shadows use light-dark() to remain visible in dark mode.
        ======================================== */
     --shadow-none: 0 0 transparent;
-    --shadow-2xs: light-dark(0 1px 2px rgb(0 0 0 / 3%), 0 1px 2px rgb(0 0 0 / 20%));
-    --shadow-xs: light-dark(0 2px 4px rgb(0 0 0 / 3%), 0 2px 4px rgb(0 0 0 / 22%));
-    --shadow-sm: light-dark(0 4px 10px -1px rgb(0 0 0 / 5%), 0 4px 10px -1px rgb(0 0 0 / 28%));
-    --shadow: light-dark(0 8px 16px -2px rgb(0 0 0 / 6%), 0 8px 16px -2px rgb(0 0 0 / 32%));
-    --shadow-md: light-dark(0 12px 24px -4px rgb(0 0 0 / 6%), 0 12px 24px -4px rgb(0 0 0 / 34%));
-    --shadow-lg: light-dark(0 24px 32px -8px rgb(0 0 0 / 8%), 0 24px 32px -8px rgb(0 0 0 / 38%));
-    --shadow-xl: light-dark(0 32px 64px -16px rgb(0 0 0 / 12%), 0 32px 64px -16px rgb(0 0 0 / 44%));
-    --shadow-2xl: light-dark(0 48px 80px -20px rgb(0 0 0 / 20%), 0 48px 80px -20px rgb(0 0 0 / 52%));
 
-    /* Inset Shadows — also light-dark() for dark mode depth */
+    /* light-dark() only accepts <color> arguments (spec: CSS Color 5) — these used
+       to wrap the *entire* shadow (offset + blur + color), which is invalid CSS.
+       Custom properties store any token soup, so the declaration itself never
+       errored, but every consumer substituting it into an actual `box-shadow`
+       got an unparseable value and silently computed to `none` in spec-compliant
+       browsers. Fixed by keeping offset/blur outside and wrapping only the color
+       — offset/blur are identical between light and dark here anyway, only the
+       alpha differs. */
+    --shadow-2xs: 0 1px 2px light-dark(rgb(0 0 0 / 3%), rgb(0 0 0 / 20%));
+    --shadow-xs: 0 2px 4px light-dark(rgb(0 0 0 / 3%), rgb(0 0 0 / 22%));
+    --shadow-sm: 0 4px 10px -1px light-dark(rgb(0 0 0 / 5%), rgb(0 0 0 / 28%));
+    --shadow: 0 8px 16px -2px light-dark(rgb(0 0 0 / 6%), rgb(0 0 0 / 32%));
+    --shadow-md: 0 12px 24px -4px light-dark(rgb(0 0 0 / 6%), rgb(0 0 0 / 34%));
+    --shadow-lg: 0 24px 32px -8px light-dark(rgb(0 0 0 / 8%), rgb(0 0 0 / 38%));
+    --shadow-xl: 0 32px 64px -16px light-dark(rgb(0 0 0 / 12%), rgb(0 0 0 / 44%));
+    --shadow-2xl: 0 48px 80px -20px light-dark(rgb(0 0 0 / 20%), rgb(0 0 0 / 52%));
+
+    /* Inset Shadows — same light-dark()-color-only fix as above. */
     --inset-shadow-none: inset 0 0 transparent;
-    --inset-shadow-2xs: light-dark(inset 0 1px rgb(0 0 0 / 5%), inset 0 1px rgb(255 255 255 / 4%));
-    --inset-shadow-xs: light-dark(inset 0 1px 1px rgb(0 0 0 / 5%), inset 0 1px 1px rgb(255 255 255 / 4%));
-    --inset-shadow-sm: light-dark(inset 0 2px 4px rgb(0 0 0 / 5%), inset 0 2px 4px rgb(0 0 0 / 25%));
-    --inset-shadow: light-dark(inset 0 2px 4px rgb(0 0 0 / 6%), inset 0 2px 4px rgb(0 0 0 / 28%));
+    --inset-shadow-2xs: inset 0 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 4%));
+    --inset-shadow-xs: inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 4%));
+    --inset-shadow-sm: inset 0 2px 4px light-dark(rgb(0 0 0 / 5%), rgb(0 0 0 / 25%));
+    --inset-shadow: inset 0 2px 4px light-dark(rgb(0 0 0 / 6%), rgb(0 0 0 / 28%));
 
     /* Drop Shadows (for filters) */
     --drop-shadow-none: 0 0 transparent;
@@ -319,7 +345,9 @@
        ======================================== */
     color-scheme: light dark;
 
-    /* Contrast scale — Neutral OKLCH with a lifted, non-pure-black Dark Mode baseline */
+    /* ── theme-tokens:generated:begin — run `pnpm run sync:theme`, do not hand-edit ── */
+
+    /* ── Contrast scale — Neutral OKLCH with a lifted, non-pure-black Dark Mode baseline ── */
     --color-contrast-50: light-dark(oklch(99% 0.001 264deg), oklch(17% 0.001 250deg)); /* Canvas, page background */
     --color-contrast-100: light-dark(oklch(97% 0.001 264deg), oklch(21% 0.001 250deg)); /* Cards, elevated surfaces */
     --color-contrast-150: light-dark(
@@ -337,7 +365,7 @@
     --color-contrast-500: light-dark(
       oklch(49% 0.002 264deg),
       oklch(58% 0.001 250deg)
-    ); /* Tertiary text - AA compliant */
+    ); /* Tertiary text - AA large-text compliant */
 
     --color-contrast-600: light-dark(
       oklch(40% 0.002 264deg),
@@ -355,166 +383,336 @@
     --color-divider: color-mix(in oklch, var(--color-contrast-300) 85%, transparent);
     --color-contrast: color-mix(in oklch, var(--color-contrast-900) 85%, transparent);
 
-    /* Halo Shadows */
+    /* ── Shade ramp — shared derivation recipe for every color family below ──── */
+
+    /* Every family only authors a `base` (+ content/contrast ink pair); every  */
+
+    /* other sub-token is `oklch(from var(--color-x) ...)`, derived from that   */
+
+    /* single base using the deltas below. Tune a family by editing its base;   */
+
+    /* tune the ramp shape itself (e.g. how much lighter "-lighter" is) here,    */
+
+    /* once, for all 7 families at once. */
+    --shade-lighter-l: 0.3;
+    --shade-lighter-c: 0.35;
+    --shade-light-l: 0.14;
+    --shade-light-c: 0.8;
+    --shade-dark-l: -0.14;
+    --shade-darker-l: -0.26;
+    --shade-darker-c: 0.85;
+    --shade-darker-h: -12;
+    --shade-focus-l: 0.06;
+    --shade-border-alpha: 60%;
+    --shade-focus-ring-strength: 40%;
+    --shade-backdrop-l-light: 93%;
+    --shade-backdrop-l-dark: 24%;
+    --shade-backdrop-c-light: 0.3;
+    --shade-backdrop-c-dark: 0.5;
+    --shade-backdrop-alpha-light: 83%;
+    --shade-backdrop-alpha-dark: 50%;
+    --shade-halo-glow: 15%;
+    --shade-halo-glow-soft: 8%;
+
+    /* ── Halo shadows — branded glow per color family ───────────────────────── */
     --halo-shadow-neutral:
       inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(0 0 0 / 15%)),
       0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(0 0 0 / 20%)) inset,
-      0 var(--size-2) var(--size-6) light-dark(oklch(58% 0 264deg / 15%), oklch(72% 0 250deg / 15%)),
-      0 var(--size-1) var(--size-3) light-dark(oklch(58% 0 264deg / 8%), oklch(72% 0 250deg / 8%));
+      0 var(--size-2) var(--size-6) color-mix(in oklch, var(--color-neutral) var(--shade-halo-glow), transparent),
+      0 var(--size-1) var(--size-3) color-mix(in oklch, var(--color-neutral) var(--shade-halo-glow-soft), transparent);
     --halo-shadow-primary:
       inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 3%)),
       0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(255 255 255 / 12%)) inset,
-      0 var(--size-2) var(--size-6) color-mix(in oklch, var(--color-primary) 15%, transparent),
-      0 var(--size-1) var(--size-3) color-mix(in oklch, var(--color-primary) 8%, transparent);
+      0 var(--size-2) var(--size-6) color-mix(in oklch, var(--color-primary) var(--shade-halo-glow), transparent),
+      0 var(--size-1) var(--size-3) color-mix(in oklch, var(--color-primary) var(--shade-halo-glow-soft), transparent);
     --halo-shadow-secondary:
       inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 3%)),
       0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(255 255 255 / 12%)) inset,
-      0 var(--size-2) var(--size-6) color-mix(in oklch, var(--color-secondary) 12%, transparent),
-      0 var(--size-1) var(--size-3) color-mix(in oklch, var(--color-secondary) 7%, transparent);
+      0 var(--size-2) var(--size-6) color-mix(in oklch, var(--color-secondary) var(--shade-halo-glow), transparent),
+      0 var(--size-1) var(--size-3) color-mix(in oklch, var(--color-secondary) var(--shade-halo-glow-soft), transparent);
     --halo-shadow-info:
       inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 3%)),
       0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(255 255 255 / 12%)) inset,
-      0 var(--size-2) var(--size-6) light-dark(oklch(60% 0.18 230deg / 15%), oklch(74% 0.16 230deg / 15%)),
-      0 var(--size-1) var(--size-3) light-dark(oklch(60% 0.18 230deg / 8%), oklch(74% 0.16 230deg / 8%));
+      0 var(--size-2) var(--size-6) color-mix(in oklch, var(--color-info) var(--shade-halo-glow), transparent),
+      0 var(--size-1) var(--size-3) color-mix(in oklch, var(--color-info) var(--shade-halo-glow-soft), transparent);
     --halo-shadow-success:
       inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 3%)),
       0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(255 255 255 / 12%)) inset,
-      0 var(--size-2) var(--size-6) light-dark(oklch(62% 0.15 160deg / 15%), oklch(78% 0.14 160deg / 15%)),
-      0 var(--size-1) var(--size-3) light-dark(oklch(62% 0.15 160deg / 8%), oklch(78% 0.14 160deg / 8%));
+      0 var(--size-2) var(--size-6) color-mix(in oklch, var(--color-success) var(--shade-halo-glow), transparent),
+      0 var(--size-1) var(--size-3) color-mix(in oklch, var(--color-success) var(--shade-halo-glow-soft), transparent);
     --halo-shadow-warning:
       inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 3%)),
       0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(255 255 255 / 12%)) inset,
-      0 var(--size-2) var(--size-6) light-dark(oklch(74% 0.18 70deg / 15%), oklch(84% 0.16 70deg / 15%)),
-      0 var(--size-1) var(--size-3) light-dark(oklch(74% 0.18 70deg / 8%), oklch(84% 0.16 70deg / 8%));
+      0 var(--size-2) var(--size-6) color-mix(in oklch, var(--color-warning) var(--shade-halo-glow), transparent),
+      0 var(--size-1) var(--size-3) color-mix(in oklch, var(--color-warning) var(--shade-halo-glow-soft), transparent);
     --halo-shadow-error:
       inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 3%)),
       0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(255 255 255 / 12%)) inset,
-      0 var(--size-2) var(--size-6) light-dark(oklch(54% 0.2 29deg / 15%), oklch(66% 0.18 29deg / 15%)),
-      0 var(--size-1) var(--size-3) light-dark(oklch(54% 0.2 29deg / 8%), oklch(66% 0.18 29deg / 8%));
+      0 var(--size-2) var(--size-6) color-mix(in oklch, var(--color-error) var(--shade-halo-glow), transparent),
+      0 var(--size-1) var(--size-3) color-mix(in oklch, var(--color-error) var(--shade-halo-glow-soft), transparent);
 
-    /* ── Neutral ─────────────────────────────────────────────────────────────── */
-    --color-neutral: light-dark(oklch(56% 0 264deg), oklch(72% 0 250deg));
-    --color-neutral-backdrop: light-dark(oklch(97% 0 264deg / 83%), oklch(27% 0 250deg / 60%));
-    --color-neutral-content: light-dark(oklch(98% 0 264deg), oklch(15% 0 250deg));
-    --color-neutral-contrast: light-dark(oklch(99% 0 264deg), oklch(13% 0 250deg));
-    --color-neutral-focus: light-dark(oklch(62% 0 264deg), oklch(78% 0 250deg));
-    --color-neutral-border: light-dark(oklch(86% 0 264deg / 75%), oklch(72% 0 250deg / 40%));
+    /* ── Neutral — True gray — neutral UI surfaces ── */
+    --color-neutral: light-dark(oklch(52% 0 264deg), oklch(72% 0 250deg));
+    --color-neutral-backdrop: light-dark(
+      oklch(
+        from var(--color-neutral) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
+          var(--shade-backdrop-alpha-light)
+      ),
+      oklch(
+        from var(--color-neutral) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
+          var(--shade-backdrop-alpha-dark)
+      )
+    );
+    --color-neutral-content: light-dark(
+      oklch(from var(--color-neutral) 99% calc(c * 0) h),
+      oklch(from var(--color-neutral) 22% calc(c * 0) h)
+    );
+    --color-neutral-contrast: light-dark(
+      oklch(from var(--color-neutral) 99% calc(c * 0) h),
+      oklch(from var(--color-neutral) 13% calc(c * 0) h)
+    );
+    --color-neutral-lighter: oklch(
+      from var(--color-neutral) clamp(0, calc(l + var(--shade-lighter-l)), 1) calc(c * var(--shade-lighter-c)) h
+    );
+    --color-neutral-light: oklch(
+      from var(--color-neutral) clamp(0, calc(l + var(--shade-light-l)), 1) calc(c * var(--shade-light-c)) h
+    );
+    --color-neutral-dark: oklch(from var(--color-neutral) clamp(0, calc(l + var(--shade-dark-l)), 1) c h);
+    --color-neutral-darker: oklch(
+      from var(--color-neutral) clamp(0, calc(l + var(--shade-darker-l)), 1) calc(c * var(--shade-darker-c))
+        calc(h + var(--shade-darker-h))
+    );
+    --color-neutral-focus: oklch(from var(--color-neutral) clamp(0, calc(l + var(--shade-focus-l)), 1) c h);
+    --color-neutral-border: oklch(from var(--color-neutral) l c h / var(--shade-border-alpha));
     --color-neutral-focus-shadow:
-      0 0 0 4px color-mix(in oklch, var(--color-neutral) 40%, transparent), var(--shadow-sm);
+      0 0 0 4px color-mix(in oklch, var(--color-neutral) var(--shade-focus-ring-strength), transparent),
+      var(--shadow-sm);
 
-    /* ── Primary hue — the single knob that themes both primary and secondary ──── */
-
-    /* Override this one variable (e.g. 220deg for blue, 160deg for teal) to      */
-
-    /* shift the entire primary palette and have secondary auto-derive from it.   */
+    /* ── Primary — Periwinkle violet — primary brand color ── */
     --color-primary-hue: 293deg;
-
-    /* ── Primary (violet) ────────────────────────────────────────────────────── */
-    --color-primary: light-dark(
-      oklch(56% 0.22 var(--color-primary-hue)),
-      oklch(72% 0.2 var(--color-primary-hue))
-    ); /* Bright enough to read on dark canvas */
-
+    --color-primary: light-dark(oklch(56% 0.22 var(--color-primary-hue)), oklch(72% 0.148 var(--color-primary-hue)));
     --color-primary-backdrop: light-dark(
-      oklch(93% 0.04 var(--color-primary-hue)),
-      oklch(24% 0.1 var(--color-primary-hue) / 40%)
+      oklch(
+        from var(--color-primary) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
+          var(--shade-backdrop-alpha-light)
+      ),
+      oklch(
+        from var(--color-primary) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
+          var(--shade-backdrop-alpha-dark)
+      )
     );
     --color-primary-content: light-dark(
-      oklch(98% 0.01 var(--color-primary-hue)),
-      oklch(15% 0.08 var(--color-primary-hue))
-    ); /* Dark ink on bright dark-mode button */
-
+      oklch(from var(--color-primary) 97% calc(c * 0.05) h),
+      oklch(from var(--color-primary) 22% calc(c * 0.3) h)
+    );
     --color-primary-contrast: light-dark(
-      oklch(98% 0.01 var(--color-primary-hue)),
-      oklch(14% 0.06 var(--color-primary-hue))
+      oklch(from var(--color-primary) 98% calc(c * 0.045) h),
+      oklch(from var(--color-primary) 14% calc(c * 0.3) h)
     );
-    --color-primary-focus: light-dark(
-      oklch(62% 0.22 var(--color-primary-hue)),
-      oklch(78% 0.2 var(--color-primary-hue))
+    --color-primary-lighter: oklch(
+      from var(--color-primary) clamp(0, calc(l + var(--shade-lighter-l)), 1) calc(c * var(--shade-lighter-c)) h
     );
-    --color-primary-border: light-dark(
-      oklch(56% 0.22 var(--color-primary-hue) / 60%),
-      oklch(72% 0.2 var(--color-primary-hue) / 60%)
+    --color-primary-light: oklch(
+      from var(--color-primary) clamp(0, calc(l + var(--shade-light-l)), 1) calc(c * var(--shade-light-c)) h
     );
+    --color-primary-dark: oklch(from var(--color-primary) clamp(0, calc(l + var(--shade-dark-l)), 1) c h);
+    --color-primary-darker: oklch(
+      from var(--color-primary) clamp(0, calc(l + var(--shade-darker-l)), 1) calc(c * var(--shade-darker-c))
+        calc(h + var(--shade-darker-h))
+    );
+    --color-primary-focus: oklch(from var(--color-primary) clamp(0, calc(l + var(--shade-focus-l)), 1) c h);
+    --color-primary-border: oklch(from var(--color-primary) l c h / var(--shade-border-alpha));
     --color-primary-focus-shadow:
-      0 0 0 4px color-mix(in oklch, var(--color-primary) 40%, transparent), var(--shadow-sm);
+      0 0 0 4px color-mix(in oklch, var(--color-primary) var(--shade-focus-ring-strength), transparent),
+      var(--shadow-sm);
 
-    /* ── Secondary — auto-derived from --color-primary-hue ─────────────────────── */
-
-    /* Near-black (light) / near-white (dark) with a subtle tint of the primary    */
-
-    /* hue. Mixing 7 % of the primary chroma/hue into an achromatic near-black or  */
-
-    /* near-white base gives a visually grounded dark that breathes with the brand. */
+    /* ── Secondary — Ink/charcoal (light) · silver (dark) — auto-derived from --color-primary-hue ── */
     --color-secondary: light-dark(
-      color-mix(in oklch, oklch(20% 0 none) 93%, oklch(56% 0.22 var(--color-primary-hue))),
-      color-mix(in oklch, oklch(83% 0 none) 93%, oklch(72% 0.2 var(--color-primary-hue)))
+      color-mix(in oklch, oklch(20% 0 none) 86%, var(--color-primary)),
+      color-mix(in oklch, oklch(83% 0 none) 86%, var(--color-primary))
     );
     --color-secondary-backdrop: light-dark(
-      color-mix(in oklch, oklch(95% 0 none / 83%) 97%, oklch(56% 0.22 var(--color-primary-hue) / 83%)),
-      color-mix(in oklch, oklch(20% 0 none / 60%) 97%, oklch(72% 0.2 var(--color-primary-hue) / 60%))
+      oklch(
+        from var(--color-secondary) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
+          var(--shade-backdrop-alpha-light)
+      ),
+      oklch(
+        from var(--color-secondary) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
+          var(--shade-backdrop-alpha-dark)
+      )
     );
     --color-secondary-content: light-dark(
-      oklch(98% 0.002 var(--color-primary-hue)),
-      oklch(15% 0.003 var(--color-primary-hue))
+      oklch(from var(--color-secondary) 97% 0.0015 h),
+      oklch(from var(--color-secondary) 22% 0.002 h)
     );
     --color-secondary-contrast: light-dark(
-      oklch(98% 0.002 var(--color-primary-hue)),
-      oklch(13% 0.003 var(--color-primary-hue))
+      oklch(from var(--color-secondary) 98% 0.002 h),
+      oklch(from var(--color-secondary) 13% 0.003 h)
     );
-    --color-secondary-focus: light-dark(
-      color-mix(in oklch, oklch(28% 0 none) 93%, oklch(56% 0.22 var(--color-primary-hue))),
-      color-mix(in oklch, oklch(90% 0 none) 93%, oklch(72% 0.2 var(--color-primary-hue)))
+    --color-secondary-lighter: oklch(
+      from var(--color-secondary) clamp(0, calc(l + var(--shade-lighter-l)), 1) calc(c * var(--shade-lighter-c)) h
     );
-    --color-secondary-border: color-mix(in oklch, var(--color-secondary) 60%, transparent);
+    --color-secondary-light: oklch(
+      from var(--color-secondary) clamp(0, calc(l + var(--shade-light-l)), 1) calc(c * var(--shade-light-c)) h
+    );
+    --color-secondary-dark: oklch(from var(--color-secondary) clamp(0, calc(l + var(--shade-dark-l)), 1) c h);
+    --color-secondary-darker: oklch(
+      from var(--color-secondary) clamp(0, calc(l + var(--shade-darker-l)), 1) calc(c * var(--shade-darker-c))
+        calc(h + var(--shade-darker-h))
+    );
+    --color-secondary-focus: oklch(from var(--color-secondary) clamp(0, calc(l + var(--shade-focus-l)), 1) c h);
+    --color-secondary-border: oklch(from var(--color-secondary) l c h / var(--shade-border-alpha));
     --color-secondary-focus-shadow:
-      0 0 0 4px color-mix(in oklch, var(--color-secondary) 40%, transparent), var(--shadow-sm);
+      0 0 0 4px color-mix(in oklch, var(--color-secondary) var(--shade-focus-ring-strength), transparent),
+      var(--shadow-sm);
 
-    /* ── Info (cyan-blue) ────────────────────────────────────────────────────── */
-    --color-info: light-dark(oklch(60% 0.18 230deg), oklch(74% 0.16 230deg));
-    --color-info-backdrop: light-dark(oklch(92% 0.06 230deg / 83%), oklch(24% 0.08 230deg / 50%));
+    /* ── Info — Blue (light mode) · cyan-blue (dark mode) — informational messages ── */
+    --color-info: light-dark(oklch(54% 0.169 255deg), oklch(74% 0.133 230deg));
+    --color-info-backdrop: light-dark(
+      oklch(
+        from var(--color-info) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
+          var(--shade-backdrop-alpha-light)
+      ),
+      oklch(
+        from var(--color-info) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
+          var(--shade-backdrop-alpha-dark)
+      )
+    );
     --color-info-content: light-dark(
-      oklch(15% 0.08 230deg),
-      oklch(15% 0.08 230deg)
-    ); /* Base is bright in both modes, content stays dark */
+      oklch(from var(--color-info) 97% 0.0122 h),
+      oklch(from var(--color-info) 15% 0.024 h)
+    );
+    --color-info-contrast: light-dark(
+      oklch(from var(--color-info) 98% 0.0081 h),
+      oklch(from var(--color-info) 12% 0.019 h)
+    );
+    --color-info-lighter: oklch(
+      from var(--color-info) clamp(0, calc(l + var(--shade-lighter-l)), 1) calc(c * var(--shade-lighter-c)) h
+    );
+    --color-info-light: oklch(
+      from var(--color-info) clamp(0, calc(l + var(--shade-light-l)), 1) calc(c * var(--shade-light-c)) h
+    );
+    --color-info-dark: oklch(from var(--color-info) clamp(0, calc(l + var(--shade-dark-l)), 1) c h);
+    --color-info-darker: oklch(
+      from var(--color-info) clamp(0, calc(l + var(--shade-darker-l)), 1) calc(c * var(--shade-darker-c))
+        calc(h + var(--shade-darker-h))
+    );
+    --color-info-focus: oklch(from var(--color-info) clamp(0, calc(l + var(--shade-focus-l)), 1) c h);
+    --color-info-border: oklch(from var(--color-info) l c h / var(--shade-border-alpha));
+    --color-info-focus-shadow:
+      0 0 0 4px color-mix(in oklch, var(--color-info) var(--shade-focus-ring-strength), transparent), var(--shadow-sm);
 
-    --color-info-contrast: light-dark(oklch(97% 0.02 230deg), oklch(18% 0.06 230deg));
-    --color-info-focus: light-dark(oklch(66% 0.18 230deg), oklch(80% 0.16 230deg));
-    --color-info-border: light-dark(oklch(60% 0.18 230deg / 60%), oklch(74% 0.16 230deg / 60%));
-    --color-info-focus-shadow: 0 0 0 4px color-mix(in oklch, var(--color-info) 40%, transparent), var(--shadow-sm);
-
-    /* ── Success (teal-green) ────────────────────────────────────────────────── */
-    --color-success: light-dark(
-      oklch(62% 0.15 160deg),
-      oklch(78% 0.14 160deg)
-    ); /* Kept brighter than error for colorblindness */
-
-    --color-success-backdrop: light-dark(oklch(93% 0.04 160deg / 83%), oklch(22% 0.07 160deg / 50%));
-    --color-success-content: light-dark(oklch(15% 0.06 160deg), oklch(15% 0.06 160deg));
-    --color-success-contrast: light-dark(oklch(97% 0.02 160deg), oklch(17% 0.06 160deg));
-    --color-success-focus: light-dark(oklch(66% 0.15 160deg), oklch(84% 0.14 160deg));
-    --color-success-border: light-dark(oklch(62% 0.15 160deg / 60%), oklch(78% 0.14 160deg / 60%));
+    /* ── Success — Green (light mode) · teal (dark mode) — positive outcomes & confirmations ── */
+    --color-success: light-dark(oklch(53% 0.145 137deg), oklch(78% 0.14 160deg));
+    --color-success-backdrop: light-dark(
+      oklch(
+        from var(--color-success) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
+          var(--shade-backdrop-alpha-light)
+      ),
+      oklch(
+        from var(--color-success) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
+          var(--shade-backdrop-alpha-dark)
+      )
+    );
+    --color-success-content: light-dark(
+      oklch(from var(--color-success) 97% 0.0494 h),
+      oklch(from var(--color-success) 15% 0.027 h)
+    );
+    --color-success-contrast: light-dark(
+      oklch(from var(--color-success) 98% 0.0323 h),
+      oklch(from var(--color-success) 12% 0.022 h)
+    );
+    --color-success-lighter: oklch(
+      from var(--color-success) clamp(0, calc(l + var(--shade-lighter-l)), 1) calc(c * var(--shade-lighter-c)) h
+    );
+    --color-success-light: oklch(
+      from var(--color-success) clamp(0, calc(l + var(--shade-light-l)), 1) calc(c * var(--shade-light-c)) h
+    );
+    --color-success-dark: oklch(from var(--color-success) clamp(0, calc(l + var(--shade-dark-l)), 1) c h);
+    --color-success-darker: oklch(
+      from var(--color-success) clamp(0, calc(l + var(--shade-darker-l)), 1) calc(c * var(--shade-darker-c))
+        calc(h + var(--shade-darker-h))
+    );
+    --color-success-focus: oklch(from var(--color-success) clamp(0, calc(l + var(--shade-focus-l)), 1) c h);
+    --color-success-border: oklch(from var(--color-success) l c h / var(--shade-border-alpha));
     --color-success-focus-shadow:
-      0 0 0 4px color-mix(in oklch, var(--color-success) 40%, transparent), var(--shadow-sm);
+      0 0 0 4px color-mix(in oklch, var(--color-success) var(--shade-focus-ring-strength), transparent),
+      var(--shadow-sm);
 
-    /* ── Warning (amber) ─────────────────────────────────────────────────────── */
-    --color-warning: light-dark(oklch(74% 0.18 70deg), oklch(84% 0.16 70deg));
-    --color-warning-backdrop: light-dark(oklch(93% 0.07 70deg / 83%), oklch(26% 0.08 70deg / 50%));
-    --color-warning-content: light-dark(oklch(15% 0.08 70deg), oklch(15% 0.08 70deg));
-    --color-warning-contrast: light-dark(oklch(96% 0.03 70deg), oklch(22% 0.06 70deg));
-    --color-warning-focus: light-dark(oklch(79% 0.18 70deg), oklch(90% 0.16 70deg));
-    --color-warning-border: light-dark(oklch(74% 0.18 70deg / 60%), oklch(84% 0.16 70deg / 60%));
+    /* ── Warning — Amber — cautionary states & alerts ── */
+    --color-warning: light-dark(oklch(54% 0.111 70deg), oklch(84% 0.113 70deg));
+    --color-warning-backdrop: light-dark(
+      oklch(
+        from var(--color-warning) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
+          var(--shade-backdrop-alpha-light)
+      ),
+      oklch(
+        from var(--color-warning) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
+          var(--shade-backdrop-alpha-dark)
+      )
+    );
+    --color-warning-content: light-dark(
+      oklch(from var(--color-warning) 97% 0.0184 h),
+      oklch(from var(--color-warning) 15% 0.026 h)
+    );
+    --color-warning-contrast: light-dark(
+      oklch(from var(--color-warning) 98% 0.0122 h),
+      oklch(from var(--color-warning) 12% 0.021 h)
+    );
+    --color-warning-lighter: oklch(
+      from var(--color-warning) clamp(0, calc(l + var(--shade-lighter-l)), 1) calc(c * var(--shade-lighter-c)) h
+    );
+    --color-warning-light: oklch(
+      from var(--color-warning) clamp(0, calc(l + var(--shade-light-l)), 1) calc(c * var(--shade-light-c)) h
+    );
+    --color-warning-dark: oklch(from var(--color-warning) clamp(0, calc(l + var(--shade-dark-l)), 1) c h);
+    --color-warning-darker: oklch(
+      from var(--color-warning) clamp(0, calc(l + var(--shade-darker-l)), 1) calc(c * var(--shade-darker-c))
+        calc(h + var(--shade-darker-h))
+    );
+    --color-warning-focus: oklch(from var(--color-warning) clamp(0, calc(l + var(--shade-focus-l)), 1) c h);
+    --color-warning-border: oklch(from var(--color-warning) l c h / var(--shade-border-alpha));
     --color-warning-focus-shadow:
-      0 0 0 4px color-mix(in oklch, var(--color-warning) 40%, transparent), var(--shadow-sm);
+      0 0 0 4px color-mix(in oklch, var(--color-warning) var(--shade-focus-ring-strength), transparent),
+      var(--shadow-sm);
 
-    /* ── Error (red-orange) ──────────────────────────────────────────────────── */
-    --color-error: light-dark(oklch(54% 0.2 29deg), oklch(66% 0.18 29deg)); /* Deeper than success for colorblindness */
-    --color-error-backdrop: light-dark(oklch(92% 0.06 29deg / 83%), oklch(20% 0.08 29deg / 50%));
-    --color-error-content: light-dark(oklch(98% 0.03 29deg), oklch(15% 0.06 29deg));
-    --color-error-contrast: light-dark(oklch(97% 0.02 29deg), oklch(16% 0.06 29deg));
-    --color-error-focus: light-dark(oklch(60% 0.2 29deg), oklch(72% 0.18 29deg));
-    --color-error-border: light-dark(oklch(54% 0.2 29deg / 60%), oklch(66% 0.18 29deg / 60%));
-    --color-error-focus-shadow: 0 0 0 4px color-mix(in oklch, var(--color-error) 40%, transparent), var(--shadow-sm);
+    /* ── Error — Vermilion — destructive actions & errors ── */
+    --color-error: light-dark(oklch(54% 0.2 29deg), oklch(66% 0.18 29deg));
+    --color-error-backdrop: light-dark(
+      oklch(
+        from var(--color-error) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
+          var(--shade-backdrop-alpha-light)
+      ),
+      oklch(
+        from var(--color-error) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
+          var(--shade-backdrop-alpha-dark)
+      )
+    );
+    --color-error-content: light-dark(
+      oklch(from var(--color-error) 97% 0.0125 h),
+      oklch(from var(--color-error) 22% 0.077 h)
+    );
+    --color-error-contrast: light-dark(
+      oklch(from var(--color-error) 98% 0.0088 h),
+      oklch(from var(--color-error) 14% 0.052 h)
+    );
+    --color-error-lighter: oklch(
+      from var(--color-error) clamp(0, calc(l + var(--shade-lighter-l)), 1) calc(c * var(--shade-lighter-c)) h
+    );
+    --color-error-light: oklch(
+      from var(--color-error) clamp(0, calc(l + var(--shade-light-l)), 1) calc(c * var(--shade-light-c)) h
+    );
+    --color-error-dark: oklch(from var(--color-error) clamp(0, calc(l + var(--shade-dark-l)), 1) c h);
+    --color-error-darker: oklch(
+      from var(--color-error) clamp(0, calc(l + var(--shade-darker-l)), 1) calc(c * var(--shade-darker-c))
+        calc(h + var(--shade-darker-h))
+    );
+    --color-error-focus: oklch(from var(--color-error) clamp(0, calc(l + var(--shade-focus-l)), 1) c h);
+    --color-error-border: oklch(from var(--color-error) l c h / var(--shade-border-alpha));
+    --color-error-focus-shadow:
+      0 0 0 4px color-mix(in oklch, var(--color-error) var(--shade-focus-ring-strength), transparent), var(--shadow-sm);
+
+    /* ── theme-tokens:generated:end ── */
   }
 
   /* ========================================
@@ -541,12 +739,23 @@
     }
   }
 
-  /* VitePress dark theme: force dark color-scheme so light-dark() resolves to dark values */
+  /* Refine's dark-mode contract: toggle `classList.add/remove('dark')` on   */
+
+  /* `<html>`, nothing else. Forcing `color-scheme` here (rather than only    */
+
+  /* relying on `prefers-color-scheme`) is what makes every `light-dark()`   */
+
+  /* token in this file resolve to the right branch once `.dark` is present, */
+
+  /* overriding the OS preference. See docs/refine/theming.md "Toggle dark   */
+
+  /* mode" — any consumer, not just this repo's own docs site, can rely on   */
+
+  /* this class toggle. */
   html.dark {
     color-scheme: dark;
   }
 
-  /* VitePress light theme: force light color-scheme so light-dark() resolves to light values */
   html:not(.dark) {
     color-scheme: light;
   }

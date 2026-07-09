@@ -71,7 +71,7 @@ export const componentManifest = [
 
 export const componentNames = componentManifest.map(({ name }) => name);
 
-const packageJsonUrl = new URL('./package.json', import.meta.url);
+const packageJsonUrl = new URL('../package.json', import.meta.url);
 const processRef = globalThis.process;
 
 const staticExportKeys = new Set([
@@ -247,7 +247,7 @@ export function verifyComponentExports() {
 }
 
 function printUsageAndExit() {
-  processRef?.stderr.write('Usage: node ./refine-manifest.mjs <check-exports|sync-exports>\n');
+  processRef?.stderr.write('Usage: node ./scripts/refine-manifest.mjs <check-exports|sync-exports>\n');
 
   if (processRef) {
     processRef.exitCode = 1;

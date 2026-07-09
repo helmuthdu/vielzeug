@@ -136,7 +136,7 @@
     margin-block-start: var(--size-1);
     font-size: var(--text-xs);
     line-height: var(--leading-tight);
-    color: var(--color-contrast-500);
+    color: color-mix(in oklch, var(--color-contrast-500) 80%, var(--color-canvas));
   }
 
   .helper-text[role='alert'] {

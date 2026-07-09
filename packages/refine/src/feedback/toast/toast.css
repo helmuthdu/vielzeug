@@ -5,7 +5,7 @@
     --_inset-bottom: var(--toast-inset-bottom, 1rem);
     --_inset-right: var(--toast-inset-right, 1rem);
     --_inset-left: var(--toast-inset-left, auto);
-    --_z-index: var(--toast-z-index, 9999);
+    --_z-index: var(--toast-z-index, var(--z-toast));
     --_max-width: var(--toast-max-width, 400px);
     --_gap: var(--toast-gap, 0.5rem);
 

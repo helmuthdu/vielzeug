@@ -17,9 +17,9 @@ const brandGroups: ColorGroup[] = [
     name: 'Primary',
     swatches: [
       { label: 'Base', variable: '--color-primary', textVariable: '--color-primary-content' },
-      { label: 'Backdrop', variable: '--color-primary-backdrop', textVariable: '--color-primary-content' },
-      { label: 'Content', variable: '--color-primary-content' },
-      { label: 'Contrast', variable: '--color-primary-contrast' },
+      { label: 'Backdrop', variable: '--color-primary-backdrop' },
+      { label: 'Content', variable: '--color-primary-content', textVariable: '--color-primary' },
+      { label: 'Contrast', variable: '--color-primary-contrast', textVariable: '--color-primary' },
       { label: 'Focus', variable: '--color-primary-focus', textVariable: '--color-primary-content' },
       { label: 'Border', variable: '--color-primary-border' },
     ],
@@ -29,9 +29,9 @@ const brandGroups: ColorGroup[] = [
     name: 'Secondary',
     swatches: [
       { label: 'Base', variable: '--color-secondary', textVariable: '--color-secondary-content' },
-      { label: 'Backdrop', variable: '--color-secondary-backdrop', textVariable: '--color-secondary-content' },
-      { label: 'Content', variable: '--color-secondary-content' },
-      { label: 'Contrast', variable: '--color-secondary-contrast' },
+      { label: 'Backdrop', variable: '--color-secondary-backdrop' },
+      { label: 'Content', variable: '--color-secondary-content', textVariable: '--color-secondary' },
+      { label: 'Contrast', variable: '--color-secondary-contrast', textVariable: '--color-secondary' },
       { label: 'Focus', variable: '--color-secondary-focus', textVariable: '--color-secondary-content' },
       { label: 'Border', variable: '--color-secondary-border' },
     ],
@@ -41,14 +41,31 @@ const brandGroups: ColorGroup[] = [
     name: 'Neutral',
     swatches: [
       { label: 'Base', variable: '--color-neutral', textVariable: '--color-neutral-content' },
-      { label: 'Backdrop', variable: '--color-neutral-backdrop', textVariable: '--color-neutral-content' },
-      { label: 'Content', variable: '--color-neutral-content' },
-      { label: 'Contrast', variable: '--color-neutral-contrast' },
+      { label: 'Backdrop', variable: '--color-neutral-backdrop' },
+      { label: 'Content', variable: '--color-neutral-content', textVariable: '--color-neutral' },
+      { label: 'Contrast', variable: '--color-neutral-contrast', textVariable: '--color-neutral' },
       { label: 'Focus', variable: '--color-neutral-focus', textVariable: '--color-neutral-content' },
       { label: 'Border', variable: '--color-neutral-border' },
     ],
   },
 ];
+
+// Every family shares the same lighter/light/base/dark/darker derivation recipe
+// (see theme.css's --shade-* tokens) — this list mirrors COLOR_FAMILIES in
+// packages/refine/theme-tokens.mjs.
+const SHADE_FAMILIES = ['neutral', 'primary', 'secondary', 'info', 'success', 'warning', 'error'] as const;
+
+const shadeGroups: ColorGroup[] = SHADE_FAMILIES.map((name) => ({
+  description: `Shared OKLCH lighter→darker ramp, derived from --color-${name}`,
+  name: `${name[0].toUpperCase()}${name.slice(1)}`,
+  swatches: [
+    { label: 'Lighter', variable: `--color-${name}-lighter`, textVariable: `--color-${name}-content` },
+    { label: 'Light', variable: `--color-${name}-light`, textVariable: `--color-${name}-content` },
+    { label: 'Base', variable: `--color-${name}`, textVariable: `--color-${name}-content` },
+    { label: 'Dark', variable: `--color-${name}-dark`, textVariable: '--color-contrast-50' },
+    { label: 'Darker', variable: `--color-${name}-darker`, textVariable: '--color-contrast-50' },
+  ],
+}));
 
 const semanticGroups: ColorGroup[] = [
   {
@@ -56,9 +73,9 @@ const semanticGroups: ColorGroup[] = [
     name: 'Info',
     swatches: [
       { label: 'Base', variable: '--color-info', textVariable: '--color-info-content' },
-      { label: 'Backdrop', variable: '--color-info-backdrop', textVariable: '--color-info-content' },
-      { label: 'Content', variable: '--color-info-content' },
-      { label: 'Contrast', variable: '--color-info-contrast' },
+      { label: 'Backdrop', variable: '--color-info-backdrop' },
+      { label: 'Content', variable: '--color-info-content', textVariable: '--color-info' },
+      { label: 'Contrast', variable: '--color-info-contrast', textVariable: '--color-info' },
       { label: 'Focus', variable: '--color-info-focus', textVariable: '--color-info-content' },
       { label: 'Border', variable: '--color-info-border' },
     ],
@@ -68,9 +85,9 @@ const semanticGroups: ColorGroup[] = [
     name: 'Success',
     swatches: [
       { label: 'Base', variable: '--color-success', textVariable: '--color-success-content' },
-      { label: 'Backdrop', variable: '--color-success-backdrop', textVariable: '--color-success-content' },
-      { label: 'Content', variable: '--color-success-content' },
-      { label: 'Contrast', variable: '--color-success-contrast' },
+      { label: 'Backdrop', variable: '--color-success-backdrop' },
+      { label: 'Content', variable: '--color-success-content', textVariable: '--color-success' },
+      { label: 'Contrast', variable: '--color-success-contrast', textVariable: '--color-success' },
       { label: 'Focus', variable: '--color-success-focus', textVariable: '--color-success-content' },
       { label: 'Border', variable: '--color-success-border' },
     ],
@@ -80,9 +97,9 @@ const semanticGroups: ColorGroup[] = [
     name: 'Warning',
     swatches: [
       { label: 'Base', variable: '--color-warning', textVariable: '--color-warning-content' },
-      { label: 'Backdrop', variable: '--color-warning-backdrop', textVariable: '--color-warning-content' },
-      { label: 'Content', variable: '--color-warning-content' },
-      { label: 'Contrast', variable: '--color-warning-contrast' },
+      { label: 'Backdrop', variable: '--color-warning-backdrop' },
+      { label: 'Content', variable: '--color-warning-content', textVariable: '--color-warning' },
+      { label: 'Contrast', variable: '--color-warning-contrast', textVariable: '--color-warning' },
       { label: 'Focus', variable: '--color-warning-focus', textVariable: '--color-warning-content' },
       { label: 'Border', variable: '--color-warning-border' },
     ],
@@ -92,9 +109,9 @@ const semanticGroups: ColorGroup[] = [
     name: 'Error',
     swatches: [
       { label: 'Base', variable: '--color-error', textVariable: '--color-error-content' },
-      { label: 'Backdrop', variable: '--color-error-backdrop', textVariable: '--color-error-content' },
-      { label: 'Content', variable: '--color-error-content' },
-      { label: 'Contrast', variable: '--color-error-contrast' },
+      { label: 'Backdrop', variable: '--color-error-backdrop' },
+      { label: 'Content', variable: '--color-error-content', textVariable: '--color-error' },
+      { label: 'Contrast', variable: '--color-error-contrast', textVariable: '--color-error' },
       { label: 'Focus', variable: '--color-error-focus', textVariable: '--color-error-content' },
       { label: 'Border', variable: '--color-error-border' },
     ],
@@ -150,6 +167,30 @@ const contrastScale: ColorSwatch[] = [
             <span class="group-desc">{{ group.description }}</span>
           </div>
           <div class="swatch-row">
+            <div
+              v-for="swatch in group.swatches"
+              :key="swatch.variable"
+              class="swatch"
+              :style="{
+                background: `var(${swatch.variable})`,
+                color: swatch.textVariable ? `var(${swatch.textVariable})` : 'var(--color-contrast-900)',
+              }">
+              <span class="swatch-label">{{ swatch.label }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="palette-section">
+      <h3 class="section-title">Shade Colors</h3>
+      <div class="group-grid">
+        <div v-for="group in shadeGroups" :key="group.name" class="color-group">
+          <div class="group-header">
+            <span class="group-name">{{ group.name }}</span>
+            <span class="group-desc">{{ group.description }}</span>
+          </div>
+          <div class="shade-row">
             <div
               v-for="swatch in group.swatches"
               :key="swatch.variable"
@@ -247,6 +288,14 @@ const contrastScale: ColorSwatch[] = [
 .swatch-row {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--vp-c-divider);
+}
+
+.shade-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--vp-c-divider);

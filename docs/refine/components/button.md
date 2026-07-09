@@ -20,22 +20,6 @@ Seven variants cover the full range of visual emphasis.
 
 </ComponentPreview>
 
-The `frost` variant adds a backdrop blur with a subtle tinted overlay. It reads best when placed over a colorful background or image.
-
-<ComponentPreview center>
-
-```html
-<ore-button variant="frost">Default</ore-button>
-<ore-button variant="frost" color="primary">Primary</ore-button>
-<ore-button variant="frost" color="secondary">Secondary</ore-button>
-<ore-button variant="frost" color="info">Info</ore-button>
-<ore-button variant="frost" color="success">Success</ore-button>
-<ore-button variant="frost" color="warning">Warning</ore-button>
-<ore-button variant="frost" color="error">Error</ore-button>
-```
-
-</ComponentPreview>
-
 ## Colors
 
 Six semantic colors communicate intent.
@@ -110,7 +94,7 @@ Use `prefix` and `suffix` slots to add icons alongside text. For icon-only butto
   <ore-icon slot="prefix" name="arrow-left"></ore-icon>
   Back
 </ore-button>
-<ore-button variant="outline" color="success">
+<ore-button color="success">
   Save
   <ore-icon slot="suffix" name="save"></ore-icon>
 </ore-button>

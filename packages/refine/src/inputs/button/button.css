@@ -283,9 +283,10 @@
   }
 
   /* Hover depth — halo border effect matching ore-input focus style */
-  [part='button']:hover {
+  [part='button']:hover,
+  [part='button']:active {
     border-color: var(--_hover-border-color, var(--_theme-focus));
-    box-shadow: var(--_theme-shadow);
+    box-shadow: var(--_theme-shadow), var(--_theme-halo);
   }
 
   /* Ghost + Text variants: no border/shadow decoration on hover */
@@ -294,6 +295,15 @@
     border-color: transparent;
     box-shadow: none;
     transform: none;
+  }
+
+  /* ...nor on :active — stay borderless even though the shared rule above now
+     adds a halo to :active too (physical press transform below still applies,
+     this only cancels border-color/box-shadow). */
+  :host([variant='ghost']) [part='button']:active,
+  :host([variant='text']) [part='button']:active {
+    border-color: transparent;
+    box-shadow: none;
   }
 
   /* Physical press feedback */

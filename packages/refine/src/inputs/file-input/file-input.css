@@ -109,7 +109,7 @@
     padding-inline: 2px;
     font-size: var(--text-xs);
     line-height: var(--leading-tight);
-    color: var(--color-contrast-500);
+    color: color-mix(in oklch, var(--color-contrast-500) 80%, var(--color-canvas));
   }
 
   /* ========================================
@@ -292,7 +292,7 @@
        ======================================== */
 
   :host([drag-over]) .dropzone {
-    background: color-mix(in oklch, var(--_theme-base, var(--color-primary)) 8%, var(--color-canvas));
+    background: color-mix(in oklch, var(--_theme-base, var(--color-primary)) 8%, transparent);
     border-color: var(--_theme-focus, var(--color-primary));
     box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
   }
@@ -331,10 +331,12 @@
     --_border-color: var(--file-input-border-color, var(--color-contrast-300));
   }
 
-  /* Flat */
+  /* Flat — a near-invisible border, deliberately weaker than bordered's
+     70%-focus border (matches button.css's flat/bordered split) so the two
+     don't read as the same box at a glance. */
   :host([variant='flat']) {
     --_bg: var(--file-input-bg, var(--color-contrast-100));
-    --_border-color: var(--file-input-border-color, var(--_theme-border));
+    --_border-color: var(--file-input-border-color, color-mix(in oklch, var(--_theme-focus) 20%, transparent));
   }
 
   :host([variant='flat']) .dropzone:hover {

@@ -53,7 +53,7 @@ const {
               <ore-button
                 size="sm"
                 icon-only
-                :variant="viewportSize === 'mobile' ? 'solid' : 'bordered'"
+                :variant="viewportSize === 'mobile' ? 'solid' : 'flat'"
                 @click="setViewportSize('mobile')"
                 title="Mobile view (375px)">
                 <ore-icon name="smartphone"></ore-icon>
@@ -61,7 +61,7 @@ const {
               <ore-button
                 size="sm"
                 icon-only
-                :variant="viewportSize === 'tablet' ? 'solid' : 'bordered'"
+                :variant="viewportSize === 'tablet' ? 'solid' : 'flat'"
                 @click="setViewportSize('tablet')"
                 title="Tablet view (768px)">
                 <ore-icon name="tablet"></ore-icon>
@@ -69,7 +69,7 @@ const {
               <ore-button
                 size="sm"
                 icon-only
-                :variant="viewportSize === 'desktop' ? 'solid' : 'bordered'"
+                :variant="viewportSize === 'desktop' ? 'solid' : 'flat'"
                 @click="setViewportSize('desktop')"
                 title="Desktop view (1280px)">
                 <ore-icon name="monitor"></ore-icon>
@@ -78,7 +78,7 @@ const {
           </div>
           <!-- Copy code button -->
           <ore-button
-            variant="bordered"
+            variant="flat"
             size="sm"
             icon-only
             @click="copyCode"
@@ -88,7 +88,7 @@ const {
 
           <!-- LTR / RTL toggle button -->
           <ore-button
-            variant="bordered"
+            variant="flat"
             size="sm"
             icon-only
             @click="toggleDirection"

@@ -6,7 +6,7 @@ import { defineConfig, mergeConfig } from 'vite';
 
 import { getConfig } from '../../vite.config';
 // @ts-expect-error - .mjs files don't have type declarations in this context
-import { getRefineLibraryEntries } from './refine-manifest.mjs';
+import { getRefineLibraryEntries } from './scripts/refine-manifest.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const processEnv = (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } })

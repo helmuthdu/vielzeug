@@ -23,14 +23,14 @@ Read the [Usage Guide](./usage.md) first. This page covers customization only.
 }
 ```
 
-That single variable shifts every primary token (base, focus, backdrop, border…) and simultaneously derives the `secondary` family as a near-black / near-white tone with a matching hue tint. No other overrides are needed for a full rebrand.
+That single variable shifts every primary token (base, focus, backdrop, border, lighter, light, dark, darker…) and simultaneously derives the `secondary` family as a near-black / near-white tone with a matching hue tint. No other overrides are needed for a full rebrand.
 
-Need finer control? Override individual sub-tokens after setting the hue:
+Need finer control? Override `--color-primary` itself after setting the hue — every other primary sub-token is computed *from* `--color-primary` with OKLCH relative color syntax (`oklch(from var(--color-primary) ...)`), so one override cascades everywhere it's used:
 
 ```css
 :root {
   --color-primary-hue: 220deg;
-  /* Optional — adjust lightness/chroma only for the primary base */
+  /* Overriding the base is usually enough — focus/border/backdrop/lighter/light/dark/darker all derive from it */
   --color-primary: light-dark(oklch(52% 0.2 var(--color-primary-hue)), oklch(65% 0.18 var(--color-primary-hue)));
 }
 ```
@@ -67,17 +67,21 @@ If you need to scope overrides to a subtree, put them on a class instead of `:ro
 
 ## Semantic Colors
 
-Each semantic color ships with **7 coordinated sub-tokens**. Always define all seven together — a partial override leaves some states using the wrong base color.
+Each semantic color ships with **one authored base plus 10 derived sub-tokens** — 11 total. Only `--color-{name}` (and, for `content`/`contrast`, two small ink pairs) is ever hand-authored; every other sub-token is computed *from the base* with [OKLCH relative color syntax](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Colors/Using_relative_colors) (`oklch(from var(--color-{name}) ...)`). Override the base and the rest follows automatically — see [Overriding the Neutral Palette](#overriding-the-neutral-palette) below for a concrete example.
 
-| Sub-token                       | Purpose                                                        |
-| ------------------------------- | -------------------------------------------------------------- |
-| `--color-{name}`                | Base interactive color (buttons, links, highlights)            |
-| `--color-{name}-focus`          | Hover and active state                                         |
-| `--color-{name}-backdrop`       | Tinted surface behind a colored element                        |
-| `--color-{name}-content`        | Foreground text or icon on the base color                      |
-| `--color-{name}-contrast`       | High-contrast inverse surface                                  |
-| `--color-{name}-border`         | Border at reduced opacity                                      |
-| `--color-{name}-focus-shadow`   | Focus ring `box-shadow`                                        |
+| Sub-token                     | Purpose                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------ |
+| `--color-{name}`               | Base interactive color (buttons, links, highlights) — the only hand-authored value |
+| `--color-{name}-lighter`       | Tint step, brighter than base — decorative fills, subtle badges                |
+| `--color-{name}-light`         | Tint step, moderately brighter than base                                      |
+| `--color-{name}-dark`          | Shade step, moderately darker than base                                       |
+| `--color-{name}-darker`        | Shade step, darker than base, hue nudged slightly cooler                       |
+| `--color-{name}-focus`         | Hover and active state                                                        |
+| `--color-{name}-backdrop`      | Tinted surface behind a colored element                                        |
+| `--color-{name}-content`       | Foreground text/icon on a translucent or tinted fill of `--color-{name}` (e.g. the frost variant) |
+| `--color-{name}-contrast`      | Foreground text/icon on a fully opaque fill of `--color-{name}` (solid buttons, badges, chips, hover/active states) |
+| `--color-{name}-border`        | Border at reduced opacity                                                      |
+| `--color-{name}-focus-shadow`  | Focus ring `box-shadow`                                                       |
 
 Available families: **neutral**, **primary**, **secondary**, **info**, **success**, **warning**, **error**.
 
@@ -85,18 +89,27 @@ Available families: **neutral**, **primary**, **secondary**, **info**, **success
 `secondary` tokens are computed from `--color-primary-hue` — you never need to define them manually. Changing `--color-primary-hue` updates both the primary and secondary families at once. Override individual `--color-secondary-*` tokens only when you need the secondary color to diverge from the primary hue.
 :::
 
+::: tip Retuning the ramp itself
+`lighter`/`light`/`dark`/`darker` share one derivation recipe (lightness/chroma deltas, defined as `--shade-*` custom properties) across all 7 families. Override e.g. `--shade-lighter-l` once to make every family's "lighter" step lighter — you don't need to touch each family individually.
+:::
+
 ### Overriding the Neutral Palette
 
-Uncolored components (buttons, inputs, chips without a `color` attribute) use the neutral family. Override it via the `--refine-color-neutral-*` surface:
+Uncolored components (buttons, inputs, chips without a `color` attribute) use the neutral family. Because every other neutral sub-token derives from `--color-neutral`, overriding the base is usually all you need:
 
 ```css
 :root {
-  --refine-color-neutral: light-dark(oklch(50% 0.01 240deg), oklch(68% 0.01 240deg));
-  --refine-color-neutral-focus: light-dark(oklch(56% 0.01 240deg), oklch(74% 0.01 240deg));
-  --refine-color-neutral-backdrop: light-dark(oklch(95% 0.005 240deg / 83%), oklch(25% 0.005 240deg / 60%));
-  --refine-color-neutral-border: light-dark(oklch(84% 0.006 240deg / 75%), oklch(28% 0.006 240deg / 75%));
-  --refine-color-neutral-content: light-dark(oklch(40% 0.01 240deg), oklch(80% 0.01 240deg));
-  --refine-color-neutral-contrast: light-dark(oklch(99% 0 240deg), oklch(13% 0 240deg));
+  --color-neutral: light-dark(oklch(50% 0.01 240deg), oklch(68% 0.01 240deg));
+}
+```
+
+`--color-neutral-focus`, `-backdrop`, `-border`, `-lighter`, `-light`, `-dark`, and `-darker` all recompute from that one value. Override `--color-neutral-content`/`-contrast` too only if the default ink stops reading clearly against your new base:
+
+```css
+:root {
+  --color-neutral: light-dark(oklch(50% 0.01 240deg), oklch(68% 0.01 240deg));
+  --color-neutral-content: light-dark(oklch(98% 0.01 240deg), oklch(15% 0.01 240deg));
+  --color-neutral-contrast: light-dark(oklch(99% 0.01 240deg), oklch(13% 0.01 240deg));
 }
 ```
 
@@ -113,7 +126,7 @@ html.dark       { color-scheme: dark; }
 html:not(.dark) { color-scheme: light; }
 ```
 
-Toggle the `.dark` class to switch modes. VitePress handles this automatically — no extra configuration needed when building docs.
+This is Refine's own dark-mode contract — not specific to any particular framework or app shell. Toggle `.dark` on `<html>` from any app (VitePress does this automatically for these docs) and every `light-dark()` token in the package resolves accordingly. Refine deliberately doesn't couple this behavior to a specific delivery mechanism (a router, a state library, a meta-framework convention) — a plain class toggle keeps it usable anywhere.
 
 ### Keeping Overrides Mode-Aware
 
@@ -285,6 +298,30 @@ color: var(--text-color-body);
 color: var(--color-contrast-800);
 ```
 
+### Z-Index Scale
+
+One shared, monotonic stacking scale for an entire page — sticky headers, dropdowns, overlays, modals, popovers, tooltips, toasts. Reach for these instead of ad-hoc `z-index` literals in app code, the same way you'd reach for `--size-*` instead of a random `margin` value:
+
+| Token           | Value | Use                                    |
+| --------------- | ----- | --------------------------------------- |
+| `--z-base`      | 0     | Default stacking, no explicit layer     |
+| `--z-sticky`    | 40    | Sticky headers/sidebars within the flow |
+| `--z-dropdown`  | 100   | Inline dropdowns (select, combobox)     |
+| `--z-fixed`     | 300   | Fixed-position chrome                   |
+| `--z-overlay`   | 500   | Backdrop behind a dialog/drawer         |
+| `--z-modal`     | 600   | Dialogs, drawers                        |
+| `--z-popover`   | 1000  | Floating menus, popovers                |
+| `--z-tooltip`   | 1100  | Tooltips — always above popovers        |
+| `--z-toast`     | 9999  | Toasts — always on top                  |
+
+```css
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+```
+
 ### Typography
 
 **Body scale (`--text-*`):**
@@ -412,6 +449,7 @@ transition: color var(--transition-fast), background var(--transition-fast);
 | **Container Sizes**        | `--size-{2xs–7xl}`                          | Named width breakpoints (256px → 1280px)            |
 | **Special Sizes**          | `--size-{full,fit,min,max,auto,none,prose}` | Keyword size utilities                             |
 | **Viewport & Breakpoints** | `--size-screen-*`                           | Viewport units + breakpoint values                 |
+| **Z-Index Scale**          | `--z-*`                                     | Shared page-wide stacking scale (sticky → toast)   |
 | **Aspect Ratios**          | `--aspect-*`                                | Common aspect ratios (square, video, wide…)        |
 | **3D Perspective**         | `--perspective-*`                           | Transform perspective distances                    |
 | **Grid Templates**         | `--grid-{1–12}`                             | CSS Grid column repeat helpers                     |
@@ -425,10 +463,20 @@ transition: color var(--transition-fast), background var(--transition-fast);
 | **Text Shadows**           | `--text-shadow-*`                           | Typographic text shadows                           |
 | **Halo Shadows**           | `--halo-shadow-*`                           | Branded glow per semantic color                    |
 | **Font Families**          | `--font-{sans,serif,mono}`                  | System font stacks                                 |
-| **Semantic Colors**        | `--color-{name}-*`                          | 7 sub-tokens per semantic color family             |
+| **Semantic Colors**        | `--color-{name}-*`                          | 1 authored base + 10 derived sub-tokens per family |
+| **Shade Ramp**              | `--shade-*`                                 | Shared lighter/light/dark/darker derivation recipe |
 | **Contrast Scale**         | `--color-contrast-{50–900}`                 | 11-step light/dark adaptive palette                |
 | **Section Spacing**        | `--section-spacing`                         | Default block section gap (2rem)                   |
 
 ::: details View theme.css
 <<< @/../packages/refine/src/styles/theme.css
 :::
+
+### Token Architecture (for contributors)
+
+The color section of `theme.css` (contrast scale, the 7 semantic families, halo shadows) is **generated**, not hand-typed — see `packages/refine/scripts/theme-tokens.mjs`. Each family authors one `base` color (plus two small ink pairs for `content`/`contrast`); every other sub-token — `backdrop`, `lighter`, `light`, `dark`, `darker`, `focus`, `border`, `focus-shadow`, `halo-shadow` — is mechanically derived from that base with OKLCH relative color syntax. This is why overriding just `--color-{name}` (as shown throughout this page) is enough for most rebrands: the derived tokens read the override live, at the CSS level, with no rebuild.
+
+Two rules keep this maintainable and stay out of your way as a consumer:
+
+- **Tokens are delivery-mechanism-agnostic.** The `.dark` class toggle (see [Dark Mode](#dark-mode)) is Refine's own contract, not tied to VitePress, a router, or any specific app shell — theme tokens never assume a particular framework is present.
+- **The generated block is verified, not trusted.** `pnpm --filter @vielzeug/refine run check:theme` fails the build if `theme.css`'s generated block and `theme-tokens.mjs` drift apart, the same guarantee `check:manifest` gives the package's export map.

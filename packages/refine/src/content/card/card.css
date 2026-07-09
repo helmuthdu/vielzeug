@@ -125,7 +125,6 @@
 
   /* Flat — tinted backdrop, subtle border */
   :host([variant='flat']) {
-    --_bg: var(--card-bg, var(--_theme-backdrop));
     --_border-color: var(--card-border-color, color-mix(in oklch, var(--_theme-border) 50%, transparent));
   }
 

@@ -78,7 +78,7 @@
   /* Flat */
   :host([variant='flat']) {
     --_cell-bg: var(--otp-cell-bg, var(--color-contrast-100));
-    --_cell-border-color: var(--otp-cell-border-color, var(--_theme-border, var(--color-contrast-200)));
+    --_cell-border-color: var(--otp-cell-border-color, color-mix(in oklch, var(--_cell-focus-border) 20%, transparent));
   }
 
   :host([variant='flat']) .cell {

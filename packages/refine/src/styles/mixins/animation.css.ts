@@ -58,7 +58,13 @@ export function registerShineProperty() {
  * Animated rainbow border with glow effect.
  * Perfect for highlighting call-to-action elements or special features.
  *
- * @param selector - CSS selector for the element (e.g., 'button', '.box')
+ * @param selector - CSS selector for the element carrying the border, matched
+ *   against the component's actual shadow DOM markup — a bare word like
+ *   'button' is a TYPE selector (matches a literal `<button>` tag), not a
+ *   part/class selector. Use the selector that actually matches your root
+ *   element, e.g. `'.box'` for a `<div class="box">`, or `'[part="button"]'`
+ *   for a `<span part="button">`/`<a part="button">` (ore-button's actual
+ *   markup — it never renders a `<button>` tag).
  * @returns CSSResult with rainbow border animation
  *
  * @example
@@ -66,7 +72,7 @@ export function registerShineProperty() {
  * import { rainbowEffectMixin } from '../../styles/effects/rainbow.css';
  *
  * return {
- *   styles: [rainbowEffectMixin('button'), componentStyles],
+ *   styles: [rainbowEffectMixin('[part="button"]'), componentStyles],
  *   template: html`...`
  * };
  * ```
@@ -157,12 +163,14 @@ export const rainbowEffectMixin = (selector: string) => {
  * configuration needed. Falls back to the neutral theme when no color
  * is set.
  *
- * @param selector - CSS selector for the inner element (e.g., 'button', '.box')
+ * @param selector - CSS selector for the inner element, matched against the
+ *   component's actual shadow DOM markup — see rainbowEffectMixin's
+ *   `selector` doc above for why a bare word like 'button' is usually wrong.
  * @returns CSSResult with shine border animation
  *
  * @example
  * ```ts
- * styles: [shineEffectMixin('button'), componentStyles]
+ * styles: [shineEffectMixin('[part="button"]'), componentStyles]
  * ```
  */
 export const shineEffectMixin = (selector: string) => {
@@ -207,9 +215,6 @@ export const shineEffectMixin = (selector: string) => {
       mask:
         conic-gradient(red 0 0) no-clip subtract,
         conic-gradient(red 0 0) padding-box;
-
-      /* Use the theme's own focus-shadow — color-aware, well-tuned, no artifacts */
-      box-shadow: var(--_theme-shadow);
 
       pointer-events: none;
       animation: shine-rotate 2.5s linear infinite;

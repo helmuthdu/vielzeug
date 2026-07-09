@@ -7,7 +7,12 @@ import { css } from '@vielzeug/ore';
  * Provides consistent frosted glass effect with backdrop blur,
  * theme-aware colors, halo shadows, and elevation support.
  *
- * @param selector - CSS selector for the element (e.g., 'button', '.card', '.field')
+ * @param selector - CSS selector for the element, matched against the
+ *   component's actual shadow DOM markup (e.g., '.card', '.field') — a bare
+ *   word like 'button' is a TYPE selector for a literal `<button>` tag, not
+ *   a part/class selector. Use `'[part="button"]'` for components whose root
+ *   is a `<span part="button">`/`<a part="button">` (e.g. ore-button, which
+ *   never renders a `<button>` tag).
  * @returns CSSResult with complete frost variant implementation
  *
  * @example
@@ -15,7 +20,7 @@ import { css } from '@vielzeug/ore';
  * import { frostVariantMixin } from '../../styles/mixins/frost.css';
  *
  * return {
- *   styles: [frostVariantMixin('button'), componentStyles],
+ *   styles: [frostVariantMixin('[part="button"]'), componentStyles],
  *   template: html`...`
  * };
  * ```

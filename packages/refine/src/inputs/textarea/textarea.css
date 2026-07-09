@@ -20,7 +20,7 @@
   .textarea-wrapper {
     display: flex;
     flex-direction: column;
-    gap: var(--size-1-5);
+    gap: var(--size-1);
     min-width: 0; /* Allow shrinking below content size */
   }
 
@@ -94,7 +94,7 @@
     padding-inline: 2px;
     font-size: var(--text-xs);
     line-height: var(--leading-tight);
-    color: var(--color-contrast-500);
+    color: color-mix(in oklch, var(--color-contrast-500) 80%, var(--color-canvas));
   }
 
   /* ========================================
@@ -203,7 +203,7 @@
   /* Flat */
   :host([variant='flat']) {
     --_bg: var(--textarea-bg, var(--color-contrast-100));
-    --_border-color: var(--textarea-border-color, var(--_theme-border));
+    --_border-color: var(--textarea-border-color, color-mix(in oklch, var(--_theme-focus) 20%, transparent));
   }
 
   :host([variant='flat']) .field {

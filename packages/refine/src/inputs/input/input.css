@@ -116,7 +116,7 @@
     margin-top: var(--size-1-5);
     font-size: var(--text-xs);
     line-height: var(--leading-tight);
-    color: var(--color-contrast-500);
+    color: color-mix(in oklch, var(--color-contrast-500) 80%, var(--color-canvas));
     overflow-wrap: anywhere;
   }
 
@@ -330,7 +330,7 @@
   /* Flat */
   :host([variant='flat']) {
     --_bg: var(--input-bg, var(--color-contrast-100));
-    --_border-color: var(--input-border-color, var(--_theme-border));
+    --_border-color: var(--input-border-color, color-mix(in oklch, var(--_theme-focus) 20%, transparent));
   }
 
   :host([variant='flat']) .field {

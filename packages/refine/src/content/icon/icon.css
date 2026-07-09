@@ -1,6 +1,8 @@
 @layer refine.base {
   :host {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
     line-height: 0;
     vertical-align: middle;
     color: inherit;
