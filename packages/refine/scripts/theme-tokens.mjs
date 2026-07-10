@@ -75,18 +75,25 @@ import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// `prettier`/`stylelint` aren't devDependencies of this package — lint/format
-// tooling is deliberately root-only in this monorepo (see other packages'
-// devDeps). Node's module resolution walks up to the workspace root's
-// node_modules and finds them there, same as every other package implicitly
-// shares it.
-import * as prettier from 'prettier';
-
-const require = createRequire(import.meta.url);
 const processRef = globalThis.process;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const THEME_CSS_PATH = join(__dirname, '../src/styles/theme.css');
+
+// `prettier`/`stylelint` aren't devDependencies of this package — lint/format
+// tooling is deliberately root-only in this monorepo (see other packages'
+// devDeps). A `createRequire(import.meta.url)` anchor resolves relative to
+// *this file's own location*, walking up through however many directories
+// it happens to live under to find the workspace root's node_modules — CI's
+// Rush-managed install doesn't hoist these into every intermediate
+// ancestor's node_modules the way a flat/hoisted install would, so that walk
+// can fail to find them depending on this file's depth (this is exactly
+// what broke moving the script one directory deeper, from the package root
+// into `scripts/`). Anchoring at the workspace root's package.json instead
+// is depth-independent — it resolves the same regardless of where this file
+// itself lives, now or after any future move.
+const require = createRequire(join(__dirname, '../../../package.json'));
+const prettier = require('prettier');
 
 const GENERATED_BEGIN = '  /* ── theme-tokens:generated:begin — run `pnpm run sync:theme`, do not hand-edit ── */';
 const GENERATED_END = '  /* ── theme-tokens:generated:end ── */';
