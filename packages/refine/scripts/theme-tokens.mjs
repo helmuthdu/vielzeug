@@ -80,19 +80,23 @@ const processRef = globalThis.process;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const THEME_CSS_PATH = join(__dirname, '../src/styles/theme.css');
 
-// `prettier`/`stylelint` aren't devDependencies of this package — lint/format
-// tooling is deliberately root-only in this monorepo (see other packages'
-// devDeps). A `createRequire(import.meta.url)` anchor resolves relative to
-// *this file's own location*, walking up through however many directories
-// it happens to live under to find the workspace root's node_modules — CI's
-// Rush-managed install doesn't hoist these into every intermediate
-// ancestor's node_modules the way a flat/hoisted install would, so that walk
-// can fail to find them depending on this file's depth (this is exactly
-// what broke moving the script one directory deeper, from the package root
-// into `scripts/`). Anchoring at the workspace root's package.json instead
-// is depth-independent — it resolves the same regardless of where this file
-// itself lives, now or after any future move.
-const require = createRequire(join(__dirname, '../../../package.json'));
+// `prettier`/`stylelint` are real devDependencies of *this* package
+// (packages/refine/package.json) specifically so this script can `require()`
+// them reliably — Rush provisions each project's own declared dependencies
+// into its own node_modules regardless of whether the git-repo-root's own
+// `pnpm install` has run. That distinction matters here: CI's "rush rebuild"
+// job runs with `root-install: false` (see .github/workflows/ci.yml) — the
+// git-repo-root's node_modules is never populated in that job at all. This
+// script used to assume `prettier`/`stylelint` would be reachable by walking
+// up node_modules ancestors to the repo root (relying on a *separate*,
+// root-only `pnpm install` most other lint/format tooling in this monorepo
+// intentionally depends on instead of duplicating itself into every
+// package) — that assumption doesn't hold for this specific script, since
+// it's `require()`d as part of `build` (via `check:theme`), which the
+// rush-rebuild-only CI job exercises without ever running that root
+// install. Anchoring at *this package's own* package.json sidesteps the
+// question entirely: Rush guarantees these are installed here regardless.
+const require = createRequire(join(__dirname, '../package.json'));
 const prettier = require('prettier');
 
 const GENERATED_BEGIN = '  /* ── theme-tokens:generated:begin — run `pnpm run sync:theme`, do not hand-edit ── */';
