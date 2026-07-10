@@ -57,7 +57,7 @@
     "@vielzeug/courier": "workspace:*",
     "@vielzeug/herald": "workspace:*",
     "@vielzeug/pulse": "workspace:*",
-    "typescript": "~6.0.3",
+    "typescript": "^6.0.3",
     "vite": "^8.1.3",
     "vitest": "^4.1.10"
   }
