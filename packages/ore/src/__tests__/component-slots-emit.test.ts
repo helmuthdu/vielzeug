@@ -119,6 +119,28 @@ describe('component slots and emit', () => {
     expect(event.composed).toBe(false);
   });
 
+  it('emit() returns false when a listener calls preventDefault(), true otherwise', async () => {
+    const results: boolean[] = [];
+    let cancelNext = false;
+
+    const { element } = await mount((_props) => {
+      const emit = useEmit<{ send: { value: string } }>();
+
+      return html`<button @click=${() => results.push(emit('send', { value: 'hi' }))}>Emit</button>`;
+    });
+
+    element.addEventListener('send', (e) => {
+      if (cancelNext) e.preventDefault();
+    });
+
+    (element.shadowRoot!.querySelector('button') as HTMLButtonElement).click();
+    expect(results).toEqual([true]);
+
+    cancelNext = true;
+    (element.shadowRoot!.querySelector('button') as HTMLButtonElement).click();
+    expect(results).toEqual([true, false]);
+  });
+
   it('infers emit and prop signals from schema + prop.* helpers', async () => {
     const tag = uniqueTag('test-schema-events');
     const toggleProps = {

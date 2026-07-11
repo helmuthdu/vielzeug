@@ -27,8 +27,9 @@ All symbols below (except `useField`/`createFormContext`, under `@vielzeug/ore/f
 | `onCleanup(fn)`        | Register teardown                                     | Setup only     | Called on component disconnect                                            |
 | `onEvent(target, …)`   | Scoped event listener with auto-cleanup               | Setup only     | No-ops on null target; removed on disconnect                              |
 | `useField(options)`    | Wire signal to form `ElementInternals`                | Setup only     | Requires `formAssociated: true` on the component definition; `@vielzeug/ore/forms` |
+| `onFormReset(fn)`      | Run work when the ancestor `<form>` resets            | Setup only     | Fires every reset (not one-shot); only for `formAssociated: true` components |
 | `aria(target, config)` | Reactively sync ARIA attributes to any element        | Setup only     | Static values applied once; getter functions tracked as effects; auto-cleanup on disconnect |
-| `useEmit<Emits>()`     | Typed `emit()` bound to the current host              | Setup only     | Call once per component; the `Emits` generic maps event → payload type    |
+| `useEmit<Emits>()`     | Typed `emit()` bound to the current host              | Setup only     | Call once per component; returns `dispatchEvent`'s boolean (`false` if a listener called `preventDefault()`) |
 | `useSlots<SlotNames>()`| Reactive slot presence/element signals                | Setup only     | Safe to call more than once — the underlying registry is created once    |
 | `getHost()`            | The current component's host element                 | Setup only     | Prefer a higher-level helper (`bind`, `aria`, …) when one exists          |
 
@@ -70,6 +71,9 @@ define('my-card', {
     const slots = useSlots<'header' | 'footer'>();
 
     onMounted(() => console.log('mounted'));
+
+    // emit() returns dispatchEvent's boolean — false if a listener called preventDefault()
+    const notCancelled = emit('close');
 
     return html`${when(slots.has('header'), () => html`<slot name="header"></slot>`)}`;
   },
@@ -309,7 +313,12 @@ type FormFieldOptions<T> = {
    * @default false
    */
   emptyStringForNull?: boolean;
+  /** Called when the ancestor <form> resets (see onFormReset) — restore local field state here. */
+  onReset?: () => void;
   toFormValue?: (value: T) => File | FormData | string | null;
+  /** Recomputed reactively and passed straight to internals.setValidity(). null = always valid. */
+  validationMessage?: Readable<string>;
+  validity?: Readable<ValidityStateFlags | null>;
   value: Signal<T> | Readable<T>;
 };
 
@@ -320,6 +329,18 @@ type FormFieldHandle = {
   setCustomValidity(message: string): void;
   setValidity: ElementInternals['setValidity'];
 };
+```
+
+Pass `validity`/`validationMessage` to make `required`-style constraints participate in native constraint validation (`checkValidity()`/`reportValidity()`, and `<ore-form>`'s submit blocking):
+
+```ts
+const isBlank = (v: string) => v.trim() === '';
+
+useField({
+  validationMessage: computed(() => (required.value && isBlank(value.value) ? 'This field is required.' : '')),
+  validity: computed(() => (required.value && isBlank(value.value) ? { valueMissing: true } : null)),
+  value,
+});
 ```
 
 ### Form Context
@@ -359,7 +380,9 @@ Import from `@vielzeug/ore/testing`.
 | ------------------------ | ------------------------------------------------------------------------------------------ |
 | `mount(setup, options?)` | Mount a component and return a test fixture                                                |
 | `cleanup()`              | Remove all mounted elements and reset test state                                           |
-| `install(afterEach)`     | Register auto-cleanup; pass `afterEach` from your test framework                           |
+| `install(afterEach)`     | Register auto-cleanup and the `ElementInternals`/`FormData`/`<form>.reset()` jsdom polyfill (see below); pass `afterEach` from your test framework |
+| `installFormInternalsPolyfill()` | Called automatically by `install()`. Call directly only if you need the polyfill without auto-cleanup |
+| `walkFlatTree(root, visit)` | Walks the flat tree (expanding `<slot>` via `assignedElements()`) — for finding slotted content across a shadow boundary that `querySelectorAll()` can't cross |
 | `flush(options?)`        | Drain reactive updates and animation frames                                                |
 | `FLUSH_DEEP`             | Pre-built options for deep async chains (`maxTurns: 12`)                                   |
 | `mock(tag, template?)`   | Register a no-op stub custom element                                                       |
@@ -371,6 +394,8 @@ Import from `@vielzeug/ore/testing`.
 | `within(element)`        | Scoped query helpers (`query`, `queryAll`, …)                                              |
 
 > **Test isolation:** `cleanup()` resets mounted elements, `live()` signal tracking, and the raw HTML sanitizer. Call it in `afterEach` to prevent state leaking between tests.
+
+> **Form-associated component testing:** jsdom implements none of the `ElementInternals` form-association API — `install()` polyfills `setFormValue`/`setValidity`/`checkValidity`/`reportValidity`/`validationMessage`/`states`, mixes `checkValidity`/`reportValidity`/`validity`/`validationMessage` onto the host element itself (real browsers do this for any `formAssociated: true` element), makes `FormData` collect a form-associated element's set value, and makes `<form>.reset()` invoke `formResetCallback()`. Every patch is a guarded no-op when its target already exists, so it's safe to call `install()` even in a suite with no form-associated components — and safe for a downstream package (e.g. a component library built on `ore`) to rely on instead of hand-rolling its own copy.
 
 #### `Fixture` interface
 
@@ -459,6 +484,7 @@ declare function onEvent(
   listener: EventListener,
   options?: AddEventListenerOptions,
 ): void;
+declare function onFormReset(fn: () => void): void; // Runs on every ancestor <form> reset; formAssociated only
 declare function watchEffect(fn: EffectCallback): () => void; // Scoped reactive effect; auto-cleaned on disconnect
 declare function bind(config: HostBindConfig, options?: BindOptions): () => void; // Bindings for host or any target element
 declare function aria(target: Element, config: AriaConfig): () => void; // Reactive ARIA attr sync; auto-cleanup on disconnect

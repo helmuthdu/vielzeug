@@ -2,7 +2,7 @@ import { type Readable, type Signal } from '@vielzeug/ripple';
 
 import { warn } from '../_dev';
 import { OreApiError, ORE_ERRORS } from '../errors';
-import { getHost, onCleanup, watchEffect } from '../runtime';
+import { getHost, onCleanup, onFormReset, watchEffect } from '../runtime';
 
 /** @internal */
 const internalsRegistry = new WeakMap<HTMLElement, ElementInternals>();
@@ -25,7 +25,24 @@ export type FormFieldOptions<T = unknown> = {
    * @default false
    */
   emptyStringForNull?: boolean;
+  /**
+   * Called when the ancestor `<form>` is reset (see `onFormReset`). Use to restore
+   * whatever local state backs `value` — `useField` itself owns no field state to reset.
+   */
+  onReset?: () => void;
   toFormValue?: (value: T) => File | FormData | string | null;
+  /**
+   * Recomputed reactively and passed straight to `internals.setValidity()` — `null`
+   * (or omitting `validity` entirely) means always valid. Pair with `validationMessage`.
+   *
+   * @example
+   * ```ts
+   * validity: computed(() => (required.value && isBlank(value.value)) ? { valueMissing: true } : null),
+   * validationMessage: computed(() => (required.value && isBlank(value.value)) ? 'Required.' : ''),
+   * ```
+   */
+  validationMessage?: Readable<string>;
+  validity?: Readable<ValidityStateFlags | null>;
   value: Signal<T> | Readable<T>;
 };
 
@@ -84,6 +101,33 @@ export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHa
       });
     }
   }
+
+  if (options.validity) {
+    watchEffect(() => {
+      const flags = options.validity?.value ?? {};
+      // Per spec, ElementInternals.setValidity() throws if any flag is true and message is
+      // empty — a caller-supplied `validity` with no matching `validationMessage` would crash
+      // this effect in a real browser. Fail safe with a generic message instead of propagating
+      // that crash, and say so loudly in dev so the real fix (pass validationMessage) gets made.
+      const hasFlag = Object.values(flags).some(Boolean);
+      const message = options.validationMessage?.value ?? '';
+
+      if (hasFlag && !message) {
+        warn(
+          'useField(): `validity` has a truthy flag but `validationMessage` is empty — internals.setValidity() ' +
+            'requires a non-empty message whenever any flag is true. Falling back to a generic message; pass ' +
+            '`validationMessage` to customize it.',
+        );
+        internals.setValidity(flags, 'Invalid value.');
+
+        return;
+      }
+
+      internals.setValidity(flags, message);
+    });
+  }
+
+  if (options.onReset) onFormReset(options.onReset);
 
   const checkValidity = () => internals.checkValidity();
   const reportValidity = () => internals.reportValidity();

@@ -5,7 +5,13 @@ import type { ComponentDefinition } from './component-types';
 import { warn } from './_dev';
 import { type OreErrorPhase, OreLifecycleError, reportRuntimeError } from './errors';
 import { createProps, getPropMeta, type InferProps, type PropInputDefs, type PropsDef } from './props';
-import { type OnMountedCallback, onCleanup, type RuntimeContext, runWithContext } from './runtime';
+import {
+  type OnFormResetCallback,
+  type OnMountedCallback,
+  onCleanup,
+  type RuntimeContext,
+  runWithContext,
+} from './runtime';
 import { ComponentPhase, LIFECYCLE_EVENTS } from './types';
 import { type HTMLResult } from './types/bindings';
 import { loadStylesheet } from './utils/css';
@@ -13,6 +19,8 @@ import { loadStylesheet } from './utils/css';
 // ─── Internal component state ─────────────────────────────────────────────────
 
 type ComponentState = {
+  /** Registered via `onFormReset()` — persists across mount callbacks, unlike `mountCallbacks`. */
+  formResetCallbacks: OnFormResetCallback[];
   /** Incremented on every disconnect — guards both mount callbacks and async setup results. */
   generation: number;
   mountCallbacks: OnMountedCallback[];
@@ -22,6 +30,7 @@ type ComponentState = {
 };
 
 const createComponentState = (): ComponentState => ({
+  formResetCallbacks: [],
   generation: 0,
   mountCallbacks: [],
   phase: ComponentPhase.UNINITIALIZED,
@@ -107,10 +116,26 @@ export class BaseElement extends HTMLElement {
     this.dispatchEvent(new CustomEvent(LIFECYCLE_EVENTS.DISCONNECT, { bubbles: false, composed: false }));
     this._component.scope.dispose();
     // Reset mutable fields for next connect, keeping the same object for stable references
+    this._component.formResetCallbacks = [];
     this._component.mountCallbacks = [];
     this._component.phase = ComponentPhase.UNINITIALIZED;
     this._component.scope = _scope();
     this._component.templateResult = null;
+  }
+
+  /**
+   * Native form-association lifecycle callback — the browser calls this on every
+   * `formAssociated: true` element inside a `<form>` when that form is reset.
+   * Runs every `onFormReset()` callback registered during `setup()`.
+   */
+  formResetCallback(): void {
+    for (const callback of this._component.formResetCallbacks) {
+      try {
+        callback();
+      } catch (error) {
+        this._handleSetupError(error, 'form-reset');
+      }
+    }
   }
 
   private _handleSetupError(error: unknown, phase: OreErrorPhase = 'setup'): HTMLResult | void {
@@ -138,7 +163,7 @@ export class BaseElement extends HTMLElement {
 
     const def = (this.constructor as typeof BaseElement)._definition;
     const normalizedPropDefs = (this.constructor as typeof BaseElement)._normalizedPropDefs;
-    const ctx: RuntimeContext = { element: this, mountCallbacks: [] };
+    const ctx: RuntimeContext = { element: this, formResetCallbacks: [], mountCallbacks: [] };
 
     try {
       let setupResult: HTMLResult | null | Promise<HTMLResult | null> | undefined;
@@ -153,6 +178,7 @@ export class BaseElement extends HTMLElement {
         });
       });
       this._component.mountCallbacks.push(...ctx.mountCallbacks);
+      this._component.formResetCallbacks.push(...ctx.formResetCallbacks);
 
       if (setupResult != null && typeof (setupResult as Promise<HTMLResult | null>).then === 'function') {
         // Async setup: show loading template immediately, swap when resolved.
@@ -287,7 +313,11 @@ export class BaseElement extends HTMLElement {
 
       for (const callback of batch) {
         try {
-          const nestedCtx = { element: this, mountCallbacks: [] as typeof this._component.mountCallbacks };
+          const nestedCtx = {
+            element: this,
+            formResetCallbacks: [] as typeof this._component.formResetCallbacks,
+            mountCallbacks: [] as typeof this._component.mountCallbacks,
+          };
 
           this._component.scope.run(() => {
             runWithContext(nestedCtx, () => {
@@ -299,6 +329,10 @@ export class BaseElement extends HTMLElement {
 
           if (nestedCtx.mountCallbacks.length > 0) {
             this._component.mountCallbacks.push(...nestedCtx.mountCallbacks);
+          }
+
+          if (nestedCtx.formResetCallbacks.length > 0) {
+            this._component.formResetCallbacks.push(...nestedCtx.formResetCallbacks);
           }
         } catch (error) {
           this._handleSetupError(error, 'mounted');

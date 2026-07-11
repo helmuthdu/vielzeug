@@ -10,11 +10,11 @@ type KeysWithoutDetail<T extends Record<string, unknown>> = {
 }[keyof T];
 
 type StrictEmitFn<T extends Record<string, unknown>> = {
-  <K extends KeysWithoutDetail<T>>(event: K): void;
-  <K extends Exclude<keyof T, KeysWithoutDetail<T>>>(event: K, detail: T[K]): void;
+  <K extends KeysWithoutDetail<T>>(event: K): boolean;
+  <K extends Exclude<keyof T, KeysWithoutDetail<T>>>(event: K, detail: T[K]): boolean;
 };
 
-type LooseEmitFn = (event: string, detail?: unknown) => void;
+type LooseEmitFn = (event: string, detail?: unknown) => boolean;
 
 export type EmitFn<T extends Record<string, unknown>> = StrictEmitFn<T> & LooseEmitFn;
 
@@ -25,6 +25,11 @@ const DEFAULT_FIRE_OPTIONS = { bubbles: true, cancelable: true, composed: false 
  * Call once during `setup()` — the `Emits` type parameter maps event names to
  * their `detail` payload type.
  *
+ * Every event is dispatched `cancelable: true`, and `emit()` returns `dispatchEvent`'s
+ * own boolean result — `false` when a listener called `preventDefault()`. Components
+ * that need to know whether a listener cancelled an event (e.g. to skip a default
+ * action) read this return value directly instead of hand-rolling `dispatchEvent`.
+ *
  * @example
  * ```ts
  * type Events = { close: undefined; change: { value: string } };
@@ -32,7 +37,9 @@ const DEFAULT_FIRE_OPTIONS = { bubbles: true, cancelable: true, composed: false 
  * setup(props) {
  *   const emit = useEmit<Events>();
  *   emit('close');
- *   emit('change', { value: 'ok' });
+ *
+ *   const notCancelled = emit('change', { value: 'ok' });
+ *   if (notCancelled) props.value.value = 'ok';
  * }
  * ```
  */
@@ -42,6 +49,6 @@ export const useEmit = <T extends Record<string, unknown> = Record<string, never
   return ((event: keyof T, ...rest: unknown[]) => {
     const customEventInit = rest.length > 0 ? { ...DEFAULT_FIRE_OPTIONS, detail: rest[0] } : DEFAULT_FIRE_OPTIONS;
 
-    host.dispatchEvent(new CustomEvent<unknown>(String(event), customEventInit));
+    return host.dispatchEvent(new CustomEvent<unknown>(String(event), customEventInit));
   }) as EmitFn<T>;
 };

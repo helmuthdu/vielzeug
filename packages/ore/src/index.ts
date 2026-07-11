@@ -27,7 +27,17 @@ export {
 } from './host-bind';
 
 // Lifecycle hooks — plain functions, called during setup() or a composable it invokes.
-export { getHost, onCleanup, onElement, onEvent, onMounted, type OnMountedCallback, watchEffect } from './runtime';
+export {
+  getHost,
+  onCleanup,
+  onElement,
+  onEvent,
+  onFormReset,
+  type OnFormResetCallback,
+  onMounted,
+  type OnMountedCallback,
+  watchEffect,
+} from './runtime';
 
 export { useEmit, type EmitFn } from './utils/emit';
 

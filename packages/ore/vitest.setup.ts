@@ -83,42 +83,7 @@ if (typeof window.matchMedia !== 'function') {
   );
 }
 
-// Polyfill ElementInternals methods for JSDOM
-if (typeof ElementInternals !== 'undefined') {
-  if (!('setFormValue' in ElementInternals.prototype)) {
-    Object.defineProperty(ElementInternals.prototype, 'setFormValue', {
-      configurable: true,
-      value: () => {},
-      writable: true,
-    });
-  }
-
-  if (!('setValidity' in ElementInternals.prototype)) {
-    Object.defineProperty(ElementInternals.prototype, 'setValidity', {
-      configurable: true,
-      value: () => {},
-      writable: true,
-    });
-  }
-
-  if (!('reportValidity' in ElementInternals.prototype)) {
-    Object.defineProperty(ElementInternals.prototype, 'reportValidity', {
-      configurable: true,
-      value: () => true,
-      writable: true,
-    });
-  }
-
-  if (!('states' in ElementInternals.prototype)) {
-    Object.defineProperty(ElementInternals.prototype, 'states', {
-      configurable: true,
-      get: function () {
-        if (!this._states) {
-          this._states = new Set();
-        }
-
-        return this._states;
-      },
-    });
-  }
-}
+// ElementInternals/FormData/`<form>.reset()` jsdom gaps (setValidity, checkValidity, the
+// checkValidity/reportValidity host mixin, FormData collection, formResetCallback dispatch) are
+// polyfilled by `install()` above, via `installFormInternalsPolyfill()` — see that function's
+// doc comment for why this lives in `@vielzeug/ore/testing` rather than here.

@@ -38,8 +38,9 @@ export class OreInternalError extends OreError {
  * - `'setup'` — synchronous setup() threw
  * - `'async-setup'` — async setup() promise rejected
  * - `'mounted'` — an onMounted callback threw
+ * - `'form-reset'` — an onFormReset callback threw
  */
-export type OreErrorPhase = 'async-setup' | 'mounted' | 'setup';
+export type OreErrorPhase = 'async-setup' | 'form-reset' | 'mounted' | 'setup';
 
 /**
  * Structured error thrown by the Ore runtime when component setup fails.

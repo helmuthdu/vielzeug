@@ -26,9 +26,11 @@ import { listen as listenInternal } from './utils/dom';
 // eliminating two parallel globals that were always set together.
 
 export type OnMountedCallback = () => CleanupFn | void;
+export type OnFormResetCallback = () => void;
 
 export type RuntimeContext = {
   element: HTMLElement;
+  formResetCallbacks: OnFormResetCallback[];
   mountCallbacks: OnMountedCallback[];
 };
 
@@ -88,6 +90,16 @@ export const onCleanup = _onCleanup;
  */
 export const onMounted = (fn: OnMountedCallback): void => {
   requireSetupContext('onMounted').mountCallbacks.push(fn);
+};
+
+/**
+ * Register work to run when the ancestor `<form>` is reset (native `formResetCallback`,
+ * only fires for `formAssociated: true` components). Multiple callbacks run in
+ * registration order, every time the form resets — unlike `onMounted`, this isn't a
+ * one-shot hook.
+ */
+export const onFormReset = (fn: OnFormResetCallback): void => {
+  requireSetupContext('onFormReset').formResetCallbacks.push(fn);
 };
 
 /**

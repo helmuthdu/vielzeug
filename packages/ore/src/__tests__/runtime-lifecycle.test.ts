@@ -4,7 +4,18 @@
 
 import { signal } from '@vielzeug/ripple';
 
-import { createContext, html, ref, inject, onCleanup, onElement, onEvent, onMounted, provide } from '../index';
+import {
+  createContext,
+  html,
+  ref,
+  inject,
+  onCleanup,
+  onElement,
+  onEvent,
+  onFormReset,
+  onMounted,
+  provide,
+} from '../index';
 import { mount } from '../testing';
 
 describe('runtime lifecycle: onMounted', () => {
@@ -211,6 +222,58 @@ describe('onElement()', () => {
     });
 
     expect(cleanupSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('onFormReset()', () => {
+  it('runs every registered callback, in order, each time the ancestor form resets', async () => {
+    const form = document.createElement('form');
+
+    document.body.appendChild(form);
+
+    const calls: number[] = [];
+
+    const fixture = await mount(
+      () => {
+        onFormReset(() => calls.push(1));
+        onFormReset(() => calls.push(2));
+
+        return html`<div></div>`;
+      },
+      { componentOptions: { formAssociated: true }, container: form },
+    );
+
+    form.reset();
+    expect(calls).toEqual([1, 2]);
+
+    form.reset();
+    expect(calls).toEqual([1, 2, 1, 2]);
+
+    fixture.dispose();
+    form.remove();
+  });
+
+  it('does not fire after the component has disconnected', async () => {
+    const form = document.createElement('form');
+
+    document.body.appendChild(form);
+
+    const spy = vi.fn();
+
+    const fixture = await mount(
+      () => {
+        onFormReset(spy);
+
+        return html`<div></div>`;
+      },
+      { componentOptions: { formAssociated: true }, container: form },
+    );
+
+    fixture.dispose();
+    form.reset();
+
+    expect(spy).not.toHaveBeenCalled();
+    form.remove();
   });
 });
 

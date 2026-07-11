@@ -7,10 +7,13 @@
  * For tree-shaking, import directly from the focused sub-modules.
  */
 
+import { installFormInternalsPolyfill } from './form-internals-polyfill';
 import { cleanup } from './mount';
 
 export { fire, createPointerEvent } from './events';
 export { FLUSH_DEEP, flush, type FlushOptions } from './flush';
+export { walkFlatTree } from './dom';
+export { installFormInternalsPolyfill } from './form-internals-polyfill';
 export { user } from './interactions';
 export { cleanup, mock, mount, mountComponent, type Fixture, type MountOptions, type MountSetup } from './mount';
 export { within, type QueryScope } from './query';
@@ -18,7 +21,11 @@ export { waitFor, waitForEvent, type WaitOptions } from './wait';
 export { renderHook, type HookFixture } from './render-hook';
 
 /**
- * Register auto-cleanup after each test. Call once in your test setup file.
+ * Register auto-cleanup after each test, and polyfill the jsdom/happy-dom gaps in
+ * `ElementInternals`/`FormData`/`<form>.reset()` that `useField()` needs (see
+ * `installFormInternalsPolyfill` — safe to call even in a suite with no form-associated
+ * components; every patch it installs is a guarded no-op when its target is missing).
+ * Call once in your test setup file.
  *
  * @example
  * // vitest.setup.ts
@@ -28,4 +35,5 @@ export { renderHook, type HookFixture } from './render-hook';
  */
 export function install(afterEachHook: (fn: () => void) => void): void {
   afterEachHook(cleanup);
+  installFormInternalsPolyfill();
 }

@@ -1,4 +1,4 @@
-import { signal } from '@vielzeug/ripple';
+import { computed, signal } from '@vielzeug/ripple';
 
 import { type FormController, createFormContext, FORM_CONTEXT_KEY, useField } from '../forms';
 import { html, inject, provide } from '../index';
@@ -348,6 +348,79 @@ describe('component form integration', () => {
           { componentOptions: { formAssociated: true } },
         ),
       ).rejects.toThrow(/useField\(\) was already called/);
+    });
+
+    it('validity: checkValidity()/reportValidity() reflect the current validity signal', async () => {
+      let handle!: ReturnType<typeof useField>;
+      const required = signal(true);
+      const value = signal('');
+      const isBlank = () => value.value.trim() === '';
+
+      await mount(
+        () => {
+          handle = useField({
+            validationMessage: computed(() => (required.value && isBlank() ? 'Required.' : '')),
+            validity: computed(() => (required.value && isBlank() ? { valueMissing: true } : null)),
+            value,
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      expect(handle.checkValidity()).toBe(false);
+      expect(handle.reportValidity()).toBe(false);
+      expect(handle.internals.validationMessage).toBe('Required.');
+
+      // Reactive: filling in the value clears the validity signal without re-calling useField().
+      value.value = 'hi';
+      expect(handle.checkValidity()).toBe(true);
+      expect(handle.internals.validationMessage).toBe('');
+
+      // Reactive the other way too: blanking it out again while required re-fails it.
+      value.value = '';
+      required.value = false;
+      expect(handle.checkValidity()).toBe(true);
+    });
+
+    it('validity: omitting the option (or passing null) means always valid', async () => {
+      let handle!: ReturnType<typeof useField>;
+
+      await mount(
+        () => {
+          handle = useField({ value: signal('') });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      expect(handle.checkValidity()).toBe(true);
+    });
+
+    it('onReset: fires when the ancestor <form> resets', async () => {
+      const form = document.createElement('form');
+
+      document.body.appendChild(form);
+
+      const onReset = vi.fn();
+
+      const fixture = await mount(
+        () => {
+          useField({ onReset, value: signal('initial') });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true }, container: form },
+      );
+
+      form.reset();
+
+      expect(onReset).toHaveBeenCalledOnce();
+
+      fixture.dispose();
+      form.remove();
     });
   });
 });

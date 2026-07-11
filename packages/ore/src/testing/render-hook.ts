@@ -66,7 +66,8 @@ export async function renderHook<D extends PropInputDefs, T>(
   document.body.appendChild(hostEl);
 
   const mountCallbacks: Array<() => void | (() => void)> = [];
-  const ctx = { element: hostEl, mountCallbacks };
+  const formResetCallbacks: Array<() => void> = [];
+  const ctx = { element: hostEl, formResetCallbacks, mountCallbacks };
 
   let result!: T;
 
