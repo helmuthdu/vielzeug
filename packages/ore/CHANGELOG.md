@@ -1,6 +1,14 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Wed, 08 Jul 2026 09:22:31 GMT and should not be manually modified.
+This log was last generated on Sat, 11 Jul 2026 19:22:05 GMT and should not be manually modified.
+
+## 1.2.0
+Sat, 11 Jul 2026 19:22:05 GMT
+
+### Minor changes
+
+- feat: useEmit()'s emit() now returns dispatchEvent()'s boolean result (false when a listener calls preventDefault()), instead of void; add onFormReset() lifecycle hook and useField() validity/validationMessage/onReset options wired to ElementInternals.setValidity() for native constraint-validation support in form-associated components
+- feat(testing): @vielzeug/ore/testing gains installFormInternalsPolyfill()/walkFlatTree() -- ElementInternals/FormData/form.reset() jsdom polyfills for form-associated components, wired automatically into install()
 
 ## 1.1.0
 Wed, 08 Jul 2026 09:22:31 GMT

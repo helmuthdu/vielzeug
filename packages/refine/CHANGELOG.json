@@ -2,6 +2,37 @@
   "name": "@vielzeug/refine",
   "entries": [
     {
+      "version": "1.4.0",
+      "tag": "@vielzeug/refine_v1.4.0",
+      "date": "Sat, 11 Jul 2026 19:22:05 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat: add ore-message-composer -- an auto-resizing chat/comment composer built directly on ore-textarea's headless primitives (createTextField, createAutoResize), with send-shortcut handling, IME-safe composition, and clear-and-refocus on send",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "23faa33f3489a636e04af90afff5bfd50e0dd4cf"
+          },
+          {
+            "comment": "feat: required now participates in real constraint validation (checkValidity/reportValidity/<ore-form> submit blocking) for ore-select, ore-radio-group, ore-checkbox-group, ore-combobox, and ore-checkbox, matching ore-input/ore-textarea; readonly fields are correctly exempt from required validation across the text-field family",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "23faa33f3489a636e04af90afff5bfd50e0dd4cf"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "fix: ore-message-composer -- flat/ghost variants no longer render identically at rest (flat now matches ore-textarea's filled/inset-shadow recipe), field no longer collapses to near-zero height before the first keystroke (auto-resize scrollHeight read deferred a frame, with a min-height floor as a backstop), and a cancelled send (preventDefault()) no longer refocuses the field",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "23faa33f3489a636e04af90afff5bfd50e0dd4cf"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ore\" to `1.2.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.3.1",
       "tag": "@vielzeug/refine_v1.3.1",
       "date": "Thu, 09 Jul 2026 15:05:53 GMT",

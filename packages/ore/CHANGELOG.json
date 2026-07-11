@@ -2,6 +2,25 @@
   "name": "@vielzeug/ore",
   "entries": [
     {
+      "version": "1.2.0",
+      "tag": "@vielzeug/ore_v1.2.0",
+      "date": "Sat, 11 Jul 2026 19:22:05 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat: useEmit()'s emit() now returns dispatchEvent()'s boolean result (false when a listener calls preventDefault()), instead of void; add onFormReset() lifecycle hook and useField() validity/validationMessage/onReset options wired to ElementInternals.setValidity() for native constraint-validation support in form-associated components",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "b2d185f5e7257eabe688ddf09a8577eae8ba9641"
+          },
+          {
+            "comment": "feat(testing): @vielzeug/ore/testing gains installFormInternalsPolyfill()/walkFlatTree() -- ElementInternals/FormData/form.reset() jsdom polyfills for form-associated components, wired automatically into install()",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "b2d185f5e7257eabe688ddf09a8577eae8ba9641"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.0",
       "tag": "@vielzeug/ore_v1.1.0",
       "date": "Wed, 08 Jul 2026 09:22:31 GMT",

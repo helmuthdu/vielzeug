@@ -1,6 +1,18 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Thu, 09 Jul 2026 15:05:53 GMT and should not be manually modified.
+This log was last generated on Sat, 11 Jul 2026 19:22:05 GMT and should not be manually modified.
+
+## 1.4.0
+Sat, 11 Jul 2026 19:22:05 GMT
+
+### Minor changes
+
+- feat: add ore-message-composer -- an auto-resizing chat/comment composer built directly on ore-textarea's headless primitives (createTextField, createAutoResize), with send-shortcut handling, IME-safe composition, and clear-and-refocus on send
+- feat: required now participates in real constraint validation (checkValidity/reportValidity/<ore-form> submit blocking) for ore-select, ore-radio-group, ore-checkbox-group, ore-combobox, and ore-checkbox, matching ore-input/ore-textarea; readonly fields are correctly exempt from required validation across the text-field family
+
+### Patches
+
+- fix: ore-message-composer -- flat/ghost variants no longer render identically at rest (flat now matches ore-textarea's filled/inset-shadow recipe), field no longer collapses to near-zero height before the first keystroke (auto-resize scrollHeight read deferred a frame, with a min-height floor as a backstop), and a cancelled send (preventDefault()) no longer refocuses the field
 
 ## 1.3.1
 Thu, 09 Jul 2026 15:05:53 GMT
