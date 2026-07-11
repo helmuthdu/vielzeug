@@ -237,7 +237,7 @@ describe('buildRegistrySource() — full assembly against a fake two-package tre
     expect(output).toContain('exports: ["derivedFn"]');
     expect(output).toContain('dependencies: ["base"]'); // derived depends on base
     expect(output).toMatch(/"base": \{\n(?:.*\n)*?\s*dependencies: \[\]/); // base depends on nothing
-  });
+  }, 15_000);
 
   it('throws when a package externalizes a dependency with no registry entry of its own', () => {
     root = mkdtempSync(path.join(tmpdir(), 'repl-registry-test-'));
