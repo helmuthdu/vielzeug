@@ -2,6 +2,8 @@
 
 A searchable, keyboard-driven list of commands presented in a centered modal — the "⌘K" pattern popularized by editors and productivity apps. Built on the native `<dialog>` element for focus trapping, top-layer stacking, and `Escape`-to-close, and on [`@vielzeug/keymap`](/keymap/) for the global shortcut that opens it from anywhere on the page.
 
+This is a centered, global modal — not an anchored, inline dropdown. For a Slack/Notion-style `/`-triggered menu that pops up under the caret inside a [`ore-message-composer`](./message-composer.md), reach for [`ore-combobox`](./combobox.md) or [`ore-menu`](./menu.md) instead; keep `ore-command-palette` for a single, page-wide "jump to action" shortcut.
+
 ## Basic Usage
 
 Declare commands with `ore-command-palette-item` elements in the default slot. Each item needs a `value`; the visible label falls back to the element's text content when `label` is omitted.

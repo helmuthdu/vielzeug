@@ -168,13 +168,104 @@ describe('createCheckable', () => {
     });
   });
 
-  describe('getFormField / triggerValidation()', () => {
-    it('calls reportValidity on the field when validateOn matches', () => {
-      const validateOn = signal<'change' | undefined>('change');
-      const reportValidity = vi.fn();
-      const { options } = makeOptions({ getFormField: () => ({ reportValidity }), validateOn });
+  describe('required / validity', () => {
+    it('fails validity while required and unchecked; passes once checked', () => {
+      const required = signal(true);
+      const checked = signal(false);
+      const { options } = makeOptions({ checked, required });
       const ctrl = createCheckable(options);
 
+      expect(ctrl.validity.value).toEqual({ valueMissing: true });
+      expect(ctrl.validationMessage.value).toBe('This field is required.');
+
+      checked.value = true;
+      expect(ctrl.validity.value).toBeNull();
+      expect(ctrl.validationMessage.value).toBe('');
+    });
+
+    it('treats indeterminate as unchecked for validity purposes', () => {
+      const { options } = makeOptions({
+        checked: signal(true),
+        indeterminate: signal(true),
+        required: signal(true),
+      });
+      const ctrl = createCheckable(options);
+
+      expect(ctrl.validity.value).toEqual({ valueMissing: true });
+    });
+
+    it('is always valid when not required', () => {
+      const { options } = makeOptions({ checked: signal(false) });
+      const ctrl = createCheckable(options);
+
+      expect(ctrl.validity.value).toBeNull();
+    });
+
+    it('supports a custom requiredMessage', () => {
+      const { options } = makeOptions({
+        checked: signal(false),
+        required: signal(true),
+        requiredMessage: signal('You must agree to continue.'),
+      });
+      const ctrl = createCheckable(options);
+
+      expect(ctrl.validationMessage.value).toBe('You must agree to continue.');
+    });
+  });
+
+  describe('reset()', () => {
+    it('restores checked/indeterminate to the value captured when the control was created', () => {
+      const { options } = makeOptions({ checked: signal(false) });
+      const ctrl = createCheckable(options);
+
+      ctrl.toggle(new Event('click'));
+      expect(ctrl.checked.value).toBe(true);
+
+      ctrl.reset();
+      expect(ctrl.checked.value).toBe(false);
+    });
+
+    it('tracks a later programmatic change to the checked option, as long as the user has not interacted yet', () => {
+      const checked = signal(false);
+      const { options } = makeOptions({ checked });
+      const ctrl = createCheckable(options);
+
+      // Before any interaction, `options.checked` hasn't been contaminated by the click-driven
+      // attribute reflection yet — an async-loaded default arriving after mount is still a
+      // legitimate "current default" to resync from, same as `createTextField`.
+      checked.value = true;
+      expect(ctrl.checked.value).toBe(true);
+
+      ctrl.reset();
+      expect(ctrl.checked.value).toBe(true);
+    });
+
+    it('freezes the reset target at the first interaction — later programmatic changes stop moving it', () => {
+      const checked = signal(false);
+      const { options } = makeOptions({ checked });
+      const ctrl = createCheckable(options);
+
+      ctrl.toggle(new Event('click')); // first interaction — freezes the reset target at `false`
+
+      // Unlike `createTextField`, changing the source option *after* interaction does not move
+      // the reset target — `options.checked` gets rewritten by every click (via the host
+      // attribute reflection), so it can't double as "the default to revert to" anymore.
+      checked.value = true;
+      expect(ctrl.checked.value).toBe(true);
+
+      ctrl.reset();
+      expect(ctrl.checked.value).toBe(false);
+    });
+  });
+
+  describe('attachFormField() / triggerValidation()', () => {
+    it('calls reportValidity on the attached field when validateOn matches', () => {
+      const validateOn = signal<'change' | undefined>('change');
+      const reportValidity = vi.fn();
+      const { options } = makeOptions({ validateOn });
+      const ctrl = createCheckable(options);
+
+      ctrl.attachFormField({ reportValidity });
       ctrl.triggerValidation('change');
       expect(reportValidity).toHaveBeenCalledOnce();
     });
@@ -182,21 +273,23 @@ describe('createCheckable', () => {
     it('does not call reportValidity when validateOn does not match', () => {
       const validateOn = signal<'blur' | undefined>('blur');
       const reportValidity = vi.fn();
-      const { options } = makeOptions({ getFormField: () => ({ reportValidity }), validateOn });
+      const { options } = makeOptions({ validateOn });
       const ctrl = createCheckable(options);
 
+      ctrl.attachFormField({ reportValidity });
       ctrl.triggerValidation('change');
       expect(reportValidity).not.toHaveBeenCalled();
     });
 
-    it('does not call reportValidity when getFormField is not provided', () => {
+    it('warns and does not throw when triggerValidation runs before attachFormField was ever called', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const validateOn = signal<'change' | undefined>('change');
-      const reportValidity = vi.fn();
       const { options } = makeOptions({ validateOn });
       const ctrl = createCheckable(options);
 
-      ctrl.triggerValidation('change');
-      expect(reportValidity).not.toHaveBeenCalled();
+      expect(() => ctrl.triggerValidation('change')).not.toThrow();
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/refine]'));
+      warnSpy.mockRestore();
     });
   });
 

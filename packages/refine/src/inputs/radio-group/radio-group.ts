@@ -118,7 +118,11 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
     name: prop.string(),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'vertical'),
     required: prop.bool(false),
-    value: prop.string(),
+    // Not auto-reflected (`reflect: false`) — the derived, interaction-updated selection
+    // (`selectedValue`) is the single writer for this attribute, via `bind()` below; letting
+    // `prop.string()`'s own default reflection also write the raw incoming value would leave
+    // two effects racing to set the same attribute from different sources.
+    value: { ...prop.string(), reflect: false },
   },
   setup(props) {
     const el = getHost();
@@ -129,20 +133,28 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(props, formCtx);
 
-    let _formField: { reportValidity(): void } | null = null;
     const choice = createChoiceField({
       disabled: fCtxProps.disabled,
       error: props.error,
-      getFormField: () => _formField,
       helper: props.helper,
       label: props.label,
       prefix: 'radio-group',
+      required: props.required,
       signal: lifecycleSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
 
-    _formField = useField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue });
+    choice.attachFormField(
+      useField<string>({
+        disabled: choice.disabled,
+        onReset: choice.reset,
+        toFormValue: (v) => v,
+        validationMessage: choice.validationMessage,
+        validity: choice.validity,
+        value: choice.formValue,
+      }),
+    );
 
     const selectedValue = choice.selectedValue;
     const isDisabled = fCtxProps.disabled;

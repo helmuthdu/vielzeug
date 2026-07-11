@@ -1,0 +1,239 @@
+/*
+ * Unlike the first version of this component, the field here is a plain `<textarea>` owned
+ * directly by this stylesheet — not a nested `ore-textarea` with its own chrome suppressed via
+ * `::part()` overrides. There is exactly one implementation of "what the field looks like" to
+ * maintain (this file), not two.
+ */
+@layer refine.base {
+  :host {
+    /* --_bg/--_border-color are set per-variant in @layer refine.variants below (every host
+       matches exactly one variant rule, including the implicit "no attribute" default) — no
+       fallback needed here. --_padding/--_font-size/--_gap are set per-size by
+       sizeVariantMixin(MESSAGE_COMPOSER_SIZE_PRESET) (see message-composer.ts's `styles`); this
+       is the `--message-composer-padding` public-override fallback for the "md" tier, matching
+       the same pattern `ore-textarea` uses for `--textarea-padding`. */
+    --_radius: var(--message-composer-radius, var(--rounded-2xl));
+    --_padding: var(--message-composer-padding, var(--size-3));
+    --_surface: var(--_bg);
+
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  :host([fullwidth]) {
+    width: 100%;
+  }
+
+  .composer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--message-composer-gap, var(--_gap));
+    width: 100%;
+    padding: var(--_padding);
+    background: var(--_surface);
+    border: var(--border) solid var(--_border-color);
+    border-radius: var(--_radius);
+    box-shadow: var(--shadow-2xs);
+    transition:
+      background var(--transition-fast),
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast);
+  }
+
+  /* `flat` excluded — it gets its own theme-tinted hover/focus recipe below instead of the
+     plain canvas-background one every other variant shares (mirrors `ore-textarea`). */
+  :host(:not([disabled], [variant='bordered'], [variant='flat'])) .composer:hover {
+    border-color: var(--color-contrast-400);
+  }
+
+  :host(:not([disabled], [variant='flat'])) .composer:focus-within {
+    --_surface: var(--color-canvas);
+
+    border-color: var(--_theme-focus);
+    box-shadow: var(--_theme-shadow);
+  }
+
+  :host([error]:not([error=''])) .composer {
+    border-color: var(--color-error);
+  }
+
+  :host([error]:not([error=''])) .composer:focus-within {
+    border-color: var(--color-error);
+    box-shadow: var(--color-error-focus-shadow);
+  }
+
+  .field {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+
+    /* Floor so an inline `height` from auto-resize (JS, set on `<textarea>` directly — see
+       auto-resize.ts) can never visually collapse the field below one line, e.g. before the
+       first `scrollHeight` read has actually happened. `ore-textarea` has the equivalent
+       `--_min-height` for the same reason. */
+    min-height: var(--message-composer-min-height, 1lh);
+    padding: 0;
+    font: inherit;
+    font-size: var(--_font-size);
+    line-height: var(--leading-relaxed);
+    color: var(--text-color-body);
+    resize: none;
+    outline: none;
+    background: transparent;
+    border: none;
+  }
+
+  .field::placeholder {
+    color: var(--message-composer-placeholder-color, var(--color-contrast-500));
+  }
+
+  .helper-text[hidden] {
+    display: none;
+  }
+
+  .helper-text {
+    padding-inline: 2px;
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    color: color-mix(in oklch, var(--color-contrast-500) 80%, var(--color-canvas));
+  }
+
+  .counter {
+    align-self: flex-end;
+    padding-inline: 2px;
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-400);
+  }
+
+  .counter.near-limit {
+    color: var(--color-warning);
+  }
+
+  .counter.at-limit {
+    color: var(--color-error);
+  }
+
+  .toolbar {
+    display: flex;
+    gap: var(--message-composer-gap, var(--_gap));
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .toolbar-start,
+  .toolbar-end {
+    display: flex;
+    gap: var(--message-composer-gap, var(--_gap));
+    align-items: center;
+    min-width: 0;
+  }
+
+  .send-btn {
+    flex-shrink: 0;
+  }
+}
+
+/*
+ * Same five-variant set as `ore-textarea` (solid/flat/bordered/outline/ghost), applied to the
+ * card (`.composer`) instead of a bare field — kept consistent with the rest of the field
+ * family rather than a bespoke boolean "flat or not" so `ore-message-composer` doesn't read as
+ * a special case next to `ore-input`/`ore-textarea`.
+ */
+@layer refine.variants {
+  /* Solid (Default) */
+  :host(:not([variant])),
+  :host([variant='solid']) {
+    --_bg: var(--message-composer-bg, var(--color-contrast-50));
+    --_border-color: var(--message-composer-border-color, var(--color-contrast-300));
+  }
+
+  :host(:not([variant])) .composer,
+  :host([variant='solid']) .composer {
+    box-shadow: var(--shadow-2xs);
+  }
+
+  :host(:not([variant], [disabled])) .composer:focus-within,
+  :host([variant='solid']:not([disabled])) .composer:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /*
+   * Flat — a filled, theme-tinted card that "sinks in" via an inset shadow rather than sitting
+   * on a border, same recipe as `ore-textarea`'s flat. Previously this was transparent at rest
+   * (identical to `ghost`) and only grew a visible identity nobody could see until it happened
+   * to line up with `ghost`'s own hover state — the two read as the same variant side-by-side.
+   */
+  :host([variant='flat']) {
+    --_bg: var(--message-composer-bg, var(--color-contrast-100));
+    --_border-color: var(--message-composer-border-color, color-mix(in oklch, var(--_theme-focus) 20%, transparent));
+  }
+
+  :host([variant='flat']) .composer {
+    box-shadow: var(--inset-shadow-2xs);
+  }
+
+  :host([variant='flat']:not([disabled])) .composer:hover {
+    background: var(--message-composer-hover-bg, color-mix(in oklch, var(--_theme-base) 6%, var(--color-contrast-100)));
+    border-color: var(
+      --message-composer-hover-border-color,
+      color-mix(in oklch, var(--_theme-base) 35%, var(--color-contrast-300))
+    );
+  }
+
+  :host([variant='flat']:not([disabled])) .composer:focus-within {
+    background: var(--message-composer-focus-bg, color-mix(in oklch, var(--_theme-base) 8%, var(--color-canvas)));
+    border-color: var(--message-composer-focus-border-color, color-mix(in oklch, var(--_theme-focus) 60%, transparent));
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /* Bordered — theme-tinted backdrop and border; field text picks up the theme color too. */
+  :host([variant='bordered']) {
+    --_bg: var(--message-composer-bg, var(--_theme-backdrop));
+    --_border-color: var(--message-composer-border-color, color-mix(in oklch, var(--_theme-focus) 70%, transparent));
+  }
+
+  :host([variant='bordered']:not([disabled])) .composer:hover {
+    border-color: var(--message-composer-hover-border-color, var(--_theme-focus));
+  }
+
+  :host([variant='bordered']) .field {
+    color: var(--_theme-base);
+  }
+
+  :host([variant='bordered']) .field::placeholder {
+    color: var(--message-composer-placeholder-color, color-mix(in oklch, var(--_theme-base) 45%, transparent));
+  }
+
+  /* Outline — transparent background, border always visible, theme-colored focus ring. */
+  :host([variant='outline']) {
+    --_bg: var(--message-composer-bg, transparent);
+  }
+
+  :host([variant='outline']) .composer {
+    box-shadow: none;
+  }
+
+  :host([variant='outline']:not([disabled])) .composer:focus-within {
+    box-shadow: var(--_theme-shadow);
+  }
+
+  /*
+   * Ghost — fully transparent at rest and on hover-only background tint; focus falls through to
+   * the shared `:focus-within` rule above (canvas background + theme-focus border + theme
+   * shadow) instead of a second, bespoke focus recipe here — same as `ore-textarea`'s ghost.
+   */
+  :host([variant='ghost']) {
+    --_bg: var(--message-composer-bg, transparent);
+    --_border-color: var(--message-composer-border-color, transparent);
+  }
+
+  :host([variant='ghost']) .composer {
+    box-shadow: none;
+  }
+
+  :host([variant='ghost']:not([disabled])) .composer:hover {
+    background: var(--message-composer-hover-bg, var(--color-contrast-100));
+  }
+}

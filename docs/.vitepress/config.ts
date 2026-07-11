@@ -1492,6 +1492,7 @@ export default defineConfig({
                 { link: '/refine/components/file-input', text: 'File Input' },
                 { link: '/refine/components/form', text: 'Form' },
                 { link: '/refine/components/input', text: 'Input' },
+                { link: '/refine/components/message-composer', text: 'Message Composer' },
                 { link: '/refine/components/number-input', text: 'Number Input' },
                 { link: '/refine/components/otp-input', text: 'OTP Input' },
                 { link: '/refine/components/radio', text: 'Radio' },

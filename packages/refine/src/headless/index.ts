@@ -1,10 +1,18 @@
 // ── Ore adapter ───────────────────────────────────────────────────────────────
 export { lifecycleSignal } from './ore';
 
+// ── Auto-resize ───────────────────────────────────────────────────────────────
+export { createAutoResize, type AutoResizeControl, type AutoResizeOptions } from './auto-resize';
+
 // ── Field base ───────────────────────────────────────────────────────────────
 export {
+  counterClassName,
+  createAssistiveState,
   createErrorHelperState,
-  type AriaProps,
+  createField,
+  createLabelState,
+  type AssistiveStateHandle,
+  type AssistiveStateOptions,
   type ControlValidationMode,
   type CounterOptions,
   type CounterState,
@@ -13,6 +21,8 @@ export {
   type FieldHandle,
   type FieldOptions,
   type LabelPlacement,
+  type LabelStateHandle,
+  type LabelStateOptions,
   type ValidationTrigger,
 } from './field-base';
 
@@ -29,6 +39,14 @@ export {
 
 // ── Checkable ─────────────────────────────────────────────────────────────────
 export { createCheckable, type CheckableChangePayload, type CheckableHandle, type CheckableOptions } from './checkable';
+
+// ── Composer ──────────────────────────────────────────────────────────────────
+export {
+  createComposerControl,
+  type ComposerControl,
+  type ComposerControlOptions,
+  type SendShortcut,
+} from './composer';
 
 // ── Overlay types (public — consumed by component authors) ───────────────────
 export {

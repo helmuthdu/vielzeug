@@ -872,6 +872,45 @@ describe('ore-combobox', () => {
     });
   });
 
+  describe('Required State', () => {
+    it('fails constraint validation while required and empty; passes once an option is selected', async () => {
+      fixture = await mount('ore-combobox', { attrs: { required: true }, html: optionsHtml });
+
+      const element = fixture.element as HTMLElement & { checkValidity(): boolean };
+
+      expect(element.checkValidity()).toBe(false);
+
+      await user.click(getInput()!);
+      await user.click(fixture.query('.option')!);
+
+      expect(element.checkValidity()).toBe(true);
+    });
+
+    it('passes constraint validation when not required, even while empty', async () => {
+      fixture = await mount('ore-combobox', { html: optionsHtml });
+
+      expect((fixture.element as HTMLElement & { checkValidity(): boolean }).checkValidity()).toBe(true);
+    });
+  });
+
+  describe('Form reset', () => {
+    it('restores the selection to whatever the ancestor form resets it to', async () => {
+      const form = document.createElement('form');
+
+      document.body.appendChild(form);
+      fixture = await mount('ore-combobox', { attrs: { value: 'us' }, container: form, html: optionsHtml });
+
+      await user.click(getInput()!);
+      await user.click(fixture.queryAll('.option')[1]!); // gb
+
+      form.reset();
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('us');
+      form.remove();
+    });
+  });
+
   describe('Accessibility', () => {
     it('passes axe checks when closed', async () => {
       fixture = await mount('ore-combobox', {

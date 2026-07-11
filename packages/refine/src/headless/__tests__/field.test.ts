@@ -5,7 +5,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createCheckable } from '../checkable';
 import { createChoiceField } from '../choice-field';
-import { createCounterState, createErrorHelperState } from '../field-base';
+import {
+  counterClassName,
+  createAssistiveState,
+  createCounterState,
+  createErrorHelperState,
+  createLabelState,
+} from '../field-base';
 import { createTextField } from '../text-field';
 
 describe('field controls', () => {
@@ -290,6 +296,110 @@ describe('field controls', () => {
 
       handle.setValues(['alpha', 'alpha', 'beta']);
       expect(handle.selectedValues.value).toEqual(['alpha', 'beta']);
+    });
+
+    it('validity reflects required + empty selection as valueMissing; valid once something is selected', async () => {
+      let handle!: ReturnType<typeof createChoiceField>;
+      const required = signal(true);
+
+      await mount(
+        () => {
+          handle = createChoiceField({
+            prefix: 'choice-required',
+            required,
+            signal: new AbortController().signal,
+            value: signal(''),
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      expect(handle.validity.value).toEqual({ valueMissing: true });
+      expect(handle.validationMessage.value).toBe('Please make a selection.');
+
+      handle.selectValue('alpha');
+      expect(handle.validity.value).toBeNull();
+
+      handle.clear();
+      required.value = false;
+      expect(handle.validity.value).toBeNull();
+    });
+
+    it('reset() restores the selection captured when the field was created', async () => {
+      let handle!: ReturnType<typeof createChoiceField>;
+      const value = signal('alpha');
+
+      await mount(
+        () => {
+          handle = createChoiceField({
+            prefix: 'choice-reset',
+            signal: new AbortController().signal,
+            value,
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      handle.selectValue('beta');
+      expect(handle.selectedValues.value).toEqual(['beta']);
+
+      handle.reset();
+      expect(handle.selectedValues.value).toEqual(['alpha']);
+    });
+
+    it('reset() tracks a later change to `value`, as long as the user has not selected anything yet', async () => {
+      let handle!: ReturnType<typeof createChoiceField>;
+      const value = signal('alpha');
+
+      await mount(
+        () => {
+          handle = createChoiceField({
+            prefix: 'choice-reset-2',
+            signal: new AbortController().signal,
+            value,
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      // Before any selection, `value` hasn't been contaminated by the selection-driven attribute
+      // reflection yet — an async-loaded default arriving after mount is still legitimate.
+      value.value = 'gamma';
+      handle.reset();
+      expect(handle.selectedValues.value).toEqual(['gamma']);
+    });
+
+    it('reset() freezes the target at the first selection — later changes to `value` stop moving it', async () => {
+      let handle!: ReturnType<typeof createChoiceField>;
+      const value = signal('alpha');
+
+      await mount(
+        () => {
+          handle = createChoiceField({
+            prefix: 'choice-reset-3',
+            signal: new AbortController().signal,
+            value,
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      handle.selectValue('beta'); // first selection — freezes the reset target at 'alpha'
+
+      // Unlike `createTextField`, this does *not* move the reset target — `ore-radio-group`/
+      // `ore-checkbox-group` rewrite `value` on every selection (via the host attribute
+      // reflection), so it can't double as "the default to revert to" anymore.
+      value.value = 'gamma';
+      handle.reset();
+      expect(handle.selectedValues.value).toEqual(['alpha']);
     });
   });
 
@@ -803,6 +913,253 @@ describe('field controls', () => {
 
       // Listener was removed — no call
       expect(changeSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createAssistiveState() — used directly by label-less fields (e.g. ore-message-composer)', () => {
+    it('exposes error/helper text and describedby/errormessage/invalid without any label state', () => {
+      const state = createAssistiveState({ error: signal('Required'), helper: signal('Hint') });
+
+      expect(state.errorText.value).toBe('Required');
+      expect(state.ariaDescribedBy.value).toBe(state.assistiveId);
+      expect(state.ariaErrorMessage.value).toBe(state.errorId);
+      expect(state.ariaInvalid.value).toBe('true');
+      expect('labelId' in state).toBe(false);
+      expect('ariaLabelledBy' in state).toBe(false);
+    });
+
+    it('triggerValidation calls reportValidity only after attachFormField and only on a matching trigger', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const reportValidity = vi.fn();
+      const state = createAssistiveState({ validateOn: signal<'change' | undefined>('change') });
+
+      // Warns (but doesn't throw) since nothing has attachFormField()-ed yet.
+      state.triggerValidation('change');
+      expect(reportValidity).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/refine]'));
+
+      state.attachFormField({ reportValidity });
+      state.triggerValidation('blur');
+      expect(reportValidity).not.toHaveBeenCalled();
+
+      state.triggerValidation('change');
+      expect(reportValidity).toHaveBeenCalledOnce();
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe('createLabelState()', () => {
+    it('derives labelVisible from the label text signal by default', () => {
+      const label = signal<string | undefined>(undefined);
+      const state = createLabelState({ label, prefix: 'demo' });
+
+      expect(state.labelVisible.value).toBe(false);
+      expect(state.ariaLabelledBy.value).toBeNull();
+
+      label.value = 'Name';
+      expect(state.labelVisible.value).toBe(true);
+      expect(state.ariaLabelledBy.value).toBe(state.labelId);
+    });
+
+    it('fieldId/labelId are stable, prefixed ids', () => {
+      const state = createLabelState({ prefix: 'demo' });
+
+      expect(state.fieldId).toMatch(/^demo-/);
+      expect(state.labelId).toMatch(/^label-/);
+    });
+  });
+
+  describe('counterClassName()', () => {
+    it('returns the bare base class when counter is undefined', () => {
+      expect(counterClassName(undefined)).toBe('counter');
+    });
+
+    it('appends "near-limit"/"at-limit" modifiers, and respects a custom base class', () => {
+      expect(counterClassName({ counterAtLimit: false, counterNearLimit: false, counterText: '' })).toBe('counter');
+      expect(counterClassName({ counterAtLimit: false, counterNearLimit: true, counterText: '' })).toBe(
+        'counter near-limit',
+      );
+      expect(counterClassName({ counterAtLimit: true, counterNearLimit: false, counterText: '' }, 'char-count')).toBe(
+        'char-count at-limit',
+      );
+    });
+  });
+
+  describe('createTextField() — form participation', () => {
+    it('attachFormField() wires triggerValidation to the attached handle, not before', async () => {
+      let handle!: ReturnType<typeof createTextField>;
+
+      await mount(
+        () => {
+          handle = createTextField({
+            prefix: 'attach',
+            signal: new AbortController().signal,
+            validateOn: signal<'blur' | undefined>('blur'),
+            value: signal(''),
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const reportValidity = vi.fn();
+
+      handle.triggerValidation('blur');
+      expect(reportValidity).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/refine]'));
+
+      handle.attachFormField({ reportValidity });
+      handle.triggerValidation('blur');
+      expect(reportValidity).toHaveBeenCalledOnce();
+      warnSpy.mockRestore();
+    });
+
+    it('validity reflects required + blank as valueMissing; valid once non-blank or not required', async () => {
+      let handle!: ReturnType<typeof createTextField>;
+      const required = signal(true);
+      const value = signal('');
+
+      await mount(
+        () => {
+          handle = createTextField({
+            prefix: 'required',
+            required,
+            signal: new AbortController().signal,
+            value,
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      expect(handle.validity.value).toEqual({ valueMissing: true });
+      expect(handle.validationMessage.value).not.toBe('');
+
+      value.value = 'hi';
+      expect(handle.validity.value).toBeNull();
+      expect(handle.validationMessage.value).toBe('');
+
+      value.value = '';
+      required.value = false;
+      expect(handle.validity.value).toBeNull();
+    });
+
+    it('validity stays null while readonly, even blank and required — matches native "barred from constraint validation"', async () => {
+      let handle!: ReturnType<typeof createTextField>;
+      const readonly = signal(true);
+
+      await mount(
+        () => {
+          handle = createTextField({
+            prefix: 'required-readonly',
+            readonly,
+            required: signal(true),
+            signal: new AbortController().signal,
+            value: signal(''),
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      expect(handle.validity.value).toBeNull();
+
+      readonly.value = false;
+      expect(handle.validity.value).toEqual({ valueMissing: true });
+    });
+
+    it('validity is always null when required is omitted', async () => {
+      let handle!: ReturnType<typeof createTextField>;
+
+      await mount(
+        () => {
+          handle = createTextField({
+            prefix: 'not-required',
+            signal: new AbortController().signal,
+            value: signal(''),
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      expect(handle.validity.value).toBeNull();
+    });
+
+    it('reset() restores the value option as it currently stands, discarding local edits', async () => {
+      let handle!: ReturnType<typeof createTextField>;
+      const value = signal('initial');
+
+      await mount(
+        () => {
+          handle = createTextField({
+            prefix: 'reset',
+            signal: new AbortController().signal,
+            value,
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      handle.value.value = 'typed by user';
+      expect(handle.value.value).toBe('typed by user');
+
+      handle.reset();
+      expect(handle.value.value).toBe('initial');
+    });
+
+    it('reset() tracks a `value` option change made *after* creation — matches native defaultValue, not a frozen snapshot', async () => {
+      let handle!: ReturnType<typeof createTextField>;
+      const value = signal('initial');
+
+      await mount(
+        () => {
+          handle = createTextField({
+            prefix: 'reset-tracks-prop',
+            signal: new AbortController().signal,
+            value,
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      handle.value.value = 'typed by user';
+
+      // Programmatically changing the source `value` (e.g. `el.setAttribute('value', ...)`)
+      // moves the reset target — the same contract a real `<input>`'s `defaultValue` has.
+      value.value = 'updated-default';
+      handle.reset();
+      expect(handle.value.value).toBe('updated-default');
+    });
+
+    it('validationMessage falls back to a default, or uses requiredMessage when provided', async () => {
+      let handle!: ReturnType<typeof createTextField>;
+
+      await mount(
+        () => {
+          handle = createTextField({
+            prefix: 'required-message',
+            required: signal(true),
+            requiredMessage: signal('Please enter your name.'),
+            signal: new AbortController().signal,
+            value: signal(''),
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      expect(handle.validationMessage.value).toBe('Please enter your name.');
     });
   });
 });

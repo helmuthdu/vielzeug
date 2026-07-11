@@ -199,6 +199,29 @@ describe('ore-checkbox-group', () => {
       expect(getCheckboxes()[1].hasAttribute('checked')).toBe(true);
     });
 
+    it('keeps the `values` attribute synchronously current inside a `change` listener — no flush required', async () => {
+      fixture = await mount('ore-checkbox-group', {
+        attrs: { values: 'a' },
+        html: checkboxHtml,
+      });
+      await fixture.flush();
+      await fixture.flush();
+
+      let valuesDuringChange: string | null = null;
+
+      fixture.element.addEventListener('change', () => {
+        valuesDuringChange = fixture.element.getAttribute('values');
+      });
+
+      await user.click(getCheckboxes()[1]!);
+
+      // Pins the reactive `bind({ attr: { values } })` write to run synchronously with the
+      // selection change, not on a later microtask/flush — the attribute is a public part of
+      // the component's contract (see the `values` prop doc comment), and a consumer's own
+      // `change` listener is exactly where they'd read it.
+      expect(valuesDuringChange).toBe('a,b');
+    });
+
     it('submits the current values as a form-associated field', async () => {
       fixture = await mount('ore-checkbox-group', {
         attrs: { name: 'choices', values: 'a,c' },
@@ -214,6 +237,49 @@ describe('ore-checkbox-group', () => {
       const formData = new FormData(form);
 
       expect(formData.get('choices')).toBe('a,c');
+    });
+  });
+
+  describe('Required State', () => {
+    it('fails constraint validation while required and nothing selected; passes once one is', async () => {
+      fixture = await mount('ore-checkbox-group', { attrs: { required: true }, html: checkboxHtml });
+      await fixture.flush();
+
+      const element = fixture.element as HTMLElement & { checkValidity(): boolean };
+
+      expect(element.checkValidity()).toBe(false);
+
+      await user.click(getCheckboxes()[0]!);
+      await fixture.flush();
+
+      expect(element.checkValidity()).toBe(true);
+    });
+
+    it('passes constraint validation when not required, even with nothing selected', async () => {
+      fixture = await mount('ore-checkbox-group', { html: checkboxHtml });
+      await fixture.flush();
+
+      expect((fixture.element as HTMLElement & { checkValidity(): boolean }).checkValidity()).toBe(true);
+    });
+  });
+
+  describe('Form reset', () => {
+    it('restores the selection to whatever the ancestor form resets it to', async () => {
+      const form = document.createElement('form');
+
+      document.body.appendChild(form);
+      fixture = await mount('ore-checkbox-group', { attrs: { values: 'a' }, container: form, html: checkboxHtml });
+      await fixture.flush();
+
+      await user.click(getCheckboxes()[1]!);
+      await fixture.flush();
+      expect(fixture.element.getAttribute('values')).toBe('a,b');
+
+      form.reset();
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('values')).toBe('a');
+      form.remove();
     });
   });
 

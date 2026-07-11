@@ -149,12 +149,10 @@ define<OreRadioProps>(RADIO_TAG, {
       checkable.toggle(originalEvent ?? new Event('change'));
     };
 
-    let _formField: { reportValidity(): void } | null = null;
     const checkable = createCheckable({
       checked: checkedFromState,
       disabled: computed(() => fCtxProps.disabled.value || Boolean(groupCtx?.disabled.value)),
       error: props.error,
-      getFormField: () => _formField,
       helper: props.helper,
       onToggle: (payload) => {
         emit('change', payload);
@@ -165,11 +163,13 @@ define<OreRadioProps>(RADIO_TAG, {
       value: props.value,
     });
 
-    _formField = useField<string | null>({
-      disabled: checkable.disabled,
-      toFormValue: (v) => v,
-      value: checkable.checkableFormValue,
-    });
+    checkable.attachFormField(
+      useField<string | null>({
+        disabled: checkable.disabled,
+        toFormValue: (v) => v,
+        value: checkable.checkableFormValue,
+      }),
+    );
 
     const { assistiveId, checked, disabled, errorText, helperText, labelId, toggle } = checkable;
 

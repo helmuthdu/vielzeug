@@ -1,4 +1,4 @@
-import { type Readable, type Signal } from '@vielzeug/ripple';
+import { computed, type Readable, type Signal } from '@vielzeug/ripple';
 
 import { type CounterState, createCounterState, createField, type FieldHandle, type FieldOptions } from './field-base';
 import { syncedSignal } from './signals';
@@ -20,12 +20,36 @@ export type TextFieldOptions = FieldOptions & {
   onChange?: (event: Event, value: string) => void;
   onFocus?: (event: FocusEvent) => void;
   onInput?: (event: Event, value: string) => void;
+  /**
+   * Bars the field from constraint validation while true — matches the native HTML rule that a
+   * `readonly` field is never a candidate for constraint validation (a `readonly required`
+   * field is always valid, per spec), so `validity`/`validationMessage` don't feed a false
+   * `valueMissing` into `useField()` just because a read-only field happens to be blank.
+   */
+  readonly?: Readable<boolean | undefined>;
+  /** Marks a blank value invalid — feeds `validity`/`validationMessage` (see below). */
+  required?: Readable<boolean | undefined>;
+  /** Message for the blank+required case. Defaults to `'This field is required.'`. */
+  requiredMessage?: Readable<string | undefined>;
   /** `AbortSignal` from the component lifecycle. The internal value-sync watcher is disposed on abort. */
   signal: AbortSignal;
   value: Readable<string | undefined>;
 };
 
 export type TextFieldHandle = FieldHandle & {
+  /**
+   * Registers the real form field handle (the return value of `useField()`) so that
+   * `triggerValidation()` — called internally on blur/change — can call its
+   * `reportValidity()`. `useField()` itself needs `value` (below) to exist first, so this
+   * is a two-step wiring rather than a constructor option:
+   *
+   * ```ts
+   * const tf = createTextField({ value: props.value, ... });
+   * const formField = useField({ value: tf.value, ... });
+   * tf.attachFormField(formField);
+   * ```
+   */
+  attachFormField: (formField: { reportValidity(): void }) => void;
   /** Clears the field value and fires synthetic input/change events. */
   clear: (event?: Event) => void;
   /**
@@ -33,6 +57,20 @@ export type TextFieldHandle = FieldHandle & {
    * Components should only render a counter element when this is non-null.
    */
   counter: Readable<CounterState> | null;
+  /**
+   * Restores the value to whatever the `value` option currently holds (native form
+   * `reset()` semantics: a `<input>` reverts to its *current* `value` content attribute,
+   * not a frozen snapshot from element creation — so setting the attribute programmatically
+   * after mount changes what a later reset reverts to). Wire into `useField({ onReset: tf.reset })`.
+   */
+  reset: () => void;
+  /** Reactive validation message paired with `validity`. Empty string when valid. */
+  validationMessage: Readable<string>;
+  /**
+   * Reactive `ValidityStateFlags` — `{ valueMissing: true }` while `required` and blank,
+   * `null` (valid) otherwise. Pass straight to `useField({ validity: tf.validity })`.
+   */
+  validity: Readable<ValidityStateFlags | null>;
   /** The local mutable field value (two-way bound to the input element via `wire()`). */
   value: Signal<string>;
   /**
@@ -49,11 +87,26 @@ export type TextFieldHandle = FieldHandle & {
   wire: (el: HTMLInputElement | HTMLTextAreaElement, signal?: AbortSignal) => TextFieldDetach;
 };
 
+const isBlank = (value: string): boolean => value.trim() === '';
+const toFieldValue = (v: string | undefined): string => String(v ?? '');
+
 export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
-  const value = syncedSignal(options.value, options.signal, (v) => String(v ?? ''));
+  const value = syncedSignal(options.value, options.signal, toFieldValue);
 
   const field = createField(options);
   const counter = options.maxLength ? createCounterState({ maxLength: options.maxLength, value }) : null;
+
+  const validity = computed<ValidityStateFlags | null>(() =>
+    !options.readonly?.value && options.required?.value && isBlank(value.value) ? { valueMissing: true } : null,
+  );
+  const validationMessage = computed(() =>
+    validity.value ? options.requiredMessage?.value || 'This field is required.' : '',
+  );
+
+  const reset = (): void => {
+    value.value = toFieldValue(options.value.value);
+    field.triggerValidation('change');
+  };
 
   const clear = (event?: Event): void => {
     event?.preventDefault?.();
@@ -106,5 +159,5 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
     return detach;
   };
 
-  return { ...field, clear, counter, value, wire };
+  return { ...field, clear, counter, reset, validationMessage, validity, value, wire };
 };

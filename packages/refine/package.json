@@ -291,6 +291,12 @@
       "require": "./dist/menu.cjs",
       "types": "./dist/overlay/menu/menu.d.ts"
     },
+    "./message-composer": {
+      "source": "./src/inputs/message-composer/message-composer.ts",
+      "import": "./dist/message-composer.js",
+      "require": "./dist/message-composer.cjs",
+      "types": "./dist/inputs/message-composer/message-composer.d.ts"
+    },
     "./navbar": {
       "source": "./src/layout/navbar/navbar.ts",
       "import": "./dist/navbar.js",

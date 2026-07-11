@@ -44,6 +44,7 @@ export type { OreComboboxEvents, OreComboboxProps } from './combobox.types';
  * @attr {boolean} creatable - Allow users to create custom options from search query
  * @attr {boolean} no-filter - Disable client-side filtering (useful for server-side search)
  * @attr {string} placeholder - Placeholder text
+ * @attr {boolean} required - Require a non-blank selection for `<ore-form>` validation
  *
  * @fires {CustomEvent} change - Emitted when selection changes. detail: { value: string | string[], values: string[], labels: string[] }
  * @fires {CustomEvent} search - Emitted when user types. detail: { query: string }
@@ -93,6 +94,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     'no-filter': prop.bool(false),
     options: prop.data<ComboboxOptionInput[]>(),
     placeholder: prop.string('Select...'),
+    required: prop.bool(false),
     rounded: prop.string<RoundedSize>(),
     size: prop.string<ComponentSize>(),
     value: prop.string(),
@@ -117,16 +119,15 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     const bitInputRef = ref<HTMLElement>();
 
     const abortSignal = lifecycleSignal(onCleanup);
-    let _formField: { reportValidity(): void } | null = null;
     const choice = createChoiceField({
       disabled: fCtxProps.disabled,
       error: props.error,
-      getFormField: () => _formField,
       helper: props.helper,
       label: props.label,
       labelPlacement: props['label-placement'],
       multiple: props.multiple,
       prefix: 'combobox',
+      required: props.required,
       signal: abortSignal,
       validateOn: formCtx?.validateOn,
       value: props.value,
@@ -159,7 +160,16 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
 
     const { disabled: isDisabled, fieldId: comboId, selectedValues, triggerValidation } = choice;
 
-    _formField = useField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue });
+    choice.attachFormField(
+      useField<string>({
+        disabled: choice.disabled,
+        onReset: choice.reset,
+        toFormValue: (v) => v,
+        validationMessage: choice.validationMessage,
+        validity: choice.validity,
+        value: choice.formValue,
+      }),
+    );
 
     const { focusedIndex, isOpen, scrollFocusedIntoView, updatePosition } = optionList;
     // ── State ────────────────────────────────────────────────────────────────

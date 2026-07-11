@@ -20,6 +20,7 @@ Accessible, themeable web components built on `ore`. Largest package; one custom
 - `sideEffects` is set for `dist/*.js`, `dist/*.cjs`, and `dist/styles/**` — keep new side-effectful entry points covered.
 - `src/_dev.ts` is private — never re-export.
 - **DOM-output package** — excluded from the REPL. Do not add REPL examples or Monaco types for refine.
+- **`--_*`-prefixed custom properties are a private contract between a component's own stylesheet and the shared mixins it composes in `styles: [...]`** (e.g. `sizeVariantMixin()` emits `--_gap`/`--_font-size`/`--_padding`; `colorThemeMixin` emits `--_theme-focus`/`--_theme-base`/`--_theme-shadow`/`--_theme-backdrop`). There is no compile-time check that a component's own CSS only reads `--_*` names an included mixin actually emits — a typo or a removed mixin silently no-ops (the variable falls back to its `var(..., fallback)` or to nothing) instead of erroring. When touching a component's `styles` array or its CSS, verify by inspection that every `--_*` variable it reads is emitted by one of its own `styles` entries.
 
 ## Accessibility testing
 

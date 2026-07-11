@@ -10,6 +10,7 @@ import { lifecycleSignal, createTextField } from '../../headless';
 import { disablableBundle, FIELD_SIZE_PRESET, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import '../../content/icon/icon';
 import { fieldMixins, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
+import { errorAttr } from '../shared/field-binding';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './input.css?inline';
 
@@ -156,11 +157,9 @@ define<OreInputProps>(INPUT_TAG, {
     const hasLabel = computed(() => !!props.label.value || slots.has('label').value);
 
     const abortSignal = lifecycleSignal(onCleanup);
-    let _formField: { reportValidity(): void } | null = null;
     const tf = createTextField({
       disabled: fCtxProps.disabled,
       error: props.error,
-      getFormField: () => _formField,
       hasLabel,
       helper: props.helper,
       label: props.label,
@@ -173,12 +172,23 @@ define<OreInputProps>(INPUT_TAG, {
         emit('input', { originalEvent: event, value });
       },
       prefix: 'input',
+      readonly: props.readonly,
+      required: props.required,
       signal: abortSignal,
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
 
-    _formField = useField<string>({ disabled: tf.disabled, toFormValue: (v) => v, value: tf.value });
+    tf.attachFormField(
+      useField<string>({
+        disabled: tf.disabled,
+        onReset: tf.reset,
+        toFormValue: (v) => v,
+        validationMessage: tf.validationMessage,
+        validity: tf.validity,
+        value: tf.value,
+      }),
+    );
 
     const {
       ariaDescribedBy,
@@ -227,7 +237,7 @@ define<OreInputProps>(INPUT_TAG, {
 
     bind({
       attr: {
-        error: () => errorText.value || undefined,
+        error: errorAttr(errorText),
         'has-value': () => (fieldValue.value ? true : undefined),
         size: fCtxProps.size,
         variant: fCtxProps.variant,

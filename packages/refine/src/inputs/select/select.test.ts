@@ -356,6 +356,43 @@ describe('ore-select', () => {
 
       expect(fixture.element.hasAttribute('required')).toBe(true);
     });
+
+    it('fails constraint validation while required and empty; passes once an option is selected', async () => {
+      fixture = await mount('ore-select', { attrs: { required: true }, html: SELECT_OPTIONS });
+
+      const element = fixture.element as HTMLElement & { checkValidity(): boolean };
+
+      expect(element.checkValidity()).toBe(false);
+
+      await user.click(fixture.query('ore-input.trigger')!);
+      await user.click(fixture.queryAll('[role="option"]')[0]!);
+
+      expect(element.checkValidity()).toBe(true);
+    });
+
+    it('passes constraint validation when not required, even while empty', async () => {
+      fixture = await mount('ore-select', { html: SELECT_OPTIONS });
+
+      expect((fixture.element as HTMLElement & { checkValidity(): boolean }).checkValidity()).toBe(true);
+    });
+  });
+
+  describe('Form reset', () => {
+    it('restores the selection to whatever the ancestor form resets it to', async () => {
+      const form = document.createElement('form');
+
+      document.body.appendChild(form);
+      fixture = await mount('ore-select', { attrs: { value: 'apple' }, container: form, html: SELECT_OPTIONS });
+
+      await user.click(fixture.query('ore-input.trigger')!);
+      await user.click(fixture.queryAll('[role="option"]')[1]!); // banana
+
+      form.reset();
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('apple');
+      form.remove();
+    });
   });
 
   // ─── Error State ─────────────────────────────────────────────────────────────

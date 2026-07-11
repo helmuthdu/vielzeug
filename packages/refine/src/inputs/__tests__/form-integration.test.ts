@@ -42,6 +42,8 @@ describe('form integration', () => {
       fixture.query('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
       expect(capturedData).toBeInstanceOf(FormData);
+      expect(capturedData?.get('username')).toBe('alice');
+      expect(capturedData?.get('bio')).toBe('Hello');
     });
 
     it('omits disabled field values from FormData', async () => {
@@ -59,9 +61,7 @@ describe('form integration', () => {
 
       fixture.query('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 
-      if (capturedData) {
-        expect(capturedData.has('secret')).toBe(false);
-      }
+      expect(capturedData?.has('secret')).toBe(false);
     });
   });
 

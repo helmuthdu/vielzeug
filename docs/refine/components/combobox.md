@@ -345,13 +345,13 @@ Assigning a new array to `options` updates the dropdown immediately. When both `
 
 ## In a Form
 
-`ore-combobox` is form-associated — its `name` attribute participates in `FormData` submissions.
+`ore-combobox` is form-associated — its `name` attribute participates in `FormData` submissions. Set `required` to fail constraint validation while nothing is selected — `<ore-form>` blocks submit and `checkValidity()`/`reportValidity()` return `false` until an option is chosen; resetting the ancestor form restores whichever selection it started with.
 
 <ComponentPreview height="400px">
 
 ```html
 <ore-form id="myForm">
-  <ore-combobox name="country" label="Country" placeholder="Search countries…">
+  <ore-combobox name="country" label="Country" placeholder="Search countries…" required>
     <ore-combobox-option value="us">United States</ore-combobox-option>
     <ore-combobox-option value="de">Germany</ore-combobox-option>
     <ore-combobox-option value="gb">United Kingdom</ore-combobox-option>
@@ -433,6 +433,7 @@ cb.addEventListener('close', (e) => {
 | `multiple`        | `boolean`                                                                 | `false`   | Allow selecting multiple options (chips are shown in field) |
 | `fullwidth`       | `boolean`                                                                 | `false`   | Expand to fill the container width                          |
 | `disabled`        | `boolean`                                                                 | `false`   | Disable the control                                         |
+| `required`        | `boolean`                                                                 | `false`   | Require a non-blank selection for `<ore-form>` validation    |
 
 **`ore-combobox` Slots**
 

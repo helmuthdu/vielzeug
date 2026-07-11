@@ -109,6 +109,8 @@ document.querySelector('ore-form').addEventListener('submit', (e) => {
 
 ## Handling Reset
 
+Calling `form.reset()` (or clicking a `<button type="reset">`) restores every field's value to whatever it was when the field was created — the same value-restoration contract native `<input>`/`<textarea>` elements have — before the `reset` event below fires.
+
 ```js
 document.querySelector('ore-form').addEventListener('reset', (e) => {
   console.log('Form was reset', e.detail.originalEvent);

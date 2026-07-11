@@ -1,9 +1,6 @@
 import { install } from '@vielzeug/ore/testing';
 import axe from 'axe-core';
 
-const FORM_VALUE_SYMBOL = Symbol.for('vielzeug.test.formValue');
-const ATTACH_INTERNALS_PATCHED = Symbol.for('vielzeug.test.attachInternalsPatched');
-
 // ── Axe-core a11y helper ──────────────────────────────────────────────────────
 // Usage in any test:
 //   const results = await axeCheck(fixture.element);
@@ -37,95 +34,12 @@ declare global {
   var axeCheck: (node: Element, options?: axe.RunOptions) => Promise<axe.AxeResults>;
 }
 
-// Polyfill ElementInternals for jsdom — jsdom does not implement form-associated
-// custom element APIs like setFormValue, setValidity, states, etc.
-if (typeof ElementInternals !== 'undefined') {
-  const proto = ElementInternals.prototype as any;
-  const originalAttachInternals = HTMLElement.prototype.attachInternals;
-  const originalSetFormValue = proto.setFormValue;
-  const internalsHostMap = new WeakMap<ElementInternals, HTMLElement>();
-
-  if (originalAttachInternals && !(HTMLElement.prototype as any)[ATTACH_INTERNALS_PATCHED]) {
-    Object.defineProperty(HTMLElement.prototype, ATTACH_INTERNALS_PATCHED, {
-      configurable: true,
-      value: true,
-    });
-
-    HTMLElement.prototype.attachInternals = function (...args: []): ElementInternals {
-      const internals = originalAttachInternals.apply(this, args);
-
-      internalsHostMap.set(internals, this);
-
-      return internals;
-    };
-  }
-
-  proto.setFormValue = function (value: File | FormData | string | null) {
-    const host = internalsHostMap.get(this);
-
-    if (host) {
-      (host as unknown as Record<symbol, File | FormData | string | null>)[FORM_VALUE_SYMBOL] = value;
-    }
-
-    originalSetFormValue?.call(this, value);
-  };
-
-  if (!proto.setValidity) proto.setValidity = () => {};
-
-  if (!proto.checkValidity) proto.checkValidity = () => true;
-
-  if (!proto.reportValidity) proto.reportValidity = () => true;
-
-  if (!proto.states) {
-    Object.defineProperty(proto, 'states', {
-      get() {
-        if (!this._states) {
-          const s = new Set<string>();
-
-          this._states = {
-            add: (v: string) => s.add(v),
-            delete: (v: string) => s.delete(v),
-            has: (v: string) => s.has(v),
-          };
-        }
-
-        return this._states;
-      },
-    });
-  }
-}
-
-const NativeFormData = globalThis.FormData;
-
-const appendFormValue = (formData: FormData, name: string, value: File | FormData | string) => {
-  if (value instanceof FormData) {
-    for (const [entryName, entryValue] of value.entries()) {
-      formData.append(entryName, entryValue);
-    }
-
-    return;
-  }
-
-  formData.append(name, value);
-};
-
-globalThis.FormData = class FormDataWithCustomElementSupport extends NativeFormData {
-  constructor(form?: HTMLFormElement, submitter?: HTMLElement | null) {
-    super(form as HTMLFormElement | undefined, submitter as HTMLElement | null | undefined);
-
-    if (!(form instanceof HTMLFormElement)) return;
-
-    for (const element of Array.from(form.querySelectorAll<HTMLElement>('[name]'))) {
-      const host = element as HTMLElement & Record<symbol, File | FormData | string | null>;
-      const name = host.getAttribute('name');
-      const value = host[FORM_VALUE_SYMBOL];
-
-      if (!name || value == null) continue;
-
-      appendFormValue(this, name, value);
-    }
-  }
-};
+// ElementInternals/FormData/`<form>.reset()` jsdom gaps — including the light/shadow boundary
+// `<ore-form>`'s slotted fields cross, which needs the flat-tree walk instead of a plain
+// `querySelectorAll` — are polyfilled by `install()` below, via `@vielzeug/ore/testing`'s
+// `installFormInternalsPolyfill()`. This used to be a second, package-local copy of that same
+// polyfill; the gap it works around is in `ore`'s own form-association feature, not anything
+// refine-specific, so it now lives with the feature instead of being duplicated here.
 
 // Polyfill ClipboardEvent for jsdom
 if (typeof ClipboardEvent === 'undefined') {

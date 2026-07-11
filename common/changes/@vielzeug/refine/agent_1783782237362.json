@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add ore-message-composer -- an auto-resizing chat/comment composer built directly on ore-textarea's headless primitives (createTextField, createAutoResize), with send-shortcut handling, IME-safe composition, and clear-and-refocus on send",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

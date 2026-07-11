@@ -63,6 +63,8 @@ Show the indicator in place of the next message bubble while waiting for the fir
 </script>
 ```
 
+Trigger it from the `input` event on [`ore-message-composer`](./message-composer.md) to broadcast "user is typing…" to other participants, or show it locally while awaiting the first token of a reply.
+
 ## API Reference
 
 ### Attributes

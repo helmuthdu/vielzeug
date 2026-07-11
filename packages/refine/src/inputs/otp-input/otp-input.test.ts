@@ -270,7 +270,6 @@ describe('ore-otp-input', () => {
 
 describe('ore-otp-input form integration', () => {
   let fixture: Fixture<HTMLElement>;
-  const FORM_VALUE_SYMBOL = Symbol.for('vielzeug.test.formValue');
 
   beforeAll(async () => {
     await (() => import('./otp-input'))();
@@ -281,7 +280,10 @@ describe('ore-otp-input form integration', () => {
   });
 
   it('registers the joined cell value as the form value (formAssociated)', async () => {
-    fixture = await mount('ore-otp-input', { attrs: { length: '4', name: 'otp' } });
+    const form = document.createElement('form');
+
+    document.body.appendChild(form);
+    fixture = await mount('ore-otp-input', { attrs: { length: '4', name: 'otp' }, container: form });
 
     const cells = [...(fixture.shadow?.querySelectorAll<HTMLInputElement>('input.cell') ?? [])];
 
@@ -291,9 +293,8 @@ describe('ore-otp-input form integration', () => {
     cells[1].dispatchEvent(new Event('input', { bubbles: true }));
     await fixture.flush();
 
-    const host = fixture.element as unknown as Record<symbol, unknown>;
-
-    expect(host[FORM_VALUE_SYMBOL]).toBe('12');
+    expect(new FormData(form).get('otp')).toBe('12');
+    form.remove();
   });
 });
 

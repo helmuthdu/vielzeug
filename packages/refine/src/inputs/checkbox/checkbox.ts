@@ -35,6 +35,8 @@ export type OreCheckboxProps = CheckableProps & {
   helper?: string;
   /** Indeterminate state (partially checked) */
   indeterminate?: boolean;
+  /** Require this checkbox to be checked for `<ore-form>` validation (e.g. a consent checkbox) */
+  required?: boolean;
   /** Component size */
   size?: ComponentSize;
 };
@@ -47,6 +49,7 @@ export type OreCheckboxProps = CheckableProps & {
  * @attr {boolean} checked - Checked state
  * @attr {boolean} disabled - Disable checkbox interaction
  * @attr {boolean} indeterminate - Indeterminate (partially checked) state
+ * @attr {boolean} required - Require this checkbox to be checked for `<ore-form>` validation
  * @attr {string} value - Field value submitted with forms
  * @attr {string} name - Form field name
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
@@ -89,6 +92,7 @@ define<OreCheckboxProps>(CHECKBOX_TAG, {
     helper: prop.string(),
     indeterminate: prop.bool(false),
     name: prop.string(),
+    required: prop.bool(false),
     value: prop.string('on'),
   },
   setup(props) {
@@ -98,13 +102,11 @@ define<OreCheckboxProps>(CHECKBOX_TAG, {
     const fCtxProps = useFormContext(props, formCtx);
     const groupCtx = inject(CHECKBOX_GROUP_CTX);
 
-    let _formField: { reportValidity(): void } | null = null;
     const checkable = createCheckable({
       checked: props.checked,
       clearIndeterminateFirst: true,
       disabled: computed(() => fCtxProps.disabled.value || Boolean(groupCtx?.disabled.value)),
       error: props.error,
-      getFormField: () => _formField,
       group: groupCtx,
       helper: props.helper,
       indeterminate: props.indeterminate,
@@ -118,16 +120,22 @@ define<OreCheckboxProps>(CHECKBOX_TAG, {
         emit('change', payload);
       },
       prefix: 'checkbox',
+      required: props.required,
       signal: lifecycleSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
 
-    _formField = useField<string | null>({
-      disabled: checkable.disabled,
-      toFormValue: (v) => v,
-      value: checkable.checkableFormValue,
-    });
+    checkable.attachFormField(
+      useField<string | null>({
+        disabled: checkable.disabled,
+        onReset: checkable.reset,
+        toFormValue: (v) => v,
+        validationMessage: checkable.validationMessage,
+        validity: checkable.validity,
+        value: checkable.checkableFormValue,
+      }),
+    );
 
     const {
       assistiveId,
@@ -143,7 +151,18 @@ define<OreCheckboxProps>(CHECKBOX_TAG, {
 
     applyCheckableBinding(
       fCtxProps.size,
-      { assistiveId, checked, disabled, errorText, handleClick, handleKeydown, helperText, indeterminate, labelId },
+      {
+        assistiveId,
+        checked,
+        disabled,
+        errorText,
+        handleClick,
+        handleKeydown,
+        helperText,
+        indeterminate,
+        labelId,
+        required: props.required,
+      },
       'checkbox',
     );
 

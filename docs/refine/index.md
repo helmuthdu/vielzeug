@@ -42,6 +42,7 @@ exports:
     ore-menu,
     ore-menu-item,
     ore-menu-separator,
+    ore-message-composer,
     ore-navbar,
     ore-navbar-item,
     ore-number-input,
@@ -205,7 +206,7 @@ Headless widget controllers (`createTextField`, `createListControl`, `createOver
 
 **Feedback:** `ore-alert`, `ore-async`, `ore-badge`, `ore-chip`, `ore-password-strength`, `ore-progress`, `ore-skeleton`, `ore-toast`, `ore-typing-indicator`
 
-**Inputs:** `ore-button`, `ore-button-group`, `ore-calendar`, `ore-checkbox`, `ore-checkbox-group`, `ore-column`, `ore-combobox`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-form`, `ore-input`, `ore-number-input`, `ore-otp-input`, `ore-radio`, `ore-radio-group`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
+**Inputs:** `ore-button`, `ore-button-group`, `ore-calendar`, `ore-checkbox`, `ore-checkbox-group`, `ore-column`, `ore-combobox`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-form`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-radio`, `ore-radio-group`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
 
 **Layout:** `ore-box`, `ore-grid`, `ore-grid-item`, `ore-navbar`, `ore-sidebar`
 

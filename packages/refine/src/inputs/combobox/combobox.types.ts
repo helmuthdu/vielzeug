@@ -37,6 +37,8 @@ export type OreComboboxProps = Omit<
   multiple?: boolean;
   'no-filter'?: boolean;
   options?: ComboboxOptionInput[];
+  /** Require a non-blank selection for `<ore-form>` validation */
+  required?: boolean;
   value?: string | string[];
 };
 

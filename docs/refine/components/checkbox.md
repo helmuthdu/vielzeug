@@ -77,6 +77,18 @@ Provide contextual feedback directly below the checkbox.
 
 </ComponentPreview>
 
+### Required
+
+Set `required` to fail constraint validation while unchecked — the classic "I agree to the terms" consent checkbox. `<ore-form>` blocks submit and `checkValidity()`/`reportValidity()` return `false` until it's checked; resetting the ancestor form restores whichever `checked` state it started with.
+
+<ComponentPreview center>
+
+```html
+<ore-checkbox name="agree" required>I agree to the terms</ore-checkbox>
+```
+
+</ComponentPreview>
+
 ### Listening for Changes
 
 ```js
@@ -270,6 +282,7 @@ Combine indeterminate state on a parent checkbox with a `ore-checkbox-group` to 
 | `checked`       | `boolean`                                                                 | `false` | Checked state                           |
 | `indeterminate` | `boolean`                                                                 | `false` | Indeterminate (partially checked) state |
 | `disabled`      | `boolean`                                                                 | `false` | Disable interaction                     |
+| `required`      | `boolean`                                                                 | `false` | Require this checkbox to be checked for `<ore-form>` validation (e.g. a consent checkbox) |
 | `value`         | `string`                                                                  | `'on'`  | Value submitted with the form           |
 | `name`          | `string`                                                                  | `''`    | Form field name                         |
 | `color`         | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Semantic color for the checked state    |

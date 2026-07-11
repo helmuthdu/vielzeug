@@ -79,6 +79,7 @@ import '@vielzeug/refine/grid-item';
 import '@vielzeug/refine/icon';
 import '@vielzeug/refine/input';
 import '@vielzeug/refine/menu';
+import '@vielzeug/refine/message-composer';
 import '@vielzeug/refine/navbar';
 import '@vielzeug/refine/number-input';
 import '@vielzeug/refine/otp-input';
@@ -197,6 +198,7 @@ Per-component API — attributes, events, slots, CSS custom properties:
 - [File Input](./components/file-input.md)
 - [Form](./components/form.md)
 - [Input](./components/input.md)
+- [Message Composer](./components/message-composer.md)
 - [Number Input](./components/number-input.md)
 - [OTP Input](./components/otp-input.md)
 - [Radio (+ Radio Group)](./components/radio.md)
@@ -249,7 +251,7 @@ createTextField(options: TextFieldOptions): TextFieldHandle
 
 Controller for `<input>` and `<textarea>`. Manages value sync, validation triggers, character counter, and event wiring.
 
-Key members: `value` (writable signal), `wire(el, signal?)`, `clear()`, `counter`.
+Key members: `value` (writable signal), `wire(el, signal?)`, `clear()`, `reset()`, `counter`, `validity`/`validationMessage` (feed straight into `useField({ validity, validationMessage })`), `attachFormField(formField)` (call once the `useField()` handle exists, to wire up validation triggers and form `reset()` restoration).
 
 ### `createChoiceField(options)`
 
@@ -259,7 +261,9 @@ createChoiceField(options: ChoiceFieldOptions): ChoiceFieldHandle
 
 Controller for single and multi-select inputs. Normalises `string | string[]` values.
 
-Key members: `selectedValues`, `selectedValue`, `selectValue()`, `toggleValue()`, `removeValue()`, `clear()`, `setValues()`, `formValue`.
+Key members: `selectedValues`, `selectedValue`, `selectValue()`, `toggleValue()`, `removeValue()`, `clear()`, `setValues()`, `formValue`, `reset()` (see below), `validity`/`validationMessage` (feed straight into `useField({ validity, validationMessage })`, `{ valueMissing: true }` while `required` and nothing selected), `attachFormField(formField)` (call once the `useField()` handle exists).
+
+`reset()` has two states, not one: before the user ever changes the selection, it re-syncs from whatever `value` currently holds (same as `createTextField`'s `reset()` — e.g. an async-loaded default arriving after mount is still a legitimate target). Once the user changes the selection for the first time, it freezes to the value captured at field creation and stops tracking `value` — this matters for `ore-radio-group`/`ore-checkbox-group` specifically, which reflect the current selection back onto the host's `value`/`values` attribute for `:host([value])` styling, so past that point `value` itself changes on every selection and can't double as "the default to revert to" the way an uncontrolled `<input>`'s `value` attribute can. `ore-select`/`ore-combobox` don't reflect their selection back onto `value` at all, so for them this distinction is moot in practice — but the primitive can't know that in advance, so it applies the same safe two-state rule uniformly.
 
 ### `createCheckable(options)`
 
@@ -269,7 +273,7 @@ createCheckable(options: CheckableOptions): CheckableHandle
 
 Controller for checkboxes and radios. Handles checked/indeterminate state, group delegation, and keyboard activation.
 
-Key members: `checked`, `indeterminate`, `toggle()`, `handleClick()`, `handleKeydown()`.
+Key members: `checked`, `indeterminate`, `toggle()`, `handleClick()`, `handleKeydown()`, `reset()` (same two-state rule as `createChoiceField`'s — tracks `checked`/`indeterminate` live until the first `toggle()`, then freezes, since `checked` is reflected back onto the host attribute too), `validity`/`validationMessage` (`{ valueMissing: true }` while `required` and unchecked, indeterminate counts as unchecked), `attachFormField(formField)`.
 
 ### `createOverlayControl(options)`
 

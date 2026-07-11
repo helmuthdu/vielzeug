@@ -112,6 +112,65 @@ describe('ore-textarea', () => {
 
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.required).toBe(true);
     });
+
+    it('fails constraint validation while required and blank; passes once non-blank', async () => {
+      fixture = await mount('ore-textarea', { attrs: { required: true } });
+
+      const element = fixture.element as HTMLElement & { checkValidity(): boolean };
+
+      expect(element.checkValidity()).toBe(false);
+
+      await fixture.attr('value', 'hi');
+      expect(element.checkValidity()).toBe(true);
+    });
+
+    it('passes constraint validation when not required, even while blank', async () => {
+      fixture = await mount('ore-textarea');
+
+      expect((fixture.element as HTMLElement & { checkValidity(): boolean }).checkValidity()).toBe(true);
+    });
+
+    it('passes constraint validation while readonly and blank, even when required', async () => {
+      fixture = await mount('ore-textarea', { attrs: { readonly: true, required: true } });
+
+      expect((fixture.element as HTMLElement & { checkValidity(): boolean }).checkValidity()).toBe(true);
+    });
+  });
+
+  describe('Form reset', () => {
+    it('restores the value typed by the user when the ancestor form resets', async () => {
+      const form = document.createElement('form');
+
+      document.body.appendChild(form);
+      fixture = await mount('ore-textarea', { attrs: { value: 'initial' }, container: form });
+
+      await user.type(fixture.query<HTMLTextAreaElement>('textarea')!, ' typed');
+      expect(fixture.query<HTMLTextAreaElement>('textarea')?.value).toBe('initial typed');
+
+      form.reset();
+      await fixture.flush();
+
+      expect(fixture.query<HTMLTextAreaElement>('textarea')?.value).toBe('initial');
+      form.remove();
+    });
+
+    it('tracks a `value` attribute change made after mount as the new reset target', async () => {
+      const form = document.createElement('form');
+
+      document.body.appendChild(form);
+      fixture = await mount('ore-textarea', { attrs: { value: 'initial' }, container: form });
+
+      // Matches native <textarea>: programmatically setting the value attribute (unlike
+      // typing) updates what a later reset() reverts to.
+      await fixture.attr('value', 'updated-default');
+      await user.type(fixture.query<HTMLTextAreaElement>('textarea')!, ' more');
+
+      form.reset();
+      await fixture.flush();
+
+      expect(fixture.query<HTMLTextAreaElement>('textarea')?.value).toBe('updated-default');
+      form.remove();
+    });
   });
 
   // ─── Error State ─────────────────────────────────────────────────────────────

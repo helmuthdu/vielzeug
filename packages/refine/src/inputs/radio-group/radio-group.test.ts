@@ -117,6 +117,43 @@ describe('ore-radio-group', () => {
     });
   });
 
+  describe('Required State', () => {
+    it('fails constraint validation while required and nothing selected; passes once one is', async () => {
+      fixture = await mount('ore-radio-group', { attrs: { required: true }, html: radioHtml });
+
+      const element = fixture.element as HTMLElement & { checkValidity(): boolean };
+
+      expect(element.checkValidity()).toBe(false);
+
+      await user.click(fixture.element.querySelectorAll<HTMLElement>('ore-radio')[0]!);
+      expect(element.checkValidity()).toBe(true);
+    });
+
+    it('passes constraint validation when not required, even with nothing selected', async () => {
+      fixture = await mount('ore-radio-group', { html: radioHtml });
+
+      expect((fixture.element as HTMLElement & { checkValidity(): boolean }).checkValidity()).toBe(true);
+    });
+  });
+
+  describe('Form reset', () => {
+    it('restores the selection to whatever the ancestor form resets it to', async () => {
+      const form = document.createElement('form');
+
+      document.body.appendChild(form);
+      fixture = await mount('ore-radio-group', { attrs: { value: 'a' }, container: form, html: radioHtml });
+
+      await user.click(fixture.element.querySelectorAll<HTMLElement>('ore-radio')[1]!);
+      expect(fixture.element.getAttribute('value')).toBe('b');
+
+      form.reset();
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('value')).toBe('a');
+      form.remove();
+    });
+  });
+
   describe('Accessibility', () => {
     it('uses radiogroup role with required semantics', async () => {
       fixture = await mount('ore-radio-group', {

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: ore-message-composer -- flat/ghost variants no longer render identically at rest (flat now matches ore-textarea's filled/inset-shadow recipe), field no longer collapses to near-zero height before the first keystroke (auto-resize scrollHeight read deferred a frame, with a min-height floor as a backstop), and a cancelled send (preventDefault()) no longer refocuses the field",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

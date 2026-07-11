@@ -6,9 +6,10 @@ import { watch as rippleWatch } from '@vielzeug/ripple';
 import type { TextFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
 
-import { lifecycleSignal, createTextField } from '../../headless';
+import { counterClassName, createAutoResize, lifecycleSignal, createTextField } from '../../headless';
 import { disablableBundle, roundableBundle, sizableBundle, TEXTAREA_SIZE_PRESET, themableBundle } from '../../shared';
 import { fieldMixins, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
+import { errorAttr } from '../shared/field-binding';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './textarea.css?inline';
 
@@ -130,27 +131,16 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
     const fCtxProps = useFormContext(props, formCtx);
 
     const textareaRef = ref<HTMLTextAreaElement>();
-
-    const autoGrow = () => {
-      if (!props['auto-resize'].value || !textareaRef.value) return;
-
-      const textareaEl = textareaRef.value;
-
-      textareaEl.style.height = 'auto';
-      textareaEl.style.height = `${textareaEl.scrollHeight}px`;
-    };
+    const autoResize = createAutoResize({ enabled: props['auto-resize'] });
 
     const abortSignal = lifecycleSignal(onCleanup);
-    let _formField: { reportValidity(): void } | null = null;
     const tf = createTextField({
       disabled: fCtxProps.disabled,
       error: props.error,
-      getFormField: () => _formField,
       helper: props.helper,
       label: props.label,
       labelPlacement: props['label-placement'],
       maxLength: props.maxlength,
-      onBeforeInput: autoGrow,
       onChange: (event: Event, value: string) => {
         emit('change', { originalEvent: event, value });
       },
@@ -158,12 +148,26 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
         emit('input', { originalEvent: event, value });
       },
       prefix: 'textarea',
+      readonly: props.readonly,
+      required: props.required,
       signal: abortSignal,
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
 
-    _formField = useField<string>({ disabled: tf.disabled, toFormValue: (v) => v, value: tf.value });
+    tf.attachFormField(
+      useField<string>({
+        disabled: tf.disabled,
+        onReset: () => {
+          tf.reset();
+          requestAnimationFrame(() => autoResize.recompute());
+        },
+        toFormValue: (v) => v,
+        validationMessage: tf.validationMessage,
+        validity: tf.validity,
+        value: tf.value,
+      }),
+    );
 
     const {
       ariaDescribedBy,
@@ -182,6 +186,7 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
 
     onElement(textareaRef, (textareaEl) => {
       const unwireEl = tf.wire(textareaEl);
+      const unwireAutoResize = autoResize.wire(textareaEl);
 
       props.ref.value?.(textareaEl);
 
@@ -193,33 +198,30 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
         textareaEl.style.resize =
           props['auto-resize'].value || props['no-resize'].value ? 'none' : props.resize.value || 'vertical';
 
-        if (props['auto-resize'].value) {
-          requestAnimationFrame(autoGrow);
-        }
+        // Deferred a frame: on mount (or right after `auto-resize` flips true) the browser
+        // hasn't necessarily finished laying out the textarea yet, so `scrollHeight` read
+        // synchronously here could be stale.
+        requestAnimationFrame(() => autoResize.recompute());
       });
 
       return () => {
         sub.dispose();
         props.ref.value?.(null);
         unwireEl();
+        unwireAutoResize();
         stopLayoutEffect();
       };
     });
 
     bind({
       attr: {
-        error: () => errorText.value || undefined,
+        error: errorAttr(errorText),
         size: fCtxProps.size,
         variant: fCtxProps.variant,
       },
     });
 
-    const counterClass = () =>
-      counter?.value.counterAtLimit
-        ? 'counter at-limit'
-        : counter?.value.counterNearLimit
-          ? 'counter near-limit'
-          : 'counter';
+    const counterClass = () => counterClassName(counter?.value);
     const counterHidden = () => !counter;
     const counterText = () => counter?.value.counterText.replace(' / ', '/') ?? '';
     const helperHidden = () => !!errorText.value || !helperText.value;

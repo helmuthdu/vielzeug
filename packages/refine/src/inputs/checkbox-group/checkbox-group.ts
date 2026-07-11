@@ -122,7 +122,11 @@ define<OreCheckboxGroupProps>(CHECKBOX_GROUP_TAG, {
     name: prop.string(),
     orientation: prop.string('vertical'),
     required: prop.bool(false),
-    values: prop.string(),
+    // Not auto-reflected (`reflect: false`) — the derived, interaction-updated selection
+    // (`choice.formValue`) is the single writer for this attribute, via `bind()` below;
+    // letting `prop.string()`'s own default reflection also write the raw incoming value
+    // would leave two effects racing to set the same attribute from different sources.
+    values: { ...prop.string(), reflect: false },
   },
   setup(props) {
     const el = getHost();
@@ -133,20 +137,28 @@ define<OreCheckboxGroupProps>(CHECKBOX_GROUP_TAG, {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(props, formCtx);
 
-    let _formField: { reportValidity(): void } | null = null;
     const choice = createChoiceField({
       disabled: fCtxProps.disabled,
       error: props.error,
-      getFormField: () => _formField,
       helper: props.helper,
       multiple: signal(true),
       prefix: 'checkbox-group',
+      required: props.required,
       signal: lifecycleSignal(onCleanup),
       validateOn: formCtx?.validateOn,
       value: props.values,
     });
 
-    _formField = useField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue });
+    choice.attachFormField(
+      useField<string>({
+        disabled: choice.disabled,
+        onReset: choice.reset,
+        toFormValue: (v) => v,
+        validationMessage: choice.validationMessage,
+        validity: choice.validity,
+        value: choice.formValue,
+      }),
+    );
 
     const checkedValues = choice.selectedValues;
 
@@ -162,7 +174,6 @@ define<OreCheckboxGroupProps>(CHECKBOX_GROUP_TAG, {
 
     const toggleCheckbox = (val: string, originalEvent?: Event) => {
       choice.toggleValue(val);
-      el.setAttribute('values', choice.formValue.value);
       choice.triggerValidation('change');
       emitChange(originalEvent);
     };
@@ -235,7 +246,10 @@ define<OreCheckboxGroupProps>(CHECKBOX_GROUP_TAG, {
     const hasError = () => Boolean(props.error.value);
     const hasHelper = () => Boolean(props.helper.value) && !hasError();
 
-    bind({ attr: { size: fCtxProps.size } });
+    // Reactive, not a one-off `el.setAttribute()` inside the click handler: the host's `values`
+    // attribute must stay in sync with the selection regardless of *why* it changed (a click,
+    // or `reset()` on ancestor form reset — neither of which should need its own copy of this).
+    bind({ attr: { size: fCtxProps.size, values: choice.formValue } });
 
     return html`
       <fieldset

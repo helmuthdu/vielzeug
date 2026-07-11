@@ -179,22 +179,30 @@ define<OreSelectProps>(SELECT_TAG, {
     let dropdownEl: HTMLElement | null = null;
 
     const abortSignal = lifecycleSignal(onCleanup);
-    let _formField: { reportValidity(): void } | null = null;
     const choice = createChoiceField({
       disabled: fCtxProps.disabled,
       error: props.error,
-      getFormField: () => _formField,
       helper: props.helper,
       label: props.label,
       labelPlacement: props['label-placement'],
       multiple: props.multiple,
       prefix: 'select',
+      required: props.required,
       signal: abortSignal,
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
 
-    _formField = useField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue });
+    choice.attachFormField(
+      useField<string>({
+        disabled: choice.disabled,
+        onReset: choice.reset,
+        toFormValue: (v) => v,
+        validationMessage: choice.validationMessage,
+        validity: choice.validity,
+        value: choice.formValue,
+      }),
+    );
 
     const optionList = createOptionList<OptionItem>({
       getBoundary: () => el,

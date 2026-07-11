@@ -146,6 +146,8 @@ const chat = createDomVirtualList({
 chat.setItems(messages);
 ```
 
+Pair the list with [`ore-message-composer`](./message-composer.md) for the input row — it handles the send gesture (Enter to send, Shift+Enter for a newline) and clears itself after each `send`.
+
 ## API Reference
 
 ### Attributes

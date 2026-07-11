@@ -97,6 +97,30 @@ export const SLIDER_SIZE_PRESET = {
   },
 } satisfies FullSizePreset;
 
+/**
+ * Size preset for the message composer card. Padding is symmetric (unlike
+ * `TEXTAREA_SIZE_PRESET`'s field-shaped padding) since this scales a card that wraps a field
+ * *and* a toolbar row, not a bare field — `md`'s padding matches the value the card used before
+ * `size` scaled anything, so the default look is unchanged.
+ */
+export const MESSAGE_COMPOSER_SIZE_PRESET = {
+  lg: {
+    '--_padding': 'var(--size-4)',
+    fontSize: 'var(--text-base)',
+    gap: 'var(--size-2-5)',
+  },
+  md: {
+    '--_padding': 'var(--size-3)',
+    fontSize: 'var(--text-sm)',
+    gap: 'var(--size-2)',
+  },
+  sm: {
+    '--_padding': 'var(--size-2)',
+    fontSize: 'var(--text-xs)',
+    gap: 'var(--size-1-5)',
+  },
+} satisfies FullSizePreset;
+
 /** Shared size preset for the file-input dropzone. */
 export const FILE_INPUT_SIZE_PRESET = {
   lg: {

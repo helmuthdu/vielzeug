@@ -223,6 +223,50 @@ describe('ore-checkbox', () => {
     });
   });
 
+  // ─── Required State ───────────────────────────────────────────────────────────
+  describe('Required State', () => {
+    it('fails constraint validation while required and unchecked; passes once checked', async () => {
+      fixture = await mount('ore-checkbox', { attrs: { required: true } });
+
+      const element = fixture.element as HTMLElement & { checkValidity(): boolean };
+
+      expect(element.checkValidity()).toBe(false);
+
+      await user.click(fixture.element);
+      expect(element.checkValidity()).toBe(true);
+    });
+
+    it('passes constraint validation when not required, even while unchecked', async () => {
+      fixture = await mount('ore-checkbox');
+
+      expect((fixture.element as HTMLElement & { checkValidity(): boolean }).checkValidity()).toBe(true);
+    });
+
+    it('sets aria-required on the host', async () => {
+      fixture = await mount('ore-checkbox', { attrs: { required: true } });
+
+      expect(fixture.element.getAttribute('aria-required')).toBe('true');
+    });
+  });
+
+  describe('Form reset', () => {
+    it('restores checked to whatever the ancestor form resets it to', async () => {
+      const form = document.createElement('form');
+
+      document.body.appendChild(form);
+      fixture = await mount('ore-checkbox', { attrs: { checked: true }, container: form });
+
+      await user.click(fixture.element);
+      expect(fixture.element.hasAttribute('checked')).toBe(false);
+
+      form.reset();
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('checked')).toBe(true);
+      form.remove();
+    });
+  });
+
   // ─── Colors ──────────────────────────────────────────────────────────────────
   describe('Colors', () => {
     const colors = ['primary', 'secondary', 'success', 'warning', 'error'] as const;

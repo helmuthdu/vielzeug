@@ -42,6 +42,7 @@ export const componentManifest = [
   { name: 'icon', source: './src/content/icon/icon' },
   { name: 'input', source: './src/inputs/input/input' },
   { name: 'menu', source: './src/overlay/menu/menu' },
+  { name: 'message-composer', source: './src/inputs/message-composer/message-composer' },
   { name: 'navbar', source: './src/layout/navbar/navbar' },
   { name: 'number-input', source: './src/inputs/number-input/number-input' },
   { name: 'otp-input', source: './src/inputs/otp-input/otp-input' },

@@ -63,6 +63,12 @@ export const mergeFormContext = (
  * component through implicit context rather than being passed in.
  *
  * Accepts `FormContext | undefined` directly — pass `inject(FORM_CTX)`.
+ *
+ * `props` here is a field component's *own* full props object (from `setup(props)`), not a
+ * narrowed struct — this reads `props.disabled`/`props.size`/`props.variant` off it directly,
+ * by name. That's easy to miss when auditing a component: `props.variant` can look unused
+ * (never appears as `props.variant` anywhere else in the file) purely because its only reader
+ * is this call — grepping for `useFormContext(props` is the tell.
  */
 export const useFormContext = (
   props: Parameters<typeof mergeFormContext>[0],

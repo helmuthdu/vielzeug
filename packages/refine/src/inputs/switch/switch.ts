@@ -84,13 +84,11 @@ define<OreSwitchProps>(SWITCH_TAG, {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(props, formCtx);
 
-    let _formField: { reportValidity(): void } | null = null;
     const checkable = createCheckable({
       checked: props.checked,
       clearIndeterminateFirst: false,
       disabled: fCtxProps.disabled,
       error: props.error,
-      getFormField: () => _formField,
       helper: props.helper,
       onToggle: (payload) => {
         checkable.triggerValidation('change');
@@ -102,11 +100,13 @@ define<OreSwitchProps>(SWITCH_TAG, {
       value: props.value,
     });
 
-    _formField = useField<string | null>({
-      disabled: checkable.disabled,
-      toFormValue: (v) => v,
-      value: checkable.checkableFormValue,
-    });
+    checkable.attachFormField(
+      useField<string | null>({
+        disabled: checkable.disabled,
+        toFormValue: (v) => v,
+        value: checkable.checkableFormValue,
+      }),
+    );
 
     const { assistiveId, checked, disabled, errorText, handleClick, handleKeydown, helperText, labelId } = checkable;
 

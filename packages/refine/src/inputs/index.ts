@@ -21,6 +21,8 @@ export { FORM_TAG } from './form/form';
 export type { OreFormEvents, OreFormProps } from './form/form';
 export { INPUT_TAG } from './input/input';
 export type { OreInputEvents, OreInputProps } from './input/input';
+export { MESSAGE_COMPOSER_TAG } from './message-composer/message-composer';
+export type { OreMessageComposerEvents, OreMessageComposerProps } from './message-composer/message-composer';
 export { NUMBER_INPUT_TAG } from './number-input/number-input';
 export type { OreNumberInputEvents, OreNumberInputProps } from './number-input/number-input';
 export { OTP_INPUT_TAG } from './otp-input/otp-input';
