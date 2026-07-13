@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: normalize navbar item button base styles",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

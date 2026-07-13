@@ -283,7 +283,10 @@
     color: var(--navbar-item-color, var(--color-contrast-700));
     white-space: nowrap;
     text-decoration: none;
+    appearance: none;
     cursor: pointer;
+    background: transparent;
+    border: none;
     border-radius: var(--rounded-md);
     transition:
       background var(--transition-fast),
