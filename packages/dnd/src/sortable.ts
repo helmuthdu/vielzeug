@@ -725,7 +725,10 @@ export function createSortable(options: SortableOptions): Sortable {
     const target = (e.target as HTMLElement).closest<HTMLElement>(`[${ITEM_ATTR}]`);
 
     if (!target) {
-      if (placeholder.parentElement !== element || placeholder.nextSibling !== null) {
+      // Only append placeholder when it isn't already inside this container.
+      // Moving it to the end on every over-empty-space event causes the
+      // placeholder to oscillate between positions as the cursor moves.
+      if (placeholder.parentElement !== element) {
         element.appendChild(placeholder);
       }
 
