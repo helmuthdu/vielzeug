@@ -407,6 +407,45 @@ It also follows a **streaming** last message that grows in place (tokens appende
 const showJumpButton = !virt.isAtEnd();
 ```
 
+## Infinite Scroll — Loading More at the End
+
+Use `isAtEnd(threshold)` to fetch the next page as the user nears the bottom. `isAtEnd()` reports scroll position only — it keeps returning `true` while a fetch is in flight — so guard it with your own `loading` flag to avoid firing the same request twice.
+
+```ts
+import { createVirtualizer, type Virtualizer } from '@vielzeug/scroll';
+
+let rows = await fetchPage(0);
+let loading = false;
+
+let virt: Virtualizer;
+virt = createVirtualizer(scrollEl, {
+  count: rows.length,
+  estimateSize: 36,
+  onChange: ({ items, totalSize }) => {
+    listEl.style.height = `${totalSize}px`;
+    listEl.innerHTML = '';
+
+    for (const item of items) {
+      const el = document.createElement('div');
+      el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
+      el.textContent = rows[item.index]?.label ?? '';
+      listEl.appendChild(el);
+    }
+
+    if (!loading && virt.isAtEnd(200)) {
+      loading = true;
+      fetchPage(rows.length).then((nextRows) => {
+        rows = [...rows, ...nextRows];
+        virt.update({ count: rows.length });
+        loading = false;
+      });
+    }
+  },
+});
+```
+
+`isAtEnd(200)` fires once the viewport is within 200px of the bottom — tune the threshold to your row height and fetch latency. `loading` is the only guard needed: it's cleared once the new page lands, and `update({ count })` re-triggers `onChange`, which re-checks `isAtEnd()` against the new total on the next scroll.
+
 ## Shared Measurement Cache
 
 When the same items are displayed across multiple virtualizer instances (e.g. a list and a detail panel that share row heights), pass a shared `MeasurementCache` created by `createMeasurementCache()`. Measurements recorded by one virtualizer are immediately available to all others using the same cache.
@@ -495,7 +534,7 @@ Scroll is rendering-layer agnostic. The pattern is always the same: create the v
 
 ```tsx [React]
 import { createVirtualizer, type Virtualizer } from '@vielzeug/scroll';
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
 interface Row {
   id: number;
@@ -530,7 +569,10 @@ function VirtualList({ rows }: { rows: Row[] }) {
     return () => virt.dispose();
   }, []); // attach once
 
-  useEffect(() => {
+  // useLayoutEffect, not useEffect: syncs count before paint. With useEffect,
+  // the DOM (and anything reading `rows`) paints once with the new length before
+  // the virtualizer's internal count catches up, which can render stale/out-of-bounds indices.
+  useLayoutEffect(() => {
     virtRef.current?.update({ count: rows.length });
   }, [rows.length]);
 
@@ -679,6 +721,7 @@ class VirtualList extends LitElement {
 ### Pitfalls
 
 - **React:** Putting `rows` in the `useEffect` dependency array causes the virtualizer to be destroyed and recreated on every data update. Only include the scroll element reference. Call `virt.update({ count })` from a separate `useEffect` for data changes.
+- **React:** Use `useLayoutEffect`, not `useEffect`, for the `count`-sync effect. `useEffect` fires after paint — a new `count` can reach the DOM (e.g. via other state derived from `rows`) before `update({ count })` runs, rendering stale or out-of-bounds indices for one frame.
 - **Vue 3:** `ref.value` is `null` inside `setup()` — the DOM doesn't exist yet. Always create the virtualizer inside `onMounted`, not in `setup()`.
 - **Svelte:** In Svelte 5, `$effect` with `bind:this` runs after the DOM is painted. The `bind:this` variable is available when the `$effect` runs — no extra tick needed.
 - **Web Components:** `firstUpdated` fires once after the first render. Use `updated()` for subsequent prop changes — Lit calls it every time `rows` changes.
