@@ -16,6 +16,7 @@ import {
   float,
   floatWithAnchor,
   getAlignment,
+  getClippingAncestorRect,
   getRects,
   getSide,
   hide,
@@ -243,6 +244,131 @@ describe('detectOverflow', () => {
       right: -934,
       top: -6,
     });
+  });
+});
+
+// ─── getClippingAncestorRect ───────────────────────────────────────────────────
+
+describe('getClippingAncestorRect', () => {
+  beforeEach(() => setViewport());
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('falls back to the viewport when no ancestor clips', () => {
+    const el = document.createElement('div');
+
+    document.body.appendChild(el);
+
+    expect(getClippingAncestorRect(el)).toEqual({ height: 768, width: 1024, x: 0, y: 0 });
+  });
+
+  it('intersects with the nearest ancestor with overflow: hidden', () => {
+    const clipper = document.createElement('div');
+    const el = document.createElement('div');
+
+    clipper.style.overflow = 'hidden';
+    vi.spyOn(clipper, 'getBoundingClientRect').mockReturnValue(
+      createDomRect({ height: 200, width: 300, x: 50, y: 60 }),
+    );
+    clipper.appendChild(el);
+    document.body.appendChild(clipper);
+
+    expect(getClippingAncestorRect(el)).toEqual({ height: 200, width: 300, x: 50, y: 60 });
+  });
+
+  it('intersects with overflow: auto and overflow: scroll ancestors too', () => {
+    for (const overflowValue of ['auto', 'scroll']) {
+      const clipper = document.createElement('div');
+      const el = document.createElement('div');
+
+      clipper.style.overflow = overflowValue;
+      vi.spyOn(clipper, 'getBoundingClientRect').mockReturnValue(
+        createDomRect({ height: 100, width: 100, x: 0, y: 0 }),
+      );
+      clipper.appendChild(el);
+      document.body.appendChild(clipper);
+
+      expect(getClippingAncestorRect(el)).toEqual({ height: 100, width: 100, x: 0, y: 0 });
+      clipper.remove();
+    }
+  });
+
+  it('ignores overflow: visible ancestors', () => {
+    const visible = document.createElement('div');
+    const el = document.createElement('div');
+
+    visible.style.overflow = 'visible';
+    vi.spyOn(visible, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 50, width: 50, x: 10, y: 10 }));
+    visible.appendChild(el);
+    document.body.appendChild(visible);
+
+    expect(getClippingAncestorRect(el)).toEqual({ height: 768, width: 1024, x: 0, y: 0 });
+  });
+
+  it('intersects multiple nested clipping ancestors — most restrictive wins', () => {
+    const outer = document.createElement('div');
+    const inner = document.createElement('div');
+    const el = document.createElement('div');
+
+    outer.style.overflow = 'auto';
+    vi.spyOn(outer, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 400, width: 400, x: 0, y: 0 }));
+    inner.style.overflow = 'hidden';
+    vi.spyOn(inner, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 100, width: 500, x: 20, y: 20 }));
+    inner.appendChild(el);
+    outer.appendChild(inner);
+    document.body.appendChild(outer);
+
+    // outer: x[0,400] y[0,400]; inner: x[20,520] y[20,120] → intersection: x[20,400] y[20,120]
+    expect(getClippingAncestorRect(el)).toEqual({ height: 100, width: 380, x: 20, y: 20 });
+  });
+
+  it('crosses shadow boundaries to reach a clipping host ancestor', () => {
+    const host = document.createElement('div');
+
+    host.style.overflow = 'hidden';
+    vi.spyOn(host, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 150, width: 250, x: 5, y: 5 }));
+    document.body.appendChild(host);
+
+    const shadow = host.attachShadow({ mode: 'open' });
+    const el = document.createElement('div');
+
+    shadow.appendChild(el);
+
+    expect(getClippingAncestorRect(el)).toEqual({ height: 150, width: 250, x: 5, y: 5 });
+  });
+
+  // Regression test mirroring the analogous one in containing-block.test.ts: a clipping
+  // ancestor that lives inside a projecting shadow tree (a dialog's `.panel`, say) rather than
+  // in the light-DOM ancestor chain of the element being measured.
+  it('crosses a <slot> boundary to reach a clipping ancestor inside the projecting shadow tree', () => {
+    const dialogHost = document.createElement('div');
+
+    document.body.appendChild(dialogHost);
+
+    const dialogShadow = dialogHost.attachShadow({ mode: 'open' });
+    const panel = document.createElement('div');
+
+    panel.style.overflow = 'hidden';
+    vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 300, width: 400, x: 10, y: 10 }));
+    dialogShadow.appendChild(panel);
+
+    const slot = document.createElement('slot');
+
+    panel.appendChild(slot);
+
+    const formGrid = document.createElement('div');
+    const el = document.createElement('div');
+
+    formGrid.appendChild(el);
+    dialogHost.appendChild(formGrid);
+
+    // jsdom doesn't compute slot assignment automatically the way a real browser does —
+    // simulate it directly via the same `assignedSlot` property `flatTreeParent` reads.
+    Object.defineProperty(formGrid, 'assignedSlot', { value: slot });
+
+    expect(getClippingAncestorRect(el)).toEqual({ height: 300, width: 400, x: 10, y: 10 });
   });
 });
 
@@ -708,6 +834,48 @@ describe('autoUpdate', () => {
 
     expect(update).toHaveBeenCalledOnce();
     cleanup();
+  });
+
+  // Regression test mirroring the analogous ones for getContainingBlock/getClippingAncestorRect:
+  // a scroll container that lives inside a projecting shadow tree (a dialog's own internal
+  // scroll region, say) rather than in the reference element's light-DOM ancestor chain.
+  it('crosses a <slot> boundary to attach a scroll listener on an ancestor inside the projecting shadow tree', () => {
+    const dialogHost = document.createElement('div');
+
+    document.body.appendChild(dialogHost);
+
+    const dialogShadow = dialogHost.attachShadow({ mode: 'open' });
+    const scrollRegion = document.createElement('div');
+
+    scrollRegion.style.overflow = 'auto';
+    dialogShadow.appendChild(scrollRegion);
+
+    const slot = document.createElement('slot');
+
+    scrollRegion.appendChild(slot);
+
+    const formGrid = document.createElement('div');
+    const reference = document.createElement('div');
+
+    vi.spyOn(reference, 'getBoundingClientRect').mockReturnValue(createDomRect({}));
+    formGrid.appendChild(reference);
+    dialogHost.appendChild(formGrid);
+
+    // jsdom doesn't compute slot assignment automatically the way a real browser does —
+    // simulate it directly via the same `assignedSlot` property `flatTreeParent` reads.
+    Object.defineProperty(formGrid, 'assignedSlot', { value: slot });
+
+    const floating = document.createElement('div');
+
+    vi.spyOn(floating, 'getBoundingClientRect').mockReturnValue(createDomRect({}));
+
+    const addSpy = vi.spyOn(scrollRegion, 'addEventListener');
+    const cleanup = autoUpdate(reference, floating, vi.fn());
+
+    expect(addSpy).toHaveBeenCalledWith('scroll', expect.any(Function), { passive: true });
+    cleanup();
+
+    document.body.removeChild(dialogHost);
   });
 
   it('observeAncestors: false uses capture-phase window scroll listener', () => {

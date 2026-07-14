@@ -7,7 +7,7 @@
 
 import type { DetectOverflowOptions, MiddlewareState, Placement, Rect, SideObject } from './types';
 
-import { baseCoords, getSide, toSideObject } from './utils';
+import { baseCoords, flatTreeParent, getSide, toSideObject } from './utils';
 
 // ── Boundary ──────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,54 @@ export function getBoundaryRect(boundary?: Element | Rect): Rect {
   }
 
   return boundary as Rect;
+}
+
+const CLIPPING_OVERFLOW = /(hidden|clip|scroll|auto|overlay)/;
+
+function intersectRect(a: Rect, b: Rect): Rect {
+  const x = Math.max(a.x, b.x);
+  const y = Math.max(a.y, b.y);
+  const right = Math.min(a.x + a.width, b.x + b.width);
+  const bottom = Math.min(a.y + a.height, b.y + b.height);
+
+  return { height: Math.max(0, bottom - y), width: Math.max(0, right - x), x, y };
+}
+
+/**
+ * Walks up from `element` (crossing shadow boundaries via the flat tree) collecting every
+ * ancestor whose `overflow`/`overflow-x`/`overflow-y` clips content — `hidden`, `clip`, `scroll`,
+ * `auto`, or `overlay` — intersecting each one's rect into a running result (the nearest,
+ * most-restrictive ancestor wins, same model real CSS clipping uses). Always intersects with the
+ * viewport too, so the result never exceeds it even when no clipping ancestor is found.
+ *
+ * Pass this as `boundary` to `flip`/`shift`/`size` so a floating element nested inside a
+ * scrollable region or a dialog panel stays within *that* container — which is what a user
+ * actually sees as "the edge" — instead of only avoiding the full page viewport, which the
+ * floating element can still be well inside while visibly overhanging a much smaller ancestor.
+ *
+ * @example
+ * ```ts
+ * const boundary = getClippingAncestorRect(floatingEl);
+ * computePosition(reference, floating, { boundary, middleware: [flip(), shift()] });
+ * ```
+ */
+export function getClippingAncestorRect(element: Element): Rect {
+  let node = flatTreeParent(element);
+  let rect = getViewportRect();
+
+  while (node) {
+    const style = getComputedStyle(node);
+
+    if (CLIPPING_OVERFLOW.test(`${style.overflow}${style.overflowX}${style.overflowY}`)) {
+      const r = node.getBoundingClientRect();
+
+      rect = intersectRect(rect, { height: r.height, width: r.width, x: r.x, y: r.y });
+    }
+
+    node = flatTreeParent(node);
+  }
+
+  return rect;
 }
 
 /**

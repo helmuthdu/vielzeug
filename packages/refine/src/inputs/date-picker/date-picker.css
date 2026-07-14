@@ -4,7 +4,6 @@
     --_day-today-color: var(--date-picker-day-today-color, var(--_theme-focus));
     --_day-outside-opacity: var(--date-picker-day-outside-opacity, 0.35);
 
-    position: relative;
     display: inline-block;
   }
 
@@ -30,11 +29,14 @@
 
   /* ── Calendar popup ──────────────────────────────────────────────────────── */
 
+  /* `fixed` (not `absolute`) — positioned via JS-computed top/left (see the positioner in
+     date-picker.ts), same as ore-select's own `.dropdown`. Laid out relative to the viewport,
+     so it never affects any ancestor's box size or scrollable-overflow area — `absolute`
+     positioned relative to the host did, once the host sat near a scroll/clip ancestor's edge. */
   .calendar {
-    position: absolute;
-    top: calc(100% + var(--size-1));
-    left: 0;
-    z-index: var(--z-dropdown, 200);
+    position: fixed;
+    inset: 0 auto auto 0;
+    z-index: var(--z-dropdown, 8000);
     display: flex;
     flex-direction: column;
     gap: var(--size-2);

@@ -1,11 +1,18 @@
-import { define, html, inject, prop, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
+import { define, html, inject, prop, ref, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore/forms';
 import { computed, signal } from '@vielzeug/ripple';
 import { Temporal, format } from '@vielzeug/tempo';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../shared';
 
-import { createDatePickerControl, formatDisplayDate, parseIso, toIsoString, type DatePickerView } from '../../headless';
+import {
+  createDatePickerControl,
+  createDropdownPositioner,
+  formatDisplayDate,
+  parseIso,
+  toIsoString,
+  type DatePickerView,
+} from '../../headless';
 import '../../content/icon/icon';
 import '../input/input';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
@@ -219,6 +226,30 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
 
     const dialogId = `date-picker-${Math.random().toString(36).slice(2, 9)}-calendar`;
 
+    // ── Floating position ────────────────────────────────────────────────────
+    // The old CSS-only `position: absolute; top: 100%` positioned the calendar relative to
+    // the host box — fine until the host sits near a scroll/clip ancestor's edge (e.g. a form
+    // grid inside a dialog), where the same absolute box also expands that ancestor's
+    // *scrollable* overflow area even though it never changes the ancestor's own layout size,
+    // which reads as "the dialog got bigger"/jumped. `createDropdownPositioner` — the same
+    // Orbit-powered primitive `ore-select`'s dropdown already uses — positions via `fixed` +
+    // computed `top`/`left`, auto-detecting both the nearest clipping ancestor (so flip/shift
+    // keep the calendar within the dialog panel, not just the page viewport) and any ancestor
+    // that establishes a containing block for `position: fixed` (a dialog panel's entrance
+    // transition commonly leaves a permanent, if visually-identity, `transform` at rest) —
+    // see `createDropdownPositioner`'s own `boundary`/`containingBlock` docs.
+    const triggerRef = ref<HTMLElement>();
+    const calendarRef = ref<HTMLElement>();
+
+    const positioner = createDropdownPositioner({
+      getFloating: () => calendarRef.value ?? null,
+      getReference: () => triggerRef.value ?? null,
+      matchWidth: false,
+      offsetPx: 4,
+    });
+
+    let stopAutoUpdate: (() => void) | null = null;
+
     // ── Derived display values ───────────────────────────────────────────────
 
     const triggerText = computed(() => {
@@ -400,12 +431,17 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
         displayYear.value = ctrl.displayYear();
         displayMonth.value = ctrl.displayMonth();
       }
+
+      positioner.update();
+      stopAutoUpdate = positioner.startAutoUpdate?.() ?? null;
     }
 
     function closePicker(): void {
       isOpen.value = false;
       ctrl.setView('day');
       currentView.value = 'day';
+      stopAutoUpdate?.();
+      stopAutoUpdate = null;
     }
 
     function handleTriggerClick(): void {
@@ -449,6 +485,8 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
 
       return () => {
         document.removeEventListener('pointerdown', handleOutsideClick, { capture: true });
+        stopAutoUpdate?.();
+        stopAutoUpdate = null;
       };
     });
 
@@ -480,6 +518,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
       <!-- Trigger: ore-input in readonly display mode -->
       <ore-input
         class="trigger"
+        ref="${triggerRef}"
         readonly
         tabindex="${tabIndex}"
         role="combobox"
@@ -508,6 +547,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
       <!-- Calendar popup -->
       <div
         class="calendar"
+        ref="${calendarRef}"
         id="${dialogId}"
         role="dialog"
         aria-modal="true"

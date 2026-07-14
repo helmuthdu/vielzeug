@@ -4,10 +4,12 @@ An accessible, keyboard-navigable date picker with an inline calendar popup. Sup
 
 ## Basic Usage
 
-<ComponentPreview vertical>
+<ComponentPreview vertical height="400px;">
 
 ```html
+<div style="height: 400px;">
 <ore-date-picker label="Appointment date"></ore-date-picker>
+</div>
 ```
 
 </ComponentPreview>
@@ -24,7 +26,7 @@ document.querySelector('ore-date-picker').addEventListener('change', (e) => {
 
 Restrict the selectable range with ISO 8601 `min` and `max` attributes.
 
-<ComponentPreview vertical>
+<ComponentPreview vertical height="400px;">
 
 ```html
 <ore-date-picker label="Conference date" min="2025-09-01" max="2025-09-30"> </ore-date-picker>
@@ -36,7 +38,7 @@ Restrict the selectable range with ISO 8601 `min` and `max` attributes.
 
 Pass a JSON array of day-of-week indices (0 = Sunday … 6 = Saturday) to `weekend-days`.
 
-<ComponentPreview vertical>
+<ComponentPreview vertical height="400px;">
 
 ```html
 <ore-date-picker label="Business day" weekend-days="[0,6]"></ore-date-picker>
@@ -61,7 +63,7 @@ Override the display locale with any BCP 47 tag. Day and month names update auto
 
 Set `value` to an ISO 8601 date string to initialise the selection.
 
-<ComponentPreview vertical>
+<ComponentPreview vertical height="400px;">
 
 ```html
 <ore-date-picker label="Start date" value="2025-06-15"></ore-date-picker>
@@ -73,7 +75,7 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 `ore-date-picker` is form-associated. The submitted value is the ISO 8601 string or empty string when no date is selected.
 
-<ComponentPreview vertical>
+<ComponentPreview vertical height="400px;">
 
 ```html
 <form>
@@ -86,7 +88,7 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 ## Sizes
 
-<ComponentPreview vertical>
+<ComponentPreview vertical height="400px;">
 
 ```html
 <ore-date-picker size="sm" placeholder="Small"></ore-date-picker>
@@ -111,7 +113,7 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 ## Colors
 
-<ComponentPreview vertical>
+<ComponentPreview vertical height="400px;">
 
 ```html
 <ore-grid cols="2" cols-sm="3" cols-md="4" gap="md">
@@ -129,7 +131,7 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 ## Error and Helper Text
 
-<ComponentPreview vertical>
+<ComponentPreview vertical height="400px;">
 
 ```html
 <ore-date-picker label="Return date" helper="Pick a date within the next 30 days"> </ore-date-picker>
@@ -141,7 +143,7 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 ## Disabled
 
-<ComponentPreview vertical>
+<ComponentPreview vertical height="400px;">
 
 ```html
 <ore-date-picker label="Read-only date" value="2025-01-01" disabled></ore-date-picker>

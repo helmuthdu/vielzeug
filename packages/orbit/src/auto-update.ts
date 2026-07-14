@@ -2,7 +2,7 @@ import { throttle } from '@vielzeug/arsenal';
 
 import type { ReferenceElement } from './types';
 
-import { isElement } from './utils';
+import { flatTreeParent, isElement } from './utils';
 
 export interface AutoUpdateOptions {
   /** Watch the floating element for size changes. Default: `true`. */
@@ -37,10 +37,15 @@ export interface AutoUpdateOptions {
  * Collects the ancestor scroll containers of an element (up to and including the
  * nearest scrollable ancestor). Used to scope scroll listeners to the minimal
  * set of elements rather than relying on a capture-phase window listener.
+ *
+ * Walks the flat (rendering) tree via `flatTreeParent` — not light-DOM `parentElement` alone —
+ * so a scroll container that lives inside the shadow tree a component's light-DOM content is
+ * *projected into* (e.g. a dialog's own internal scroll region, reached only by crossing its
+ * `<slot>`) is still found, instead of silently skipped.
  */
 function getScrollAncestors(el: Element): Element[] {
   const ancestors: Element[] = [];
-  let current: Element | null = el.parentElement;
+  let current: Element | null = flatTreeParent(el);
 
   while (current) {
     const style = getComputedStyle(current);
@@ -50,13 +55,7 @@ function getScrollAncestors(el: Element): Element[] {
       ancestors.push(current);
     }
 
-    if (current.parentElement) {
-      current = current.parentElement;
-    } else {
-      const root = current.getRootNode();
-
-      current = root instanceof ShadowRoot ? root.host : null;
-    }
+    current = flatTreeParent(current);
   }
 
   return ancestors;

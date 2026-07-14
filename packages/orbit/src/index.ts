@@ -3,7 +3,8 @@ export { OrbitConfigError, OrbitError } from './errors';
 
 // Core engine
 export { computePosition, computePositionAsync, computePositionRaf, getRects } from './core';
-export { detectOverflow } from './overflow';
+export { detectOverflow, getClippingAncestorRect } from './overflow';
+export { getContainingBlock } from './containing-block';
 
 // High-level API
 export { float, floatWithAnchor, isCssAnchorSupported } from './float';
