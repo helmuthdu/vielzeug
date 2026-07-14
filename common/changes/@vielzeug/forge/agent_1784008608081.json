@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
+      "packageName": "@vielzeug/forge",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/forge"
+}
