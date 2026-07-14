@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: dropdown-style overlays (select, combobox, menu, date-picker) now auto-detect the nearest clipping ancestor as their flip/shift boundary (via orbit's getClippingAncestorRect) instead of only the page viewport, and auto-correct for any ancestor establishing a position:fixed containing block (via orbit's getContainingBlock) — fixes ore-date-picker's calendar overhanging or mispositioning inside a dialog",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

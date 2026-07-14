@@ -1,61 +1,17 @@
 @layer refine.base {
+  /* No explicit width here, on purpose — matches ore-select/ore-date-picker's own :host, neither
+     of which sets one either. A grid/flex item with `width: auto` (the default) stretches to
+     fill its track by default; the old `width: fit-content` here overrode that default and
+     forced this one field to shrink-wrap while every sibling field stretched to match the
+     column, e.g. in a 2-column form grid. */
   :host {
     display: inline-flex;
-    width: fit-content;
   }
 
+  /* Explicit opt-in still forces full width outside a stretching grid/flex context — same
+     convention as ore-input's own :host([fullwidth]). */
   :host([fullwidth]) {
     width: 100%;
-  }
-
-  .wrapper {
-    display: inline-flex;
-    gap: var(--size-1);
-    align-items: center;
-    width: 100%;
-  }
-
-  /* Align buttons to the top when the label is outside (it adds height above the field) */
-  :host([label-placement='outside']) .wrapper {
-    align-items: flex-end;
-  }
-
-  /* Spin buttons */
-  button {
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    width: var(--size-10);
-    min-width: var(--size-10);
-    height: var(--size-10);
-    min-height: var(--size-10);
-    padding: 0;
-    color: var(--color-contrast-600);
-    cursor: pointer;
-    background: transparent;
-    border: none;
-    border-radius: var(--rounded-md);
-    transition: color var(--transition-fast);
-  }
-
-  button:hover:not(:disabled) {
-    color: var(--color-contrast-800);
-    background: var(--color-contrast-100);
-  }
-
-  button:active:not(:disabled) {
-    background: var(--color-contrast-200);
-  }
-
-  button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-
-  button:focus-visible {
-    outline: 2px solid var(--color-primary-500);
-    outline-offset: 2px;
   }
 
   /* Centre the typed number inside the field */
@@ -63,13 +19,49 @@
     text-align: center;
   }
 
-  .field {
-    width: var(--size-20);
+  /* Stepper buttons — slotted into ore-input's own prefix/suffix, so they render inside its
+     bordered box like its built-in clear/password-toggle buttons, not as separate controls. */
+  button[part='decrement-btn'],
+  button[part='increment-btn'] {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-6);
+    min-width: var(--size-6);
+    height: var(--size-6);
+    min-height: var(--size-6);
+    padding: 0;
+    color: var(--color-contrast-600);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-radius: var(--rounded-sm);
+    transition:
+      color var(--transition-fast),
+      background var(--transition-fast);
   }
 
-  :host([fullwidth]) .field {
-    flex: 1;
-    width: auto;
-    min-width: 0;
+  button[part='decrement-btn']:hover:not(:disabled),
+  button[part='increment-btn']:hover:not(:disabled) {
+    color: var(--color-contrast-900);
+    background: var(--color-contrast-150, var(--color-contrast-100));
+  }
+
+  button[part='decrement-btn']:active:not(:disabled),
+  button[part='increment-btn']:active:not(:disabled) {
+    background: var(--color-contrast-200);
+  }
+
+  button[part='decrement-btn']:disabled,
+  button[part='increment-btn']:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  button[part='decrement-btn']:focus-visible,
+  button[part='increment-btn']:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: -2px;
   }
 }

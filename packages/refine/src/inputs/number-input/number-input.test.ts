@@ -28,11 +28,11 @@ describe('ore-number-input', () => {
   // ─── Rendering ───────────────────────────────────────────────────────────────
 
   describe('Rendering', () => {
-    it('renders a spinbutton control div', async () => {
+    it('renders a spinbutton control', async () => {
       fixture = await mount('ore-number-input');
       await fixture.flush();
 
-      expect(fixture.query('.wrapper')).toBeTruthy();
+      expect(fixture.query('ore-input.field')).toBeTruthy();
       expect(getInput(fixture)?.getAttribute('role')).toBe('spinbutton');
     });
 
@@ -293,9 +293,9 @@ describe('ore-number-input', () => {
     it('updates the inner ore-input value when committed via keyboard (Home/End)', async () => {
       fixture = await mount('ore-number-input', { attrs: { max: '10', min: '0', value: '5' } });
 
-      const wrapper = fixture.query<HTMLElement>('.wrapper');
+      const control = fixture.query<HTMLElement>('ore-input.field');
 
-      wrapper?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'End' }));
+      control?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'End' }));
       await fixture.flush();
 
       const innerInput = fixture.query<HTMLElement & { value: string }>('ore-input.field');

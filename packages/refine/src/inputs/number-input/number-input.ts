@@ -271,9 +271,35 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
 
     const isNonInteractive = computed(() => isDisabled.value || isReadonly.value);
 
+    // The stepper buttons are slotted *into* ore-input's own `prefix`/`suffix` slots instead of
+    // sitting outside it in a separate wrapper — they render inside ore-input's own bordered
+    // box (same as its built-in clear/password-toggle buttons), matching every other field's
+    // single-box look instead of floating as two detached icon buttons either side of a
+    // narrow field. `@keydown` moves to ore-input itself: native keyboard events are
+    // `composed: true` and bubble out past a shadow boundary, so it still sees keydowns
+    // originating from ore-input's internal <input> as well as from these slotted buttons.
     return html`
-      <div class="wrapper" part="control" @keydown="${(e: KeyboardEvent) => spinner.handleKeydown(e)}">
+      <ore-input
+        class="field"
+        part="field control"
+        ref="${bitInputRef}"
+        :value="${() => fieldValue.value}"
+        :label="${() => props.label.value ?? ''}"
+        :label-placement="${() => props['label-placement'].value ?? 'inset'}"
+        :placeholder="${() => props.placeholder.value ?? ''}"
+        :name="${() => props.name.value ?? ''}"
+        :helper="${() => props.helper.value ?? ''}"
+        :error="${() => props.error.value ?? ''}"
+        :size="${fCtxProps.size}"
+        :color="${() => props.color.value ?? ''}"
+        :variant="${() => props.variant.value ?? ''}"
+        :rounded="${() => props.rounded.value}"
+        ?disabled="${isDisabled}"
+        ?readonly="${isReadonly}"
+        ?fullwidth="${() => props.fullwidth.value}"
+        @keydown="${(e: KeyboardEvent) => spinner.handleKeydown(e)}">
         <button
+          slot="prefix"
           type="button"
           part="decrement-btn"
           aria-label="Decrease"
@@ -281,26 +307,8 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
           @click="${(e: Event) => spinner.incrementBy(-(Number(props.step.value) || 1), e)}">
           <ore-icon name="minus" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>
         </button>
-        <ore-input
-          class="field"
-          part="field"
-          ref="${bitInputRef}"
-          :value="${() => fieldValue.value}"
-          :label="${() => props.label.value ?? ''}"
-          :label-placement="${() => props['label-placement'].value ?? 'inset'}"
-          :placeholder="${() => props.placeholder.value ?? ''}"
-          :name="${() => props.name.value ?? ''}"
-          :helper="${() => props.helper.value ?? ''}"
-          :error="${() => props.error.value ?? ''}"
-          :size="${fCtxProps.size}"
-          :color="${() => props.color.value ?? ''}"
-          :variant="${() => props.variant.value ?? ''}"
-          :rounded="${() => props.rounded.value}"
-          ?disabled="${isDisabled}"
-          ?readonly="${isReadonly}"
-          ?fullwidth="${() => false}">
-        </ore-input>
         <button
+          slot="suffix"
           type="button"
           part="increment-btn"
           aria-label="Increase"
@@ -308,7 +316,7 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
           @click="${(e: Event) => spinner.incrementBy(Number(props.step.value) || 1, e)}">
           <ore-icon name="plus" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>
         </button>
-      </div>
+      </ore-input>
     `;
   },
   shadow: { delegatesFocus: true },
