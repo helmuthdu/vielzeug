@@ -47,12 +47,21 @@
  * e.g. `local-publish.mjs`) to run the publish step with inherited stdio instead, so npm
  * shares the caller's actual terminal and can do the browser-trust dance — the tradeoff is no
  * captured output for that call, so no automatic E409 retry; just re-run by hand on a conflict.
+ *
+ * ## Workspace protocol dependencies
+ *
+ * `npm pack` has no idea what a `workspace:*` dependency specifier means — it would otherwise
+ * pack that literal string straight into the published tarball's package.json, breaking every
+ * consumer that installs the result outside this monorepo. `resolveWorkspaceDeps` rewrites them
+ * to real semver ranges on disk right before packing and restores the original file straight
+ * after — see `resolve-workspace-deps.mjs` for the full rationale.
  */
 
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { run as defaultRun } from '../lib/cli.mjs';
+import { resolveWorkspaceDependencies } from './resolve-workspace-deps.mjs';
 
 const RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
 
@@ -60,11 +69,40 @@ function defaultSleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Rewrites `folder`'s package.json on disk to resolve `workspace:*` dependency specifiers into
+ * real semver ranges, and returns a restore function that puts the original file content back.
+ * `findProject` is a test seam only (see `resolve-workspace-deps.mjs`'s default) — production
+ * callers never need to pass it, it resolves each dependency's real version from `rush.json`.
+ */
+function defaultResolveWorkspaceDeps(folder, { findProject } = {}) {
+  const pkgJsonPath = path.join(folder, 'package.json');
+  const original = readFileSync(pkgJsonPath, 'utf8');
+  const rewritten = resolveWorkspaceDependencies(JSON.parse(original), { findProject });
+  writeFileSync(pkgJsonPath, `${JSON.stringify(rewritten, null, 2)}\n`);
+  return () => writeFileSync(pkgJsonPath, original);
+}
+
 export async function publishPackage(
   folder,
-  { dryRun = false, interactive = false, otp, run = defaultRun, sleep = defaultSleep } = {},
+  {
+    dryRun = false,
+    findProject,
+    interactive = false,
+    otp,
+    resolveWorkspaceDeps = defaultResolveWorkspaceDeps,
+    run = defaultRun,
+    sleep = defaultSleep,
+  } = {},
 ) {
-  const [{ filename }] = JSON.parse(run('npm', ['pack', '--json'], { cwd: folder }));
+  const restorePackageJson = resolveWorkspaceDeps(folder, { findProject });
+  let filename;
+  try {
+    [{ filename }] = JSON.parse(run('npm', ['pack', '--json'], { cwd: folder }));
+  } finally {
+    restorePackageJson();
+  }
+
   const tarballPath = path.join(folder, filename);
   const publishArgs = ['publish', filename, '--access', 'public', ...(otp ? [`--otp=${otp}`] : [])];
 
