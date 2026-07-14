@@ -23,7 +23,7 @@ pre-commit:
       stage_fixed: true
       run: >
         npx eslint --fix {staged_files} &&
-        npx vitest {staged_files} --run
+        npx vitest {staged_files} --passWithNoTests --run
     check:workflow-docs:
       glob: '.ai/workflows/{manifest.json,pkg-workflow.md}'
       run: node scripts/sync-workflow-docs.mjs --check

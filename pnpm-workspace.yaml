@@ -3,4 +3,5 @@ packages:
 allowBuilds:
   esbuild: true
   lefthook: true
+  playwright: true
   rs-module-lexer: true

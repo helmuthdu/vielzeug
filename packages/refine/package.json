@@ -461,6 +461,7 @@
     "sync:exports": "node ./scripts/refine-manifest.mjs sync-exports",
     "sync:theme": "node ./scripts/theme-tokens.mjs sync",
     "test": "vitest",
+    "test:e2e": "playwright test",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:bundle:watch": "vite build --watch --config vite.bundle.config.ts"
   },
@@ -475,7 +476,10 @@
     "lucide": "^1.23.0"
   },
   "devDependencies": {
+    "@types/node": "^22.20.1",
+    "@axe-core/playwright": "^4.12.1",
     "@custom-elements-manifest/analyzer": "^0.11.0",
+    "@playwright/test": "^1.61.1",
     "@types/culori": "^4.0.1",
     "axe-core": "^4.12.1",
     "browserslist": "^4.28.5",

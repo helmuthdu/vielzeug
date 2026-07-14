@@ -9,6 +9,7 @@ export default defineConfig({
     environment: 'node',
     exclude: ['dist/**', 'node_modules/**'],
     globals: true,
+    globalSetup: ['./scripts/vitest-global-setup.ts'],
     projects: [
       {
         extends: true,

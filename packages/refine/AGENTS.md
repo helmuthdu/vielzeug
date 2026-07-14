@@ -24,12 +24,33 @@ Accessible, themeable web components built on `ore`. Largest package; one custom
 
 ## Accessibility testing
 
-a11y is tested in **jsdom only** (no browser harness). Keep it reliable by asserting only what jsdom can actually evaluate:
+Two test layers cover different concerns.
 
-- Each component test should call the global `axeCheck(element)` helper (`vitest.setup.ts`) and assert **zero violations**. It runs `wcag2a/2aa/best-practice` but **disables layout/style-dependent rules** (`color-contrast`, `target-size`, `scrollable-region-focusable`, …) that jsdom cannot compute — do **not** re-enable them in jsdom tests.
+### Layer 1 — jsdom (vitest, `pnpm test`)
+
+- Each component test calls the global `axeCheck(element)` helper (`vitest.setup.ts`) and asserts **zero violations**. It runs `wcag2a/2aa/best-practice` but **disables layout/style-dependent rules** (`color-contrast`, `target-size`, `scrollable-region-focusable`, …) that jsdom cannot compute — do **not** re-enable them in jsdom tests.
 - Assert roles, names, and ARIA state with `@vielzeug/refine/testing` helpers (`getAriaLabel`, `isAriaExpanded`, `getRole`, `queryPart`, …), and keyboard/focus behaviour via the `headless/` primitives (focus-trap, roving tabindex, announcer).
-- **Out of automated scope** — verify in a real browser or by manual/visual review: colour contrast, target size, focus-visible, reflow, and anything needing real layout.
-- Why: axe-core targets real browsers; jsdom has no CSS box model and a stubbed `getComputedStyle` (it doesn't even parse `@layer` — every rule in a layer-wrapped stylesheet is silently dropped), so the disabled rules produce false positives/negatives. `scripts/verify-layout.mjs` (`pnpm verify:layout`, repo root) covers a handful of concrete flexbox/box-model regressions in headless Chrome for exactly this reason — run it after touching layout-sensitive CSS. It's a manual dev-time check, not wired into `pnpm test`.
+- Why jsdom can't do more: no CSS box model, `getComputedStyle` is stubbed, `@layer` blocks are silently dropped.
+
+### Layer 2 — real browser (Playwright, `pnpm test:e2e`)
+
+Runs in Chromium via `src/__e2e__/`. No dev server needed — loads the built IIFE stack via `page.setContent()`. Requires a prior `pnpm build`.
+
+```bash
+cd packages/refine
+pnpm test:e2e               # run all e2e specs
+pnpm test:e2e src/__e2e__/a11y.spec.ts       # a11y suite only
+pnpm test:e2e src/__e2e__/layout.spec.ts     # layout regression suite
+pnpm test:e2e src/__e2e__/interaction.spec.ts # interaction/overlay suite
+```
+
+- **`a11y.spec.ts`** — full wcag2a/aa axe scan with `color-contrast` and `target-size` re-enabled. Tests are scoped to `.frame` to avoid page-level false positives. Three tests are marked `test.fail()` with documented reasons (shadow DOM axe limitations for select/tabs, genuine checkbox a11y gap).
+- **`layout.spec.ts`** — CSS layout regression checks (flexbox geometry, overflow, padding ratios). Supersedes `scripts/verify-layout.mjs`'s chat-message scenarios plus adds button/dialog/navbar coverage.
+- **`interaction.spec.ts`** — open/close, focus-trap, keyboard navigation for overlay and composite components (dialog, accordion, tabs, tooltip, popover).
+
+**Adding a new e2e test:** add to the relevant spec in `src/__e2e__/` using the `test` import from `./fixtures`. Call `refinePage.mountComponent(html)` to inject HTML and wait for upgrade. The fixture pre-loads the full IIFE dependency stack.
+
+**Known shadow DOM limitation with axe:** axe-core's flat-tree traversal cannot pierce shadow boundaries for role-child relationships (e.g. `listbox > option`). Components where the ARIA role tree crosses the shadow/light boundary may produce false-positive violations. Mark these `test.fail()` with an explanation — they document known gaps, not real failures.
 
 ## Core Design Principles
 
@@ -91,7 +112,8 @@ Named improvement lenses to guide AI-driven design work on components. Each list
 
 ## Verification
 
-- Tests: **co-located** next to components (`src/<category>/<component>/<component>.test.ts`) plus shared suites under `src/headless/__tests__/` and `src/inputs/__tests__/`. Run the whole tree — `pnpm vitest run packages/refine/src/` (or `pnpm --filter @vielzeug/refine test`). The `.../src/__tests__/` path used by other packages misses most refine tests.
+- **Unit/component tests** (jsdom): `pnpm vitest run packages/refine/src/` or `pnpm --filter @vielzeug/refine test`. Tests are **co-located** next to components (`src/<category>/<component>/<component>.test.ts`) plus shared suites under `src/headless/__tests__/` and `src/inputs/__tests__/`. The `.../src/__tests__/` path used by other packages misses most refine tests.
+- **E2E tests** (Playwright/Chromium): `pnpm --filter @vielzeug/refine test:e2e`. Requires a built dist (`pnpm --filter @vielzeug/refine build` first). Specs live in `src/__e2e__/`.
 - Lint (JS/TS): `pnpm --filter @vielzeug/refine lint` (`eslint src`). This does **not** lint CSS — refine ships many `.css` files; lint those from the repo root with `pnpm lint:css` (or `pnpm lint` for the whole repo).
 - Build (includes `sync:exports` + `check:manifest` + manifest analyze): `pnpm --filter @vielzeug/refine build`
 
