@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/flux
 
-This log was last generated on Tue, 07 Jul 2026 09:20:39 GMT and should not be manually modified.
+This log was last generated on Tue, 14 Jul 2026 06:12:09 GMT and should not be manually modified.
+
+## 1.0.5
+Tue, 14 Jul 2026 06:12:09 GMT
+
+### Patches
+
+- fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)
 
 ## 1.0.4
 Tue, 07 Jul 2026 09:20:39 GMT

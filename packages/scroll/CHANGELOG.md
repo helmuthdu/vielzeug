@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/scroll
 
-This log was last generated on Wed, 08 Jul 2026 17:19:00 GMT and should not be manually modified.
+This log was last generated on Tue, 14 Jul 2026 06:12:09 GMT and should not be manually modified.
+
+## 1.1.1
+Tue, 14 Jul 2026 06:12:09 GMT
+
+### Patches
+
+- fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)
 
 ## 1.1.0
 Wed, 08 Jul 2026 17:19:00 GMT

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Sat, 11 Jul 2026 19:22:05 GMT and should not be manually modified.
+This log was last generated on Tue, 14 Jul 2026 06:12:09 GMT and should not be manually modified.
+
+## 1.2.1
+Tue, 14 Jul 2026 06:12:09 GMT
+
+### Patches
+
+- fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)
 
 ## 1.2.0
 Sat, 11 Jul 2026 19:22:05 GMT

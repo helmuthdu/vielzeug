@@ -2,6 +2,34 @@
   "name": "@vielzeug/flux",
   "entries": [
     {
+      "version": "1.0.5",
+      "tag": "@vielzeug/flux_v1.0.5",
+      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "1a8008d19848e2db3dace46af8c9710eb79be07a"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `1.1.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.5`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `1.1.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.5`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.4",
       "tag": "@vielzeug/flux_v1.0.4",
       "date": "Tue, 07 Jul 2026 09:20:39 GMT",

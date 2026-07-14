@@ -2,6 +2,36 @@
   "name": "@vielzeug/refine",
   "entries": [
     {
+      "version": "1.4.1",
+      "tag": "@vielzeug/refine_v1.4.1",
+      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: normalize navbar item button base styles",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "7f6d5af417dcc1c1fa267de4387abc26387f80f7"
+          },
+          {
+            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "1a8008d19848e2db3dace46af8c9710eb79be07a"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/dnd\" to `1.2.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/orbit\" to `1.0.5`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ore\" to `1.2.1`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.4.0",
       "tag": "@vielzeug/refine_v1.4.0",
       "date": "Sat, 11 Jul 2026 19:22:05 GMT",

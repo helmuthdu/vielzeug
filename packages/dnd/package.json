@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/dnd",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Framework-agnostic drag-and-drop — sortable lists, file-drop zones, and MIME-type filtering",
   "type": "module",
   "files": [

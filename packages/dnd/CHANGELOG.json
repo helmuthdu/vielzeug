@@ -2,6 +2,27 @@
   "name": "@vielzeug/dnd",
   "entries": [
     {
+      "version": "1.2.0",
+      "tag": "@vielzeug/dnd_v1.2.0",
+      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: prevent sortable placeholder oscillation in empty containers",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "8602b9ab58ae3fcc11a34db1dfed7142dc16bed7"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "feat: add createTouchDragShim() to bridge touch gestures to sortable/drop-zone drag events",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "77471d8422dbf3b6ed32594ee1ab6e0f9f0b05b8"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.1",
       "tag": "@vielzeug/dnd_v1.1.1",
       "date": "Tue, 07 Jul 2026 09:20:39 GMT",

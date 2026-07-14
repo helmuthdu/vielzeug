@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/dnd
 
-This log was last generated on Tue, 07 Jul 2026 09:20:39 GMT and should not be manually modified.
+This log was last generated on Tue, 14 Jul 2026 06:12:09 GMT and should not be manually modified.
+
+## 1.2.0
+Tue, 14 Jul 2026 06:12:09 GMT
+
+### Minor changes
+
+- feat: add createTouchDragShim() to bridge touch gestures to sortable/drop-zone drag events
+
+### Patches
+
+- fix: prevent sortable placeholder oscillation in empty containers
 
 ## 1.1.1
 Tue, 07 Jul 2026 09:20:39 GMT
