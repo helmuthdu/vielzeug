@@ -393,6 +393,43 @@ try {
 }
 ```
 
+## Touch Support
+
+HTML5 drag-and-drop has no native touch story — touch devices never fire `dragstart`/`dragover`/`drop`. `createTouchDragShim` bridges `touchstart`/`touchmove`/`touchend`/`touchcancel` into that same synthetic `DragEvent` sequence at the `document` level, so `createSortable`/`createDropZone` work on touch with no per-instance wiring.
+
+```ts
+import { createTouchDragShim } from '@vielzeug/dnd';
+
+// Call once at app startup — one instance covers the whole page.
+using touchDrag = createTouchDragShim();
+```
+
+### Custom draggable selector
+
+Defaults to `[draggable="true"]` — the attribute `createSortable`/`createDropZone` already set on managed elements. Override it if you're bridging touch to elements you manage draggability on yourself.
+
+```ts
+createTouchDragShim({ draggableSelector: '.my-drag-handle' });
+```
+
+### Disabled state
+
+```ts
+const options = { disabled: false };
+const touchDrag = createTouchDragShim(options);
+
+// options.disabled is read live on each touch event — mutate to toggle:
+options.disabled = true;
+```
+
+### Cleanup
+
+```ts
+touchDrag.dispose();
+// or:
+using touchDrag = createTouchDragShim();
+```
+
 ## Framework Integration
 
 ::: code-group
@@ -517,3 +554,4 @@ define('task-list', {
 - Use `createSortableScope()` only when items should genuinely move between containers.
 - Use drag handles (`.handle` selector) when the full item surface area conflicts with other interactions such as text selection.
 - Test keyboard reordering explicitly — Dnd sets `tabindex` on items and supports arrow keys by default.
+- Call `createTouchDragShim()` once at app startup if you support touch devices — it's a single `document`-level bridge, not something to attach per `createSortable`/`createDropZone` instance.

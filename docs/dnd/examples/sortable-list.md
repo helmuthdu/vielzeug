@@ -65,5 +65,6 @@ using sortable = createSortable({
 
 - [Connected kanban with keyboard sorting](./connected-kanban-keyboard-sorting.md)
 - [Combined: sortable with inline editing](./combined-sortable-with-inline-editing.md)
+- [Touch-enabled sortable list](./touch-enabled-sortable-list.md)
 - [File upload drop zone](./file-upload-drop-zone.md)
 - [Framework Integration](../usage.md#framework-integration)

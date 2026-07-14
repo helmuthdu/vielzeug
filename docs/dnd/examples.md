@@ -6,6 +6,7 @@ description: Practical examples and recipes for dnd.
 ## Examples
 
 - [Sortable List](./examples/sortable-list.md)
+- [Touch-Enabled Sortable List](./examples/touch-enabled-sortable-list.md)
 - [File Upload Drop Zone](./examples/file-upload-drop-zone.md)
 - [Optimistic Reorder with Revert and FLIP Animation](./examples/optimistic-reorder-with-revert.md)
 - [Combined Sortable With Inline Editing](./examples/combined-sortable-with-inline-editing.md)

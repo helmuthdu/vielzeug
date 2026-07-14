@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/dnd` &nbsp;·&nbsp; **Category:** UI Interaction
 
-**Key exports:** `createDropZone`, `createSortable`, `createSortableScope`, `applyReorder`, `matchesAccept`
+**Key exports:** `createDropZone`, `createSortable`, `createSortableScope`, `createTouchDragShim`, `applyReorder`, `matchesAccept`
 
 **When to use:** File drop zones with MIME filtering and async validation, or sortable lists with keyboard, FLIP animation, and optimistic-update support — zero dependencies.
 

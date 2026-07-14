@@ -12,6 +12,7 @@ description: Complete API reference for Dnd.
 | `createDropZone()`         | Create a typed drop-zone controller          | Sync           | Remember to destroy the controller during teardown                |
 | `createSortable()`         | Add sortable drag-and-drop behavior to lists | Sync           | Provide stable item identity for reorder operations               |
 | `createSortableScope()`    | Create a shared scope for connected lists    | Sync           | Each set of connected containers needs its own scope instance     |
+| `createTouchDragShim()`    | Bridge touch gestures to synthetic DragEvents | Sync          | Create once per app — it's a single `document`-level listener set |
 | `applyReorder()`           | Apply ordered IDs to data arrays             | Sync           | Unknown IDs are skipped; non-mentioned items are appended         |
 | `DropZoneOptions.accept`   | Filter file types before processing          | Sync           | Mismatch between MIME and extension can reject files unexpectedly |
 | `DropZoneOptions.maxFiles` | Cap accepted files per drop                  | Sync           | Excess accepted files become rejected; `onDropRejected` is called |
@@ -114,6 +115,15 @@ declare function createSortableScope(): SortableScope;
 ```
 
 Creates an explicit connection scope for multi-container sorting. Containers only exchange items when they share the same scope instance.
+
+### `TouchDragOptions`
+
+```ts
+interface TouchDragOptions {
+  disabled?: boolean;
+  draggableSelector?: string;
+}
+```
 
 ## `createDropZone()`
 
@@ -353,6 +363,32 @@ Dnd reads and writes the following DOM attributes:
 | Class             | Applied to                   | When                                                          |
 | ----------------- | ---------------------------- | ------------------------------------------------------------- |
 | `dnd-placeholder` | `<div>` inserted by sortable | While an item is being dragged, in the placeholder's position |
+
+## `createTouchDragShim()`
+
+```ts
+declare function createTouchDragShim(options?: TouchDragOptions): Disposable;
+```
+
+Bridges touch gestures to the synthetic `DragEvent` sequence `createSortable()`/`createDropZone()` already listen for — `touchstart`/`touchmove`/`touchend`/`touchcancel` become `dragstart`/`dragover`/`drop`/`dragend` on the same `document`. HTML5 drag-and-drop has no native touch equivalent otherwise.
+
+| Option              | Type      | Default              | Description                                                                                                                  |
+| -------------------- | --------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `disabled`           | `boolean` | —                      | When `true`, touch gestures are ignored. Read live off the same options object on each `touchstart`, like `SortableOptions.disabled`. |
+| `draggableSelector`   | `string`  | `'[draggable="true"]'` | CSS selector identifying draggable elements under the touch point. The default matches what `createSortable`/`createDropZone` already set. |
+
+**Returns:** `Disposable`
+
+Notes:
+
+- Listens at the `document` level — create one instance per app, not one per sortable/drop-zone.
+- Falls back to a plain object when the `DataTransfer` constructor is unavailable (Safari < 14).
+
+```ts
+import { createTouchDragShim } from '@vielzeug/dnd';
+
+using touchDrag = createTouchDragShim();
+```
 
 ## `matchesAccept()`
 

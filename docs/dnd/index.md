@@ -5,7 +5,7 @@ package: dnd
 category: ui-interaction
 keywords: [drag-drop, sortable, file-upload, drop-zone, dnd, reorder]
 related: [ore, scroll, refine]
-exports: [createDropZone, createSortable, createSortableScope, applyReorder, matchesAccept]
+exports: [createDropZone, createSortable, createSortableScope, createTouchDragShim, applyReorder, matchesAccept]
 environments: [browser]
 ---
 
@@ -56,6 +56,7 @@ const zone = createDropZone({
 | Sortable lists      | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | Drag handles        | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | `using` support     | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Touch support        | <ore-icon name="check" size="16"></ore-icon> Opt-in shim  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | Zero dependencies   | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
@@ -138,6 +139,7 @@ using sortable = createSortable({
 - **`sortable.revert()`** — register a revert function via `event.setRevert(fn)` inside `onReorder`; `sortable.revert()` invokes it and clears it for rolling back optimistic updates on server failure
 - **Boundary-safe keyboard reordering** — arrow keys at the first/last item no longer suppress `preventDefault`, so the browser can scroll the page normally
 - **Explicit connected scopes** — lists only exchange items when they share a `createSortableScope()` instance
+- **Touch support via `createTouchDragShim()`** — bridges `touchstart`/`touchmove`/`touchend`/`touchcancel` into the same synthetic `DragEvent` sequence `createSortable`/`createDropZone` already listen for; one `document`-level instance covers the whole app
 - **Explicit DOM sync** — call `sortable.sync()` after DOM mutations instead of relying on hidden observers
 - **`[Symbol.dispose]`** — both primitives support the `using` keyword for automatic cleanup
 - **Reactive-friendly options** — `disabled` is re-read on each event (reassign `options.disabled = true` to toggle); `accept` captures the array reference, so push/splice mutations are reflected without recreating the zone
