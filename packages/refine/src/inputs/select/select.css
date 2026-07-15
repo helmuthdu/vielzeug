@@ -15,8 +15,15 @@
     display: none;
   }
 
-  /* ore-input is readonly so pointer defaults to text — override to pointer */
+  /* ore-input is readonly so pointer defaults to text — override to pointer.
+     `width: 100%` matters just as much: `:host` is `display: inline-block`, which — unlike a
+     flex/grid container with `align-items`/`justify-items: stretch` — never stretches its own
+     children to fill its own box. Without this, `.trigger` (an `ore-input`, whose own `:host`
+     only guarantees a 12rem *minimum*) stays shrink-wrapped to that minimum even when this
+     select's own host has already been stretched wider by an ancestor grid/flex track — visibly
+     narrower than a sibling field (e.g. `ore-number-input`) occupying the same-width track. */
   .trigger {
+    width: 100%;
     cursor: pointer;
   }
 

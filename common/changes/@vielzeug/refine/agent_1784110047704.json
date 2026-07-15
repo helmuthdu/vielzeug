@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: ore-select's and ore-date-picker's inner ore-input trigger now stretches (width:100%) to fill the host's own width — :host is display:inline-block on both, which unlike a flex/grid container with stretch alignment never stretches its children on its own, so the trigger stayed shrink-wrapped to its own 12rem minimum even when the host itself had already been stretched wider by an ancestor grid/flex track, rendering visibly narrower than a same-width sibling field (e.g. ore-number-input, whose inner field already stretches via flex:1)",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

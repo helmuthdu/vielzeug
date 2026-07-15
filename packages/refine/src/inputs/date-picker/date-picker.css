@@ -17,8 +17,12 @@
     --_day-today-color: var(--date-picker-day-today-color, var(--_theme-base));
   }
 
-  /* Make the trigger look like a button — ore-input is readonly so pointer changes to text by default */
+  /* Make the trigger look like a button — ore-input is readonly so pointer changes to text by
+     default. `width: 100%` matters just as much — see ore-select's own `.trigger` for why:
+     `:host` is `display: inline-block`, which never stretches its own children to fill its own
+     box the way a flex/grid container with `stretch` alignment would. */
   .trigger {
+    width: 100%;
     cursor: pointer;
   }
 
