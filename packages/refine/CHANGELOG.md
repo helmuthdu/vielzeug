@@ -1,6 +1,18 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 15 Jul 2026 07:45:31 GMT and should not be manually modified.
+This log was last generated on Wed, 15 Jul 2026 17:08:06 GMT and should not be manually modified.
+
+## 1.5.0
+Wed, 15 Jul 2026 17:08:06 GMT
+
+### Minor changes
+
+- feat: ore-input, ore-number-input, ore-combobox, and ore-date-picker now set a 12rem min-width on their :host (matching ore-select/ore-textarea's existing convention, each via its own --<field>-min-width custom property), and ore-number-input's inner ore-input now stretches (flex:1) to fill its own host's width instead of just its min-width — form fields of different types placed side by side (e.g. in a 2-column grid) no longer render at visibly different widths purely because their content differs
+
+### Patches
+
+- fix: ore-select's and ore-date-picker's inner ore-input trigger now stretches (width:100%) to fill the host's own width — :host is display:inline-block on both, which unlike a flex/grid container with stretch alignment never stretches its children on its own, so the trigger stayed shrink-wrapped to its own 12rem minimum even when the host itself had already been stretched wider by an ancestor grid/flex track, rendering visibly narrower than a same-width sibling field (e.g. ore-number-input, whose inner field already stretches via flex:1)
+- fix: ore-toast now registers ore-alert internally — toast.ts renders <ore-alert> in its own template but never imported alert.ts, so any consumer that imported only @vielzeug/refine/toast (without separately importing @vielzeug/refine/alert) got an undefined custom element rendering as unstyled plain text instead of a styled alert
 
 ## 1.4.2
 Wed, 15 Jul 2026 07:45:31 GMT
