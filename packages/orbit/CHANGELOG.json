@@ -2,6 +2,20 @@
   "name": "@vielzeug/orbit",
   "entries": [
     {
+      "version": "1.1.0",
+      "tag": "@vielzeug/orbit_v1.1.0",
+      "date": "Wed, 15 Jul 2026 07:45:31 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat: add getContainingBlock() and getClippingAncestorRect() for auto-detecting position:fixed containing-block traps and the nearest real clipping ancestor; fix flatTreeParent (used by both, and by autoUpdate's scroll-ancestor detection) to cross <slot> boundaries instead of skipping straight past a shadow host to its light-DOM ancestors",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "c024b3450f549402987b7d77cf50e1cf8dc30b7b"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.5",
       "tag": "@vielzeug/orbit_v1.0.5",
       "date": "Tue, 14 Jul 2026 06:12:09 GMT",

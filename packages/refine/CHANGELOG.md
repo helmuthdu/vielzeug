@@ -1,6 +1,16 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Tue, 14 Jul 2026 06:12:09 GMT and should not be manually modified.
+This log was last generated on Wed, 15 Jul 2026 07:45:31 GMT and should not be manually modified.
+
+## 1.4.2
+Wed, 15 Jul 2026 07:45:31 GMT
+
+### Patches
+
+- fix: render ore-number-input's stepper buttons inside the field's bordered box instead of floating beside it
+- fix: ore-number-input default width now stretches to fill its container like other fields instead of shrink-wrapping; ore-date-picker's calendar now positions via fixed+auto-correction so it never grows/shifts an ancestor's layout
+- fix: dropdown-style overlays (select, combobox, menu, date-picker) now auto-detect the nearest clipping ancestor as their flip/shift boundary (via orbit's getClippingAncestorRect) instead of only the page viewport, fixing ore-date-picker's calendar overhanging a dialog. Also self-corrects any residual position:fixed containing-block mismatch by measuring the actual rendered rect and compensating — analytically pre-detecting the trapping ancestor turned out to misposition ore-select's dropdown, which isn't affected by the same ancestor the calendar is. The measurement neutralizes the floating element's own entrance-transition transform first, so it isn't misread as a permanent mismatch and baked into the position — that misread was making ore-select's options unclickable (dropdown appeared correctly placed but closed immediately on option click)
+- fix: ore-dialog/ore-drawer no longer mistake a same-named bubbling event from a nested field for their own native close/cancel — selecting an option in an ore-select/ore-combobox dropdown nested in a dialog was closing the whole dialog instead of just that field's dropdown, because slot-assignment-based event-path computation crosses into a projecting shadow tree regardless of the originating event's own composed flag
 
 ## 1.4.1
 Tue, 14 Jul 2026 06:12:09 GMT

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/orbit
 
-This log was last generated on Tue, 14 Jul 2026 06:12:09 GMT and should not be manually modified.
+This log was last generated on Wed, 15 Jul 2026 07:45:31 GMT and should not be manually modified.
+
+## 1.1.0
+Wed, 15 Jul 2026 07:45:31 GMT
+
+### Minor changes
+
+- feat: add getContainingBlock() and getClippingAncestorRect() for auto-detecting position:fixed containing-block traps and the nearest real clipping ancestor; fix flatTreeParent (used by both, and by autoUpdate's scroll-ancestor detection) to cross <slot> boundaries instead of skipping straight past a shadow host to its light-DOM ancestors
 
 ## 1.0.5
 Tue, 14 Jul 2026 06:12:09 GMT
