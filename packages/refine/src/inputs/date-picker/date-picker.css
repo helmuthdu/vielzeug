@@ -5,6 +5,7 @@
     --_day-outside-opacity: var(--date-picker-day-outside-opacity, 0.35);
 
     display: inline-block;
+    min-width: var(--date-picker-min-width, 12rem);
   }
 
   :host([fullwidth]) {

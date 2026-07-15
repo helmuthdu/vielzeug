@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: ore-input, ore-number-input, ore-combobox, and ore-date-picker now set a 12rem min-width on their :host (matching ore-select/ore-textarea's existing convention, each via its own --<field>-min-width custom property), and ore-number-input's inner ore-input now stretches (flex:1) to fill its own host's width instead of just its min-width — form fields of different types placed side by side (e.g. in a 2-column grid) no longer render at visibly different widths purely because their content differs",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

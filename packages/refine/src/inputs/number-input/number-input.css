@@ -1,17 +1,32 @@
 @layer refine.base {
-  /* No explicit width here, on purpose — matches ore-select/ore-date-picker's own :host, neither
-     of which sets one either. A grid/flex item with `width: auto` (the default) stretches to
-     fill its track by default; the old `width: fit-content` here overrode that default and
-     forced this one field to shrink-wrap while every sibling field stretched to match the
-     column, e.g. in a 2-column form grid. */
+  /* No explicit `width` here, on purpose — matches every other field's own `:host` (`ore-input`,
+     `ore-select`, `ore-combobox`, `ore-date-picker`). A grid/flex item with `width: auto` (the
+     default) stretches to fill its track by default; the old `width: fit-content` here overrode
+     that default and forced this one field to shrink-wrap while every sibling field stretched to
+     match the column, e.g. in a 2-column form grid.
+     `min-width` is different: every field above sets the same `12rem` floor (each via its own
+     `--<field>-min-width` custom property) so that a row of mixed field types — this one included
+     — doesn't shrink-wrap to noticeably different widths purely because their *content* (a typed
+     number vs. a selected option's label vs. free text) happens to differ. */
   :host {
     display: inline-flex;
+    min-width: var(--number-input-min-width, 12rem);
   }
 
   /* Explicit opt-in still forces full width outside a stretching grid/flex context — same
      convention as ore-input's own :host([fullwidth]). */
   :host([fullwidth]) {
     width: 100%;
+  }
+
+  /* The inner `ore-input` (class="field", see number-input.ts) is a flex item of this `:host`'s
+     own `inline-flex` box — without `flex: 1` it only ever grows to its own `min-width` (12rem)
+     and no further, leaving this component visibly narrower than its host once the host itself
+     stretches to fill a wider grid/flex track (e.g. next to a full-width sibling field). `flex: 1`
+     lets it grow to match; its own `min-width` (inherited from `ore-input`'s `:host`) still holds
+     as the shrink floor, so this doesn't affect the min-width consistency across field types. */
+  .field {
+    flex: 1;
   }
 
   /* Centre the typed number inside the field */
