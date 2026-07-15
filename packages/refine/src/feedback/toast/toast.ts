@@ -1,3 +1,4 @@
+import '../alert/alert';
 import { uuid } from '@vielzeug/arsenal';
 import { define, html, prop, ref, getHost, onCleanup, onMounted, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
