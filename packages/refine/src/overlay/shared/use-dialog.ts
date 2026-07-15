@@ -223,6 +223,10 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
   // spec-correct hook — relying on `keydown`'s `preventDefault()` to stop the close-watcher is
   // implementation-specific, not guaranteed across browsers.
   const handleCancel = (e: Event): void => {
+    // See `handleNativeClose`'s comment: guard against a same-named bubbling event from a
+    // descendant field being misread as this dialog's own native event.
+    if (e.target !== options.dialogRef.value) return;
+
     e.preventDefault();
 
     if (options.isPersistent()) return;
@@ -237,7 +241,17 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
   };
 
   // ── Internal native close handler ─────────────────────────────────────────
-  const handleNativeClose = (): void => {
+  // `e.target` must be checked against the native `<dialog>` itself, the same way
+  // `handleBackdropClick` already does: a bubbling `close`-named event fired by *any* descendant
+  // component reaches this listener too — regardless of that event's own `composed` flag, since
+  // slot-assignment-based event-path computation (a slotted descendant's "parent" is the `<slot>`
+  // projecting it) isn't gated by `composed` the way crossing back out of a shadow root is. Some
+  // fields nested here (`ore-select`, `ore-combobox`, …) emit their own public `close` event when
+  // *their* dropdown closes — without this check, selecting an option in one of those closes this
+  // dialog too, misreading the field's own event as this dialog's native close.
+  const handleNativeClose = (e?: Event): void => {
+    if (e && e.target !== options.dialogRef.value) return;
+
     bgLock.unlock();
     options.host.removeAttribute('open');
     isOpen.value = false;

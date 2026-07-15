@@ -190,6 +190,56 @@ describe('ore-dialog', () => {
       expect(closeHandler).not.toHaveBeenCalled();
       expect(fixture.query('dialog[open]')).toBeTruthy();
     });
+
+    // Regression test: a bubbling `close`-named event dispatched by a *slotted descendant*
+    // (e.g. `ore-select` firing its own public `close` event when its dropdown closes) reaches
+    // this dialog's native-close listener via slot-assignment-based event-path computation —
+    // which isn't gated by that event's own `composed` flag, only the reverse (shadow → host)
+    // direction is. Without checking `e.target`, selecting an option in any dropdown field
+    // nested in a dialog closes the whole dialog instead of just that field's own dropdown.
+    //
+    // Note: the descendant's event still bubbles to `fixture.element`'s *own* `close` listener
+    // regardless of this fix — that's normal, expected DOM bubbling to the host element, not the
+    // bug. The bug (and what this asserts) is `useDialogControl`'s *internal* native-close
+    // handler mistaking it for the dialog's own native close and tearing down its open state.
+    it('does not tear down open state when a slotted descendant fires its own bubbling close-named event', async () => {
+      fixture = await mount('ore-dialog', {
+        attrs: { open: '' },
+        html: '<div id="descendant-field"></div>',
+      });
+
+      // Light-DOM (slotted) content — not queryable via `fixture.query()`, which is scoped to the
+      // shadow root. Query the host element's own light DOM directly instead.
+      fixture.element
+        .querySelector('#descendant-field')!
+        .dispatchEvent(new CustomEvent('close', { bubbles: true, cancelable: true, detail: { reason: 'trigger' } }));
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('open')).toBe(true);
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+    });
+
+    it('does not close when a slotted descendant fires its own bubbling cancel-named event', async () => {
+      fixture = await mount('ore-dialog', {
+        attrs: { open: '' },
+        html: '<div id="descendant-field"></div>',
+      });
+
+      const closeHandler = vi.fn();
+      const closeRequestHandler = vi.fn();
+
+      fixture.element.addEventListener('close', closeHandler);
+      fixture.element.addEventListener('close-request', closeRequestHandler);
+
+      fixture.element
+        .querySelector('#descendant-field')!
+        .dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
+      await fixture.flush();
+
+      expect(closeRequestHandler).not.toHaveBeenCalled();
+      expect(closeHandler).not.toHaveBeenCalled();
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+    });
   });
 
   describe('Invoker Commands API', () => {

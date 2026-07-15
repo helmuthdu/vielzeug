@@ -3,7 +3,6 @@ import {
   computePosition,
   flip,
   getClippingAncestorRect,
-  getContainingBlock,
   offset,
   type Placement,
   type Rect,
@@ -36,18 +35,6 @@ export type DropdownPositionerOptions = {
    * boundary to override auto-detection.
    */
   boundary?: Element | Rect;
-  /**
-   * Containing-block element used to correct the coordinates written to `style.left`/`style.top`.
-   * Defaults to the nearest ancestor establishing a containing block for `position: fixed`
-   * (`transform`/`filter`/`perspective`/`backdrop-filter`/`will-change`/`contain` — even a
-   * visually-identity value, e.g. `transform: scale(1)` left over from an entrance transition
-   * that never resets to `none` at rest), auto-detected per update via `getContainingBlock()`.
-   * Without this, a dropdown nested inside such an ancestor (a modal dialog's panel is the
-   * classic case) silently mispositions, because its `left`/`top` resolve against that
-   * ancestor's box instead of the viewport `computePosition`'s own math assumes. Pass `null` to
-   * force skipping the adjustment (assume true viewport-relative coordinates).
-   */
-  containingBlock?: Element | null;
   /**
    * Returns the text direction used for placement mirroring. Defaults to the resolved
    * direction of the reference element (nearest `dir="ltr"|"rtl"` ancestor, falling back to
@@ -89,7 +76,6 @@ const rtlPlacement = (p: Placement): Placement => {
  */
 export function createDropdownPositioner({
   boundary,
-  containingBlock,
   getDir,
   getFloating,
   getPlacement,
@@ -112,18 +98,16 @@ export function createDropdownPositioner({
     if (!ref || !floating) return;
 
     const placement = resolvedPlacement();
-    // `boundary`/`containingBlock` default to `undefined` (meaning "auto-detect"), not the
-    // detected value itself — re-running the detection on every update (rather than once, at
-    // positioner-creation time) matters because the dialog/scroll-container an instance is
-    // rendered into can change across opens (e.g. the same `<ore-select>` reused in different
-    // dialogs), and the detected ancestor's own rect can change between opens even when it's the
-    // same element (a resized dialog).
+    // Defaults to `undefined` (meaning "auto-detect"), not the detected value itself —
+    // re-running the detection on every update (rather than once, at positioner-creation time)
+    // matters because the dialog/scroll-container an instance is rendered into can change
+    // across opens (e.g. the same `<ore-select>` reused in different dialogs), and the detected
+    // ancestor's own rect can change between opens even when it's the same element (a resized
+    // dialog).
     const resolvedBoundary = boundary ?? getClippingAncestorRect(floating);
-    const resolvedContainingBlock = containingBlock !== undefined ? containingBlock : getContainingBlock(floating);
 
     const result = computePosition(ref, floating, {
       boundary: resolvedBoundary,
-      containingBlock: resolvedContainingBlock,
       middleware: [
         ...(offsetPx ? [offset(offsetPx)] : []),
         flip({ padding }),
@@ -135,6 +119,47 @@ export function createDropdownPositioner({
 
     floating.style.left = `${result.x}px`;
     floating.style.top = `${result.y}px`;
+
+    // `computePosition()` assumes `left`/`top` resolve relative to the viewport (correct for
+    // `position: fixed`) — true almost always, but not when some ancestor establishes a
+    // containing block for fixed descendants (a non-`none` `transform`, even a visually-identity
+    // one left over from an entrance transition that never resets to `none` at rest is a real,
+    // easy-to-hit case — a modal dialog's panel, say). Analytically detecting *that* ancestor via
+    // `getContainingBlock()` and pre-subtracting its rect turned out to be unreliable in
+    // practice: browsers don't apply the "ancestor transform traps fixed descendants" rule
+    // uniformly across every element nested under it in every case we tested — some floating
+    // elements in the exact same subtree needed the correction and some didn't, for reasons we
+    // couldn't fully pin down. Measuring what actually happened after writing `left`/`top`
+    // and correcting only the observed gap sidesteps that: it's a no-op when the browser already
+    // put the element where asked, and it fixes the same class of bug the moment there's a real
+    // mismatch, regardless of which specific ancestor (if any) turns out to be responsible.
+    //
+    // The measurement itself must not be fooled by the floating element's *own* transform,
+    // though: dropdowns/popovers here all use a `transform: translateY(...)` entrance transition
+    // driven by a `[data-open]` attribute + `@starting-style` — right at open, before the
+    // transition has visibly progressed, `getBoundingClientRect()` can still reflect that
+    // starting offset (a handful of px, matching `--overlay-enter-translate-y`), which this
+    // correction would otherwise misread as a permanent ancestor-driven mismatch and bake in
+    // forever. Temporarily neutralizing the floating element's own transform for the measurement
+    // (and restoring it before anything paints, so there's no visible flash) isolates the
+    // correction to ancestor-driven offsets only, which is the only thing it's meant to fix.
+    const prevTransition = floating.style.transition;
+    const prevTransform = floating.style.transform;
+
+    floating.style.transition = 'none';
+    floating.style.transform = 'none';
+
+    const actual = floating.getBoundingClientRect();
+    const deltaX = result.x - actual.left;
+    const deltaY = result.y - actual.top;
+
+    floating.style.transition = prevTransition;
+    floating.style.transform = prevTransform;
+
+    if (deltaX !== 0 || deltaY !== 0) {
+      floating.style.left = `${result.x + deltaX}px`;
+      floating.style.top = `${result.y + deltaY}px`;
+    }
 
     if (matchWidth) {
       floating.style.width = `${ref.getBoundingClientRect().width}px`;
