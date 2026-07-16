@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Thu, 16 Jul 2026 13:17:33 GMT and should not be manually modified.
+This log was last generated on Thu, 16 Jul 2026 16:49:59 GMT and should not be manually modified.
+
+## 1.5.2
+Thu, 16 Jul 2026 16:49:59 GMT
+
+### Patches
+
+- fix: match externalized subpath imports (e.g. @vielzeug/ore/forms) so refine doesn't vendor a second, disconnected copy of ore's runtime
 
 ## 1.5.1
 Thu, 16 Jul 2026 13:17:33 GMT

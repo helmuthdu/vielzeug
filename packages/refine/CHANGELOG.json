@@ -2,6 +2,20 @@
   "name": "@vielzeug/refine",
   "entries": [
     {
+      "version": "1.5.2",
+      "tag": "@vielzeug/refine_v1.5.2",
+      "date": "Thu, 16 Jul 2026 16:49:59 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: match externalized subpath imports (e.g. @vielzeug/ore/forms) so refine doesn't vendor a second, disconnected copy of ore's runtime",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "7132c2ceb1a4a19455c57eb3ac428cc82c48bc6f"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.5.1",
       "tag": "@vielzeug/refine_v1.5.1",
       "date": "Thu, 16 Jul 2026 13:17:33 GMT",
