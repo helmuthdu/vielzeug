@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 15 Jul 2026 17:08:06 GMT and should not be manually modified.
+This log was last generated on Thu, 16 Jul 2026 13:17:33 GMT and should not be manually modified.
+
+## 1.5.1
+Thu, 16 Jul 2026 13:17:33 GMT
+
+### Patches
+
+- fix: ore-navbar's mobile toggle button and menu panel now respect their own hidden state — :host([data-mobile]) .mobile-toggle set display:inline-flex unconditionally (an author-stylesheet rule, which always wins over the UA stylesheet's [hidden]{display:none} regardless of specificity), so the button stayed visibly clickable even when the component's own logic correctly decided to hide it (no mobile-menu slot content, no mobile-sidebar target) — clicking toggled a panel that stayed hidden too, doing nothing visible. Also: ore-navbar-item now closes the mobile menu on click (via a new closeMobileMenu on NavbarContext) — previously stayed open after navigating
 
 ## 1.5.0
 Wed, 15 Jul 2026 17:08:06 GMT
