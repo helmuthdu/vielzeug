@@ -18,6 +18,9 @@
  *   plan --before-file=<path> <pkg...>      print a JSON publish plan (for a matrix)
  *   publish <pkg> <version> <folder> [--otp=<code>] [--interactive]   publish + tag + release one package
  *   publish-missing [--otp=<code>] [--interactive]                    backfill any @vielzeug/* version missing from npm
+ *   tag-release <pkg> <version> <folder>    tag + GitHub release only — no `npm publish` (the
+ *                                            version must already exist on npm, e.g. published
+ *                                            via `pnpm release:publish-local`)
  *
  * `publish` and `publish-missing` take two flags relevant only when running this locally
  * rather than in CI (CI never needs either — see `npm-publish.mjs` for why):
@@ -102,6 +105,19 @@ async function main(argv) {
       await publishPackage(folder, { dryRun, interactive: Boolean(flags.interactive), otp: flags.otp });
       tagAndRelease({ dryRun, folder, package: pkg, version });
       console.log(`✅ Published ${pkg}@${version}`);
+      return;
+    }
+
+    case 'tag-release': {
+      const [pkg, version, folder] = args;
+      if (!(await versionExists(pkg, version))) {
+        throw new Error(
+          `${pkg}@${version} not found on npm — this command only tags and creates a GitHub release for a ` +
+            `version already published (e.g. via 'pnpm release:publish-local'). Publish it first, then re-run.`,
+        );
+      }
+      tagAndRelease({ dryRun, folder, package: pkg, version });
+      console.log(`✅ Tagged and released ${pkg}@${version} (no npm publish — already on npm)`);
       return;
     }
 

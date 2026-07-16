@@ -16,6 +16,7 @@ release fail," start in `scripts/release/`, not the YAML.
 | `workflows/deploy-docs.yml`  | Builds and deploys the VitePress docs site to GitHub Pages.                                                                                                                                                                                                                                                                                                     |
 | `workflows/publish.yml`      | Manual dispatch, **the only entry point that can publish**: `mode=single` bumps + publishes one package, `mode=all` bumps + publishes every package with a pending change file as a matrix, `mode=missing` backfills any version missing from npm with no version bump. See its header comment for why these three used to be separate files and no longer are. |
 | `workflows/_publish-one.yml` | Reusable (`workflow_call`) single-package publish/tag/release job — the one place `npm publish` runs for `mode=single`/`mode=all`. Used by both as a single `needs:` job and as a matrix, respectively.                                                                                                                                                         |
+| `workflows/release.yml`      | Manual dispatch, tag + GitHub release **only** — no `npm publish`. For a version already published outside this repo's own publish path (e.g. `pnpm release:publish-local`, which intentionally never tags/releases). Verifies the version exists on npm first, then delegates to `scripts/release/cli.mjs tag-release`. Needs no `npm-publish` environment or OIDC `id-token` permission since it never touches the registry. |
 
 ## `scripts/release/cli.mjs`
 
@@ -71,7 +72,8 @@ release:publish-local` (`scripts/release/local-publish.mjs`) reuses the exact sa
 implementation. Read the header comment in that file before running it: it requires you to
 already have a real npm auth session (OIDC Trusted Publishing only exists inside a GitHub
 Actions runner, never on a laptop), and it deliberately does **not** create git tags or GitHub
-releases (same as `mode=missing` in CI) — tag manually from an up-to-date `main` afterward.
+releases (same as `mode=missing` in CI) — tag manually from an up-to-date `main` afterward, or
+dispatch `workflows/release.yml` instead of tagging by hand.
 
 ```bash
 DRY_RUN=1 pnpm release:publish-local   # see what would publish, without touching npm

@@ -1,0 +1,66 @@
+name: Release (tag + GitHub release only)
+
+# Companion to publish.yml for a version that was already published to npm outside this
+# workflow's own publish path — most commonly `pnpm release:publish-local`
+# (scripts/release/local-publish.mjs), which deliberately never creates a git tag or GitHub
+# release (see its header comment) so that a human can publish from a real terminal (OTP /
+# WebAuthn step-up) without CI ever touching npm credentials. This workflow fills that gap:
+# it verifies the version is already on npm, then only tags the commit and creates the
+# GitHub release — it never runs `npm publish` and needs neither the `npm-publish` environment
+# approval nor an `id-token: write` permission (no OIDC exchange happens here).
+#
+# Do NOT register this filename as an npm Trusted Publisher — it never publishes, so npm would
+# never see a matching request to authorize anyway.
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package name (e.g. @vielzeug/coins). Must already be published on npm at "version".'
+        required: true
+        type: string
+      version:
+        description: 'Version already on npm (e.g. 1.2.3) — verified against the registry before tagging.'
+        required: true
+        type: string
+      dry-run:
+        description: 'Do everything except the actual git tag / GitHub release'
+        required: false
+        default: false
+        type: boolean
+
+# Shares publish.yml's concurrency group — both workflows push tags and create GitHub releases
+# on the same repo, so they must not race each other.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Node-only setup — this workflow never runs `npm publish`, so it doesn't need a full
+      # rush/pnpm install, only enough Node to run the release CLI and resolve the package's
+      # folder from rush.json.
+      - uses: ./.github/actions/setup
+        with:
+          root-install: 'false'
+          rush-install: 'false'
+
+      - name: Resolve package folder
+        id: project
+        run: node scripts/release/cli.mjs project "${{ inputs.package }}" >> "$GITHUB_OUTPUT"
+
+      - name: Tag and create GitHub release (no npm publish)
+        env:
+          DRY_RUN: ${{ inputs.dry-run && '1' || '' }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release/cli.mjs tag-release "${{ inputs.package }}" "${{ inputs.version }}" "${{ steps.project.outputs.folder }}"

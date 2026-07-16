@@ -157,6 +157,50 @@ describe('publish', () => {
   });
 });
 
+describe('tag-release', () => {
+  it('throws when the version is not on npm yet', async () => {
+    versionExists.mockResolvedValue(false);
+
+    await expect(main(['tag-release', '@vielzeug/ore', '1.0.4', 'packages/ore'])).rejects.toThrow(
+      '@vielzeug/ore@1.0.4 not found on npm',
+    );
+    expect(tagAndRelease).not.toHaveBeenCalled();
+  });
+
+  it('tags and releases without publishing when the version already exists on npm', async () => {
+    versionExists.mockResolvedValue(true);
+
+    await main(['tag-release', '@vielzeug/ore', '1.0.4', 'packages/ore']);
+
+    expect(publishPackage).not.toHaveBeenCalled();
+    expect(tagAndRelease).toHaveBeenCalledWith({
+      dryRun: false,
+      folder: 'packages/ore',
+      package: '@vielzeug/ore',
+      version: '1.0.4',
+    });
+  });
+
+  it('honors DRY_RUN', async () => {
+    versionExists.mockResolvedValue(true);
+    const originalDryRun = process.env.DRY_RUN;
+    process.env.DRY_RUN = '1';
+
+    try {
+      await main(['tag-release', '@vielzeug/ore', '1.0.4', 'packages/ore']);
+      expect(tagAndRelease).toHaveBeenCalledWith({
+        dryRun: true,
+        folder: 'packages/ore',
+        package: '@vielzeug/ore',
+        version: '1.0.4',
+      });
+    } finally {
+      if (originalDryRun === undefined) delete process.env.DRY_RUN;
+      else process.env.DRY_RUN = originalDryRun;
+    }
+  });
+});
+
 describe('publish-missing', () => {
   it('sets a non-zero exit code when any package failed', async () => {
     publishMissing.mockResolvedValue({ failed: ['@vielzeug/ore@1.0.4'], published: [], skipped: [] });
