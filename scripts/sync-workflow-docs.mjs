@@ -9,6 +9,6 @@ import { main } from './sync-ai-data.mjs';
 
 if (isMain(import.meta.url)) {
   const { flags } = parseArgs(process.argv.slice(2));
-  const ok = main({ check: Boolean(flags.check) });
+  const ok = await main({ check: Boolean(flags.check) });
   if (!ok) process.exitCode = 1;
 }

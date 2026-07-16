@@ -85,8 +85,22 @@ export function mergePackageData(curatedPackages, livePackages) {
     .sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
-export function packagesFileContent(packages) {
-  return `${JSON.stringify({ $schemaVersion: 1, packages }, null, 2)}\n`;
+/** Formats through prettier (not just `JSON.stringify(..., null, 2)`) so the generated
+ * content byte-for-byte matches what's actually on disk: lefthook's pre-commit `pnpm fix`
+ * (and any editor's format-on-save) run prettier over `.ai/data/packages.json`, which collapses
+ * short arrays like `["ripple"]` onto one line — `JSON.stringify` never does that, it always
+ * expands arrays one-element-per-line. Skipping this step made `--check` mode compare its own
+ * raw serialization against a prettier-reformatted file that's semantically identical but
+ * textually different, so CI reported `[STALE]` on every commit even right after `gen:ai-data`. */
+async function formatJson(content, filepath) {
+  const prettier = await import('prettier');
+  const config = (await prettier.resolveConfig(filepath)) ?? undefined;
+  return prettier.format(content, { ...config, filepath });
+}
+
+export async function packagesFileContent(packages) {
+  const raw = JSON.stringify({ $schemaVersion: 1, packages }, null, 2);
+  return formatJson(raw, path.join(ROOT, '.ai/data/packages.json'));
 }
 
 export function renderPackagesTable(packages) {
@@ -213,7 +227,7 @@ export function findDanglingAiReferences(
   return dangling;
 }
 
-export function main({ check = false } = {}) {
+export async function main({ check = false } = {}) {
   const curatedPackages = readAiPackages();
   const livePackages = readLivePackages();
   const mergedPackages = mergePackageData(curatedPackages, livePackages);
@@ -226,7 +240,7 @@ export function main({ check = false } = {}) {
     console.error(message);
   };
 
-  syncFile('.ai/data/packages.json', packagesFileContent(mergedPackages), { check, onStale });
+  syncFile('.ai/data/packages.json', await packagesFileContent(mergedPackages), { check, onStale });
 
   const packagesReferencePath = path.join(ROOT, '.ai/reference/packages.md');
   const packagesReference = readFileSync(packagesReferencePath, 'utf8');
@@ -261,7 +275,7 @@ export function main({ check = false } = {}) {
 
 if (isMain(import.meta.url)) {
   const { flags } = parseArgs(process.argv.slice(2));
-  const ok = main({ check: Boolean(flags.check) });
+  const ok = await main({ check: Boolean(flags.check) });
   if (!ok) process.exitCode = 1;
 }
 
