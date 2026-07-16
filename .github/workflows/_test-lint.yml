@@ -57,8 +57,5 @@ jobs:
         with:
           fail_level: error
 
-      - name: Check workflow docs are in sync with manifest.json
-        run: pnpm check:workflow-docs
-
-      - name: Check catalogue dependency graph is in sync with package.json
-        run: pnpm check:catalogue
+      - name: Check AI metadata is in sync with source
+        run: pnpm check:ai-data

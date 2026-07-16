@@ -1,0 +1,45 @@
+{
+  "$schemaVersion": 1,
+  "tasks": [
+    {
+      "key": "analyze",
+      "description": "Review or redesign a package or subsystem and produce a concrete plan.",
+      "inputs": ["scope", "goal"],
+      "references": [".ai/core/policy.md", ".ai/core/workspace.md", ".ai/core/conventions.md", ".ai/tasks/analyze.md"]
+    },
+    {
+      "key": "change",
+      "description": "Implement a clean, coherent package or repo change.",
+      "inputs": ["scope", "goal"],
+      "references": [".ai/core/policy.md", ".ai/core/workspace.md", ".ai/core/conventions.md", ".ai/tasks/change.md"]
+    },
+    {
+      "key": "validate",
+      "description": "Run focused correctness, design, type, security, or coverage checks.",
+      "inputs": ["scope", "modules"],
+      "references": [
+        ".ai/core/policy.md",
+        ".ai/core/workspace.md",
+        ".ai/reference/security-checklist.md",
+        ".ai/tasks/validate.md"
+      ]
+    },
+    {
+      "key": "docs",
+      "description": "Sync package documentation with source and template rules.",
+      "inputs": ["package"],
+      "references": [
+        ".ai/core/policy.md",
+        ".ai/core/workspace.md",
+        ".ai/reference/docs-template.md",
+        ".ai/tasks/docs.md"
+      ]
+    },
+    {
+      "key": "repl",
+      "description": "Update REPL examples to match the current API and recommended usage.",
+      "inputs": ["package"],
+      "references": [".ai/core/policy.md", ".ai/core/workspace.md", ".ai/tasks/repl.md"]
+    }
+  ]
+}

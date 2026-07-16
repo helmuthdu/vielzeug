@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Vielzeug** (German for "many tools") is a monorepo of **30 independent, zero-dependency, tree-shakeable TypeScript packages** published to npm. Each package targets ES2022 and ships both ESM and CJS formats.
 
-For the full package catalogue and dependency graph see `.ai/rules/data/catalogue.md`. For toolchain details see `.ai/rules/process/workspace.md`. For engineering conventions see `.ai/rules/code/conventions.md`.
+For the AI system entrypoint see `.ai/README.md`. For the full package catalogue and dependency graph see `.ai/data/packages.json` and `.ai/reference/packages.md`. For toolchain details see `.ai/core/workspace.md`. For engineering conventions see `.ai/core/conventions.md`.
 
 ## Commands
 
@@ -67,7 +67,7 @@ Rush.js orchestrates parallel builds across packages. Vite runs in library mode 
 
 ### Package Dependency Graph (notable edges)
 
-Generated from `package.json` files — authoritative copy in `.ai/rules/data/catalogue.md`. Reproduced here for a quick reference:
+Generated from `package.json` files — authoritative copy in `.ai/data/packages.json` and the human-readable summary in `.ai/reference/packages.md`. Reproduced here for a quick reference:
 
 ```
 clockwork → ripple
@@ -153,7 +153,7 @@ pnpm worktree:list
 pnpm worktree:remove <pkg>
 ```
 
-Creates `.worktrees/<pkg>/` on a new `agent/<pkg>-<timestamp>` branch. Full details in `.ai/rules/process/workspace.md § Multi-agent worktrees`.
+Creates `.worktrees/<pkg>/` on a new `agent/<pkg>-<timestamp>` branch. Full details in `.ai/core/workspace.md`.
 
 ## Teardown / Disposal Convention
 
@@ -227,7 +227,7 @@ export function devOnly(fn: () => void): void {
 
 Opt-in structured debug logging exported only from the `/devtools` sub-path. Uses `console.debug`. Tree-shaken in production. No environment gate needed — consumers choose to import it.
 
-**Naming: always `debug<Noun>`** (never `attach*`/`enable*`). Two sanctioned shapes, matching how consumers normally obtain the primitive — see `.ai/rules/code/conventions.md § Layer 2` for full detail:
+**Naming: always `debug<Noun>`** (never `attach*`/`enable*`). Two sanctioned shapes, matching how consumers normally obtain the primitive — see `.ai/core/conventions.md` for full detail:
 - **Factory-wrap** (`debugCourier`, `debugBus`, `debugWard`, `debugRouter`, `debugMachine`, `debugFloat`, `debugEffect`): same args/return type as the real `create<Noun>()` factory, logging pre-wired.
 - **Instance-attach** (`debugForm`, `debugSearch`): takes an already-live instance, subscribes to its public API, returns a plain `() => void`.
 - Exception: a global, process-wide hook installer for a real DevTools-extension inspector takes no `<Noun>` (it isn't instance-scoped) — `installDevTools(hook)` (currently only `ripple`, alongside its own `debugEffect`).
@@ -281,24 +281,16 @@ When in doubt about structure, style, or test layout:
 - **`spell`** — canonical standard shape: focused public API, centralised `src/__tests__/`, dedicated `errors.ts` and `types.ts`. **When creating a new package: copy `spell`'s structure, rename, and remove unneeded files.**
 - **`arsenal`** — canonical tree-shakeable multi-helper: one function per file grouped by category folder, all re-exported from `index.ts`.
 
-## Slash Commands (pkg-workflow)
+## AI Tasks
 
-This project has Claude Code slash commands for package development workflows. Stubs are in `.claude/commands/` — gitignored, generated from `.ai/workflows/manifest.json` via `pnpm gen:workflow-docs`; canonical workflow definitions are in `.ai/workflows/`:
+Canonical AI task definitions live in `.ai/tasks/`, with structured metadata in `.ai/data/tasks.json`. Generated adapter stubs still live in `.claude/commands/` and `.devin/workflows/`, but they are derived from the task metadata via `pnpm gen:ai-data`.
 
-| Command | Purpose |
-|---------|---------|
-| `/pkg-plan` | Architecture & DX analysis, converging on a ranked `plan.md` (~3 passes typical) |
-| `/pkg-implement` | Implement items from `plan.md`, converging on green (~3 rounds typical) |
-| `/pkg-review` | Three-lens code review (correctness, arch, types) — all 3 lenses always run |
-| `/pkg-security` | Three-surface security audit — all 3 surfaces always run |
-| `/pkg-tests` | Coverage gap analysis and test expansion |
-| `/pkg-docs` | API sync, template compliance, codex rebuild |
-| `/pkg-repl` | REPL example audit and update |
+| Task | Purpose |
+|------|---------|
+| `analyze` | Review or redesign a package or subsystem and produce a concrete plan |
+| `change` | Implement a package or repo change cleanly |
+| `validate` | Run focused correctness, design, type, security, or coverage checks |
+| `docs` | Sync package docs with source and template rules |
+| `repl` | Update REPL examples to match the current API |
 
-The orchestrator workflow (`/pkg-workflow`) runs all phases in sequence for a given package. Invoke via the Workflow tool:
-
-```
-Workflow({ name: 'pkg-workflow', args: { pkg: 'sandbox', mode: 'analyse' } })
-```
-
-Run artifacts live under the gitignored `.ai/workflows/runs/<pkg>/` (`plan.md`, `progress.md`, `review.md`, `security.md`) — ephemeral scratch state, not project history. See `.ai/workflows/runs/AGENTS.md`.
+Ephemeral AI state lives under the gitignored `.ai/state/`. See `.ai/state/AGENTS.md`.

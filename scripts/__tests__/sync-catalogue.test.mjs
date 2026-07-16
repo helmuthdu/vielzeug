@@ -1,111 +1,104 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { dependencyGraphSection, formatNameList, readPackages } from '../sync-catalogue.mjs';
+import { mergePackageData, patchPackagesReference, renderPackagesTable } from '../sync-ai-data.mjs';
 
 describe('module has no import-time side effects', () => {
   it('only exports functions, does not touch the filesystem', () => {
-    expect(typeof dependencyGraphSection).toBe('function');
+    expect(typeof renderPackagesTable).toBe('function');
   });
 });
 
-describe('formatNameList()', () => {
-  it('returns empty string for no names', () => {
-    expect(formatNameList([])).toBe('');
-  });
-
-  it('quotes a single name with no conjunction', () => {
-    expect(formatNameList(['a'])).toBe('`a`');
-  });
-
-  it('joins two names with "and"', () => {
-    expect(formatNameList(['a', 'b'])).toBe('`a` and `b`');
-  });
-
-  it('joins three or more names with an Oxford comma', () => {
-    expect(formatNameList(['a', 'b', 'c'])).toBe('`a`, `b`, and `c`');
-  });
-});
-
-describe('readPackages()', () => {
-  let root;
-
+describe('mergePackageData()', () => {
   afterEach(() => {
-    if (root) rmSync(root, { recursive: true, force: true });
-    root = undefined;
+    // no temp files; kept only to mirror the no-side-effects contract across script tests
   });
 
-  function makePackage(root, slug, pkgJson) {
-    const dir = path.join(root, 'packages', slug);
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(path.join(dir, 'package.json'), JSON.stringify(pkgJson));
-  }
-
-  it('extracts @vielzeug/* runtime deps, ignoring devDependencies and non-scoped deps', () => {
-    root = mkdtempSync(path.join(tmpdir(), 'sync-catalogue-test-'));
-    makePackage(root, 'forge', {
-      name: '@vielzeug/forge',
-      dependencies: { '@vielzeug/arsenal': 'workspace:*', '@vielzeug/ripple': 'workspace:*', zod: '^3.0.0' },
-      devDependencies: { '@vielzeug/scout': 'workspace:*' },
-    });
-
-    const [pkg] = readPackages(root);
-    expect(pkg).toEqual({ deps: ['arsenal', 'ripple'], optionalPeers: [], slug: 'forge' });
-  });
-
-  it('extracts optional peer deps from peerDependenciesMeta, ignoring required peers', () => {
-    root = mkdtempSync(path.join(tmpdir(), 'sync-catalogue-test-'));
-    makePackage(root, 'flux', {
-      name: '@vielzeug/flux',
-      peerDependencies: { '@vielzeug/courier': 'workspace:*', '@vielzeug/pulse': 'workspace:*' },
-      peerDependenciesMeta: {
-        '@vielzeug/courier': { optional: true },
-        '@vielzeug/pulse': {},
-      },
-    });
-
-    const [pkg] = readPackages(root);
-    expect(pkg.optionalPeers).toEqual(['courier']);
-  });
-
-  it('skips a package directory with no package.json', () => {
-    root = mkdtempSync(path.join(tmpdir(), 'sync-catalogue-test-'));
-    mkdirSync(path.join(root, 'packages', 'half-scaffolded'), { recursive: true });
-    makePackage(root, 'real', { name: '@vielzeug/real' });
-
-    const packages = readPackages(root);
-    expect(packages).toHaveLength(1);
-    expect(packages[0].slug).toBe('real');
-  });
-});
-
-describe('dependencyGraphSection()', () => {
-  it('renders the fenced graph, independence line, and optional-peer notes, sorted by slug', () => {
-    const section = dependencyGraphSection([
-      { deps: ['arsenal'], optionalPeers: [], slug: 'sourcerer' },
-      { deps: [], optionalPeers: [], slug: 'arsenal' },
-      { deps: ['ripple'], optionalPeers: ['courier'], slug: 'flux' },
-    ]);
-
-    expect(section).toBe(
+  it('preserves curated metadata while refreshing live dependency fields', () => {
+    const merged = mergePackageData(
       [
-        '```text',
-        'flux      → ripple',
-        'sourcerer → arsenal',
-        '```',
-        '',
-        'Fully independent (no `@vielzeug/*` deps): `arsenal`.',
-        '',
-        '> **Note:** `flux` also declares optional peer dependencies on `courier`.',
-      ].join('\n'),
+        {
+          slug: 'flux',
+          name: '@vielzeug/flux',
+          category: 'Streams',
+          description: 'Composable streams',
+          domOutput: false,
+          dependencies: [],
+          optionalPeers: [],
+        },
+      ],
+      [{ slug: 'flux', dependencies: ['ripple'], optionalPeers: ['courier'] }],
+    );
+
+    expect(merged[0].dependencies).toEqual(['ripple']);
+    expect(merged[0].optionalPeers).toEqual(['courier']);
+    expect(merged[0].category).toBe('Streams');
+  });
+
+  it('throws when a real package has no curated entry', () => {
+    expect(() => mergePackageData([], [{ slug: 'flux', dependencies: [], optionalPeers: [] }])).toThrow(
+      /missing curated metadata/,
     );
   });
 
-  it('omits the independence line trailing packages gracefully when every package has a dep', () => {
-    const section = dependencyGraphSection([{ deps: ['ripple'], optionalPeers: [], slug: 'forge' }]);
-    expect(section).toContain('Fully independent (no `@vielzeug/*` deps): .');
+  it('throws when a curated package no longer exists on disk', () => {
+    expect(() =>
+      mergePackageData(
+        [
+          {
+            slug: 'ghost',
+            name: '@vielzeug/ghost',
+            category: 'Utilities',
+            description: 'stale',
+            domOutput: false,
+            dependencies: [],
+            optionalPeers: [],
+          },
+        ],
+        [],
+      ),
+    ).toThrow(/stale curated entries/);
+  });
+});
+
+describe('renderPackagesTable() / patchPackagesReference()', () => {
+  it('renders a markdown table from package metadata', () => {
+    const table = renderPackagesTable([
+      {
+        slug: 'ore',
+        name: '@vielzeug/ore',
+        category: 'UI',
+        description: 'Web-component primitives',
+        domOutput: true,
+        dependencies: ['ripple'],
+        optionalPeers: [],
+      },
+    ]);
+
+    expect(table).toContain('| Package | Category | DOM | Description | Dependencies | Optional peers | Test command |');
+    expect(table).toContain('| `@vielzeug/ore` | UI | yes | Web-component primitives | `ripple` | — | — |');
+  });
+
+  it('patches the generated packages table into the reference file', () => {
+    const source = [
+      '# Package Reference',
+      '',
+      '<!-- GENERATED:packages-table:BEGIN -->',
+      '<!-- GENERATED:packages-table:END -->',
+    ].join('\n');
+
+    const patched = patchPackagesReference(source, [
+      {
+        slug: 'ward',
+        name: '@vielzeug/ward',
+        category: 'Auth',
+        description: 'RBAC engine',
+        domOutput: false,
+        dependencies: [],
+        optionalPeers: [],
+      },
+    ]);
+
+    expect(patched).toMatch(/`@vielzeug\/ward`/);
+    expect(patched).toMatch(/RBAC engine/);
   });
 });

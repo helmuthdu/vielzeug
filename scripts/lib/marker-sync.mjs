@@ -25,7 +25,7 @@ export function readIfExists(abs) {
 /** True if `relPath` would be tracked by git (i.e. not matched by .gitignore).
  * Asks git directly rather than guessing from a path prefix — `.claude/` and
  * `.devin/` are gitignored local tool config; everything under `.ai/` (except
- * `.ai/workflows/runs/`) is real, committed source.
+ * `.ai/state/`) is gitignored scratch state; the rest of `.ai/` is real, committed source.
  *
  * Explicitly clears GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE: the main caller of this is a
  * lefthook pre-commit hook, and git hook environments can set these to point at a

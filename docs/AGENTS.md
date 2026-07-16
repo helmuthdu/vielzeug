@@ -6,13 +6,13 @@ VitePress documentation site. Per-package docs live in `docs/<name>/` and follow
 
 ## Ownership
 
-- **Documentation template, tone, and per-page structure rules** — `.ai/workflows/pkg-docs.md` (authoritative; do not duplicate here).
-- **REPL example and Monaco-type rules** — `.ai/workflows/pkg-repl.md`.
-- Package facts referenced by docs — `.ai/rules/data/catalogue.md`.
+- **Documentation template, tone, and per-page structure rules** — `.ai/reference/docs-template.md`.
+- **REPL example rules** — `.ai/tasks/repl.md`.
+- Package facts referenced by docs — `.ai/data/packages.json` and `.ai/reference/packages.md`.
 
 ## Local Contracts
 
-- Each `docs/<name>/` has the four standard pages: `index.md` (Explanation), `usage.md` (How-to), `api.md` (Reference), `examples.md` + `examples/*.md` (How-to). Follow `pkg-docs.md` for required frontmatter and section order.
+- Each `docs/<name>/` has the four standard pages: `index.md` (Explanation), `usage.md` (How-to), `api.md` (Reference), `examples.md` + `examples/*.md` (How-to). Follow `.ai/reference/docs-template.md` for required frontmatter and section order.
 - REPL wiring lives in `docs/.vitepress/theme/components/repl/`:
   - `examples/<name>/` — hand-authored example modules (the only content authors write by hand), registered in the matching `index.ts`.
   - `execution/` — the sandbox execution engine (Monaco loading + TS transpile, `@vielzeug/sandbox`-based iframe execution, import rewriting, output formatting). Pure logic here is unit-tested under `execution/__tests__/`.
@@ -23,7 +23,7 @@ VitePress documentation site. Per-package docs live in `docs/<name>/` and follow
 
 ## Work Guidance
 
-- Run docs work through the `/pkg-docs` and `/pkg-repl` workflows rather than ad-hoc edits.
+- Run docs work through the `.ai/tasks/docs.md` and `.ai/tasks/repl.md` task playbooks rather than ad-hoc edits.
 - Editing docs invalidates the `codex` bundle — **always** rebuild codex after a docs pass (`pnpm --filter @vielzeug/codex build`). It is fast and idempotent; skipping it leaves the MCP bundle stale for future sessions.
 
 ## Verification

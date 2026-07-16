@@ -8,9 +8,10 @@
 
 Package count, the dependency graph, and the catalogue change often enough that duplicating them here just goes stale. Treat these as the single source of truth instead:
 
-- **Engineering conventions** (disposal, dev logging, error classes, file layout) — `.ai/rules/code/conventions.md`
-- **Package catalogue & dependency graph** — `.ai/rules/data/catalogue.md`
-- **Workspace toolchain & commands** — `.ai/rules/process/workspace.md`
+- **AI system entrypoint** — `.ai/README.md`
+- **Engineering conventions** (disposal, dev logging, error classes, file layout) — `.ai/core/conventions.md`
+- **Package catalogue & dependency graph** — `.ai/data/packages.json` and `.ai/reference/packages.md`
+- **Workspace toolchain & commands** — `.ai/core/workspace.md`
 - **Root agent contract** — `AGENTS.md` (indexes child `AGENTS.md` files per subtree)
 - **Contributor workflow** — `.github/contributing.md`
 
@@ -24,7 +25,7 @@ pnpm lint    # eslint + stylelint
 pnpm fix     # auto-fix JS (eslint --fix) and CSS (prettier + stylelint)
 ```
 
-Per-package: `cd packages/<name> && pnpm build|test|lint|fix`. Test path convention and per-package overrides are documented in `.ai/rules/process/workspace.md`.
+Per-package: `cd packages/<name> && pnpm build|test|lint|fix`. Test path convention and per-package overrides are documented in `.ai/core/workspace.md` and `.ai/data/packages.json`.
 
 ## Key conventions (summary — full detail in conventions.md)
 
@@ -34,22 +35,17 @@ Per-package: `cd packages/<name> && pnpm build|test|lint|fix`. Test path convent
 - Conventional commits: `feat(courier): add retry logic`.
 - All public exports go through `packages/<name>/src/index.ts`.
 
-## Workflows
+## Tasks
 
-Canonical workflow definitions live in `.ai/workflows/`. Read the relevant file before acting on a package task:
+Canonical AI task definitions live in `.ai/tasks/`. Read the smallest task that fits the job:
 
-| Task                          | Workflow file                                       |
-| ------------------------------ | ---------------------------------------------------- |
-| Improve a package end-to-end   | `.ai/workflows/pkg-workflow.md` (mode: `analyse`, default) |
-| Add a feature to a package     | `.ai/workflows/pkg-workflow.md` (mode: `feature`)   |
-| Create a new package           | `.ai/workflows/pkg-workflow.md` (mode: `new-package`) |
-| Architecture & DX plan         | `.ai/workflows/pkg-plan.md` (converges, ~3 passes typical) |
-| Implement an existing plan     | `.ai/workflows/pkg-implement.md` (converges, ~3 rounds typical) |
-| Code review                    | `.ai/workflows/pkg-review.md` (3 fixed lenses — all mandatory) |
-| Security audit                 | `.ai/workflows/pkg-security.md` (3 fixed surfaces — all mandatory) |
-| Test coverage gaps             | `.ai/workflows/pkg-tests.md`                        |
-| Docs sync                      | `.ai/workflows/pkg-docs.md`                         |
-| REPL examples                  | `.ai/workflows/pkg-repl.md`                         |
+| Need | Task file |
+| --- | --- |
+| Review or redesign a package | `.ai/tasks/analyze.md` |
+| Implement a package or repo change | `.ai/tasks/change.md` |
+| Run focused review / security / coverage checks | `.ai/tasks/validate.md` |
+| Sync docs | `.ai/tasks/docs.md` |
+| Update REPL examples | `.ai/tasks/repl.md` |
 
 ## AI integration (`codex`)
 

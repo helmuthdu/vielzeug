@@ -6,7 +6,7 @@ Reactive SVG charting library. Mounts an `<svg>` into a host container; each cha
 
 ## Ownership
 
-- Parent contract: `packages/AGENTS.md` and `.ai/rules/code/conventions.md`.
+- Parent contract: `packages/AGENTS.md` and `.ai/core/conventions.md`.
 - Usage docs: `docs/prism/`.
 
 ## Local Contracts

@@ -4,44 +4,39 @@
 
 Root [DOX](https://github.com/agent0ai/dox) rail for the Vielzeug monorepo. It anchors the AGENTS.md chain.
 
-DOX is adopted in a **tiered** fashion: a child `AGENTS.md` exists only where a subtree has local rules not already covered by the `.ai/rules/` files. Leaf packages that follow the standard conventions intentionally have **no** `AGENTS.md` — that absence is expected, not "unindexed".
+DOX is adopted in a **tiered** fashion: a child `AGENTS.md` exists only where a subtree has local rules not already covered by the canonical files in `.ai/core/`, `.ai/data/`, `.ai/reference/`, and `.ai/tasks/`. Leaf packages that follow the standard conventions intentionally have **no** `AGENTS.md` — that absence is expected, not "unindexed".
 
 ## Ownership
 
-- **Engineering conventions** (disposal, logging, errors, file layout) — `.ai/rules/code/conventions.md` (single source of truth; never duplicate it, reference it).
-- **Package catalogue and dependency graph** — `.ai/rules/data/catalogue.md` (live data; update when packages change).
-- **Workspace toolchain, commands, versioning** — `.ai/rules/process/workspace.md`.
-- **Reusable package workflows** (plan / implement / review / security / tests / docs / repl / orchestrator) — `.ai/workflows/*.md` (single source of truth; generated, gitignored stubs in `.devin/workflows/` and `.claude/commands/` delegate here via `.ai/workflows/manifest.json` + `pnpm gen:workflow-docs`; `.junie/guidelines.md` links here directly with no stub file).
+- **AI system entrypoint** — `.ai/README.md`.
+- **Engineering conventions** (disposal, logging, errors, file layout) — `.ai/core/conventions.md`.
+- **Package catalogue and dependency graph** — `.ai/data/packages.json` and `.ai/reference/packages.md`.
+- **Workspace toolchain, commands, versioning** — `.ai/core/workspace.md`.
+- **Task playbooks** (analyze / change / validate / docs / repl) — `.ai/tasks/*.md`, with structured task metadata in `.ai/data/tasks.json`.
 - **Contributor and tooling guidance** — `CLAUDE.md`.
 
-## Workflow Index
+## Task Index
 
-Reach for the workflow that matches the task (full definitions in `.ai/workflows/`):
+Reach for the smallest task that matches the job:
 
-| Situation                                                | Workflow                                                                                                                                                             |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Improve one package end-to-end                           | `/pkg-workflow` (default `analyse` mode; also proposes a lighter scope than the full pipeline where it fits — see `.ai/workflows/pkg-workflow.md § Scope selection`) |
-| Add a feature to an existing package                     | `/pkg-workflow mode:feature`                                                                                                                                         |
-| Create a new package from scratch                        | `/pkg-workflow mode:new-package`                                                                                                                                     |
-| Analyse and produce an improvement plan                  | `/pkg-plan` (mode `analyse`, converges — typically ~3 passes)                                                                                                        |
-| Design a feature or new-package spec                     | `/pkg-plan` (mode `feature` / `new-package` — same file, different pass structure)                                                                                   |
-| Apply an existing plan                                   | `/pkg-implement` (converges — as many rounds as needed)                                                                                                              |
-| Suspected bug / quality concern                          | `/pkg-review` (Lens A correctness, B design, C types — all 3 mandatory)                                                                                              |
-| Security concern (injection, prototype pollution, leaks) | `/pkg-security` (3 fixed surfaces — all mandatory)                                                                                                                   |
-| Coverage gaps or messy tests                             | `/pkg-tests`                                                                                                                                                         |
-| Docs out of sync with the API                            | `/pkg-docs`                                                                                                                                                          |
-| REPL examples stale or missing                           | `/pkg-repl`                                                                                                                                                          |
+| Situation | Read |
+| --- | --- |
+| Review or redesign a package | `.ai/tasks/analyze.md` |
+| Implement a package or repo change | `.ai/tasks/change.md` |
+| Run focused correctness / security / coverage checks | `.ai/tasks/validate.md` |
+| Sync package docs | `.ai/tasks/docs.md` |
+| Update REPL examples | `.ai/tasks/repl.md` |
 
-Cadence inside `/pkg-workflow`: plan → implement converge on their own evidence (no fixed count, ~3 passes/rounds typical); review's 3 lenses and security's 3 surfaces are a fixed enumeration, always all run; tests → docs → repl are single-pass. See `.ai/rules/process/agent-execution.md § Multi-pass convergence` for the exact rule.
+Default guidance: prefer one focused task plus the smallest useful validation instead of a fixed multi-phase pipeline.
 
 ## Local Contracts
 
-- `.ai/workflows/runs/<pkg>/` (workflow run scratch state) is gitignored, not part of the DOX chain — see `.ai/workflows/runs/AGENTS.md` for its lifecycle contract and `.ai/rules/process/agent-execution.md § Run artifacts` for the canonical, versioned description.
-- Do not duplicate canonical context; link to the relevant `.ai/rules/**/*.md` file.
+- `.ai/state/` (AI scratch state) is gitignored, not part of the DOX chain — see `.ai/state/AGENTS.md`.
+- Do not duplicate canonical context; link to the relevant `.ai/core/**/*.md`, `.ai/tasks/**/*.md`, `.ai/data/**/*.json`, or `.ai/reference/**/*.md` file.
 
 ## Work Guidance
 
-Defer to `.ai/rules/code/conventions.md` for engineering conventions, `.ai/rules/data/catalogue.md` for the package catalogue, `.ai/rules/process/workspace.md` for toolchain and commands, and the relevant `.ai/workflows/*.md` for task procedure.
+Defer to `.ai/core/conventions.md` for engineering conventions, `.ai/data/packages.json` / `.ai/reference/packages.md` for package facts, `.ai/core/workspace.md` for toolchain and commands, and the relevant `.ai/tasks/*.md` file for task procedure.
 
 ## Verification
 
@@ -49,6 +44,8 @@ Defer to `.ai/rules/code/conventions.md` for engineering conventions, `.ai/rules
 - Lint: `pnpm --filter @vielzeug/<name> lint`
 - Build: `pnpm --filter @vielzeug/<name> build`
 - Docs: `pnpm docs:build`
+- REPL examples: `pnpm validate:repl` (`-- --package <name>` for a focused package run)
+- AI metadata: `pnpm check:ai-data` (`pnpm gen:ai-data` to refresh `.ai/data/` and generated references)
 
 ## Child DOX Index
 
@@ -56,4 +53,4 @@ Defer to `.ai/rules/code/conventions.md` for engineering conventions, `.ai/rules
 - `docs/AGENTS.md` — VitePress documentation site and REPL.
 - `scripts/AGENTS.md` — repo tooling: release automation, worktree helper, generated-doc sync, REPL codegen/validation, and the shared `scripts/lib/` primitives they're all built on. No top-level router/CLI entrypoint exists on purpose — run `pnpm run` (no args) to see every available command; see `scripts/AGENTS.md`'s Layout section for why a hand-maintained routing table was rejected.
 - `.github/AGENTS.md` — CI/CD workflow YAML and the `scripts/release/` automation it calls into; the npm Trusted Publishing constraints that shape `publish.yml`'s design.
-- `.ai/workflows/runs/AGENTS.md` — lifecycle contract for gitignored per-package workflow scratch state (plans, progress, findings). Not itself committed history — describes ephemeral state, not a package.
+- `.ai/state/AGENTS.md` — lifecycle contract for gitignored AI scratch state. Not itself committed history — describes ephemeral state, not a package.
