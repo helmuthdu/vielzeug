@@ -20,6 +20,7 @@ import { t } from '../core/i18n';
 import { presenceCount, presenceSignal, setupRealtime } from '../core/realtime';
 import { router } from '../core/router';
 import { taskIndex } from '../core/search-index';
+import { initialsFromName } from '../core/users';
 import { openTaskDialog } from './components/task-dialog';
 import { createAnalyticsView } from './views/analytics';
 import { createBacklogView } from './views/backlog';
@@ -81,15 +82,6 @@ function isTypingInField(): boolean {
   }
 
   return false;
-}
-
-function userInitials(name: string): string {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join('')
-    .toUpperCase();
 }
 
 define('app-shell', {
@@ -243,7 +235,7 @@ define('app-shell', {
                   size="xs"
                   status="online"
                   :alt=${() => u.value.name}
-                  :initials=${() => userInitials(u.value.name)}></ore-avatar>`,
+                  :initials=${() => initialsFromName(u.value.name)}></ore-avatar>`,
             )}
             ${when(
               () => presenceCount.value > 0,

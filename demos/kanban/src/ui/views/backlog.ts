@@ -14,7 +14,7 @@ import { boardSignal } from '../../core/board-store';
 import { formatDueDate } from '../../core/format';
 import { t } from '../../core/i18n';
 import { taskIndex } from '../../core/search-index';
-import { seedUsers } from '../../core/seed-data';
+import { userInitials, userMap } from '../../core/users';
 import { openTaskDialog } from '../components/task-dialog';
 
 const ITEM_HEIGHT = 72;
@@ -42,19 +42,6 @@ const PRIORITY_COLOR: Record<Task['priority'], string> = {
   medium: 'var(--color-info, var(--color-primary))',
   urgent: 'var(--color-error)',
 };
-
-const USER_MAP = new Map(seedUsers.map((u) => [u.id, u]));
-
-function userInitials(id: string): string {
-  const name = USER_MAP.get(id)?.name ?? id;
-
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join('')
-    .toUpperCase();
-}
 
 function renderTaskRow(task: Task, el: HTMLElement, onOpen: (taskId: string) => void): void {
   el.className = 'backlog__task';
@@ -97,7 +84,7 @@ function renderTaskRow(task: Task, el: HTMLElement, onOpen: (taskId: string) => 
     const av = document.createElement('ore-avatar') as HTMLElement;
 
     av.setAttribute('size', 'xs');
-    av.setAttribute('alt', USER_MAP.get(task.assigneeId)?.name ?? task.assigneeId);
+    av.setAttribute('alt', userMap.value.get(task.assigneeId)?.name ?? task.assigneeId);
     av.setAttribute('initials', userInitials(task.assigneeId));
     el.appendChild(av);
   } else {

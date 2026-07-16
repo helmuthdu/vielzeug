@@ -1,5 +1,15 @@
 import type { Board, User } from './types';
 
+// Relative to "now" (not fixed calendar dates) so the analytics view's 7-day completion
+// velocity chart always has real data to plot, regardless of when the demo is loaded.
+function daysAgo(n: number): string {
+  const d = new Date();
+
+  d.setDate(d.getDate() - n);
+
+  return d.toISOString();
+}
+
 export const seedUsers: User[] = [
   { id: 'user-alice', name: 'Alice Chen', role: 'admin' },
   { id: 'user-bob', name: 'Bob Martinez', role: 'member' },
@@ -18,6 +28,7 @@ export const seedBoard: Board = {
     {
       assigneeId: 'user-alice',
       budget: null,
+      completedAt: null,
       description: 'Agree on REST endpoints and JSON shapes for the backend team.',
       dueDate: '2026-07-20',
       id: 'task-001',
@@ -29,6 +40,7 @@ export const seedBoard: Board = {
     {
       assigneeId: 'user-bob',
       budget: { amount: '500.00', currency: 'USD' },
+      completedAt: null,
       description: 'Configure GitHub Actions for lint, test, and build steps.',
       dueDate: '2026-07-18',
       id: 'task-002',
@@ -40,6 +52,7 @@ export const seedBoard: Board = {
     {
       assigneeId: null,
       budget: null,
+      completedAt: null,
       description: 'Create a getting-started guide for new contributors.',
       dueDate: null,
       id: 'task-003',
@@ -51,6 +64,7 @@ export const seedBoard: Board = {
     {
       assigneeId: 'user-bob',
       budget: { amount: '1200.00', currency: 'USD' },
+      completedAt: null,
       description: 'Add JWT-based login and refresh-token flow.',
       dueDate: '2026-07-15',
       id: 'task-004',
@@ -62,6 +76,7 @@ export const seedBoard: Board = {
     {
       assigneeId: 'user-carol',
       budget: { amount: '800.00', currency: 'USD' },
+      completedAt: null,
       description: 'Wire up the @vielzeug/dnd primitives to allow card reordering.',
       dueDate: '2026-07-22',
       id: 'task-005',
@@ -73,6 +88,7 @@ export const seedBoard: Board = {
     {
       assigneeId: 'user-alice',
       budget: { amount: '350.00', currency: 'USD' },
+      completedAt: null,
       description: 'Use @vielzeug/coins for precise monetary arithmetic on task budgets.',
       dueDate: '2026-07-25',
       id: 'task-006',
@@ -84,6 +100,7 @@ export const seedBoard: Board = {
     {
       assigneeId: 'user-carol',
       budget: null,
+      completedAt: null,
       description: 'Run axe-core against all components and fix reported violations.',
       dueDate: '2026-07-14',
       id: 'task-007',
@@ -95,6 +112,7 @@ export const seedBoard: Board = {
     {
       assigneeId: 'user-bob',
       budget: { amount: '600.00', currency: 'USD' },
+      completedAt: null,
       description: 'Profile the virtual list with 10 000 tasks and address bottlenecks.',
       dueDate: '2026-07-16',
       id: 'task-008',
@@ -106,6 +124,7 @@ export const seedBoard: Board = {
     {
       assigneeId: 'user-alice',
       budget: null,
+      completedAt: null,
       description: 'Add a CSS custom-property theme layer for light and dark palettes.',
       dueDate: null,
       id: 'task-009',
@@ -117,6 +136,7 @@ export const seedBoard: Board = {
     {
       assigneeId: 'user-carol',
       budget: { amount: '400.00', currency: 'USD' },
+      completedAt: daysAgo(1),
       description: 'Export spacing, colour, and typography tokens as CSS variables.',
       dueDate: '2026-07-05',
       id: 'task-010',
@@ -128,6 +148,7 @@ export const seedBoard: Board = {
     {
       assigneeId: 'user-alice',
       budget: null,
+      completedAt: daysAgo(3),
       description: 'Configure Rush, pnpm workspaces, and shared ESLint / Prettier configs.',
       dueDate: '2026-07-01',
       id: 'task-011',
@@ -139,6 +160,7 @@ export const seedBoard: Board = {
     {
       assigneeId: 'user-bob',
       budget: { amount: '250.00', currency: 'USD' },
+      completedAt: daysAgo(5),
       description: 'Cover ripple signals and forge form-state with Vitest.',
       dueDate: '2026-07-08',
       id: 'task-012',

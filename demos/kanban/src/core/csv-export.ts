@@ -4,7 +4,7 @@ import type { Task } from './types';
 
 import { boardSignal } from './board-store';
 
-const csvWorker = createWorker((tasks: Task[]) => {
+function serializeTasksAsCsv(tasks: Task[]): string {
   const header = 'id,title,status,assigneeId,dueDate,budget';
   const rows = tasks.map((t) =>
     [
@@ -20,16 +20,25 @@ const csvWorker = createWorker((tasks: Task[]) => {
   );
 
   return [header, ...rows].join('\n');
-});
+}
 
 export async function exportTasksAsCsv(): Promise<void> {
-  const csv = await csvWorker.run(boardSignal.value.tasks);
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  // Scoped to this one call — a CSV export is a single, infrequent, one-off task, so there's
+  // no long-lived pool to justify a module-scope singleton; `dispose()` in `finally` guarantees
+  // the worker is always torn down, success or failure.
+  const worker = createWorker(serializeTasksAsCsv);
 
-  a.href = url;
-  a.download = 'tasks.csv';
-  a.click();
-  URL.revokeObjectURL(url);
+  try {
+    const csv = await worker.run(boardSignal.value.tasks);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+
+    a.href = url;
+    a.download = 'tasks.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  } finally {
+    worker.dispose();
+  }
 }

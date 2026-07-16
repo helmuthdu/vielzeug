@@ -8,13 +8,13 @@ import '@vielzeug/refine/button';
 import { define, html } from '@vielzeug/ore';
 import { when } from '@vielzeug/ore/directives';
 import { computed, effect, signal } from '@vielzeug/ripple';
+import { s } from '@vielzeug/spell';
 
 import type { Task, TaskPriority, TaskStatus } from '../../core/types';
 
 import { currentUser } from '../../core/auth';
 import { boardSignal } from '../../core/board-store';
 import { t } from '../../core/i18n';
-import { seedUsers } from '../../core/seed-data';
 import {
   attemptCreateTask,
   attemptDeleteTask,
@@ -22,6 +22,7 @@ import {
   canDeleteTask,
   canUpdateTask,
 } from '../../core/task-actions';
+import { usersSignal } from '../../core/users';
 
 export type TaskDialogRequest = { kind: 'create'; status: TaskStatus } | { kind: 'edit'; taskId: string };
 
@@ -50,10 +51,19 @@ const PRIORITY_OPTIONS = computed<Array<{ label: string; value: TaskPriority }>>
   { label: t('priority.urgent'), value: 'urgent' },
 ]);
 
-const ASSIGNEE_OPTIONS: Array<{ label: string; value: string }> = [
-  { label: 'Unassigned', value: '' },
-  ...seedUsers.map((u) => ({ label: u.name, value: u.id })),
-];
+const ASSIGNEE_OPTIONS = computed<Array<{ label: string; value: string }>>(() => [
+  { label: t('taskDialog.unassigned'), value: '' },
+  ...usersSignal.value.map((u) => ({ label: u.name, value: u.id })),
+]);
+
+/**
+ * Validates the draft before save. `@vielzeug/spell` (zero-dep schema validation) replaces a
+ * hand-rolled `titleTouched && title.trim() === ''` check — declarative, and the same schema
+ * shape extends cleanly if more fields ever need validation beyond just the title.
+ */
+const TaskDraftSchema = s.object({
+  title: s.string().trim().min(1),
+});
 
 /**
  * A draft mirrors what the user has typed/picked so far. It exists because every refine field
@@ -85,8 +95,11 @@ define('task-dialog', {
   setup() {
     const draft = signal<TaskDraft>(emptyDraft('todo'));
     const editingTask = signal<Task | null>(null);
-    const dialogLabel = signal('New task');
-    const saveLabel = signal('Create');
+    // `computed()`, not a plain string signal set imperatively in `populate()` — re-translates
+    // immediately on locale change instead of staying frozen in whatever language was active
+    // when the dialog was last opened.
+    const dialogLabel = computed(() => editingTask.value?.title || t('taskDialog.newTask'));
+    const saveLabel = computed(() => (editingTask.value ? t('taskDialog.save') : t('taskDialog.create')));
     const readOnly = computed(() => {
       const task = editingTask.value;
 
@@ -107,9 +120,17 @@ define('task-dialog', {
     const titleTouched = signal(false);
     const confirmDeleteOpen = signal(false);
 
-    const titleError = computed(() =>
-      titleTouched.value && draft.value.title.trim() === '' ? 'Title is required' : '',
-    );
+    const titleError = computed(() => {
+      if (!titleTouched.value) return '';
+
+      const result = TaskDraftSchema.safeParse({ title: draft.value.title });
+
+      if (result.success) return '';
+
+      const titleIssue = result.error.flattenFirst().fieldErrors.find((e) => e.path[0] === 'title');
+
+      return titleIssue?.message ?? t('taskDialog.titleRequired');
+    });
 
     const patchDraft = (patch: Partial<TaskDraft>): void => {
       draft.value = { ...draft.value, ...patch };
@@ -122,8 +143,6 @@ define('task-dialog', {
       if (request.kind === 'create') {
         editingTask.value = null;
         draft.value = emptyDraft(request.status);
-        dialogLabel.value = 'New task';
-        saveLabel.value = 'Create';
 
         return;
       }
@@ -143,8 +162,6 @@ define('task-dialog', {
         status: task.status,
         title: task.title,
       };
-      dialogLabel.value = task.title;
-      saveLabel.value = 'Save';
     }
 
     effect(() => {
@@ -170,13 +187,15 @@ define('task-dialog', {
 
     const onSave = (): void => {
       void (async () => {
-        const title = draft.value.title.trim();
+        const validated = TaskDraftSchema.safeParse({ title: draft.value.title });
 
-        if (!title) {
+        if (!validated.success) {
           titleTouched.value = true;
 
           return;
         }
+
+        const title = validated.data.title;
 
         const patch = {
           assigneeId: draft.value.assigneeId || null,
@@ -192,7 +211,13 @@ define('task-dialog', {
         const task = editingTask.value;
         const ok = task
           ? await attemptEditTask(task, patch)
-          : Boolean(await attemptCreateTask({ ...patch, ownerId: currentUser.value.id }));
+          : Boolean(
+              await attemptCreateTask({
+                ...patch,
+                completedAt: patch.status === 'done' ? new Date().toISOString() : null,
+                ownerId: currentUser.value.id,
+              }),
+            );
 
         if (ok) requestSignal.value = null;
       })();
@@ -232,21 +257,21 @@ define('task-dialog', {
         @close=${onCancel}>
         <div style="display:flex;flex-direction:column;gap:var(--size-4)">
           <ore-input
-            label="Title"
+            label=${() => t('taskDialog.title')}
             required
             ?disabled=${readOnly}
             :value=${() => draft.value.title}
             :error=${titleError}
             @input=${(e: Event) => patchDraft({ title: (e as CustomEvent<{ value: string }>).detail.value })}></ore-input>
           <ore-textarea
-            label="Description"
+            label=${() => t('taskDialog.description')}
             rows="3"
             ?disabled=${readOnly}
             :value=${() => draft.value.description}
             @input=${(e: Event) => patchDraft({ description: (e as CustomEvent<{ value: string }>).detail.value })}></ore-textarea>
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:var(--size-4)">
             <ore-select
-              label="Status"
+              label=${() => t('taskDialog.status')}
               :options=${STATUS_OPTIONS}
               ?disabled=${readOnly}
               :value=${() => draft.value.status}
@@ -256,7 +281,7 @@ define('task-dialog', {
                     draft.value.status) as TaskStatus,
                 })}></ore-select>
             <ore-select
-              label="Priority"
+              label=${() => t('taskDialog.priority')}
               :options=${PRIORITY_OPTIONS}
               ?disabled=${readOnly}
               :value=${() => draft.value.priority}
@@ -268,7 +293,7 @@ define('task-dialog', {
           </div>
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:var(--size-4)">
             <ore-select
-              label="Assignee"
+              label=${() => t('taskDialog.assignee')}
               :options=${ASSIGNEE_OPTIONS}
               ?disabled=${readOnly}
               :value=${() => draft.value.assigneeId}
@@ -277,7 +302,7 @@ define('task-dialog', {
                   assigneeId: (e as CustomEvent<{ values: string[] }>).detail.values[0] ?? '',
                 })}></ore-select>
             <ore-date-picker
-              label="Due date"
+              label=${() => t('taskDialog.dueDate')}
               ?disabled=${readOnly}
               :value=${() => draft.value.dueDate}
               @change=${(e: Event) =>
@@ -287,7 +312,7 @@ define('task-dialog', {
           </div>
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:var(--size-4)">
             <ore-number-input
-              label="Budget (USD)"
+              label=${() => t('taskDialog.budget')}
               min="0"
               ?disabled=${readOnly}
               :value=${() => draft.value.budgetAmount}
@@ -301,11 +326,14 @@ define('task-dialog', {
         <div slot="footer" style="display:flex;justify-content:space-between;width:100%">
           ${when(
             canDelete,
-            () => html`<ore-button variant="ghost" color="error" @click=${onDeleteRequest}>Delete</ore-button>`,
+            () =>
+              html`<ore-button variant="ghost" color="error" @click=${onDeleteRequest}
+                >${() => t('taskDialog.deleteTask')}</ore-button
+              >`,
             () => html`<span></span>`,
           )}
           <div style="display:flex;gap:var(--size-2)">
-            <ore-button variant="bordered" @click=${onCancel}>Close</ore-button>
+            <ore-button variant="bordered" @click=${onCancel}>${() => t('taskDialog.close')}</ore-button>
             ${when(
               canSave,
               () => html`<ore-button variant="solid" color="primary" @click=${onSave}>${saveLabel}</ore-button>`,
@@ -313,14 +341,22 @@ define('task-dialog', {
           </div>
         </div>
       </ore-dialog>
-      <ore-dialog size="sm" dismissible label="Delete task?" ?open=${confirmDeleteOpen} @close=${onDeleteCancel}>
+      <ore-dialog
+        size="sm"
+        dismissible
+        :label=${() => t('taskDialog.deleteConfirmTitle')}
+        ?open=${confirmDeleteOpen}
+        @close=${onDeleteCancel}>
         <p>
-          This deletes <strong>${() => editingTask.value?.title ?? 'this task'}</strong> permanently. This action cannot
-          be undone.
+          ${() => t('taskDialog.deleteConfirmBody', { title: editingTask.value?.title ?? t('taskDialog.thisTask') })}
         </p>
         <div slot="footer" style="display:flex;justify-content:flex-end;gap:var(--size-2);width:100%">
-          <ore-button variant="bordered" @click=${onDeleteCancel}>Cancel</ore-button>
-          <ore-button variant="solid" color="error" @click=${onDeleteConfirm}>Delete</ore-button>
+          <ore-button variant="bordered" @click=${onDeleteCancel}
+            >${() => t('taskDialog.deleteConfirmCancel')}</ore-button
+          >
+          <ore-button variant="solid" color="error" @click=${onDeleteConfirm}
+            >${() => t('taskDialog.deleteConfirmConfirm')}</ore-button
+          >
         </div>
       </ore-dialog>
     `;

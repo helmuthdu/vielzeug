@@ -23,9 +23,9 @@ const STATUSES: TaskStatus[] = ['todo', 'in-progress', 'review', 'done'];
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
- * Returns a fake 7-day velocity series based on dueDate.
- * Days are today-6 through today; the value is the count of "done" tasks
- * whose dueDate falls on that calendar day.
+ * Real 7-day completion velocity: buckets each `done` task's `completedAt` (set by
+ * `history.ts`'s `moveTask` the moment a task transitions into `'done'`) by calendar day.
+ * Days are today-6 through today.
  */
 function buildVelocitySeries(): { key: Date; value: number }[] {
   const today = new Date();
@@ -41,11 +41,14 @@ function buildVelocitySeries(): { key: Date; value: number }[] {
     days.push(d);
   }
 
-  const doneTasks = boardSignal.value.tasks.filter((t) => t.status === 'done' && t.dueDate !== null);
+  const completedAtDays = boardSignal.value.tasks
+    .map((t) => t.completedAt)
+    .filter((c): c is string => c !== null)
+    .map((c) => c.slice(0, 10));
 
   return days.map((day) => {
     const dayStr = day.toISOString().slice(0, 10);
-    const count = doneTasks.filter((t) => t.dueDate?.slice(0, 10) === dayStr).length;
+    const count = completedAtDays.filter((c) => c === dayStr).length;
 
     return { key: day, value: count };
   });

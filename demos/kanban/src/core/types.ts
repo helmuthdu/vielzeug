@@ -17,6 +17,8 @@ export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type Task = {
   assigneeId: string | null;
   budget: { amount: string; currency: string } | null;
+  /** ISO timestamp set the moment a task's status becomes `'done'`; cleared if moved back out. */
+  completedAt: string | null;
   description: string;
   dueDate: string | null;
   id: string;

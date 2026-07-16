@@ -48,19 +48,30 @@ export async function moveTask(
   from: TaskStatus,
   to: TaskStatus,
 ): Promise<void> {
+  // Captured up front so rollback restores the exact prior value — a task can only reach
+  // `to === 'done'` from a non-done status (the FSM in task-machine.ts forbids done->done),
+  // so `previousCompletedAt` is always `null` on the way in, but reading it here (rather than
+  // assuming that) keeps this command correct even if that invariant ever changes.
+  const previousCompletedAt = boardSignal.value.tasks.find((t) => t.id === taskId)?.completedAt ?? null;
+  const nextCompletedAt = to === 'done' ? new Date().toISOString() : null;
+
   await ledger.do(
     compose(
       [
         {
           execute: () => {
             const board = boardSignal.value;
-            const tasks = board.tasks.map((t) => (t.id === taskId ? { ...t, status: to } : t));
+            const tasks = board.tasks.map((t) =>
+              t.id === taskId ? { ...t, completedAt: nextCompletedAt, status: to } : t,
+            );
 
             boardSignal.value = { ...board, tasks };
           },
           rollback: () => {
             const board = boardSignal.value;
-            const tasks = board.tasks.map((t) => (t.id === taskId ? { ...t, status: from } : t));
+            const tasks = board.tasks.map((t) =>
+              t.id === taskId ? { ...t, completedAt: previousCompletedAt, status: from } : t,
+            );
 
             boardSignal.value = { ...board, tasks };
           },

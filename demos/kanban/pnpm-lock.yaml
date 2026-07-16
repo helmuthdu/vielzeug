@@ -48,8 +48,8 @@ importers:
         specifier: ^1.0.5
         version: 1.0.5
       '@vielzeug/refine':
-        specifier: ^1.5.0
-        version: 1.5.0
+        specifier: ^1.5.1
+        version: 1.5.1
       '@vielzeug/ripple':
         specifier: ^1.2.1
         version: 1.2.1
@@ -65,6 +65,9 @@ importers:
       '@vielzeug/sourcerer':
         specifier: ^1.0.4
         version: 1.0.4
+      '@vielzeug/spell':
+        specifier: ^1.1.2
+        version: 1.1.2
       '@vielzeug/tempo':
         specifier: ^1.0.3
         version: 1.0.3
@@ -281,8 +284,8 @@ packages:
     resolution: {integrity: sha512-yQTU+rTDrQUaggRfCNj953ASygEbBAM1nahT6NyQK6L3kuIfgop/i4WiNI2preBH3t5u48PuxHFgb+tIaiiJYw==}
     engines: {node: '>=18'}
 
-  '@vielzeug/refine@1.5.0':
-    resolution: {integrity: sha512-w0EyjsFmz44bzNEuoWFU53jRwyOA8Zm/F8aS1vqxRnGKMQGPgOGZeX4LlyAy08NSpqgDDUt6gpI0XoXRP1PFCw==}
+  '@vielzeug/refine@1.5.1':
+    resolution: {integrity: sha512-l5tsjDM7CZd+DIPI5ahAeeEsPSPy5kVGHgMj22gQkI2b9IsJdD6TxzdNTRIsIVBD1nVT+VN/z64Q1SSP3nh2yQ==}
     engines: {node: '>=18'}
 
   '@vielzeug/ripple@1.2.1':
@@ -303,6 +306,10 @@ packages:
 
   '@vielzeug/sourcerer@1.0.4':
     resolution: {integrity: sha512-Nt/oiY/fLMaow+u8mCAGMr+xWGjl1SSrQ6XH1GgxrzuzvJivqfgGto4cQDBBUH8a294mJ4VLVG7j7wikuG8hCg==}
+    engines: {node: '>=18'}
+
+  '@vielzeug/spell@1.1.2':
+    resolution: {integrity: sha512-mk06TV+rtSGhNoS39d05EtIjMH8sOSaL7+fKMVJ91lBZbURiCzJFOQxYWPMenegyfF3fWx4biWXJAW2QVmrLvQ==}
     engines: {node: '>=18'}
 
   '@vielzeug/tempo@1.0.3':
@@ -640,7 +647,7 @@ snapshots:
     dependencies:
       '@vielzeug/ripple': 1.2.1
 
-  '@vielzeug/refine@1.5.0':
+  '@vielzeug/refine@1.5.1':
     dependencies:
       '@vielzeug/arsenal': 1.1.1
       '@vielzeug/dnd': 1.2.0
@@ -664,6 +671,10 @@ snapshots:
       '@vielzeug/ripple': 1.2.1
 
   '@vielzeug/sourcerer@1.0.4':
+    dependencies:
+      '@vielzeug/arsenal': 1.1.1
+
+  '@vielzeug/spell@1.1.2':
     dependencies:
       '@vielzeug/arsenal': 1.1.1
 

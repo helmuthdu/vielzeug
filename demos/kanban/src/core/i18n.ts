@@ -1,5 +1,6 @@
+import { flux, toSignal } from '@vielzeug/flux';
 import { createI18n } from '@vielzeug/lingua';
-import { signal } from '@vielzeug/ripple';
+import { computed } from '@vielzeug/ripple';
 
 // ── Message catalog ──────────────────────────────────────────────────────────
 
@@ -66,6 +67,27 @@ const messages = {
       review: 'Überprüfung',
       todo: 'Zu erledigen',
     },
+    taskDialog: {
+      assignee: 'Zugewiesen an',
+      budget: 'Budget (USD)',
+      close: 'Schließen',
+      create: 'Erstellen',
+      deleteConfirmBody: 'Dies löscht {title} dauerhaft. Diese Aktion kann nicht rückgängig gemacht werden.',
+      deleteConfirmCancel: 'Abbrechen',
+      deleteConfirmConfirm: 'Löschen',
+      deleteConfirmTitle: 'Aufgabe löschen?',
+      deleteTask: 'Löschen',
+      description: 'Beschreibung',
+      dueDate: 'Fälligkeitsdatum',
+      newTask: 'Neue Aufgabe',
+      priority: 'Priorität',
+      save: 'Speichern',
+      status: 'Status',
+      thisTask: 'diese Aufgabe',
+      title: 'Titel',
+      titleRequired: 'Titel ist erforderlich',
+      unassigned: 'Nicht zugewiesen',
+    },
   },
   en: {
     action: {
@@ -129,6 +151,27 @@ const messages = {
       review: 'Review',
       todo: 'To Do',
     },
+    taskDialog: {
+      assignee: 'Assignee',
+      budget: 'Budget (USD)',
+      close: 'Close',
+      create: 'Create',
+      deleteConfirmBody: 'This deletes {title} permanently. This action cannot be undone.',
+      deleteConfirmCancel: 'Cancel',
+      deleteConfirmConfirm: 'Delete',
+      deleteConfirmTitle: 'Delete task?',
+      deleteTask: 'Delete',
+      description: 'Description',
+      dueDate: 'Due date',
+      newTask: 'New task',
+      priority: 'Priority',
+      save: 'Save',
+      status: 'Status',
+      thisTask: 'this task',
+      title: 'Title',
+      titleRequired: 'Title is required',
+      unassigned: 'Unassigned',
+    },
   },
 };
 
@@ -145,13 +188,20 @@ export function setLocale(locale: 'de' | 'en'): void {
   void i18n.setLocale(locale);
 }
 
-// ── Reactive locale (bridges lingua's subscribe() into a ripple signal) ─────────
+// ── Reactive locale (bridges lingua's subscribe() into a ripple signal via flux — the same
+// fromSubscribe-style producer pattern used by board-store.ts's activeRoute and
+// realtime.ts's presenceSignal) ────────────────────────────────────────────────
 
-export const currentLocale = signal<'de' | 'en'>(i18n.locale as 'de' | 'en');
+const localeBinding = toSignal(
+  flux<'de' | 'en'>((observer) => {
+    observer.next(i18n.locale as 'de' | 'en');
 
-i18n.subscribe(() => {
-  currentLocale.value = i18n.locale as 'de' | 'en';
-});
+    return i18n.subscribe(() => observer.next(i18n.locale as 'de' | 'en'));
+  }),
+  { initial: i18n.locale as 'de' | 'en' },
+);
+
+export const currentLocale = computed(() => localeBinding.value);
 
 /**
  * `i18n.t()` itself isn't a ripple-reactive read — `lingua` has no idea ripple exists — so a

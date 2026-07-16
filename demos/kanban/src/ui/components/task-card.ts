@@ -8,9 +8,7 @@ import { when } from '@vielzeug/ore/directives';
 import type { Task } from '../../core/types';
 
 import { dueDateUrgency, formatBudget, formatDueDate } from '../../core/format';
-import { seedUsers } from '../../core/seed-data';
-
-const USER_MAP = new Map(seedUsers.map((u) => [u.id, u]));
+import { userInitials, userMap } from '../../core/users';
 
 const PRIORITY_COLOR: Record<Task['priority'], string> = {
   high: 'warning',
@@ -18,17 +16,6 @@ const PRIORITY_COLOR: Record<Task['priority'], string> = {
   medium: 'info',
   urgent: 'error',
 };
-
-function userInitials(id: string): string {
-  const name = USER_MAP.get(id)?.name ?? id;
-
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join('')
-    .toUpperCase();
-}
 
 /** The prop shape `define()` sees — `task` starts `undefined` until `renderTaskCard()` assigns it. */
 type TaskCardProps = {
@@ -128,7 +115,7 @@ define<TaskCardProps>('task-card', {
               () => html`
                 <ore-avatar
                   size="xs"
-                  :alt=${() => USER_MAP.get(task().assigneeId ?? '')?.name ?? task().assigneeId}
+                  :alt=${() => userMap.value.get(task().assigneeId ?? '')?.name ?? task().assigneeId}
                   :initials=${() => userInitials(task().assigneeId ?? '')}></ore-avatar>
               `,
             )}

@@ -14,8 +14,6 @@ import { openTaskDialog } from './task-dialog';
 export const sharedScope = createSortableScope();
 
 interface ColumnOptions {
-  status: TaskStatus;
-  items: () => Task[];
   onReorder: (ids: string[]) => void;
 }
 
@@ -112,7 +110,6 @@ define<{ status: TaskStatus }>('board-column', {
       const container = itemsRef.value!;
 
       col = createColumn(container, {
-        items: () => boardSignal.value.tasks.filter((t) => t.status === props.status.value),
         onReorder: (ids) => {
           for (const id of ids) {
             if (!currentTaskIds.has(id)) {
@@ -124,7 +121,6 @@ define<{ status: TaskStatus }>('board-column', {
             }
           }
         },
-        status: props.status.value,
       });
 
       const stop = effect(() => {
