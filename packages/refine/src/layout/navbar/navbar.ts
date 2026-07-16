@@ -104,6 +104,7 @@ const findScrollContainer = (start: HTMLElement): HTMLElement | null => {
 
 /** Context provided by `ore-navbar` to `ore-navbar-item` children. */
 export type NavbarContext = {
+  closeMobileMenu: () => void;
   isMobile: Readable<boolean>;
   mobileMenuOpen: Readable<boolean>;
 };
@@ -281,6 +282,9 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     };
 
     provide(NAVBAR_CTX, {
+      // Wrapped, not passed directly — `closeMobileMenu` (below) isn't defined yet at this point
+      // in `setup()`; by the time `ore-navbar-item` actually calls this (a later click), it is.
+      closeMobileMenu: () => closeMobileMenu(),
       isMobile: computed(() => isMobile.value) as Readable<boolean>,
       mobileMenuOpen: computed(() => isMobileMenuOpen.value) as Readable<boolean>,
     });
@@ -773,6 +777,15 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
     // Prevent reverse tabnapping: auto-inject noopener + noreferrer for _blank links.
     const effectiveRel = computed(() => computeSafeRel(props.rel.value, props.target.value));
 
+    // Closes the mobile overflow panel when one of its items is activated — otherwise picking a
+    // destination (or firing any other action placed in the `mobile-menu` slot) leaves the panel
+    // open over the page until the user separately taps the toggle again. Only matters while
+    // actually in mobile mode; on desktop `navbarCtx.mobileMenuOpen` is never true to begin with,
+    // so `closeMobileMenu()` (idempotent — see `setMobileMenu`'s equality check) is a no-op there.
+    const closeMobileMenuIfOpen = (): void => {
+      if (navbarCtx?.mobileMenuOpen.value) navbarCtx.closeMobileMenu();
+    };
+
     const renderItemContent = () => html`
       <span class="item-icon" part="item-icon" ?hidden=${() => !hasIcon()} aria-hidden="true">
         <slot name="icon"></slot>
@@ -793,7 +806,8 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
               href="${props.href}"
               :rel="${effectiveRel}"
               :target="${props.target}"
-              aria-current="${() => (props.active.value ? 'page' : null)}">
+              aria-current="${() => (props.active.value ? 'page' : null)}"
+              @click=${closeMobileMenuIfOpen}>
               ${renderItemContent()}
             </a>
           `;
@@ -803,7 +817,9 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
           return html`<div class="item" part="item" tabindex="-1" aria-disabled="true">${renderItemContent()}</div>`;
         }
 
-        return html`<button class="item" part="item" type="button">${renderItemContent()}</button>`;
+        return html`<button class="item" part="item" type="button" @click=${closeMobileMenuIfOpen}>
+          ${renderItemContent()}
+        </button>`;
       }}
     `;
   },

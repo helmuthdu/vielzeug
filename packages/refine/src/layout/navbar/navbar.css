@@ -189,7 +189,11 @@
     animation: navbar-mobile-in var(--transition-fast) var(--ease-out);
   }
 
-  :host([data-mobile][data-mobile-open]) .mobile-menu-panel {
+  /* `:not([hidden])` — same reasoning as `.mobile-toggle` above: this panel's own `?hidden=`
+     binding (navbar.ts) already covers "not mobile" / "menu closed" / "no mobile-menu content",
+     but an unconditional `display: grid` here would still override that `[hidden]` for the "no
+     content" case specifically, since author styles always win over the UA stylesheet. */
+  :host([data-mobile][data-mobile-open]) .mobile-menu-panel:not([hidden]) {
     display: grid;
     gap: var(--size-1);
   }
@@ -211,7 +215,15 @@
     border-radius: 0 0 var(--rounded-md) var(--rounded-md);
   }
 
-  :host([data-mobile]) .mobile-toggle {
+  /* `:not([hidden])` matters — the component's own `?hidden=` binding (navbar.ts) hides this
+     button when there's neither `mobile-menu` slot content nor a `mobile-sidebar` target to
+     toggle. Without it, this rule's `display: inline-flex` — an author-stylesheet declaration —
+     unconditionally overrides the UA stylesheet's `[hidden] { display: none }`, since author
+     styles always win over UA styles regardless of selector specificity. That left the button
+     visibly clickable while toggling a `mobile-menu-panel` that stays hidden too (its own
+     `?hidden=` binding includes the same "nothing to show" check) — clicking did nothing
+     visible at all. */
+  :host([data-mobile]) .mobile-toggle:not([hidden]) {
     display: inline-flex;
     order: -1;
   }

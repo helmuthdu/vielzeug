@@ -249,6 +249,36 @@ describe('ore-navbar', () => {
     }
   });
 
+  it('closes the mobile menu when a mobile-menu item is clicked', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-navbar', {
+        html: '<ore-navbar-item slot="mobile-menu">Item</ore-navbar-item>',
+      });
+
+      const el = fixture.element as HTMLElement & { openMobileMenu(): void };
+
+      el.openMobileMenu();
+      await fixture.flush();
+      expect(fixture.element.hasAttribute('data-mobile-open')).toBe(true);
+
+      const item = fixture.element.querySelector('ore-navbar-item')!;
+
+      await user.click(item.shadowRoot!.querySelector('.item')!);
+      await fixture.flush();
+      expect(fixture.element.hasAttribute('data-mobile-open')).toBe(false);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   it('opens mobile menu in floating-only mode', async () => {
     const originalMatchMedia = window.matchMedia;
 
