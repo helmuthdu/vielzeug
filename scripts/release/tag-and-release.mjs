@@ -32,7 +32,7 @@ function releaseNotes({ folder, package: pkg, tag, version }) {
 `;
 }
 
-function tagExists(tag, run) {
+export function tagExists(tag, { run = defaultRun } = {}) {
   try {
     run('git', ['rev-parse', tag], { quiet: true });
     return true;
@@ -49,7 +49,7 @@ export function tagAndRelease({ dryRun = false, folder, package: pkg, run = defa
     return;
   }
 
-  if (tagExists(tag, run)) {
+  if (tagExists(tag, { run })) {
     throw new Error(
       `Tag ${tag} already exists — refusing to overwrite it. This means this version was published without ever ` +
         `being tagged, or this release ran twice; investigate before retagging by hand.`,

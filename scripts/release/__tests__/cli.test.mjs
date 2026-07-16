@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../npm-publish.mjs', () => ({ publishPackage: vi.fn() }));
 vi.mock('../npm-version-exists.mjs', () => ({ versionExists: vi.fn() }));
 vi.mock('../publish-missing.mjs', () => ({ publishMissing: vi.fn(), summaryMarkdown: vi.fn(() => '## summary') }));
+vi.mock('../release-only-plan.mjs', () => ({ planTagReleases: vi.fn() }));
 vi.mock('../release-plan.mjs', () => ({ planReleases: vi.fn() }));
 vi.mock('../rush-publish-apply.mjs', () => ({ applyVersionBump: vi.fn(), listChangedPackageNames: vi.fn() }));
 vi.mock('../rush-project.mjs', () => ({ findProject: vi.fn(), listProjectNames: vi.fn() }));
@@ -15,6 +16,7 @@ vi.mock('../tag-and-release.mjs', () => ({ tagAndRelease: vi.fn() }));
 const { publishPackage } = await import('../npm-publish.mjs');
 const { versionExists } = await import('../npm-version-exists.mjs');
 const { publishMissing } = await import('../publish-missing.mjs');
+const { planTagReleases } = await import('../release-only-plan.mjs');
 const { planReleases } = await import('../release-plan.mjs');
 const { applyVersionBump, listChangedPackageNames } = await import('../rush-publish-apply.mjs');
 const { findProject, listProjectNames } = await import('../rush-project.mjs');
@@ -198,6 +200,19 @@ describe('tag-release', () => {
       if (originalDryRun === undefined) delete process.env.DRY_RUN;
       else process.env.DRY_RUN = originalDryRun;
     }
+  });
+});
+
+describe('release-plan', () => {
+  it('prints the tag+release plan as JSON', async () => {
+    planTagReleases.mockResolvedValue([{ folder: 'packages/ore', package: '@vielzeug/ore', version: '1.0.4' }]);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await main(['release-plan']);
+
+    expect(log).toHaveBeenCalledWith(
+      JSON.stringify([{ folder: 'packages/ore', package: '@vielzeug/ore', version: '1.0.4' }]),
+    );
   });
 });
 

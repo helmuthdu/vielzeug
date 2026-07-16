@@ -21,6 +21,9 @@
  *   tag-release <pkg> <version> <folder>    tag + GitHub release only — no `npm publish` (the
  *                                            version must already exist on npm, e.g. published
  *                                            via `pnpm release:publish-local`)
+ *   release-plan                            print a JSON tag+release plan (for release.yml's
+ *                                            mode=all matrix): every publishable package whose
+ *                                            current version is on npm but not yet tagged
  *
  * `publish` and `publish-missing` take two flags relevant only when running this locally
  * rather than in CI (CI never needs either — see `npm-publish.mjs` for why):
@@ -39,6 +42,7 @@ import { isMain, parseArgs } from '../lib/cli.mjs';
 import { publishPackage } from './npm-publish.mjs';
 import { versionExists } from './npm-version-exists.mjs';
 import { publishMissing, summaryMarkdown } from './publish-missing.mjs';
+import { planTagReleases } from './release-only-plan.mjs';
 import { planReleases } from './release-plan.mjs';
 import { applyVersionBump, listChangedPackageNames } from './rush-publish-apply.mjs';
 import { findProject, listProjectNames } from './rush-project.mjs';
@@ -118,6 +122,12 @@ async function main(argv) {
       }
       tagAndRelease({ dryRun, folder, package: pkg, version });
       console.log(`✅ Tagged and released ${pkg}@${version} (no npm publish — already on npm)`);
+      return;
+    }
+
+    case 'release-plan': {
+      const plan = await planTagReleases();
+      console.log(JSON.stringify(plan));
       return;
     }
 

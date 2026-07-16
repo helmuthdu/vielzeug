@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { tagAndRelease } from '../tag-and-release.mjs';
+import { tagAndRelease, tagExists } from '../tag-and-release.mjs';
 
 function envWithRepo() {
   process.env.GITHUB_SERVER_URL = 'https://github.com';
@@ -46,5 +46,22 @@ describe('tagAndRelease()', () => {
     tagAndRelease({ dryRun: true, folder: 'packages/ore', package: '@vielzeug/ore', run, version: '1.0.4' });
 
     expect(run).not.toHaveBeenCalled();
+  });
+});
+
+describe('tagExists()', () => {
+  it('returns true when the tag already exists', () => {
+    const run = vi.fn(() => '');
+
+    expect(tagExists('@vielzeug/ore@1.0.4', { run })).toBe(true);
+    expect(run).toHaveBeenCalledWith('git', ['rev-parse', '@vielzeug/ore@1.0.4'], { quiet: true });
+  });
+
+  it('returns false when the tag does not exist', () => {
+    const run = vi.fn(() => {
+      throw new Error('unknown revision');
+    });
+
+    expect(tagExists('@vielzeug/ore@1.0.4', { run })).toBe(false);
   });
 });

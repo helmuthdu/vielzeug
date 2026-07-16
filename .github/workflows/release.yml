@@ -9,19 +9,31 @@ name: Release (tag + GitHub release only)
 # GitHub release — it never runs `npm publish` and needs neither the `npm-publish` environment
 # approval nor an `id-token: write` permission (no OIDC exchange happens here).
 #
+# mode=single tags/releases one package (needs "package" + "version" inputs); mode=all scans
+# every publishable package for one that's on npm but not yet tagged, and does all of them as
+# a matrix — mirrors publish.yml's mode=single/mode=all shape without the version-bump/publish
+# steps that don't apply here.
+#
 # Do NOT register this filename as an npm Trusted Publisher — it never publishes, so npm would
 # never see a matching request to authorize anyway.
 
 on:
   workflow_dispatch:
     inputs:
-      package:
-        description: 'Package name (e.g. @vielzeug/coins). Must already be published on npm at "version".'
+      mode:
+        description: 'single: one package (needs "package" + "version") · all: every publishable package already on npm but not yet tagged'
         required: true
+        type: choice
+        options:
+          - single
+          - all
+      package:
+        description: 'mode=single only: package name (e.g. @vielzeug/coins). Must already be published on npm at "version".'
+        required: false
         type: string
       version:
-        description: 'Version already on npm (e.g. 1.2.3) — verified against the registry before tagging.'
-        required: true
+        description: 'mode=single only: version already on npm (e.g. 1.2.3) — verified against the registry before tagging.'
+        required: false
         type: string
       dry-run:
         description: 'Do everything except the actual git tag / GitHub release'
@@ -39,7 +51,11 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  # Node-only setup — this workflow never runs `npm publish`, so it doesn't need a full
+  # rush/pnpm install, only enough Node to run the release CLI and resolve packages from
+  # rush.json.
+  release-single:
+    if: inputs.mode == 'single'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -47,13 +63,17 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Node-only setup — this workflow never runs `npm publish`, so it doesn't need a full
-      # rush/pnpm install, only enough Node to run the release CLI and resolve the package's
-      # folder from rush.json.
       - uses: ./.github/actions/setup
         with:
           root-install: 'false'
           rush-install: 'false'
+
+      - name: Validate inputs
+        run: |
+          if [ -z "${{ inputs.package }}" ] || [ -z "${{ inputs.version }}" ]; then
+            echo "❌ mode=single requires both 'package' and 'version' inputs."
+            exit 1
+          fi
 
       - name: Resolve package folder
         id: project
@@ -64,3 +84,56 @@ jobs:
           DRY_RUN: ${{ inputs.dry-run && '1' || '' }}
           GH_TOKEN: ${{ github.token }}
         run: node scripts/release/cli.mjs tag-release "${{ inputs.package }}" "${{ inputs.version }}" "${{ steps.project.outputs.folder }}"
+
+  prepare-all:
+    if: inputs.mode == 'all'
+    runs-on: ubuntu-latest
+    outputs:
+      has-releases: ${{ steps.plan.outputs.has-releases }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: ./.github/actions/setup
+        with:
+          root-install: 'false'
+          rush-install: 'false'
+
+      # Filters out anything already tagged or not yet on npm *before* the matrix is built, so
+      # the Actions UI only ever shows real tag+release jobs — no phantom "skipped" entries for
+      # a run where only 2 of 30 packages actually need one.
+      - id: plan
+        run: |
+          PLAN=$(node scripts/release/cli.mjs release-plan)
+          echo "matrix={\"include\":${PLAN}}" >> "$GITHUB_OUTPUT"
+          [ "$PLAN" = "[]" ] && echo "has-releases=false" >> "$GITHUB_OUTPUT" || echo "has-releases=true" >> "$GITHUB_OUTPUT"
+
+  # One matrix entry per package that actually needs tagging — each gets its own job (own log,
+  # own pass/fail) instead of one long bash loop. `fail-fast: false` because one package's tag
+  # push or `gh release create` failing is not a reason to abort the others.
+  release-all:
+    needs: prepare-all
+    if: inputs.mode == 'all' && needs.prepare-all.outputs.has-releases == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-all.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: ./.github/actions/setup
+        with:
+          root-install: 'false'
+          rush-install: 'false'
+
+      - name: Tag and create GitHub release (no npm publish)
+        env:
+          DRY_RUN: ${{ inputs.dry-run && '1' || '' }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release/cli.mjs tag-release "${{ matrix.package }}" "${{ matrix.version }}" "${{ matrix.folder }}"
