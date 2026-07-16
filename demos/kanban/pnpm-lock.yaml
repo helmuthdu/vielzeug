@@ -48,8 +48,8 @@ importers:
         specifier: ^1.0.5
         version: 1.0.5
       '@vielzeug/refine':
-        specifier: ^1.5.1
-        version: 1.5.1
+        specifier: ^1.5.2
+        version: 1.5.2
       '@vielzeug/ripple':
         specifier: ^1.2.1
         version: 1.2.1
@@ -284,8 +284,8 @@ packages:
     resolution: {integrity: sha512-yQTU+rTDrQUaggRfCNj953ASygEbBAM1nahT6NyQK6L3kuIfgop/i4WiNI2preBH3t5u48PuxHFgb+tIaiiJYw==}
     engines: {node: '>=18'}
 
-  '@vielzeug/refine@1.5.1':
-    resolution: {integrity: sha512-l5tsjDM7CZd+DIPI5ahAeeEsPSPy5kVGHgMj22gQkI2b9IsJdD6TxzdNTRIsIVBD1nVT+VN/z64Q1SSP3nh2yQ==}
+  '@vielzeug/refine@1.5.2':
+    resolution: {integrity: sha512-owRYwgKYZ2hZTRm8EWwawJ6aJ9O3oAwCfiVFST9BUrhyB0MD9qGIMsnJ/4NbnYu3IdeLORCj4pPvsxflt3u4sQ==}
     engines: {node: '>=18'}
 
   '@vielzeug/ripple@1.2.1':
@@ -647,7 +647,7 @@ snapshots:
     dependencies:
       '@vielzeug/ripple': 1.2.1
 
-  '@vielzeug/refine@1.5.1':
+  '@vielzeug/refine@1.5.2':
     dependencies:
       '@vielzeug/arsenal': 1.1.1
       '@vielzeug/dnd': 1.2.0
