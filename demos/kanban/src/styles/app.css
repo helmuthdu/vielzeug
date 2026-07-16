@@ -1,0 +1,574 @@
+/* ========================================================================
+   Kanban demo — global layout + board styles
+   Built on top of @vielzeug/refine theme tokens.
+   ======================================================================== */
+
+/* ── Reset & root ─────────────────────────────────────────────────────── */
+
+html,
+body {
+  min-height: 100dvh;
+  padding: 0;
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  font-size: var(--text-base);
+  color: var(--text-color-body);
+  background: var(--color-contrast-50);
+}
+
+#app {
+  display: contents;
+}
+
+/* ── App shell ─────────────────────────────────────────────────────────── */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+/* ── Main content area ─────────────────────────────────────────────────── */
+
+.app-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: var(--size-4) var(--size-5) var(--size-6);
+  overflow: auto;
+  background: var(--color-contrast-150, var(--color-contrast-200));
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Board root (ore-grid handles the column layout) ───────────────────── */
+
+/* Columns stretch to fill the viewport instead of trailing off into empty
+   page background below whichever column has the fewest tasks. */
+
+.board-root {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.board-root ore-grid {
+  flex: 1;
+  align-items: stretch;
+}
+
+/* ── Board columns ─────────────────────────────────────────────────────── */
+
+.board__column {
+  --column-accent: var(--color-contrast-400);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-5);
+  height: 100%;
+  padding: var(--size-4);
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-xl, 10px);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
+}
+
+.board__column[data-status='todo'] {
+  --column-accent: var(--color-contrast-400);
+}
+
+.board__column[data-status='in-progress'] {
+  --column-accent: var(--color-primary);
+}
+
+.board__column[data-status='review'] {
+  --column-accent: var(--color-warning);
+}
+
+.board__column[data-status='done'] {
+  --column-accent: var(--color-success);
+}
+
+/* ── Column header ─────────────────────────────────────────────────────── */
+
+.board__column-header {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--size-1);
+}
+
+.board__column-heading {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.board__column-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--column-accent);
+  border-radius: 999px;
+}
+
+.board__column-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.board__column-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--size-1-5);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-color-tertiary);
+  background: var(--color-contrast-200);
+  border-radius: 999px;
+}
+
+.board__column-count[data-over-limit] {
+  color: var(--color-warning-dark, var(--color-warning));
+  background: color-mix(in oklch, var(--color-warning) 16%, var(--color-contrast-50));
+}
+
+/* ── Column items container ────────────────────────────────────────────── */
+
+.board__column-items {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+  min-height: 40px;
+}
+
+.board__column-items:empty::after {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60px;
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+  content: 'Drop tasks here';
+  border: 2px dashed var(--color-divider);
+  border-radius: 6px;
+}
+
+/* ── Column footer (add-task affordance) ───────────────────────────────── */
+
+.board__column-add {
+  justify-content: flex-start;
+  width: 100%;
+  margin-top: auto;
+}
+
+/* ── DnD placeholder — must not intercept drag events ─────────────────── */
+
+.dnd-placeholder {
+  pointer-events: none;
+  background: color-mix(in oklch, var(--color-primary) 10%, transparent);
+  border: 2px dashed color-mix(in oklch, var(--color-primary) 50%, transparent);
+  border-radius: 8px;
+  opacity: 0.7;
+}
+
+/* ── Task card ─────────────────────────────────────────────────────────── */
+
+.task-card {
+  padding: var(--size-3-5) var(--size-4);
+  cursor: grab;
+  user-select: none;
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+  transition:
+    box-shadow 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.task-card:hover,
+.task-card:focus-visible {
+  border-color: var(--color-primary);
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--color-primary) 25%, transparent),
+    0 4px 12px rgb(0 0 0 / 10%);
+  transform: translateY(-2px);
+}
+
+.task-card:focus-visible {
+  outline: none;
+}
+
+.task-card:active {
+  cursor: grabbing;
+  transform: translateY(0);
+}
+
+.task-card__header {
+  display: flex;
+  gap: var(--size-2);
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--size-1);
+}
+
+.task-card__title {
+  flex: 1;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--text-color-heading);
+}
+
+.task-card__description {
+  display: -webkit-box;
+  margin: 0 0 var(--size-2-5);
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--text-color-tertiary);
+  -webkit-box-orient: vertical;
+}
+
+.task-card__footer {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+  padding-top: var(--size-2);
+  margin-top: var(--size-2);
+  border-top: 1px solid var(--color-divider);
+}
+
+.task-card__due {
+  display: flex;
+  gap: var(--size-1);
+  align-items: center;
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+}
+
+.task-card__due--soon {
+  color: var(--color-warning-dark, var(--color-warning));
+}
+
+.task-card__due--overdue {
+  font-weight: 600;
+  color: var(--color-error-dark, var(--color-error));
+}
+
+.task-card__budget {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-color-secondary);
+}
+
+/* ── Backlog ───────────────────────────────────────────────────────────── */
+
+.backlog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-5);
+  width: 100%;
+  max-width: var(--size-6xl);
+  margin: 0 auto;
+}
+
+.backlog h1 {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-color-heading);
+}
+
+.backlog__toolbar {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+}
+
+.backlog__toolbar ore-input {
+  flex: 1;
+}
+
+.backlog__list-area {
+  position: relative;
+  min-height: 400px;
+  overflow: hidden;
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
+}
+
+.backlog__task {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  gap: var(--size-4);
+  align-items: center;
+  padding: var(--size-3-5) var(--size-5);
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-divider);
+  transition: background 0.1s;
+}
+
+.backlog__task:last-child {
+  border-bottom: none;
+}
+
+.backlog__task:hover,
+.backlog__task:focus-visible {
+  background: var(--color-contrast-150, var(--color-contrast-200));
+}
+
+.backlog__task:focus-visible {
+  outline: none;
+}
+
+.backlog__task-priority {
+  width: 8px;
+  height: 8px;
+  background: var(--priority-color, var(--color-contrast-400));
+  border-radius: 999px;
+}
+
+.backlog__task-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-0-5);
+  min-width: 0;
+}
+
+.backlog__task-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-color-heading);
+}
+
+.backlog__task-desc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+  white-space: nowrap;
+}
+
+.backlog__task-due {
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+  white-space: nowrap;
+}
+
+.backlog__pagination {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+  justify-content: center;
+  padding: var(--size-2) 0;
+}
+
+.backlog__pagination-info {
+  font-size: var(--text-sm);
+  color: var(--text-color-secondary);
+}
+
+/* ── Analytics ───────────────────────────────────────────────────────────── */
+
+.analytics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-6);
+}
+
+.analytics__title {
+  margin: 0 0 var(--size-1);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-color-heading);
+}
+
+.analytics__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: var(--size-6);
+}
+
+.analytics__section {
+  padding: var(--size-5) var(--size-6);
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
+}
+
+.analytics__section-title {
+  margin: 0 0 var(--size-4);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-color-heading);
+}
+
+.analytics__chart {
+  height: 240px;
+}
+
+/* ── Settings ──────────────────────────────────────────────────────────── */
+
+.settings-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-5);
+  max-width: 560px;
+}
+
+.settings-view h1 {
+  margin: 0 0 var(--size-2);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--text-color-heading);
+}
+
+.settings-view__group {
+  padding: var(--size-5) var(--size-6);
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 6%);
+}
+
+.settings-view h2 {
+  margin: 0 0 var(--size-1);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-color-heading);
+}
+
+/* One label+control row per setting — icon anchors the row, the control sits flush right.
+   Rows share a group card instead of each getting its own boxed section: the box communicated
+   "these three things are unrelated", when they're really one flat list of preferences. */
+.settings-view__row {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+  padding: var(--size-4) 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.settings-view__row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.settings-view__row > ore-icon {
+  flex-shrink: 0;
+  color: var(--text-color-tertiary);
+}
+
+.settings-view__row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--size-0-5, 2px);
+  min-width: 0;
+}
+
+.settings-view__row-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-color-primary);
+}
+
+.settings-view__row-hint {
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+}
+
+.settings-view__lang-buttons {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--size-2);
+}
+
+/* The developer group's one row is itself an accordion trigger (prefix icon + title +
+   subtitle slots) — no extra `.settings-view__row` wrapper needed, refine's own accordion-item
+   already lays those three slots out the same way. */
+.settings-view__group ore-accordion {
+  margin-top: calc(-1 * var(--size-2));
+}
+
+.settings-view__debug-log {
+  max-height: 280px;
+  padding: var(--size-2);
+  overflow-y: auto;
+  font-family: ui-monospace, monospace;
+  background: #111;
+  border-radius: 6px;
+}
+
+.settings-view__debug-entry {
+  display: flex;
+  gap: var(--size-2);
+  padding: 2px 0;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.settings-view__debug-entry:last-child {
+  border-bottom: none;
+}
+
+.settings-view__debug-ts {
+  color: #666;
+  white-space: nowrap;
+}
+
+.settings-view__debug-level {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.settings-view__debug-msg {
+  color: #ddd;
+  overflow-wrap: anywhere;
+}
+
+.settings-view__debug-empty {
+  padding: var(--size-2);
+  font-family: var(--font-sans, inherit);
+  font-size: var(--text-sm);
+  color: var(--text-color-tertiary);
+}
+
+/* ── Presence ──────────────────────────────────────────────────────────── */
+
+.presence-avatars {
+  display: flex;
+  gap: var(--size-1);
+  align-items: center;
+}
+
+.presence-count {
+  margin-left: var(--size-1);
+  font-size: var(--text-xs);
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+}
