@@ -23,6 +23,17 @@ const refineExternals = [
   'lucide',
 ];
 
+// Rollup/Rolldown's `external` matches array-of-strings entries by exact equality only — it
+// does NOT treat them as prefixes. Without this, subpath imports like `@vielzeug/ore/forms` or
+// `@vielzeug/ore/directives` fail to match `@vielzeug/ore` and get bundled (vendored) into this
+// package's own dist instead of staying external. That silently creates a second, private copy
+// of ore's module-scope singleton state (e.g. the `getHost()` setup-context tracker), which
+// breaks the moment a consumer app also imports `@vielzeug/ore` directly: refine's own
+// `useField()`/`getHost()` calls see an empty context and throw "Lifecycle hooks must be called
+// during component setup". Match subpaths explicitly so every import of an externalized package
+// — whatever its subpath — resolves to the same shared module instance as the consumer's.
+const isRefineExternal = (id: string): boolean => refineExternals.some((dep) => id === dep || id.startsWith(`${dep}/`));
+
 export default defineConfig(
   mergeConfig(
     getConfig(__dirname, {
@@ -35,7 +46,7 @@ export default defineConfig(
           checks: {
             pluginTimings: !disablePluginTimings,
           },
-          external: refineExternals,
+          external: isRefineExternal,
         },
       },
       css: {
