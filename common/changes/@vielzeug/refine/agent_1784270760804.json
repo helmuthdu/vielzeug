@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: resolve @vielzeug/ore/directives in vitest",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

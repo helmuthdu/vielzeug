@@ -6,4 +6,10 @@ import { getBundleConfig } from '../../vite.config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig(getBundleConfig(__dirname, { fileName: 'pulse', name: 'Pulse' }));
+export default defineConfig(
+  getBundleConfig(__dirname, {
+    external: ['@vielzeug/ripple'],
+    fileName: 'pulse',
+    name: 'Pulse',
+  }),
+);

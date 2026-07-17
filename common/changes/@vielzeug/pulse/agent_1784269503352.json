@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: resolve ripple from source in tests and externalize bundle dep",
+      "packageName": "@vielzeug/pulse",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/pulse"
+}
