@@ -3,9 +3,11 @@ import type { Adapter } from '@vielzeug/vault';
 import { effect } from '@vielzeug/ripple';
 import { createLocalStorage, table } from '@vielzeug/vault';
 
+import type { ThemePreference } from './theme';
 import type { Board } from './types';
 
 import { boardSignal } from './board-store';
+import { setThemePreference, themePreference } from './theme';
 
 // ---------------------------------------------------------------------------
 // Vault schema — a single row keyed 'current' holds the whole board. A real backend-per-task
@@ -21,8 +23,12 @@ import { boardSignal } from './board-store';
 // ---------------------------------------------------------------------------
 
 type BoardRow = { board: Board; id: 'current' };
+type ThemeRow = { id: 'appearance'; preference: ThemePreference };
 
-const schema = { board: table<BoardRow>('id') };
+const schema = {
+  board: table<BoardRow>('id'),
+  theme: table<ThemeRow>('id'),
+};
 const store: Adapter<typeof schema> = createLocalStorage({ name: 'kanban', schema });
 
 async function loadBoard(): Promise<Board | null> {
@@ -33,6 +39,16 @@ async function loadBoard(): Promise<Board | null> {
 
 async function saveBoard(board: Board): Promise<void> {
   await store.put('board', { board, id: 'current' } as never);
+}
+
+async function loadThemePreference(): Promise<ThemePreference | null> {
+  const row = (await store.get('theme', 'appearance')) as ThemeRow | undefined;
+
+  return row?.preference ?? null;
+}
+
+async function saveThemePreference(preference: ThemePreference): Promise<void> {
+  await store.put('theme', { id: 'appearance', preference } as never);
 }
 
 // ---------------------------------------------------------------------------
@@ -46,11 +62,19 @@ async function saveBoard(board: Board): Promise<void> {
  */
 export async function setupPersistence(): Promise<void> {
   const saved = await loadBoard();
+  const savedThemePreference = await loadThemePreference();
 
   if (saved) boardSignal.value = saved;
   else await saveBoard(boardSignal.value);
 
+  if (savedThemePreference) setThemePreference(savedThemePreference);
+  else await saveThemePreference(themePreference.value);
+
   effect(() => {
     void saveBoard(boardSignal.value);
+  });
+
+  effect(() => {
+    void saveThemePreference(themePreference.value);
   });
 }

@@ -501,7 +501,7 @@ body {
   color: var(--text-color-tertiary);
 }
 
-.settings-view__lang-buttons {
+.settings-view__option-buttons {
   display: flex;
   flex-shrink: 0;
   gap: var(--size-2);

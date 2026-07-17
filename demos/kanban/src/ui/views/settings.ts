@@ -13,6 +13,7 @@ import { currentUser } from '../../core/board-store';
 import { currentLocale, setLocale, t } from '../../core/i18n';
 import { ringBuffer } from '../../core/logger';
 import { seedUsers } from '../../core/seed-data';
+import { setThemePreference, themePreference } from '../../core/theme';
 
 const LEVEL_COLORS: Record<string, string> = {
   debug: '#888',
@@ -25,6 +26,12 @@ const LEVEL_COLORS: Record<string, string> = {
 const LANGUAGES: Array<{ code: 'de' | 'en'; label: string }> = [
   { code: 'en', label: 'English' },
   { code: 'de', label: 'Deutsch' },
+];
+
+const THEMES: Array<{ code: 'dark' | 'light' | 'system'; label: () => string }> = [
+  { code: 'system', label: () => t('settings.themeSystem') },
+  { code: 'light', label: () => t('settings.themeLight') },
+  { code: 'dark', label: () => t('settings.themeDark') },
 ];
 
 const USER_OPTIONS = seedUsers.map((user) => ({ label: `${user.name} (${user.role})`, value: user.id }));
@@ -79,7 +86,7 @@ define('settings-view', {
           <div class="settings-view__row-text">
             <span class="settings-view__row-label">${() => t('settings.languageLabel')}</span>
           </div>
-          <div class="settings-view__lang-buttons" role="group" :aria-label=${() => t('settings.languageLabel')}>
+          <div class="settings-view__option-buttons" role="group" :aria-label=${() => t('settings.languageLabel')}>
             ${each(
               LANGUAGES,
               (lang) => lang.code,
@@ -89,6 +96,27 @@ define('settings-view', {
                   :variant=${() => (currentLocale.value === lang.value.code ? 'solid' : 'bordered')}
                   @click=${() => setLocale(lang.value.code)}
                   >${() => lang.value.label}</ore-button
+                >`,
+            )}
+          </div>
+        </div>
+
+        <div class="settings-view__row">
+          <ore-icon name="palette" size="18" stroke-width="2"></ore-icon>
+          <div class="settings-view__row-text">
+            <span class="settings-view__row-label">${() => t('settings.themeLabel')}</span>
+            <span class="settings-view__row-hint">${() => t('settings.themeHint')}</span>
+          </div>
+          <div class="settings-view__option-buttons" role="group" :aria-label=${() => t('settings.themeLabel')}>
+            ${each(
+              THEMES,
+              (theme) => theme.code,
+              (theme) =>
+                html`<ore-button
+                  size="sm"
+                  :variant=${() => (themePreference.value === theme.value.code ? 'solid' : 'bordered')}
+                  @click=${() => setThemePreference(theme.value.code)}
+                  >${() => theme.value.label()}</ore-button
                 >`,
             )}
           </div>
