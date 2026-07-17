@@ -30,7 +30,7 @@ description: Complete API reference for @vielzeug/lingua.
 | `i18n.isNamespaceLoaded()`  | Check if a namespace is loaded for the active (or given) locale                  | Sync           | Returns `false` if not registered or not yet loaded for this locale                                                |
 | `i18n.isNamespaceRegistered()` | Check if a namespace factory has been registered                              | Sync           | `true` after `registerNamespace()` or `extend()`; `false` before                                                   |
 | `i18n.getState()`         | Extract a serializable snapshot of loaded catalogs + active locale                 | Sync           | Equivalent to `serializeI18n(i18n)` — preferred for public API access                                              |
-| `i18n.restoreState()`     | Hydrate instance from serialized state                                             | Sync           | Equivalent to `hydrateI18n(state, i18n)` — preferred for public API access; throws `LinguaRestoreError` if locale missing |
+| `i18n.restoreState()`     | Hydrate instance from serialized state                                             | Sync           | Equivalent to `hydrateI18n(i18n, state)` — preferred for public API access; throws `LinguaRestoreError` if locale missing |
 | `serializeI18n()`         | Serialise loaded catalogs for SSR hydration                                        | Sync           | Loader-only locales are omitted — check `isLoaded()` before calling                                                |
 | `hydrateI18n()`           | Hydrate a client instance from server-serialised state                             | Sync           | Throws `LinguaRestoreError` if `state.locale` has no catalog                                                            |
 | Error classes             | Named error subclasses (`LinguaDisposedError`, `LinguaMissingLocaleError`, …)      | —              | All runtime errors are `instanceof LinguaError`; use `instanceof` for specific handling                            |
@@ -248,7 +248,7 @@ const state = i18n.getState();
 restoreState(state: I18nState): void
 ```
 
-Hydrates this instance from an `I18nState` produced by `getState()` or `serializeI18n()`. Equivalent to `hydrateI18n(state, i18n)` but preferred because it is called directly on the instance.
+Hydrates this instance from an `I18nState` produced by `getState()` or `serializeI18n()`. Equivalent to `hydrateI18n(i18n, state)` but preferred because it is called directly on the instance.
 
 - Replaces all catalogs with those from `state`.
 - Sets the active locale to `state.locale`.
