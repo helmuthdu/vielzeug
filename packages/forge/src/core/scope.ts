@@ -1,5 +1,6 @@
 import type {
   ArrayField,
+  ConnectOptions,
   ConnectionResult,
   ErrorKeyOf,
   FieldState,
@@ -403,21 +404,78 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     }, options);
   }
 
+  function createScopedAdapter() {
+    return {
+      array(name: string): ArrayField {
+        return ctx.root.array(pre(name) as FlatKeyOf<TValues>) as ArrayField;
+      },
+      clearError(name: string): void {
+        ctx.root.clearError(pre(name) as ErrorKeyOf<TValues>);
+      },
+      connect(name: string, config?: ConnectOptions): ConnectionResult<unknown> {
+        return ctx.root.connect(pre(name) as FlatKeyOf<TValues>, config) as ConnectionResult<unknown>;
+      },
+      field(name: string): FieldState<unknown> {
+        return ctx.root.field(pre(name) as FlatKeyOf<TValues>) as FieldState<unknown>;
+      },
+      get(name: string): unknown {
+        return ctx.root.get(pre(name) as FlatKeyOf<TValues>);
+      },
+      register(name: string, options?: RegisterFieldOptions<unknown>): Unsubscribe {
+        return ctx.root.fields.register(
+          pre(name) as FlatKeyOf<TValues>,
+          options as RegisterFieldOptions<TypeAtPath<TValues, FlatKeyOf<TValues>>>,
+        );
+      },
+      remove(name: string): void {
+        ctx.root.fields.remove(pre(name) as FlatKeyOf<TValues>);
+      },
+      resetField(name: string): void {
+        ctx.root.resetField(pre(name) as FlatKeyOf<TValues>);
+      },
+      set(name: string, value: unknown, options?: SetOptions): void {
+        ctx.root.set(pre(name) as FlatKeyOf<TValues>, value as TypeAtPath<TValues, FlatKeyOf<TValues>>, options);
+      },
+      setError(name: string, message: string): void {
+        ctx.root.setError(pre(name) as ErrorKeyOf<TValues>, message);
+      },
+      setValidator(name: string, validator?: FieldValidator): void {
+        ctx.root.fields.setValidator(pre(name) as FlatKeyOf<TValues>, validator);
+      },
+      subscribeField(
+        name: string,
+        listener: (state: FieldState<unknown>) => void,
+        options?: SubscribeOptions,
+      ): Unsubscribe {
+        return ctx.root.subscribeField(
+          pre(name) as FlatKeyOf<TValues>,
+          listener as (state: FieldState<TypeAtPath<TValues, FlatKeyOf<TValues>>>) => void,
+          options,
+        );
+      },
+      touch(name: string): void {
+        ctx.root.touch(pre(name) as FlatKeyOf<TValues>);
+      },
+      untouch(name: string): void {
+        ctx.root.untouch(pre(name) as FlatKeyOf<TValues>);
+      },
+    };
+  }
+
   /* ---- Public scoped form object ---- */
 
   type S = ScopedValues<TValues, P>;
 
+  const adapter = createScopedAdapter();
+
   return {
     array: (name) =>
-      ctx.root.array(pre(name as string) as FlatKeyOf<TValues>) as ArrayField<
+      adapter.array(name as string) as ArrayField<
         TypeAtPath<S, typeof name> extends readonly (infer E)[] ? E : unknown
       >,
     batch: (fn) => ctx.root.batch(fn),
-    clearError: (name) => ctx.root.clearError(pre(name as string) as ErrorKeyOf<TValues>),
-    connect: (name, config?) =>
-      ctx.root.connect(pre(name as string) as FlatKeyOf<TValues>, config) as ConnectionResult<
-        TypeAtPath<S, typeof name>
-      >,
+    clearError: (name) => adapter.clearError(name as string),
+    connect: (name, config?) => adapter.connect(name as string, config) as ConnectionResult<TypeAtPath<S, typeof name>>,
     get disposalSignal() {
       return ctx.root.disposalSignal;
     },
@@ -427,20 +485,14 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     get disposed() {
       return ctx.isDisposed();
     },
-    field: (name) =>
-      ctx.root.field(pre(name as string) as FlatKeyOf<TValues>) as FieldState<TypeAtPath<S, typeof name>>,
+    field: (name) => adapter.field(name as string) as FieldState<TypeAtPath<S, typeof name>>,
     fields: {
       list: scopedListFields,
-      register: (name, options?) =>
-        ctx.root.fields.register(
-          pre(name as string) as FlatKeyOf<TValues>,
-          options as RegisterFieldOptions<TypeAtPath<TValues, FlatKeyOf<TValues>>>,
-        ),
-      remove: (name) => ctx.root.fields.remove(pre(name as string) as FlatKeyOf<TValues>),
-      setValidator: (name, validator?) =>
-        ctx.root.fields.setValidator(pre(name as string) as FlatKeyOf<TValues>, validator),
+      register: (name, options?) => adapter.register(name as string, options as RegisterFieldOptions<unknown>),
+      remove: (name) => adapter.remove(name as string),
+      setValidator: (name, validator?) => adapter.setValidator(name as string, validator),
     },
-    get: (name) => ctx.root.get(pre(name as string) as FlatKeyOf<TValues>) as TypeAtPath<S, typeof name>,
+    get: (name) => adapter.get(name as string) as TypeAtPath<S, typeof name>,
     get isLoading() {
       return ctx.root.isLoading;
     },
@@ -451,18 +503,13 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     replace: scopedReplace as Form<S>['replace'],
     reset: scopedReset,
     resetErrors: scopedResetErrors as Form<S>['resetErrors'],
-    resetField: (name) => ctx.root.resetField(pre(name as string) as FlatKeyOf<TValues>),
+    resetField: (name) => adapter.resetField(name as string),
     // Cast is irreducible: FormSnapshot<ScopedValues<TValues,P>> and FormSnapshot<TValues> are
     // structurally unrelated generic instantiations -- TS cannot verify one against the other.
     restore: (snap) => ctx.root.restore(snap as FormSnapshot<TValues>),
     scope: (subPrefix) => createScopedForm(ctx, pre(subPrefix as string)) as Form<ScopedValues<S, typeof subPrefix>>,
-    set: (name, value, options?: SetOptions) =>
-      ctx.root.set(
-        pre(name as string) as FlatKeyOf<TValues>,
-        value as TypeAtPath<TValues, FlatKeyOf<TValues>>,
-        options,
-      ),
-    setError: (name, message) => ctx.root.setError(pre(name as string) as ErrorKeyOf<TValues>, message),
+    set: (name, value, options?: SetOptions) => adapter.set(name as string, value, options),
+    setError: (name, message) => adapter.setError(name as string, message),
     // Cast is irreducible: FormSnapshot<TValues> and FormSnapshot<ScopedValues<TValues,P>> are
     // structurally unrelated generic instantiations -- TS cannot verify one against the other.
     snapshot: () => ctx.root.snapshot() as FormSnapshot<S>,
@@ -479,19 +526,15 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     },
     subscribe: (listener, options?) => ctx.root.subscribe(listener, options),
     subscribeField: (name, listener, options?) =>
-      ctx.root.subscribeField(
-        pre(name as string) as FlatKeyOf<TValues>,
-        listener as (state: FieldState<TypeAtPath<TValues, FlatKeyOf<TValues>>>) => void,
-        options,
-      ),
+      adapter.subscribeField(name as string, listener as (state: FieldState<unknown>) => void, options),
     subscribeScoped,
     [Symbol.asyncIterator]: () => ctx.root[Symbol.asyncIterator](),
     [Symbol.dispose]() {
       this.dispose();
     },
-    touch: (name) => ctx.root.touch(pre(name as string) as FlatKeyOf<TValues>),
+    touch: (name) => adapter.touch(name as string),
     touchAll: scopedTouchAll,
-    untouch: (name) => ctx.root.untouch(pre(name as string) as FlatKeyOf<TValues>),
+    untouch: (name) => adapter.untouch(name as string),
     untouchAll: scopedUntouchAll,
     validate: scopedValidate as Form<S>['validate'],
     validateStream(signal?) {

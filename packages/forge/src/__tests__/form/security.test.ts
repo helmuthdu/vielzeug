@@ -113,6 +113,23 @@ describe('prototype chain safety', () => {
     expect(() => form.subscribeField('__proto__' as never, () => {})).toThrow('Unsafe key');
   });
 
+  test('deep dot-path keys emit a dev warning once when type inference likely falls back', () => {
+    const form = createForm<Record<string, unknown>>({});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const deepKey = 'a.b.c.d.e.f' as never;
+
+    form.set(deepKey, 'x' as never);
+    form.set(deepKey, 'y' as never);
+
+    const fallbackWarnings = warnSpy.mock.calls.filter((call) =>
+      String(call[0]).includes('exceeds typed depth limits'),
+    );
+
+    expect(fallbackWarnings).toHaveLength(1);
+
+    warnSpy.mockRestore();
+  });
+
   test('fields.remove() throws for an unsafe key', () => {
     const form = createForm({ defaultValues: {} as Record<string, unknown> });
 

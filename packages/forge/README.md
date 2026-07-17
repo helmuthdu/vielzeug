@@ -58,6 +58,14 @@ if (!submission.ok && submission.type === 'validation') {
 }
 ```
 
+## Scoped Forms Semantics
+
+`form.scope(prefix)` is memoized and returns a sub-form with **relative** field paths for its APIs and state projection.
+
+- Root form state paths are absolute (for example, `address.city`).
+- Scoped form state paths are relative (for example, `city` within `form.scope('address')`).
+- Prefer `scoped.validate()` / `scoped.submit()` instead of manually passing touched field arrays across root/scoped boundaries.
+
 ## Documentation
 
 - [Overview](https://vielzeug.dev/forge/)

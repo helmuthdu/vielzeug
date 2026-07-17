@@ -74,6 +74,12 @@ console.log(result.valid); // true only if no errors exist after this run
 console.log(result.errors); // full current error map after the run
 ```
 
+Validation race semantics:
+
+- Forge aborts superseded runs instead of surfacing them as failures.
+- The newest validation run owns final field errors.
+- Aborted runs resolve without throwing in normal API usage.
+
 Schema integration — pass a `safeParse`-compatible schema directly to `validator`:
 
 ```ts
@@ -223,11 +229,27 @@ await address.validate(); // validates only address.* fields; returns scoped err
 await address.submit((vals) => vals); // validates and submits only address.* fields
 ```
 
+### Root vs Scoped Path Semantics
+
+| Surface                    | Root form (`form`) | Scoped form (`form.scope('address')`) |
+| -------------------------- | ------------------ | ------------------------------------- |
+| `get` / `set` / `field`    | absolute keys      | relative keys                         |
+| `errors` in `state`        | absolute keys      | relative keys                         |
+| `touchedFields` in `state` | absolute keys      | relative keys                         |
+| `validatingFields` in `state` | absolute keys   | relative keys                         |
+| `validate(name)` input     | absolute key       | relative key                          |
+| `validate()` result keys   | absolute keys      | relative keys                         |
+
+### Recommended Scoped Patterns
+
+1. Call `const address = form.scope('address')` once per UI/module boundary and pass that around.
+2. Use `address.validate()` / `address.submit()` instead of manually feeding `state.touchedFields` into `validate(fields[])`.
+3. Prefer `address.subscribeScoped(...)` for section UIs so sibling/root mutations do not trigger redraws.
+
 **Key characteristics:**
 
 - `dispose()` on a scoped form is a no-op — call `parentForm.dispose()` to tear down.
-- `scope.state` returns a **scoped projection**: `errors`, `touchedFields`, `validatingFields`, `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect only fields within the scope's prefix. `isSubmitting`, `isLoading`, and `submitCount` reflect the full form. Use `scope.validate()` or `scope.submit()` for scoped validity checks; their results contain relative keys and a scoped `valid` flag.
-- `touchedFields` in `state` contains full-prefixed paths. Prefer `scope.validate()` over `scope.validate([...state.touchedFields])` to avoid double-prefixing.
+- `scope.state` returns a **scoped projection**: `errors`, `touchedFields`, `validatingFields`, `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect only fields within the scope's prefix and use relative keys. `isSubmitting`, `isLoading`, and `submitCount` reflect the full form. Use `scope.validate()` or `scope.submit()` for scoped validity checks; their results also use relative keys.
 
 ### Scoped Subscriptions
 
