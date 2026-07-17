@@ -49,6 +49,18 @@ await source.ready();
 console.log(source.current, source.meta.totalItems);
 ```
 
+## Local Search Presets
+
+For large in-memory lists, prefer `searchBy(...)` over the default JSON-stringify search:
+
+```ts
+import { createLocalSource, searchBy } from '@vielzeug/sourcerer';
+
+const source = createLocalSource(users, {
+  searchFn: searchBy([(u) => u.name, (u) => u.email]),
+});
+```
+
 ## Sources Overview
 
 | Factory                  | Data model         | Navigation                |

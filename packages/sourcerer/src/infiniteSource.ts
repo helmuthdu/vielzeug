@@ -1,10 +1,9 @@
 import type { InfiniteConfig, InfiniteMeta, InfiniteSource, InfiniteSourceQuery, SearchOptions } from './types';
 
 import { defaultKeyOf, extractError, retry } from './_utils';
+import { createAsyncSearchCoordinator } from './asyncSearch';
 import { createAsyncSource } from './asyncSource';
 import { SourcererError } from './errors';
-
-type PendingSearch = { promise: Promise<void>; resolve: () => void };
 
 /** Creates an infinite-scroll source that appends pages on `loadMore()`. */
 export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<T> {
@@ -19,7 +18,6 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
   let total = 0;
   let error: SourcererError | null = null;
   let isLoadingMore = false;
-  let pendingSearch: PendingSearch | null = null;
 
   // ── Cached accessors ─────────────────────────────────────────────────────────
   let cachedCurrent: readonly T[] = [];
@@ -60,13 +58,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
 
     base.core.notify();
   };
-
-  const resolvePendingSearch = () => {
-    if (pendingSearch) {
-      pendingSearch.resolve();
-      pendingSearch = null;
-    }
-  };
+  const searchCoordinator = createAsyncSearchCoordinator(base.core, notifyListeners);
 
   // ── Core fetch ──────────────────────────────────────────────────────────────
   const fetchPage = (targetPage: number, append: boolean): Promise<void> => {
@@ -123,7 +115,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       () => {
         notifyListeners();
 
-        if (base.pendingCount() === 0) resolvePendingSearch();
+        searchCoordinator.settleIfIdle(base.pendingCount());
       },
     );
   };
@@ -146,7 +138,8 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
     },
 
     dispose: () => {
-      resolvePendingSearch();
+      searchCoordinator.cancel();
+      searchCoordinator.dispose();
       base.dispose();
     },
 
@@ -190,8 +183,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
 
       // patch() is documented as a single atomic fetch — cancel any debounced search()
       // still pending so it doesn't fire a second, redundant fetch afterwards.
-      base.core.cancelTimer();
-      resolvePendingSearch();
+      searchCoordinator.cancel();
 
       items = [];
       total = 0;
@@ -214,8 +206,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
     },
 
     reset() {
-      base.core.cancelTimer();
-      resolvePendingSearch();
+      searchCoordinator.cancel();
       currentPage = 1;
       loadedPages = 0;
       items = [];
@@ -231,8 +222,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
         // `q === search` alone doesn't mean the fetch already happened.
         if (q === search && !base.core.isScheduled) return Promise.resolve();
 
-        base.core.cancelTimer();
-        resolvePendingSearch();
+        searchCoordinator.cancel();
         search = q;
         items = [];
         total = 0;
@@ -244,31 +234,20 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
 
       if (q === search) return Promise.resolve();
 
-      resolvePendingSearch();
-
       search = q;
       items = [];
       total = 0;
       loadedPages = 0;
       currentPage = 1;
 
-      let resolveSearch!: () => void;
-      const promise = new Promise<void>((res) => {
-        resolveSearch = res;
-      });
-
-      pendingSearch = { promise, resolve: resolveSearch };
-
-      base.core.schedule(() => void doFetch(), debounceMs);
-      notifyListeners();
-
-      return promise;
+      return searchCoordinator.schedule(() => void doFetch(), debounceMs);
     },
 
     subscribe: (listener) => base.core.subscribe(listener),
 
     [Symbol.dispose]: () => {
-      resolvePendingSearch();
+      searchCoordinator.cancel();
+      searchCoordinator.dispose();
       base.dispose();
     },
   };

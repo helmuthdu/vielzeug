@@ -8,7 +8,7 @@ export { createLocalSource } from './localSource';
 export { mergeSource } from './merge';
 export { itemRange } from './pagination';
 export { prefetchSource, prefetchSourceAndKeep } from './prefetch';
-export { filterContains, filterEquals, filterRange, sortBy } from './presets';
+export { filterContains, filterEquals, filterRange, searchBy, sortBy } from './presets';
 export { createRemoteSource } from './remoteSource';
 export { sourceState } from './state';
 export { SourceDisposedError, SourcererError, SourceTimeoutError } from './errors';

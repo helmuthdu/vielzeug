@@ -1,4 +1,4 @@
-import { filterContains, filterEquals, filterRange, sortBy } from '../presets';
+import { filterContains, filterEquals, filterRange, searchBy, sortBy } from '../presets';
 
 describe('filterContains', () => {
   const items = [{ name: 'Alice' }, { name: 'Bob' }, { name: 'alice' }];
@@ -153,5 +153,50 @@ describe('sortBy', () => {
     const sorter = sortBy((n: number) => n);
 
     expect(sorter(5, 5)).toBe(0);
+  });
+});
+
+describe('searchBy', () => {
+  const users = [
+    { active: true, email: 'alice@acme.dev', id: 1, name: 'Alice' },
+    { active: false, email: 'bob@acme.dev', id: 2, name: 'Bob' },
+    { active: true, email: 'charlie@acme.dev', id: 3, name: 'Charlie' },
+  ];
+
+  it('searches a single field case-insensitively by default', () => {
+    const search = searchBy((u: (typeof users)[number]) => u.name);
+
+    expect(search(users, 'ali')).toEqual([users[0]]);
+  });
+
+  it('searches multiple fields', () => {
+    const search = searchBy([(u: (typeof users)[number]) => u.email, (u: (typeof users)[number]) => u.id]);
+
+    expect(search(users, '2')).toEqual([users[1]]);
+    expect(search(users, 'charlie@acme')).toEqual([users[2]]);
+  });
+
+  it('supports case-sensitive search', () => {
+    const search = searchBy((u: (typeof users)[number]) => u.name, { caseSensitive: true });
+
+    expect(search(users, 'alice')).toEqual([]);
+    expect(search(users, 'Alice')).toEqual([users[0]]);
+  });
+
+  it('returns original items when query is empty', () => {
+    const search = searchBy((u: (typeof users)[number]) => u.name);
+
+    expect(search(users, '')).toBe(users);
+  });
+
+  it('supports boolean and date values', () => {
+    const values = [{ createdAt: new Date('2024-01-01T00:00:00.000Z'), enabled: true }];
+    const search = searchBy([
+      (item: (typeof values)[number]) => item.enabled,
+      (item: (typeof values)[number]) => item.createdAt,
+    ]);
+
+    expect(search(values, 'true')).toEqual(values);
+    expect(search(values, '2024-01-01')).toEqual(values);
   });
 });

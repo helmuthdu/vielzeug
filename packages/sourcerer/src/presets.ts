@@ -3,6 +3,29 @@ import type { Predicate, Sorter } from './types';
 type Direction = 'asc' | 'desc';
 
 type PrimitiveComparable = number | string | Date;
+type SearchByGetter<T> = (item: T) => unknown;
+type SearchByOptions = Readonly<{ caseSensitive?: boolean }>;
+
+const toSearchableString = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+
+  if (
+    typeof value === 'bigint' ||
+    typeof value === 'boolean' ||
+    typeof value === 'number' ||
+    typeof value === 'string'
+  ) {
+    return String(value);
+  }
+
+  if (value instanceof Date) return value.toISOString();
+
+  try {
+    return JSON.stringify(value) ?? '';
+  } catch {
+    return String(value);
+  }
+};
 
 export const filterContains = <T>(
   getValue: (item: T) => string | null | undefined,
@@ -62,5 +85,28 @@ export const sortBy = <T, V extends PrimitiveComparable>(
     if (left > right) return 1 * sign;
 
     return 0;
+  };
+};
+
+export const searchBy = <T>(
+  getValue: SearchByGetter<T> | readonly SearchByGetter<T>[],
+  opts: SearchByOptions = {},
+): ((items: readonly T[], query: string) => readonly T[]) => {
+  const getters = Array.isArray(getValue) ? getValue : [getValue];
+  const caseSensitive = opts.caseSensitive === true;
+
+  return (items, query) => {
+    if (query.length === 0) return items;
+
+    const needle = caseSensitive ? query : query.toLowerCase();
+
+    return items.filter((item) => {
+      return getters.some((getter) => {
+        const raw = toSearchableString(getter(item));
+        const haystack = caseSensitive ? raw : raw.toLowerCase();
+
+        return haystack.includes(needle);
+      });
+    });
   };
 };

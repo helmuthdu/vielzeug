@@ -47,10 +47,20 @@ createLocalSource(data, {
   debounceMs: 300, // debounce delay for source.search() (default: 300)
   filter: (u) => u.active, // initial synchronous filter predicate
   sort: (a, b) => a.name.localeCompare(b.name), // initial sorter
-  searchFn: (items, query) => items.filter(/* custom match */), // override default search
+  searchFn: searchBy([(u) => u.name, (u) => u.email]), // override default search
   // Async variants — enable Web Worker offloading via @vielzeug/familiar:
   filterAsync: async (items, signal) => items.filter(/* expensive filter */),
   sortAsync: async (items, signal) => [...items].sort(/* expensive sort */),
+});
+```
+
+For large in-memory datasets, prefer the `searchBy(...)` preset over the default `JSON.stringify` search:
+
+```ts
+import { createLocalSource, searchBy } from '@vielzeug/sourcerer';
+
+const source = createLocalSource(users, {
+  searchFn: searchBy([(u) => u.name, (u) => u.email]),
 });
 ```
 
@@ -124,6 +134,7 @@ createRemoteSource({
 ```
 
 `staleTime` compares the **query key** — navigating to a different page always fetches even when the previous result is still within the stale window.
+When an `optimisticUpdate()` is active, `refresh()` always fetches even within `staleTime` so the optimistic state can settle deterministically.
 
 ### The `fetch` callback
 
@@ -575,6 +586,7 @@ effect(() => {
 - Always call the unsubscribe function returned by `subscribe()` when the component is torn down.
 - For URL sync, use `decodeQuery()` + `applyQuery()` rather than reconstructing source state from params manually.
 - Use `staleTime` with `refreshInterval` for stale-while-revalidate patterns on dashboards.
+- If you use `optimisticUpdate()`, call `refresh()` after mutation confirmation; it bypasses `staleTime` while optimistic state is active.
 - Only one `optimisticUpdate()` can be active at a time — always handle the thrown error or check before calling.
 - When using `decodeQuery()`, validate the parsed `filter` and `sort` with a type guard before passing to the server — they are returned as-is without runtime validation.
 - For infinite sources, pass `{ limit: query.limit, search: query.search }` to `applyQuery()` for URL state sync — `page` is not restorable since items accumulate across pages.

@@ -1,11 +1,10 @@
 import type { RemoteConfig, RemoteSource, RemoteSourceQuery, SearchOptions } from './types';
 
 import { defaultKeyOf, extractError, retry } from './_utils';
+import { createAsyncSearchCoordinator } from './asyncSearch';
 import { createAsyncSource } from './asyncSource';
 import { SourcererError } from './errors';
 import { clampPage, createMeta, pageCount } from './pagination';
-
-type PendingSearch = { promise: Promise<void>; resolve: () => void };
 
 /** Creates a remote page-based source that fetches data from a network endpoint. */
 export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
@@ -27,7 +26,6 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
   let error: SourcererError | null = null;
   let lastFetchTime = 0;
   let lastFetchKey = '';
-  let pendingSearch: PendingSearch | null = null;
 
   // Optimistic update state.
   let optimistic: { active: boolean; prevItems: readonly T[]; prevTotal: number } | null = null;
@@ -84,6 +82,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
 
     base.core.notify();
   };
+  const searchCoordinator = createAsyncSearchCoordinator(base.core, notifyListeners);
 
   // ── Assign result ───────────────────────────────────────────────────────────
   const assign = (result: Readonly<{ items: readonly T[]; total: number }>) => {
@@ -95,13 +94,6 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     items = result.items;
     total = result.total;
     page = clampPage(page, pageCount(total, limit));
-  };
-
-  const resolvePendingSearch = () => {
-    if (pendingSearch) {
-      pendingSearch.resolve();
-      pendingSearch = null;
-    }
   };
 
   // ── Core fetch ──────────────────────────────────────────────────────────────
@@ -116,7 +108,13 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
   const fetchQuery = (q: RemoteSourceQuery<TFilter, TSort>): Promise<void> => {
     const key = keyOf(q);
 
-    if (staleTimeMs > 0 && key === lastFetchKey && total > 0 && Date.now() - lastFetchTime < staleTimeMs) {
+    if (
+      staleTimeMs > 0 &&
+      key === lastFetchKey &&
+      total > 0 &&
+      Date.now() - lastFetchTime < staleTimeMs &&
+      !optimistic?.active
+    ) {
       return Promise.resolve();
     }
 
@@ -166,7 +164,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       () => {
         notifyListeners();
 
-        if (base.pendingCount() === 0) resolvePendingSearch();
+        searchCoordinator.settleIfIdle(base.pendingCount());
       },
     );
   };
@@ -189,7 +187,8 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     },
 
     dispose: () => {
-      resolvePendingSearch();
+      searchCoordinator.cancel();
+      searchCoordinator.dispose();
       base.dispose();
     },
 
@@ -307,8 +306,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
 
       // patch() is documented as a single atomic fetch — cancel any debounced search()
       // still pending so it doesn't fire a second, redundant fetch afterwards.
-      base.core.cancelTimer();
-      resolvePendingSearch();
+      searchCoordinator.cancel();
 
       // Reset to page 1 when non-page query fields changed without explicit page
       if (
@@ -348,8 +346,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     },
 
     reset() {
-      base.core.cancelTimer();
-      resolvePendingSearch();
+      searchCoordinator.cancel();
       search = '';
       page = 1;
       filter = cfg.filter;
@@ -364,8 +361,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
         // `q === search` alone doesn't mean the fetch already happened.
         if (q === search && !base.core.isScheduled) return Promise.resolve();
 
-        base.core.cancelTimer();
-        resolvePendingSearch();
+        searchCoordinator.cancel();
         search = q;
         page = 1;
 
@@ -374,28 +370,17 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
 
       if (q === search) return Promise.resolve();
 
-      resolvePendingSearch();
-
       search = q;
       page = 1;
 
-      let resolveSearch!: () => void;
-      const promise = new Promise<void>((res) => {
-        resolveSearch = res;
-      });
-
-      pendingSearch = { promise, resolve: resolveSearch };
-
-      base.core.schedule(() => void doUpdate(), debounceMs);
-      notifyListeners();
-
-      return promise;
+      return searchCoordinator.schedule(() => void doUpdate(), debounceMs);
     },
 
     subscribe: (listener) => base.core.subscribe(listener),
 
     [Symbol.dispose]: () => {
-      resolvePendingSearch();
+      searchCoordinator.cancel();
+      searchCoordinator.dispose();
       base.dispose();
     },
   };

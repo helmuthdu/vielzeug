@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: align async search orchestration and stale optimistic refresh",
+      "packageName": "@vielzeug/sourcerer",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/sourcerer"
+}

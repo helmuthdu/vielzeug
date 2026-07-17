@@ -1,10 +1,9 @@
 import type { CursorConfig, CursorMeta, CursorSource, CursorSourceQuery, SearchOptions } from './types';
 
 import { defaultKeyOf, extractError, retry } from './_utils';
+import { createAsyncSearchCoordinator } from './asyncSearch';
 import { createAsyncSource } from './asyncSource';
 import { SourcererError } from './errors';
-
-type PendingSearch = { promise: Promise<void>; resolve: () => void };
 
 /** Creates a cursor-based (keyset-pagination) source that fetches data from a network endpoint. */
 export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCursor>): CursorSource<T, TCursor> {
@@ -20,7 +19,6 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
   let items: readonly T[] = [];
   let total = 0;
   let error: SourcererError | null = null;
-  let pendingSearch: PendingSearch | null = null;
 
   // ── Cached accessors ────────────────────────────────────────────────────────
   let cachedCurrent: readonly T[] = [];
@@ -59,13 +57,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
 
     base.core.notify();
   };
-
-  const resolvePendingSearch = () => {
-    if (pendingSearch) {
-      pendingSearch.resolve();
-      pendingSearch = null;
-    }
-  };
+  const searchCoordinator = createAsyncSearchCoordinator(base.core, notifyListeners);
 
   // ── Core fetch ──────────────────────────────────────────────────────────────
   const toRemoteQuery = (): CursorSourceQuery<TCursor> => ({
@@ -117,7 +109,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
       () => {
         notifyListeners();
 
-        if (base.pendingCount() === 0) resolvePendingSearch();
+        searchCoordinator.settleIfIdle(base.pendingCount());
       },
     );
   };
@@ -140,7 +132,8 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
     },
 
     dispose: () => {
-      resolvePendingSearch();
+      searchCoordinator.cancel();
+      searchCoordinator.dispose();
       base.dispose();
     },
 
@@ -188,8 +181,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
 
       // patch() is documented as a single atomic fetch — cancel any debounced search()
       // still pending so it doesn't fire a second, redundant fetch afterwards.
-      base.core.cancelTimer();
-      resolvePendingSearch();
+      searchCoordinator.cancel();
 
       return doUpdate();
     },
@@ -221,8 +213,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
     },
 
     reset() {
-      base.core.cancelTimer();
-      resolvePendingSearch();
+      searchCoordinator.cancel();
       search = '';
       afterCursor = undefined;
       beforeCursor = undefined;
@@ -236,8 +227,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
         // `q === search` alone doesn't mean the fetch already happened.
         if (q === search && !base.core.isScheduled) return Promise.resolve();
 
-        base.core.cancelTimer();
-        resolvePendingSearch();
+        searchCoordinator.cancel();
         search = q;
         afterCursor = undefined;
         beforeCursor = undefined;
@@ -247,29 +237,18 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
 
       if (q === search) return Promise.resolve();
 
-      resolvePendingSearch();
-
       search = q;
       afterCursor = undefined;
       beforeCursor = undefined;
 
-      let resolveSearch!: () => void;
-      const promise = new Promise<void>((res) => {
-        resolveSearch = res;
-      });
-
-      pendingSearch = { promise, resolve: resolveSearch };
-
-      base.core.schedule(() => void doUpdate(), debounceMs);
-      notifyListeners();
-
-      return promise;
+      return searchCoordinator.schedule(() => void doUpdate(), debounceMs);
     },
 
     subscribe: (listener) => base.core.subscribe(listener),
 
     [Symbol.dispose]: () => {
-      resolvePendingSearch();
+      searchCoordinator.cancel();
+      searchCoordinator.dispose();
       base.dispose();
     },
   };

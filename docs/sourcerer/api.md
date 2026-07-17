@@ -9,7 +9,7 @@ description: Complete API surface for @vielzeug/sourcerer.
 
 | Symbol                                 | Purpose                                                                                       | Execution mode | Common gotcha                                                                     |
 | -------------------------------------- | --------------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
-| `createLocalSource()`                  | In-memory reactive collection with filter, sort, and search                                   | Sync           | Default `searchFn` is fuzzy, not substring                                        |
+| `createLocalSource()`                  | In-memory reactive collection with filter, sort, and search                                   | Sync           | Default `searchFn` JSON-stringifies each item for substring matching              |
 | `createRemoteSource()`                 | Async server-backed collection with page navigation                                           | Async          | Fetches on creation; set `autoFetch: false` to delay                              |
 | `createCursorSource()`                 | Async collection navigated by cursor tokens                                                   | Async          | `next()`/`prev()` are no-ops when the cursor is absent                            |
 | `createInfiniteSource()`               | Async append-mode (infinite scroll) collection                                                | Async          | `loadMore()` is a no-op once `meta.hasMore` is `false`                            |
@@ -26,6 +26,7 @@ description: Complete API surface for @vielzeug/sourcerer.
 | `filterContains()`                     | Preset predicate: case-insensitive substring match                                            | Sync           | Matches against a getter's string value                                           |
 | `filterEquals()`                       | Preset predicate: strict equality match                                                       | Sync           | Uses `Object.is` semantics                                                        |
 | `filterRange()`                        | Preset predicate: inclusive min/max range                                                     | Sync           | Works with numbers and Dates                                                      |
+| `searchBy()`                           | Preset search builder: field-based matching for `LocalSourceConfig.searchFn`                  | Sync           | Prefer this over default JSON-stringify search on large collections               |
 | `sortBy()`                             | Preset comparator: sort by a getter value                                                     | Sync           | Supports `'asc'` / `'desc'`; handles strings, numbers, Dates                      |
 | `encodeQuery()`                        | Serialize source query to URL params                                                          | Sync           | Filter and sort are JSON-stringified                                              |
 | `decodeQuery()`                        | Deserialize URL params (or `URLSearchParams`) to a source query                               | Sync           | Malformed JSON is silently dropped by default                                     |
@@ -63,7 +64,7 @@ type LocalSourceConfig<T> = {
 };
 ```
 
-The default `searchFn` performs a case-insensitive JSON substring match — i.e. it stringifies each item with `JSON.stringify` and checks if the query string appears anywhere in the result. Provide a custom `searchFn` for domain-specific relevance or exact field matching.
+The default `searchFn` performs a case-insensitive JSON substring match — it stringifies each item with `JSON.stringify` and checks if the query string appears anywhere in the result. For better performance and intent clarity, prefer `searchBy(...)` when searching known fields.
 
 `filterAsync` and `sortAsync` run after their synchronous counterparts. They set `meta.isLoading = true` during computation and accept an `AbortSignal` — a new call aborts any running async computation.
 
@@ -116,7 +117,7 @@ type RemoteConfig<T, TFilter, TSort> = {
 ```
 
 `queryKey` defaults to a stable JSON serialization with recursively sorted keys.
-`staleTime` compares the **query key** — navigating to a different page always fetches even within the stale window.
+`staleTime` compares the **query key** — navigating to a different page always fetches even within the stale window. If an `optimisticUpdate()` is active, `refresh()` bypasses `staleTime` to settle the optimistic state.
 
 **Returns:** `RemoteSource<T, TFilter, TSort>` — async server-backed source with page navigation and optimistic update support.
 

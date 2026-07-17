@@ -758,6 +758,20 @@ describe('createRemoteSource', () => {
       await source.refresh(); // same query key (page 2) within staleTime — skipped
       expect(fetch).toHaveBeenCalledTimes(2);
     });
+
+    it('does not skip re-fetch while an optimistic update is active', async () => {
+      const fetch = vi.fn(async () => ({ items: ['server'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, fetch, staleTime: 60_000 });
+
+      await source.refresh();
+      source.optimisticUpdate((items) => [...items, 'optimistic'], { total: 2 });
+
+      await source.refresh();
+
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(source.current).toEqual(['server']);
+      expect(() => source.optimisticUpdate((items) => items)).not.toThrow();
+    });
   });
 
   describe('ready with timeout', () => {
