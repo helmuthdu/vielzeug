@@ -5,6 +5,7 @@
 
 import { onCleanup as _onCleanup, scope as _scope } from '@vielzeug/ripple';
 
+import { OreLifecycleError, reportRuntimeError } from '../errors';
 import { createProps, type InferProps, type PropInputDefs } from '../props';
 import { runWithContext } from '../runtime';
 import { flush } from './flush';
@@ -90,8 +91,21 @@ export async function renderHook<D extends PropInputDefs, T>(
             if (typeof cleanup === 'function') _onCleanup(cleanup);
           });
         });
-      } catch {
-        /* test will surface the error via result */
+      } catch (error) {
+        // Mirror BaseElement's real onMounted error handling (see
+        // base-element.ts's `_scheduleMountCallbacks`): report the error
+        // (console + `ore:error` event on the host) and keep running the
+        // remaining callbacks, instead of hiding the failure entirely.
+        const err = error instanceof Error ? error : new Error(String(error));
+
+        reportRuntimeError(
+          new OreLifecycleError(`renderHook() mount callback failed`, {
+            cause: err,
+            component: 'renderHook',
+            phase: 'mounted',
+          }),
+          hostEl,
+        );
       }
     }
   } catch (err) {

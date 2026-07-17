@@ -178,11 +178,21 @@ export async function mount<T extends HTMLElement = HTMLElement>(
 
   for (const [name, value] of Object.entries(attrs)) applyAttr(element, name, value);
 
-  await withWindowErrorCapture(async () => {
-    container.appendChild(element);
-    _mountedElements.push(element);
-    await flush();
-  });
+  try {
+    await withWindowErrorCapture(async () => {
+      container.appendChild(element);
+      _mountedElements.push(element);
+      await flush();
+    });
+  } catch (err) {
+    element.remove();
+
+    const i = _mountedElements.indexOf(element);
+
+    if (i !== -1) _mountedElements.splice(i, 1);
+
+    throw err;
+  }
 
   let isDisposed = false;
 

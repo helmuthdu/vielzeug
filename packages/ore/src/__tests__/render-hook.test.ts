@@ -25,6 +25,29 @@ describe('renderHook()', () => {
     expect(log).toEqual(['setup', 'mounted']);
   });
 
+  it('reports (does not silently swallow) an error thrown from an onMounted callback, and still runs the remaining callbacks', async () => {
+    const log: string[] = [];
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { result } = await renderHook(() => {
+      onMounted(() => {
+        log.push('first');
+        throw new Error('boom');
+      });
+      onMounted(() => {
+        log.push('second');
+      });
+
+      return 'ok';
+    });
+
+    expect(result).toBe('ok');
+    expect(log).toEqual(['first', 'second']);
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
   it('supports reactive effects tracking signal changes', async () => {
     const log: number[] = [];
 

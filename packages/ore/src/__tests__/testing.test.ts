@@ -32,6 +32,18 @@ describe('Testing: Render Utilities', () => {
 
       expect(element.innerHTML).toContain('Content');
     });
+
+    it('removes the element from the DOM if setup throws, instead of leaking a half-mounted fixture', async () => {
+      const before = document.body.childElementCount;
+
+      await expect(
+        mount(() => {
+          throw new Error('boom');
+        }),
+      ).rejects.toThrow('boom');
+
+      expect(document.body.childElementCount).toBe(before);
+    });
   });
 
   describe('fire', () => {
@@ -211,6 +223,15 @@ describe('Testing: Render Utilities', () => {
       const el = document.createElement('div');
 
       await expect(waitForEvent(el, 'never-fires', 50)).rejects.toBeInstanceOf(OreTimeoutError);
+    });
+
+    it('removes its event listener when the wait times out (no dangling listener)', async () => {
+      const el = document.createElement('div');
+      const removeSpy = vi.spyOn(el, 'removeEventListener');
+
+      await expect(waitForEvent(el, 'never-fires', 20)).rejects.toBeInstanceOf(OreTimeoutError);
+
+      expect(removeSpy).toHaveBeenCalledWith('never-fires', expect.any(Function));
     });
   });
 

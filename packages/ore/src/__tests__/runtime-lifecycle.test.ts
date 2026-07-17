@@ -461,4 +461,10 @@ describe('html template: dynamic tag-name guard (R5)', () => {
       'not a valid HTML element name',
     );
   });
+
+  it('throws immediately for a dynamic closing tag with no matching dynamic opening tag', async () => {
+    await expect(mount(() => html`<div>content</${'div'}>`)).rejects.toThrow(
+      'dynamic closing tag has no matching dynamic opening tag',
+    );
+  });
 });

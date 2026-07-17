@@ -434,6 +434,44 @@ describe('Directive: each()', () => {
     warnSpy.mockRestore();
   });
 
+  it('warns and recovers when a subsequent update (not just the initial mount) introduces duplicate keys', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const items = signal([
+      { id: 1, value: 'A' },
+      { id: 2, value: 'B' },
+    ]);
+
+    const { flush, queryAll } = await mount(
+      () =>
+        html`<ul>
+          ${each(
+            items,
+            (item) => item.id,
+            (item) => html`<li class="item">${() => item.value.value}</li>`,
+          )}
+        </ul>`,
+    );
+
+    expect(queryAll('.item').map((node) => node.textContent)).toEqual(['A', 'B']);
+
+    // A later render introduces a duplicate key that wasn't present at mount time.
+    items.value = [
+      { id: 3, value: 'C' },
+      { id: 3, value: 'D' },
+    ];
+    await flush();
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('duplicate key'));
+    expect(queryAll('.item')).toHaveLength(0);
+
+    // The list can still recover cleanly on the next update after the bad one.
+    items.value = [{ id: 4, value: 'E' }];
+    await flush();
+    expect(queryAll('.item').map((node) => node.textContent)).toEqual(['E']);
+
+    warnSpy.mockRestore();
+  });
+
   it('renders a plain static array as a one-time snapshot', async () => {
     const staticItems = [1, 2, 3];
     const { queryAll } = await mount(
@@ -703,6 +741,42 @@ describe('Directive: when()', () => {
 
     expect(query('.off')?.textContent).toBe('Off');
     expect(query('.on')).toBeNull();
+  });
+
+  it('tears down and remounts cleanly across rapid, repeated toggles — no leftover nodes accumulate', async () => {
+    const enabled = signal(true);
+    let onMountCount = 0;
+    let offMountCount = 0;
+
+    const { flush, queryAll } = await mount(
+      () =>
+        html`<section>
+          ${when(
+            enabled,
+            () => {
+              onMountCount++;
+
+              return html`<p class="on">On</p>`;
+            },
+            () => {
+              offMountCount++;
+
+              return html`<p class="off">Off</p>`;
+            },
+          )}
+        </section>`,
+    );
+
+    for (let i = 0; i < 5; i++) {
+      enabled.value = !enabled.value;
+      await flush();
+
+      // Exactly one branch's node present at any point — never both, never zero.
+      expect(queryAll('.on, .off')).toHaveLength(1);
+    }
+
+    // 1 initial mount + 5 toggles split across both branches, no duplicate mounts.
+    expect(onMountCount + offMountCount).toBe(6);
   });
 
   it('should render reactive bindings inside branches', async () => {
@@ -995,6 +1069,25 @@ describe('Directive: model()', () => {
     });
 
     expect(text.value).toBe('typed');
+  });
+
+  it('stops syncing signal → DOM and DOM → signal once the host disconnects', async () => {
+    const name = signal('Alice');
+    const { dispose, element, flush, query } = await mount(() => html`<input class="f" type="text" ${model(name)} />`);
+    const input = query<HTMLInputElement>('.f')!;
+
+    dispose();
+
+    // Signal → DOM: further signal writes must not reach the (now detached) input.
+    name.value = 'Bob';
+    await flush();
+    expect(input.value).toBe('Alice');
+
+    // DOM → signal: firing input on the detached element must not update the signal.
+    input.value = 'Charlie';
+    fire.input(input);
+    expect(name.value).toBe('Bob');
+    expect(element.isConnected).toBe(false);
   });
 });
 

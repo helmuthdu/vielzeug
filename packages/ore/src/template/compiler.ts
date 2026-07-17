@@ -7,6 +7,8 @@
  * - Expose `getStaticTemplate()` for use by the instantiator.
  */
 
+import { OreApiError, ORE_ERRORS } from '../errors';
+
 // ─── Slot kinds ───────────────────────────────────────────────────────────────
 // Const object + derived union, same pattern as `ComponentPhase`/`LIFECYCLE_EVENTS`
 // in types.ts — used here (rather than plain string literals) because the kind
@@ -203,8 +205,15 @@ const buildStaticTemplate = (strings: TemplateStringsArray): CompiledStaticTempl
       html += prefixWithoutAngle + `<ore-dyn-${id} u="${id}"`;
       slots.push({ elementId: id, kind: SlotKind.TAG_NAME });
     } else if (slot.kind === SlotKind.CLOSE_TAG) {
-      // Dynamic closing tag: close the matching placeholder element
-      const id = tagNameStack.pop() ?? 0;
+      // Dynamic closing tag: close the matching placeholder element. An empty
+      // stack means this closing interpolation has no matching dynamic opener
+      // (malformed template) — fail fast instead of silently closing the
+      // wrong (or a nonexistent) placeholder element.
+      if (tagNameStack.length === 0) {
+        throw new OreApiError(ORE_ERRORS.mismatchedDynamicCloseTag);
+      }
+
+      const id = tagNameStack.pop()!;
       const prefixWithoutClose = raw.replace(/<\/\s*$/, '');
 
       html += prefixWithoutClose + `</ore-dyn-${id}>`;

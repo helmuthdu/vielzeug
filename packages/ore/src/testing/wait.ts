@@ -77,18 +77,15 @@ export async function waitFor(
  */
 export function waitForEvent<T extends Event = Event>(element: Element, name: string, timeout = 1000): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new OreTimeoutError(`waitForEvent: "${name}" timed out after ${timeout}ms`)),
-      timeout,
-    );
+    const onEvent = (e: Event): void => {
+      clearTimeout(timer);
+      resolve(e as T);
+    };
+    const timer = setTimeout(() => {
+      element.removeEventListener(name, onEvent);
+      reject(new OreTimeoutError(`waitForEvent: "${name}" timed out after ${timeout}ms`));
+    }, timeout);
 
-    element.addEventListener(
-      name,
-      (e) => {
-        clearTimeout(timer);
-        resolve(e as T);
-      },
-      { once: true },
-    );
+    element.addEventListener(name, onEvent, { once: true });
   });
 }

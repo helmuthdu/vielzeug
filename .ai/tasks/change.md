@@ -27,6 +27,7 @@ Default is `full` — follow every step of the Default flow below, including the
 5. Update implementation, exports, tests, and docs together.
 6. Run the narrowest useful validation.
 7. If the public API is changed, update docs and REPL examples that demonstrate it.
+8. Under `full` rigor, once validation passes, create a Rush change file for every modified publishable package using the scoped helper (`.ai/core/workspace.md`'s "Change files" section) — one invocation per package, picking `patch`/`minor`/`major` per the conventional-commit mapping already documented there (`fix`→patch, `feat`→minor, breaking→major). Skip this step for `quick` rigor, and for changes with no version-relevant behavior change (docs-only, `.ai/state/` scratch notes, CI/tooling files outside `packages/*`). Creating the change file is not a commit — it still requires no push/commit without separate explicit approval (see `.ai/core/policy.md`).
 
 ## Rules
 
@@ -51,5 +52,6 @@ If a dependent package breaks as a result, fix it in the same pass or document t
 - updated source
 - updated tests
 - updated docs/examples when required
+- a Rush change file per modified package under `full` rigor (step 8 above)
 - optional implementation note under `.ai/state/<scope>/` if the task is likely to resume later
 

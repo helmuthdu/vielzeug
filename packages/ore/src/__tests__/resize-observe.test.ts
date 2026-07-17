@@ -113,4 +113,33 @@ describe('resizeObserver()', () => {
       globalThis.ResizeObserver = origRO;
     }
   });
+
+  it('disconnects exactly once even if the fixture is disposed twice (idempotent teardown)', async () => {
+    const disconnectSpy = vi.fn();
+    const origRO = globalThis.ResizeObserver;
+
+    globalThis.ResizeObserver = class {
+      observe = vi.fn();
+      disconnect = disconnectSpy;
+      constructor(_cb: ResizeObserverCallback) {}
+    } as unknown as typeof ResizeObserver;
+
+    try {
+      const { dispose } = await mount((_props) => {
+        const divRef = ref<HTMLDivElement>();
+
+        onMounted(() => {
+          resizeObserver(divRef.value!);
+        });
+
+        return html`<div ref=${divRef}></div>`;
+      });
+
+      dispose();
+      dispose();
+      expect(disconnectSpy).toHaveBeenCalledOnce();
+    } finally {
+      globalThis.ResizeObserver = origRO;
+    }
+  });
 });

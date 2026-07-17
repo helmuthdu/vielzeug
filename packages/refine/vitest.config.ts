@@ -13,6 +13,10 @@ export default defineConfig({
         replacement: path.resolve(__dirname, '../ore/src/observers/index.ts'),
       },
       {
+        find: /^@vielzeug\/ore\/directives$/,
+        replacement: path.resolve(__dirname, '../ore/src/directives/index.ts'),
+      },
+      {
         find: /^@vielzeug\/ore\/testing$/,
         replacement: path.resolve(__dirname, '../ore/src/testing/index.ts'),
       },

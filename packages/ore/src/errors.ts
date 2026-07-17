@@ -88,6 +88,7 @@ export const ORE_ERRORS = {
     `html\`...\`: dynamic tag name "${tagName}" is not a valid HTML element name`,
   invariantViolated: (message: string): string => `invariant violated: ${message}`,
   lifecycleOutsideSetup: 'Lifecycle hooks must be called during component setup',
+  mismatchedDynamicCloseTag: 'html`...`: dynamic closing tag has no matching dynamic opening tag',
   propInvalidReflect: 'Structured props cannot use reflect:true — use prop.json() with reflect:false',
   validationFailed: (tag: string, errors: string[]): string => `Validation failed for <${tag}>:\n${errors.join('\n')}`,
 } as const;
