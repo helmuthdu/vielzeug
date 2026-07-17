@@ -13,14 +13,26 @@ describe('ward: guardRequestWith', () => {
   ]);
 
   it('returns granted: true when principal is allowed', async () => {
-    const result = await guardRequestWith(ward, {}, () => ({ id: 'u1', roles: ['viewer'] }), 'posts', 'read');
+    const result = await guardRequestWith({
+      action: 'read',
+      extractPrincipal: () => ({ id: 'u1', roles: ['viewer'] }),
+      req: {},
+      resource: 'posts',
+      ward,
+    });
 
     expect(result.granted).toBe(true);
     expect(result.principal).toEqual({ id: 'u1', roles: ['viewer'] });
   });
 
   it('returns granted: false with decision when denied', async () => {
-    const result = await guardRequestWith(ward, {}, () => ({ id: 'u1', roles: ['viewer'] }), 'posts', 'update');
+    const result = await guardRequestWith({
+      action: 'update',
+      extractPrincipal: () => ({ id: 'u1', roles: ['viewer'] }),
+      req: {},
+      resource: 'posts',
+      ward,
+    });
 
     expect(result.granted).toBe(false);
 
@@ -30,19 +42,25 @@ describe('ward: guardRequestWith', () => {
   });
 
   it('supports async principal extractor', async () => {
-    const result = await guardRequestWith(ward, {}, async () => ({ id: 'u1', roles: ['viewer'] }), 'posts', 'read');
+    const result = await guardRequestWith({
+      action: 'read',
+      extractPrincipal: async () => ({ id: 'u1', roles: ['viewer'] }),
+      req: {},
+      resource: 'posts',
+      ward,
+    });
 
     expect(result.granted).toBe(true);
   });
 
   it('returns granted: false for no-matching-rule', async () => {
-    const result = await guardRequestWith(
+    const result = await guardRequestWith({
+      action: 'read',
+      extractPrincipal: () => null, // anonymous
+      req: {},
+      resource: 'posts',
       ward,
-      {},
-      () => null, // anonymous
-      'posts',
-      'read',
-    );
+    });
 
     expect(result.granted).toBe(false);
 
@@ -61,14 +79,19 @@ describe('guardRequest: simple principal overload', () => {
   const principal = { id: 'u1', roles: ['editor'] };
 
   it('returns granted=true when principal can perform action', async () => {
-    const result = await guardRequest(ward, principal, 'posts', 'read');
+    const result = await guardRequest({ action: 'read', principal, resource: 'posts', ward });
 
     expect(result.granted).toBe(true);
     expect(result.principal).toBe(principal);
   });
 
   it('returns granted=false with reason when denied', async () => {
-    const result = await guardRequest(ward, { id: 'u2', roles: ['viewer'] }, 'posts', 'read');
+    const result = await guardRequest({
+      action: 'read',
+      principal: { id: 'u2', roles: ['viewer'] },
+      resource: 'posts',
+      ward,
+    });
 
     expect(result.granted).toBe(false);
 
@@ -78,7 +101,7 @@ describe('guardRequest: simple principal overload', () => {
   });
 
   it('accepts null principal for anonymous checks', async () => {
-    const result = await guardRequest(ward, null, 'posts', 'read');
+    const result = await guardRequest({ action: 'read', principal: null, resource: 'posts', ward });
 
     expect(result.granted).toBe(false);
   });
@@ -94,11 +117,19 @@ describe('guardRequest: simple principal overload', () => {
       },
     ]);
 
-    const allowed = await guardRequest(dataWard, { id: 'u1', roles: ['editor'] }, 'posts', 'update', {
-      authorId: 'u1',
+    const allowed = await guardRequest({
+      action: 'update',
+      data: { authorId: 'u1' },
+      principal: { id: 'u1', roles: ['editor'] },
+      resource: 'posts',
+      ward: dataWard,
     });
-    const denied = await guardRequest(dataWard, { id: 'u1', roles: ['editor'] }, 'posts', 'update', {
-      authorId: 'u2',
+    const denied = await guardRequest({
+      action: 'update',
+      data: { authorId: 'u2' },
+      principal: { id: 'u1', roles: ['editor'] },
+      resource: 'posts',
+      ward: dataWard,
     });
 
     expect(allowed.granted).toBe(true);

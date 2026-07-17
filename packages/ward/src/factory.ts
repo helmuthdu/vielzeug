@@ -1,14 +1,20 @@
 import type { CompiledEntry } from './_compile';
 import type {
+  BoundWardAllowedActionsInput,
+  BoundWardDecisionInput,
+  BoundWardRulesInScopeInput,
   BoundWard,
   Principal,
   UserPrincipal,
+  WardAllowedActionsInput,
   Ward,
   WardCheck,
   WardConflict,
+  WardDecisionInput,
   WardDecision,
   WardDecisionResult,
   WardOptions,
+  WardRulesInScopeInput,
   WardRule,
   WardTrace,
   WardTraceCandidate,
@@ -119,13 +125,12 @@ export function createWard<TAction extends string = string, TData = unknown>(
   // -------------------------------------------------------------------------
   // Public API
   // -------------------------------------------------------------------------
+  // Request objects avoid call-site ambiguity between resource/action/data and
+  // make later API growth additive instead of positional-breaking.
 
-  function explain(
-    principal: Principal,
-    resource: string,
-    action: TAction,
-    data?: TData,
-  ): WardDecision<TAction, TData> {
+  function explain(input: WardDecisionInput<TAction, TData>): WardDecision<TAction, TData> {
+    const { action, data, principal, resource } = input;
+
     validatePrincipal(principal);
 
     return evaluateAndLog(principal, resource, action, data);
@@ -153,28 +158,25 @@ export function createWard<TAction extends string = string, TData = unknown>(
     return runCheckAll(principal, checks);
   }
 
-  function allowedActions(
-    principal: Principal,
-    resource: string,
-    knownActions: readonly TAction[],
-    data?: TData,
-  ): TAction[] {
+  function allowedActions(input: WardAllowedActionsInput<TAction, TData>): TAction[] {
+    const { data, knownActions, principal, resource } = input;
+
     validatePrincipal(principal);
 
     return coreAllowedActions(entries, principal, resource, knownActions, data);
   }
 
-  function rulesInScope(
-    principal: Principal,
-    resource: string,
-    data?: TData,
-  ): ReadonlyArray<Readonly<WardRule<TAction, TData>>> {
+  function rulesInScope(input: WardRulesInScopeInput<TData>): ReadonlyArray<Readonly<WardRule<TAction, TData>>> {
+    const { data, principal, resource } = input;
+
     validatePrincipal(principal);
 
     return coreRulesInScope(entries, principal, resource, data);
   }
 
-  function trace(principal: Principal, resource: string, action: TAction, data?: TData): WardTrace<TAction, TData> {
+  function trace(input: WardDecisionInput<TAction, TData>): WardTrace<TAction, TData> {
+    const { action, data, principal, resource } = input;
+
     validatePrincipal(principal);
 
     const matching: CompiledEntry<TAction, TData>[] = [];
@@ -214,12 +216,15 @@ export function createWard<TAction extends string = string, TData = unknown>(
     };
 
     return {
-      allowedActions: (resource, knownActions, data?) =>
-        coreAllowedActions(entries, snap, resource, knownActions, data),
+      allowedActions: (input: BoundWardAllowedActionsInput<TAction, TData>) =>
+        coreAllowedActions(entries, snap, input.resource, input.knownActions, input.data),
       checkAll: (checks) => (checks.length === 0 ? [] : runCheckAll(snap, checks)),
-      explain: (resource, action, data?) => evaluateAndLog(snap, resource, action, data),
-      rulesInScope: (resource, data?) => coreRulesInScope(entries, snap, resource, data),
-      trace: (resource, action, data?) => trace(snap, resource, action, data),
+      explain: (input: BoundWardDecisionInput<TAction, TData>) =>
+        evaluateAndLog(snap, input.resource, input.action, input.data),
+      rulesInScope: (input: BoundWardRulesInScopeInput<TData>) =>
+        coreRulesInScope(entries, snap, input.resource, input.data),
+      trace: (input: BoundWardDecisionInput<TAction, TData>) =>
+        trace({ action: input.action, data: input.data, principal: snap, resource: input.resource }),
     };
   }
 

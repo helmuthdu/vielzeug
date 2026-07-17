@@ -12,53 +12,50 @@ export type GuardResult<TAction extends string, TData> =
       reason: 'explicit-deny' | 'no-matching-rule';
     };
 
-/**
- * Evaluates a ward decision for a known `principal` and returns a `GuardResult`.
- * Use when you have already resolved the principal (e.g. from a session or JWT).
- *
- * For request-object based flows where the principal must be extracted asynchronously,
- * use `guardRequestWith` instead.
- *
- * @example
- * ```ts
- * // Express / Hono / any framework — write a 3-line adapter:
- * app.use('/posts', async (req, res, next) => {
- *   const result = await guardRequestWith(ward, req, extractPrincipal, 'posts', 'read');
- *   result.granted ? next() : res.status(403).json({ reason: result.reason });
- * });
- * ```
- */
+export type GuardRequestInput<TAction extends string, TData> = {
+  action: TAction;
+  data?: TData;
+  principal: Principal;
+  resource: string;
+  ward: Ward<TAction, TData>;
+};
+
+export type GuardRequestWithInput<TAction extends string, TData, TReq extends WardRequest> = {
+  action: TAction;
+  data?: TData;
+  extractPrincipal: PrincipalExtractor<TReq>;
+  req: TReq;
+  resource: string;
+  ward: Ward<TAction, TData>;
+};
+
 export function guardRequest<TAction extends string, TData>(
-  ward: Ward<TAction, TData>,
-  principal: Principal,
-  resource: string,
-  action: TAction,
-  data?: TData,
+  input: GuardRequestInput<TAction, TData>,
 ): GuardResult<TAction, TData> {
-  const decision = ward.explain(principal, resource, action, data);
+  const decision = input.ward.explain({
+    action: input.action,
+    data: input.data,
+    principal: input.principal,
+    resource: input.resource,
+  });
 
   if (decision.allowed) {
-    return { granted: true, principal };
+    return { granted: true, principal: input.principal };
   }
 
-  return { decision, granted: false, principal, reason: decision.reason };
+  return { decision, granted: false, principal: input.principal, reason: decision.reason };
 }
 
-/**
- * Evaluates a ward decision by first extracting the principal from a request object,
- * then running the authorization check. The extractor may be async (e.g. to verify a JWT).
- *
- * Use `guardRequest` instead when the principal is already resolved.
- */
 export async function guardRequestWith<TAction extends string, TData, TReq extends WardRequest>(
-  ward: Ward<TAction, TData>,
-  req: TReq,
-  extractPrincipal: PrincipalExtractor<TReq>,
-  resource: string,
-  action: TAction,
-  data?: TData,
+  input: GuardRequestWithInput<TAction, TData, TReq>,
 ): Promise<GuardResult<TAction, TData>> {
-  const principal = await extractPrincipal(req);
+  const principal = await input.extractPrincipal(input.req);
 
-  return guardRequest(ward, principal, resource, action, data);
+  return guardRequest({
+    action: input.action,
+    data: input.data,
+    principal,
+    resource: input.resource,
+    ward: input.ward,
+  });
 }

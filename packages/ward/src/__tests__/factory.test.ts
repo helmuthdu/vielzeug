@@ -1,16 +1,74 @@
 import { vi } from 'vitest';
 
-import type { BoundWard, Ward, WardLoggerContext, WardPredicate } from '../index';
+import type { BoundWard, Principal, Ward, WardLoggerContext, WardPredicate } from '../index';
 
 import { ANONYMOUS, createWard, owns, WardPredicateError, WILDCARD } from '../index';
 
 const can = <TAction extends string, TData>(
   ward: Ward<TAction, TData>,
-  principal: Parameters<Ward<TAction, TData>['explain']>[0],
+  principal: Principal,
   resource: string,
   action: TAction,
   data?: TData,
-) => ward.explain(principal, resource, action, data).allowed;
+) => explainDecision(ward, principal, resource, action, data).allowed;
+
+const explainDecision = <TAction extends string, TData>(
+  ward: Ward<TAction, TData>,
+  principal: Principal,
+  resource: string,
+  action: TAction,
+  data?: TData,
+) => ward.explain({ action, data, principal, resource });
+
+const traceDecision = <TAction extends string, TData>(
+  ward: Ward<TAction, TData>,
+  principal: Principal,
+  resource: string,
+  action: TAction,
+  data?: TData,
+) => ward.trace({ action, data, principal, resource });
+
+const rulesInScopeDecision = <TAction extends string, TData>(
+  ward: Ward<TAction, TData>,
+  principal: Principal,
+  resource: string,
+  data?: TData,
+) => ward.rulesInScope({ data, principal, resource });
+
+const allowedActionsDecision = <TAction extends string, TData>(
+  ward: Ward<TAction, TData>,
+  principal: Principal,
+  resource: string,
+  knownActions: readonly TAction[],
+  data?: TData,
+) => ward.allowedActions({ data, knownActions, principal, resource });
+
+const boundExplain = <TAction extends string, TData>(
+  ward: BoundWard<TAction, TData>,
+  resource: string,
+  action: TAction,
+  data?: TData,
+) => ward.explain({ action, data, resource });
+
+const boundTrace = <TAction extends string, TData>(
+  ward: BoundWard<TAction, TData>,
+  resource: string,
+  action: TAction,
+  data?: TData,
+) => ward.trace({ action, data, resource });
+
+const boundRulesInScope = <TAction extends string, TData>(
+  ward: BoundWard<TAction, TData>,
+  resource: string,
+  data?: TData,
+) => ward.rulesInScope({ data, resource });
+
+const boundAllowedActions = <TAction extends string, TData>(
+  ward: BoundWard<TAction, TData>,
+  resource: string,
+  knownActions: readonly TAction[],
+  data?: TData,
+) => ward.allowedActions({ data, knownActions, resource });
 
 // ---------------------------------------------------------------------------
 // Core decision model
@@ -127,7 +185,7 @@ describe('ward: multi-role rules', () => {
   it('preserves authored multi-role array in returned rule shape', () => {
     const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer', 'editor'] }]);
 
-    const decision = permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+    const decision = explainDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
     expect(decision.allowed).toBe(true);
 
@@ -145,9 +203,9 @@ describe('ward: validation', () => {
   it('throws for invalid principal payloads', () => {
     const permit = createWard();
 
-    expect(() => permit.explain({ id: 'u1' } as any, 'posts', 'read')).toThrow('Invalid principal');
-    expect(() => permit.explain({ roles: ['admin'] } as any, 'posts', 'read')).toThrow('Invalid principal');
-    expect(() => permit.explain(undefined as any, 'posts', 'read')).toThrow('Invalid principal');
+    expect(() => explainDecision(permit, { id: 'u1' } as any, 'posts', 'read')).toThrow('Invalid principal');
+    expect(() => explainDecision(permit, { roles: ['admin'] } as any, 'posts', 'read')).toThrow('Invalid principal');
+    expect(() => explainDecision(permit, undefined as any, 'posts', 'read')).toThrow('Invalid principal');
   });
 
   it('throws when a rule effect is invalid', () => {
@@ -193,7 +251,7 @@ describe('ward: validation', () => {
   it('throws when a principal has a whitespace-only role string', () => {
     const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
 
-    expect(() => permit.explain({ id: 'u1', roles: ['   '] }, 'posts', 'read')).toThrow(
+    expect(() => explainDecision(permit, { id: 'u1', roles: ['   '] }, 'posts', 'read')).toThrow(
       'roles must be an array of non-empty strings',
     );
   });
@@ -203,7 +261,7 @@ describe('ward: validation', () => {
       { action: 'read', effect: 'allow', resource: 'posts', role: ['editor', 'editor', 'viewer'] },
     ]);
 
-    const decision = permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
+    const decision = explainDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', 'read');
 
     expect(decision.allowed).toBe(true);
 
@@ -306,8 +364,8 @@ describe('ward: decision APIs', () => {
     ]);
     const principal = { id: 'u1', roles: ['viewer'] };
 
-    expect(permit.allowedActions(principal, 'posts', ['read', 'update'])).toEqual(['read']);
-    expect(permit.allowedActions(principal, 'posts', ['update', 'delete'])).toEqual([]);
+    expect(allowedActionsDecision(permit, principal, 'posts', ['read', 'update'])).toEqual(['read']);
+    expect(allowedActionsDecision(permit, principal, 'posts', ['update', 'delete'])).toEqual([]);
   });
 
   it('returns an empty array for empty batch checks without validating the principal', () => {
@@ -339,7 +397,7 @@ describe('ward: decision APIs', () => {
   it('returns the normalized rule shape from explain, including priority: 0 when not authored', () => {
     const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
 
-    const decision = permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+    const decision = explainDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
     expect(decision).toEqual({
       allowed: true,
@@ -353,7 +411,7 @@ describe('ward: decision APIs', () => {
       { action: 'read', effect: 'deny', resource: 'posts', role: ['blocked'] },
     ]);
 
-    const decision = permit.explain({ id: 'u1', roles: ['blocked'] }, 'posts', 'read');
+    const decision = explainDecision(permit, { id: 'u1', roles: ['blocked'] }, 'posts', 'read');
 
     expect(decision).toEqual({
       allowed: false,
@@ -365,7 +423,7 @@ describe('ward: decision APIs', () => {
   it('returns no-matching-rule when nothing matches', () => {
     const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
 
-    expect(permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read')).toEqual({
+    expect(explainDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', 'read')).toEqual({
       allowed: false,
       reason: 'no-matching-rule',
     });
@@ -384,12 +442,12 @@ describe('ward: allowedActions', () => {
       { action: 'delete', effect: 'deny', resource: 'posts', role: ['editor'] },
     ]);
 
-    expect(permit.allowedActions({ id: 'u1', roles: ['viewer'] }, 'posts', ['read', 'update', 'delete'])).toEqual([
-      'read',
-    ]);
-    expect(permit.allowedActions({ id: 'u2', roles: ['editor'] }, 'posts', ['read', 'update', 'delete'])).toEqual([
-      'update',
-    ]);
+    expect(
+      allowedActionsDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', ['read', 'update', 'delete']),
+    ).toEqual(['read']);
+    expect(
+      allowedActionsDecision(permit, { id: 'u2', roles: ['editor'] }, 'posts', ['read', 'update', 'delete']),
+    ).toEqual(['update']);
   });
 
   it('resolves wildcard-action rules when knownActions is provided', () => {
@@ -397,7 +455,7 @@ describe('ward: allowedActions', () => {
       { action: WILDCARD, effect: 'allow', resource: 'posts', role: ['admin'] },
     ]);
 
-    expect(permit.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', ['read', 'update'])).toEqual([
+    expect(allowedActionsDecision(permit, { id: 'u1', roles: ['admin'] }, 'posts', ['read', 'update'])).toEqual([
       'read',
       'update',
     ]);
@@ -406,7 +464,7 @@ describe('ward: allowedActions', () => {
   it('returns empty array when knownActions is empty', () => {
     const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: ['admin'] }]);
 
-    expect(permit.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', [])).toEqual([]);
+    expect(allowedActionsDecision(permit, { id: 'u1', roles: ['admin'] }, 'posts', [])).toEqual([]);
   });
 
   it('deduplicates knownActions while preserving order', () => {
@@ -414,10 +472,9 @@ describe('ward: allowedActions', () => {
       { action: WILDCARD, effect: 'allow', resource: 'posts', role: ['admin'] },
     ]);
 
-    expect(permit.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', ['update', 'read', 'update'])).toEqual([
-      'update',
-      'read',
-    ]);
+    expect(
+      allowedActionsDecision(permit, { id: 'u1', roles: ['admin'] }, 'posts', ['update', 'read', 'update']),
+    ).toEqual(['update', 'read']);
   });
 
   it('respects data-dependent rules when data is passed', () => {
@@ -425,10 +482,12 @@ describe('ward: allowedActions', () => {
       { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
     ]);
 
-    expect(permit.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', ['update'], { authorId: 'u1' })).toEqual([
-      'update',
-    ]);
-    expect(permit.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', ['update'], { authorId: 'u2' })).toEqual([]);
+    expect(
+      allowedActionsDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', ['update'], { authorId: 'u1' }),
+    ).toEqual(['update']);
+    expect(
+      allowedActionsDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', ['update'], { authorId: 'u2' }),
+    ).toEqual([]);
   });
 });
 
@@ -445,7 +504,7 @@ describe('ward: rulesInScope', () => {
       { action: 'read', effect: 'allow', resource: 'comments', role: ['viewer'] },
     ]);
 
-    expect(permit.rulesInScope({ id: 'u1', roles: ['viewer', 'blocked'] }, 'posts')).toEqual([
+    expect(rulesInScopeDecision(permit, { id: 'u1', roles: ['viewer', 'blocked'] }, 'posts')).toEqual([
       { action: 'read', effect: 'allow', priority: 0, resource: 'posts', role: ['viewer'] },
       { action: WILDCARD, effect: 'deny', priority: 100, resource: 'posts', role: ['blocked'] },
     ]);
@@ -462,9 +521,9 @@ describe('ward: rulesInScope', () => {
       },
     ]);
 
-    expect(permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts')).toHaveLength(1);
-    expect(permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u1' })).toHaveLength(1);
-    expect(permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u2' })).toEqual([]);
+    expect(rulesInScopeDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts')).toHaveLength(1);
+    expect(rulesInScopeDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u1' })).toHaveLength(1);
+    expect(rulesInScopeDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u2' })).toEqual([]);
   });
 
   it('returns anonymous rules in scope for a null principal', () => {
@@ -473,7 +532,7 @@ describe('ward: rulesInScope', () => {
       { action: 'read', effect: 'allow', resource: 'posts', role: WILDCARD },
     ]);
 
-    expect(permit.rulesInScope(null, 'posts')).toEqual([
+    expect(rulesInScopeDecision(permit, null, 'posts')).toEqual([
       { action: 'read', effect: 'allow', priority: 0, resource: 'posts', role: [ANONYMOUS] },
     ]);
   });
@@ -484,8 +543,8 @@ describe('ward: rulesInScope', () => {
       { action: 'update', effect: 'allow', resource: 'posts', role: 'editor', when: neverTrue },
     ]);
 
-    const withoutData = permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts');
-    const withData = permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'other' });
+    const withoutData = rulesInScopeDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts');
+    const withData = rulesInScopeDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'other' });
 
     expect(withoutData).toHaveLength(1);
     expect(withData).toHaveLength(0);
@@ -496,8 +555,8 @@ describe('ward: rulesInScope', () => {
       { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer', 'editor'] },
     ]);
 
-    expect(permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts')).toHaveLength(1);
-    expect(permit.rulesInScope({ id: 'u2', roles: ['admin'] }, 'posts')).toHaveLength(0);
+    expect(rulesInScopeDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts')).toHaveLength(1);
+    expect(rulesInScopeDecision(permit, { id: 'u2', roles: ['admin'] }, 'posts')).toHaveLength(0);
   });
 });
 
@@ -514,7 +573,7 @@ describe('ward: bound view', () => {
 
     const bound = permit.forUser({ id: 'u1', roles: ['viewer'] });
 
-    expect(bound.explain('posts', 'read').allowed).toBe(true);
+    expect(boundExplain(bound, 'posts', 'read').allowed).toBe(true);
     expect(
       bound
         .checkAll([
@@ -531,7 +590,7 @@ describe('ward: bound view', () => {
         ])
         .some((d) => d.allowed),
     ).toBe(true);
-    expect(bound.explain('posts', 'update')).toEqual({
+    expect(boundExplain(bound, 'posts', 'update')).toEqual({
       allowed: false,
       reason: 'explicit-deny',
       rule: { action: 'update', effect: 'deny', priority: 0, resource: 'posts', role: ['viewer'] },
@@ -567,7 +626,7 @@ describe('ward: bound view', () => {
       },
     ]);
 
-    expect(bound.rulesInScope('posts')).toEqual([
+    expect(boundRulesInScope(bound, 'posts')).toEqual([
       { action: 'read', effect: 'allow', priority: 0, resource: 'posts', role: ['viewer'] },
       { action: 'update', effect: 'deny', priority: 0, resource: 'posts', role: ['viewer'] },
     ]);
@@ -581,7 +640,7 @@ describe('ward: bound view', () => {
 
     const bound = permit.forUser({ id: 'u1', roles: ['viewer'] });
 
-    expect(bound.allowedActions('posts', ['read', 'update', 'delete'])).toEqual(['read']);
+    expect(boundAllowedActions(bound, 'posts', ['read', 'update', 'delete'])).toEqual(['read']);
   });
 
   it('snapshots principal roles and attributes at bind time', () => {
@@ -606,7 +665,7 @@ describe('ward: bound view', () => {
     principal.roles.push('blocked');
     principal.attributes.tier = 'free';
 
-    expect(bound.explain('premium-content', 'read').allowed).toBe(true);
+    expect(boundExplain(bound, 'premium-content', 'read').allowed).toBe(true);
   });
 
   it('does not expose forUser on BoundWard', () => {
@@ -629,7 +688,7 @@ describe('ward: logger behavior', () => {
       logger: (context) => calls.push(context),
     });
 
-    permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read', { trace: 'x' } as any);
+    explainDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read', { trace: 'x' } as any);
 
     expect(calls[0].allowed).toBe(true);
     expect(calls[0].action).toBe('read');
@@ -654,9 +713,9 @@ describe('ward: logger behavior', () => {
 
     const principal = { id: 'u1', roles: ['viewer'] };
 
-    permit.explain(principal, 'posts', 'read'); // allow
-    permit.explain(principal, 'posts', 'update'); // explicit-deny
-    permit.explain(principal, 'posts', 'delete' as any); // no-matching-rule
+    explainDecision(permit, principal, 'posts', 'read'); // allow
+    explainDecision(permit, principal, 'posts', 'update'); // explicit-deny
+    explainDecision(permit, principal, 'posts', 'delete' as any); // no-matching-rule
 
     expect(calls[0].allowed).toBe(true);
     expect(calls[1].allowed).toBe(false);
@@ -704,8 +763,8 @@ describe('ward: logger behavior', () => {
       },
     );
 
-    permit.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', ['read', 'delete']);
-    permit.rulesInScope({ id: 'u1', roles: ['viewer'] }, 'posts');
+    allowedActionsDecision(permit, { id: 'u1', roles: ['admin'] }, 'posts', ['read', 'delete']);
+    rulesInScopeDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts');
 
     expect(calls).toEqual([]);
   });
@@ -795,7 +854,7 @@ describe('ward: predicate error propagation', () => {
       },
     ]);
 
-    expect(() => permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read', { id: 'u1' })).toThrow(
+    expect(() => explainDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', 'read', { id: 'u1' })).toThrow(
       'Rule[0] threw: predicate exploded',
     );
   });
@@ -816,7 +875,7 @@ describe('ward: predicate error propagation', () => {
     let caught: unknown;
 
     try {
-      permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read', { id: 'u1' });
+      explainDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', 'read', { id: 'u1' });
     } catch (e) {
       caught = e;
     }
@@ -855,10 +914,10 @@ describe('ward: predicate error propagation', () => {
       },
     ]);
 
-    expect(() => permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read')).toThrow(
+    expect(() => explainDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', 'read')).toThrow(
       'Rule[0] threw: Rule[0] when() returned a Promise',
     );
-    expect(() => permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read')).toThrow(WardPredicateError);
+    expect(() => explainDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', 'read')).toThrow(WardPredicateError);
   });
 
   it('rejects async predicates in checkAll() with WardPredicateError', () => {
@@ -907,7 +966,7 @@ describe('ward: bound view snapshot depth', () => {
 
     (principal.attributes.config as Record<string, unknown>).enabled = false;
 
-    expect(bound.explain('docs', 'read').allowed).toBe(true);
+    expect(boundExplain(bound, 'docs', 'read').allowed).toBe(true);
   });
 
   it('does not reflect shallow attribute replacement after forUser binding', () => {
@@ -931,7 +990,7 @@ describe('ward: bound view snapshot depth', () => {
 
     principal.attributes.tier = 'free';
 
-    expect(bound.explain('docs', 'read').allowed).toBe(true);
+    expect(boundExplain(bound, 'docs', 'read').allowed).toBe(true);
   });
 });
 
@@ -968,7 +1027,7 @@ describe('ward: allowedActions with null principal', () => {
       { action: WILDCARD, effect: 'allow', resource: 'docs', role: ANONYMOUS },
     ]);
 
-    expect(permit.allowedActions(null, 'docs', ['read', 'write'])).toEqual(['read', 'write']);
+    expect(allowedActionsDecision(permit, null, 'docs', ['read', 'write'])).toEqual(['read', 'write']);
   });
 
   it('returns empty array for null principal when no ANONYMOUS rules exist', () => {
@@ -976,7 +1035,7 @@ describe('ward: allowedActions with null principal', () => {
       { action: 'read', effect: 'allow', resource: 'docs', role: ['viewer'] },
     ]);
 
-    expect(permit.allowedActions(null, 'docs', ['read', 'write'])).toEqual([]);
+    expect(allowedActionsDecision(permit, null, 'docs', ['read', 'write'])).toEqual([]);
   });
 });
 
@@ -984,7 +1043,7 @@ describe('ward: rulesInScope with wildcard resource', () => {
   it('includes a wildcard-resource rule in scope for any resource', () => {
     const permit = createWard([{ action: 'read', effect: 'allow', resource: WILDCARD, role: ['admin'] }]);
 
-    const scope = permit.rulesInScope({ id: 'u1', roles: ['admin'] }, 'anything');
+    const scope = rulesInScopeDecision(permit, { id: 'u1', roles: ['admin'] }, 'anything');
 
     expect(scope).toHaveLength(1);
     expect(scope[0].resource).toBe(WILDCARD);
@@ -993,7 +1052,7 @@ describe('ward: rulesInScope with wildcard resource', () => {
   it('does not include a wildcard-resource rule in scope for a principal without the required role', () => {
     const permit = createWard([{ action: 'read', effect: 'allow', resource: WILDCARD, role: ['admin'] }]);
 
-    const scope = permit.rulesInScope({ id: 'u1', roles: ['viewer'] }, 'anything');
+    const scope = rulesInScopeDecision(permit, { id: 'u1', roles: ['viewer'] }, 'anything');
 
     expect(scope).toHaveLength(0);
   });
@@ -1007,7 +1066,7 @@ describe('ward: explain preserves the when predicate in the returned rule', () =
       { action: 'edit', effect: 'allow', resource: 'posts', role: ['user'], when: isOwner },
     ]);
 
-    const decision = permit.explain({ id: 'u1', roles: ['user'] }, 'posts', 'edit', { ownerId: 'u1' });
+    const decision = explainDecision(permit, { id: 'u1', roles: ['user'] }, 'posts', 'edit', { ownerId: 'u1' });
 
     expect(decision.allowed).toBe(true);
 
@@ -1022,7 +1081,7 @@ describe('ward: returned decision.rule is frozen', () => {
   it('returned rules are frozen objects — mutations throw TypeError in strict mode', () => {
     const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
 
-    const decision = permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+    const decision = explainDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
     expect(decision.allowed).toBe(true);
 
@@ -1040,8 +1099,8 @@ describe('ward: returned decision.rule is frozen', () => {
     const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
     const principal = { id: 'u1', roles: ['viewer'] };
 
-    const a = permit.explain(principal, 'posts', 'read');
-    const b = permit.explain(principal, 'posts', 'read');
+    const a = explainDecision(permit, principal, 'posts', 'read');
+    const b = explainDecision(permit, principal, 'posts', 'read');
 
     // Same frozen object reference (no clone on every call)
     expect(a.allowed && b.allowed && a.rule === b.rule).toBe(true);
@@ -1266,7 +1325,7 @@ describe('ward: trace', () => {
   it('returns decision and empty candidates when no rules match', () => {
     const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }]);
 
-    const trace = permit.trace({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
+    const trace = traceDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', 'read');
 
     expect(trace.decision).toEqual({ allowed: false, reason: 'no-matching-rule' });
     expect(trace.candidates).toHaveLength(0);
@@ -1275,7 +1334,7 @@ describe('ward: trace', () => {
   it('returns one candidate marked won when a single rule matches', () => {
     const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }]);
 
-    const trace = permit.trace({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+    const trace = traceDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
     expect(trace.decision).toEqual({ allowed: true, rule: expect.objectContaining({ role: ['viewer'] }) });
     expect(trace.candidates).toHaveLength(1);
@@ -1288,7 +1347,7 @@ describe('ward: trace', () => {
       { action: 'read', effect: 'deny', priority: 10, resource: 'posts', role: 'viewer' },
     ]);
 
-    const trace = permit.trace({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+    const trace = traceDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
     expect(trace.candidates).toHaveLength(2);
 
@@ -1304,7 +1363,7 @@ describe('ward: trace', () => {
       { action: 'read', effect: 'allow', priority: 5, resource: 'posts', role: 'viewer' },
     ]);
 
-    const trace = permit.trace({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+    const trace = traceDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
     expect(trace.candidates[0].priority).toBe(5);
     expect(typeof trace.candidates[0].score).toBe('number');
@@ -1316,7 +1375,7 @@ describe('ward: trace', () => {
     const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }]);
 
     const bound = permit.forUser({ id: 'u1', roles: ['viewer'] });
-    const trace = bound.trace('posts', 'read');
+    const trace = boundTrace(bound, 'posts', 'read');
 
     expect(trace.decision.allowed).toBe(true);
     expect(trace.candidates).toHaveLength(1);
@@ -1329,7 +1388,7 @@ describe('ward: trace', () => {
       logger: (ctx) => calls.push(ctx),
     });
 
-    permit.trace({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+    traceDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
     expect(calls).toHaveLength(0);
   });
@@ -1341,7 +1400,7 @@ describe('ward: trace', () => {
       logger: (ctx) => calls.push(ctx),
     });
 
-    permit.trace({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
+    traceDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', 'read');
 
     expect(calls).toHaveLength(0);
   });
@@ -1353,7 +1412,7 @@ describe('ward: trace', () => {
     ];
 
     const permit = createWard(rules);
-    const { candidates } = permit.trace({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+    const { candidates } = traceDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
     expect(candidates).toHaveLength(2);
     expect(candidates[0].index).toBe(0);
@@ -1478,7 +1537,7 @@ describe('ward: predicate throws non-Error value', () => {
       },
     ]);
 
-    expect(() => permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read', undefined)).toThrow(
+    expect(() => explainDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', 'read', undefined)).toThrow(
       'Rule[0] threw: not-an-error-object',
     );
   });
@@ -1496,7 +1555,7 @@ describe('ward: predicate throws non-Error value', () => {
       },
     ]);
 
-    expect(() => permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read', undefined)).toThrow(
+    expect(() => explainDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', 'read', undefined)).toThrow(
       'Rule[0] threw: 42',
     );
   });
@@ -1561,7 +1620,7 @@ describe('ward: first-in-array wins on absolute tie', () => {
     ]);
 
     // Will be flagged as duplicate — but the first one wins the decision
-    const decision = permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+    const decision = explainDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
     expect(decision.allowed).toBe(true);
 
@@ -1617,7 +1676,11 @@ describe('ward: allowedActions', () => {
       { action: 'delete', effect: 'deny', resource: 'posts', role: ['editor'] },
     ]);
 
-    const allowed = permit.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update', 'delete']);
+    const allowed = allowedActionsDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', [
+      'read',
+      'update',
+      'delete',
+    ]);
 
     expect(allowed).toEqual(['read', 'update']);
   });
@@ -1628,7 +1691,7 @@ describe('ward: allowedActions', () => {
       { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
     ]);
 
-    const allowed = permit.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update'], {
+    const allowed = allowedActionsDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update'], {
       authorId: 'u1',
     });
 
@@ -1642,7 +1705,7 @@ describe('ward: allowedActions', () => {
       { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
     ]);
 
-    const allowed = permit.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update'], {
+    const allowed = allowedActionsDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update'], {
       authorId: 'u2',
     });
 
@@ -1660,7 +1723,7 @@ describe('ward: rulesInScope predicate interaction', () => {
       { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
     ]);
 
-    const rules = permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts');
+    const rules = rulesInScopeDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts');
 
     expect(rules).toHaveLength(1);
   });
@@ -1670,8 +1733,8 @@ describe('ward: rulesInScope predicate interaction', () => {
       { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
     ]);
 
-    const match = permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u1' });
-    const noMatch = permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u2' });
+    const match = rulesInScopeDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u1' });
+    const noMatch = rulesInScopeDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u2' });
 
     expect(match).toHaveLength(1);
     expect(noMatch).toHaveLength(0);
@@ -1712,7 +1775,7 @@ describe('ward: trace with zero matching rules', () => {
   it('returns empty candidates and no-matching-rule decision when nothing matches', () => {
     const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
 
-    const result = permit.trace({ id: 'u1', roles: ['admin'] }, 'posts', 'read');
+    const result = traceDecision(permit, { id: 'u1', roles: ['admin'] }, 'posts', 'read');
 
     expect(result.candidates).toHaveLength(0);
     expect(result.decision).toEqual({ allowed: false, reason: 'no-matching-rule' });
@@ -1724,7 +1787,7 @@ describe('ward: trace with zero matching rules', () => {
       { action: 'read', effect: 'deny', priority: 1, resource: 'posts', role: ['viewer'] },
     ]);
 
-    const result = permit.trace({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+    const result = traceDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
     expect(result.candidates).toHaveLength(2);
 
@@ -1746,12 +1809,12 @@ describe('ward: forUser snapshot isolation', () => {
     const principal = { id: 'u1', roles: ['viewer'] };
     const bound = permit.forUser(principal);
 
-    expect(bound.explain('posts', 'read').allowed).toBe(true);
+    expect(boundExplain(bound, 'posts', 'read').allowed).toBe(true);
 
     // Mutate original — bound view should still use snapshot ['viewer']
     (principal.roles as string[]).length = 0;
 
-    expect(bound.explain('posts', 'read').allowed).toBe(true);
+    expect(boundExplain(bound, 'posts', 'read').allowed).toBe(true);
   });
 
   it('mutating principal.attributes after forUser does not affect bound view', () => {
@@ -1768,12 +1831,12 @@ describe('ward: forUser snapshot isolation', () => {
     const principal = { attributes: { level: 5 }, id: 'u1', roles: ['editor'] };
     const bound = permit.forUser(principal);
 
-    expect(bound.explain('posts', 'update').allowed).toBe(true);
+    expect(boundExplain(bound, 'posts', 'update').allowed).toBe(true);
 
     // Mutate original attributes — bound snapshot was deep-cloned
     principal.attributes.level = 0;
 
-    expect(bound.explain('posts', 'update').allowed).toBe(true);
+    expect(boundExplain(bound, 'posts', 'update').allowed).toBe(true);
   });
 });
 
@@ -1815,8 +1878,8 @@ describe('ward: BoundWard.trace() with predicate data', () => {
 
     const bound = permit.forUser({ id: 'u1', roles: ['editor'] });
 
-    const matchTrace = bound.trace('posts', 'update', { authorId: 'u1' });
-    const noMatchTrace = bound.trace('posts', 'update', { authorId: 'u2' });
+    const matchTrace = boundTrace(bound, 'posts', 'update', { authorId: 'u1' });
+    const noMatchTrace = boundTrace(bound, 'posts', 'update', { authorId: 'u2' });
 
     expect(matchTrace.decision.allowed).toBe(true);
     expect(matchTrace.candidates).toHaveLength(1);

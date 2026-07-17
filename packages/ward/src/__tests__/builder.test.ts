@@ -56,10 +56,28 @@ describe('ward: ruleFor factory', () => {
       }),
     ]);
 
-    expect(ward.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read').allowed).toBe(true);
-    expect(ward.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'update').allowed).toBe(false);
-    expect(ward.explain({ id: 'u2', roles: ['editor'] }, 'posts', 'update', { authorId: 'u2' }).allowed).toBe(true);
-    expect(ward.explain({ id: 'u2', roles: ['editor'] }, 'posts', 'update', { authorId: 'u3' }).allowed).toBe(false);
+    expect(
+      ward.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts' }).allowed,
+    ).toBe(true);
+    expect(
+      ward.explain({ action: 'update', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts' }).allowed,
+    ).toBe(false);
+    expect(
+      ward.explain({
+        action: 'update',
+        data: { authorId: 'u2' },
+        principal: { id: 'u2', roles: ['editor'] },
+        resource: 'posts',
+      }).allowed,
+    ).toBe(true);
+    expect(
+      ward.explain({
+        action: 'update',
+        data: { authorId: 'u3' },
+        principal: { id: 'u2', roles: ['editor'] },
+        resource: 'posts',
+      }).allowed,
+    ).toBe(false);
   });
 
   it('priority option sets the priority field on all produced rules', () => {
@@ -108,8 +126,12 @@ describe('ward: allow factory', () => {
   it('works correctly inside createWard', () => {
     const ward = createWard([...allow('viewer', 'posts', ['read']), ...deny('viewer', 'posts', ['delete'])]);
 
-    expect(ward.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read').allowed).toBe(true);
-    expect(ward.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete').allowed).toBe(false);
+    expect(
+      ward.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts' }).allowed,
+    ).toBe(true);
+    expect(
+      ward.explain({ action: 'delete', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts' }).allowed,
+    ).toBe(false);
   });
 });
 

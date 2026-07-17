@@ -1,81 +1,75 @@
 # @vielzeug/ward
 
-> Minimal authorization engine with deterministic precedence, wildcard support, and runtime predicates.
-
-[![npm version](https://img.shields.io/npm/v/@vielzeug/ward)](https://www.npmjs.com/package/@vielzeug/ward) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<details>
-<summary>Quick Reference</summary>
-
-**Package:** `@vielzeug/ward` &nbsp;·&nbsp; **Category:** Auth
-
-**Key exports:** `createWard`, `allow`, `deny`, `predicate`, `owns`, `matchesPattern`, `patternCovers`, `guardRequest`, `guardRequestWith`, `WardPredicateError`, `WILDCARD`, `ANONYMOUS`
-
-**When to use:** Minimal authorization engine with deterministic precedence, wildcard support, and runtime predicates.
-
-**Related:** [@vielzeug/rune](https://vielzeug.dev/rune/) · [@vielzeug/wayfinder](https://vielzeug.dev/wayfinder/) · [@vielzeug/conduit](https://vielzeug.dev/conduit/)
-
-</details>
-
-`@vielzeug/ward` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+Minimal authorization engine with deterministic precedence, wildcard support, and runtime predicates.
 
 ## Installation
 
 ```sh
 pnpm add @vielzeug/ward
-npm install @vielzeug/ward
-yarn add @vielzeug/ward
 ```
 
 ## Quick Start
 
 ```ts
-import { ANONYMOUS, WILDCARD, allow, createWard, deny, predicate } from '@vielzeug/ward';
+import { ANONYMOUS, WILDCARD, allow, createWard, deny, owns } from '@vielzeug/ward';
 
 const ward = createWard<'read' | 'update', { authorId: string }>([
-  // Multi-role rule: viewer and editor can both read
-  ...allow(['viewer', 'editor'], 'posts', ['read']),
-  // Editor can update their own posts (ownership predicate)
-  ...allow('editor', 'posts', ['update'], { when: predicate.owns('authorId') }),
-  // High-priority deny overrides any allow rule for blocked principals
+  ...allow([ANONYMOUS, 'viewer'], 'posts', ['read']),
+  ...allow('editor', 'posts', ['update'], { when: owns('authorId') }),
   ...deny('blocked', WILDCARD, [WILDCARD], { priority: 100 }),
-  // Anonymous visitors can read posts
-  ...allow(ANONYMOUS, 'posts', ['read']),
 ]);
 
 const principal = { id: 'u1', roles: ['editor'] };
 
-// Full decision object — narrow on .allowed for type-safe access
-const decision = ward.explain(principal, 'posts', 'update', { authorId: 'u2' });
-if (!decision.allowed) console.log(decision.reason); // 'no-matching-rule' | 'explicit-deny'
+const decision = ward.explain({
+  principal,
+  resource: 'posts',
+  action: 'update',
+  data: { authorId: 'u2' },
+});
 
-// Batch decisions across multiple resources/actions in one call
-const results = ward.checkAll(principal, [
+const batch = ward.checkAll(principal, [
   { resource: 'posts', action: 'read' },
   { resource: 'posts', action: 'update', data: { authorId: 'u1' } },
 ]);
 
-// Decision trace — candidates with index, score, priority, won (no logger fired)
-const trace = ward.trace(principal, 'posts', 'update', { authorId: 'u2' });
-trace.candidates.forEach((c) => console.log(`Rule[${c.index}]`, c.rule.effect, c.score, c.won));
+const trace = ward.trace({
+  principal,
+  resource: 'posts',
+  action: 'update',
+  data: { authorId: 'u2' },
+});
 
-// Principal-bound view — principal is snapshotted at bind time
 const bound = ward.forUser(principal);
-bound.allowedActions('posts', ['read', 'update', 'delete']);
-bound.explain('posts', 'update', { authorId: 'u2' });
-
-// Conflict detection — O(n²), lazy + cached
-const conflicts = ward.detectConflicts();
-if (conflicts.length > 0) console.warn('Policy conflicts:', conflicts);
+bound.allowedActions({ resource: 'posts', knownActions: ['read', 'update', 'delete'] as const });
+bound.explain({ resource: 'posts', action: 'update', data: { authorId: 'u2' } });
 ```
 
-## Documentation
+## Middleware Guards
 
-- [Overview](https://vielzeug.dev/ward/)
-- [Usage Guide](https://vielzeug.dev/ward/usage)
-- [API Reference](https://vielzeug.dev/ward/api)
-- [Examples](https://vielzeug.dev/ward/examples)
+```ts
+import { guardRequest, guardRequestWith } from '@vielzeug/ward';
 
-## License
+const direct = guardRequest({
+  ward,
+  principal,
+  resource: 'posts',
+  action: 'read',
+});
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+const withExtractor = await guardRequestWith({
+  ward,
+  req,
+  extractPrincipal: async (request) => request.user ?? null,
+  resource: 'posts',
+  action: 'read',
+});
+```
+
+## API Notes
+
+1. `explain()` and `trace()` take object inputs: `{ principal, resource, action, data? }`.
+2. `allowedActions()` takes `{ principal, resource, knownActions, data? }`.
+3. `rulesInScope()` takes `{ principal, resource, data? }`.
+4. `BoundWard` methods use object inputs without `principal`.
+5. `trace()` does not call the logger; `explain()` and `checkAll()` do.

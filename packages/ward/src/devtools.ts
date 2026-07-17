@@ -27,10 +27,10 @@ import { createWard } from './factory';
  * import { debugWard } from '@vielzeug/ward/devtools';
  *
  * const permit = debugWard(rules);
- * permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+ * permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts' });
  * // [ward:decision] allow            (allow)  viewer  posts  read
  *
- * permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete');
+ * permit.explain({ action: 'delete', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts' });
  * // [ward:decision] no-matching-rule          viewer  posts  delete
  *
  * // Note: `trace()` does NOT fire the logger — it is a side-channel-free inspection tool.

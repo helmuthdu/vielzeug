@@ -46,16 +46,26 @@ describe('ward: hierarchical resource patterns in rules', () => {
   it('a namespace-wildcard rule matches concrete resource IDs', () => {
     const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts:*', role: 'viewer' }]);
 
-    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts:123', 'read').allowed).toBe(true);
-    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts:draft:1', 'read').allowed).toBe(true);
-    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'comments:1', 'read').allowed).toBe(false);
+    expect(
+      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts:123' }).allowed,
+    ).toBe(true);
+    expect(
+      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts:draft:1' }).allowed,
+    ).toBe(true);
+    expect(
+      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'comments:1' }).allowed,
+    ).toBe(false);
   });
 
   it('exact resource rule does not match namespace-wildcard resource', () => {
     const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }]);
 
-    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read').allowed).toBe(true);
-    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts:123', 'read').allowed).toBe(false);
+    expect(
+      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts' }).allowed,
+    ).toBe(true);
+    expect(
+      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts:123' }).allowed,
+    ).toBe(false);
   });
 
   it('namespace wildcard and global wildcard interact with specificity', () => {
@@ -66,9 +76,13 @@ describe('ward: hierarchical resource patterns in rules', () => {
     ]);
 
     // posts:123 matches both rules; posts:* is more specific, deny wins
-    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts:123', 'read').allowed).toBe(false);
+    expect(
+      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts:123' }).allowed,
+    ).toBe(false);
     // other resources only match the wildcard rule — allow
-    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'comments:1', 'read').allowed).toBe(true);
+    expect(
+      permit.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'comments:1' }).allowed,
+    ).toBe(true);
   });
 
   it('rulesInScope returns namespace-wildcard rules for matching resources', () => {
@@ -77,9 +91,11 @@ describe('ward: hierarchical resource patterns in rules', () => {
       { action: 'read', effect: 'allow', resource: 'comments', role: 'viewer' },
     ]);
 
-    expect(permit.rulesInScope({ id: 'u1', roles: ['viewer'] }, 'posts:123')).toHaveLength(1);
-    expect(permit.rulesInScope({ id: 'u1', roles: ['viewer'] }, 'posts:123')[0].resource).toBe('posts:*');
-    expect(permit.rulesInScope({ id: 'u1', roles: ['viewer'] }, 'comments')).toHaveLength(1);
+    expect(permit.rulesInScope({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts:123' })).toHaveLength(1);
+    expect(permit.rulesInScope({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts:123' })[0].resource).toBe(
+      'posts:*',
+    );
+    expect(permit.rulesInScope({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'comments' })).toHaveLength(1);
   });
 });
 

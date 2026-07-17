@@ -27,8 +27,9 @@
  * `.ts` file's typechecking depends on `lib/cli.d.mts` staying in sync for zero real benefit.
  */
 
+import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
@@ -39,6 +40,23 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export const ROOT = join(__dirname, '..');
 export const PACKAGES_DIR = join(ROOT, 'packages');
 const OUTPUT_FILE = join(ROOT, 'docs/.vitepress/theme/components/repl/registry.generated.ts');
+const BUILT_PACKAGES = new Set<string>();
+
+function maybeBuildPackage(pkg: string, packagesDir: string): void {
+  // Only auto-build against the real monorepo packages/ path. Fixture trees used by tests
+  // should keep the current explicit "missing dist file" failure behavior.
+  if (resolve(packagesDir) !== resolve(PACKAGES_DIR) || BUILT_PACKAGES.has(pkg)) {
+    return;
+  }
+
+  BUILT_PACKAGES.add(pkg);
+
+  try {
+    execSync(`pnpm --filter @vielzeug/${pkg} build`, { cwd: ROOT, stdio: 'inherit' });
+  } catch (error) {
+    throw new Error(`Failed to build @vielzeug/${pkg} while generating REPL registry.`, { cause: error });
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Global variable name + dependency order, parsed from each package's vite.bundle.config.ts
@@ -195,7 +213,13 @@ export function readDistFile(pkg: string, relativePath: string, packagesDir = PA
   const path = join(packagesDir, pkg, 'dist', relativePath);
 
   if (!existsSync(path)) {
-    throw new Error(`Missing ${path}. Run "pnpm --filter @vielzeug/${pkg} build" first.`);
+    maybeBuildPackage(pkg, packagesDir);
+  }
+
+  if (!existsSync(path)) {
+    throw new Error(
+      `Missing ${path}. Run "pnpm --filter @vielzeug/${pkg} build" first, or rerun docs:dev to auto-build it.`,
+    );
   }
 
   return readFileSync(path, 'utf8');
@@ -207,7 +231,13 @@ export function extractApi(pkg: string, packagesDir = PACKAGES_DIR): ExtractedAp
   // Fail fast with a clear message before handing this to the compiler — ts.createProgram()
   // would otherwise report a missing entry point through a much less friendly diagnostic.
   if (!existsSync(entry)) {
-    throw new Error(`Missing ${entry}. Run "pnpm --filter @vielzeug/${pkg} build" first.`);
+    maybeBuildPackage(pkg, packagesDir);
+  }
+
+  if (!existsSync(entry)) {
+    throw new Error(
+      `Missing ${entry}. Run "pnpm --filter @vielzeug/${pkg} build" first, or rerun docs:dev to auto-build it.`,
+    );
   }
 
   const program = ts.createProgram([entry], {
