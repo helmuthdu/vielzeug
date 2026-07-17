@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add scoped spell overrides and async variant parsing",
+      "packageName": "@vielzeug/spell",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/spell"
+}

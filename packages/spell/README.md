@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/spell` &nbsp;·&nbsp; **Category:** Validation
 
-**Key exports:** `s`, `SpellValidationError`, `setMessages`, `setLogger`, `resetMessages`, `ErrorCode`, `errorsAt`, `descriptorToJsonSchema`
+**Key exports:** `s`, `SpellValidationError`, `setMessages`, `setLogger`, `resetMessages`, `createParseContext`, `withMessages`, `withLogger`, `ErrorCode`, `errorsAt`, `descriptorToJsonSchema`
 
 **When to use:** Zero-dependency schema validation library with strict-by-default objects, async refinements, coercion, flexible schema composition, and full TypeScript inference.
 

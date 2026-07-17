@@ -27,7 +27,16 @@ export {
   prependIssuePath,
 } from './core';
 
-export { resetMessages, setLogger, setMessages, type DeepPartial, type Logger } from './messages';
+export {
+  createParseContext,
+  resetMessages,
+  setLogger,
+  setMessages,
+  withLogger,
+  withMessages,
+  type DeepPartial,
+  type Logger,
+} from './messages';
 
 export { descriptorToJsonSchema, schemaToJsonSchema } from './json-schema';
 

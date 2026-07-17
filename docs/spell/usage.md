@@ -139,7 +139,7 @@ const Signup = s.object({ confirm: s.string(), password: s.string() }).validate(
 });
 ```
 
-Async rules work in the same method. Spell awaits them only in `parseAsync()` — async callbacks passed to `validate()` are silently skipped in synchronous `parse()`.
+Async rules work in the same method. Spell awaits them in `parseAsync()`, including nested schemas (for example inside `s.variant(...)` branches). Async callbacks passed to `validate()` are still skipped in synchronous `parse()`.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -242,7 +242,7 @@ Descriptors are serializable snapshots of the schema structure. Use `toDescripto
 
 ## Messages
 
-Use `setMessages()` to replace the active validation message catalog. Each call replaces the current overrides — it does not accumulate.
+Use `setMessages()` to replace the active validation message catalog globally. Each call replaces the current overrides — it does not accumulate.
 
 ```ts
 import { resetMessages, setMessages } from '@vielzeug/spell';
@@ -268,6 +268,35 @@ import { setLogger } from '@vielzeug/spell';
 
 setLogger(null); // silence
 setLogger((msg) => myLogger.warn(msg)); // redirect
+```
+
+Use `createParseContext()` when you need request-scoped message overrides without mutating global state.
+
+```ts
+import { createParseContext, s } from '@vielzeug/spell';
+
+const User = s.object({ email: s.string().email() });
+
+User.safeParse(
+  { email: 'ada@example.com', extra: true },
+  createParseContext({ object: { invalidKeys: () => 'No unknown keys in this endpoint' } }),
+);
+```
+
+Use `withMessages()` / `withLogger()` to apply temporary global overrides inside a bounded sync or async callback.
+
+```ts
+import { s, withLogger, withMessages } from '@vielzeug/spell';
+
+const Email = s.string().email();
+
+await withMessages({ string: { email: () => 'Scoped email' } }, async () => {
+  Email.safeParse('bad'); // issue message uses "Scoped email"
+});
+
+withLogger((msg) => myLogger.warn(msg), () => {
+  s.string().regex(/^a$/).regex(/^b$/);
+});
 ```
 
 To integrate with `@vielzeug/lingua`, call `setMessages()` from your locale change callback:

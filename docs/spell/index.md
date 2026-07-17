@@ -16,8 +16,11 @@ exports:
     fail,
     descriptorToJsonSchema,
     schemaToJsonSchema,
+    createParseContext,
     setMessages,
     setLogger,
+    withMessages,
+    withLogger,
     resetMessages,
     prependIssuePath,
   ]

@@ -1,3 +1,5 @@
+import type { ParseContext } from './types';
+
 import { warn as _warnFn } from './_dev';
 import { cloneRecord, defineOwnProperty, isUnsafeObjectKey } from './safe-object';
 
@@ -287,7 +289,8 @@ function mergeMessages<T extends Record<string, unknown>>(base: T, patch: DeepPa
 
 /**
  * Override any subset of the default validation messages globally.
- * Merges deeply into the current active messages — call again to update.
+ * Each call starts from built-ins and applies the provided deep overrides.
+ * It does not accumulate previous overrides.
  *
  * For locale integration (e.g. with \@vielzeug/lingua), call this inside
  * your locale-change handler:
@@ -310,6 +313,74 @@ export function setLogger(logger: Logger | null): void {
 /** Reset all messages to the built-in defaults. */
 export function resetMessages(): void {
   _activeMessages = _builtinMessages;
+}
+
+/**
+ * Creates a parse context with request-scoped message overrides.
+ * Does not mutate global message state.
+ */
+export function createParseContext(messages?: DeepPartial<Messages>): ParseContext {
+  if (messages === undefined) return { messages: _activeMessages };
+
+  return { messages: mergeMessages(_activeMessages, messages) };
+}
+
+/**
+ * Runs a callback with temporary global message overrides, then restores the previous state.
+ * Supports both sync and async callbacks.
+ */
+export function withMessages<T>(messages: DeepPartial<Messages>, run: () => T): T;
+export function withMessages<T>(messages: DeepPartial<Messages>, run: () => Promise<T>): Promise<T>;
+export function withMessages<T>(messages: DeepPartial<Messages>, run: () => T | Promise<T>): T | Promise<T> {
+  const previous = _activeMessages;
+
+  _activeMessages = mergeMessages(_builtinMessages, messages);
+
+  try {
+    const result = run();
+
+    if (result instanceof Promise) {
+      return result.finally(() => {
+        _activeMessages = previous;
+      });
+    }
+
+    _activeMessages = previous;
+
+    return result;
+  } catch (error) {
+    _activeMessages = previous;
+    throw error;
+  }
+}
+
+/**
+ * Runs a callback with a temporary logger override, then restores the previous logger.
+ * Supports both sync and async callbacks.
+ */
+export function withLogger<T>(logger: Logger | null, run: () => T): T;
+export function withLogger<T>(logger: Logger | null, run: () => Promise<T>): Promise<T>;
+export function withLogger<T>(logger: Logger | null, run: () => T | Promise<T>): T | Promise<T> {
+  const previous = _logger;
+
+  _logger = logger ?? (() => {});
+
+  try {
+    const result = run();
+
+    if (result instanceof Promise) {
+      return result.finally(() => {
+        _logger = previous;
+      });
+    }
+
+    _logger = previous;
+
+    return result;
+  } catch (error) {
+    _logger = previous;
+    throw error;
+  }
 }
 
 /** @internal — returns the active (possibly overridden) message set. */

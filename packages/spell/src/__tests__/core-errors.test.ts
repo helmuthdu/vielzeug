@@ -1,6 +1,17 @@
 import { vi } from 'vitest';
 
-import { errorsAt, prependIssuePath, resetMessages, s, setLogger, setMessages, SpellValidationError } from '../index';
+import {
+  createParseContext,
+  errorsAt,
+  prependIssuePath,
+  resetMessages,
+  s,
+  setLogger,
+  setMessages,
+  SpellValidationError,
+  withLogger,
+  withMessages,
+} from '../index';
 
 describe('SpellValidationError message and shaping', () => {
   it('formats a root-level error with fallback path label', () => {
@@ -260,5 +271,97 @@ describe('setLogger(null) — warning silencing', () => {
 
     expect(logs.length).toBeGreaterThan(0);
     expect(logs[0]).toContain('constructor');
+  });
+});
+
+describe('scoped message/logger helpers', () => {
+  afterEach(() => {
+    resetMessages();
+    setLogger(null);
+  });
+
+  it('createParseContext() applies request-scoped message overrides without mutating global messages', () => {
+    const schema = s.object({ email: s.string().email() });
+    const scoped = createParseContext({ object: { invalidKeys: () => 'Scoped unknown keys' } });
+
+    const scopedResult = schema.safeParse({ email: 'a@b.com', extra: true }, scoped);
+    const globalResult = schema.safeParse({ email: 'a@b.com', extra: true });
+
+    expect(scopedResult.success).toBe(false);
+    expect(globalResult.success).toBe(false);
+
+    if (!scopedResult.success) expect(scopedResult.error.issues[0]!.message).toBe('Scoped unknown keys');
+
+    if (!globalResult.success) expect(globalResult.error.issues[0]!.message).toBe('Unrecognized keys: extra');
+  });
+
+  it('withMessages() scopes global overrides for sync callbacks and restores previous state', () => {
+    const schema = s.string().email();
+
+    const scopedMessage = withMessages({ string: { email: () => 'Scoped email' } }, () => {
+      const result = schema.safeParse('bad');
+
+      if (!result.success) return result.error.issues[0]!.message;
+
+      return '';
+    });
+
+    const after = schema.safeParse('bad');
+
+    expect(scopedMessage).toBe('Scoped email');
+
+    expect(after.success).toBe(false);
+
+    if (!after.success) expect(after.error.issues[0]!.message).toBe('Invalid email address');
+  });
+
+  it('withLogger() scopes logger overrides for sync callbacks and restores previous logger', () => {
+    const captured: string[] = [];
+
+    withLogger(
+      (msg) => captured.push(msg),
+      () => {
+        s.string().regex(/^a$/).regex(/^b$/);
+      },
+    );
+
+    expect(captured.length).toBeGreaterThan(0);
+    expect(captured[0]).toMatch(/multiple \.regex\(\) constraints/i);
+  });
+
+  it('withMessages() restores previous messages after async callbacks', async () => {
+    const schema = s.string().email();
+
+    const scoped = await withMessages({ string: { email: () => 'Scoped async email' } }, async () => {
+      await Promise.resolve();
+
+      const result = schema.safeParse('bad');
+
+      if (!result.success) return result.error.issues[0]!.message;
+
+      return '';
+    });
+
+    const after = schema.safeParse('bad');
+
+    expect(scoped).toBe('Scoped async email');
+    expect(after.success).toBe(false);
+
+    if (!after.success) expect(after.error.issues[0]!.message).toBe('Invalid email address');
+  });
+
+  it('withLogger() restores previous logger after async callbacks', async () => {
+    const captured: string[] = [];
+
+    await withLogger(
+      (msg) => captured.push(msg),
+      async () => {
+        await Promise.resolve();
+        s.string().regex(/^a$/).regex(/^b$/);
+      },
+    );
+
+    expect(captured.length).toBeGreaterThan(0);
+    expect(captured[0]).toMatch(/multiple \.regex\(\) constraints/i);
   });
 });

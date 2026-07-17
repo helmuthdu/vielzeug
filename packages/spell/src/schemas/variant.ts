@@ -1,6 +1,6 @@
 import type { AnySchema, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema } from '../core';
+import { ErrorCode, Schema, SpellValidationError, _makeCtx } from '../core';
 import { SpellError } from '../errors';
 import { _messages } from '../messages';
 import { defineOwnProperty, objectFromEntries } from '../safe-object';
@@ -102,6 +102,30 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     return result.issues.length === 0
       ? { data: result.data, issues: [], typeOk: true }
       : { data: value, issues: result.issues, typeOk: true };
+  }
+
+  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<InferVariantMap<K, M>> {
+    const c = ctx ?? _makeCtx();
+
+    return this._withCatchAsync(async () => {
+      const prepared = this._prepareInput(value);
+
+      if (prepared.skip) return prepared.value as unknown as InferVariantMap<K, M>;
+
+      const resolved = this._resolveVariant(prepared.value, c);
+
+      if ('issues' in resolved) throw new SpellValidationError(resolved.issues);
+
+      const branch = await resolved.matched.safeParseAsync(prepared.value, c);
+
+      if (!branch.success) throw branch.error;
+
+      const validationIssues = await this._runValidatorsAsync(branch.data, c);
+
+      if (validationIssues.length > 0) throw new SpellValidationError(validationIssues);
+
+      return this._runPostprocessors(branch.data) as InferVariantMap<K, M>;
+    });
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
