@@ -135,6 +135,21 @@ describe('createPulse — dispose', () => {
 
     warnSpy.mockRestore();
   });
+
+  it('presence() does not warn for expected aborted auto-join during disposal', async () => {
+    const { pulse } = setup();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const pres = pulse.presence('lobby');
+
+    pulse.dispose();
+    await Promise.resolve();
+
+    expect(pres.disposed).toBe(true);
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("presence() join failed for room 'lobby'"));
+
+    warnSpy.mockRestore();
+  });
 });
 
 describe('createPulse — send / on', () => {
@@ -389,6 +404,57 @@ describe('createPulse — rooms', () => {
     pulse.dispose();
 
     await expect(pulse.join('x')).rejects.toThrow();
+  });
+
+  it('coalesces concurrent join() calls for the same room into a single join frame', async () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+
+    const join1 = pulse.join('lobby');
+    const join2 = pulse.join('lobby');
+
+    const joinFrames = ws.sentMessages.filter((m) => {
+      const parsed = JSON.parse(m) as { room?: string; type: string };
+
+      return parsed.type === 'join' && parsed.room === 'lobby';
+    });
+
+    expect(joinFrames).toHaveLength(1);
+
+    ws.receive({ room: 'lobby', type: 'joined' });
+
+    await expect(Promise.all([join1, join2])).resolves.toEqual([undefined, undefined]);
+
+    pulse.dispose();
+  });
+
+  it('coalesces concurrent leave() calls for the same room into a single leave frame', async () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+
+    const joinPromise = pulse.join('lobby');
+
+    ws.receive({ room: 'lobby', type: 'joined' });
+    await joinPromise;
+
+    const leave1 = pulse.leave('lobby');
+    const leave2 = pulse.leave('lobby');
+
+    const leaveFrames = ws.sentMessages.filter((m) => {
+      const parsed = JSON.parse(m) as { room?: string; type: string };
+
+      return parsed.type === 'leave' && parsed.room === 'lobby';
+    });
+
+    expect(leaveFrames).toHaveLength(1);
+
+    ws.receive({ room: 'lobby', type: 'left' });
+
+    await expect(Promise.all([leave1, leave2])).resolves.toEqual([undefined, undefined]);
+
+    pulse.dispose();
   });
 });
 
@@ -729,7 +795,7 @@ describe('createPulse — malformed message handling (C6)', () => {
       ws.receive({ room: 'lobby', type: 'presence_state' });
     }).not.toThrow();
 
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Frame handling error'));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Protocol error: PulseProtocolError: Malformed'));
 
     warnSpy.mockRestore();
     pulse.dispose();

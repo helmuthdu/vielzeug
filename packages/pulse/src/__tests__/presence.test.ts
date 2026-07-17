@@ -109,6 +109,35 @@ describe('createPulse — presence', () => {
 
     pulse.dispose();
   });
+
+  it('presence() returns the same object for the same room (memoized)', () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+
+    const pres1 = pulse.presence('lobby');
+    const pres2 = pulse.presence('lobby');
+
+    expect(pres1).toBe(pres2);
+
+    pulse.dispose();
+  });
+
+  it('presence() returns a new object after the previous one is disposed', () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+
+    const pres1 = pulse.presence('lobby');
+
+    pres1.dispose();
+
+    const pres2 = pulse.presence('lobby');
+
+    expect(pres1).not.toBe(pres2);
+
+    pulse.dispose();
+  });
 });
 
 describe('createPulse — C1: presence disposed warnings', () => {

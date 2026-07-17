@@ -55,6 +55,7 @@ using _ = pulse;
 - **Typed event maps** — `TServer` and `TClient` generics enforce payload types at compile time
 - **`on()` / `once()` / `wait()`** — persistent, one-shot, and async-await subscriptions
 - **`channel()`** — isolated namespaces multiplexed over the shared connection
+- **`presence()`** — room-scoped presence channels are memoized by room name
 - **`join()` / `leave()`** — room membership with server-confirmation promises
 - **`presence()`** — reactive `Signal<Map<memberId, T>>` with `onJoin`/`onLeave` callbacks
 - **Middleware** — intercept outgoing `send()` calls; omit `next()` to suppress

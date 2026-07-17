@@ -20,11 +20,11 @@ import { PulseAbortError, PulseConnectionError, PulseDisposedError, PulseTimeout
 import { createHeartbeat } from './heartbeat';
 import { createPresence } from './presence';
 import {
-  type InFrame,
+  type DecodedInFrame,
   type InPresenceJoinFrame,
   type InPresenceLeaveFrame,
   type InPresenceStateFrame,
-  decode,
+  decodeValidated,
   encode,
 } from './protocol';
 import { createReconnect } from './reconnect';
@@ -116,6 +116,8 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
 
   // Memoized channel cache — same name returns the same object
   const channelCache = new Map<string, PulseChannel<MessageMap, MessageMap>>();
+  // Memoized presence cache — same room returns the same object
+  const presenceCache = new Map<string, PresenceChannel<unknown>>();
 
   // Message buffer (null = disabled)
   const bufferCfg = opts.buffer;
@@ -203,10 +205,10 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
     ws.onmessage = (ev: MessageEvent): void => {
       opts.onMessage?.(ev);
 
-      let frame: InFrame;
+      let frame: DecodedInFrame;
 
       try {
-        frame = decode(ev.data);
+        frame = decodeValidated(ev.data);
       } catch (err) {
         warn(`Protocol error: ${String(err)}`);
 
@@ -253,7 +255,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
   async function handleUnexpectedClose(): Promise<void> {
     status.value = 'reconnecting';
 
-    const ok = await reconnect.attempt(
+    const result = await reconnect.attempt(
       () =>
         new Promise<void>((resolve, reject) => {
           pendingOpens.push({ reject, resolve });
@@ -263,7 +265,11 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       opts.onReconnect,
     );
 
-    if (!ok && !disposed) {
+    if (!result.ok && !disposed) {
+      if (result.error) {
+        warn(`Reconnect attempt failed: ${String(result.error)}`);
+      }
+
       warn('Reconnect budget exhausted — connection permanently closed');
       status.value = 'closed';
     }
@@ -271,7 +277,15 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
 
   // ── Frame routing ──────────────────────────────────────────────────────────
 
-  function handleFrame(frame: InFrame): void {
+  function handleFrame(decoded: DecodedInFrame): void {
+    if (decoded.kind === 'unknown') {
+      warn(`Received frame with an unrecognized type: ${decoded.type}`);
+
+      return;
+    }
+
+    const frame = decoded.frame;
+
     switch (frame.type) {
       case 'error':
         warn(`Server error [${frame.code}]: ${frame.message}`);
@@ -340,14 +354,6 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       case 'subscribed':
       case 'unsubscribed':
         break;
-
-      default: {
-        const unrecognized: { type: unknown } = frame;
-
-        warn(`Received frame with an unrecognized type: ${String(unrecognized.type)}`);
-
-        break;
-      }
     }
   }
 
@@ -406,6 +412,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       };
 
       let pendingSet = pending.get(room);
+      const shouldSendFrame = !pendingSet;
 
       if (!pendingSet) {
         pendingSet = new Set();
@@ -416,6 +423,8 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       sig.addEventListener('abort', onAbort, { once: true });
 
       const sendFrame = (): void => rawSend(encode({ room, type: frameType }));
+
+      if (!shouldSendFrame) return;
 
       if (ws?.readyState === WebSocket.OPEN) {
         sendFrame();
@@ -512,6 +521,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       for (const p of pending) p.reject(new PulseDisposedError());
 
       channelCache.clear();
+      presenceCache.clear();
       pendingJoins.clear();
       pendingLeaves.clear();
       status.dispose();
@@ -562,6 +572,10 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
     },
 
     presence<T>(room: string): PresenceChannel<T> {
+      const cached = presenceCache.get(room);
+
+      if (cached) return cached as PresenceChannel<T>;
+
       const ch = createPresence<T>(
         room,
         rawSend,
@@ -571,12 +585,21 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
           onState: (handler) => listeners.add(null, 'presence_state', (p) => handler(p as InPresenceStateFrame)),
         },
         disposalCtrl.signal,
+        () => {
+          presenceCache.delete(room);
+        },
       );
+
+      if (!disposed) {
+        presenceCache.set(room, ch as PresenceChannel<unknown>);
+      }
 
       if (disposed) {
         warn(`presence('${room}') called on a disposed Pulse — returning an already-disposed presence channel`);
       } else {
         pulse.join(room).catch((err: unknown) => {
+          if (err instanceof PulseAbortError || err instanceof PulseDisposedError) return;
+
           warn(`presence() join failed for room '${room}': ${String(err)}`);
         });
       }

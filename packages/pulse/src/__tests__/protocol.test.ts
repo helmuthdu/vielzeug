@@ -1,5 +1,5 @@
 import { PulseProtocolError } from '../errors';
-import { decode, encode } from '../protocol';
+import { decode, decodeValidated, encode } from '../protocol';
 
 describe('encode', () => {
   it('serialises a message frame to JSON', () => {
@@ -57,5 +57,26 @@ describe('decode', () => {
     } catch (err) {
       expect(err).toBeInstanceOf(PulseProtocolError);
     }
+  });
+});
+
+describe('decodeValidated', () => {
+  it('accepts a valid known frame shape', () => {
+    const decoded = decodeValidated(JSON.stringify({ event: 'greet', payload: 'hi', type: 'message' }));
+
+    expect(decoded.kind).toBe('known');
+    expect(decoded.kind === 'known' ? decoded.frame.type : '').toBe('message');
+  });
+
+  it('throws PulseProtocolError for malformed known frame shape', () => {
+    expect(() => decodeValidated(JSON.stringify({ room: 'lobby', type: 'presence_state' }))).toThrow(
+      PulseProtocolError,
+    );
+  });
+
+  it('passes through unknown frame types for caller-level handling', () => {
+    const decoded = decodeValidated(JSON.stringify({ foo: 1, type: 'future_frame' }));
+
+    expect(decoded).toEqual({ kind: 'unknown', type: 'future_frame' });
   });
 });

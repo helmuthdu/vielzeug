@@ -265,6 +265,7 @@ export type Pulse<TServer extends MessageMap = MessageMap, TClient extends Messa
 
   /**
    * Return a presence channel that tracks all members' state in a room.
+   * Multiple calls with the same room return the **same** presence object.
    * Calling `presence()` implicitly joins the room.
    */
   presence<T>(room: string): PresenceChannel<T>;

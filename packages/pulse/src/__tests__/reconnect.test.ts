@@ -5,14 +5,16 @@ describe('createReconnect — disabled (opts=false)', () => {
     const handle = createReconnect(false);
     const result = await handle.attempt(() => Promise.resolve(), new AbortController().signal);
 
-    expect(result).toBe(false);
+    expect(result.ok).toBe(false);
+    expect(result.error).toBeUndefined();
   });
 
   it('attempt() returns false when opts is undefined', async () => {
     const handle = createReconnect(undefined);
     const result = await handle.attempt(() => Promise.resolve(), new AbortController().signal);
 
-    expect(result).toBe(false);
+    expect(result.ok).toBe(false);
+    expect(result.error).toBeUndefined();
   });
 });
 
@@ -34,7 +36,7 @@ describe('createReconnect — enabled', () => {
 
     await vi.runAllTimersAsync();
 
-    expect(await p).toBe(true);
+    await expect(p).resolves.toMatchObject({ ok: true });
     expect(connect).toHaveBeenCalledTimes(1);
   });
 
@@ -47,7 +49,8 @@ describe('createReconnect — enabled', () => {
 
     await vi.runAllTimersAsync();
 
-    expect(await p).toBe(false);
+    await expect(p).resolves.toMatchObject({ ok: false });
+    await expect(p).resolves.toMatchObject({ error: expect.any(Error) });
   });
 
   it('returns false when maxAttempts is exhausted', async () => {
@@ -66,7 +69,8 @@ describe('createReconnect — enabled', () => {
 
     const result = await handle.attempt(connect, ctrl.signal);
 
-    expect(result).toBe(false);
+    expect(result.ok).toBe(false);
+    expect(result.error).toBeUndefined();
     expect(connect).toHaveBeenCalledTimes(2);
   });
 
@@ -79,7 +83,7 @@ describe('createReconnect — enabled', () => {
 
     await vi.runAllTimersAsync();
 
-    expect(await p).toBe(false);
+    await expect(p).resolves.toMatchObject({ ok: false });
     expect(connect).not.toHaveBeenCalled();
   });
 
@@ -102,7 +106,7 @@ describe('createReconnect — enabled', () => {
     p = handle.attempt(okConnect, ctrl.signal);
     await vi.runAllTimersAsync();
 
-    expect(await p).toBe(true);
+    await expect(p).resolves.toMatchObject({ ok: true });
   });
 
   it('uses a fixed numeric delay', async () => {

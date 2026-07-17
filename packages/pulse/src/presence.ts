@@ -23,10 +23,19 @@ export function createPresence<T>(
   rawSend: RawSendFn,
   events: PresenceEvents,
   disposalSignal: AbortSignal,
+  onDispose?: () => void,
 ): PresenceChannel<T> {
   const ctrl = deriveAbortController(disposalSignal);
 
   let disposed = ctrl.signal.aborted;
+
+  ctrl.signal.addEventListener(
+    'abort',
+    () => {
+      disposed = true;
+    },
+    { once: true },
+  );
 
   const members: Signal<Map<string, T>> = signal(new Map<string, T>());
   const joinHandlers = new Set<(memberId: string, state: T) => void>();
@@ -88,6 +97,7 @@ export function createPresence<T>(
       joinHandlers.clear();
       leaveHandlers.clear();
       members.dispose();
+      onDispose?.();
     },
 
     get disposed() {

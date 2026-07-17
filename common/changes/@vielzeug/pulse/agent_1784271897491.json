@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: harden frame handling and memoize presence channels",
+      "packageName": "@vielzeug/pulse",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/pulse"
+}

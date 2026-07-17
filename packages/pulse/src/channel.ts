@@ -23,6 +23,14 @@ export function createChannel<TServer extends MessageMap, TClient extends Messag
 
   let disposed = ctrl.signal.aborted;
 
+  ctrl.signal.addEventListener(
+    'abort',
+    () => {
+      disposed = true;
+    },
+    { once: true },
+  );
+
   const channel: PulseChannel<TServer, TClient> = {
     get disposalSignal() {
       return ctrl.signal;
