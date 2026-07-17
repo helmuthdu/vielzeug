@@ -1516,6 +1516,30 @@ describe('validation — nested target paths', () => {
       });
     }).not.toThrow();
   });
+
+  it('throws when validateHydratedContext is true and hydrated context fails validation', () => {
+    type Event = { type: 'GO' };
+
+    const def = createMachine<'a' | 'b', { n: number }, Event>({
+      context: { n: 0 },
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+      validateContext: (ctx) => ctx.n >= 0 || 'n must be >= 0',
+    });
+
+    expect(() => {
+      def.start({
+        persistence: {
+          load: () => ({ context: { n: -99 }, state: 'a' }),
+          save: () => {},
+        },
+        validateHydratedContext: true,
+      });
+    }).toThrow(ClockworkInvalidValidateContextError);
+  });
 });
 
 describe('can()', () => {
@@ -1628,6 +1652,20 @@ describe('subscribe — no spurious fire', () => {
 
     // @ts-expect-error unknown event — no transition should happen
     m.send({ type: 'UNKNOWN' });
+
+    expect(calls).toHaveLength(0);
+  });
+
+  it('subscribe() after dispose returns a noop unsubscribe and never registers', () => {
+    const m = trafficDef.start();
+    const calls: unknown[] = [];
+
+    m.dispose();
+
+    const unsub = m.subscribe((snap) => calls.push(snap));
+
+    expect(() => unsub()).not.toThrow();
+    m.send({ type: 'NEXT' });
 
     expect(calls).toHaveLength(0);
   });
@@ -2924,28 +2962,43 @@ describe('C1 — can() evaluates guards without onDebug side effects', () => {
 });
 
 describe('C2 — subscribe() snapshot isolation between subscribers', () => {
-  it('snapshot is frozen so mutation by one subscriber cannot affect another', () => {
-    const m = trafficDef.start();
+  it('snapshot context is isolated so subscriber mutations do not affect machine or other subscribers', () => {
+    type Event = { type: 'INC' };
 
-    let mutationThrew = false;
-    let snapSeenByB: string | undefined;
+    const def = createMachine<'idle', { nested: { count: number } }, Event>({
+      context: { nested: { count: 0 } },
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            INC: {
+              actions: [
+                ({ context }) => {
+                  context.nested.count += 1;
+                },
+              ],
+              target: 'idle',
+            },
+          },
+        },
+      },
+    });
+
+    const m = def.start();
+    let seenBySecond: number | undefined;
 
     m.subscribe((snap) => {
-      try {
-        (snap as { state: string }).state = 'mutated';
-      } catch {
-        mutationThrew = true;
-      }
+      (snap.context.nested as { count: number }).count = 999;
     });
 
     m.subscribe((snap) => {
-      snapSeenByB = snap.state as string;
+      seenBySecond = snap.context.nested.count;
     });
 
-    m.send({ type: 'NEXT' });
+    m.send({ type: 'INC' });
 
-    expect(mutationThrew).toBe(true);
-    expect(snapSeenByB).toBe('yellow');
+    expect(seenBySecond).toBe(1);
+    expect(m.context.value.nested.count).toBe(1);
   });
 });
 

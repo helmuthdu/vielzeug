@@ -212,6 +212,11 @@ export type InterpretOptions<State extends string, Ctx extends object, Ev extend
    * Set explicitly to override.
    */
   traceLimit?: number;
+  /**
+   * Whether to validate hydrated context via `validateContext` during startup.
+   * Defaults to `false` for backward compatibility.
+   */
+  validateHydratedContext?: boolean;
 };
 
 // ── Definition handle ─────────────────────────────────────────────────────────

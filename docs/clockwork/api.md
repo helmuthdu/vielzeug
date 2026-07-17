@@ -335,6 +335,7 @@ type InterpretOptions<State extends string, Ctx extends object, Ev extends Machi
   onDebug?: (event: DebugEvent<State, Ctx, Ev>) => void;
   persistence?: PersistenceAdapter<State, Ctx>;
   snapshot?: MachineSnapshot<State, Ctx>;
+  validateHydratedContext?: boolean;
   traceLimit?: number;
 };
 ```
@@ -347,6 +348,7 @@ type InterpretOptions<State extends string, Ctx extends object, Ev extends Machi
 | `onDebug`                | `undefined`       | Callback for all debug events (guards, transitions, invokes, skips). Auto-enables a 50-entry trace buffer unless `traceLimit` is set.                           |
 | `persistence`            | `undefined`       | Save/load adapter for snapshot persistence                                                                                                                      |
 | `snapshot`               | `undefined`       | Snapshot to hydrate from on startup (takes priority over persistence)                                                                                           |
+| `validateHydratedContext`| `false`           | When `true`, runs `validateContext` against hydrated context during startup; when `false`, hydrated context is trusted and only validated on transitions.         |
 | `traceLimit`             | auto (`50`/`0`)   | Ring buffer capacity for `getTrace()`. Defaults to `50` when `onDebug` is set; `0` (disabled) otherwise. Set explicitly to override.                            |
 
 ---
@@ -474,7 +476,7 @@ interface MachineInstance<State extends string, Ctx extends object, Ev extends M
 | `matches(...states)` | `boolean`                | `true` if the current state is one of the given values or a descendant of any (e.g. `matches('loading')` matches `'loading.pending'`). Returns `false` when disposed.                                     |
 | `dispose()`          | `void`                   | Aborts active invokes, clears after-timers, and disposes reactive signals. Idempotent. Does **not** clear persisted state. Equivalent to `using m = createMachine(config).start()`.                       |
 | `send(event)`        | `SendResult`             | Dispatches the event. Returns a `SendResult` with `.status`: `'transitioned'`, `'queued'`, or `'rejected'` (also when the machine is already disposed).                                                     |
-| `subscribe(fn)`      | `() => void`             | Subscribes to state/context changes. Returns an unsubscribe function. Fires only when state or context changes — **not** on the initial value. Use `getSnapshot()` to read the current state immediately. |
+| `subscribe(fn)`      | `() => void`             | Subscribes to state/context changes. Returns an unsubscribe function. Fires only when state or context changes — **not** on the initial value. Callback receives an isolated snapshot (`context` is cloned). Use `getSnapshot()` to read the current state immediately. |
 | `[Symbol.dispose]()` | `void`                   | Delegates to `dispose()`. Enables `using` declarations.                                                                                                                                                   |
 
 ---
@@ -526,7 +528,7 @@ type PersistenceAdapter<State extends string, Ctx extends object> = {
 };
 ```
 
-`save` is called after every committed transition. `load` is called once during startup if no `snapshot` option is provided.
+`save` is called after every committed transition. `load` is called once during startup if no `snapshot` option is provided. Hydrated context is not validated at startup unless `validateHydratedContext: true` is set.
 
 ---
 

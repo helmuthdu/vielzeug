@@ -377,7 +377,9 @@ On startup, `createMachine().start()` checks `options.snapshot` first, then `per
 :::
 
 ::: tip Validate loaded snapshots
-If context is loaded from untrusted sources (e.g. `localStorage`), run your `validateContext` guard before interpreting, or wrap `persistence.load()` with a try/catch and schema check.
+Hydrated context is trusted by default for backward compatibility. To enforce `validateContext` during hydration, pass `validateHydratedContext: true` to `.start(...)`.
+
+If context is loaded from untrusted sources (e.g. `localStorage`), enable `validateHydratedContext` or validate inside `persistence.load()` before returning the snapshot.
 :::
 
 ## Interceptors
@@ -457,6 +459,7 @@ unsub(); // stop listening
 ```
 
 The callback fires only when `state` or `context` reference changes — not on every signal read.
+Each callback receives an isolated snapshot object; mutating the callback payload does not mutate machine state.
 
 ## Debugging and Tracing
 

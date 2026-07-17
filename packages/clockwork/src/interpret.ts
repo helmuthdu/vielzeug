@@ -156,7 +156,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
     ? clone(persistedSnapshot.context)
     : clone(('context' in definition ? definition.context : ({} as Ctx)) as Ctx);
 
-  if (!persistedSnapshot) assertContext(initialContext, 'init');
+  if (!persistedSnapshot || options.validateHydratedContext) assertContext(initialContext, 'init');
 
   // ── Section: State & context signals ──────────────────────────────────────
 
@@ -235,9 +235,11 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
   const notifySubscribers = (): void => {
     if (subscribers.size === 0) return;
 
-    const snap: MachineSnapshot<State, Ctx> = Object.freeze({ context: context_.value, state: state_.value });
+    for (const fn of subscribers) {
+      const snap: MachineSnapshot<State, Ctx> = Object.freeze({ context: clone(context_.value), state: state_.value });
 
-    for (const fn of subscribers) fn(snap);
+      fn(snap);
+    }
   };
 
   // ── Section: Event queue (hoisted so executeTransition closures can reference) ──
@@ -566,6 +568,8 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
 
   // R5: subscribe via plain Set — no ripple effect(), no prevState/prevCtx tracking
   const subscribe = (fn: (snapshot: MachineSnapshot<State, Ctx>) => void): (() => void) => {
+    if (disposed) return () => {};
+
     subscribers.add(fn);
 
     return () => subscribers.delete(fn);
@@ -603,6 +607,8 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
 
     disposed = true;
     disposeController.abort();
+    subscribers.clear();
+    queue.length = 0;
     stopInvokes();
     clearTimers();
     state_.dispose();
