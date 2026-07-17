@@ -364,7 +364,7 @@ const state = qc.getState<User>(['users', 1]);
 ```ts
 const store = qc.watchKey<User>(['users', 1]);
 
-const initial = store.peek(); // idle state if not yet fetched
+const initial = store.peek(); // loading baseline if not yet fetched
 const stop = store.subscribe(() => {
   console.log(store.peek());
 });
@@ -403,7 +403,7 @@ const store = qc.observe({
 });
 
 // Synchronously read the current state
-console.log(store.peek().status); // 'idle' or 'pending'
+console.log(store.peek().status); // 'loading' (or 'success' / 'error' if already cached)
 console.log(store.peek().data); // placeholderData while fetching
 
 // Subscribe to future changes
@@ -447,7 +447,7 @@ function useUser(id: number) {
 For entries **without active subscribers**, invalidation evicts the cache entry immediately. For entries **with active subscribers**:
 
 - If the entry has a stored query function (registered via `fetch()`), it is background-revalidated.
-- If the entry was only populated via `set()`, it resets to `idle`.
+- If the entry was only populated via `set()`, it resets to `'loading'`.
 
 Supports **prefix matching**: invalidating `['users']` affects `['users', 1]`, `['users', 2]`, and so on.
 
@@ -458,7 +458,7 @@ qc.invalidate(['users']);
 
 ### `cancel(key)`
 
-Cancels an in-flight fetch without removing the cache entry. State transitions back to `'success'` if data exists, otherwise `'idle'`.
+Cancels an in-flight fetch without removing the cache entry. State transitions back to `'success'` if data exists, otherwise `'loading'`.
 
 ```ts
 qc.cancel(['users', 1]);
@@ -466,7 +466,7 @@ qc.cancel(['users', 1]);
 
 ### `clear()`
 
-Clears every cache entry. Active subscribers are notified with an `'idle'` state.
+Clears every cache entry. Active subscribers are notified with a `'loading'` state.
 
 ```ts
 qc.clear();

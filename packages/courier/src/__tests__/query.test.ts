@@ -1223,6 +1223,20 @@ describe('Query Client', () => {
 
         expect(qc.disposalSignal.aborted).toBe(true);
       });
+
+      it('observe().subscribe() after dispose is a noop and does not create entries', () => {
+        const qc = createQuery();
+        const calls: string[] = [];
+
+        qc.dispose();
+
+        const store = qc.observe({ fetch: false, key: ['disposed-key'] });
+        const unsub = store.subscribe(() => calls.push('called'));
+
+        expect(() => unsub()).not.toThrow();
+        expect(qc.size).toBe(0);
+        expect(calls).toEqual([]);
+      });
     });
 
     describe('observeMany()', () => {

@@ -11,7 +11,7 @@ const IDLE_STATE: MutationState<unknown> = Object.freeze({
   data: undefined,
   error: null,
   isFetching: false,
-  isLoading: false,
+  isLoading: true,
   status: 'loading',
   updatedAt: undefined,
 });
@@ -230,6 +230,8 @@ export function createMutation<TData, TVariables = void>(
       return (cachedStore ??= {
         peek: () => snap,
         subscribe: (cb) => {
+          if (disposed) return () => {};
+
           observers.add(cb);
 
           return () => observers.delete(cb);
@@ -238,6 +240,8 @@ export function createMutation<TData, TVariables = void>(
     },
 
     subscribe(onStoreChange: () => void): Unsubscribe {
+      if (disposed) return () => {};
+
       observers.add(onStoreChange);
 
       return () => observers.delete(onStoreChange);

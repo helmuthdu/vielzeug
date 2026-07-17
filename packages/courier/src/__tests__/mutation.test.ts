@@ -299,7 +299,7 @@ describe('Mutation', () => {
         data: undefined,
         error: null,
         isFetching: false,
-        isLoading: false,
+        isLoading: true,
         status: 'loading',
         updatedAt: undefined,
       });
@@ -478,6 +478,30 @@ describe('Mutation', () => {
 
       await expect(mutation.mutate(undefined)).rejects.toThrow('[courier] Mutation disposed');
       expect(calls).toBe(0);
+    });
+
+    it('subscribe() after dispose returns a noop unsubscribe and does not notify', () => {
+      const mutation = createMutation(async () => 'ok');
+      const calls: string[] = [];
+
+      mutation.dispose();
+
+      const unsub = mutation.subscribe(() => calls.push('called'));
+
+      expect(() => unsub()).not.toThrow();
+      expect(calls).toEqual([]);
+    });
+
+    it('store.subscribe() after dispose returns a noop unsubscribe and does not notify', () => {
+      const mutation = createMutation(async () => 'ok');
+      const calls: string[] = [];
+
+      mutation.dispose();
+
+      const unsub = mutation.store.subscribe(() => calls.push('called'));
+
+      expect(() => unsub()).not.toThrow();
+      expect(calls).toEqual([]);
     });
   });
 });

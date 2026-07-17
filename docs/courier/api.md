@@ -125,7 +125,7 @@ Creates a query client with caching, deduplication, prefix invalidation, and rea
 | `getState`         | `<T>(key) => QueryState<T> \| null`                                     | Full state snapshot                                                                  |
 | `observeMany`      | `<T>(keys: QueryKey[]) => SyncStore<QueryState<T>[]>`                   | Observe multiple keys as one combined store; updates on any key change               |
 | `invalidate`       | `(key) => void`                                                         | Evict or background-revalidate a key/prefix                                          |
-| `remove`           | `(key: QueryKey) => void`                                               | Evict a single entry; aborts any in-flight fetch; resets observers to idle if active |
+| `remove`           | `(key: QueryKey) => void`                                               | Evict a single entry; aborts any in-flight fetch; resets observers to `'loading'` if active |
 | `cancel`           | `(key) => void`                                                         | Cancel an in-flight fetch; entry returns to `'loading'` or retains prior success data |
 | `clear`            | `() => void`                                                            | Clear all entries; active subscribers see `'loading'`                                |
 | `refetchStale`     | `() => void`                                                            | Manually revalidate all stale observed entries                                       |
@@ -186,7 +186,7 @@ Creates a standalone, observable mutation handle.
 | `peek`             | `() => MutationState<TData>`                 | Read current state snapshot                             |
 | `subscribe`        | `(cb: () => void) => () => void`             | Subscribe to state changes; returns unsubscribe fn      |
 | `store`            | `SyncStore<MutationState<TData>>` (property) | Framework-friendly external store; stable reference     |
-| `reset`            | `() => void`                                 | Reset back to the idle state                            |
+| `reset`            | `() => void`                                 | Reset back to the `'loading'` baseline state            |
 | `dispose`          | `() => void`                                 | Abort active run, clear observers, and mark as disposed |
 | `disposed`         | `boolean` (getter)                           | Whether `dispose()` has been called                     |
 | `[Symbol.dispose]` | —                                            | Delegates to `dispose()`; enables `using` declarations  |

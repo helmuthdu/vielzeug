@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: align loading baseline and disposed subscription behavior",
+      "packageName": "@vielzeug/courier",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/courier"
+}

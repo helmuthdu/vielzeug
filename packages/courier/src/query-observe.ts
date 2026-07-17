@@ -104,6 +104,8 @@ export function watchInternal<T = unknown, S = T>(
     },
 
     subscribe(onStoreChange: () => void): Unsubscribe {
+      if (ctx.disposed) return () => {};
+
       const entry = ensureEntry<T>(ctx, key);
 
       cancelGc(ctx, entry.hash);

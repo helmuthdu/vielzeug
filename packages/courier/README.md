@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/courier` &nbsp;·&nbsp; **Category:** Http
 
-**Key exports:** `createApi`, `createCourier`, `createQuery`, `createMutation`, `createStream`, `CourierError`, `HttpError`, `NetworkError`, `TimeoutError`, `AbortError`
+**Key exports:** `createApi`, `createCourier`, `createQuery`, `createMutation`, `createStream`, `CourierError`, `CourierHttpError`, `CourierNetworkError`, `CourierTimeoutError`, `CourierAbortError`
 
 **When to use:** Typed HTTP, caching, mutations, SSE, and readable streaming with a shared interceptor pipeline.
 
