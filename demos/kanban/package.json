@@ -10,33 +10,33 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vielzeug/clockwork": "^1.0.5",
+    "@vielzeug/clockwork": "^1.1.0",
     "@vielzeug/coins": "^1.0.3",
-    "@vielzeug/courier": "^1.1.2",
+    "@vielzeug/courier": "^1.1.3",
     "@vielzeug/dnd": "^1.2.0",
     "@vielzeug/familiar": "^1.0.4",
-    "@vielzeug/flux": "^1.0.5",
+    "@vielzeug/flux": "^1.0.6",
     "@vielzeug/herald": "^1.0.3",
     "@vielzeug/keymap": "^1.1.1",
     "@vielzeug/ledger": "^1.1.3",
-    "@vielzeug/lingua": "^1.1.1",
-    "@vielzeug/ore": "^1.2.1",
+    "@vielzeug/lingua": "^1.1.2",
+    "@vielzeug/ore": "^1.2.2",
     "@vielzeug/prism": "^1.1.4",
-    "@vielzeug/pulse": "^1.0.5",
-    "@vielzeug/refine": "^1.5.2",
-    "@vielzeug/ripple": "^1.2.1",
+    "@vielzeug/pulse": "^1.0.6",
+    "@vielzeug/refine": "^1.5.3",
+    "@vielzeug/ripple": "^1.2.2",
     "@vielzeug/rune": "^1.1.1",
-    "@vielzeug/scout": "^1.1.3",
-    "@vielzeug/scroll": "^1.1.1",
-    "@vielzeug/sourcerer": "^1.0.4",
-    "@vielzeug/spell": "^1.1.2",
+    "@vielzeug/scout": "^1.1.4",
+    "@vielzeug/scroll": "^1.1.2",
+    "@vielzeug/sourcerer": "^1.0.5",
+    "@vielzeug/spell": "^1.2.0",
     "@vielzeug/tempo": "^1.0.3",
     "@vielzeug/vault": "^1.0.3",
-    "@vielzeug/ward": "^1.0.3",
+    "@vielzeug/ward": "^1.0.4",
     "@vielzeug/wayfinder": "^1.0.3"
   },
   "devDependencies": {
-    "typescript": "^6.0.3",
-    "vite": "^8.1.3"
+    "typescript": "^7.0.2",
+    "vite": "^8.1.4"
   }
 }
