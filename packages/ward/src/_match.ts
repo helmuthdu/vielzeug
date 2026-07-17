@@ -1,7 +1,6 @@
 import type { CompiledEntry } from './_compile';
 import type { Principal, UserPrincipal, WardDecision, WardRule } from './types';
 
-import { error } from './_dev';
 import { ANONYMOUS, WILDCARD } from './constants';
 import { WardConfigError, WardPredicateError } from './errors';
 import { matchesPattern } from './resource';
@@ -83,8 +82,8 @@ export function matchesRule<TAction extends string, TData>(
     const result: unknown = entry.rule.when({ data, principal });
 
     if (result instanceof Promise) {
-      error(
-        `Rule[${entry.index}] when() returned a Promise. Async predicates are not supported — the Promise is truthy and will always grant access. Use a sync predicate instead.`,
+      throw new TypeError(
+        `Rule[${entry.index}] when() returned a Promise. Async predicates are not supported — use a synchronous predicate.`,
       );
     }
 

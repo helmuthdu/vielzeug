@@ -94,7 +94,7 @@ Creates an immutable ward instance with the given rules. All rules are compiled 
 
 | Option         | Type                                   | Default     | Description                                                                                                              |
 | -------------- | -------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `logger`       | `(context: WardLoggerContext) => void` | `undefined` | Called after every decision method (`explain`, `checkAll`, `trace`). Not called by `allowedActions` or `rulesInScope`. |
+| `logger`       | `(context: WardLoggerContext) => void` | `undefined` | Called after decision methods (`explain`, `checkAll`). Not called by `trace`, `allowedActions`, or `rulesInScope`. |
 | `onConflict`   | `(conflict: WardConflict) => void`     | `undefined` | Called synchronously for each conflict detected at creation time.                                                        |
 | `strict`       | `boolean`                              | `false`     | Throws immediately if any rule conflicts are detected.                                                                   |
 | `maxConflicts` | `number`                               | `Infinity`  | Caps the number of conflicts returned by `detectConflicts()`. Set to `0` to disable conflict detection entirely.         |
@@ -222,7 +222,7 @@ ward.trace(
 Returns the complete decision trace: every rule that matched before the winner was selected, plus the final `WardDecision`. Each candidate exposes `priority`, `score`, `rule`, and a `won` flag.
 
 ::: tip Audit-safe
-`trace()` fires the logger with the same context as `explain()`. Switching from `explain` to `trace` for richer diagnostics does not silently drop audit records.
+`trace()` does **not** fire the logger — it is a side-channel-free inspection tool. Use `explain()` when logger output is required.
 :::
 
 **Returns:** `WardTrace<TAction, TData>`

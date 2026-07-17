@@ -843,6 +843,42 @@ describe('ward: predicate error propagation', () => {
       'Rule[0] threw: predicate exploded',
     );
   });
+
+  it('rejects async predicates in explain() with WardPredicateError', () => {
+    const permit = createWard<'read'>([
+      {
+        action: 'read',
+        effect: 'allow',
+        resource: 'posts',
+        role: ['editor'],
+        when: async () => true,
+      },
+    ]);
+
+    expect(() => permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read')).toThrow(
+      'Rule[0] threw: Rule[0] when() returned a Promise',
+    );
+    expect(() => permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read')).toThrow(WardPredicateError);
+  });
+
+  it('rejects async predicates in checkAll() with WardPredicateError', () => {
+    const permit = createWard<'read'>([
+      {
+        action: 'read',
+        effect: 'allow',
+        resource: 'posts',
+        role: ['editor'],
+        when: async () => true,
+      },
+    ]);
+
+    expect(() => permit.checkAll({ id: 'u1', roles: ['editor'] }, [{ action: 'read', resource: 'posts' }])).toThrow(
+      'Rule[0] threw: Rule[0] when() returned a Promise',
+    );
+    expect(() => permit.checkAll({ id: 'u1', roles: ['editor'] }, [{ action: 'read', resource: 'posts' }])).toThrow(
+      WardPredicateError,
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------

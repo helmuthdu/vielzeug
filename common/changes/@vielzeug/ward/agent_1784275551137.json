@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: fail closed on async predicates",
+      "packageName": "@vielzeug/ward",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ward"
+}
