@@ -69,7 +69,7 @@ export const installDevTools = (hook: RippleDevToolsHook | null): void => {
  * }, { name: 'renderUser' });
  * ```
  */
-export const debugEffect = (fn: EffectCallback, options?: Omit<EffectOptions, 'trace'>): EffectHandle => {
+export const debugEffect = (fn: EffectCallback, options?: EffectOptions): EffectHandle => {
   const label = options?.name ?? 'anonymous';
 
   // Track versions seen on the last run so we can diff on the next run.

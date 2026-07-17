@@ -74,8 +74,9 @@ export const isReactive = <T = unknown>(value: unknown): value is Readable<T> =>
   typeof value === 'object' && value !== null && !!(value as Record<typeof IS_SIGNAL, unknown>)[IS_SIGNAL];
 
 /**
- * Returns `true` only for writable `Signal<T>` values — excludes `computed()`, `store()`,
- * and `readonly()` wrappers.
+ * Returns `true` only for writable `Signal<T>` values — excludes `computed()` and `store()`.
+ * `readonly()` wrappers of a signal still report `true` since they carry the same
+ * `IS_SIGNAL` brand as their source (they are not `IS_COMPUTED`/`IS_STORE`).
  *
  * Use `isReactive` for the broad "is this reactive?" check.
  *

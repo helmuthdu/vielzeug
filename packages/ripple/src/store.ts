@@ -69,6 +69,11 @@ class LensSignal<V> implements Signal<V> {
   private evict_: () => void;
   private disposeSource_: (() => void) | undefined;
   private name_: string | undefined;
+  // Own flag — top-level lenses don't own their source (the store does), so
+  // `dispose()` can't rely on `source_.disposed` alone to reflect "was this
+  // handle disposed?". Nested lenses still cascade into `source_.disposed`
+  // via `disposeSource_`, so the getter below ORs both signals.
+  private disposed_ = false;
 
   get name(): string | undefined {
     return this.name_ ?? this.source_.name;
@@ -99,10 +104,11 @@ class LensSignal<V> implements Signal<V> {
   }
 
   get disposed(): boolean {
-    return this.source_.disposed;
+    return this.disposed_ || this.source_.disposed;
   }
 
   dispose(): void {
+    this.disposed_ = true;
     this.evict_();
     this.disposeSource_?.();
   }

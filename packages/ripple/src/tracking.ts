@@ -162,6 +162,15 @@ export const getScopeCleanups = (): CleanupFn[] | null => getCtx().scopeCleanups
 // created in (computed(), resource()): dispose when the enclosing effect re-runs
 // or disposes, or — if not inside an effect — when the enclosing scope disposes.
 // No-op if neither is active (the caller owns disposal directly).
+//
+// Why signal() and store() don't call this: computed()/resource() are *derived*
+// computations — recreating one on every effect re-run is normal and cheap, so
+// tying their lifetime to the enclosing context avoids leaking a fresh graph
+// node per run. signal()/store() hold raw, caller-owned state that is typically
+// created once and read across many effect re-runs; auto-disposing it on the
+// first re-run would silently break any effect that reads a signal it declared
+// itself. Callers who genuinely want scope-scoped state should use
+// `scope.add(() => mySignal.dispose())` explicitly.
 
 /**
  * Registers `dispose` to run when the enclosing effect re-runs/disposes, or —

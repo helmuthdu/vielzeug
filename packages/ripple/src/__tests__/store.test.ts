@@ -222,6 +222,31 @@ describe('store.lens()', () => {
     expect(s.peek().x).toBe(42);
   });
 
+  it('top-level lens.dispose() marks the handle itself disposed — even though the store still owns the underlying signal', () => {
+    const s = store({ x: 1 });
+    const lens1 = s.lens('x');
+
+    expect(lens1.disposed).toBe(false);
+    lens1.dispose();
+    expect(lens1.disposed).toBe(true);
+
+    // The store's own copy of the property is unaffected — a fresh lens for
+    // the same path still works normally.
+    const lens2 = s.lens('x');
+
+    expect(lens2.disposed).toBe(false);
+    expect(lens2.value).toBe(1);
+  });
+
+  it('nested (dot-path) lens.dispose() marks the handle disposed via its internal computed', () => {
+    const s = store({ user: { name: 'Alice' } });
+    const nameLens = s.lens('user.name');
+
+    expect(nameLens.disposed).toBe(false);
+    nameLens.dispose();
+    expect(nameLens.disposed).toBe(true);
+  });
+
   it('with dot-notation path reads nested values', () => {
     const s = store({ user: { address: { city: 'NY' }, name: 'Alice' } });
     const city = s.lens('user.address.city');
