@@ -9,14 +9,14 @@ importers:
   .:
     dependencies:
       '@vielzeug/clockwork':
-        specifier: ^1.0.5
-        version: 1.0.5
+        specifier: ^1.1.0
+        version: 1.1.0
       '@vielzeug/coins':
         specifier: ^1.0.3
         version: 1.0.3
       '@vielzeug/courier':
-        specifier: ^1.1.2
-        version: 1.1.2
+        specifier: ^1.1.3
+        version: 1.1.3
       '@vielzeug/dnd':
         specifier: ^1.2.0
         version: 1.2.0
@@ -24,8 +24,8 @@ importers:
         specifier: ^1.0.4
         version: 1.0.4
       '@vielzeug/flux':
-        specifier: ^1.0.5
-        version: 1.0.5(@vielzeug/courier@1.1.2)(@vielzeug/herald@1.0.3)(@vielzeug/pulse@1.0.5)
+        specifier: ^1.0.6
+        version: 1.0.6(@vielzeug/courier@1.1.3)(@vielzeug/herald@1.0.3)(@vielzeug/pulse@1.0.6)
       '@vielzeug/herald':
         specifier: ^1.0.3
         version: 1.0.3
@@ -36,38 +36,38 @@ importers:
         specifier: ^1.1.3
         version: 1.1.3
       '@vielzeug/lingua':
-        specifier: ^1.1.1
-        version: 1.1.1
+        specifier: ^1.1.2
+        version: 1.1.2
       '@vielzeug/ore':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.2
+        version: 1.2.2
       '@vielzeug/prism':
         specifier: ^1.1.4
         version: 1.1.4
       '@vielzeug/pulse':
-        specifier: ^1.0.5
-        version: 1.0.5
+        specifier: ^1.0.6
+        version: 1.0.6
       '@vielzeug/refine':
-        specifier: ^1.5.2
-        version: 1.5.2
+        specifier: ^1.5.3
+        version: 1.5.3
       '@vielzeug/ripple':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.2
+        version: 1.2.2
       '@vielzeug/rune':
         specifier: ^1.1.1
         version: 1.1.1
       '@vielzeug/scout':
-        specifier: ^1.1.3
-        version: 1.1.3
+        specifier: ^1.1.4
+        version: 1.1.4
       '@vielzeug/scroll':
-        specifier: ^1.1.1
-        version: 1.1.1
-      '@vielzeug/sourcerer':
-        specifier: ^1.0.4
-        version: 1.0.4
-      '@vielzeug/spell':
         specifier: ^1.1.2
         version: 1.1.2
+      '@vielzeug/sourcerer':
+        specifier: ^1.0.5
+        version: 1.0.5
+      '@vielzeug/spell':
+        specifier: ^1.2.0
+        version: 1.2.0
       '@vielzeug/tempo':
         specifier: ^1.0.3
         version: 1.0.3
@@ -75,17 +75,17 @@ importers:
         specifier: ^1.0.3
         version: 1.0.3
       '@vielzeug/ward':
-        specifier: ^1.0.3
-        version: 1.0.3
+        specifier: ^1.0.4
+        version: 1.0.4
       '@vielzeug/wayfinder':
         specifier: ^1.0.3
         version: 1.0.3
     devDependencies:
       typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
+        specifier: ^7.0.2
+        version: 7.0.2
       vite:
-        specifier: ^8.1.3
+        specifier: ^8.1.4
         version: 8.1.4
 
 packages:
@@ -213,20 +213,140 @@ packages:
   '@tybys/wasm-util@0.10.3':
     resolution: {integrity: sha512-F3fo1MYrRJYL3zER0OUOmkutjr1Vp23m7OsSgp7nq4SP6OqX6C/56XFIPAl5bt3zaBRjmW7SGz3u/6LwFpYcOg==}
 
+  '@typescript/typescript-aix-ppc64@7.0.2':
+    resolution: {integrity: sha512-MTKKkWB7p/0E9xi1d1tHtZ5PiLkGEMIq88pK2CubZjOsLtYTLqhgIgi6zepFa+9GHZ6h05NMCkQxGKiPXMxXtQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [ppc64]
+    os: [aix]
+
+  '@typescript/typescript-darwin-arm64@7.0.2':
+    resolution: {integrity: sha512-gowzar9MwS/aRWp6f3a4KUqzRjAZjOsmGNCM6LcTgXum+dBfgsBVMN+AgvOCCbguXyick6LJhpBszxMebJ8syA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@typescript/typescript-darwin-x64@7.0.2':
+    resolution: {integrity: sha512-SZ9xZInqApNlNGc9s0W1VSsktYSOe9cFqNOIqmN1Gs8SmkjKZYFt017G4VwPxASInODuAdbTW7sXiFUf893RgA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@typescript/typescript-freebsd-arm64@7.0.2':
+    resolution: {integrity: sha512-W5NH4y/J0plIIS5b2xvTEkU7JFxyqdMAOgf+Ilhl0vHQXKO5dZoxd+C/jEtq56c4F3wk71RB4BMRQ2XdI+bwYQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [freebsd]
+
+  '@typescript/typescript-freebsd-x64@7.0.2':
+    resolution: {integrity: sha512-UMGDx5sTpzNw3WiPebH7l90IWfJggEd+egHt/q6p7/Cm3zqoV7VxkGXt+3DxPIw8CcmvAB0j3sVVfbhX+M4Tpw==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [freebsd]
+
+  '@typescript/typescript-linux-arm64@7.0.2':
+    resolution: {integrity: sha512-Qh4eU4/y3yDjnfjjyPYihMj5/ODIlmt+Bzu17OI+fiSRDW57QmU5SiN63exPRNJPKUzcc1INa1NXdrJ+MqHjUQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@typescript/typescript-linux-arm@7.0.2':
+    resolution: {integrity: sha512-gffT3xPz9sR7j/YJExkyPntrI0P2EP9XbOyWzth2/Gs0RstK+90RBcO0ncXoXy/beYll1SXw846Nf2zdnEz0QQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm]
+    os: [linux]
+
+  '@typescript/typescript-linux-loong64@7.0.2':
+    resolution: {integrity: sha512-uEHck9i8hoAzXPiYRib1O7miOnz23SxIeVl6F4LXox+qov1K35jHcEW6VHKvZI+pyvl7fZEP4MCU5LYvIq1GuQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [loong64]
+    os: [linux]
+
+  '@typescript/typescript-linux-mips64el@7.0.2':
+    resolution: {integrity: sha512-R4KvAMnE43W5Qeqb0Ly56O3mWMWIAgsMyz36DCaycd5nbg/9kzm0liw3JocfRqyJY0KPmzFjbswozXyW0DnIYA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [mips64el]
+    os: [linux]
+
+  '@typescript/typescript-linux-ppc64@7.0.2':
+    resolution: {integrity: sha512-DORx5b3sd/4S7eayxm4FQv+A7CrkUIGRaHiwI8oiHTAI1fAPWhF4J0vAlkC8biAlHSVVwxMQ3tjZ2/DVbnQiiA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [ppc64]
+    os: [linux]
+
+  '@typescript/typescript-linux-riscv64@7.0.2':
+    resolution: {integrity: sha512-wf0jqEDOjrPRnKwYRyyJDRo11KMbvMFrU+q4zqKyChODBzvlkbhNQfKvLxQCcwTpdDaXSHZTVuh0JoCrKCUMHQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [riscv64]
+    os: [linux]
+
+  '@typescript/typescript-linux-s390x@7.0.2':
+    resolution: {integrity: sha512-IkwJc3L7yhytWd/ewjyxNDfOmswCm9GWMJT/ue/dU4aZNbwZeYAetq42VyLmsmSjvoX7z74X6ZaYCtzAr0EuGw==}
+    engines: {node: '>=16.20.0'}
+    cpu: [s390x]
+    os: [linux]
+
+  '@typescript/typescript-linux-x64@7.0.2':
+    resolution: {integrity: sha512-EYdf2cNg7rgCWJnxCdJ+F3V39O8ihb37eHAu1LK8oAFizgTQbPOK7zHHXbPt8rX24COqODXeI3sIf0fCXG7H/A==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [linux]
+
+  '@typescript/typescript-netbsd-arm64@7.0.2':
+    resolution: {integrity: sha512-+polYF4MF04aPpO5FTkHran9yUQDSXqy5GiSDKpsll5jy3l3+g9QLhpf39T+ePtefhXLOGrLl0QIjkQP6VnelA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [netbsd]
+
+  '@typescript/typescript-netbsd-x64@7.0.2':
+    resolution: {integrity: sha512-8YIT0EHM/3dq10ZOVF/A7pc/YSMtbcecct4rWtexrnSCHOPcpC2KTLXfTCR6vDpnSiY12heNb1GiN/wu+T/FyA==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [netbsd]
+
+  '@typescript/typescript-openbsd-arm64@7.0.2':
+    resolution: {integrity: sha512-APT8+ClYnuYm1u9+kgGXoMj2VzWzcymwh2gNSQVySHfkRDGOTVkoWLjCmOQSaO+PoqQ57B0flRp9SA+7GnnkzQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [openbsd]
+
+  '@typescript/typescript-openbsd-x64@7.0.2':
+    resolution: {integrity: sha512-yX7s+Q0Dln0Dt9tEzZsAjXXR/+ytBM7AlglaqyeMPxQszJ1JhlJdZ6jLA+IzldHtflX81em7lDao1xXu+aRRkg==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [openbsd]
+
+  '@typescript/typescript-sunos-x64@7.0.2':
+    resolution: {integrity: sha512-dLJDGaLZ1D4HPQn62u1n8mBDkJREwMsAkCdkwd4Ieqw+x3TUyTsqY0YiBCtE6H6OzzgGk3iuZ3vFWRS+E8/d1g==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [sunos]
+
+  '@typescript/typescript-win32-arm64@7.0.2':
+    resolution: {integrity: sha512-Gyl1Vy6OsWesLzmq+EP0Fb7b4Nid5232AvcA2SFcdYreldpNtYFFofPjnt62y9hQy7VTaZp65ICJjuAQRaVcIQ==}
+    engines: {node: '>=16.20.0'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@typescript/typescript-win32-x64@7.0.2':
+    resolution: {integrity: sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g==}
+    engines: {node: '>=16.20.0'}
+    cpu: [x64]
+    os: [win32]
+
   '@vielzeug/arsenal@1.1.1':
     resolution: {integrity: sha512-fkVSjg1AgGqFcZnHRNc6oSOWwcV9BmB3KDQQO0twQ4r5zC7LtE/H1HzCLqT1oOGzfyF8gTrQm5Ha6Be/X5YE6A==}
     engines: {node: '>=18'}
 
-  '@vielzeug/clockwork@1.0.5':
-    resolution: {integrity: sha512-kG68K3wRsPVzgpJNH2RnIk4XaT7u0Yl0YAXkP9KvaKVScVrTSJVYRSECPMjxE0i7Y45+mIjI8fHJoI/XNlczwA==}
+  '@vielzeug/clockwork@1.1.0':
+    resolution: {integrity: sha512-nae2u1BkagQmjJflTYA0TgOGmNyT7isSP2nOmVhyybIFzTWVFDVAtCVo8cV1gjqtGIkIdbmioRIW+npiwLZfhg==}
     engines: {node: '>=18'}
 
   '@vielzeug/coins@1.0.3':
     resolution: {integrity: sha512-QP1uPUUF1wDdwjNjOPNdwisqkfv+noRSLZcwa/RwCCpD1TTcq7Y9Gi9eEhDhzB6ZPh8RKlgltcI5HcRC3l/wOA==}
     engines: {node: '>=18'}
 
-  '@vielzeug/courier@1.1.2':
-    resolution: {integrity: sha512-GOzX1PloVjVw++d0+p5ffApPjsjCMArcGmewtmMhufciginNIxxToV8Y4hEJE+wi2SJIFyD4p0eJiqqBPNZf4w==}
+  '@vielzeug/courier@1.1.3':
+    resolution: {integrity: sha512-y4dYIuh6E5qxqrx0zmoVZ+FT6tr8BE5lkAbFWGUN9ByCz2rWjG5THqghsY5AXA3VNxIeo8dxCXkNNa51HFeH2Q==}
     engines: {node: '>=20.3.0'}
 
   '@vielzeug/dnd@1.2.0':
@@ -237,13 +357,13 @@ packages:
     resolution: {integrity: sha512-AwZSXXK5JRzwW6MZUXXIaJO6NQMlfIzVsYVcbDVlnZzn0z3n4fxI7ohgaew0BhaD/ejUEFEY2J2yCu8s7/8Ztg==}
     engines: {node: '>=18'}
 
-  '@vielzeug/flux@1.0.5':
-    resolution: {integrity: sha512-Ml/CMCbcq6uPs4LV5lG0TVx9e9iiYxjAsSAoAwE1mxrL9RQd/iPmry4zM6ht+Hksox5LVY1+fCC4Gm/lFBTefQ==}
+  '@vielzeug/flux@1.0.6':
+    resolution: {integrity: sha512-HHELRtzXE0OoMWGER6pJOMlJAbbSdqLsdl6LDN/mJF6tykH81iY5trto0l33cKGA9K6XSsj/7PYa5kiU6IPWTA==}
     engines: {node: '>=18'}
     peerDependencies:
-      '@vielzeug/courier': 1.1.2
+      '@vielzeug/courier': 1.1.3
       '@vielzeug/herald': 1.0.3
-      '@vielzeug/pulse': 1.0.5
+      '@vielzeug/pulse': 1.0.6
     peerDependenciesMeta:
       '@vielzeug/courier':
         optional: true
@@ -264,52 +384,60 @@ packages:
     resolution: {integrity: sha512-njYWyk+GmHqF3r6eQx8+Rl+MVHIi0tYwWJVwGapUHXN1wWrbD7dIFpnOabgu2Ao3YjBWarQvuWOVuFhu8IS7Bw==}
     engines: {node: '>=18'}
 
-  '@vielzeug/lingua@1.1.1':
-    resolution: {integrity: sha512-8kv49QKG44Kl9plbsmDRiKTVNcyalrR/Vr8xuKQlLNGFvqJEBXQsX2d0k2AwYSFFStKQoQDznxfmXazKeTAfAg==}
+  '@vielzeug/lingua@1.1.2':
+    resolution: {integrity: sha512-ixs7Cp4l8OFvEWe0oUPNXOS1l0fRLkLASJeNcEreEadUo5YJ1BKkHZXTeDuA/96WIKfbwpjBo95U5VxePPrFAg==}
     engines: {node: '>=18'}
 
   '@vielzeug/orbit@1.1.0':
     resolution: {integrity: sha512-GXOYLg9fMVnFPAMLNOxdq6Es76l6qJc7c+AXxQqVBBRyWIjEtiAh/XsDSMth3E7Ytj65ONHgCfNNaBZl1Gx2Vg==}
     engines: {node: '>=18'}
 
-  '@vielzeug/ore@1.2.1':
-    resolution: {integrity: sha512-8NGXfDMzcw2pSwhU17yqpicNOUVy/35r87UWbWMqmk7o3uiXmh8DFMpDugiM1s2hGuY8Tx66PTvxQ2aFBLF1yQ==}
+  '@vielzeug/orbit@1.1.1':
+    resolution: {integrity: sha512-0eEQLRpUj3pTi257fHuD60diKMZJdjxV3EKhLa8+O9daoIrMOmc7cLFNi4yrz4CPEIY7miAjMl6aEEH1tpRApQ==}
+    engines: {node: '>=18'}
+
+  '@vielzeug/ore@1.2.2':
+    resolution: {integrity: sha512-XlpNQLVBKqnVxN8b9jdwaRPAUlwaG+OMAo4IZ2hml+/q+ktqhfgW5MqV/Q6nB5uvlIAP/E36x6dSdmb8Dn2c9A==}
     engines: {node: '>=18'}
 
   '@vielzeug/prism@1.1.4':
     resolution: {integrity: sha512-P9NtDT96Jw6nUQS2LzmGodB4N/LZqwEpJ2ElvH56ED26y4OxEgXwgv/9MYMbUKARjJA3FRDJsbW+N4Udhqpgqg==}
     engines: {node: '>=18'}
 
-  '@vielzeug/pulse@1.0.5':
-    resolution: {integrity: sha512-yQTU+rTDrQUaggRfCNj953ASygEbBAM1nahT6NyQK6L3kuIfgop/i4WiNI2preBH3t5u48PuxHFgb+tIaiiJYw==}
+  '@vielzeug/pulse@1.0.6':
+    resolution: {integrity: sha512-q/+YIlOohJkogW+/Uvw/5XvQhnR0Vdug2kmOAw9/Y+Vf6veowYpK5sECrZH8BteEi+1GPemsdT3ZJhdvSu6Psw==}
     engines: {node: '>=18'}
 
-  '@vielzeug/refine@1.5.2':
-    resolution: {integrity: sha512-owRYwgKYZ2hZTRm8EWwawJ6aJ9O3oAwCfiVFST9BUrhyB0MD9qGIMsnJ/4NbnYu3IdeLORCj4pPvsxflt3u4sQ==}
+  '@vielzeug/refine@1.5.3':
+    resolution: {integrity: sha512-drsfHc+qLprcbTbn4EK8rdzote8AxZZglonq3GUVj9zT5pWKjdr3gt4714nNWSnfRVuXJJ1uhu+3YQxewMM8XQ==}
     engines: {node: '>=18'}
 
   '@vielzeug/ripple@1.2.1':
     resolution: {integrity: sha512-2PiOv24QCY1wlaxF4iFc/XaqFdF4JgIbMxAbmuDE65srxf+laHAajaanV0rnXhiFuVk4fenKdENugduP/kIp6A==}
     engines: {node: '>=18'}
 
+  '@vielzeug/ripple@1.2.2':
+    resolution: {integrity: sha512-LlMok7m9L1rUwpHgBds05NNFIfX/tvxSFjpPMWHSF2Yxn+ipAdZJCZuUCU8b7fcr/sOwWBJn8QtlF9wRYEA76Q==}
+    engines: {node: '>=18'}
+
   '@vielzeug/rune@1.1.1':
     resolution: {integrity: sha512-QfndDzOcL12hBH1102K4Kf30TelfextWRKVk4Gb95vQ3LpJ7i8ELpqOaukLWQSZBoxwb+lll90xjX+9R1ww75Q==}
     engines: {node: '>=18'}
 
-  '@vielzeug/scout@1.1.3':
-    resolution: {integrity: sha512-W0h1O6ZpIdnD7tk1hv0W3M0amJ5esC1petw6yNY1dujT7VRf1DASr5mPql4elBPU0tH3a/5RZZXa2G7cNAKcaw==}
+  '@vielzeug/scout@1.1.4':
+    resolution: {integrity: sha512-V/g6mx14a9Knc7S/wTVX6ec0cJVOZ5H3e+kXi5l3FrDAIp01GZCtgkLJTU0DDzi/RfSVwlocJSIkImecx0R10w==}
     engines: {node: '>=18'}
 
-  '@vielzeug/scroll@1.1.1':
-    resolution: {integrity: sha512-L9cTUovYCs+ArFM0DRV4oy9wW5hV1IoPTNWcovTVmjD93aet8WugAbV0RZi28344hgs/lTg0tUyEb+huvxCzng==}
+  '@vielzeug/scroll@1.1.2':
+    resolution: {integrity: sha512-ZVWl2cRsTj7qrzeV1PnozGHJZ/RJ+pQdLmcANWIxkF2r9fnmZrgI0c6w0Of78OHxIQBzxLK781OzwyMyWvJs9Q==}
     engines: {node: '>=18'}
 
-  '@vielzeug/sourcerer@1.0.4':
-    resolution: {integrity: sha512-Nt/oiY/fLMaow+u8mCAGMr+xWGjl1SSrQ6XH1GgxrzuzvJivqfgGto4cQDBBUH8a294mJ4VLVG7j7wikuG8hCg==}
+  '@vielzeug/sourcerer@1.0.5':
+    resolution: {integrity: sha512-Ypbm57kq0ufK1oM0wlloJNLU1lGRvh2YUuwY66Y8pf/4ETgs7PuKSEx8pdIW1vTt1lVqneZUJEWd09tz91sSQA==}
     engines: {node: '>=18'}
 
-  '@vielzeug/spell@1.1.2':
-    resolution: {integrity: sha512-mk06TV+rtSGhNoS39d05EtIjMH8sOSaL7+fKMVJ91lBZbURiCzJFOQxYWPMenegyfF3fWx4biWXJAW2QVmrLvQ==}
+  '@vielzeug/spell@1.2.0':
+    resolution: {integrity: sha512-XcPDFvlHyiSez5DPZAUrURilThtBZ+/NQ+n83t6683WrUoS2e/jGUT/YwcnWYw8EMpcQAqlmNBMS6ctmaCVtAA==}
     engines: {node: '>=18'}
 
   '@vielzeug/tempo@1.0.3':
@@ -320,8 +448,8 @@ packages:
     resolution: {integrity: sha512-HMdF1yZw7amawz9yNJykipgvzK5TazAZXcGVcvqT8YN2M0ugYSZdf0Li3fXJArkryXoaOuhvw1hgCsmvAxPwgQ==}
     engines: {node: '>=18'}
 
-  '@vielzeug/ward@1.0.3':
-    resolution: {integrity: sha512-xc8aCUxhV2Vk9qURL8acKcyfQhjMgaKFSkaHHGdwgu+9MawfPY0V/CpVo8V6uk6bkHgP5WZ4RIEWmh4niVXWJw==}
+  '@vielzeug/ward@1.0.4':
+    resolution: {integrity: sha512-YcSFdAyPcYDx/kN3O5iORi9gNcc+fVyscxT6U+nbBquYtxYtUbKL+ZjXVqdDnWT/6WpVHgluUO+z2l0cPTOdUA==}
     engines: {node: '>=18'}
 
   '@vielzeug/wayfinder@1.0.3':
@@ -458,9 +586,9 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-  typescript@6.0.3:
-    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
-    engines: {node: '>=14.17'}
+  typescript@7.0.2:
+    resolution: {integrity: sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==}
+    engines: {node: '>=16.20.0'}
     hasBin: true
 
   vite@8.1.4:
@@ -593,15 +721,75 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
+  '@typescript/typescript-aix-ppc64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-darwin-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-darwin-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-freebsd-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-freebsd-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-arm@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-loong64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-mips64el@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-ppc64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-riscv64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-s390x@7.0.2':
+    optional: true
+
+  '@typescript/typescript-linux-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-netbsd-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-netbsd-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-openbsd-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-openbsd-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-sunos-x64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-win32-arm64@7.0.2':
+    optional: true
+
+  '@typescript/typescript-win32-x64@7.0.2':
+    optional: true
+
   '@vielzeug/arsenal@1.1.1': {}
 
-  '@vielzeug/clockwork@1.0.5':
+  '@vielzeug/clockwork@1.1.0':
     dependencies:
-      '@vielzeug/ripple': 1.2.1
+      '@vielzeug/ripple': 1.2.2
 
   '@vielzeug/coins@1.0.3': {}
 
-  '@vielzeug/courier@1.1.2':
+  '@vielzeug/courier@1.1.3':
     dependencies:
       '@vielzeug/arsenal': 1.1.1
 
@@ -611,13 +799,13 @@ snapshots:
     dependencies:
       '@vielzeug/arsenal': 1.1.1
 
-  '@vielzeug/flux@1.0.5(@vielzeug/courier@1.1.2)(@vielzeug/herald@1.0.3)(@vielzeug/pulse@1.0.5)':
+  '@vielzeug/flux@1.0.6(@vielzeug/courier@1.1.3)(@vielzeug/herald@1.0.3)(@vielzeug/pulse@1.0.6)':
     dependencies:
-      '@vielzeug/ripple': 1.2.1
+      '@vielzeug/ripple': 1.2.2
     optionalDependencies:
-      '@vielzeug/courier': 1.1.2
+      '@vielzeug/courier': 1.1.3
       '@vielzeug/herald': 1.0.3
-      '@vielzeug/pulse': 1.0.5
+      '@vielzeug/pulse': 1.0.6
 
   '@vielzeug/herald@1.0.3': {}
 
@@ -627,54 +815,61 @@ snapshots:
     dependencies:
       '@vielzeug/ripple': 1.2.1
 
-  '@vielzeug/lingua@1.1.1': {}
+  '@vielzeug/lingua@1.1.2': {}
 
   '@vielzeug/orbit@1.1.0':
     dependencies:
       '@vielzeug/arsenal': 1.1.1
       '@vielzeug/ripple': 1.2.1
 
-  '@vielzeug/ore@1.2.1':
+  '@vielzeug/orbit@1.1.1':
     dependencies:
-      '@vielzeug/ripple': 1.2.1
+      '@vielzeug/arsenal': 1.1.1
+      '@vielzeug/ripple': 1.2.2
+
+  '@vielzeug/ore@1.2.2':
+    dependencies:
+      '@vielzeug/ripple': 1.2.2
 
   '@vielzeug/prism@1.1.4':
     dependencies:
       '@vielzeug/orbit': 1.1.0
       '@vielzeug/ripple': 1.2.1
 
-  '@vielzeug/pulse@1.0.5':
+  '@vielzeug/pulse@1.0.6':
     dependencies:
-      '@vielzeug/ripple': 1.2.1
+      '@vielzeug/ripple': 1.2.2
 
-  '@vielzeug/refine@1.5.2':
+  '@vielzeug/refine@1.5.3':
     dependencies:
       '@vielzeug/arsenal': 1.1.1
       '@vielzeug/dnd': 1.2.0
       '@vielzeug/keymap': 1.1.1
-      '@vielzeug/orbit': 1.1.0
-      '@vielzeug/ore': 1.2.1
-      '@vielzeug/ripple': 1.2.1
+      '@vielzeug/orbit': 1.1.1
+      '@vielzeug/ore': 1.2.2
+      '@vielzeug/ripple': 1.2.2
       '@vielzeug/tempo': 1.0.3
       lucide: 1.24.0
 
   '@vielzeug/ripple@1.2.1': {}
 
+  '@vielzeug/ripple@1.2.2': {}
+
   '@vielzeug/rune@1.1.1': {}
 
-  '@vielzeug/scout@1.1.3':
+  '@vielzeug/scout@1.1.4':
     dependencies:
-      '@vielzeug/ripple': 1.2.1
+      '@vielzeug/ripple': 1.2.2
 
-  '@vielzeug/scroll@1.1.1':
+  '@vielzeug/scroll@1.1.2':
     dependencies:
-      '@vielzeug/ripple': 1.2.1
+      '@vielzeug/ripple': 1.2.2
 
-  '@vielzeug/sourcerer@1.0.4':
+  '@vielzeug/sourcerer@1.0.5':
     dependencies:
       '@vielzeug/arsenal': 1.1.1
 
-  '@vielzeug/spell@1.1.2':
+  '@vielzeug/spell@1.2.0':
     dependencies:
       '@vielzeug/arsenal': 1.1.1
 
@@ -684,7 +879,7 @@ snapshots:
 
   '@vielzeug/vault@1.0.3': {}
 
-  '@vielzeug/ward@1.0.3': {}
+  '@vielzeug/ward@1.0.4': {}
 
   '@vielzeug/wayfinder@1.0.3': {}
 
@@ -793,7 +988,28 @@ snapshots:
   tslib@2.8.1:
     optional: true
 
-  typescript@6.0.3: {}
+  typescript@7.0.2:
+    optionalDependencies:
+      '@typescript/typescript-aix-ppc64': 7.0.2
+      '@typescript/typescript-darwin-arm64': 7.0.2
+      '@typescript/typescript-darwin-x64': 7.0.2
+      '@typescript/typescript-freebsd-arm64': 7.0.2
+      '@typescript/typescript-freebsd-x64': 7.0.2
+      '@typescript/typescript-linux-arm': 7.0.2
+      '@typescript/typescript-linux-arm64': 7.0.2
+      '@typescript/typescript-linux-loong64': 7.0.2
+      '@typescript/typescript-linux-mips64el': 7.0.2
+      '@typescript/typescript-linux-ppc64': 7.0.2
+      '@typescript/typescript-linux-riscv64': 7.0.2
+      '@typescript/typescript-linux-s390x': 7.0.2
+      '@typescript/typescript-linux-x64': 7.0.2
+      '@typescript/typescript-netbsd-arm64': 7.0.2
+      '@typescript/typescript-netbsd-x64': 7.0.2
+      '@typescript/typescript-openbsd-arm64': 7.0.2
+      '@typescript/typescript-openbsd-x64': 7.0.2
+      '@typescript/typescript-sunos-x64': 7.0.2
+      '@typescript/typescript-win32-arm64': 7.0.2
+      '@typescript/typescript-win32-x64': 7.0.2
 
   vite@8.1.4:
     dependencies:

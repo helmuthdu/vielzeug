@@ -1,4 +1,17 @@
 packages:
   - .
 minimumReleaseAgeExclude:
-  - '@vielzeug/refine@1.5.2'
+  - '@vielzeug/refine@1.5.2 || 1.5.3'
+  - '@vielzeug/clockwork@1.1.0'
+  - '@vielzeug/courier@1.1.3'
+  - '@vielzeug/flux@1.0.6'
+  - '@vielzeug/lingua@1.1.2'
+  - '@vielzeug/orbit@1.1.1'
+  - '@vielzeug/ore@1.2.2'
+  - '@vielzeug/pulse@1.0.6'
+  - '@vielzeug/ripple@1.2.2'
+  - '@vielzeug/scout@1.1.4'
+  - '@vielzeug/scroll@1.1.2'
+  - '@vielzeug/sourcerer@1.0.5'
+  - '@vielzeug/spell@1.2.0'
+  - '@vielzeug/ward@1.0.4'
