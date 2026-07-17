@@ -14,6 +14,10 @@ Zero external dependencies. Full tree-shaking. TypeScript-first throughout.
 The [REPL](/repl) lets you run any package in the browser without installing anything.
 :::
 
+::: info End-to-end showcase
+Looking for a full, multi-package example app? See [Showcases](/guide/showcases) and open the Kanban demo on StackBlitz.
+:::
+
 ## What are you building?
 
 Jump to the packages most relevant to your work.

@@ -1,4 +1,5 @@
 import '@vielzeug/refine/button';
+import '@vielzeug/refine/alert';
 import '@vielzeug/refine/navbar';
 import '@vielzeug/refine/avatar';
 import '@vielzeug/refine/command-palette';
