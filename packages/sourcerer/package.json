@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/sourcerer",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Typed data-source adapter — pagination, filtering, sorting, search, and cursor-based infinite scroll",
   "type": "module",
   "files": [

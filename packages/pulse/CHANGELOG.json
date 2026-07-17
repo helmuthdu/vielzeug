@@ -2,6 +2,30 @@
   "name": "@vielzeug/pulse",
   "entries": [
     {
+      "version": "1.0.6",
+      "tag": "@vielzeug/pulse_v1.0.6",
+      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: resolve ripple from source in tests and externalize bundle dep",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "399a94067d6eb0208ec72de59d69ec2cd2aaaf9c"
+          },
+          {
+            "comment": "feat: harden frame handling and memoize presence channels",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3ddd06f6fda33f10529ab6fdc0647e2772c4ea36"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.2`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.5",
       "tag": "@vielzeug/pulse_v1.0.5",
       "date": "Tue, 14 Jul 2026 06:12:09 GMT",

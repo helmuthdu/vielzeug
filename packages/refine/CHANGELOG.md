@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Thu, 16 Jul 2026 16:49:59 GMT and should not be manually modified.
+This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+
+## 1.5.3
+Fri, 17 Jul 2026 14:17:07 GMT
+
+### Patches
+
+- fix: resolve @vielzeug/ore/directives in vitest
 
 ## 1.5.2
 Thu, 16 Jul 2026 16:49:59 GMT

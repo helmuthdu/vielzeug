@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/sourcerer
 
-This log was last generated on Tue, 14 Jul 2026 06:12:09 GMT and should not be manually modified.
+This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+
+## 1.0.5
+Fri, 17 Jul 2026 14:17:07 GMT
+
+### Patches
+
+- fix: align async search orchestration and stale optimistic refresh
 
 ## 1.0.4
 Tue, 14 Jul 2026 06:12:09 GMT

@@ -2,6 +2,25 @@
   "name": "@vielzeug/ore",
   "entries": [
     {
+      "version": "1.2.2",
+      "tag": "@vielzeug/ore_v1.2.2",
+      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(ore): guard against silent template/test-utility failure states",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "eda7a2b6593834874bd38fc14ed5632a6f8a6bb0"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.2`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.2.1",
       "tag": "@vielzeug/ore_v1.2.1",
       "date": "Tue, 14 Jul 2026 06:12:09 GMT",

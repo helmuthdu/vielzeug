@@ -2,6 +2,20 @@
   "name": "@vielzeug/lingua",
   "entries": [
     {
+      "version": "1.1.2",
+      "tag": "@vielzeug/lingua_v1.1.2",
+      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: harden namespace and subscription lifecycle behavior",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "fbea2e0f80fd770bbf73db4db25c5200b777fcef"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.1",
       "tag": "@vielzeug/lingua_v1.1.1",
       "date": "Tue, 07 Jul 2026 09:20:39 GMT",

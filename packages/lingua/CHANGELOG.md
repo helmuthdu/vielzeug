@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/lingua
 
-This log was last generated on Tue, 07 Jul 2026 09:20:39 GMT and should not be manually modified.
+This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+
+## 1.1.2
+Fri, 17 Jul 2026 14:17:07 GMT
+
+### Patches
+
+- fix: harden namespace and subscription lifecycle behavior
 
 ## 1.1.1
 Tue, 07 Jul 2026 09:20:39 GMT

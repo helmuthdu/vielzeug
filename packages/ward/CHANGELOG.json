@@ -2,6 +2,25 @@
   "name": "@vielzeug/ward",
   "entries": [
     {
+      "version": "1.0.4",
+      "tag": "@vielzeug/ward_v1.0.4",
+      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: fail closed on async predicates",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "d7044427674f45ce639ee8cde9dd8c5a2f4088b4"
+          },
+          {
+            "comment": "fix: update ward behavior and docs",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "99b270a412d29dbd07791b9ff968de94e1a92cd3"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.3",
       "tag": "@vielzeug/ward_v1.0.3",
       "date": "Tue, 07 Jul 2026 09:20:39 GMT",

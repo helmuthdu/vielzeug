@@ -1,6 +1,14 @@
 # Change Log - @vielzeug/pulse
 
-This log was last generated on Tue, 14 Jul 2026 06:12:09 GMT and should not be manually modified.
+This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+
+## 1.0.6
+Fri, 17 Jul 2026 14:17:07 GMT
+
+### Patches
+
+- fix: resolve ripple from source in tests and externalize bundle dep
+- feat: harden frame handling and memoize presence channels
 
 ## 1.0.5
 Tue, 14 Jul 2026 06:12:09 GMT

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/forge
 
-This log was last generated on Tue, 14 Jul 2026 06:12:09 GMT and should not be manually modified.
+This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+
+## 1.3.0
+Fri, 17 Jul 2026 14:17:07 GMT
+
+### Minor changes
+
+- feat: improve scoped adapter ergonomics and scoped path documentation
 
 ## 1.2.1
 Tue, 14 Jul 2026 06:12:09 GMT

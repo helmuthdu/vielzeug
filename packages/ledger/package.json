@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/ledger",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "Async undo/redo command history with Ripple signals for reactive canUndo/canRedo state",
   "type": "module",
   "files": [

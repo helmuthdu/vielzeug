@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/clockwork
 
-This log was last generated on Tue, 14 Jul 2026 06:12:09 GMT and should not be manually modified.
+This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+
+## 1.1.0
+Fri, 17 Jul 2026 14:17:07 GMT
+
+### Minor changes
+
+- feat: add hydrated-context validation option and snapshot-safe subscriptions
 
 ## 1.0.5
 Tue, 14 Jul 2026 06:12:09 GMT

@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/refine",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Accessible, themeable web components built on Ore custom element primitives",
   "keywords": [
     "web-components",

@@ -2,6 +2,31 @@
   "name": "@vielzeug/refine",
   "entries": [
     {
+      "version": "1.5.3",
+      "tag": "@vielzeug/refine_v1.5.3",
+      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: resolve @vielzeug/ore/directives in vitest",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "399a94067d6eb0208ec72de59d69ec2cd2aaaf9c"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/orbit\" to `1.1.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ore\" to `1.2.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.2`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.5.2",
       "tag": "@vielzeug/refine_v1.5.2",
       "date": "Thu, 16 Jul 2026 16:49:59 GMT",

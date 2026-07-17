@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/spell
 
-This log was last generated on Tue, 14 Jul 2026 06:12:09 GMT and should not be manually modified.
+This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+
+## 1.2.0
+Fri, 17 Jul 2026 14:17:07 GMT
+
+### Minor changes
+
+- feat: add scoped spell overrides and async variant parsing
 
 ## 1.1.2
 Tue, 14 Jul 2026 06:12:09 GMT

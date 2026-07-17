@@ -1,6 +1,11 @@
 # Change Log - @vielzeug/scroll
 
-This log was last generated on Tue, 14 Jul 2026 06:12:09 GMT and should not be manually modified.
+This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+
+## 1.1.2
+Fri, 17 Jul 2026 14:17:07 GMT
+
+_Version update only_
 
 ## 1.1.1
 Tue, 14 Jul 2026 06:12:09 GMT

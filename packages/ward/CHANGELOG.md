@@ -1,6 +1,14 @@
 # Change Log - @vielzeug/ward
 
-This log was last generated on Tue, 07 Jul 2026 09:20:39 GMT and should not be manually modified.
+This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+
+## 1.0.4
+Fri, 17 Jul 2026 14:17:07 GMT
+
+### Patches
+
+- fix: fail closed on async predicates
+- fix: update ward behavior and docs
 
 ## 1.0.3
 Tue, 07 Jul 2026 09:20:39 GMT

@@ -2,6 +2,25 @@
   "name": "@vielzeug/clockwork",
   "entries": [
     {
+      "version": "1.1.0",
+      "tag": "@vielzeug/clockwork_v1.1.0",
+      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat: add hydrated-context validation option and snapshot-safe subscriptions",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "8b933935886f73b827fe4520bae70672f491953d"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.2`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.5",
       "tag": "@vielzeug/clockwork_v1.0.5",
       "date": "Tue, 14 Jul 2026 06:12:09 GMT",

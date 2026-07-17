@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ripple
 
-This log was last generated on Tue, 07 Jul 2026 09:20:39 GMT and should not be manually modified.
+This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+
+## 1.2.2
+Fri, 17 Jul 2026 14:17:07 GMT
+
+### Patches
+
+- fix(ripple): correct disposed state for top-level store lenses
 
 ## 1.2.1
 Tue, 07 Jul 2026 09:20:39 GMT
