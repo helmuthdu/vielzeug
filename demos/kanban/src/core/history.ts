@@ -10,6 +10,56 @@ export const ledger = createLedger({ maxHistory: 50 });
 
 export type NewTask = Omit<Task, 'id'>;
 
+/**
+ * Re-splices the subsequence of `tasks` whose `status === status` into `orderedIds`' order,
+ * leaving every other task's position (and every other status's relative order) untouched.
+ * `orderedIds` must contain exactly the ids currently in that status — extra/missing ids are
+ * silently dropped/skipped, matching how `@vielzeug/dnd`'s own `applyReorder()` treats mismatches.
+ */
+function applyReorderWithinStatus(tasks: Task[], status: TaskStatus, orderedIds: string[]): Task[] {
+  const byId = new Map(tasks.map((t) => [t.id, t] as const));
+  const reordered = orderedIds.map((id) => byId.get(id)).filter((t): t is Task => Boolean(t));
+  let cursor = 0;
+
+  return tasks.map((t) => (t.status === status ? (reordered[cursor++] ?? t) : t));
+}
+
+/**
+ * Persists a same-column drag reorder (no status change — see `moveTask` for that). Without
+ * this, `@vielzeug/dnd` still commits the visual reorder, but `board-column`'s post-drag
+ * reconcile redraws from `boardSignal` (which never changed), silently snapping every reordered
+ * card back to its original position the instant the drag ends.
+ */
+export async function reorderTasks(
+  boardSignal: Signal<Board>,
+  status: TaskStatus,
+  orderedIds: string[],
+): Promise<void> {
+  const previousOrder = boardSignal.value.tasks.filter((t) => t.status === status).map((t) => t.id);
+
+  if (previousOrder.length === orderedIds.length && previousOrder.every((id, i) => id === orderedIds[i])) return;
+
+  await ledger.do(
+    compose(
+      [
+        {
+          execute: () => {
+            const board = boardSignal.value;
+
+            boardSignal.value = { ...board, tasks: applyReorderWithinStatus(board.tasks, status, orderedIds) };
+          },
+          rollback: () => {
+            const board = boardSignal.value;
+
+            boardSignal.value = { ...board, tasks: applyReorderWithinStatus(board.tasks, status, previousOrder) };
+          },
+        },
+      ],
+      `Reorder ${status} tasks`,
+    ),
+  );
+}
+
 export async function createTask(boardSignal: Signal<Board>, input: NewTask): Promise<string> {
   const id = crypto.randomUUID();
   const task: Task = { ...input, id };

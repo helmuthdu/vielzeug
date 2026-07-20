@@ -188,6 +188,42 @@ describe('createSortable', () => {
       sortable.dispose();
     });
 
+    // Regression: without this, a mobile browser can decide the initial finger movement on a
+    // draggable item is a page scroll/pan before `createTouchDragShim`'s own threshold logic and
+    // `preventDefault()` calls ever run, silently handing the whole gesture to native scrolling.
+    // The item then never receives the `dragover` sequence needed to update the drop target, so
+    // the drop commits back to wherever it started — indistinguishable from "reverting".
+    it('sets touch-action:none on items when no handle option', () => {
+      const {
+        element,
+        items: [first],
+      } = makeList('a', 'b');
+      const sortable = createSortable({ element, getKey });
+
+      expect(first.style.touchAction).toBe('none');
+
+      sortable.dispose();
+    });
+
+    it('sets touch-action:none on the handle (not the item) when handle option is set', () => {
+      const element = document.createElement('ul');
+      const li = document.createElement('li');
+      const handle = document.createElement('span');
+
+      handle.className = 'handle';
+      li.setAttribute('data-sort-id', 'a');
+      li.append(handle);
+      element.append(li);
+      document.body.appendChild(element);
+
+      const sortable = createSortable({ element, getKey, handle: '.handle' });
+
+      expect(li.style.touchAction).toBe('');
+      expect(handle.style.touchAction).toBe('none');
+
+      sortable.dispose();
+    });
+
     it('removes all dnd attributes on dispose', () => {
       const {
         element,
@@ -201,6 +237,7 @@ describe('createSortable', () => {
       expect(first.getAttribute('draggable')).toBeNull();
       expect(first.getAttribute('role')).toBeNull();
       expect(first.getAttribute('tabindex')).toBeNull();
+      expect(first.style.touchAction).toBe('');
     });
   });
 

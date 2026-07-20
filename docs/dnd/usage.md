@@ -412,6 +412,24 @@ Defaults to `[draggable="true"]` — the attribute `createSortable`/`createDropZ
 createTouchDragShim({ draggableSelector: '.my-drag-handle' });
 ```
 
+### Drag preview
+
+A native mouse-driven drag gets a floating drag image for free — the browser snapshots the dragged element the moment `dragstart` fires and keeps that image under the cursor for the whole gesture. `createTouchDragShim`'s `dragstart` is a synthetic event, so no such snapshot ever exists; without a preview of its own, the dragged element would simply disappear (hidden by `createSortable`'s own scheduled hide) with no visual feedback until the drop. `createTouchDragShim` renders one automatically — a `cloneNode(true)` of the dragged element, positioned `fixed` and translated to follow the touch point — enabled by default.
+
+```ts
+// Opt out to render fully custom feedback instead (e.g. toggling a class from your own
+// dragstart/dragend listeners):
+createTouchDragShim({ showDragPreview: false });
+```
+
+Note the preview only clones light-DOM content — an item whose visible content lives inside a shadow root will preview as an empty shell.
+
+### Why draggable items get `touch-action: none`
+
+`createSortable` sets `touch-action: none` on every element it marks as draggable (the item itself, or the handle when `handle` is set) — no configuration needed. Without it, a mobile browser can decide the very first bit of finger movement on a draggable item is a page scroll/pan — a decision made independently of, and before, `createTouchDragShim`'s own drag-start threshold and `preventDefault()` calls ever run — and hand the rest of the gesture to native scrolling. Once that happens the item never receives the `dragover` sequence needed to update the drop target, so the drop commits back to wherever it started, which looks identical to the drop simply reverting. This is most visible dragging between two containers that require any real finger travel (e.g. a Kanban column stacked below the source column on a narrow viewport) — a short in-place reorder rarely travels far enough to trigger the browser's scroll-intent heuristic, which is why this class of bug can pass casual same-container testing and only show up cross-container.
+
+This has no effect on mouse/pointer input — `touch-action` is touch-only — so it's safe even for `createSortable` instances that never pair with `createTouchDragShim`.
+
 ### Disabled state
 
 ```ts

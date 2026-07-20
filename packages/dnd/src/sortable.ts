@@ -257,6 +257,7 @@ function clearHandleAttributes(element: HTMLElement): void {
   element.querySelectorAll<HTMLElement>(`[${HANDLE_ATTR}]`).forEach((handleEl) => {
     handleEl.removeAttribute(HANDLE_ATTR);
     handleEl.removeAttribute('draggable');
+    handleEl.style.touchAction = '';
   });
 }
 
@@ -558,12 +559,25 @@ export function createSortable(options: SortableOptions): Sortable {
 
       if (handle) {
         el.removeAttribute('draggable');
+        el.style.touchAction = '';
         el.querySelectorAll<HTMLElement>(handle).forEach((handleEl) => {
           handleEl.setAttribute(HANDLE_ATTR, '');
           handleEl.setAttribute('draggable', 'true');
+          // See the matching comment above `cleanupItems()` for why this matters at all.
+          handleEl.style.touchAction = 'none';
         });
       } else {
         el.setAttribute('draggable', 'true');
+        // A native mouse drag has no competing gesture to arbitrate; touch does. Without this,
+        // a mobile browser can decide the very first bit of finger movement is a page
+        // scroll/pan — a decision it makes independently of, and before, this library's own
+        // touch-shim threshold/`preventDefault()` logic ever runs — and hand the rest of the
+        // gesture to native scrolling. Once that happens the item never receives the
+        // `dragover` sequence needed to update the drop target, so the session ends up
+        // committing back to wherever it started: indistinguishable from the drop "reverting".
+        // `touch-action: none` opts the element out of every default touch gesture from
+        // `touchstart` onward, leaving the whole interaction to this library's own JS.
+        el.style.touchAction = 'none';
       }
     });
   };
@@ -607,6 +621,7 @@ export function createSortable(options: SortableOptions): Sortable {
       item.removeAttribute('draggable');
       item.removeAttribute('role');
       item.removeAttribute('tabindex');
+      item.style.touchAction = '';
     });
   };
 

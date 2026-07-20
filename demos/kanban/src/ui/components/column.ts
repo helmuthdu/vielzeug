@@ -5,6 +5,7 @@ import { when } from '@vielzeug/ore/directives';
 import { computed, effect } from '@vielzeug/ripple';
 
 import { boardSignal } from '../../core/board-store';
+import { reorderTasks } from '../../core/history';
 import { attemptMoveTask, canCreateTask } from '../../core/task-actions';
 import { type Task, type TaskStatus } from '../../core/types';
 import { renderTaskCard } from './task-card';
@@ -12,6 +13,22 @@ import { openTaskDialog } from './task-dialog';
 
 // ONE scope instance shared across every column — required for cross-column drag.
 export const sharedScope = createSortableScope();
+
+// In-flight `attemptMoveTask` commits, shared across every column instance (not scoped to the
+// column that initiated the move). A cross-column drop fires `onReorder` on BOTH the source
+// container (item removed, no new ids) and the target container (item added) — only the target's
+// callback ever sees a new id to move. If each column tracked its own pending commit, the SOURCE
+// column's post-drag reconcile would find nothing pending and redraw immediately from
+// `boardSignal` before the target's async `attemptMoveTask` had actually updated the task's
+// status, recreating the card back in its original column. Tracking commits here lets every
+// column's dragend flush (source and target alike) wait for ALL outstanding moves before
+// reconciling, so both columns redraw once from the final, settled state.
+const pendingMoveCommits = new Set<Promise<unknown>>();
+
+function trackMoveCommit(commit: Promise<unknown>): void {
+  pendingMoveCommits.add(commit);
+  void commit.finally(() => pendingMoveCommits.delete(commit));
+}
 
 interface ColumnOptions {
   onReorder: (ids: string[]) => void;
@@ -111,14 +128,30 @@ define<{ status: TaskStatus }>('board-column', {
 
       col = createColumn(container, {
         onReorder: (ids) => {
-          for (const id of ids) {
-            if (!currentTaskIds.has(id)) {
-              const task = boardSignal.value.tasks.find((t) => t.id === id);
+          const hasNewId = ids.some((id) => !currentTaskIds.has(id));
 
-              if (!task) continue;
+          if (hasNewId) {
+            for (const id of ids) {
+              if (!currentTaskIds.has(id)) {
+                const task = boardSignal.value.tasks.find((t) => t.id === id);
 
-              void attemptMoveTask(task, props.status.value);
+                if (!task) continue;
+
+                trackMoveCommit(attemptMoveTask(task, props.status.value));
+              }
             }
+
+            return;
+          }
+
+          // No new id here — either a pure same-column reorder (exact same set, just resequenced)
+          // or this column just lost an item to another column (fewer ids than before). Only the
+          // former needs persisting; the latter is the *source* side of a cross-column move,
+          // already fully handled by the target column's `attemptMoveTask` call above —
+          // reordering the remainder here too would race with that async status change and
+          // corrupt `boardSignal.value.tasks` (see `reorderTasks`'s doc comment).
+          if (ids.length === currentTaskIds.size) {
+            trackMoveCommit(reorderTasks(boardSignal, props.status.value, ids));
           }
         },
       });
@@ -134,9 +167,19 @@ define<{ status: TaskStatus }>('board-column', {
       });
 
       // Flush deferred reactive renders after any drag ends. Effects skipped during isDragging
-      // need one nudge to reconcile the DOM once commitSession has updated boardSignal.
+      // need one nudge to reconcile the DOM once commitSession has updated boardSignal. Waits for
+      // every in-flight `attemptMoveTask` commit (see `pendingMoveCommits` above) — not just this
+      // column's own — so a cross-column move settles fully before either side redraws.
       const onDragEnd = (): void => {
-        queueMicrotask(() => reconcile(tasksComputed.value));
+        queueMicrotask(() => {
+          if (pendingMoveCommits.size === 0) {
+            reconcile(tasksComputed.value);
+
+            return;
+          }
+
+          void Promise.allSettled([...pendingMoveCommits]).then(() => reconcile(tasksComputed.value));
+        });
       };
 
       document.addEventListener('dragend', onDragEnd, { signal: sharedScope.disposalSignal });
@@ -156,10 +199,10 @@ define<{ status: TaskStatus }>('board-column', {
         </div>
         <span
           class="board__column-count"
-          ?data-over-limit=${() => {
+          data-over-limit=${() => {
             const wipLimit = meta().wipLimit;
 
-            return Boolean(wipLimit && tasksComputed.value.length > wipLimit);
+            return wipLimit && tasksComputed.value.length > wipLimit ? 'true' : null;
           }}
           >${() => tasksComputed.value.length}</span
         >

@@ -231,7 +231,7 @@ declare function createSortable(options: SortableOptions): Sortable;
 
 Makes the direct children of a container element reorderable via drag. Returns a `Sortable` handle.
 
-`createSortable` sets `draggable="true"` and `role="listitem"` on qualifying children and sets `role="list"` on the container at initialization. After DOM mutations, call `sortable.sync()` to re-apply sortable attributes explicitly.
+`createSortable` sets `draggable="true"`, `role="listitem"`, and `touch-action: none` (inline style) on qualifying children and sets `role="list"` on the container at initialization. After DOM mutations, call `sortable.sync()` to re-apply sortable attributes explicitly.
 
 - `element`: `HTMLElement`, required. The container whose children become sortable.
 - `getKey`: `(element: HTMLElement) => string`, required. Maps each item element to its stable string identity. Children for which `getKey` returns a falsy value are skipped.
@@ -357,6 +357,7 @@ Dnd reads and writes the following DOM attributes:
 - `data-dragging`: set during drag, removed on `dragend` or `dispose()`. Use it as your styling hook for drag state.
 - `data-dnd-handle`: internal marker set by `createSortable` and `sortable.sync()`, removed by `dispose()`. Lets Dnd clean up only the handle attributes it applied.
 - `aria-hidden="true"`: set on placeholder creation and removed with the placeholder. Applied to the `.dnd-placeholder` element.
+- `style.touchAction = 'none'` (inline style): set by `createSortable` and `sortable.sync()` on the item (or the handle, when `handle` is set), cleared by `dispose()`. Opts the element out of the browser's default touch gestures (scroll/pan/zoom) so a mobile browser never hijacks a drag gesture as a page scroll before `createTouchDragShim`'s own logic runs — see Usage's "Why draggable items get `touch-action: none`". No effect on mouse/pointer input.
 
 ## CSS Classes
 
@@ -376,13 +377,15 @@ Bridges touch gestures to the synthetic `DragEvent` sequence `createSortable()`/
 | -------------------- | --------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `disabled`           | `boolean` | —                      | When `true`, touch gestures are ignored. Read live off the same options object on each `touchstart`, like `SortableOptions.disabled`. |
 | `draggableSelector`   | `string`  | `'[draggable="true"]'` | CSS selector identifying draggable elements under the touch point. The default matches what `createSortable`/`createDropZone` already set. |
+| `showDragPreview`     | `boolean` | `true`                 | Renders a floating clone of the dragged element that follows the touch point for the whole gesture. A native mouse drag gets this for free from the browser's own drag image; this shim's `dragstart` is synthetic, so without it the dragged element would simply vanish (hidden by `createSortable`'s own `scheduleHide()`) with no visual feedback at all. Set to `false` to render fully custom feedback instead. |
 
 **Returns:** `Disposable`
 
 Notes:
 
 - Listens at the `document` level — create one instance per app, not one per sortable/drop-zone.
-- Falls back to a plain object when the `DataTransfer` constructor is unavailable (Safari < 14).
+- Dispatched events carry a plain object as `dataTransfer` (`dropEffect`/`effectAllowed`/`getData`/`setData`/`setDragImage`), never a real `DataTransfer` — a genuine `DataTransfer` created outside an active native drag is permanently in the spec's "disabled mode", where `dropEffect` writes are silently ignored, which `createSortable`/`createDropZone`'s own commit-vs-cancel check would otherwise always read as a cancellation.
+- The floating preview is a `cloneNode(true)` of the dragged element — it only clones light-DOM content, so an item whose visible content lives inside a shadow root will preview as an empty shell.
 
 ```ts
 import { createTouchDragShim } from '@vielzeug/dnd';

@@ -1,5 +1,6 @@
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/alert';
+import '@vielzeug/refine/icon';
 import '@vielzeug/refine/navbar';
 import '@vielzeug/refine/avatar';
 import '@vielzeug/refine/command-palette';
@@ -217,14 +218,16 @@ define('app-shell', {
             >`,
         )}
         <ore-navbar-item slot="mobile-menu" ?disabled=${() => !ledger.canUndo.value} @click=${() => void ledger.undo()}
-          >${() => t('action.undo')}</ore-navbar-item
+          ><ore-icon name="undo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
+          ${() => t('action.undo')}</ore-navbar-item
         >
         <ore-navbar-item slot="mobile-menu" ?disabled=${() => !ledger.canRedo.value} @click=${() => void ledger.redo()}
-          >${() => t('action.redo')}</ore-navbar-item
+          ><ore-icon name="redo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
+          ${() => t('action.redo')}</ore-navbar-item
         >
         <ore-navbar-item slot="mobile-menu" @click=${openPalette}>${() => t('action.search')}</ore-navbar-item>
-        <ore-navbar-item slot="mobile-menu" @click=${() => void exportTasksAsCsv()}
-          >${() => t('action.export')} CSV</ore-navbar-item
+        <ore-navbar-item slot="mobile-menu" @click=${() => void exportTasksAsCsv()}>
+          ${() => t('action.export')} CSV</ore-navbar-item
         >
         <div slot="end" style="display:flex;align-items:center;gap:0.5rem">
           <div class="presence-avatars">
@@ -249,21 +252,25 @@ define('app-shell', {
           <ore-button
             variant="ghost"
             size="sm"
+            icon-only
+            label=${() => t('action.undo')}
             ?disabled=${() => !ledger.canUndo.value}
             @click=${() => void ledger.undo()}
-            >${() => t('action.undo')} ⌘Z</ore-button
-          >
+            ><ore-icon name="undo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon
+          ></ore-button>
           <ore-button
             variant="ghost"
             size="sm"
+            icon-only
+            label=${() => t('action.redo')}
             ?disabled=${() => !ledger.canRedo.value}
             @click=${() => void ledger.redo()}
-            >${() => t('action.redo')} ⇧⌘Z</ore-button
+            ><ore-icon name="redo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon
+          ></ore-button>
+          <ore-button variant="ghost" size="sm" @click=${() => void exportTasksAsCsv()}>
+            ${() => t('action.export')} CSV</ore-button
           >
           <ore-button variant="ghost" size="sm" @click=${openPalette}>${() => t('action.search')} ⌘K</ore-button>
-          <ore-button variant="ghost" size="sm" @click=${() => void exportTasksAsCsv()}
-            >${() => t('action.export')} CSV</ore-button
-          >
         </div>
       </ore-navbar>
       <main class="app-main" ref=${mainRef}></main>
