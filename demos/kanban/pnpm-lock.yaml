@@ -18,8 +18,8 @@ importers:
         specifier: ^1.1.3
         version: 1.1.3
       '@vielzeug/dnd':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.1
+        version: 1.2.1
       '@vielzeug/familiar':
         specifier: ^1.0.4
         version: 1.0.4
@@ -33,8 +33,8 @@ importers:
         specifier: ^1.1.1
         version: 1.1.1
       '@vielzeug/ledger':
-        specifier: ^1.1.3
-        version: 1.1.3
+        specifier: ^1.1.4
+        version: 1.1.4
       '@vielzeug/lingua':
         specifier: ^1.1.2
         version: 1.1.2
@@ -42,14 +42,14 @@ importers:
         specifier: ^1.2.2
         version: 1.2.2
       '@vielzeug/prism':
-        specifier: ^1.1.4
-        version: 1.1.4
+        specifier: ^1.1.5
+        version: 1.1.5
       '@vielzeug/pulse':
         specifier: ^1.0.6
         version: 1.0.6
       '@vielzeug/refine':
-        specifier: ^1.5.3
-        version: 1.5.3
+        specifier: ^1.5.4
+        version: 1.5.4
       '@vielzeug/ripple':
         specifier: ^1.2.2
         version: 1.2.2
@@ -57,8 +57,8 @@ importers:
         specifier: ^1.1.1
         version: 1.1.1
       '@vielzeug/scout':
-        specifier: ^1.1.4
-        version: 1.1.4
+        specifier: ^1.1.5
+        version: 1.1.5
       '@vielzeug/scroll':
         specifier: ^1.1.2
         version: 1.1.2
@@ -85,8 +85,8 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
       vite:
-        specifier: ^8.1.4
-        version: 8.1.4
+        specifier: ^8.1.5
+        version: 8.1.5
 
 packages:
 
@@ -349,8 +349,8 @@ packages:
     resolution: {integrity: sha512-y4dYIuh6E5qxqrx0zmoVZ+FT6tr8BE5lkAbFWGUN9ByCz2rWjG5THqghsY5AXA3VNxIeo8dxCXkNNa51HFeH2Q==}
     engines: {node: '>=20.3.0'}
 
-  '@vielzeug/dnd@1.2.0':
-    resolution: {integrity: sha512-1ZNvXzEDogXfWrgmfg5SxeK7QurRrJlciuhMBrR6hcmoSc7Nqq56xIcCtYFCBtwJD3pb8z+9VpoCgUvup6WEIQ==}
+  '@vielzeug/dnd@1.2.1':
+    resolution: {integrity: sha512-zVxXpylfRbQ6u02Y78Ig8MurR7WCe/U7XxuDxQ71SDvOax1h8rDM5LGTEXLpeX0vMIUV1il44daZpDSEOgIM2A==}
     engines: {node: '>=18'}
 
   '@vielzeug/familiar@1.0.4':
@@ -380,16 +380,12 @@ packages:
     resolution: {integrity: sha512-hd7d1q761AZ43Kt0ZU8qUKkZ7sYlQA4tv+U5y/8Lwy3SQpwCYbsmtt8a2i2mGZZn408y9z2hS5SjU3iSawvBgA==}
     engines: {node: '>=18'}
 
-  '@vielzeug/ledger@1.1.3':
-    resolution: {integrity: sha512-njYWyk+GmHqF3r6eQx8+Rl+MVHIi0tYwWJVwGapUHXN1wWrbD7dIFpnOabgu2Ao3YjBWarQvuWOVuFhu8IS7Bw==}
+  '@vielzeug/ledger@1.1.4':
+    resolution: {integrity: sha512-MGKqd2Zi9h3czjZ0M00Cid0K7FLgNP6W4mdIaMPVLR3ulljrKxZSUQK0grQ9k3idjEuMP/lpqQrt9uMYGAY33Q==}
     engines: {node: '>=18'}
 
   '@vielzeug/lingua@1.1.2':
     resolution: {integrity: sha512-ixs7Cp4l8OFvEWe0oUPNXOS1l0fRLkLASJeNcEreEadUo5YJ1BKkHZXTeDuA/96WIKfbwpjBo95U5VxePPrFAg==}
-    engines: {node: '>=18'}
-
-  '@vielzeug/orbit@1.1.0':
-    resolution: {integrity: sha512-GXOYLg9fMVnFPAMLNOxdq6Es76l6qJc7c+AXxQqVBBRyWIjEtiAh/XsDSMth3E7Ytj65ONHgCfNNaBZl1Gx2Vg==}
     engines: {node: '>=18'}
 
   '@vielzeug/orbit@1.1.1':
@@ -400,20 +396,16 @@ packages:
     resolution: {integrity: sha512-XlpNQLVBKqnVxN8b9jdwaRPAUlwaG+OMAo4IZ2hml+/q+ktqhfgW5MqV/Q6nB5uvlIAP/E36x6dSdmb8Dn2c9A==}
     engines: {node: '>=18'}
 
-  '@vielzeug/prism@1.1.4':
-    resolution: {integrity: sha512-P9NtDT96Jw6nUQS2LzmGodB4N/LZqwEpJ2ElvH56ED26y4OxEgXwgv/9MYMbUKARjJA3FRDJsbW+N4Udhqpgqg==}
+  '@vielzeug/prism@1.1.5':
+    resolution: {integrity: sha512-Cc7fvHW1xWJDPCgfnjNxr3TrmfMf23pI18bUD3WJ/1KXIIWlGKQA2mjf2OcPRrh7Sh5JnSpWAGbCUAxpDTpAVA==}
     engines: {node: '>=18'}
 
   '@vielzeug/pulse@1.0.6':
     resolution: {integrity: sha512-q/+YIlOohJkogW+/Uvw/5XvQhnR0Vdug2kmOAw9/Y+Vf6veowYpK5sECrZH8BteEi+1GPemsdT3ZJhdvSu6Psw==}
     engines: {node: '>=18'}
 
-  '@vielzeug/refine@1.5.3':
-    resolution: {integrity: sha512-drsfHc+qLprcbTbn4EK8rdzote8AxZZglonq3GUVj9zT5pWKjdr3gt4714nNWSnfRVuXJJ1uhu+3YQxewMM8XQ==}
-    engines: {node: '>=18'}
-
-  '@vielzeug/ripple@1.2.1':
-    resolution: {integrity: sha512-2PiOv24QCY1wlaxF4iFc/XaqFdF4JgIbMxAbmuDE65srxf+laHAajaanV0rnXhiFuVk4fenKdENugduP/kIp6A==}
+  '@vielzeug/refine@1.5.4':
+    resolution: {integrity: sha512-Gz4H0BoQSzeIV2R/daycjf1NqGwfcoVO9/JaA5hUTOQnnTZAVolibvnJSnrUgrHgMqMrGDzlVE0D/UmwfbTkQg==}
     engines: {node: '>=18'}
 
   '@vielzeug/ripple@1.2.2':
@@ -424,8 +416,8 @@ packages:
     resolution: {integrity: sha512-QfndDzOcL12hBH1102K4Kf30TelfextWRKVk4Gb95vQ3LpJ7i8ELpqOaukLWQSZBoxwb+lll90xjX+9R1ww75Q==}
     engines: {node: '>=18'}
 
-  '@vielzeug/scout@1.1.4':
-    resolution: {integrity: sha512-V/g6mx14a9Knc7S/wTVX6ec0cJVOZ5H3e+kXi5l3FrDAIp01GZCtgkLJTU0DDzi/RfSVwlocJSIkImecx0R10w==}
+  '@vielzeug/scout@1.1.5':
+    resolution: {integrity: sha512-N7wmh2Uo+fCJP4iSGere/WnHaUIziAaS9AydYFT0G7d0x/FUxUQ+iLsoqBTsJQlzxv2ZRYO+hneUz2GZHQx6pA==}
     engines: {node: '>=18'}
 
   '@vielzeug/scroll@1.1.2':
@@ -591,8 +583,8 @@ packages:
     engines: {node: '>=16.20.0'}
     hasBin: true
 
-  vite@8.1.4:
-    resolution: {integrity: sha512-bTT9PsdWO+MQMNG9ZXIP/qM9wGh37DFxTV/sPq9cFpHr3w4jkgef032PkAL9jAqhk3Nz8NQw3O8n6/xFkqO4QQ==}
+  vite@8.1.5:
+    resolution: {integrity: sha512-7ULLwsCdYx/nRyrpiEwvqb5TFHrMVZyBt+rg/OAXT7rgj/z+DtTDyKFeLAdDkubDVDKD8jOsndmy7m55XcfUsw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -793,7 +785,7 @@ snapshots:
     dependencies:
       '@vielzeug/arsenal': 1.1.1
 
-  '@vielzeug/dnd@1.2.0': {}
+  '@vielzeug/dnd@1.2.1': {}
 
   '@vielzeug/familiar@1.0.4':
     dependencies:
@@ -811,16 +803,11 @@ snapshots:
 
   '@vielzeug/keymap@1.1.1': {}
 
-  '@vielzeug/ledger@1.1.3':
+  '@vielzeug/ledger@1.1.4':
     dependencies:
-      '@vielzeug/ripple': 1.2.1
+      '@vielzeug/ripple': 1.2.2
 
   '@vielzeug/lingua@1.1.2': {}
-
-  '@vielzeug/orbit@1.1.0':
-    dependencies:
-      '@vielzeug/arsenal': 1.1.1
-      '@vielzeug/ripple': 1.2.1
 
   '@vielzeug/orbit@1.1.1':
     dependencies:
@@ -831,19 +818,19 @@ snapshots:
     dependencies:
       '@vielzeug/ripple': 1.2.2
 
-  '@vielzeug/prism@1.1.4':
+  '@vielzeug/prism@1.1.5':
     dependencies:
-      '@vielzeug/orbit': 1.1.0
-      '@vielzeug/ripple': 1.2.1
+      '@vielzeug/orbit': 1.1.1
+      '@vielzeug/ripple': 1.2.2
 
   '@vielzeug/pulse@1.0.6':
     dependencies:
       '@vielzeug/ripple': 1.2.2
 
-  '@vielzeug/refine@1.5.3':
+  '@vielzeug/refine@1.5.4':
     dependencies:
       '@vielzeug/arsenal': 1.1.1
-      '@vielzeug/dnd': 1.2.0
+      '@vielzeug/dnd': 1.2.1
       '@vielzeug/keymap': 1.1.1
       '@vielzeug/orbit': 1.1.1
       '@vielzeug/ore': 1.2.2
@@ -851,13 +838,11 @@ snapshots:
       '@vielzeug/tempo': 1.0.3
       lucide: 1.24.0
 
-  '@vielzeug/ripple@1.2.1': {}
-
   '@vielzeug/ripple@1.2.2': {}
 
   '@vielzeug/rune@1.1.1': {}
 
-  '@vielzeug/scout@1.1.4':
+  '@vielzeug/scout@1.1.5':
     dependencies:
       '@vielzeug/ripple': 1.2.2
 
@@ -1011,7 +996,7 @@ snapshots:
       '@typescript/typescript-win32-arm64': 7.0.2
       '@typescript/typescript-win32-x64': 7.0.2
 
-  vite@8.1.4:
+  vite@8.1.5:
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.5
