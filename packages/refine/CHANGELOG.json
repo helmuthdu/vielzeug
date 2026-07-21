@@ -2,6 +2,18 @@
   "name": "@vielzeug/refine",
   "entries": [
     {
+      "version": "1.5.4",
+      "tag": "@vielzeug/refine_v1.5.4",
+      "date": "Tue, 21 Jul 2026 07:04:16 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/dnd\" to `1.2.1`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.5.3",
       "tag": "@vielzeug/refine_v1.5.3",
       "date": "Fri, 17 Jul 2026 14:17:07 GMT",

@@ -2,6 +2,25 @@
   "name": "@vielzeug/dnd",
   "entries": [
     {
+      "version": "1.2.1",
+      "tag": "@vielzeug/dnd_v1.2.1",
+      "date": "Tue, 21 Jul 2026 07:04:16 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: avoid starting touch drag on tap",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "c8898aeae39fef10b7a5c71c6c6ce45d2553a766"
+          },
+          {
+            "comment": "fix: set touch-action:none on sortable items so mobile browsers don't hijack cross-column drags as page scroll",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "c8898aeae39fef10b7a5c71c6c6ce45d2553a766"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.2.0",
       "tag": "@vielzeug/dnd_v1.2.0",
       "date": "Tue, 14 Jul 2026 06:12:09 GMT",

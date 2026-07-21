@@ -1,6 +1,14 @@
 # Change Log - @vielzeug/dnd
 
-This log was last generated on Tue, 14 Jul 2026 06:12:09 GMT and should not be manually modified.
+This log was last generated on Tue, 21 Jul 2026 07:04:16 GMT and should not be manually modified.
+
+## 1.2.1
+Tue, 21 Jul 2026 07:04:16 GMT
+
+### Patches
+
+- fix: avoid starting touch drag on tap
+- fix: set touch-action:none on sortable items so mobile browsers don't hijack cross-column drags as page scroll
 
 ## 1.2.0
 Tue, 14 Jul 2026 06:12:09 GMT
