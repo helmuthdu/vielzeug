@@ -135,11 +135,17 @@ export const prop: PropFactory = {
   },
 };
 
+const isPropDef = (value: unknown): value is PropDef<unknown> =>
+  typeof value === 'object' && value !== null && 'default' in value && 'parse' in value;
+
 /**
- * Define a custom prop with explicit parser and reflection behavior.
- * Use when prop.* helpers don't cover your type.
+ * Validate and normalize a prop definition.
+ * Throws if definition is invalid or incomplete.
  *
- * @example
+ * Accepts any object shaped like `PropDef` — not just `prop.*` helper output — so you can
+ * define a custom prop with explicit parser and reflection behavior when the `prop.*` helpers
+ * don't cover your type:
+ *
  * ```ts
  * const customProp = (): PropDef<MyCustomType> => ({
  *   default: new MyCustomType(),
@@ -147,14 +153,6 @@ export const prop: PropFactory = {
  *   reflect: false,
  * });
  * ```
- */
-
-const isPropDef = (value: unknown): value is PropDef<unknown> =>
-  typeof value === 'object' && value !== null && 'default' in value && 'parse' in value;
-
-/**
- * Validate and normalize a prop definition.
- * Throws if definition is invalid or incomplete.
  */
 export function normalizePropDefinition<T>(value: unknown, propName: string): PropDef<T> {
   if (!isPropDef(value)) {

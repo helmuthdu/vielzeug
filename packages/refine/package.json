@@ -23,7 +23,7 @@
     "url": "https://github.com/helmuthdu/vielzeug/issues"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "type": "module",
   "customElements": "dist/custom-elements.json",

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
+      "packageName": "@vielzeug/forge",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/forge"
+}
