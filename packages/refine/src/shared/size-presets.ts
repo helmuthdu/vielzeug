@@ -121,6 +121,39 @@ export const MESSAGE_COMPOSER_SIZE_PRESET = {
   },
 } satisfies FullSizePreset;
 
+/**
+ * Size preset for `ore-menu`'s floating panel, `ore-menu-item`'s row, and `ore-menu-separator`'s
+ * margin. `--_panel-padding`, `--_item-padding`, and `--_separator-margin` are custom pass-through
+ * keys (not one of `SizeConfig`'s named slots) since the panel, its items, and its separators each
+ * need independently-scaling spacing; `md`'s values match what `menu.css`/`menu-item.css`/
+ * `menu-separator.css` hardcoded before `size` was wired up, so the default look is unchanged.
+ * `--_font-size`/`--_gap` are inherited by `ore-menu-item` from `ore-menu`'s own host — custom
+ * properties cascade down through light-DOM children the same way they cascade into a shadow root.
+ */
+export const MENU_SIZE_PRESET = {
+  lg: {
+    '--_item-padding': 'var(--size-2) var(--size-3-5)',
+    '--_panel-padding': 'var(--size-1-5)',
+    '--_separator-margin': 'var(--size-1-5)',
+    fontSize: 'var(--text-base)',
+    gap: 'var(--size-2-5)',
+  },
+  md: {
+    '--_item-padding': 'var(--size-1-5) var(--size-3)',
+    '--_panel-padding': 'var(--size-1)',
+    '--_separator-margin': 'var(--size-1)',
+    fontSize: 'var(--text-sm)',
+    gap: 'var(--size-2)',
+  },
+  sm: {
+    '--_item-padding': 'var(--size-1) var(--size-2-5)',
+    '--_panel-padding': 'var(--size-0-5)',
+    '--_separator-margin': 'var(--size-0-5)',
+    fontSize: 'var(--text-xs)',
+    gap: 'var(--size-1-5)',
+  },
+} satisfies FullSizePreset;
+
 /** Shared size preset for the file-input dropzone. */
 export const FILE_INPUT_SIZE_PRESET = {
   lg: {

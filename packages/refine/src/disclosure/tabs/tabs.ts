@@ -1,9 +1,21 @@
-import { createContext, define, html, prop, ref, bind, getHost, onMounted, provide, useEmit } from '@vielzeug/ore';
+import {
+  createContext,
+  define,
+  html,
+  prop,
+  ref,
+  bind,
+  getHost,
+  onCleanup,
+  onMounted,
+  provide,
+  useEmit,
+} from '@vielzeug/ore';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
 
-import { createInteraction, createListControl } from '../../headless';
+import { createInteraction, createListControl, elementDirection, lifecycleSignal } from '../../headless';
 import { sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin } from '../../styles';
 import styles from './tabs.css?inline';
@@ -155,6 +167,7 @@ define<OreTabsProps>(TABS_TAG, {
     // ────────────────────────────────────────────────────────────────
 
     const listControl = createListControl({
+      direction: () => elementDirection(el),
       getItems: () => getEnabledTabs(),
       loop: true,
       onNavigate: (_action, index) => {
@@ -170,6 +183,7 @@ define<OreTabsProps>(TABS_TAG, {
         }
       },
       orientation: () => (isVertical() ? 'vertical' : 'both'),
+      signal: lifecycleSignal(onCleanup),
     });
 
     // ────────────────────────────────────────────────────────────────

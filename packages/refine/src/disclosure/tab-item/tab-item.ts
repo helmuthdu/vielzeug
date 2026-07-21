@@ -1,8 +1,9 @@
-import { define, html, inject, prop, bind, getHost, watchEffect } from '@vielzeug/ore';
+import { define, html, inject, prop, ref, bind, getHost, onMounted, watchEffect } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
 
+import { setAriaReflection } from '../../headless';
 import { disablableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
@@ -109,18 +110,39 @@ define<OreTabItemProps>(TAB_ITEM_TAG, {
     };
 
     const tabId = () => `tab-${props.value.value}`;
-    const controlsAttr = () => `tabpanel-${props.value.value}`;
+    const buttonRef = ref<HTMLButtonElement>();
+
+    // `aria-controls` as a plain IDREF attribute cannot resolve across shadow-tree boundaries
+    // (the matching `id` lives inside <ore-tab-panel>'s own shadow root) — see
+    // `setAriaReflection()`'s doc comment. Deferred to `onMounted()`: sibling custom elements
+    // (including the peer `<ore-tab-panel>`) connect in tree order within the same synchronous
+    // insertion, so a sibling's shadow content may not exist yet during this element's own
+    // `setup()` — `onMounted()`'s microtask runs after the whole subtree has connected.
+    onMounted(() => {
+      watchEffect(() => {
+        const button = buttonRef.value;
+        const value = props.value.value;
+
+        if (!button) return;
+
+        const tabsEl = value ? el.closest('ore-tabs') : null;
+        const panelEl = tabsEl?.querySelector<HTMLElement>(`:scope > ore-tab-panel[value="${value}"]`);
+        const panel = panelEl?.shadowRoot?.querySelector<HTMLElement>('.panel') ?? null;
+
+        setAriaReflection(button, 'ariaControlsElements', panel ? [panel] : []);
+      });
+    });
 
     return html`
       <button
         role="tab"
         type="button"
         part="tab"
+        ref="${buttonRef}"
         :id="${tabId}"
         aria-selected="${isActive}"
         tabindex="${() => (isActive.value ? '0' : '-1')}"
         aria-disabled="${isDisabled}"
-        :aria-controls="${controlsAttr}"
         @click="${handleClick}">
         <slot name="prefix"></slot>
         <slot></slot>

@@ -250,6 +250,39 @@ describe('createOverlayControl', () => {
     expect(openState.value).toBe(false);
   });
 
+  it('disposed reflects dispose() state, including via [Symbol.dispose] and signal abort', () => {
+    const openState = signal(false);
+
+    const overlay = createOverlayControl({
+      getBoundary: () => document.body,
+      isOpen: () => openState.value,
+      setOpen: (next) => {
+        openState.value = next;
+      },
+      signal: controller.signal,
+    });
+
+    expect(overlay.disposed).toBe(false);
+    overlay.dispose();
+    expect(overlay.disposed).toBe(true);
+
+    // Idempotent.
+    overlay.dispose();
+    expect(overlay.disposed).toBe(true);
+
+    const viaSymbol = createOverlayControl({
+      getBoundary: () => document.body,
+      isOpen: () => openState.value,
+      setOpen: (next) => {
+        openState.value = next;
+      },
+      signal: controller.signal,
+    });
+
+    viaSymbol[Symbol.dispose]();
+    expect(viaSymbol.disposed).toBe(true);
+  });
+
   it('uses event.target fallback when composedPath is unavailable', () => {
     const openState = signal(false);
     const host = document.createElement('div');

@@ -117,14 +117,25 @@ describe('createSwipeControl', () => {
     control.dispose();
   });
 
-  it('dispose() resets active state', () => {
+  it('dispose() resets active state and marks the control disposed', () => {
     const control = createSwipeControl({ threshold: () => 100 });
 
     control.handlePointerDown(new PointerEvent('pointerdown', { clientX: 0, pointerId: 1 }));
     expect(control.isActive()).toBe(true);
 
+    expect(control.disposed).toBe(false);
     control.dispose();
 
+    expect(control.isActive()).toBe(false);
+    expect(control.disposed).toBe(true);
+  });
+
+  it('handlePointerDown no-ops once disposed', () => {
+    const control = createSwipeControl({ threshold: () => 100 });
+
+    control.dispose();
+
+    expect(control.handlePointerDown(new PointerEvent('pointerdown', { clientX: 0, pointerId: 1 }))).toBe(false);
     expect(control.isActive()).toBe(false);
   });
 

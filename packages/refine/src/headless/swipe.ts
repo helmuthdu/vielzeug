@@ -32,6 +32,8 @@ export type SwipeControl = {
   [Symbol.dispose](): void;
   /** Cancel any in-flight swipe and clean up internal state. */
   dispose: () => void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   handlePointerCancel: (event: PointerEvent) => boolean;
   handlePointerDown: (event: PointerEvent) => boolean;
   handlePointerMove: (event: PointerEvent) => boolean;
@@ -68,11 +70,17 @@ const defaultCaptureTarget = (event: PointerEvent): HTMLElement | null => {
 
 export const createSwipeControl = (options: SwipeControlOptions): SwipeControl => {
   let active: ActiveSwipe | null = null;
+  let disposed = false;
 
   const isDisabled = (): boolean => Boolean(options.disabled?.value);
 
   const reset = (): void => {
     active = null;
+  };
+
+  const dispose = (): void => {
+    disposed = true;
+    reset();
   };
 
   const matchesPointer = (event: PointerEvent): boolean => {
@@ -98,7 +106,7 @@ export const createSwipeControl = (options: SwipeControlOptions): SwipeControl =
   };
 
   const handlePointerDown = (event: PointerEvent): boolean => {
-    if (active || isDisabled()) return false;
+    if (disposed || active || isDisabled()) return false;
 
     const axis = resolveAxis(options);
 
@@ -165,12 +173,15 @@ export const createSwipeControl = (options: SwipeControlOptions): SwipeControl =
   };
 
   return {
-    dispose: reset,
+    dispose,
+    get disposed() {
+      return disposed;
+    },
     handlePointerCancel,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
     isActive: () => active != null,
-    [Symbol.dispose]: reset,
+    [Symbol.dispose]: dispose,
   };
 };

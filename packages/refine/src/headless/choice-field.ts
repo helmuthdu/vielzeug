@@ -1,6 +1,6 @@
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
-import { createField, type FieldHandle, type FieldOptions } from './field-base';
+import { createDirtyTracker, createField, type FieldHandle, type FieldOptions } from './field-base';
 
 // ── Choice change event payload ──────────────────────────────────────────────────────────────
 
@@ -33,13 +33,8 @@ export type ChoiceFieldHandle = FieldHandle & {
   formValue: Readable<string>;
   removeValue: (value: string) => void;
   /**
-   * Restores the selection to its native "default": whatever `value` currently holds, if the
-   * user has never changed the selection yet, or the value snapshotted at creation, if they
-   * have. Two states, not one — see `createCheckable`'s `reset()` for the identical situation
-   * with `checked`, and why: `ore-radio-group`/`ore-checkbox-group` reflect the current
-   * selection back onto the host's `value`/`values` attribute for `:host([value])` styling
-   * (there's no native form control here to carry it), so `options.value` changes on every
-   * selection and can't double as "the default to revert to" post-interaction.
+   * Restores the selection to its native "default". See `DirtyTracker` for the two-state
+   * rationale.
    */
   reset: () => void;
   selectedValue: Readable<string | undefined>;
@@ -86,27 +81,22 @@ export const createChoiceField = (options: ChoiceFieldOptions): ChoiceFieldHandl
     return [...new Set(normalized.filter(Boolean))];
   };
 
-  // Set the moment the user first changes the selection — see `reset()`'s doc comment for why
-  // this matters: before that point, `options.value` is still a reliable "current default" to
-  // resync from (e.g. an async-loaded value arriving after mount); after it, `options.value` is
-  // contaminated by the selection-driven attribute reflection (on the components where that
-  // applies) and the frozen snapshot is the only value that still represents "the default".
-  let dirty = false;
+  const dirtyTracker = createDirtyTracker();
 
-  // The actual state setter, shared by every mutation path. Deliberately *not* where `dirty`
-  // gets set — `syncFromProp` (below) calls this directly to stay exempt from it, since mirroring
-  // an external prop change is never "the user changed the selection".
+  // The actual state setter, shared by every mutation path. Deliberately *not* where the dirty
+  // tracker gets marked — `syncFromProp` (below) calls this directly to stay exempt from it,
+  // since mirroring an external prop change is never "the user changed the selection".
   const applyValues = (values: string[]): void => {
     selectedValues.value = normalizeValues(values);
   };
 
   const setValues = (values: string[]): void => {
-    dirty = true;
+    dirtyTracker.markDirty();
     applyValues(values);
   };
   const clear = (): void => setValues([]);
   const removeValue = (value: string): void => {
-    dirty = true;
+    dirtyTracker.markDirty();
     selectedValues.value = selectedValues.value.filter((v) => v !== value);
   };
 
@@ -154,8 +144,8 @@ export const createChoiceField = (options: ChoiceFieldOptions): ChoiceFieldHandl
 
   const initialValues = selectedValues.value;
   const reset = (): void => {
-    applyValues(dirty ? initialValues : parseChoiceValues(options.value.value));
-    dirty = false;
+    applyValues(dirtyTracker.isDirty ? initialValues : parseChoiceValues(options.value.value));
+    dirtyTracker.clear();
     field.triggerValidation('change');
   };
 

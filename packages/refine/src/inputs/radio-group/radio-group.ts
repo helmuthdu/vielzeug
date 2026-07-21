@@ -28,7 +28,7 @@ import {
   getLightChildrenByTag,
 } from '../../headless';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
-import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import { disabledStateMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './radio-group.css?inline';
 
@@ -309,5 +309,5 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
       </fieldset>
     `;
   },
-  styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin, componentStyles],
+  styles: [disabledStateMixin, componentStyles],
 });

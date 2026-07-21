@@ -5,7 +5,7 @@ import type { ComponentSize, ThemeColor } from '../../shared';
 import type { ButtonVariant } from '../button/button';
 
 import { sizableBundle, themableBundle } from '../../shared';
-import styles from './button-group.css?inline';
+import componentStyles from './button-group.css?inline';
 
 /** Button group properties */
 export type OreButtonGroupProps = {
@@ -93,5 +93,5 @@ define<OreButtonGroupProps>(BUTTON_GROUP_TAG, {
       </div>
     `;
   },
-  styles: [styles],
+  styles: [componentStyles],
 });

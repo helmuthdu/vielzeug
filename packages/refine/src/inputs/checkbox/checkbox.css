@@ -45,7 +45,7 @@
        Focus State
        ======================================== */
 
-  input:focus-visible + .box {
+  :host(:focus-visible) .box {
     box-shadow: var(--_focus-shadow);
   }
 

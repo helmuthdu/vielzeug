@@ -11,7 +11,7 @@ import '../../feedback/chip/chip';
 import '../../content/icon/icon';
 import '../input/input';
 import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
-import { reducedMotionMixin } from '../../styles';
+import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './select.css?inline';
 
@@ -564,5 +564,5 @@ define<OreSelectProps>(SELECT_TAG, {
       </div>`;
   },
   shadow: { delegatesFocus: true },
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [colorThemeMixin, reducedMotionMixin, roundedVariantMixin, componentStyles],
 });

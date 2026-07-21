@@ -147,6 +147,90 @@ describe('createListControl', () => {
       { action: 'prev', index: 0 },
     ]);
   });
+
+  it('dispose() and disposed conform to the monorepo disposal convention', () => {
+    const items = [{ disabled: false }, { disabled: false }];
+    const nav = createListControl({ getItems: () => items });
+
+    expect(nav.disposed).toBe(false);
+    nav.dispose();
+    expect(nav.disposed).toBe(true);
+
+    // Idempotent — calling again does not throw.
+    nav.dispose();
+    expect(nav.disposed).toBe(true);
+  });
+
+  it('[Symbol.dispose] is an alias for dispose()', () => {
+    const items = [{ disabled: false }];
+    const nav = createListControl({ getItems: () => items });
+
+    nav[Symbol.dispose]();
+    expect(nav.disposed).toBe(true);
+  });
+});
+
+describe('createListControl direction (RTL mirroring)', () => {
+  it('horizontal orientation: RTL swaps ArrowLeft/ArrowRight meaning', () => {
+    const items = [{ disabled: false }, { disabled: false }, { disabled: false }];
+    const nav = createListControl({ direction: 'rtl', getItems: () => items, orientation: 'horizontal' });
+
+    nav.set(0);
+    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    expect(nav.focusedIndex.value).toBe(1); // ArrowLeft is "next" in RTL
+
+    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(nav.focusedIndex.value).toBe(0); // ArrowRight is "prev" in RTL
+  });
+
+  it("'both' orientation: RTL mirrors only the horizontal arrows, not vertical", () => {
+    const items = [{ disabled: false }, { disabled: false }, { disabled: false }];
+    const nav = createListControl({ direction: 'rtl', getItems: () => items, orientation: 'both' });
+
+    nav.set(0);
+    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    expect(nav.focusedIndex.value).toBe(1); // vertical arrows unaffected by direction
+
+    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+    expect(nav.focusedIndex.value).toBe(2); // ArrowLeft is "next" in RTL
+  });
+
+  it('LTR (default) keeps the standard ArrowRight=next / ArrowLeft=prev mapping', () => {
+    const items = [{ disabled: false }, { disabled: false }];
+    const nav = createListControl({ getItems: () => items, orientation: 'horizontal' });
+
+    nav.set(0);
+    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(nav.focusedIndex.value).toBe(1);
+  });
+
+  it('a getter direction is re-resolved on every keydown', () => {
+    const items = [{ disabled: false }, { disabled: false }];
+    let dir: 'ltr' | 'rtl' = 'ltr';
+    const nav = createListControl({ direction: () => dir, getItems: () => items, orientation: 'horizontal' });
+
+    nav.set(0);
+    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(nav.focusedIndex.value).toBe(1);
+
+    dir = 'rtl';
+    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(nav.focusedIndex.value).toBe(0); // now "prev" under RTL
+  });
+
+  it('an explicit keys override takes precedence over direction mirroring', () => {
+    const items = [{ disabled: false }, { disabled: false }];
+    const nav = createListControl({
+      direction: 'rtl',
+      getItems: () => items,
+      keys: { next: ['ArrowRight'], prev: ['ArrowLeft'] },
+      orientation: 'horizontal',
+    });
+
+    nav.set(0);
+    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(nav.focusedIndex.value).toBe(1);
+  });
 });
 
 describe('createListControl typeahead', () => {

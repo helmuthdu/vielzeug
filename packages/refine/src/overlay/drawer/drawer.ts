@@ -17,7 +17,7 @@ import type { OverlayCloseDetail, OverlayOpenDetail, SwipeAxis } from '../../hea
 
 import { createSwipeControl } from '../../headless';
 import '../../content/icon/icon';
-import { coarsePointerMixin, elevationMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
+import { coarsePointerMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
 import styles from './drawer.css?inline';
 
@@ -479,5 +479,5 @@ define<OreDrawerProps>(DRAWER_TAG, {
       </dialog>
     `;
   },
-  styles: [elevationMixin, forcedColorsMixin, coarsePointerMixin, reducedMotionMixin, styles],
+  styles: [forcedColorsMixin, coarsePointerMixin, reducedMotionMixin, styles],
 });

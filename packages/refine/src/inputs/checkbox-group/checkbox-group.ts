@@ -27,7 +27,7 @@ import {
   getLightChildrenByTag,
 } from '../../headless';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
-import { colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
+import { disabledStateMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './checkbox-group.css?inline';
 
@@ -272,5 +272,5 @@ define<OreCheckboxGroupProps>(CHECKBOX_GROUP_TAG, {
       </fieldset>
     `;
   },
-  styles: [colorThemeMixin, sizeVariantMixin(), disabledStateMixin, componentStyles],
+  styles: [disabledStateMixin, componentStyles],
 });

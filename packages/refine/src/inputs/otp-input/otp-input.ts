@@ -8,7 +8,7 @@ import { createListControl } from '../../headless';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
-import styles from './otp-input.css?inline';
+import componentStyles from './otp-input.css?inline';
 
 export type OreOtpInputEvents = {
   change: { complete: boolean; originalEvent?: Event; value: string };
@@ -292,5 +292,5 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
       </div>
     `;
   },
-  styles: [colorThemeMixin, sizeVariantMixin({}), forcedColorsFocusMixin('.cell'), styles],
+  styles: [colorThemeMixin, sizeVariantMixin({}), forcedColorsFocusMixin('.cell'), componentStyles],
 });

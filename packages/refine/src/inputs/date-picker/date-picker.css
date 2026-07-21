@@ -3,6 +3,9 @@
     --_day-selected-bg: var(--date-picker-day-selected-bg, var(--_theme-focus));
     --_day-today-color: var(--date-picker-day-today-color, var(--_theme-focus));
     --_day-outside-opacity: var(--date-picker-day-outside-opacity, 0.35);
+    --_bg: var(--date-picker-bg, var(--color-canvas));
+    --_border-color: var(--date-picker-border-color, var(--color-contrast-200));
+    --_radius: var(--date-picker-radius, var(--rounded-xl));
 
     display: inline-block;
     min-width: var(--date-picker-min-width, 12rem);

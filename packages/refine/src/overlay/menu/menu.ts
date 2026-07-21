@@ -25,8 +25,8 @@ import {
   type DropdownCloseReason,
   type OverlayOpenDetail,
 } from '../../headless';
-import { disablableBundle, sizableBundle } from '../../shared';
-import { forcedColorsMixin, sizeVariantMixin } from '../../styles';
+import { disablableBundle, MENU_SIZE_PRESET, sizableBundle } from '../../shared';
+import { colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styles';
 import menuItemStyles from './menu-item.css?inline';
 import menuSeparatorStyles from './menu-separator.css?inline';
 import componentStyles from './menu.css?inline';
@@ -146,7 +146,7 @@ define<OreMenuItemProps>(MENU_ITEM_TAG, {
           </div>
         `;
   },
-  styles: [menuItemStyles],
+  styles: [colorThemeMixin, menuItemStyles],
 });
 
 // ── Menu Separator ─────────────────────────────────────────────────────────────
@@ -445,5 +445,5 @@ define<OreMenuProps>(MENU_TAG, {
       </div>
     `;
   },
-  styles: [componentStyles, sizeVariantMixin(), forcedColorsMixin],
+  styles: [componentStyles, sizeVariantMixin(MENU_SIZE_PRESET), forcedColorsMixin],
 });

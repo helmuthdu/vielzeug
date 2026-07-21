@@ -1,6 +1,6 @@
 import { computed, type Readable, type Signal, signal } from '@vielzeug/ripple';
 
-import { createField, type ControlValidationMode, type FieldHandle } from './field-base';
+import { createDirtyTracker, createField, type ControlValidationMode, type FieldHandle } from './field-base';
 import { createInteraction } from './keyboard';
 import { syncedSignal } from './signals';
 
@@ -40,16 +40,8 @@ export type CheckableHandle = FieldHandle & {
   handleKeydown: (event: KeyboardEvent) => boolean;
   indeterminate: Signal<boolean>;
   /**
-   * Restores `checked`/`indeterminate` to their native "default" value: whatever `checked`/
-   * `indeterminate` currently hold, if the user has never interacted with this control yet, or
-   * the value snapshotted at creation, if they have. Two states, not one, because this
-   * component reflects the interactive `checked` state back onto the host's `checked` attribute
-   * (for `:host([checked])` styling, since shadow-DOM custom elements have no native `:checked`
-   * pseudo-class to style against) — so `options.checked` itself changes on every click and
-   * can't double as "the default to revert to" post-interaction, the way an uncontrolled
-   * `<input>`'s `value` attribute can (see `createTextField`'s `reset()`, which has no
-   * "post-interaction" case to handle for exactly that reason). Wire into
-   * `useField({ onReset: checkable.reset })`.
+   * Restores `checked`/`indeterminate` to their native "default" value. See `DirtyTracker`
+   * for the two-state rationale. Wire into `useField({ onReset: checkable.reset })`.
    */
   reset: () => void;
   toggle: (event: Event) => void;
@@ -70,12 +62,7 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
     : signal(false);
   const initialChecked = checked.value;
   const initialIndeterminate = indeterminate.value;
-  // Set the moment the user first interacts — see `reset()`'s doc comment for why this
-  // matters: before that point, `options.checked` is still a reliable "current default" to
-  // resync from (e.g. an async-loaded value arriving after mount); after it, `options.checked`
-  // is contaminated by the click-driven attribute reflection and the frozen snapshot is the
-  // only value that still represents "the default" in the native sense.
-  let dirty = false;
+  const dirtyTracker = createDirtyTracker();
 
   const checkableFormValue = computed<string | null>(() =>
     indeterminate.value ? null : checked.value ? (options.value.value ?? '') : null,
@@ -91,9 +78,9 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   );
 
   const reset = (): void => {
-    checked.value = dirty ? initialChecked : Boolean(options.checked.value);
-    indeterminate.value = dirty ? initialIndeterminate : Boolean(options.indeterminate?.value);
-    dirty = false;
+    checked.value = dirtyTracker.isDirty ? initialChecked : Boolean(options.checked.value);
+    indeterminate.value = dirtyTracker.isDirty ? initialIndeterminate : Boolean(options.indeterminate?.value);
+    dirtyTracker.clear();
     field.triggerValidation('change');
   };
 
@@ -106,7 +93,7 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   const toggle = (event: Event): void => {
     if (field.disabled.value) return;
 
-    dirty = true;
+    dirtyTracker.markDirty();
 
     if (options.group) {
       indeterminate.value = false;

@@ -1,7 +1,8 @@
-import { define, html, inject, prop, bind, watchEffect } from '@vielzeug/ore';
+import { define, html, inject, prop, ref, bind, getHost, onMounted, watchEffect } from '@vielzeug/ore';
 import { styleMap, when } from '@vielzeug/ore/directives';
 import { computed, signal } from '@vielzeug/ripple';
 
+import { setAriaReflection } from '../../headless';
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
 import styles from './tab-panel.css?inline';
@@ -57,6 +58,7 @@ define<OreTabPanelProps>(TAB_PANEL_TAG, {
     value: prop.string(''),
   },
   setup(props) {
+    const el = getHost();
     const watch = watchEffect;
 
     const tabsCtx = inject(TABS_CTX);
@@ -87,15 +89,36 @@ define<OreTabPanelProps>(TAB_PANEL_TAG, {
     const shouldRender = computed(() => !props.lazy.value || hasBeenActive.value);
     const panelStyle = styleMap({ '--tab-panel-padding': paddingValue });
     const panelId = () => `tabpanel-${props.value.value}`;
-    const labelledById = () => `tab-${props.value.value}`;
+    const panelRef = ref<HTMLElement>();
+
+    // `aria-labelledby` as a plain IDREF attribute cannot resolve across shadow-tree boundaries
+    // (the matching `id` lives inside <ore-tab-item>'s own shadow root) — see
+    // `setAriaReflection()`'s doc comment. Deferred to `onMounted()`: sibling custom elements
+    // (including the peer `<ore-tab-item>`) connect in tree order within the same synchronous
+    // insertion, so a sibling's shadow content may not exist yet during this element's own
+    // `setup()` — `onMounted()`'s microtask runs after the whole subtree has connected.
+    onMounted(() => {
+      watch(() => {
+        const panel = panelRef.value;
+        const value = props.value.value;
+
+        if (!panel) return;
+
+        const tabsEl = value ? el.closest('ore-tabs') : null;
+        const tabEl = tabsEl?.querySelector<HTMLElement>(`:scope > ore-tab-item[value="${value}"]`);
+        const button = tabEl?.shadowRoot?.querySelector<HTMLElement>('[role="tab"]') ?? null;
+
+        setAriaReflection(panel, 'ariaLabelledByElements', button ? [button] : []);
+      });
+    });
 
     return html`
       <div
         class="panel"
         part="panel"
         role="tabpanel"
-        id="${() => panelId()}"
-        aria-labelledby="${() => labelledById()}"
+        ref="${panelRef}"
+        :id="${panelId}"
         aria-hidden="${() => String(!isActive.value)}"
         :style="${panelStyle}"
         tabindex="0">

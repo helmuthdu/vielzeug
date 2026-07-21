@@ -4,7 +4,13 @@ import { computed } from '@vielzeug/ripple';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
-import { type CheckableChangePayload, lifecycleSignal, createCheckable, createListControl } from '../../headless';
+import {
+  type CheckableChangePayload,
+  elementDirection,
+  lifecycleSignal,
+  createCheckable,
+  createListControl,
+} from '../../headless';
 import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
   coarsePointerMixin,
@@ -124,8 +130,11 @@ define<OreRadioProps>(RADIO_TAG, {
     };
 
     const listControl = createListControl({
+      direction: () => elementDirection(el),
       getItems: () => getRadioGroup(),
-      keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
+      // 'both' accepts every arrow key regardless of the group's visual layout (radio groups
+      // may render horizontally or vertically via CSS) — RTL mirroring of Left/Right still
+      // applies via `direction` since nav.ts's default keymap covers 'both' too.
       loop: true,
       onNavigate: (_action, index, event) => {
         const nextRadio = getRadioGroup()[index];
@@ -135,6 +144,8 @@ define<OreRadioProps>(RADIO_TAG, {
         nextRadio.focus();
         selectRadio(nextRadio, event);
       },
+      orientation: 'both',
+      signal: lifecycleSignal(onCleanup),
     });
 
     const activateSelf = (originalEvent?: Event): void => {

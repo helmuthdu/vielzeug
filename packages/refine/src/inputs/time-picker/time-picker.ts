@@ -1,9 +1,10 @@
-import { define, html, inject, prop, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
+import { define, html, inject, prop, ref, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore/forms';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { VisualVariant } from '../../shared';
 
+import { createDropdownPositioner } from '../../headless';
 import '../../content/icon/icon';
 import '../input/input';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
@@ -197,6 +198,23 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
     const isOpen = signal(false);
     const selectedTime = signal<{ hours: number; minutes: number } | null>(parseTime(props.value.value));
 
+    // ── Floating position ────────────────────────────────────────────────────
+    // Same Orbit-powered positioner ore-date-picker's `.calendar` popup uses (see its own
+    // comment for the full rationale) — `fixed` + computed `top`/`left` instead of a static
+    // `position: absolute; top: 100%`, so the dropdown flips/shifts to stay within the nearest
+    // clipping ancestor instead of silently overflowing it.
+    const triggerRef = ref<HTMLElement>();
+    const dropdownRef = ref<HTMLElement>();
+
+    const positioner = createDropdownPositioner({
+      getFloating: () => dropdownRef.value ?? null,
+      getReference: () => triggerRef.value ?? null,
+      matchWidth: false,
+      offsetPx: 4,
+    });
+
+    let stopAutoUpdate: (() => void) | null = null;
+
     // ── Form context ─────────────────────────────────────────────────────────
 
     const formCtx = inject(FORM_CTX);
@@ -350,10 +368,14 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
       }
 
       isOpen.value = true;
+      positioner.update();
+      stopAutoUpdate = positioner.startAutoUpdate?.() ?? null;
     }
 
     function closePicker(): void {
       isOpen.value = false;
+      stopAutoUpdate?.();
+      stopAutoUpdate = null;
     }
 
     function handleTriggerClick(): void {
@@ -372,7 +394,11 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
     onMounted(() => {
       document.addEventListener('pointerdown', handleOutsideClick, { capture: true });
 
-      return () => document.removeEventListener('pointerdown', handleOutsideClick, { capture: true });
+      return () => {
+        document.removeEventListener('pointerdown', handleOutsideClick, { capture: true });
+        stopAutoUpdate?.();
+        stopAutoUpdate = null;
+      };
     });
 
     // ── Keyboard ──────────────────────────────────────────────────────────────
@@ -460,6 +486,7 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
       <!-- Trigger -->
       <ore-input
         class="trigger"
+        ref="${triggerRef}"
         readonly
         tabindex="0"
         role="combobox"
@@ -488,6 +515,7 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
       <!-- Dropdown -->
       <div
         class="dropdown"
+        ref="${dropdownRef}"
         id="${dialogId}"
         role="listbox"
         aria-label="${() => (props.label.value ? `${props.label.value} — select time` : 'Select time')}"

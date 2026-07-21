@@ -121,6 +121,37 @@ describe('ore-tabs', () => {
       expect(fixture.query('[role="tablist"]')?.getAttribute('aria-orientation')).toBe('vertical');
     });
 
+    it('links each tab to its panel and back via cross-shadow-root ARIA reflection', async () => {
+      // aria-controls / aria-labelledby cross a shadow-tree boundary here (tab-item's <button>
+      // is in tab-item's own shadow root; the matching <div role="tabpanel"> is in tab-panel's).
+      // Plain IDREF attributes cannot resolve across that boundary — see
+      // headless/aria-reflection.ts — so this must be asserted via the element-reflection API
+      // (or its jsdom-unsupported attribute fallback), not by comparing id strings.
+      fixture = await mount('ore-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
+      await fixture.flush();
+
+      const items = fixture.element.querySelectorAll<HTMLElement>('ore-tab-item');
+      const panels = fixture.element.querySelectorAll<HTMLElement>('ore-tab-panel');
+
+      const overviewButton = items[0].shadowRoot?.querySelector<HTMLButtonElement>('[role="tab"]');
+      const overviewPanel = panels[0].shadowRoot?.querySelector<HTMLElement>('[role="tabpanel"]');
+
+      expect(overviewButton).toBeTruthy();
+      expect(overviewPanel).toBeTruthy();
+
+      if (overviewButton && 'ariaControlsElements' in overviewButton) {
+        expect(Array.from(overviewButton.ariaControlsElements ?? [])).toEqual([overviewPanel]);
+      } else {
+        expect(overviewButton?.getAttribute('aria-controls')).toBe(overviewPanel?.id);
+      }
+
+      if (overviewPanel && 'ariaLabelledByElements' in overviewPanel) {
+        expect(Array.from(overviewPanel.ariaLabelledByElements ?? [])).toEqual([overviewButton]);
+      } else {
+        expect(overviewPanel?.getAttribute('aria-labelledby')).toBe(overviewButton?.id);
+      }
+    });
+
     it('keeps only active panel visible to assistive tech', async () => {
       fixture = await mount('ore-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
 

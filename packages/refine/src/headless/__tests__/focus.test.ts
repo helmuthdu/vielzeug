@@ -154,5 +154,62 @@ describe('createFocusManager', () => {
 
       expect(document.activeElement).toBe(document.body);
     });
+
+    it('cancelInitialFocus() cancels a pending focus frame', async () => {
+      const host = makeHost();
+      const target = document.createElement('button');
+
+      target.setAttribute('data-testid', 'initial');
+      host.appendChild(target);
+      document.body.appendChild(host);
+
+      const manager = createFocusManager({
+        getInitialFocusSelector: () => '[data-testid="initial"]',
+        getReturnFocus: () => true,
+        host,
+      });
+
+      manager.applyInitialFocus();
+      manager.cancelInitialFocus();
+      await vi.runAllTimersAsync();
+
+      expect(document.activeElement).not.toBe(target);
+
+      document.body.removeChild(host);
+    });
+  });
+
+  describe('signal teardown', () => {
+    it('aborting the signal cancels a pending applyInitialFocus frame', async () => {
+      const host = makeHost();
+      const target = document.createElement('button');
+
+      target.setAttribute('data-testid', 'initial');
+      host.appendChild(target);
+      document.body.appendChild(host);
+
+      const controller = new AbortController();
+      const manager = createFocusManager({
+        getInitialFocusSelector: () => '[data-testid="initial"]',
+        getReturnFocus: () => true,
+        host,
+        signal: controller.signal,
+      });
+
+      manager.applyInitialFocus();
+      controller.abort();
+      await vi.runAllTimersAsync();
+
+      // The disconnect happened before the deferred focus frame ran — it must not fire.
+      expect(document.activeElement).not.toBe(target);
+
+      document.body.removeChild(host);
+    });
+
+    it('works without a signal (optional)', () => {
+      const manager = createFocusManager(makeOptions());
+
+      expect(() => manager.applyInitialFocus()).not.toThrow();
+    });
   });
 });

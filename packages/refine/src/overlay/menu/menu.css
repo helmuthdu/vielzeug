@@ -21,7 +21,7 @@
     box-sizing: border-box;
     min-width: var(--menu-panel-min-width, 10rem);
     max-height: var(--menu-panel-max-height, min(70vh, 32rem));
-    padding: var(--size-1);
+    padding: var(--_panel-padding, var(--size-1));
     margin: 0;
     overflow-y: auto;
     pointer-events: none;

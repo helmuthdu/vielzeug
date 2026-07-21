@@ -105,6 +105,37 @@ describe('ore-menu', () => {
     });
   });
 
+  describe('Sizing', () => {
+    const sizes = ['sm', 'md', 'lg'] as const;
+
+    sizes.forEach((size) => {
+      it(`applies size="${size}"`, async () => {
+        fixture = await mount('ore-menu', {
+          attrs: { size },
+          html: `
+            <button slot="trigger">Open</button>
+            <ore-menu-item value="edit">Edit</ore-menu-item>
+          `,
+        });
+
+        expect(fixture.element.getAttribute('size')).toBe(size);
+      });
+    });
+
+    it('updates size dynamically', async () => {
+      fixture = await mount('ore-menu', {
+        attrs: { size: 'sm' },
+        html: `
+          <button slot="trigger">Open</button>
+          <ore-menu-item value="edit">Edit</ore-menu-item>
+        `,
+      });
+
+      await fixture.attr('size', 'lg');
+      expect(fixture.element.getAttribute('size')).toBe('lg');
+    });
+  });
+
   describe('Accessibility', () => {
     it('sets trigger aria-haspopup and aria-expanded', async () => {
       fixture = await mount('ore-menu', {

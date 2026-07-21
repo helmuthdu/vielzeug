@@ -110,6 +110,7 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     getInitialFocusSelector: () => options.initialFocus.value,
     getReturnFocus: () => options.returnFocus.value,
     host: options.host,
+    signal: abortSignal,
   });
   // ─────────────────────────────────────────────────────────────────────────
 

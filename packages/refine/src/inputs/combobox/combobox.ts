@@ -25,7 +25,7 @@ import {
   type DialogCloseReason,
   type OverlayOpenReason,
 } from '../../headless';
-import { reducedMotionMixin, srOnlyMixin } from '../../styles';
+import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptions } from './combobox-options';
 import '../../feedback/chip/chip';
@@ -920,5 +920,5 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [reducedMotionMixin, srOnlyMixin, componentStyles],
+  styles: [colorThemeMixin, reducedMotionMixin, roundedVariantMixin, srOnlyMixin, componentStyles],
 }) as unknown as AddEventListeners<OreComboboxEvents>;

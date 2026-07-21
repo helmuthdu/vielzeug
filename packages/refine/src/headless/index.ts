@@ -4,10 +4,14 @@ export { lifecycleSignal } from './ore';
 // ── Auto-resize ───────────────────────────────────────────────────────────────
 export { createAutoResize, type AutoResizeControl, type AutoResizeOptions } from './auto-resize';
 
+// ── Cross-shadow-root ARIA relationships ──────────────────────────────────────
+export { setAriaReflection, type AriaReflectionProperty } from './aria-reflection';
+
 // ── Field base ───────────────────────────────────────────────────────────────
 export {
   counterClassName,
   createAssistiveState,
+  createDirtyTracker,
   createErrorHelperState,
   createField,
   createLabelState,
@@ -16,6 +20,7 @@ export {
   type ControlValidationMode,
   type CounterOptions,
   type CounterState,
+  type DirtyTracker,
   type ErrorHelperOptions,
   type ErrorHelperState,
   type FieldHandle,
@@ -105,9 +110,6 @@ export {
   type YearCell,
 } from './date-picker';
 
-// ── Dialog focus ─────────────────────────────────────────────────────────────
-export { createDialogFocusControl, type DialogFocusControl, type DialogFocusControlOptions } from './dialog-focus';
-
 // ── DOM utilities ─────────────────────────────────────────────────────────────
 export { getChoiceLabel, getLightChildrenByTag } from './light-dom';
 
@@ -141,5 +143,6 @@ export { createOverlayControl, type OverlayControlOptions } from './overlay';
 export { createSelectionControl, type SelectionControl, type SelectionControlOptions } from './selection-control';
 export { createSortControl, type SortControl, type SortControlOptions } from './sort-control';
 export { createTypeahead, type Typeahead, type TypeaheadOptions } from './typeahead';
+export { elementDirection } from './direction';
 export { parseStringTriggers } from './parse';
 export { syncedSignal } from './signals';

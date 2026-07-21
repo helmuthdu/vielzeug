@@ -86,6 +86,41 @@ export const counterClassName = (counter: CounterState | undefined, base = 'coun
   return base;
 };
 
+// ── Dirty tracking (two-state reset) ───────────────────────────────────────────
+
+/**
+ * Tracks whether a control's value has ever been changed by user interaction.
+ *
+ * Backs the "two-state reset()" pattern used by `createCheckable` (`checked`/
+ * `indeterminate`) and `createChoiceField` (`selectedValues`): before the first
+ * interaction, the live prop is still a reliable "current default" to resync from
+ * (e.g. an async-loaded value arriving after mount); after it, the prop is
+ * contaminated by interaction-driven attribute reflection, so only a snapshot taken
+ * at creation still represents "the default" in the native sense. `reset()` callers
+ * check `isDirty` to decide which source to revert to, then call `clear()`.
+ */
+export type DirtyTracker = {
+  clear: () => void;
+  readonly isDirty: boolean;
+  markDirty: () => void;
+};
+
+export function createDirtyTracker(): DirtyTracker {
+  let dirty = false;
+
+  return {
+    clear: () => {
+      dirty = false;
+    },
+    get isDirty() {
+      return dirty;
+    },
+    markDirty: () => {
+      dirty = true;
+    },
+  };
+}
+
 // ── Label placement ───────────────────────────────────────────────────────────
 
 export type LabelPlacement = 'inset' | 'outside' | undefined;

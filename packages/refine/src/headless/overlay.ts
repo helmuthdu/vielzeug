@@ -50,6 +50,8 @@ export type OverlayControl = {
   close(reason?: DialogCloseReason, restoreFocus?: boolean): void;
   /** Tears down the overlay: closes silently and removes all event listeners. */
   dispose(): void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   /**
    * Opens the overlay.
    * @param reason — why it's opening (default `'programmatic'`)
@@ -142,7 +144,13 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     }
   };
 
+  let disposed = false;
+
   const dispose = (): void => {
+    if (disposed) return;
+
+    disposed = true;
+
     // Close silently — teardown should not fire onClose callbacks.
     if (options.isOpen()) close('programmatic', false, true);
 
@@ -156,5 +164,14 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
 
   options.signal.addEventListener('abort', dispose, { once: true });
 
-  return { close, dispose, open, [Symbol.dispose]: dispose, toggle };
+  return {
+    close,
+    dispose,
+    get disposed() {
+      return disposed;
+    },
+    open,
+    [Symbol.dispose]: dispose,
+    toggle,
+  };
 };

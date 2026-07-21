@@ -39,7 +39,7 @@
     background: var(--_bg);
     border: var(--border) solid var(--_border-color);
     border-radius: var(--_radius);
-    box-shadow: var(--_shadow, var(--shadow-2xs));
+    box-shadow: var(--shadow-2xs);
     transition: var(
       --_motion-transition,
       background var(--transition-fast),

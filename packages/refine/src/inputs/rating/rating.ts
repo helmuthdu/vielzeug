@@ -10,7 +10,7 @@ import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { renderHelperRegion } from '../shared/templates';
-import styles from './rating.css?inline';
+import componentStyles from './rating.css?inline';
 
 export type OreRatingEvents = {
   change: { originalEvent?: Event; value: number };
@@ -238,5 +238,5 @@ define<OreRatingProps>(RATING_TAG, {
       ${renderHelperRegion(assistiveId, errorText, helperText)}
     `;
   },
-  styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, reducedMotionMixin, styles],
+  styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, reducedMotionMixin, componentStyles],
 });

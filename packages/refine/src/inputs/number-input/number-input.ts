@@ -10,7 +10,7 @@ import '../input/input';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { disabledStateMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
-import styles from './number-input.css?inline';
+import componentStyles from './number-input.css?inline';
 
 export type OreNumberInputEvents = {
   change: { originalEvent?: Event; value: number | null };
@@ -320,5 +320,5 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [disabledStateMixin, styles],
+  styles: [disabledStateMixin, componentStyles],
 });

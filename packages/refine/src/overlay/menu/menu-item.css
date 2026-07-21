@@ -17,10 +17,10 @@
 
   .item {
     display: flex;
-    gap: var(--size-2);
+    gap: var(--_gap, var(--size-2));
     align-items: center;
-    padding: var(--size-1-5) var(--size-3);
-    font-size: var(--text-sm);
+    padding: var(--_item-padding, var(--size-1-5) var(--size-3));
+    font-size: var(--_font-size, var(--text-sm));
     line-height: var(--leading-normal);
     white-space: nowrap;
     cursor: pointer;

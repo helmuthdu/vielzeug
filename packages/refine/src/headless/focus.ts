@@ -15,6 +15,13 @@ export type FocusManagerOptions = {
   getReturnFocus: () => boolean | undefined;
   /** Host element used for `querySelector` when resolving the initial focus target. */
   host: HTMLElement;
+  /**
+   * `AbortSignal` from the component lifecycle. Cancels a pending `applyInitialFocus()`
+   * animation frame automatically on abort — prevents a stray `.focus()` call landing on an
+   * element that's been disconnected in the meantime (e.g. the dialog closes and unmounts
+   * before the deferred focus frame runs).
+   */
+  signal?: AbortSignal;
 };
 
 export type FocusManager = {
@@ -40,12 +47,18 @@ export function createFocusManager(options: FocusManagerOptions): FocusManager {
   let returnFocusEl: HTMLElement | null = null;
   let rafHandle: ReturnType<typeof requestAnimationFrame> | null = null;
 
+  const cancelInitialFocus = (): void => {
+    if (rafHandle !== null) {
+      cancelAnimationFrame(rafHandle);
+      rafHandle = null;
+    }
+  };
+
+  options.signal?.addEventListener('abort', cancelInitialFocus, { once: true });
+
   return {
     applyInitialFocus() {
-      if (rafHandle !== null) {
-        cancelAnimationFrame(rafHandle);
-        rafHandle = null;
-      }
+      cancelInitialFocus();
 
       const selector = options.getInitialFocusSelector();
 
@@ -72,12 +85,7 @@ export function createFocusManager(options: FocusManagerOptions): FocusManager {
       }
     },
 
-    cancelInitialFocus() {
-      if (rafHandle !== null) {
-        cancelAnimationFrame(rafHandle);
-        rafHandle = null;
-      }
-    },
+    cancelInitialFocus,
 
     captureReturnFocus() {
       returnFocusEl = document.activeElement as HTMLElement;

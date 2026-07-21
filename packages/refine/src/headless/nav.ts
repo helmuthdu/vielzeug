@@ -46,7 +46,27 @@ const DEFAULT_KEYS: Record<'both' | 'horizontal' | 'vertical', Record<ListNaviga
   vertical: { first: ['Home'], last: ['End'], next: ['ArrowDown'], prev: ['ArrowUp'] },
 };
 
+/**
+ * RTL mirror of `DEFAULT_KEYS`'s horizontal component (per WAI-ARIA APG — tabs/radiogroup
+ * flip Left/Right in `dir="rtl"` so "next" always advances in reading order, not screen-space
+ * direction). Only the Left/Right bindings differ; Home/End and the vertical arrows are
+ * direction-independent and stay identical to `DEFAULT_KEYS`.
+ */
+const DEFAULT_KEYS_RTL: Record<'both' | 'horizontal' | 'vertical', Record<ListNavigationAction, string[]>> = {
+  both: { first: ['Home'], last: ['End'], next: ['ArrowDown', 'ArrowLeft'], prev: ['ArrowUp', 'ArrowRight'] },
+  horizontal: { first: ['Home'], last: ['End'], next: ['ArrowLeft'], prev: ['ArrowRight'] },
+  vertical: DEFAULT_KEYS.vertical,
+};
+
 export type ListNavigationOptions<T> = {
+  /**
+   * Text direction, used to mirror the default Left/Right arrow-key bindings for
+   * `'horizontal'`/`'both'` orientation (WAI-ARIA APG: `dir="rtl"` flips which arrow key
+   * means "next" vs "prev"). Pass a getter for dynamic/reactive direction (e.g. derived from
+   * `elementDirection(getHost())`, since a `dir` ancestor attribute can change at runtime).
+   * Has no effect when an explicit `keys` override is provided. Defaults to `'ltr'`.
+   */
+  direction?: 'ltr' | 'rtl' | (() => 'ltr' | 'rtl');
   disabled?: Readable<boolean | undefined>;
   /**
    * Returns a plain-text label for an item used by typeahead search.
@@ -82,6 +102,10 @@ export type ListNavigationOptions<T> = {
 
 export type ListControl<T> = {
   [Symbol.dispose](): void;
+  /** Disposes the internal typeahead timer. Alias for `dispose()`. Conforms to the monorepo disposal convention. */
+  dispose(): void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   /** Current focused index. `-1` when nothing is focused. */
   readonly focusedIndex: Readable<number>;
   getActiveItem(): T | undefined;
@@ -212,9 +236,13 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
   const resolveOrientation = (): 'both' | 'horizontal' | 'vertical' =>
     typeof options.orientation === 'function' ? options.orientation() : (options.orientation ?? 'vertical');
 
+  const resolveDirection = (): 'ltr' | 'rtl' =>
+    typeof options.direction === 'function' ? options.direction() : (options.direction ?? 'ltr');
+
   const buildKeymap = (): Record<string, (keyboardEvent: KeyboardEvent) => void> => {
     const keys = options.keys;
-    const orientationDefaults = DEFAULT_KEYS[resolveOrientation()];
+    const keyTable = resolveDirection() === 'rtl' ? DEFAULT_KEYS_RTL : DEFAULT_KEYS;
+    const orientationDefaults = keyTable[resolveOrientation()];
     const resolved = {
       first: keys?.first ?? orientationDefaults.first,
       last: keys?.last ?? orientationDefaults.last,
@@ -264,8 +292,10 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
       })
     : null;
 
-  const _staticKeymap: Record<string, (e: KeyboardEvent) => void> | null =
-    typeof options.orientation === 'function' ? null : buildKeymap();
+  // Keymap depends on both orientation and direction — if either is dynamic, rebuild on every
+  // keydown instead of caching once.
+  const isDynamicKeymap = typeof options.orientation === 'function' || typeof options.direction === 'function';
+  const _staticKeymap: Record<string, (e: KeyboardEvent) => void> | null = isDynamicKeymap ? null : buildKeymap();
 
   const handleKeydown = (event: KeyboardEvent): boolean => {
     const km = _staticKeymap ?? buildKeymap();
@@ -275,7 +305,12 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
     return typeahead?.handleKeydown(event) ?? false;
   };
 
+  let disposed = false;
+
   const dispose = (): void => {
+    if (disposed) return;
+
+    disposed = true;
     typeahead?.reset();
   };
 
@@ -284,6 +319,10 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
   }
 
   return {
+    dispose,
+    get disposed() {
+      return disposed;
+    },
     focusedIndex: _index,
     getActiveItem,
     handleKeydown,

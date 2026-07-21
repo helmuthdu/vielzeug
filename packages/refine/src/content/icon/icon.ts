@@ -1,5 +1,5 @@
-import { define, html, prop, bind } from '@vielzeug/ore';
-import { raw } from '@vielzeug/ore/directives';
+import { define, html, prop, ref, bind, watchEffect } from '@vielzeug/ore';
+import { when } from '@vielzeug/ore/directives';
 import { computed } from '@vielzeug/ripple';
 import * as lucideModule from 'lucide';
 
@@ -11,10 +11,11 @@ export type IconNode = Array<[string, Record<string, string | number | undefined
 const DEFAULT_SIZE = 16;
 const DEFAULT_STROKE_WIDTH = 2;
 const LUCIDE_VIEWBOX_SIZE = 24;
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
  * Allowlisted SVG shape/structure element names. Only these tags are permitted
- * when building the SVG markup from an IconNode, preventing arbitrary element
+ * when building the SVG DOM from an IconNode, preventing arbitrary element
  * injection (e.g. <script>, event-handler-bearing elements).
  */
 const ALLOWED_SVG_TAGS = new Set([
@@ -58,15 +59,6 @@ export function registerIcons(icons: Record<string, IconNode>): void {
   }
 }
 
-const toAttrString = (attrs: Record<string, string | number>): string =>
-  Object.entries(attrs)
-    .filter(([k]) => ATTR_KEY_RE.test(k) && !BLOCKED_ATTR_RE.test(k))
-    .map(
-      ([k, v]) =>
-        `${k}="${String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}"`,
-    )
-    .join(' ');
-
 const toPascalCase = (value: string): string =>
   value
     .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
@@ -81,6 +73,31 @@ const parseSize = (value: string | null): number | string => {
   const n = Number(value);
 
   return Number.isFinite(n) && n > 0 && /^\d+(\.\d+)?$/.test(value.trim()) ? n : value;
+};
+
+const resolveIcon = (name: string): IconNode | undefined => registry.get(name) ?? registry.get(toPascalCase(name));
+
+/**
+ * Builds an allowlisted SVG child element via `createElementNS` — real DOM construction, not
+ * HTML-string parsing, so this never touches ore's `raw()` directive (and its "unsanitized
+ * HTML" dev warning) at all. `iconNode` entries come from the bundled Lucide icon set or
+ * `registerIcons()` (a developer/build-time API, never runtime user input), but the tag/attr
+ * allowlist stays as defense in depth regardless of where the data originated.
+ */
+const createSvgChild = (tag: string, attrs: Record<string, string | number | undefined>): SVGElement | null => {
+  if (!ALLOWED_SVG_TAGS.has(tag)) return null;
+
+  const el = document.createElementNS(SVG_NS, tag);
+
+  for (const [key, value] of Object.entries(attrs)) {
+    if (value === undefined) continue;
+
+    if (!ATTR_KEY_RE.test(key) || BLOCKED_ATTR_RE.test(key)) continue;
+
+    el.setAttribute(key, String(value));
+  }
+
+  return el;
 };
 
 /** Icon component properties */
@@ -147,56 +164,54 @@ define<OreIconProps>(ICON_TAG, {
       },
     });
 
-    const markup = computed(() => {
+    const svgRef = ref<SVGSVGElement>();
+
+    // Memoized so an unknown icon name only warns once per change, not once per reactive read.
+    const iconNode = computed(() => {
       const name = (props.name.value ?? '').trim();
 
-      if (!name) return '';
+      if (!name) return undefined;
 
-      const iconNode = registry.get(name) ?? registry.get(toPascalCase(name));
+      const node = resolveIcon(name);
 
-      if (!iconNode) {
-        warn(`ore-icon: icon not found: "${String(name).slice(0, 64)}"`);
+      if (!node) warn(`ore-icon: icon not found: "${name.slice(0, 64)}"`);
 
-        return '';
-      }
+      return node;
+    });
+
+    // Real DOM construction (createElementNS), not the raw() directive — see createSvgChild's
+    // doc comment. Rebuilds the <svg>'s attributes and children whenever the icon name, size,
+    // or presentation props change, or when `svgRef` first attaches (a fresh element mounts
+    // every time `when()`'s branch below flips truthy).
+    watchEffect(() => {
+      const svg = svgRef.value;
+      const node = iconNode.value;
+
+      if (!svg || !node) return;
 
       const size = props.size.value;
       const numericSize = typeof size === 'number' ? size : LUCIDE_VIEWBOX_SIZE;
-
       const strokeWidth =
         props.absoluteStrokeWidth.value && !props.solid.value
           ? props.strokeWidth.value! * (LUCIDE_VIEWBOX_SIZE / numericSize)
           : props.strokeWidth.value!;
 
-      const nodes = iconNode
-        .filter(([tag]) => ALLOWED_SVG_TAGS.has(tag))
-        .map(([tag, tagAttrs]) => {
-          const attrs: Record<string, string | number> = {};
+      svg.setAttribute('fill', props.solid.value ? 'currentColor' : 'none');
+      svg.setAttribute('stroke', props.solid.value ? 'none' : 'currentColor');
+      svg.setAttribute('stroke-linecap', 'round');
+      svg.setAttribute('stroke-linejoin', 'round');
+      svg.setAttribute('stroke-width', String(props.solid.value ? 0 : strokeWidth));
+      svg.setAttribute('viewBox', '0 0 24 24');
 
-          for (const [k, v] of Object.entries(tagAttrs)) {
-            if (v !== undefined) attrs[k] = v;
-          }
+      const children = node.map(([tag, attrs]) => createSvgChild(tag, attrs)).filter((el): el is SVGElement => !!el);
 
-          return `<${tag} ${toAttrString(attrs)} />`;
-        })
-        .join('');
-
-      const svgAttrs = toAttrString({
-        fill: props.solid.value ? 'currentColor' : 'none',
-        part: 'svg',
-        stroke: props.solid.value ? 'none' : 'currentColor',
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': props.solid.value ? 0 : strokeWidth,
-        style: `width:100%;height:100%`,
-        viewBox: '0 0 24 24',
-        xmlns: 'http://www.w3.org/2000/svg',
-      });
-
-      return `<svg ${svgAttrs}>${nodes}</svg>`;
+      svg.replaceChildren(...children);
     });
 
-    return html`${raw(markup)}`;
+    return html`${when(
+      () => !!iconNode.value,
+      () => html`<svg ref="${svgRef}" part="svg" style="width:100%;height:100%"></svg>`,
+    )}`;
   },
   styles: [styles],
 });

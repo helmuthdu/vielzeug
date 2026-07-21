@@ -12,7 +12,7 @@
     flex-wrap: wrap;
     gap: var(--_gap, var(--size-2-5));
     align-items: center;
-    min-height: var(--size-11);
+    min-height: var(--_touch-target);
     touch-action: manipulation;
     cursor: pointer;
     user-select: none;
@@ -57,7 +57,7 @@
        Focus State
        ======================================== */
 
-  input:focus-visible ~ .switch-track {
+  :host(:focus-visible) .switch-track {
     box-shadow: var(--_focus-shadow);
   }
 

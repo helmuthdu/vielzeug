@@ -307,6 +307,8 @@ createListControl<T>(options: ListNavigationOptions<T>): ListControl<T>
 
 Keyboard-navigable list without open state. Supports vertical/horizontal/omni navigation, disabled-item skipping, looping, and typeahead. Navigation methods return the resolved index, or `-1` when no enabled item was found.
 
+Pass `direction` (`'ltr' | 'rtl'` or a getter) to mirror the default Left/Right arrow-key bindings for `'horizontal'`/`'both'` orientation, per WAI-ARIA APG (e.g. `direction: () => elementDirection(getHost())`). Has no effect when an explicit `keys` override is supplied.
+
 ### Other Headless Exports
 
 | Export                       | Description                                                        |
@@ -319,7 +321,6 @@ Keyboard-navigable list without open state. Supports vertical/horizontal/omni na
 | `createDataGridControl()`    | Data grid state (sorting, selection, column management, pagination)|
 | `createTypeahead()`          | Standalone typeahead buffer with debounced reset                   |
 | `createDropdownPositioner()` | Floating dropdown positioner (wraps Orbit)                         |
-| `createDialogFocusControl()` | Dialog-specific focus entry and restoration                        |
 | `createInteraction()`        | Unified click/keyboard press handler for interactive elements      |
 | `dispatchKeyboardAction()`   | Low-level keymap dispatcher                                        |
 | `createSelectionControl()`   | Single/multi/none row-selection controller (used by the data grid) |

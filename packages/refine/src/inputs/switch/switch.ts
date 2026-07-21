@@ -5,7 +5,13 @@ import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
 import { type CheckableChangePayload, lifecycleSignal, createCheckable } from '../../headless';
 import { disablableBundle, sizableBundle, SWITCH_SIZE_PRESET, themableBundle } from '../../shared';
-import { colorThemeMixin, disabledStateMixin, forcedColorsFormControlMixin, sizeVariantMixin } from '../../styles';
+import {
+  coarsePointerMixin,
+  colorThemeMixin,
+  disabledStateMixin,
+  forcedColorsFormControlMixin,
+  sizeVariantMixin,
+} from '../../styles';
 import { applyCheckableBinding } from '../shared/field-binding';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { renderHelperRegion } from '../shared/templates';
@@ -130,6 +136,7 @@ define<OreSwitchProps>(SWITCH_TAG, {
     colorThemeMixin,
     forcedColorsFormControlMixin,
     disabledStateMixin,
+    coarsePointerMixin,
     sizeVariantMixin(SWITCH_SIZE_PRESET),
     componentStyles,
   ],
