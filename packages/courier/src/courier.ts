@@ -72,19 +72,11 @@ export function createCourier(opts?: CourierOptions) {
   const api = createApi({ transport });
   const stream = createStream({ transport });
 
-  // Wire transport.dispatch into the query client so query fetches flow through
-  // the same interceptor pipeline as api/stream requests (auth, logging, etc.).
-  // The adapter converts the query fetch (url + AbortSignal) to a full dispatch call,
-  // merging global headers so interceptors that add per-request headers work correctly.
-  const transportFetch: typeof globalThis.fetch = (input, init) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-    const { signal, ...restInit } = init ?? {};
-    const headers = Object.fromEntries(new Headers({ ...transport.getHeaders(), ...(init?.headers ?? {}) }).entries());
-
-    return transport.dispatch({ headers, init: { ...restInit, signal }, url });
-  };
-
-  const queryClient = createQuery({ ...queryOpts, fetch: transportFetch });
+  // Note: query fetches do NOT automatically flow through the shared interceptor
+  // pipeline — `client.query.fetch()`/`observe()`'s `fn` is fully caller-authored.
+  // Route it through the pipeline explicitly by calling `client.api.get()` (etc.)
+  // inside `fn`, as shown in the README/docs examples.
+  const queryClient = createQuery(queryOpts);
 
   return {
     api,

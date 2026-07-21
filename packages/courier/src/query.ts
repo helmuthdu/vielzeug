@@ -69,12 +69,6 @@ export type ObserveOptions<T, S = T> =
   | ({ fetch: false; key: QueryKey } & Partial<QueryOptions<T>> & ObserveExtras<T, S>);
 
 export type QueryClientOptions = {
-  /**
-   * Optional fetch implementation injected by `createCourier` so that
-   * query fetches flow through the shared interceptor pipeline (auth, logging, etc.).
-   * When omitted `globalThis.fetch` is used directly.
-   */
-  fetch?: typeof globalThis.fetch;
   gcTime?: number;
   staleTime?: number;
 } & RetryOptions;
