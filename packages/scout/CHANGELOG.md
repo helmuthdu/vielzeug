@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/scout
 
-This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+This log was last generated on Tue, 21 Jul 2026 07:21:10 GMT and should not be manually modified.
+
+## 1.1.5
+Tue, 21 Jul 2026 07:21:10 GMT
+
+### Patches
+
+- fix: score fuzzy matches with the overlap coefficient instead of Sørensen–Dice, so short query prefixes of much longer text no longer fall below the default threshold
 
 ## 1.1.4
 Fri, 17 Jul 2026 14:17:07 GMT

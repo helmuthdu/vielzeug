@@ -2,6 +2,20 @@
   "name": "@vielzeug/scout",
   "entries": [
     {
+      "version": "1.1.5",
+      "tag": "@vielzeug/scout_v1.1.5",
+      "date": "Tue, 21 Jul 2026 07:21:10 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: score fuzzy matches with the overlap coefficient instead of Sørensen–Dice, so short query prefixes of much longer text no longer fall below the default threshold",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "43443174fa18ec79afd656a3a4b1344a08376039"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.4",
       "tag": "@vielzeug/scout_v1.1.4",
       "date": "Fri, 17 Jul 2026 14:17:07 GMT",
