@@ -88,11 +88,17 @@ index.search('日本語'); // matches the first document
 Pass `limit`, `threshold`, and `minQueryLength` in options to control result count and quality.
 
 ```ts
-// At most 10 results, minimum Dice score 0.3
+// At most 10 results, minimum overlap score 0.3
 const results = index.search('widget', { limit: 10, threshold: 0.3 });
 ```
 
 Per-call options override the index-level defaults set in `createIndex`.
+
+Scores come from the overlap (Szymkiewicz–Simpson) coefficient — the fraction of the *shorter*
+trigram set (almost always the query) found in the longer one. This is deliberate for the
+autocomplete/command-palette use case `createIndex` targets: a short query that's a clean prefix
+of a much longer field value (e.g. `'fin'` against `'Finalize Q3 budget report'`) scores on how
+much of the query matched, not diluted by how much longer the target field happens to be.
 
 ### Controlling short-query behaviour
 

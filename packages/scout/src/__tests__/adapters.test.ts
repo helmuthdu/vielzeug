@@ -54,9 +54,13 @@ describe('toSearchFn', () => {
     expect(results).toHaveLength(1);
   });
 
+  // 'widget' is a *complete* prefix word of 'Widget Pro'/'Widget Lite' — every one of its
+  // trigrams is found in the title, which now correctly scores as a perfect match (1.0) under
+  // the overlap coefficient. Use a near-miss (extra trailing letter) to exercise a genuinely
+  // partial match instead, so this test still verifies `threshold` actually excludes something.
   test('respects options.threshold', () => {
     const fn = toSearchFn(index, { threshold: 0.99 });
-    const results = fn(PRODUCTS, 'widget');
+    const results = fn(PRODUCTS, 'widgetzz');
 
     expect(results).toHaveLength(0);
   });
@@ -101,8 +105,9 @@ describe('toFilterPredicate', () => {
     expect(results).toHaveLength(4);
   });
 
+  // See the matching comment on `toSearchFn`'s "respects options.threshold" test above.
   test('respects threshold option', () => {
-    const pred = toFilterPredicate(index, 'widget', { threshold: 0.99 });
+    const pred = toFilterPredicate(index, 'widgetzz', { threshold: 0.99 });
     const results = PRODUCTS.filter(pred);
 
     expect(results).toHaveLength(0);

@@ -3,7 +3,7 @@ import type { FieldDef, FieldMatch, ScoutIndexOptions, SearchConstraints, Search
 import { ScoutIndexError } from './errors';
 import { findMatchRanges } from './highlight';
 import { defaultStringify, tokenize } from './tokenize';
-import { diceSimilarity, generateTrigrams } from './trigram';
+import { generateTrigrams, overlapSimilarity } from './trigram';
 
 type FieldConfig<T> = {
   field: keyof T & string;
@@ -220,7 +220,7 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
 
         if (!itemTrigrams || itemTrigrams.size === 0) continue;
 
-        fieldScore = diceSimilarity(queryTrigrams, itemTrigrams);
+        fieldScore = overlapSimilarity(queryTrigrams, itemTrigrams);
       }
 
       const weighted = fieldScore * (weight / maxWeight);

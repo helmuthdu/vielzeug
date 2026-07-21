@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: score fuzzy matches with the overlap coefficient instead of Sørensen–Dice, so short query prefixes of much longer text no longer fall below the default threshold",
+      "packageName": "@vielzeug/scout",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/scout"
+}

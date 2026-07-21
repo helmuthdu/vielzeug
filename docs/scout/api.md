@@ -49,7 +49,7 @@ function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): ScoutIndex<T
 | --- | --- | --- |
 | `items` | `T[]` | Initial corpus to index. |
 | `options.fields` | `ReadonlyArray<FieldDef<T>>` | Fields to index. Required; at least one entry. |
-| `options.threshold` | `number` | Min Dice score for a result (default `0.2`). |
+| `options.threshold` | `number` | Min overlap score for a result (default `0.2`). |
 | `options.limit` | `number` | Max results returned by `search()` (default `50`). |
 | `options.minQueryLength` | `number` | Min chars before trigram scoring; shorter queries use O(n) containment scan (default `3`). |
 
@@ -194,7 +194,7 @@ function createReactiveSearch<T>(
 | `items` | `T[]` | Initial corpus to index. |
 | `options.fields` | `ReadonlyArray<FieldDef<T>>` | Fields to index. Required. |
 | `options.debounce` | `number` | Debounce ms (default `200`). |
-| `options.threshold` | `number` | Min Dice score (default `0.2`). |
+| `options.threshold` | `number` | Min overlap score (default `0.2`). |
 | `options.limit` | `number` | Max results (default `50`). |
 | `options.minQueryLength` | `number` | Min chars before trigram scoring (default `3`). |
 

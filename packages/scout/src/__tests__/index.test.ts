@@ -165,6 +165,36 @@ describe('ScoutIndex.search', () => {
     expect(results.every((r) => r.score === 1.0)).toBe(true);
   });
 
+  // Regression: a short (>= minQueryLength, so trigram-scored) query that's a clean prefix of a
+  // much longer field value used to score *below* the default 0.2 threshold under the old
+  // Sørensen–Dice formula purely because of the length mismatch, disappearing from results —
+  // then reappearing once the user typed enough extra characters to shrink that mismatch. E.g.
+  // "fin" vs "Finalize Q3 budget report" scored ~0.14 under Dice (below threshold); "fina"
+  // scored exactly 0.2 (borderline). The overlap coefficient scores purely on how much of the
+  // (short) query was found, independent of the target's length, fixing this at 3 characters.
+  test('a 3-character query prefix-matches a much longer field value at the default threshold', () => {
+    const items = [{ title: 'Finalize Q3 budget report' }, { title: 'Unrelated task' }];
+    const index = createIndex(items, { fields: ['title'] });
+
+    const results = index.search('fin');
+
+    expect(results.map((r) => r.item.title)).toContain('Finalize Q3 budget report');
+    expect(results.find((r) => r.item.title === 'Finalize Q3 budget report')!.score).toBeGreaterThanOrEqual(0.2);
+  });
+
+  test('does not lose the match as more characters are typed — no "3 chars hides it, 4 shows it" cliff', () => {
+    const items = [{ title: 'Finalize Q3 budget report' }];
+    const index = createIndex(items, { fields: ['title'] });
+
+    const threeChars = index.search('fin');
+    const fourChars = index.search('fina');
+    const fiveChars = index.search('final');
+
+    expect(threeChars).toHaveLength(1);
+    expect(fourChars).toHaveLength(1);
+    expect(fiveChars).toHaveLength(1);
+  });
+
   test('minQueryLength=1 uses trigram path for single-char queries', () => {
     const items = [{ name: 'b' }, { name: 'a' }];
     const index = createIndex(items, { fields: ['name'] });

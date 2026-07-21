@@ -41,7 +41,7 @@ export type SearchConstraints = {
    */
   minQueryLength?: number;
   /**
-   * Minimum Dice similarity score `[0, 1]` for a candidate to appear in results. Default: `0.2`.
+   * Minimum overlap-coefficient score `[0, 1]` for a candidate to appear in results. Default: `0.2`.
    * Higher values require a closer match; lower values are more permissive.
    */
   threshold?: number;
@@ -85,7 +85,9 @@ export type SearchResult<T> = {
   /** Per-field match ranges for rendering highlighted snippets. Empty when query is empty. */
   matches: FieldMatch<keyof T & string>[];
   /**
-   * Weighted Dice similarity score in `[0, 1]`.
+   * Weighted overlap-coefficient score in `[0, 1]` — the fraction of the smaller trigram set
+   * (almost always the query) found in the larger one. `1` when every trigram of the smaller
+   * set is present in the larger set.
    * `1` when query is empty (all items returned with full score).
    */
   score: number;
