@@ -38,6 +38,17 @@ export function generateTrigrams(text: string): Set<string> {
  * (by the AM ≥ min inequality), so this can only ever include *more* legitimate matches, never
  * fewer, than the previous Dice-based scoring.
  *
+ * A single shared trigram is treated as `0` (no match), not folded into the ratio above — for
+ * any query of 4+ characters (the overwhelmingly common case: `generateTrigrams` yields
+ * `length + 1` trigrams once padded), one incidental boundary trigram already clears the
+ * `min(|A|,|B|) `-based ratio far enough to pass the library's own default `threshold` (`0.2`,
+ * `1/4`), regardless of how unrelated the two strings actually are — e.g. `"x300"` and `"a200"`
+ * share nothing but the trailing `"00 "` boundary trigram (both end in a round hundred) yet
+ * would otherwise score `0.25`. A real fuzzy/typo match almost always shares *several*
+ * consecutive trigrams, not one; requiring `>= 2` (or a full match, for the rare query short
+ * enough to normalize to a single trigram) filters out this class of false positive without
+ * weakening genuine partial matches — see `scout-index.ts`'s `search()` tests for both cases.
+ *
  * @internal
  */
 export function overlapSimilarity(a: Set<string>, b: Set<string>): number {
@@ -48,6 +59,8 @@ export function overlapSimilarity(a: Set<string>, b: Set<string>): number {
   for (const trigram of a) {
     if (b.has(trigram)) shared++;
   }
+
+  if (shared < 2 && shared < a.size) return 0;
 
   return shared / Math.min(a.size, b.size);
 }

@@ -195,6 +195,19 @@ describe('ScoutIndex.search', () => {
     expect(fiveChars).toHaveLength(1);
   });
 
+  // Regression: two unrelated 4-character codes that merely end the same way (both round
+  // hundreds) used to both score 0.25 — a single shared boundary trigram (`"00 "`) was enough to
+  // clear the default 0.2 threshold, so searching for one code surfaced every other code sharing
+  // that ending too. A real fuzzy match shares *several* trigrams, not exactly one.
+  test('a single shared boundary trigram does not count as a match', () => {
+    const items = [{ code: 'X300' }, { code: 'A200' }, { code: 'V500' }, { code: 'R350' }];
+    const index = createIndex(items, { fields: ['code'] });
+
+    const results = index.search('x300');
+
+    expect(results.map((r) => r.item.code)).toEqual(['X300']);
+  });
+
   test('minQueryLength=1 uses trigram path for single-char queries', () => {
     const items = [{ name: 'b' }, { name: 'a' }];
     const index = createIndex(items, { fields: ['name'] });
