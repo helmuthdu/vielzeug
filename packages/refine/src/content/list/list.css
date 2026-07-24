@@ -1,0 +1,48 @@
+@layer refine.base {
+  :host {
+    display: block;
+  }
+
+  ::slotted(ore-list-item) {
+    display: block;
+  }
+
+  /* ========================================
+       Bordered Variant
+       ======================================== */
+
+  :host([variant='bordered']) {
+    overflow: hidden;
+    border: var(--border) solid var(--color-contrast-200);
+    border-radius: var(--list-radius, var(--rounded-lg));
+  }
+
+  :host([variant='bordered']) ::slotted(ore-list-item:not(:last-of-type)) {
+    border-bottom: var(--border) solid var(--color-contrast-200);
+  }
+
+  /* ========================================
+       Separated Variant
+       ======================================== */
+
+  :host([variant='separated']) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--_gap, var(--size-2-5));
+  }
+
+  :host([variant='separated']) ::slotted(ore-list-item) {
+    overflow: hidden;
+    border: var(--border) solid var(--color-contrast-200);
+    border-radius: var(--list-radius, var(--rounded-lg));
+  }
+
+  /* ========================================
+       Disabled State
+       ======================================== */
+
+  :host([disabled]) {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+}

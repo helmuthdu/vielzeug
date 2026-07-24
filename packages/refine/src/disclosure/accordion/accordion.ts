@@ -1,9 +1,9 @@
-import { createContext, define, html, prop, bind, getHost, provide, useEmit } from '@vielzeug/ore';
+import { createContext, define, html, prop, bind, getHost, onCleanup, provide, useEmit } from '@vielzeug/ore';
 import { computed, type Readable } from '@vielzeug/ripple';
 
 import type { ComponentSize, SurfaceVariant } from '../../types';
 
-import { createListControl } from '../../headless';
+import { createListControl, lifecycleSignal } from '../../headless';
 import styles from './accordion.css?inline';
 
 /** Context provided by ore-accordion to its ore-accordion-item children. */
@@ -109,6 +109,7 @@ define<OreAccordionProps>(ACCORDION_TAG, {
 
         summaries[index]?.focus();
       },
+      signal: lifecycleSignal(onCleanup),
     });
 
     provide(ACCORDION_CTX, {

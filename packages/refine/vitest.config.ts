@@ -36,7 +36,7 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    exclude: ['**/node_modules/**', '**/dist/**', 'src/__e2e__/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', 'src/**/*.e2e.ts'],
     globals: true,
     hookTimeout: 10_000,
     name: 'refine',

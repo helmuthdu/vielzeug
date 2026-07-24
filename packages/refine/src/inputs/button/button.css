@@ -110,6 +110,19 @@
     width: 100%;
   }
 
+  /* `[part='button']`'s own height otherwise comes from the fixed size-preset var
+     (`--_height`, default `--size-10`) — overriding just the host's own box height (e.g. via an
+     external `height: 100%` from a swipe-action panel container) stretches an invisible wrapper
+     without moving the visible button surface at all. Both declarations are needed. */
+  :host([fullheight]) {
+    display: flex;
+    height: 100%;
+  }
+
+  :host([fullheight]) [part='button'] {
+    height: 100%;
+  }
+
   /* Icon-only always uses perfect circle */
   :host([rounded][icon-only]) [part='button'] {
     border-radius: 50%;

@@ -14,8 +14,8 @@ export default defineConfig({
   ],
   reporter: 'list',
   retries: process.env['CI'] ? 2 : 0,
-  testDir: path.join(__dirname, 'src/__e2e__'),
-  testMatch: '**/*.spec.ts',
+  testDir: path.join(__dirname, 'src'),
+  testMatch: '**/*.e2e.ts',
   use: {
     // No base URL — tests use page.setContent() with IIFE scripts
     headless: true,

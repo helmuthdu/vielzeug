@@ -78,6 +78,8 @@ import '@vielzeug/refine/grid';
 import '@vielzeug/refine/grid-item';
 import '@vielzeug/refine/icon';
 import '@vielzeug/refine/input';
+import '@vielzeug/refine/list';
+import '@vielzeug/refine/list-item';
 import '@vielzeug/refine/menu';
 import '@vielzeug/refine/message-composer';
 import '@vielzeug/refine/navbar';
@@ -175,6 +177,7 @@ Per-component API — attributes, events, slots, CSS custom properties:
 - [Chat Message](./components/chat-message.md)
 - [Copy Command](./components/copy-command.md)
 - [Icon](./components/icon.md)
+- [List (+ List Item)](./components/list.md)
 - [Pagination](./components/pagination.md)
 - [Separator](./components/separator.md)
 - [Table](./components/table.md)

@@ -19,6 +19,10 @@ export type {
 } from './chat-message/chat-message';
 export { ICON_TAG, registerIcons } from './icon/icon';
 export type { OreIconProps, IconNode } from './icon/icon';
+export { LIST_ITEM_TAG } from './list/list-item';
+export type { ListItemRevealSide, OreListItemEvents, OreListItemProps } from './list/list-item';
+export { LIST_CTX, LIST_TAG } from './list/list';
+export type { ListContext, ListVariant, OreListEvents, OreListProps } from './list/list';
 export { PAGINATION_TAG } from './pagination/pagination';
 export type { OrePaginationEvents, OrePaginationProps } from './pagination/pagination';
 export { SEPARATOR_TAG } from './separator/separator';

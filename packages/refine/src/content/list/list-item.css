@@ -1,0 +1,171 @@
+@layer refine.base {
+  /* `--_gap` / `--_padding` / `--_font-size` are intentionally not emitted by any mixin in this
+     component's own `styles` array — they're inherited from the parent `ore-list`'s
+     `sizeVariantMixin(LIST_SIZE_PRESET)` call the same way `ore-menu-item` inherits
+     `--_gap`/`--_font-size` from `ore-menu` (see `LIST_SIZE_PRESET`'s doc comment). The
+     `var(..., fallback)` defaults below cover standalone use outside an `ore-list`. */
+  :host {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    color: var(--color-contrast-700);
+
+    --_actions-width: var(--list-item-actions-width, var(--size-24));
+  }
+
+  /* ========================================
+       Row
+       ======================================== */
+
+  .row {
+    position: relative;
+    z-index: 1;
+    box-sizing: border-box;
+    display: flex;
+    gap: var(--_gap, var(--size-4));
+    align-items: center;
+    width: 100%;
+    min-height: var(--_min-height, var(--size-4));
+    padding: var(--_padding, var(--size-2-5) var(--size-4));
+    padding-inline-end: var(--_padding-inline-end, var(--size-6));
+    font-size: var(--_font-size, var(--text-sm));
+    text-align: start;
+    touch-action: pan-y;
+    cursor: default;
+    outline: none;
+    background: var(--list-item-bg, var(--color-canvas));
+    border: none;
+    transform: translateX(calc(var(--_swipe-x, 0) * var(--_actions-width)));
+    transition: var(--_motion-transition, transform var(--transition-fast), background var(--transition-fast));
+  }
+
+  .leading,
+  .trailing {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  .content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--size-0-5);
+    min-width: 0;
+  }
+
+  .title {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .description {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--text-xs);
+    color: var(--color-contrast-400);
+    white-space: nowrap;
+  }
+
+  .description:empty {
+    display: none;
+  }
+
+  .row:hover {
+    background: var(--list-item-hover-bg, var(--color-contrast-100));
+  }
+
+  .row:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  /* ========================================
+       Selected / Disabled States
+       ======================================== */
+
+  :host([selected]) .row {
+    color: var(--color-primary);
+    background: var(--list-item-selected-bg, color-mix(in oklch, var(--color-primary) 10%, transparent));
+  }
+
+  :host([disabled]) {
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  /* ========================================
+       Swipe Action Panels
+       ======================================== */
+
+  .actions {
+    position: absolute;
+    inset-block: 0;
+    display: flex;
+    align-items: stretch;
+    width: var(--_actions-width);
+    transition: var(--_motion-transition, transform var(--transition-fast));
+  }
+
+  /* A single slotted action button fills the whole revealed panel — the common case (one big
+     tappable target, e.g. a full-height "Delete" button) rather than a small icon-sized hit area.
+     This stretches the slotted element's own light-DOM box, which is enough for plain elements
+     (a native <button>, an <a>, ...). It is NOT enough on its own for `ore-button`: its visible
+     surface is an inner `[part="button"]` with a fixed height from its size preset, independent
+     of its own host box size — pass `fullheight` on the `ore-button` itself too (see its own
+     `fullheight` prop) to actually fill this panel edge-to-edge. */
+  .actions ::slotted(*) {
+    flex: 1;
+    height: 100%;
+  }
+
+  .actions-left {
+    left: 0;
+    transform: translateX(calc((var(--_swipe-x, 0) - 1) * 100%));
+  }
+
+  .actions-right {
+    right: 0;
+    transform: translateX(calc((var(--_swipe-x, 0) + 1) * 100%));
+  }
+
+  /* `:host(:has(...))` (`:has()` as `:host()`'s functional argument) is invalid — `:host()`
+     only accepts a compound selector and doesn't accept `:has()` inside it. The plain `:host`
+     pseudo-class chained directly with `:has()` (no parentheses) is the valid form. Kept as
+     separate rules (not grouped via a comma with the `[revealed]` rules) so a selector list
+     doesn't silently drop the whole rule if either half were ever invalid again. */
+  :host([revealed='left']) {
+    --_swipe-x: 1;
+  }
+
+  :host([revealed='right']) {
+    --_swipe-x: -1;
+  }
+
+  :host:has(.actions-left:focus-within) {
+    --_swipe-x: 1;
+  }
+
+  :host:has(.actions-right:focus-within) {
+    --_swipe-x: -1;
+  }
+
+  /* Suppress the transition while a drag is actively updating `--_swipe-x` inline so the row
+     and action panels track the pointer 1:1 instead of lagging behind on every move event. */
+  :host([data-dragging]) .row,
+  :host([data-dragging]) .actions-left,
+  :host([data-dragging]) .actions-right {
+    transition: none;
+  }
+
+  /* Feedback that the drag has passed into "swipe all the way through" territory (close to
+     CONFIRM_THRESHOLD) — set by list-item.ts's onMove once past ~85% of that distance, cleared
+     on release/cancel/commit. Visual-only; the confirm itself fires from JS regardless of CSS. */
+  :host([data-confirming]) .actions-left,
+  :host([data-confirming]) .actions-right {
+    filter: saturate(1.4) brightness(0.94);
+  }
+}

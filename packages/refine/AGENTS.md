@@ -34,21 +34,22 @@ Two test layers cover different concerns.
 
 ### Layer 2 — real browser (Playwright, `pnpm test:e2e`)
 
-Runs in Chromium via `src/__e2e__/`. No dev server needed — loads the built IIFE stack via `page.setContent()`. Requires a prior `pnpm build`.
+**Co-located next to the component**, same convention as jsdom `*.test.ts` files: `src/<category>/<component>/<component>.e2e.ts`. No dev server needed — loads the built IIFE stack via `page.setContent()`. Requires a prior `pnpm build`.
 
 ```bash
 cd packages/refine
-pnpm test:e2e               # run all e2e specs
-pnpm test:e2e src/__e2e__/a11y.spec.ts       # a11y suite only
-pnpm test:e2e src/__e2e__/layout.spec.ts     # layout regression suite
-pnpm test:e2e src/__e2e__/interaction.spec.ts # interaction/overlay suite
+pnpm test:e2e                                      # run all e2e tests
+pnpm test:e2e src/content/list/list.e2e.ts          # one component's e2e file
+pnpm test:e2e -g "Accessibility"                    # every a11y describe block, any component
 ```
 
-- **`a11y.spec.ts`** — full wcag2a/aa axe scan with `color-contrast` and `target-size` re-enabled. Tests are scoped to `.frame` to avoid page-level false positives. Three tests are marked `test.fail()` with documented reasons (shadow DOM axe limitations for select/tabs, genuine checkbox a11y gap).
-- **`layout.spec.ts`** — CSS layout regression checks (flexbox geometry, overflow, padding ratios). Supersedes `scripts/verify-layout.mjs`'s chat-message scenarios plus adds button/dialog/navbar coverage.
-- **`interaction.spec.ts`** — open/close, focus-trap, keyboard navigation for overlay and composite components (dialog, accordion, tabs, tooltip, popover).
+Each `*.e2e.ts` file groups its tests into `describe('Accessibility', ...)` / `describe('Interaction', ...)` / `describe('Layout', ...)` / `describe('Selection', ...)` etc. as needed — not every component needs every category, and multi-part components (`ore-list` + `ore-list-item`) share one file per the parent folder (`list.e2e.ts` covers both).
 
-**Adding a new e2e test:** add to the relevant spec in `src/__e2e__/` using the `test` import from `./fixtures`. Call `refinePage.mountComponent(html)` to inject HTML and wait for upgrade. The fixture pre-loads the full IIFE dependency stack.
+- **Accessibility** — full wcag2a/aa axe scan with `color-contrast` and `target-size` re-enabled (`axeCheck()`, shared from `src/testing/fixtures.ts`). Tests are scoped to `.frame` to avoid page-level false positives. A handful across the suite are marked `test.fail()` with documented reasons (shadow DOM axe limitations for select/tabs, genuine checkbox a11y gap, the list/list-item nested-interactive combo).
+- **Layout** — CSS layout regression checks (flexbox geometry, overflow, padding ratios). `chat-message.e2e.ts` supersedes `scripts/verify-layout.mjs`'s chat-message scenarios.
+- **Interaction** — open/close, focus-trap, keyboard navigation, gesture-driven state for overlay and composite components (dialog, accordion, tabs, tooltip, popover, list swipe actions).
+
+**Adding a new e2e test:** add a `describe` block (or a new one) to the component's own `<component>.e2e.ts` (create it if this is the component's first e2e test), importing `test`/`expect`/`axeCheck` from `../../testing/fixtures` (path depth is always `category/component/` → two `../`). Call `refinePage.mountComponent(html)` to inject HTML and wait for upgrade. `src/testing/fixtures.ts` is Playwright-only shared harness/helper infrastructure (the real-browser counterpart to `src/testing/index.ts`'s jsdom helpers) — not a spec file, and not part of the public `@vielzeug/refine/testing` export (`index.ts` never imports it).
 
 **Known shadow DOM limitation with axe:** axe-core's flat-tree traversal cannot pierce shadow boundaries for role-child relationships (e.g. `listbox > option`). Components where the ARIA role tree crosses the shadow/light boundary may produce false-positive violations. Mark these `test.fail()` with an explanation — they document known gaps, not real failures.
 
@@ -113,7 +114,7 @@ Named improvement lenses to guide AI-driven design work on components. Each list
 ## Verification
 
 - **Unit/component tests** (jsdom): `pnpm vitest run packages/refine/src/` or `pnpm --filter @vielzeug/refine test`. Tests are **co-located** next to components (`src/<category>/<component>/<component>.test.ts`) plus shared suites under `src/headless/__tests__/` and `src/inputs/__tests__/`. The `.../src/__tests__/` path used by other packages misses most refine tests.
-- **E2E tests** (Playwright/Chromium): `pnpm --filter @vielzeug/refine test:e2e`. Requires a built dist (`pnpm --filter @vielzeug/refine build` first). Specs live in `src/__e2e__/`.
+- **E2E tests** (Playwright/Chromium): `pnpm --filter @vielzeug/refine test:e2e`. Requires a built dist (`pnpm --filter @vielzeug/refine build` first). Co-located next to components as `src/<category>/<component>/<component>.e2e.ts`; shared harness lives in `src/testing/fixtures.ts`.
 - Lint (JS/TS): `pnpm --filter @vielzeug/refine lint` (`eslint src`). This does **not** lint CSS — refine ships many `.css` files; lint those from the repo root with `pnpm lint:css` (or `pnpm lint` for the whole repo).
 - Build (includes `sync:exports` + `check:manifest` + manifest analyze): `pnpm --filter @vielzeug/refine build`
 

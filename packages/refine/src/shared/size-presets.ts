@@ -154,6 +154,49 @@ export const MENU_SIZE_PRESET = {
   },
 } satisfies FullSizePreset;
 
+/**
+ * Size preset for `ore-list`'s own host. `ore-list-item` has no `sizeVariantMixin` call of its
+ * own — it reads `--_gap`/`--_padding`/`--_padding-inline-end`/`--_font-size`/`--_min-height`/
+ * `--_min-height-two-line` inherited straight from its parent `ore-list`'s shadow host (custom
+ * properties cascade through light-DOM children the same way `MENU_SIZE_PRESET` cascades from
+ * `ore-menu` into `ore-menu-item`), with fallback defaults for standalone use outside an
+ * `ore-list`.
+ *
+ * Follows Material 3's list-item spacing at `md`/`lg`: 16dp between leading/content/trailing
+ * (`gap`), 16dp inline-start (`padding`), 24dp inline-end (`--_padding-inline-end` — the trailing
+ * edge sits 8dp further out than the other three sides in the M3 spec), 56dp one-line / 72dp
+ * two-line row height (`--_min-height`/`--_min-height-two-line`, applied in `list-item.css`).
+ * `sm` keeps the same asymmetry and the M3/WCAG 48dp touch-target floor proportionally, for a
+ * denser list that still reads as "M3-like" rather than hitting the exact dp values M3 doesn't
+ * itself define an alternate density for.
+ */
+export const LIST_SIZE_PRESET = {
+  lg: {
+    '--_min-height': 'var(--size-14)',
+    '--_min-height-two-line': 'calc(var(--size-16) + var(--size-2))',
+    '--_padding-inline-end': 'var(--size-6)',
+    fontSize: 'var(--text-base)',
+    gap: 'var(--size-4)',
+    padding: 'var(--size-3) var(--size-4)',
+  },
+  md: {
+    '--_min-height': 'var(--size-14)',
+    '--_min-height-two-line': 'calc(var(--size-16) + var(--size-2))',
+    '--_padding-inline-end': 'var(--size-6)',
+    fontSize: 'var(--text-sm)',
+    gap: 'var(--size-4)',
+    padding: 'var(--size-2-5) var(--size-4)',
+  },
+  sm: {
+    '--_min-height': 'var(--size-12)',
+    '--_min-height-two-line': 'var(--size-16)',
+    '--_padding-inline-end': 'var(--size-4)',
+    fontSize: 'var(--text-xs)',
+    gap: 'var(--size-2)',
+    padding: 'var(--size-1-5) var(--size-2)',
+  },
+} satisfies FullSizePreset;
+
 /** Shared size preset for the file-input dropzone. */
 export const FILE_INPUT_SIZE_PRESET = {
   lg: {

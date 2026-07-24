@@ -41,6 +41,8 @@ export const componentManifest = [
   { name: 'grid-item', source: './src/layout/grid-item/grid-item' },
   { name: 'icon', source: './src/content/icon/icon' },
   { name: 'input', source: './src/inputs/input/input' },
+  { name: 'list', source: './src/content/list/list' },
+  { name: 'list-item', source: './src/content/list/list-item' },
   { name: 'menu', source: './src/overlay/menu/menu' },
   { name: 'message-composer', source: './src/inputs/message-composer/message-composer' },
   { name: 'navbar', source: './src/layout/navbar/navbar' },
@@ -120,6 +122,8 @@ export const customElementsManifestConfig = {
   dev: false,
   exclude: [
     'src/**/*.test.ts',
+    'src/**/*.e2e.ts',
+    'src/testing/fixtures.ts',
     'src/**/__tests__/**',
     'src/utils/**',
     'src/**/index.ts',

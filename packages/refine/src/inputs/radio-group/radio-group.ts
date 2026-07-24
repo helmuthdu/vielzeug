@@ -254,6 +254,7 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
           selectRadio(radio.getAttribute('value') ?? '', event);
         }
       },
+      signal: lifecycleSignal(onCleanup),
     });
 
     bind({

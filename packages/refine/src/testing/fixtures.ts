@@ -1,10 +1,19 @@
+import AxeBuilder from '@axe-core/playwright';
 import { test as base } from '@playwright/test';
 /**
- * Shared Playwright test fixture for refine e2e specs.
+ * Shared Playwright test fixture for refine e2e specs — the real-browser counterpart to this
+ * same folder's jsdom `axeCheck()`/ARIA helpers (`index.ts`), just Playwright/Chromium-only
+ * instead of jsdom-only. Not part of the public `@vielzeug/refine/testing` sub-path — `index.ts`
+ * never imports it, so it's never bundled into that export's output; it lives here purely so
+ * every `*.e2e.ts` file's test infra sits next to its jsdom equivalent.
  *
  * Loads the full IIFE dependency stack (same load order as verify-layout.mjs and the
  * docs component preview) via page.setContent() with inline scripts. Tests call
  * mountComponent(html) to render arbitrary HTML inside a styled frame element.
+ *
+ * e2e specs are co-located next to the component they cover (`<component>.e2e.ts`, matching
+ * `<component>.test.ts`'s jsdom co-location) rather than centralized here — this file is just
+ * the shared harness/helpers every one of them imports.
  *
  * No dev server is required — all scripts are inlined from the built dist/ outputs.
  */
@@ -37,7 +46,18 @@ const IIFE_ENTRIES: Array<{ path: string; shim?: string }> = [
   { path: path.join(PKG, 'refine/dist/refine.iife.js') },
 ];
 
-const STYLES_CSS = readFileSync(path.join(PKG, 'refine/dist/styles/styles.css'), 'utf-8');
+// `dist/styles/styles.css` is just four `@import url(...)` lines (LightningCSS keeps them
+// external so consumers' bundlers can dedupe/split them) — pointing a `<link>` at it via
+// `page.setContent()` fails silently: the page's own origin is `about:blank`, so the `file://`
+// stylesheet (and its own nested `@import`s) is cross-origin and Chromium never applies it —
+// `getComputedStyle()` on anything under `.frame` then sees none of the `--size-*`/`--color-*`
+// tokens every component's CSS falls back through, not even as a loud error. Reading and
+// concatenating the four imported files directly (same order `styles.css` imports them in)
+// sidesteps needing a real file:// page origin at all.
+const STYLES_DIR = path.join(PKG, 'refine/dist/styles');
+const STYLES_CSS = ['preflight.css', 'theme.css', 'animation.css', 'layer.css']
+  .map((name) => readFileSync(path.join(STYLES_DIR, name), 'utf-8'))
+  .join('\n');
 
 // Pre-build the script tags string once (expensive — large IIFE bundles)
 const IIFE_SCRIPT_TAGS = IIFE_ENTRIES.map(({ path: p, shim }) => {
@@ -101,3 +121,36 @@ export const test = base.extend<{ refinePage: RefinePage }>({
 });
 
 export { expect } from '@playwright/test';
+
+// Page-level rules that produce false positives for component-level axe scans (axe still runs
+// on the full document; these rules target <html>/<head> structure that `.frame` doesn't own).
+const PAGE_LEVEL_RULES: Record<string, { enabled: false }> = {
+  'document-title': { enabled: false },
+  'html-has-lang': { enabled: false },
+  'landmark-one-main': { enabled: false },
+  'page-has-heading-one': { enabled: false },
+  region: { enabled: false },
+};
+
+/**
+ * Runs axe against `selector` (default `.frame`, the component container) with the full
+ * wcag2a/wcag2aa/best-practice ruleset — including `color-contrast` and `target-size`, which the
+ * jsdom-based `axeCheck()` in `vitest.setup.ts` must disable (no CSS layout engine there). Shared
+ * by every component's `*.e2e.ts` a11y tests so the rule config lives in exactly one place.
+ */
+export async function axeCheck(
+  page: ConstructorParameters<typeof AxeBuilder>[0]['page'],
+  selector = '.frame',
+): ReturnType<AxeBuilder['analyze']> {
+  return new AxeBuilder({ page })
+    .include(selector)
+    .withTags(['wcag2a', 'wcag2aa', 'best-practice'])
+    .options({
+      rules: {
+        ...PAGE_LEVEL_RULES,
+        'color-contrast': { enabled: true },
+        'target-size': { enabled: true },
+      },
+    })
+    .analyze();
+}

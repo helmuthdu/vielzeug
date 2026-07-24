@@ -1460,6 +1460,7 @@ export default defineConfig({
                 { link: '/refine/components/code-window', text: 'Code Window' },
                 { link: '/refine/components/copy-command', text: 'Copy Command' },
                 { link: '/refine/components/icon', text: 'Icon' },
+                { link: '/refine/components/list', text: 'List' },
                 { link: '/refine/components/pagination', text: 'Pagination' },
                 { link: '/refine/components/separator', text: 'Separator' },
                 { link: '/refine/components/table', text: 'Table' },

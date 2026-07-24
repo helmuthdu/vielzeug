@@ -134,6 +134,24 @@ The `rounded` attribute sets the border radius from the theme scale. Used withou
 
 </ComponentPreview>
 
+## Full Height
+
+`fullheight` fills the button's own container height instead of its size preset's fixed height —
+useful when the button itself is the whole tappable surface of a space it doesn't otherwise
+control the size of, such as a swipe-revealed row action in [`ore-list-item`](./list.md)'s
+`actions-left`/`actions-right` slots.
+
+<ComponentPreview center>
+
+```html
+<div style="display: flex; height: 4rem; gap: 0.5rem;">
+  <ore-button fullheight color="primary">Full Height</ore-button>
+  <ore-button color="secondary">Default Height</ore-button>
+</div>
+```
+
+</ComponentPreview>
+
 ## Link Mode
 
 Set `href` to render a real `<a>` internally instead of a `<button>`; the host itself takes `role="link"` (and carries the real `tabindex`/keyboard handling, since `ore-button` is form-associated). Native left/middle/ctrl-click, right-click context menu, and hover-preview behavior all work as expected. All variants, sizes, states, and slots behave identically.
@@ -281,6 +299,7 @@ Removes spacing and connects buttons with shared borders — use for segmented c
 | `icon-only` | `boolean`                                                                       | `false`    | Square aspect ratio, no padding — pair with `label`                         |
 | `label`     | `string`                                                                        | —          | Sets `aria-label` on the host — required for icon-only buttons              |
 | `fullwidth` | `boolean`                                                                       | `false`    | Expands to full container width                                             |
+| `fullheight` | `boolean`                                                                      | `false`    | Expands to full container height (see [List's swipe actions](./list.md))    |
 | `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`          | —          | Border radius; omit value or use `'full'` for pill shape                    |
 | `href`      | `string`                                                                        | —          | Renders as a real `<a>` internally when set; host takes `role="link"`       |
 | `target`    | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | —          | Link target (requires `href`)                                               |

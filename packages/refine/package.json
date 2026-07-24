@@ -285,6 +285,18 @@
       "require": "./dist/input.cjs",
       "types": "./dist/inputs/input/input.d.ts"
     },
+    "./list": {
+      "source": "./src/content/list/list.ts",
+      "import": "./dist/list.js",
+      "require": "./dist/list.cjs",
+      "types": "./dist/content/list/list.d.ts"
+    },
+    "./list-item": {
+      "source": "./src/content/list/list-item.ts",
+      "import": "./dist/list-item.js",
+      "require": "./dist/list-item.cjs",
+      "types": "./dist/content/list/list-item.d.ts"
+    },
     "./menu": {
       "source": "./src/overlay/menu/menu.ts",
       "import": "./dist/menu.js",

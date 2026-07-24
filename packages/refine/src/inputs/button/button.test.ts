@@ -121,6 +121,29 @@ describe('ore-button', () => {
     });
   });
 
+  describe('Layout', () => {
+    it('reflects fullheight as a host attribute', async () => {
+      fixture = await mount('ore-button', { attrs: { fullheight: '' } });
+
+      expect(fixture.element.hasAttribute('fullheight')).toBe(true);
+    });
+
+    // `[part='button']`'s own height otherwise comes from a fixed size-preset var
+    // (`--_height`) rather than the host's box — jsdom drops `@layer`-wrapped rules from the
+    // CSSOM (see the Hover/active halo test above for the same limitation), so this asserts the
+    // raw CSS source's declarations directly; a real browser is where the actual rendering
+    // (list-item.css's e2e layout suite) is verified.
+    it('fullheight sets height:100% on both the host and [part="button"]', () => {
+      const match = buttonCss.match(
+        /:host\(\[fullheight\]\)\s*{([^}]*)}\s*:host\(\[fullheight\]\)\s*\[part='button'\]\s*{([^}]*)}/,
+      );
+
+      expect(match).not.toBeNull();
+      expect(match![1]).toContain('height: 100%');
+      expect(match![2]).toContain('height: 100%');
+    });
+  });
+
   describe('Disabled state', () => {
     it('does not fire click when disabled', async () => {
       fixture = await mount('ore-button', { attrs: { disabled: '' } });

@@ -38,6 +38,13 @@ export type OreButtonProps = {
   disabled?: boolean;
   /** Animated border effect: 'shine' (color-aware neon sweep) or 'rainbow' */
   effect?: ButtonEffect;
+  /**
+   * Full height button (100% of container) — the inner `[part="button"]` fills its host's
+   * height instead of the size preset's fixed height. Useful when the button itself is the
+   * whole tappable surface of a container it doesn't otherwise control the size of (e.g. a
+   * swipe-revealed row action in `ore-list-item`'s `actions-left`/`actions-right` slots).
+   */
+  fullheight?: boolean;
   /** Full width button (100% of container) */
   fullwidth?: boolean;
   /** When set, renders an `<a>` instead of `<button>` */
@@ -78,6 +85,7 @@ export type OreButtonProps = {
  * @attr {string} effect - Animated border effect: 'shine' | 'rainbow'
  * @attr {boolean} icon-only - Icon-only mode (square aspect ratio, no padding)
  * @attr {boolean} fullwidth - Full width button (100% of container)
+ * @attr {boolean} fullheight - Full height button (100% of container)
  *
  * @fires click - Emitted when button is clicked (unless disabled/loading)
  *
@@ -114,6 +122,7 @@ define<OreButtonProps>(BUTTON_TAG, {
   props: {
     ...commonProps,
     effect: prop.string<ButtonEffect>(),
+    fullheight: prop.bool(false),
     fullwidth: prop.bool(false),
     href: prop.string(),
     iconOnly: prop.bool(false),

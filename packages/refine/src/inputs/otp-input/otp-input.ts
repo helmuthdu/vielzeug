@@ -1,10 +1,10 @@
-import { define, html, inject, prop, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
+import { define, html, inject, prop, bind, getHost, onCleanup, onMounted, useEmit } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore/forms';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
-import { createListControl } from '../../headless';
+import { createListControl, lifecycleSignal } from '../../headless';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
@@ -138,6 +138,7 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
 
         inputs[index]?.focus();
       },
+      signal: lifecycleSignal(onCleanup),
     });
 
     function getValue(): string {
