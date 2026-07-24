@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/clockwork
 
-This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+
+## 1.1.1
+Fri, 24 Jul 2026 05:28:41 GMT
+
+### Patches
+
+- chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement
 
 ## 1.1.0
 Fri, 17 Jul 2026 14:17:07 GMT

@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/clockwork",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Zero-dependency typed finite state machine — guards, async invokes, nested states, and signal integration",
   "type": "module",
   "files": [

@@ -2,6 +2,20 @@
   "name": "@vielzeug/keymap",
   "entries": [
     {
+      "version": "1.1.2",
+      "tag": "@vielzeug/keymap_v1.1.2",
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.1",
       "tag": "@vielzeug/keymap_v1.1.1",
       "date": "Tue, 07 Jul 2026 09:20:39 GMT",

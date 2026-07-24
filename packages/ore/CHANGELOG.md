@@ -1,6 +1,14 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+
+## 1.2.3
+Fri, 24 Jul 2026 05:28:41 GMT
+
+### Patches
+
+- chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement
+- fix: attach orphaned custom-prop JSDoc to normalizePropDefinition() instead of floating unattached
 
 ## 1.2.2
 Fri, 17 Jul 2026 14:17:07 GMT

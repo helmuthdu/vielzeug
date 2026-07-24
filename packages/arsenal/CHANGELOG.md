@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/arsenal
 
-This log was last generated on Tue, 07 Jul 2026 09:20:39 GMT and should not be manually modified.
+This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+
+## 1.1.2
+Fri, 24 Jul 2026 05:28:41 GMT
+
+### Patches
+
+- chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement
 
 ## 1.1.1
 Tue, 07 Jul 2026 09:20:39 GMT

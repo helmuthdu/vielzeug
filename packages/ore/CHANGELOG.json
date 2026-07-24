@@ -2,6 +2,30 @@
   "name": "@vielzeug/ore",
   "entries": [
     {
+      "version": "1.2.3",
+      "tag": "@vielzeug/ore_v1.2.3",
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+          },
+          {
+            "comment": "fix: attach orphaned custom-prop JSDoc to normalizePropDefinition() instead of floating unattached",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.3`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.2.2",
       "tag": "@vielzeug/ore_v1.2.2",
       "date": "Fri, 17 Jul 2026 14:17:07 GMT",

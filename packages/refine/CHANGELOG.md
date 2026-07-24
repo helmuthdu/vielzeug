@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Tue, 21 Jul 2026 07:04:16 GMT and should not be manually modified.
+This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+
+## 1.6.0
+Fri, 24 Jul 2026 05:28:41 GMT
+
+### Minor changes
+
+- chore: fix --_* CSS mixin gaps (select/combobox/date-picker/time-picker/checkbox/switch/menu), RTL keyboard nav, cross-shadow-root ARIA (tab-item/tab-panel), icon.ts XSS-warning noise; dedup headless dirty-tracking; dispose-shape consistency; BREAKING: remove unused createFocusTrap/createDialogFocusControl from @vielzeug/refine/headless
+
+### Patches
+
+- chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement
 
 ## 1.5.4
 Tue, 21 Jul 2026 07:04:16 GMT

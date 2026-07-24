@@ -2,6 +2,30 @@
   "name": "@vielzeug/scout",
   "entries": [
     {
+      "version": "1.1.6",
+      "tag": "@vielzeug/scout_v1.1.6",
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+          },
+          {
+            "comment": "fix(scout): a single shared trigram no longer counts as a fuzzy match, fixing false-positive results for short queries",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "be459b5621a039d2e409193afeb99e01b01e2363"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.3`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.5",
       "tag": "@vielzeug/scout_v1.1.5",
       "date": "Tue, 21 Jul 2026 07:21:10 GMT",

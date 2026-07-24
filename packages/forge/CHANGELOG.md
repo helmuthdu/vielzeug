@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/forge
 
-This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+
+## 1.3.1
+Fri, 24 Jul 2026 05:28:41 GMT
+
+### Patches
+
+- chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement
 
 ## 1.3.0
 Fri, 17 Jul 2026 14:17:07 GMT

@@ -1,6 +1,14 @@
 # Change Log - @vielzeug/courier
 
-This log was last generated on Fri, 17 Jul 2026 14:17:07 GMT and should not be manually modified.
+This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+
+## 1.1.4
+Fri, 24 Jul 2026 05:28:41 GMT
+
+### Patches
+
+- fix: remove dead QueryClientOptions.fetch (never wired into query engine); split stream.ts into stream-shared/sse/readable modules
+- chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement
 
 ## 1.1.3
 Fri, 17 Jul 2026 14:17:07 GMT

@@ -2,6 +2,20 @@
   "name": "@vielzeug/wayfinder",
   "entries": [
     {
+      "version": "1.0.4",
+      "tag": "@vielzeug/wayfinder_v1.0.4",
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.3",
       "tag": "@vielzeug/wayfinder_v1.0.3",
       "date": "Tue, 07 Jul 2026 09:20:39 GMT",

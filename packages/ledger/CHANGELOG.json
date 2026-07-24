@@ -2,6 +2,25 @@
   "name": "@vielzeug/ledger",
   "entries": [
     {
+      "version": "1.1.5",
+      "tag": "@vielzeug/ledger_v1.1.5",
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.3`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.4",
       "tag": "@vielzeug/ledger_v1.1.4",
       "date": "Fri, 17 Jul 2026 14:17:07 GMT",

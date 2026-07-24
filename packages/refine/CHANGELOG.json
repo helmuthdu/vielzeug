@@ -2,6 +2,50 @@
   "name": "@vielzeug/refine",
   "entries": [
     {
+      "version": "1.6.0",
+      "tag": "@vielzeug/refine_v1.6.0",
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "chore: fix --_* CSS mixin gaps (select/combobox/date-picker/time-picker/checkbox/switch/menu), RTL keyboard nav, cross-shadow-root ARIA (tab-item/tab-panel), icon.ts XSS-warning noise; dedup headless dirty-tracking; dispose-shape consistency; BREAKING: remove unused createFocusTrap/createDialogFocusControl from @vielzeug/refine/headless",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "7ab188de7775031e7c7fc9f54d82c5bf2a4bcac9"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.1.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/dnd\" to `1.2.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/keymap\" to `1.1.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/orbit\" to `1.1.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ore\" to `1.2.3`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.3`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/tempo\" to `1.0.4`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.5.4",
       "tag": "@vielzeug/refine_v1.5.4",
       "date": "Tue, 21 Jul 2026 07:04:16 GMT",

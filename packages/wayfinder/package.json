@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/wayfinder",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Typed client-side router — guards, middleware, history management, and nested routes",
   "type": "module",
   "files": [
