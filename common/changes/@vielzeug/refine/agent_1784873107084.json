@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(file-input): drag feedback, upload progress/retry/replace, independent per-file queue",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

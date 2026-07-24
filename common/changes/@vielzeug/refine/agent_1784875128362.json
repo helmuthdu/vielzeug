@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor(file-input): extract upload lifecycle into file-input-upload.ts, fix disabled guards on remove/retry/replace, make drop-zone disabled reactive, add screen-reader announcements, gate Replace to multiple mode",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

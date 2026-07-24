@@ -91,6 +91,11 @@
     transition: text-decoration-color var(--transition-fast);
   }
 
+  /* Signal 01: the copy itself during an active drag, not just the border/glow. */
+  .dropzone-title-active {
+    color: var(--_theme-focus, var(--color-primary));
+  }
+
   .dropzone-hint {
     font-size: var(--text-xs);
     line-height: var(--leading-tight);
@@ -168,7 +173,14 @@
     color: var(--color-contrast-400);
   }
 
-  .file-remove {
+  .file-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--size-0-5);
+  }
+
+  .file-remove,
+  .file-action {
     display: flex;
     flex-shrink: 0;
     align-items: center;
@@ -189,6 +201,42 @@
     background: var(--color-error-backdrop, color-mix(in oklch, var(--color-error) 12%, transparent));
   }
 
+  /* Signal 03/04: retry and replace share one neutral-hover treatment — distinct from remove's
+     error-red hover so the destructive action doesn't blend in with the recovery ones. */
+  .file-action:hover {
+    color: var(--_theme-focus, var(--color-primary));
+    background: var(--_theme-backdrop, color-mix(in oklch, var(--color-primary) 12%, transparent));
+  }
+
+  /* ========================================
+       Upload Status (Signals 02, 03, 04)
+       ======================================== */
+
+  .file-progress-meta {
+    font-size: var(--text-xs);
+    color: var(--color-contrast-400);
+  }
+
+  .file-error-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--text-xs);
+    color: var(--color-error);
+    white-space: nowrap;
+  }
+
+  .file-item[data-status='success'] .file-icon {
+    color: var(--color-success);
+  }
+
+  .file-item[data-status='error'] .file-icon {
+    color: var(--color-error);
+  }
+
+  .file-item[data-status='error'] {
+    border-color: color-mix(in oklch, var(--color-error) 40%, var(--color-contrast-200));
+  }
+
   /* ========================================
        File Gallery (preview grid)
        ======================================== */
@@ -205,11 +253,15 @@
   }
 
   .file-card {
-    position: relative;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: var(--size-1);
+  }
+
+  .file-thumb-frame {
+    position: relative;
+    display: block;
   }
 
   .file-thumb {
@@ -230,6 +282,14 @@
     color: var(--color-contrast-400);
   }
 
+  .file-card[data-status='uploading'] .file-thumb {
+    opacity: 0.6;
+  }
+
+  .file-card[data-status='error'] .file-thumb {
+    border-color: color-mix(in oklch, var(--color-error) 50%, var(--color-contrast-200));
+  }
+
   .file-card-name {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -239,11 +299,40 @@
     white-space: nowrap;
   }
 
-  .file-card-remove {
+  /* Signal 04: a small badge over the thumbnail corner — an explicit success/error indicator
+     next to the visual proof itself, not just a caption line below it. */
+  .file-status-badge {
+    position: absolute;
+    top: var(--size-1);
+    left: var(--size-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-5);
+    height: var(--size-5);
+    color: var(--color-canvas);
+    border-radius: var(--rounded-full);
+  }
+
+  .file-status-badge-success {
+    background: var(--color-success);
+  }
+
+  .file-status-badge-error {
+    background: var(--color-error);
+  }
+
+  .file-card-actions {
     position: absolute;
     top: var(--size-1);
     right: var(--size-1);
     display: flex;
+    gap: var(--size-0-5);
+  }
+
+  .file-card-action {
+    display: flex;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
     width: var(--size-5);
@@ -262,6 +351,17 @@
   .file-card-remove:hover {
     color: var(--color-canvas);
     background: var(--color-error);
+  }
+
+  .file-card-action:not(.file-card-remove):hover {
+    color: var(--color-canvas);
+    background: var(--color-primary);
+  }
+
+  .file-card .file-progress-meta,
+  .file-card .file-error-text {
+    text-align: center;
+    white-space: normal;
   }
 
   /* ========================================
@@ -294,7 +394,14 @@
   :host([drag-over]) .dropzone {
     background: color-mix(in oklch, var(--_theme-base, var(--color-primary)) 8%, transparent);
     border-color: var(--_theme-focus, var(--color-primary));
-    box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
+    border-style: solid;
+
+    /* A genuine glow (not the same subtle ring `:focus-visible` uses above) — a soft inner
+       ring plus a wider, brighter halo, so an active drag reads unmistakably differently from
+       a merely-focused, idle dropzone. */
+    box-shadow:
+      0 0 0 3px color-mix(in oklch, var(--_theme-focus, var(--color-primary)) 25%, transparent),
+      0 0 20px 2px color-mix(in oklch, var(--_theme-focus, var(--color-primary)) 45%, transparent);
   }
 
   :host([drag-over]) .dropzone .dropzone-icon {
@@ -370,13 +477,19 @@
   }
 
   /* Ghost */
+
+  /* Borderless at rest — only reveals a border on hover (the border-*width* stays reserved via
+     a transparent color, not `none`, so revealing it on hover never shifts layout). Focus
+     already gets its own themed border + glow from the generic `:focus-visible` rule above,
+     regardless of variant, so it needs no ghost-specific override here. */
   :host([variant='ghost']) {
     --_bg: var(--file-input-bg, transparent);
-    --_border-color: var(--file-input-border-color, var(--color-contrast-200));
+    --_border-color: var(--file-input-border-color, transparent);
   }
 
-  :host([variant='ghost']) .dropzone:hover {
+  :host(:not([disabled])[variant='ghost']) .dropzone:hover {
     background: var(--file-input-hover-bg, var(--color-contrast-100));
+    border-color: var(--file-input-hover-border-color, var(--color-contrast-200));
   }
 }
 

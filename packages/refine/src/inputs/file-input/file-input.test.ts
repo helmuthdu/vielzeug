@@ -406,4 +406,332 @@ describe('ore-file-input accessibility', () => {
       expect(results.violations).toHaveLength(0);
     });
   });
+
+  function dispatchFiles(input: HTMLInputElement, files: File[]): void {
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: { ...files, item: (i: number) => files[i] ?? null, length: files.length },
+    });
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function makeDragEvent(type: string, files: File[] = []): DragEvent {
+    const event = new Event(type, { bubbles: true, cancelable: true }) as DragEvent;
+
+    Object.defineProperty(event, 'dataTransfer', {
+      configurable: true,
+      value: { files, items: files.map(() => ({ kind: 'file' })), setData: vi.fn(), setDragImage: vi.fn() },
+    });
+
+    return event;
+  }
+
+  describe('Drag feedback (Signal 01)', () => {
+    it('shows an active drag-over state and shifts the copy on dragenter', async () => {
+      fixture = await mount('ore-file-input');
+
+      const dropzone = fixture.query('[role="button"]')!;
+
+      dropzone.dispatchEvent(makeDragEvent('dragenter'));
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('drag-over')).toBe(true);
+      expect(dropzone.textContent).toContain('Release to upload');
+      expect(dropzone.textContent).not.toContain('click to browse');
+    });
+
+    it('reverts the drag-over state and copy on dragleave', async () => {
+      fixture = await mount('ore-file-input');
+
+      const dropzone = fixture.query('[role="button"]')!;
+
+      dropzone.dispatchEvent(makeDragEvent('dragenter'));
+      await fixture.flush();
+      dropzone.dispatchEvent(makeDragEvent('dragleave'));
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('drag-over')).toBe(false);
+      expect(dropzone.textContent).toContain('click to browse');
+    });
+  });
+
+  describe('Upload lifecycle', () => {
+    it('starts uploading immediately once a file is added, when `upload` is set', async () => {
+      const upload = vi.fn(() => new Promise<void>(() => {}));
+
+      fixture = await mount('ore-file-input', { props: { upload } });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+      const file = new File(['x'], 'video.mp4', { type: 'video/mp4' });
+
+      dispatchFiles(input, [file]);
+      await fixture.flush();
+
+      expect(upload).toHaveBeenCalledTimes(1);
+      expect(upload).toHaveBeenCalledWith(file, expect.objectContaining({ resumeFrom: 0 }));
+      expect(fixture.query('.file-item')?.getAttribute('data-status')).toBe('uploading');
+    });
+
+    it('reports honest percent/speed/eta from onProgress instead of a generic spinner (Signal 02)', async () => {
+      let onProgress!: (loaded: number, total: number) => void;
+      const upload = vi.fn(
+        (_file: File, ctx: { onProgress: (loaded: number, total: number) => void }) =>
+          new Promise<void>(() => {
+            onProgress = ctx.onProgress;
+          }),
+      );
+
+      fixture = await mount('ore-file-input', { props: { upload } });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+
+      dispatchFiles(input, [new File(['x'], 'video.mp4', { type: 'video/mp4' })]);
+      await fixture.flush();
+
+      await fixture.act(() => onProgress(50, 100));
+
+      const progress = fixture.query('ore-progress');
+
+      expect(progress).toBeTruthy();
+      expect(progress?.getAttribute('value')).toBe('50');
+      expect(fixture.query('.file-progress-meta')).toBeTruthy();
+    });
+
+    it('keeps the file and lets the user retry from the failure point instead of restarting (Signal 03)', async () => {
+      let attempt = 0;
+      let lastResumeFrom = -1;
+      const upload = vi.fn(
+        (_file: File, ctx: { onProgress: (loaded: number, total: number) => void; resumeFrom: number }) => {
+          attempt += 1;
+          lastResumeFrom = ctx.resumeFrom;
+
+          if (attempt === 1) {
+            ctx.onProgress(60, 100);
+
+            return Promise.reject(new Error('connection dropped'));
+          }
+
+          return Promise.resolve();
+        },
+      );
+
+      fixture = await mount('ore-file-input', { props: { upload } });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+
+      dispatchFiles(input, [new File(['x'], 'doc.pdf', { type: 'application/pdf' })]);
+      await fixture.flush();
+      await fixture.act(() => Promise.resolve());
+
+      expect(fixture.query('.file-item')?.getAttribute('data-status')).toBe('error');
+      expect(fixture.query('.file-error-text')?.textContent).toContain('connection dropped');
+      // File persistence: still listed, not dropped back to an empty picker.
+      expect(fixture.query('.file-name')?.textContent).toContain('doc.pdf');
+
+      fixture.query<HTMLButtonElement>('[aria-label="Retry uploading doc.pdf"]')!.click();
+      await fixture.flush();
+      await fixture.act(() => Promise.resolve());
+
+      expect(attempt).toBe(2);
+      expect(lastResumeFrom).toBe(60);
+      expect(fixture.query('.file-item')?.getAttribute('data-status')).toBe('success');
+    });
+
+    it('shows a success card with a checkmark and file metadata, with a working Replace action (Signal 04)', async () => {
+      const upload = vi.fn(() => Promise.resolve());
+
+      // Replace is only offered in `multiple` mode — in single-file mode the dropzone itself
+      // already re-picks-and-replaces the one file, so a second "Replace" affordance would be
+      // redundant (see the analysis this refactor implements).
+      fixture = await mount('ore-file-input', { attrs: { multiple: '' }, props: { upload } });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+      const original = new File(['x'.repeat(2048)], 'contract.pdf', { type: 'application/pdf' });
+
+      dispatchFiles(input, [original]);
+      await fixture.flush();
+      await fixture.act(() => Promise.resolve());
+
+      const item = fixture.query('.file-item')!;
+
+      expect(item.getAttribute('data-status')).toBe('success');
+      expect(item.querySelector('.file-icon ore-icon')?.getAttribute('name')).toBe('check');
+      expect(fixture.query('.file-size')?.textContent).toContain('KB');
+
+      const clickSpy = vi.spyOn(input, 'click');
+
+      fixture.query<HTMLButtonElement>('[aria-label="Replace contract.pdf"]')!.click();
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+
+      const replacement = new File(['y'.repeat(4096)], 'contract-v2.pdf', { type: 'application/pdf' });
+
+      dispatchFiles(input, [replacement]);
+      await fixture.flush();
+      await fixture.act(() => Promise.resolve());
+
+      expect(upload).toHaveBeenCalledTimes(2);
+      expect(upload).toHaveBeenLastCalledWith(replacement, expect.anything());
+      expect(fixture.queryAll('.file-item')).toHaveLength(1);
+      expect(fixture.query('.file-name')?.textContent).toContain('contract-v2.pdf');
+    });
+
+    it('isolates one failing upload from the rest of a concurrent batch (Signal 05)', async () => {
+      const upload = vi.fn((file: File) =>
+        file.name === 'bad.txt' ? Promise.reject(new Error('boom')) : Promise.resolve(),
+      );
+
+      fixture = await mount('ore-file-input', { attrs: { multiple: '' }, props: { upload } });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+
+      dispatchFiles(input, [new File(['x'], 'good.txt'), new File(['x'], 'bad.txt')]);
+      await fixture.flush();
+      await fixture.act(() => Promise.resolve());
+
+      expect(upload).toHaveBeenCalledTimes(2);
+
+      const statuses = fixture
+        .queryAll<HTMLElement>('.file-item')
+        .map((el) => ({ name: el.querySelector('.file-name')?.textContent, status: el.getAttribute('data-status') }));
+
+      expect(statuses).toContainEqual({ name: 'good.txt', status: 'success' });
+      expect(statuses).toContainEqual({ name: 'bad.txt', status: 'error' });
+    });
+
+    it('aborts the in-flight upload when its file is removed, without touching other files', async () => {
+      const upload = vi.fn(
+        (_file: File, ctx: { signal: AbortSignal }) =>
+          new Promise<void>((_resolve, reject) => {
+            ctx.signal.addEventListener('abort', () => reject(new Error('aborted')));
+          }),
+      );
+
+      fixture = await mount('ore-file-input', { attrs: { multiple: '' }, props: { upload } });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+      const keep = new File(['x'], 'keep.txt');
+      const drop = new File(['x'], 'drop.txt');
+
+      dispatchFiles(input, [keep, drop]);
+      await fixture.flush();
+
+      fixture.query<HTMLButtonElement>('[aria-label="Remove drop.txt"]')!.click();
+      await fixture.flush();
+
+      expect(fixture.queryAll('.file-item')).toHaveLength(1);
+      expect(fixture.query('.file-name')?.textContent).toBe('keep.txt');
+    });
+
+    it('ignores remove/retry while disabled — a disabled input is fully non-interactive, not just unable to add files', async () => {
+      const upload = vi.fn(() => Promise.reject(new Error('boom')));
+
+      fixture = await mount('ore-file-input', { props: { upload } });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+      const file = new File(['x'], 'doc.pdf', { type: 'application/pdf' });
+
+      dispatchFiles(input, [file]);
+      await fixture.flush();
+      await fixture.act(() => Promise.resolve());
+
+      expect(fixture.query('.file-item')?.getAttribute('data-status')).toBe('error');
+
+      await fixture.attr('disabled', true);
+      upload.mockClear();
+
+      fixture.query<HTMLButtonElement>('[aria-label="Retry uploading doc.pdf"]')!.click();
+      await fixture.flush();
+
+      expect(upload).not.toHaveBeenCalled();
+
+      fixture.query<HTMLButtonElement>('[aria-label="Remove doc.pdf"]')!.click();
+      await fixture.flush();
+
+      expect(fixture.queryAll('.file-item')).toHaveLength(1);
+    });
+
+    const flushAnnounce = () => new Promise((r) => setTimeout(r, 60)); // announce() clear-then-set delay
+    const politeRegion = () => document.querySelector('[data-block-announcer="polite"]');
+    const assertiveRegion = () => document.querySelector('[data-block-announcer="assertive"]');
+
+    it('announces a successful upload to screen readers (Signal 04 completes the a11y story)', async () => {
+      const upload = vi.fn(() => Promise.resolve());
+
+      fixture = await mount('ore-file-input', { props: { upload } });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+
+      dispatchFiles(input, [new File(['x'], 'report.pdf', { type: 'application/pdf' })]);
+      await fixture.flush();
+      await fixture.act(() => Promise.resolve());
+      await flushAnnounce();
+
+      expect(politeRegion()?.textContent).toContain('report.pdf uploaded successfully');
+    });
+
+    it('announces a failed upload assertively', async () => {
+      const upload = vi.fn(() => Promise.reject(new Error('connection dropped')));
+
+      fixture = await mount('ore-file-input', { props: { upload } });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+
+      dispatchFiles(input, [new File(['x'], 'report.pdf', { type: 'application/pdf' })]);
+      await fixture.flush();
+      await fixture.act(() => Promise.resolve());
+      await flushAnnounce();
+
+      expect(assertiveRegion()?.textContent).toContain('report.pdf failed to upload: connection dropped');
+    });
+
+    it('passes axe checks while uploading', async () => {
+      const upload = vi.fn(() => new Promise<void>(() => {}));
+
+      fixture = await mount('ore-file-input', { attrs: { label: 'Upload file' }, props: { upload } });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+
+      dispatchFiles(input, [new File(['x'], 'video.mp4', { type: 'video/mp4' })]);
+      await fixture.flush();
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks in the error state (retry button included)', async () => {
+      const upload = vi.fn(() => Promise.reject(new Error('boom')));
+
+      fixture = await mount('ore-file-input', { attrs: { label: 'Upload file' }, props: { upload } });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+
+      dispatchFiles(input, [new File(['x'], 'doc.pdf', { type: 'application/pdf' })]);
+      await fixture.flush();
+      await fixture.act(() => Promise.resolve());
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks in the success state, including gallery mode (checkmark badge + Replace/Remove)', async () => {
+      const upload = vi.fn(() => Promise.resolve());
+
+      fixture = await mount('ore-file-input', {
+        attrs: { gallery: '', label: 'Upload file', multiple: '' },
+        props: { upload },
+      });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+
+      dispatchFiles(input, [new File(['x'], 'photo.png', { type: 'image/png' })]);
+      await fixture.flush();
+      await fixture.act(() => Promise.resolve());
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });
