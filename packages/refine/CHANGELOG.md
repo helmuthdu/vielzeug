@@ -1,6 +1,18 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+This log was last generated on Fri, 24 Jul 2026 21:50:50 GMT and should not be manually modified.
+
+## 1.7.0
+Fri, 24 Jul 2026 21:50:49 GMT
+
+### Minor changes
+
+- feat(file-input): drag feedback, upload progress/retry/replace, independent per-file queue
+- refactor(file-input): extract upload lifecycle into file-input-upload.ts, fix disabled guards on remove/retry/replace, make drop-zone disabled reactive, add screen-reader announcements, gate Replace to multiple mode
+- feat(refine): add loading/success states to ore-input, fix disabled-state opacity anti-pattern across ore-input/ore-textarea/ore-file-input
+- feat(refine): add loading/success states to ore-textarea/ore-select/ore-combobox/ore-number-input, fix disabled-state opacity anti-pattern on ore-textarea/ore-number-input hosts, fix ore-select loading forward disabling its trigger
+- feat(refine): add success state to ore-date-picker/ore-time-picker/ore-message-composer, add error/success status icon to ore-file-input dropzone, fix ore-message-composer loading state blocking text entry
+- feat(refine): add List component with swipe-to-reveal row actions and swipe-through confirm gesture
 
 ## 1.6.0
 Fri, 24 Jul 2026 05:28:41 GMT

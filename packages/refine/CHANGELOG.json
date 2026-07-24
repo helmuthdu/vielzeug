@@ -2,6 +2,45 @@
   "name": "@vielzeug/refine",
   "entries": [
     {
+      "version": "1.7.0",
+      "tag": "@vielzeug/refine_v1.7.0",
+      "date": "Fri, 24 Jul 2026 21:50:49 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat(file-input): drag feedback, upload progress/retry/replace, independent per-file queue",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "083f7b633415d8831c17e45a2fcaf5ab8b90c7cf"
+          },
+          {
+            "comment": "refactor(file-input): extract upload lifecycle into file-input-upload.ts, fix disabled guards on remove/retry/replace, make drop-zone disabled reactive, add screen-reader announcements, gate Replace to multiple mode",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "083f7b633415d8831c17e45a2fcaf5ab8b90c7cf"
+          },
+          {
+            "comment": "feat(refine): add loading/success states to ore-input, fix disabled-state opacity anti-pattern across ore-input/ore-textarea/ore-file-input",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "488dc1f9ec10e5afd9984684e44df35b21791b98"
+          },
+          {
+            "comment": "feat(refine): add loading/success states to ore-textarea/ore-select/ore-combobox/ore-number-input, fix disabled-state opacity anti-pattern on ore-textarea/ore-number-input hosts, fix ore-select loading forward disabling its trigger",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "488dc1f9ec10e5afd9984684e44df35b21791b98"
+          },
+          {
+            "comment": "feat(refine): add success state to ore-date-picker/ore-time-picker/ore-message-composer, add error/success status icon to ore-file-input dropzone, fix ore-message-composer loading state blocking text entry",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "488dc1f9ec10e5afd9984684e44df35b21791b98"
+          },
+          {
+            "comment": "feat(refine): add List component with swipe-to-reveal row actions and swipe-through confirm gesture",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "22524e68109cb355ad7e23c73db27e3f7be50a2c"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.6.0",
       "tag": "@vielzeug/refine_v1.6.0",
       "date": "Fri, 24 Jul 2026 05:28:41 GMT",
