@@ -835,6 +835,26 @@ describe('ore-select accessibility', () => {
     });
   });
 
+  describe('Success State', () => {
+    it('forwards success to the inner ore-input trigger', async () => {
+      fixture = await mount('ore-select', {
+        attrs: { success: true },
+        html: '<option value="apple">Apple</option>',
+      });
+
+      expect(fixture.query('ore-input.trigger')?.hasAttribute('success')).toBe(true);
+    });
+
+    it('does not forward success while an error is also set', async () => {
+      fixture = await mount('ore-select', {
+        attrs: { error: 'Required', success: true },
+        html: '<option value="apple">Apple</option>',
+      });
+
+      expect(fixture.query('ore-input.trigger')?.hasAttribute('success')).toBe(false);
+    });
+  });
+
   describe('Accessibility', () => {
     it('passes axe checks when closed', async () => {
       fixture = await mount('ore-select', {

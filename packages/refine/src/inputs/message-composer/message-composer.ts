@@ -95,6 +95,11 @@ export type OreMessageComposerProps = {
   'send-shortcut'?: SendShortcut;
   /** Component size */
   size?: ComponentSize;
+  /**
+   * Shows an inline green check icon inside the field to confirm the value has
+   * passed validation. Ignored while `error` is set — an error always wins.
+   */
+  success?: boolean;
   /** Current text value */
   value?: string;
   /** Visual variant of the card — same variant set as `ore-textarea`, applied to the card. */
@@ -120,6 +125,7 @@ export type OreMessageComposerProps = {
  * @attr {string} name - Form field name
  * @attr {string} helper - Helper text shown below the field
  * @attr {string} error - Error message shown below the field
+ * @attr {boolean} success - Show an inline success check icon (suppressed while `error` is set)
  * @attr {boolean} disabled - Disable the whole composer
  * @attr {boolean} readonly - Read-only mode
  * @attr {boolean} required - Require a non-blank value for `<ore-form>` validation
@@ -156,6 +162,7 @@ export type OreMessageComposerProps = {
  *
  * @part composer - Root card container
  * @part field - The native `<textarea>` element
+ * @part status-icon - The inline error/success icon shown inside the field
  * @part helper - Helper text element
  * @part error - Error text element (`role="alert"`)
  * @part toolbar - Toolbar row below the field
@@ -191,6 +198,7 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
     'send-icon': prop.string(),
     'send-label': prop.string(),
     'send-shortcut': prop.oneOf(['enter', 'mod+enter'] as const, 'enter'),
+    success: prop.bool(false),
     value: prop.string(),
     variant: prop.string<Exclude<VisualVariant, 'frost' | 'text'>>(),
   },
@@ -288,6 +296,9 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
       attr: {
         error: errorAttr(tf.errorText),
         size: fCtxProps.size,
+        // Reflects `success` only once `error` is confirmed empty — keeps the two host
+        // attributes mutually exclusive even if a consumer sets both props at once.
+        success: () => (props.success.value && !tf.errorText.value ? true : undefined),
         variant: fCtxProps.variant,
       },
     });
@@ -297,6 +308,12 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
     const counterText = () => tf.counter?.value.counterText.replace(' / ', '/') ?? '';
     const helperHidden = () => !!tf.errorText.value || !tf.helperText.value;
     const errorHidden = () => !tf.errorText.value;
+    // Error always wins over success — a field can't be both invalid and confirmed at once.
+    const statusIconStatus = () => (tf.errorText.value ? 'error' : 'success');
+    const statusIcon = () =>
+      tf.errorText.value
+        ? html`<ore-icon name="alert-circle" size="14" stroke-width="2" aria-hidden="true"></ore-icon>`
+        : html`<ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>`;
 
     return html`
       <div class="composer" part="composer">
@@ -317,6 +334,9 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
           :aria-describedby="${tf.ariaDescribedBy}"
           :aria-errormessage="${tf.ariaErrorMessage}"
           :aria-invalid="${tf.ariaInvalid}"></textarea>
+        <span class="status-icon" part="status-icon" aria-hidden="true" :data-status="${statusIconStatus}">
+          ${statusIcon}
+        </span>
         <span class="${counterClass}" aria-live="polite" ?hidden="${counterHidden}">${counterText}</span>
         <div id="${tf.assistiveId}" class="helper-text" aria-live="polite" part="helper" ?hidden="${helperHidden}">
           ${() => tf.helperText.value}

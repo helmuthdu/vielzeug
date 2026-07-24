@@ -81,6 +81,7 @@ export type OreSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'text' 
  * @attr {boolean} required - Required field
  * @attr {string} helper - Helper text below the select
  * @attr {string} error - Error message
+ * @attr {boolean} success - Show an inline success check icon (suppressed while `error` is set)
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost'
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
@@ -141,6 +142,7 @@ define<OreSelectProps>(SELECT_TAG, {
     options: prop.json(undefined as OreSelectOptionInput[] | undefined),
     placeholder: prop.string(),
     required: prop.bool(false),
+    success: prop.bool(false),
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
@@ -423,7 +425,6 @@ define<OreSelectProps>(SELECT_TAG, {
     const inputDisabled = () => (isDisabled.value ? true : undefined);
     const inputRequired = () => (props.required.value ? true : undefined);
     const inputFullwidth = () => (props.fullwidth.value ? true : undefined);
-    const inputLoading = () => (props.loading.value ? true : undefined);
     const tabIndexAttr = () => (isDisabled.value ? '-1' : '0');
 
     watch(slots.elements(), () => readOptions(), { immediate: true });
@@ -491,7 +492,7 @@ define<OreSelectProps>(SELECT_TAG, {
         ?disabled="${inputDisabled}"
         ?required="${inputRequired}"
         ?fullwidth="${inputFullwidth}"
-        ?loading="${inputLoading}"
+        ?success="${() => props.success.value}"
         ref="${(el: HTMLElement) => {
           triggerEl = el;
         }}">

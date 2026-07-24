@@ -49,6 +49,11 @@ export type OreTimePickerProps = {
   rounded?: string;
   /** Component size */
   size?: string;
+  /**
+   * Shows an inline green check icon inside the field to confirm the value has
+   * passed validation. Ignored while `error` is set — an error always wins.
+   */
+  success?: boolean;
   /** Display format: '12' for AM/PM, '24' for 24-hour (default: '24') */
   'time-format'?: '12' | '24';
   /** Selected time in HH:MM format (24-hour) */
@@ -125,6 +130,7 @@ function clampTime(
  * @attr {boolean} required - Required field
  * @attr {string} name - Form field name
  * @attr {string} error - Error message
+ * @attr {boolean} success - Show an inline success check icon (suppressed while `error` is set)
  * @attr {string} helper - Helper text
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
@@ -184,6 +190,7 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
     name: prop.string(),
     placeholder: prop.string(),
     required: prop.bool(false),
+    success: prop.bool(false),
     'time-format': prop.oneOf(['12', '24'] as const, '24'),
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
@@ -507,6 +514,7 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
         ?disabled="${inputDisabled}"
         ?required="${inputRequired}"
         ?fullwidth="${inputFullwidth}"
+        ?success="${() => props.success.value}"
         @click="${handleTriggerClick}"
         @keydown="${handleTriggerKeydown}">
         <ore-icon slot="suffix" name="clock" size="16" stroke-width="1.75" aria-hidden="true"></ore-icon>

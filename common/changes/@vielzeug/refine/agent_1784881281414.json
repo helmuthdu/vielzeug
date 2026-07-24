@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(refine): add loading/success states to ore-textarea/ore-select/ore-combobox/ore-number-input, fix disabled-state opacity anti-pattern on ore-textarea/ore-number-input hosts, fix ore-select loading forward disabling its trigger",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

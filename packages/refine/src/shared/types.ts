@@ -99,6 +99,11 @@ export type BaseFormProps = {
   'label-placement'?: 'inset' | 'outside';
   name?: string;
   size?: ComponentSize;
+  /**
+   * Shows an inline green check icon inside the field to confirm the value has passed
+   * validation. Ignored while `error` is set — an error always wins.
+   */
+  success?: boolean;
 };
 
 type FieldVisualProps<TVariant extends VisualVariant> = {

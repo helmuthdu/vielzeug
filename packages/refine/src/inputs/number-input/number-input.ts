@@ -8,7 +8,7 @@ import { createSpinnerControl } from '../../headless';
 import '../../content/icon/icon';
 import '../input/input';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
-import { disabledStateMixin } from '../../styles';
+import { disabledLoadingMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './number-input.css?inline';
 
@@ -35,6 +35,12 @@ export type OreNumberInputProps = {
   'label-placement'?: 'inset' | 'outside';
   /** Large step (for Page Up/Down, default: 10 × step) */
   'large-step'?: number;
+  /**
+   * Shows an inline spinner inside the field and forces the control into `disabled` for the
+   * duration — use while an async validation/submission request is in flight to prevent
+   * double-submits.
+   */
+  loading?: boolean;
   /** Maximum allowed value */
   max?: number;
   /** Minimum allowed value */
@@ -57,6 +63,11 @@ export type OreNumberInputProps = {
   size?: ComponentSize;
   /** Step size for increment/decrement */
   step?: number;
+  /**
+   * Shows an inline green check icon inside the field to confirm the value has
+   * passed validation. Ignored while `error` is set — an error always wins.
+   */
+  success?: boolean;
   /** Current numeric value */
   value?: number;
   /** Visual variant */
@@ -75,6 +86,8 @@ export type OreNumberInputProps = {
  * @attr {number} large-step - Step for Page Up/Down (default: 10)
  * @attr {boolean} disabled - Disables the control
  * @attr {boolean} readonly - Read-only mode
+ * @attr {boolean} loading - Show an inline spinner and force the control disabled
+ * @attr {boolean} success - Show an inline success check icon (suppressed while `error` is set)
  * @attr {string} label - Visible label
  * @attr {string} name - Form field name
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
@@ -103,6 +116,8 @@ export type OreNumberInputProps = {
  * @example
  * ```html
  * <ore-number-input label="Quantity" value="1" min="1" max="99" step="1"></ore-number-input>
+ * <ore-number-input label="Quantity" success></ore-number-input>
+ * <ore-number-input label="Quantity" loading></ore-number-input>
  * ```
  */
 export const NUMBER_INPUT_TAG = 'ore-number-input' as const;
@@ -119,6 +134,7 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
     label: prop.string(),
     'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
     'large-step': prop.json(undefined as number | undefined),
+    loading: prop.bool(false),
     max: prop.json(undefined as number | undefined),
     min: prop.json(undefined as number | undefined),
     name: prop.string(),
@@ -126,6 +142,7 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
     readonly: prop.bool(false),
     ref: prop.json(undefined as ((el: HTMLInputElement | null) => void) | null | undefined),
     step: prop.number(1),
+    success: prop.bool(false),
     value: prop.json(undefined as number | undefined),
     variant: prop.string<VisualVariant>(),
   },
@@ -135,7 +152,8 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
 
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(props, formCtx);
-    const isDisabled = fCtxProps.disabled;
+    // `loading` behaves like a temporary `disabled` — see ore-input's identical computation.
+    const isDisabled = computed(() => fCtxProps.disabled.value || props.loading.value);
     const isReadonly = computed(() => Boolean(props.readonly.value));
 
     // Internal numeric value signal (string representation for the input)
@@ -294,9 +312,11 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
         :color="${() => props.color.value ?? ''}"
         :variant="${() => props.variant.value ?? ''}"
         :rounded="${() => props.rounded.value}"
-        ?disabled="${isDisabled}"
+        ?disabled="${fCtxProps.disabled}"
         ?readonly="${isReadonly}"
         ?fullwidth="${() => props.fullwidth.value}"
+        ?loading="${() => props.loading.value}"
+        ?success="${() => props.success.value}"
         @keydown="${(e: KeyboardEvent) => spinner.handleKeydown(e)}">
         <button
           slot="prefix"
@@ -320,5 +340,5 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [disabledStateMixin, componentStyles],
+  styles: [disabledLoadingMixin, componentStyles],
 });

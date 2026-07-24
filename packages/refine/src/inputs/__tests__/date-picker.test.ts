@@ -132,6 +132,22 @@ describe('ore-date-picker', () => {
     });
   });
 
+  // ── Success State ────────────────────────────────────────────────────────
+
+  describe('Success State', () => {
+    it('forwards success to the inner ore-input trigger', async () => {
+      fixture = await mount('ore-date-picker', { attrs: { success: true } });
+
+      expect(sq('ore-input.trigger')?.hasAttribute('success')).toBe(true);
+    });
+
+    it('does not forward success while an error is also set', async () => {
+      fixture = await mount('ore-date-picker', { attrs: { error: 'Required', success: true } });
+
+      expect(sq('ore-input.trigger')?.hasAttribute('success')).toBe(false);
+    });
+  });
+
   // ── ARIA ─────────────────────────────────────────────────────────────────
 
   describe('Accessibility', () => {

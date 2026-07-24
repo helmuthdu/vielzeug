@@ -26,6 +26,7 @@
   }
 
   .composer {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: var(--message-composer-gap, var(--_gap));
@@ -61,6 +62,43 @@
   :host([error]:not([error=''])) .composer:focus-within {
     border-color: var(--color-error);
     box-shadow: var(--color-error-focus-shadow);
+  }
+
+  :host([success]) .composer {
+    border-color: var(--color-success);
+  }
+
+  :host([success]) .composer:focus-within {
+    border-color: var(--color-success);
+    box-shadow: var(--color-success-focus-shadow);
+  }
+
+  /* ========================================
+       Status Icon (error/success — never color alone)
+       ======================================== */
+
+  .status-icon {
+    position: absolute;
+    inset-block-start: var(--_padding);
+    inset-inline-end: var(--_padding);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-5);
+    height: var(--size-5);
+  }
+
+  :host([error]:not([error=''])) .status-icon,
+  :host([success]) .status-icon {
+    display: flex;
+  }
+
+  .status-icon[data-status='error'] {
+    color: var(--color-error);
+  }
+
+  .status-icon[data-status='success'] {
+    color: var(--color-success);
   }
 
   .field {
@@ -236,4 +274,48 @@
   :host([variant='ghost']:not([disabled])) .composer:hover {
     background: var(--message-composer-hover-bg, var(--color-contrast-100));
   }
+}
+
+/* ========================================
+     Disabled / Loading overrides — intentionally unlayered
+     ======================================== */
+
+/*
+ * The shared `disabledLoadingMixin` treats `[disabled]` and `[loading]` identically: bare,
+ * unlayered `opacity: 0.5` plus `pointer-events: none` on every direct child (this component's
+ * template root is a single `.composer` div, so that means the whole card). Cascade layers always
+ * lose to unlayered rules regardless of source order or specificity, so these overrides have to
+ * stay unlayered too, to actually win — see `ore-input`'s `input.css` for the same pattern.
+ *
+ * `loading` here documents itself as "blocks further sends... without disabling editing" (see
+ * the `loading` prop's own doc comment) — the send button already disables itself via
+ * `composer.canSend`. Inheriting the generic mixin's `[loading]` treatment silently broke that:
+ * `pointer-events: none` on `.composer` cascades (it's an inherited property) to the `<textarea>`
+ * itself, blocking typing during every in-flight send. `:not([disabled])` keeps a real `disabled`
+ * still fully blocking, exactly like every other field.
+ */
+:host([loading]:not([disabled])) {
+  opacity: 1;
+}
+
+:host([loading]:not([disabled])) .composer {
+  pointer-events: auto;
+}
+
+:host([disabled]) {
+  opacity: 1;
+}
+
+:host([disabled]) .composer {
+  background: var(--color-contrast-100);
+  border-color: var(--color-contrast-200);
+  box-shadow: none;
+}
+
+:host([disabled]) .field {
+  color: var(--color-contrast-400);
+}
+
+:host([disabled]) .field::placeholder {
+  color: var(--color-contrast-300);
 }

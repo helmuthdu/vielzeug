@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(refine): add success state to ore-date-picker/ore-time-picker/ore-message-composer, add error/success status icon to ore-file-input dropzone, fix ore-message-composer loading state blocking text entry",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

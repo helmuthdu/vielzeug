@@ -296,13 +296,77 @@
     box-shadow: var(--color-error-focus-shadow);
   }
 
-  :host([error]:not([error=''])) .label-inset,
-  :host([error]:not([error=''])) .label-outside {
+  :host([error]:not([error=''])) .label {
     color: var(--color-error);
   }
 
   .helper-text[role='alert'] {
     color: var(--color-error);
+  }
+
+  /* ========================================
+       Success State (Signal 04)
+       ======================================== */
+
+  :host([success]) .field {
+    border-color: var(--color-success);
+  }
+
+  :host([success]) .field:focus-within {
+    border-color: var(--color-success);
+    box-shadow: var(--color-success-focus-shadow);
+  }
+
+  /* ========================================
+       Status Icon (Signals 03/04: error/success — never color alone)
+       ======================================== */
+
+  .status-icon {
+    display: none;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-5);
+    height: var(--size-5);
+  }
+
+  :host([error]:not([error=''])) .status-icon,
+  :host([success]) .status-icon {
+    display: flex;
+  }
+
+  .status-icon[data-status='error'] {
+    color: var(--color-error);
+  }
+
+  .status-icon[data-status='success'] {
+    color: var(--color-success);
+  }
+
+  /* ========================================
+       Loading Spinner (Signal 06)
+       ======================================== */
+
+  /* Keyframe must live in shadow DOM — @keyframes don't inherit across shadow roots */
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .field-spinner {
+    display: none;
+    flex-shrink: 0;
+    width: var(--size-4);
+    height: var(--size-4);
+    border: var(--border-2) solid var(--_theme-focus, currentcolor);
+    border-inline-end-color: transparent;
+    border-radius: 50%;
+    animation: var(--_motion-animation, spin var(--transition-loader) infinite);
+  }
+
+  :host([loading]) .field-spinner {
+    display: inline-block;
   }
 }
 
@@ -416,4 +480,42 @@
   :host([fullwidth]) {
     width: 100%;
   }
+}
+
+/* ========================================
+     Disabled State (Signal 05) — intentionally unlayered
+     ======================================== */
+
+/*
+ * The shared `disabledLoadingMixin` (pulled in via `fieldMixins`) dims `:host([disabled])`
+ * with `opacity: 0.5` as bare, unlayered CSS. Cascade layers always lose to unlayered rules
+ * regardless of source order or specificity, so overriding that from inside any `@layer`
+ * block in this file (including `refine.overrides`) would be a no-op — this has to stay
+ * unlayered too, to actually win.
+ *
+ * Per the field-state UX review: opacity-based dimming reads as a washed-out/loading look
+ * and can mimic reduced-contrast content for low-vision users, rather than a clearly locked
+ * field. Swapped for an explicit grayscale surface + `not-allowed` cursor (the cursor already
+ * comes from the shared mixin, left untouched here).
+ */
+:host([disabled]) {
+  opacity: 1;
+}
+
+:host([disabled]) .field {
+  background: var(--color-contrast-100);
+  border-color: var(--color-contrast-200);
+  box-shadow: none;
+}
+
+:host([disabled]) input {
+  color: var(--color-contrast-400);
+}
+
+:host([disabled]) input::placeholder {
+  color: var(--color-contrast-300);
+}
+
+:host([disabled]) .label {
+  color: var(--color-contrast-400);
 }

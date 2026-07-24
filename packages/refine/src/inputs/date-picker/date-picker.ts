@@ -58,6 +58,11 @@ export type OreDatePickerProps = {
   /** Component size */
   size?: ComponentSize;
   /**
+   * Shows an inline green check icon inside the field to confirm the value has
+   * passed validation. Ignored while `error` is set — an error always wins.
+   */
+  success?: boolean;
+  /**
    * Selected date in ISO 8601 format (yyyy-MM-dd).
    * @example '2025-06-15'
    */
@@ -91,6 +96,7 @@ export type OreDatePickerProps = {
  * @attr {boolean} required - Required field
  * @attr {string} name - Form field name
  * @attr {string} error - Error message
+ * @attr {boolean} success - Show an inline success check icon (suppressed while `error` is set)
  * @attr {string} helper - Helper text
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
@@ -149,6 +155,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
     name: prop.string(),
     placeholder: prop.string(),
     required: prop.bool(false),
+    success: prop.bool(false),
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
     'weekend-days': prop.json([] as number[]),
@@ -539,6 +546,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
         ?disabled="${inputDisabled}"
         ?required="${inputRequired}"
         ?fullwidth="${inputFullwidth}"
+        ?success="${() => props.success.value}"
         @click="${handleTriggerClick}"
         @keydown="${handleTriggerKeydown}">
         <ore-icon slot="suffix" name="calendar" size="16" stroke-width="1.75" aria-hidden="true"></ore-icon>

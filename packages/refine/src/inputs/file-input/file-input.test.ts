@@ -40,6 +40,24 @@ describe('ore-file-input', () => {
       expect(fixture.query('[part="error"]')?.textContent?.trim()).toBe('File too large');
     });
 
+    it('swaps the dropzone icon to an alert icon when error is set', async () => {
+      fixture = await mount('ore-file-input', { attrs: { error: 'File too large' } });
+
+      const icon = fixture.query('.dropzone-icon');
+
+      expect(icon?.getAttribute('data-status')).toBe('error');
+      expect(icon?.querySelector('ore-icon[name="alert-circle"]')).toBeTruthy();
+    });
+
+    it('shows the default upload icon when there is no error', async () => {
+      fixture = await mount('ore-file-input');
+
+      const icon = fixture.query('.dropzone-icon');
+
+      expect(icon?.getAttribute('data-status')).toBeNull();
+      expect(icon?.querySelector('ore-icon[name="upload"]')).toBeTruthy();
+    });
+
     it('renders file list container', async () => {
       fixture = await mount('ore-file-input');
 

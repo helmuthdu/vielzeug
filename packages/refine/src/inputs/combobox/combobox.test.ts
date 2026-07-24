@@ -911,6 +911,26 @@ describe('ore-combobox', () => {
     });
   });
 
+  describe('Success State', () => {
+    it('forwards success to the inner ore-input trigger', async () => {
+      fixture = await mount('ore-combobox', {
+        attrs: { success: true },
+        html: optionsHtml,
+      });
+
+      expect(fixture.query('ore-input.trigger')?.hasAttribute('success')).toBe(true);
+    });
+
+    it('does not forward success while an error is also set', async () => {
+      fixture = await mount('ore-combobox', {
+        attrs: { error: 'Required', success: true },
+        html: optionsHtml,
+      });
+
+      expect(fixture.query('ore-input.trigger')?.hasAttribute('success')).toBe(false);
+    });
+  });
+
   describe('Accessibility', () => {
     it('passes axe checks when closed', async () => {
       fixture = await mount('ore-combobox', {

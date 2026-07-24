@@ -441,8 +441,11 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
             inert
             tabindex="-1" />
           <div class="dropzone-content">
-            <span class="dropzone-icon" aria-hidden="true">
-              <ore-icon name="upload" size="36" stroke-width="1.5" aria-hidden="true"></ore-icon>
+            <span class="dropzone-icon" aria-hidden="true" :data-status="${() => (isInvalid.value ? 'error' : null)}">
+              ${() =>
+                isInvalid.value
+                  ? html`<ore-icon name="alert-circle" size="36" stroke-width="1.5" aria-hidden="true"></ore-icon>`
+                  : html`<ore-icon name="upload" size="36" stroke-width="1.5" aria-hidden="true"></ore-icon>`}
             </span>
             <!-- Signal 01: the copy itself shifts on drag-entry (not just border/glow) — a
                  static "Drop files here" during an active drag reads as if the drop target

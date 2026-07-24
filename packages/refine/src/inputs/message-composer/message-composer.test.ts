@@ -328,6 +328,43 @@ describe('ore-message-composer', () => {
 
       expect(getTextarea(fixture).maxLength).toBe(10);
     });
+
+    it('reflects success on host', async () => {
+      fixture = await mount('ore-message-composer', { attrs: { success: true } });
+
+      expect(fixture.element.hasAttribute('success')).toBe(true);
+    });
+
+    it('does not reflect success on host while an error is also set', async () => {
+      fixture = await mount('ore-message-composer', { attrs: { error: 'Invalid', success: true } });
+
+      expect(fixture.element.hasAttribute('success')).toBe(false);
+    });
+
+    it('shows a check icon in the status icon when success is set', async () => {
+      fixture = await mount('ore-message-composer', { attrs: { success: true } });
+
+      const statusIcon = fixture.query('.status-icon');
+
+      expect(statusIcon?.getAttribute('data-status')).toBe('success');
+      expect(statusIcon?.querySelector('ore-icon[name="check"]')).toBeTruthy();
+    });
+
+    it('shows an alert icon in the status icon when error is set', async () => {
+      fixture = await mount('ore-message-composer', { attrs: { error: 'Message failed to send' } });
+
+      const statusIcon = fixture.query('.status-icon');
+
+      expect(statusIcon?.getAttribute('data-status')).toBe('error');
+      expect(statusIcon?.querySelector('ore-icon[name="alert-circle"]')).toBeTruthy();
+    });
+
+    it('keeps the field editable (not disabled) while loading — only sends are blocked', async () => {
+      fixture = await mount('ore-message-composer', { attrs: { loading: true } });
+
+      expect(fixture.element.hasAttribute('loading')).toBe(true);
+      expect(getTextarea(fixture).disabled).toBe(false);
+    });
   });
 
   // ─── Attribute reflection ─────────────────────────────────────────────────────
@@ -445,7 +482,7 @@ describe('ore-message-composer', () => {
     it('overrides the default send icon via `send-icon`', async () => {
       fixture = await mount('ore-message-composer', { attrs: { 'send-icon': 'send' } });
 
-      expect(fixture.query('ore-icon')?.getAttribute('name')).toBe('send');
+      expect(getSendButton(fixture).querySelector('ore-icon')?.getAttribute('name')).toBe('send');
     });
   });
 
@@ -503,6 +540,12 @@ describe('ore-message-composer', () => {
 
     it('has no axe violations while loading', async () => {
       fixture = await mount('ore-message-composer', { attrs: { loading: true, value: 'hi' } });
+
+      expect((await axeCheck(fixture.element)).violations).toHaveLength(0);
+    });
+
+    it('has no axe violations with success set', async () => {
+      fixture = await mount('ore-message-composer', { attrs: { success: true, value: 'hi' } });
 
       expect((await axeCheck(fixture.element)).violations).toHaveLength(0);
     });

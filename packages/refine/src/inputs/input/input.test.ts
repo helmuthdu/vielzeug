@@ -795,9 +795,115 @@ describe('ore-input accessibility', () => {
     });
   });
 
+  // ─── Loading State ───────────────────────────────────────────────────────────
+
+  describe('Loading State', () => {
+    it('reflects loading on host', async () => {
+      fixture = await mount('ore-input', { attrs: { loading: true } });
+
+      expect(fixture.element.hasAttribute('loading')).toBe(true);
+    });
+
+    it('disables the inner input while loading', async () => {
+      fixture = await mount('ore-input', { attrs: { loading: true } });
+
+      expect(fixture.query<HTMLInputElement>('input')?.disabled).toBe(true);
+    });
+
+    it('does not disable the inner input when not loading', async () => {
+      fixture = await mount('ore-input');
+
+      expect(fixture.query<HTMLInputElement>('input')?.disabled).toBe(false);
+    });
+
+    it('sets aria-busy="true" on the inner input while loading', async () => {
+      fixture = await mount('ore-input', { attrs: { loading: true } });
+
+      expect(fixture.query('input')?.getAttribute('aria-busy')).toBe('true');
+    });
+
+    it('omits aria-busy on the inner input when not loading', async () => {
+      fixture = await mount('ore-input');
+
+      expect(fixture.query('input')?.getAttribute('aria-busy')).toBeNull();
+    });
+
+    it('renders an inline spinner element', async () => {
+      fixture = await mount('ore-input', { attrs: { loading: true } });
+
+      expect(fixture.query('.field-spinner')).toBeTruthy();
+    });
+  });
+
+  // ─── Success State ──────────────────────────────────────────────────────────
+
+  describe('Success State', () => {
+    it('reflects success on host', async () => {
+      fixture = await mount('ore-input', { attrs: { success: true } });
+
+      expect(fixture.element.hasAttribute('success')).toBe(true);
+    });
+
+    it('does not reflect success on host while an error is also set', async () => {
+      fixture = await mount('ore-input', { attrs: { error: 'Invalid', success: true } });
+
+      expect(fixture.element.hasAttribute('success')).toBe(false);
+    });
+
+    it('shows a check icon in the status icon when success is set', async () => {
+      fixture = await mount('ore-input', { attrs: { success: true } });
+
+      const statusIcon = fixture.query('.status-icon');
+
+      expect(statusIcon?.getAttribute('data-status')).toBe('success');
+      expect(statusIcon?.querySelector('ore-icon[name="check"]')).toBeTruthy();
+    });
+
+    it('shows an alert icon in the status icon when error is set, even if success is also set', async () => {
+      fixture = await mount('ore-input', { attrs: { error: 'Invalid', success: true } });
+
+      const statusIcon = fixture.query('.status-icon');
+
+      expect(statusIcon?.getAttribute('data-status')).toBe('error');
+      expect(statusIcon?.querySelector('ore-icon[name="alert-circle"]')).toBeTruthy();
+    });
+  });
+
   describe('Accessibility', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-input', { attrs: { label: 'Email', placeholder: 'you@example.com' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks in the error state', async () => {
+      fixture = await mount('ore-input', { attrs: { error: 'Invalid email', label: 'Email' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks in the success state', async () => {
+      fixture = await mount('ore-input', { attrs: { label: 'Email', success: true } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks in the loading state', async () => {
+      fixture = await mount('ore-input', { attrs: { label: 'Email', loading: true } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks in the disabled state', async () => {
+      fixture = await mount('ore-input', { attrs: { disabled: true, label: 'Email' } });
 
       const results = await axeCheck(fixture.element);
 

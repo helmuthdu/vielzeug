@@ -564,9 +564,103 @@ describe('ore-textarea accessibility', () => {
     });
   });
 
+  // ─── Loading State ───────────────────────────────────────────────────────────
+
+  describe('Loading State', () => {
+    it('reflects loading on host', async () => {
+      fixture = await mount('ore-textarea', { attrs: { loading: true } });
+
+      expect(fixture.element.hasAttribute('loading')).toBe(true);
+    });
+
+    it('disables the inner textarea while loading', async () => {
+      fixture = await mount('ore-textarea', { attrs: { loading: true } });
+
+      expect(fixture.query<HTMLTextAreaElement>('textarea')?.disabled).toBe(true);
+    });
+
+    it('sets aria-busy="true" on the inner textarea while loading', async () => {
+      fixture = await mount('ore-textarea', { attrs: { loading: true } });
+
+      expect(fixture.query('textarea')?.getAttribute('aria-busy')).toBe('true');
+    });
+
+    it('renders an inline spinner element', async () => {
+      fixture = await mount('ore-textarea', { attrs: { loading: true } });
+
+      expect(fixture.query('.field-spinner')).toBeTruthy();
+    });
+  });
+
+  // ─── Success State ──────────────────────────────────────────────────────────
+
+  describe('Success State', () => {
+    it('reflects success on host', async () => {
+      fixture = await mount('ore-textarea', { attrs: { success: true } });
+
+      expect(fixture.element.hasAttribute('success')).toBe(true);
+    });
+
+    it('does not reflect success on host while an error is also set', async () => {
+      fixture = await mount('ore-textarea', { attrs: { error: 'Invalid', success: true } });
+
+      expect(fixture.element.hasAttribute('success')).toBe(false);
+    });
+
+    it('shows a check icon in the status icon when success is set', async () => {
+      fixture = await mount('ore-textarea', { attrs: { success: true } });
+
+      const statusIcon = fixture.query('.status-icon');
+
+      expect(statusIcon?.getAttribute('data-status')).toBe('success');
+      expect(statusIcon?.querySelector('ore-icon[name="check"]')).toBeTruthy();
+    });
+
+    it('shows an alert icon in the status icon when error is set, even if success is also set', async () => {
+      fixture = await mount('ore-textarea', { attrs: { error: 'Invalid', success: true } });
+
+      const statusIcon = fixture.query('.status-icon');
+
+      expect(statusIcon?.getAttribute('data-status')).toBe('error');
+      expect(statusIcon?.querySelector('ore-icon[name="alert-circle"]')).toBeTruthy();
+    });
+  });
+
   describe('Accessibility', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-textarea', { attrs: { label: 'Description' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks in the error state', async () => {
+      fixture = await mount('ore-textarea', { attrs: { error: 'Too long', label: 'Description' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks in the success state', async () => {
+      fixture = await mount('ore-textarea', { attrs: { label: 'Description', success: true } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks in the loading state', async () => {
+      fixture = await mount('ore-textarea', { attrs: { label: 'Description', loading: true } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks in the disabled state', async () => {
+      fixture = await mount('ore-textarea', { attrs: { disabled: true, label: 'Description' } });
 
       const results = await axeCheck(fixture.element);
 

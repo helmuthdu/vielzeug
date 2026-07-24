@@ -421,6 +421,11 @@
     color: var(--color-error);
   }
 
+  /* Signal 03: an in-field icon alongside the border shift — never color alone. */
+  .dropzone-icon[data-status='error'] {
+    color: var(--color-error);
+  }
+
   /* ========================================
        Error Text
        ======================================== */
@@ -497,4 +502,40 @@
   :host([fullwidth]) {
     width: 100%;
   }
+}
+
+/* ========================================
+     Disabled State — intentionally unlayered
+     ======================================== */
+
+/*
+ * The shared `disabledLoadingMixin` (pulled in via `fieldMixins`) dims `:host([disabled])`
+ * with `opacity: 0.5` as bare, unlayered CSS. Cascade layers always lose to unlayered rules
+ * regardless of source order or specificity, so overriding that from inside any `@layer`
+ * block in this file (including `refine.overrides`) would be a no-op — this has to stay
+ * unlayered too, to actually win. See `ore-input`'s `input.css` for the same pattern.
+ *
+ * Per the field-state UX review: opacity-based dimming reads as a washed-out/loading look
+ * and can mimic reduced-contrast content for low-vision users, rather than a clearly locked
+ * field. Swapped for an explicit grayscale surface + `not-allowed` cursor (the cursor already
+ * comes from the shared mixin, left untouched here).
+ */
+:host([disabled]) {
+  opacity: 1;
+}
+
+:host([disabled]) .dropzone {
+  background: var(--color-contrast-100);
+  border-color: var(--color-contrast-200);
+}
+
+:host([disabled]) .dropzone-icon,
+:host([disabled]) .dropzone-title,
+:host([disabled]) .dropzone-hint,
+:host([disabled]) .dropzone-title u {
+  color: var(--color-contrast-400);
+}
+
+:host([disabled]) .label-outside {
+  color: var(--color-contrast-400);
 }

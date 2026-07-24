@@ -28,6 +28,12 @@ export type OreInputProps = TextFieldProps<Exclude<VisualVariant, 'frost'>> & {
   clearable?: boolean;
   /** Virtual keyboard hint for mobile devices */
   inputmode?: 'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
+  /**
+   * Shows an inline spinner inside the field and forces the inner `<input>` into
+   * `disabled` for the duration — use while an async validation/submission request
+   * is in flight (e.g. checking username availability) to prevent double-submits.
+   */
+  loading?: boolean;
   /** Maximum character length — shows a counter below the input */
   maxlength?: number;
   /** Minimum character length */
@@ -76,6 +82,8 @@ const VALID_INPUT_TYPES = [
  * @attr {boolean} disabled - Disable input interaction
  * @attr {boolean} readonly - Make the input read-only
  * @attr {boolean} required - Mark the field as required
+ * @attr {boolean} loading - Show an inline spinner and force the field disabled
+ * @attr {boolean} success - Show an inline success check icon (suppressed while `error` is set)
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text'
  * @attr {string} size - Input size: 'sm' | 'md' | 'lg'
@@ -95,6 +103,8 @@ const VALID_INPUT_TYPES = [
  * @part field - The field container element
  * @part input-row - The input row container element
  * @part input - The input element
+ * @part status-icon - The inline error/success icon shown inside the field
+ * @part spinner - The inline loading spinner shown inside the field while `loading`
  * @part helper - The helper text element
  *
  * @cssprop --input-bg - Background color
@@ -115,6 +125,9 @@ const VALID_INPUT_TYPES = [
  * ```html
  * <ore-input type="email" label="Email" placeholder="you@example.com" />
  * <ore-input label="Name" variant="bordered" color="primary" />
+ * <ore-input label="Username" error="That username is taken" />
+ * <ore-input label="Username" success />
+ * <ore-input label="Username" loading />
  * ```
  */
 export const INPUT_TAG = 'ore-input' as const;
@@ -133,6 +146,7 @@ define<OreInputProps>(INPUT_TAG, {
     inputmode: prop.string<'none' | 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url'>(),
     label: prop.string(),
     'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
+    loading: prop.bool(false),
     maxlength: prop.json(undefined as number | undefined),
     minlength: prop.json(undefined as number | undefined),
     name: prop.string(),
@@ -141,6 +155,7 @@ define<OreInputProps>(INPUT_TAG, {
     readonly: prop.bool(false),
     ref: prop.json(undefined as ((el: HTMLInputElement | null) => void) | null | undefined),
     required: prop.bool(false),
+    success: prop.bool(false),
     type: prop.oneOf(VALID_INPUT_TYPES, 'text'),
     value: prop.string(),
     variant: prop.string<'flat' | 'text' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
@@ -155,10 +170,14 @@ define<OreInputProps>(INPUT_TAG, {
     const inputRef = ref<HTMLInputElement>();
 
     const hasLabel = computed(() => !!props.label.value || slots.has('label').value);
+    // `loading` behaves like a temporary `disabled` — forces the inner <input> out of
+    // constraint validation and interaction for the duration, layered on top of any real
+    // `disabled` prop or form-context disabling already folded into `fCtxProps.disabled`.
+    const isDisabled = computed(() => fCtxProps.disabled.value || props.loading.value);
 
     const abortSignal = lifecycleSignal(onCleanup);
     const tf = createTextField({
-      disabled: fCtxProps.disabled,
+      disabled: isDisabled,
       error: props.error,
       hasLabel,
       helper: props.helper,
@@ -240,6 +259,9 @@ define<OreInputProps>(INPUT_TAG, {
         error: errorAttr(errorText),
         'has-value': () => (fieldValue.value ? true : undefined),
         size: fCtxProps.size,
+        // Reflects `success` only once `error` is confirmed empty — keeps the two host
+        // attributes mutually exclusive even if a consumer sets both props at once.
+        success: () => (props.success.value && !errorText.value ? true : undefined),
         variant: fCtxProps.variant,
       },
     });
@@ -253,6 +275,12 @@ define<OreInputProps>(INPUT_TAG, {
         : html`<ore-icon name="eye" size="14" stroke-width="2" aria-hidden="true"></ore-icon>`;
     const helperHidden = () => !!errorText.value || !helperText.value;
     const errorHidden = () => !errorText.value;
+    // Error always wins over success — a field can't be both invalid and confirmed at once.
+    const statusIconStatus = () => (errorText.value ? 'error' : 'success');
+    const statusIcon = () =>
+      errorText.value
+        ? html`<ore-icon name="alert-circle" size="14" stroke-width="2" aria-hidden="true"></ore-icon>`
+        : html`<ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>`;
     const counterNearLimit = () => (counter?.value.counterNearLimit && !counter?.value.counterAtLimit ? '' : null);
     const counterAtLimit = () => (counter?.value.counterAtLimit ? '' : null);
     const counterHidden = () => !counter;
@@ -285,7 +313,7 @@ define<OreInputProps>(INPUT_TAG, {
               :maxlength="${props.maxlength}"
               :minlength="${props.minlength}"
               :pattern="${props.pattern}"
-              ?disabled="${props.disabled}"
+              ?disabled="${isDisabled}"
               ?readonly="${props.readonly}"
               ?required="${props.required}"
               :value="${live(fieldValue)}"
@@ -293,8 +321,13 @@ define<OreInputProps>(INPUT_TAG, {
               :aria-describedby="${ariaDescribedBy}"
               :aria-errormessage="${ariaErrorMessage}"
               :aria-invalid="${ariaInvalid}"
+              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
               ref="${inputRef}" />
             <slot name="suffix"></slot>
+            <span class="status-icon" part="status-icon" aria-hidden="true" :data-status="${statusIconStatus}">
+              ${statusIcon}
+            </span>
+            <span class="field-spinner" part="spinner" role="status" aria-label="Loading"></span>
             <button
               class="pwd-toggle-btn"
               part="pwd-toggle"

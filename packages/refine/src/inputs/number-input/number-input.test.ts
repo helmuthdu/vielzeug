@@ -449,5 +449,72 @@ describe('ore-number-input accessibility', () => {
 
       expect(results.violations).toHaveLength(0);
     });
+
+    it('passes axe checks in the loading state', async () => {
+      fixture = await mount('ore-number-input', { attrs: { label: 'Quantity', loading: true } });
+      await fixture.flush();
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks in the success state', async () => {
+      fixture = await mount('ore-number-input', { attrs: { label: 'Quantity', success: true } });
+      await fixture.flush();
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
+});
+
+// ─── Loading / Success States ───────────────────────────────────────────────────
+
+describe('ore-number-input loading/success states', () => {
+  let fixture: Fixture<HTMLElement>;
+
+  beforeAll(async () => {
+    await (() => import('./number-input'))();
+    await import('../input/input');
+  });
+
+  afterEach(() => {
+    fixture?.dispose();
+  });
+
+  it('disables the inner input while loading, without setting host [disabled]', async () => {
+    fixture = await mount('ore-number-input', { attrs: { loading: true } });
+    await fixture.flush();
+
+    expect(getInput(fixture)?.disabled).toBe(true);
+    expect(fixture.element.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('shows the inner spinner while loading', async () => {
+    fixture = await mount('ore-number-input', { attrs: { loading: true } });
+    await fixture.flush();
+
+    const bitInput = fixture.query('ore-input.field');
+
+    expect(bitInput?.shadowRoot?.querySelector('.field-spinner')).toBeTruthy();
+  });
+
+  it('disables the stepper buttons while loading', async () => {
+    fixture = await mount('ore-number-input', { attrs: { loading: true, value: 5 } });
+    await fixture.flush();
+
+    expect(fixture.query<HTMLButtonElement>('[part="decrement-btn"]')?.disabled).toBe(true);
+    expect(fixture.query<HTMLButtonElement>('[part="increment-btn"]')?.disabled).toBe(true);
+  });
+
+  it('reflects success on the inner ore-input', async () => {
+    fixture = await mount('ore-number-input', { attrs: { success: true } });
+    await fixture.flush();
+
+    const bitInput = fixture.query('ore-input.field');
+
+    expect(bitInput?.hasAttribute('success')).toBe(true);
   });
 });

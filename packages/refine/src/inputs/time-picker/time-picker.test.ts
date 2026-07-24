@@ -402,6 +402,22 @@ describe('ore-time-picker', () => {
     });
   });
 
+  // ─── Success State ────────────────────────────────────────────────────────
+
+  describe('Success State', () => {
+    it('forwards success to the inner ore-input trigger', async () => {
+      fixture = await mount('ore-time-picker', { attrs: { success: true } });
+
+      expect(fixture.query('ore-input.trigger')?.hasAttribute('success')).toBe(true);
+    });
+
+    it('does not forward success while an error is also set', async () => {
+      fixture = await mount('ore-time-picker', { attrs: { error: 'Required', success: true } });
+
+      expect(fixture.query('ore-input.trigger')?.hasAttribute('success')).toBe(false);
+    });
+  });
+
   // ─── Accessibility ────────────────────────────────────────────────────────
 
   describe('Accessibility', () => {

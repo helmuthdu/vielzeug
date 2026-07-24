@@ -70,8 +70,9 @@
 
   button[part='decrement-btn']:disabled,
   button[part='increment-btn']:disabled {
+    color: var(--color-contrast-300);
     cursor: not-allowed;
-    opacity: 0.5;
+    background: transparent;
   }
 
   button[part='decrement-btn']:focus-visible,
@@ -79,4 +80,24 @@
     outline: 2px solid var(--color-primary-500);
     outline-offset: -2px;
   }
+}
+
+/* ========================================
+     Disabled State — intentionally unlayered
+     ======================================== */
+
+/*
+ * `disabledStateMixin` (passed directly in `styles:`, not via `fieldMixins`) dims
+ * `:host([disabled])` with `opacity: 0.5` as bare, unlayered CSS. Cascade layers always lose to
+ * unlayered rules regardless of source order or specificity, so overriding that from inside any
+ * `@layer` block in this file would be a no-op — this has to stay unlayered too, to actually win.
+ * See `ore-input`'s `input.css` for the same pattern.
+ *
+ * The visible surface here is entirely the inner `ore-input`'s own `.field` (already fixed to a
+ * grayscale look, not opacity) plus these slotted stepper buttons (muted via `:disabled` above,
+ * also not opacity) — so this host itself needs no compensating background/color, just dropping
+ * the blanket opacity that would otherwise wash out both of those over again.
+ */
+:host([disabled]) {
+  opacity: 1;
 }

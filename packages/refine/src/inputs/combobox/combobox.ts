@@ -45,6 +45,7 @@ export type { OreComboboxEvents, OreComboboxProps } from './combobox.types';
  * @attr {boolean} no-filter - Disable client-side filtering (useful for server-side search)
  * @attr {string} placeholder - Placeholder text
  * @attr {boolean} required - Require a non-blank selection for `<ore-form>` validation
+ * @attr {boolean} success - Show an inline success check icon (suppressed while `error` is set)
  *
  * @fires {CustomEvent} change - Emitted when selection changes. detail: { value: string | string[], values: string[], labels: string[] }
  * @fires {CustomEvent} search - Emitted when user types. detail: { query: string }
@@ -97,6 +98,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     required: prop.bool(false),
     rounded: prop.string<RoundedSize>(),
     size: prop.string<ComponentSize>(),
+    success: prop.bool(false),
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
@@ -801,6 +803,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
         ?disabled="${isDisabled}"
         ?required="${() => false}"
         ?fullwidth="${inputFullwidth}"
+        ?success="${() => props.success.value}"
         :name="${() => props.name.value ?? ''}"
         @click="${(e: MouseEvent) => {
           fieldPress.handleClick(e);

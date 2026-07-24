@@ -1,12 +1,13 @@
 import { define, html, inject, prop, ref, bind, onCleanup, onElement, useEmit, watchEffect } from '@vielzeug/ore';
 import { live } from '@vielzeug/ore/directives';
 import { useField } from '@vielzeug/ore/forms';
-import { watch as rippleWatch } from '@vielzeug/ripple';
+import { computed, watch as rippleWatch } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
 
 import { counterClassName, createAutoResize, lifecycleSignal, createTextField } from '../../headless';
+import '../../content/icon/icon';
 import { disablableBundle, roundableBundle, sizableBundle, TEXTAREA_SIZE_PRESET, themableBundle } from '../../shared';
 import { fieldMixins, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 import { errorAttr } from '../shared/field-binding';
@@ -23,6 +24,12 @@ export type OreTextareaEvents = {
 export type OreTextareaProps = TextFieldProps<Exclude<VisualVariant, 'frost' | 'text'>> & {
   /** Allow auto-grow with content */
   'auto-resize'?: boolean;
+  /**
+   * Shows an inline spinner inside the field and forces the inner `<textarea>` into
+   * `disabled` for the duration — use while an async validation/submission request
+   * is in flight to prevent double-submits.
+   */
+  loading?: boolean;
   /** Maximum character count; shows a counter when set */
   maxlength?: number;
   /** Disable a manual resize handle */
@@ -59,6 +66,8 @@ export type OreTextareaProps = TextFieldProps<Exclude<VisualVariant, 'frost' | '
  * @attr {boolean} required - Required field
  * @attr {boolean} no-resize - Disable manual resize
  * @attr {boolean} auto-resize - Grow with content
+ * @attr {boolean} loading - Show an inline spinner and force the field disabled
+ * @attr {boolean} success - Show an inline success check icon (suppressed while `error` is set)
  * @attr {string} resize - Resize direction: 'none' | 'horizontal' | 'both' | 'vertical'
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost'
@@ -69,6 +78,9 @@ export type OreTextareaProps = TextFieldProps<Exclude<VisualVariant, 'frost' | '
  * @fires change - Fired on blur with changed value. detail: { value: string; originalEvent: Event }
  *
  * @slot helper - Complex helper content
+ *
+ * @part status-icon - The inline error/success icon shown inside the field
+ * @part spinner - The inline loading spinner shown inside the field while `loading`
  *
  * @cssprop --textarea-bg - Background color
  * @cssprop --textarea-border-color - Border color
@@ -95,6 +107,8 @@ export type OreTextareaProps = TextFieldProps<Exclude<VisualVariant, 'frost' | '
  * @example
  * ```html
  * <ore-textarea></ore-textarea>
+ * <ore-textarea label="Bio" success></ore-textarea>
+ * <ore-textarea label="Bio" loading></ore-textarea>
  * ```
  */
 export const TEXTAREA_TAG = 'ore-textarea' as const;
@@ -111,6 +125,7 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
     helper: prop.string(),
     label: prop.string(),
     'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
+    loading: prop.bool(false),
     maxlength: prop.json(undefined as number | undefined),
     name: prop.string(),
     'no-resize': prop.bool(false),
@@ -120,6 +135,7 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
     required: prop.bool(false),
     resize: prop.string<'none' | 'both' | 'horizontal' | 'vertical'>(),
     rows: prop.json(undefined as number | undefined),
+    success: prop.bool(false),
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
@@ -132,10 +148,12 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
 
     const textareaRef = ref<HTMLTextAreaElement>();
     const autoResize = createAutoResize({ enabled: props['auto-resize'] });
+    // `loading` behaves like a temporary `disabled` — see ore-input's identical computation.
+    const isDisabled = computed(() => fCtxProps.disabled.value || props.loading.value);
 
     const abortSignal = lifecycleSignal(onCleanup);
     const tf = createTextField({
-      disabled: fCtxProps.disabled,
+      disabled: isDisabled,
       error: props.error,
       helper: props.helper,
       label: props.label,
@@ -217,6 +235,9 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
       attr: {
         error: errorAttr(errorText),
         size: fCtxProps.size,
+        // Reflects `success` only once `error` is confirmed empty — keeps the two host
+        // attributes mutually exclusive even if a consumer sets both props at once.
+        success: () => (props.success.value && !errorText.value ? true : undefined),
         variant: fCtxProps.variant,
       },
     });
@@ -226,6 +247,12 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
     const counterText = () => counter?.value.counterText.replace(' / ', '/') ?? '';
     const helperHidden = () => !!errorText.value || !helperText.value;
     const errorHidden = () => !errorText.value;
+    // Error always wins over success — a field can't be both invalid and confirmed at once.
+    const statusIconStatus = () => (errorText.value ? 'error' : 'success');
+    const statusIcon = () =>
+      errorText.value
+        ? html`<ore-icon name="alert-circle" size="14" stroke-width="2" aria-hidden="true"></ore-icon>`
+        : html`<ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>`;
 
     return html`
       <div class="textarea-wrapper" part="wrapper">
@@ -241,14 +268,19 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
             :placeholder="${props.placeholder}"
             :rows="${props.rows}"
             :maxlength="${props.maxlength}"
-            ?disabled="${props.disabled}"
+            ?disabled="${isDisabled}"
             ?readonly="${props.readonly}"
             ?required="${props.required}"
             :value="${live(tf.value)}"
             :aria-describedby="${ariaDescribedBy}"
             :aria-errormessage="${ariaErrorMessage}"
             :aria-invalid="${ariaInvalid}"
-            :aria-labelledby="${ariaLabelledBy}"></textarea>
+            :aria-labelledby="${ariaLabelledBy}"
+            :aria-busy="${() => (props.loading.value ? 'true' : null)}"></textarea>
+          <span class="status-icon" part="status-icon" aria-hidden="true" :data-status="${statusIconStatus}">
+            ${statusIcon}
+          </span>
+          <span class="field-spinner" part="spinner" role="status" aria-label="Loading"></span>
         </div>
         <span class="${counterClass}" aria-live="polite" ?hidden="${counterHidden}">${counterText}</span>
         <div id="${assistiveId}" class="helper-text" aria-live="polite" part="helper" ?hidden="${helperHidden}">
