@@ -1,12 +1,12 @@
 import { define, html, inject, prop, ref, bind, onCleanup, onElement, useEmit, useSlots } from '@vielzeug/ore';
 import { live } from '@vielzeug/ore/directives';
 import { useField } from '@vielzeug/ore/forms';
-import { computed, watch } from '@vielzeug/ripple';
+import { computed } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import {
-  counterClassName,
+  bindRefCallback,
   createAutoResize,
   createComposerControl,
   createTextField,
@@ -24,6 +24,7 @@ import {
   colorThemeMixin,
   coarsePointerMixin,
   disabledLoadingMixin,
+  fieldVariantMixin,
   forcedColorsFocusMixin,
   forcedColorsMixin,
   reducedMotionMixin,
@@ -31,6 +32,7 @@ import {
 } from '../../styles';
 import { errorAttr } from '../shared/field-binding';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { renderFieldStatusRegion, renderStatusIcon } from '../shared/templates';
 import '../../content/icon/icon';
 import '../button/button';
 import componentStyles from './message-composer.css?inline';
@@ -192,7 +194,7 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
     name: prop.string(),
     placeholder: prop.string(),
     readonly: prop.bool(false),
-    ref: prop.json(undefined as ((el: HTMLTextAreaElement | null) => void) | null | undefined),
+    ref: prop.data<((el: HTMLTextAreaElement | null) => void) | null>(),
     required: prop.bool(false),
     rows: prop.json(undefined as number | undefined),
     'send-icon': prop.string(),
@@ -269,26 +271,16 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
     onElement(textareaRef, (textareaEl) => {
       const unwireField = tf.wire(textareaEl);
       const unwireAutoResize = autoResize.wire(textareaEl);
+      const unwireRef = bindRefCallback(props.ref, textareaEl);
       const handleKeydown = (e: KeyboardEvent) => composer.handleKeydown(e);
 
       textareaEl.addEventListener('keydown', handleKeydown);
-
-      // Immediate fire for when the prop is already set on mount.
-      props.ref.value?.(textareaEl);
-
-      // Reactive watcher so that if props.ref is set *after* the inner <textarea> mounts
-      // (e.g. a parent sets it via a ref callback after render), the new callback still
-      // receives the live element.
-      const refSub = watch(props.ref, (cb) => {
-        cb?.(textareaEl);
-      });
 
       return () => {
         textareaEl.removeEventListener('keydown', handleKeydown);
         unwireField();
         unwireAutoResize();
-        refSub.dispose();
-        props.ref.value?.(null);
+        unwireRef();
       };
     });
 
@@ -302,18 +294,6 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
         variant: fCtxProps.variant,
       },
     });
-
-    const counterClass = () => counterClassName(tf.counter?.value);
-    const counterHidden = () => !tf.counter;
-    const counterText = () => tf.counter?.value.counterText.replace(' / ', '/') ?? '';
-    const helperHidden = () => !!tf.errorText.value || !tf.helperText.value;
-    const errorHidden = () => !tf.errorText.value;
-    // Error always wins over success — a field can't be both invalid and confirmed at once.
-    const statusIconStatus = () => (tf.errorText.value ? 'error' : 'success');
-    const statusIcon = () =>
-      tf.errorText.value
-        ? html`<ore-icon name="alert-circle" size="14" stroke-width="2" aria-hidden="true"></ore-icon>`
-        : html`<ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>`;
 
     return html`
       <div class="composer" part="composer">
@@ -334,16 +314,7 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
           :aria-describedby="${tf.ariaDescribedBy}"
           :aria-errormessage="${tf.ariaErrorMessage}"
           :aria-invalid="${tf.ariaInvalid}"></textarea>
-        <span class="status-icon" part="status-icon" aria-hidden="true" :data-status="${statusIconStatus}">
-          ${statusIcon}
-        </span>
-        <span class="${counterClass}" aria-live="polite" ?hidden="${counterHidden}">${counterText}</span>
-        <div id="${tf.assistiveId}" class="helper-text" aria-live="polite" part="helper" ?hidden="${helperHidden}">
-          ${() => tf.helperText.value}
-        </div>
-        <div id="${tf.errorId}" class="helper-text" role="alert" part="error" ?hidden="${errorHidden}">
-          ${() => tf.errorText.value}
-        </div>
+        ${renderStatusIcon(tf.errorText)} ${renderFieldStatusRegion(tf)}
         <div class="toolbar" part="toolbar">
           <div class="toolbar-start" part="toolbar-start">
             <slot name="prefix"></slot>
@@ -383,5 +354,10 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
     forcedColorsFocusMixin('.field'),
     sizeVariantMixin(MESSAGE_COMPOSER_SIZE_PRESET),
     componentStyles,
+    // Must come after `componentStyles` — see `ore-input`'s identical ordering note for why
+    // (`@layer` precedence is fixed by which layer name is *first* referenced across this whole
+    // array; `componentStyles` establishes `refine.base`, which this mixin's `refine.variants`
+    // rules need to win over).
+    fieldVariantMixin({ container: '.composer', text: '.field', tokenPrefix: 'message-composer' }),
   ],
 });

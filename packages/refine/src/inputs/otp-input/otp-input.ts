@@ -6,7 +6,7 @@ import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { createListControl, lifecycleSignal } from '../../headless';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
-import { colorThemeMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
+import { colorThemeMixin, fieldVariantMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './otp-input.css?inline';
 
@@ -293,5 +293,12 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
       </div>
     `;
   },
-  styles: [colorThemeMixin, sizeVariantMixin({}), forcedColorsFocusMixin('.cell'), componentStyles],
+  styles: [
+    colorThemeMixin,
+    sizeVariantMixin({}),
+    forcedColorsFocusMixin('.cell'),
+    componentStyles,
+    // Must come after `componentStyles` — see `ore-input`'s identical ordering note for why.
+    fieldVariantMixin({ accentVar: '--_cell-focus-border', container: '.cell', tokenPrefix: 'otp-cell' }),
+  ],
 });

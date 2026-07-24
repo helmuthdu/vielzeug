@@ -4,6 +4,9 @@ export { lifecycleSignal } from './ore';
 // ── Auto-resize ───────────────────────────────────────────────────────────────
 export { createAutoResize, type AutoResizeControl, type AutoResizeOptions } from './auto-resize';
 
+// ── Ref callback ──────────────────────────────────────────────────────────────
+export { bindRefCallback, type RefCallback } from './ref-callback';
+
 // ── Cross-shadow-root ARIA relationships ──────────────────────────────────────
 export { setAriaReflection, type AriaReflectionProperty } from './aria-reflection';
 

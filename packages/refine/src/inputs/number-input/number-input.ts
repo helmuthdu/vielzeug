@@ -140,7 +140,7 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
     name: prop.string(),
     placeholder: prop.string(),
     readonly: prop.bool(false),
-    ref: prop.json(undefined as ((el: HTMLInputElement | null) => void) | null | undefined),
+    ref: prop.data<((el: HTMLInputElement | null) => void) | null>(),
     step: prop.number(1),
     success: prop.bool(false),
     value: prop.json(undefined as number | undefined),

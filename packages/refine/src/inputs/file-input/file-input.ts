@@ -19,7 +19,7 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 
 import '../../content/icon/icon';
 import '../../feedback/progress/progress';
-import { createInteraction } from '../../headless';
+import { bindRefCallback, createInteraction } from '../../headless';
 import { FILE_INPUT_SIZE_PRESET } from '../../shared';
 import { fieldMixins, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
@@ -175,7 +175,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     'max-size': prop.number(0),
     multiple: prop.bool(false),
     name: prop.string(),
-    ref: prop.json(undefined as ((el: HTMLInputElement | null) => void) | null | undefined),
+    ref: prop.data<((el: HTMLInputElement | null) => void) | null>(),
     required: prop.bool(false),
     size: prop.string(),
     upload: prop.data<FileUploadFn>(),
@@ -336,18 +336,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     // ============================================
     // Template
     // ============================================
-    onElement(inputRef, (inp) => {
-      props.ref.value?.(inp);
-
-      const sub = watch(props.ref, (cb) => {
-        cb?.(inp);
-      });
-
-      return () => {
-        sub.dispose();
-        props.ref.value?.(null);
-      };
-    });
+    onElement(inputRef, (inp) => bindRefCallback(props.ref, inp));
 
     onMounted(() => {
       const inp = inputRef.value!;

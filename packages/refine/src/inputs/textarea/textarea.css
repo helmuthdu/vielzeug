@@ -211,12 +211,6 @@
     border-color: var(--color-contrast-400);
   }
 
-  :host(:not([disabled], [variant='text'], [variant='flat'])) .field:focus-within {
-    background: var(--color-canvas);
-    border-color: var(--_theme-focus);
-    box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
-  }
-
   :host(:not([disabled])) .field:focus-within ~ .label,
   :host(:not([disabled])) .textarea-wrapper:has(.field:focus-within) .label {
     color: var(--_theme-focus);
@@ -227,11 +221,6 @@
     border-color: var(--color-error);
   }
 
-  :host([error]:not([error=''])) .field:focus-within {
-    border-color: var(--color-error);
-    box-shadow: var(--color-error-focus-shadow);
-  }
-
   :host([error]:not([error=''])) .label {
     color: var(--color-error);
   }
@@ -240,6 +229,27 @@
   :host([success]) .field {
     border-color: var(--color-success);
   }
+}
+
+/*
+ * Focus/error/success `box-shadow` on `.field` — moved out of `@layer refine.base` into
+ * `refine.variants` (alongside `fieldVariantMixin`'s rest-state `box-shadow` for solid/outline/
+ * ghost) so normal specificity decides the winner. Cascade layers beat specificity outright, so
+ * a `refine.base` box-shadow here always lost to every variant's unconditional rest-state
+ * `box-shadow`, focused/error/success or not — the same bug class fixed for `ore-otp-input`'s
+ * focus ring.
+ */
+@layer refine.variants {
+  :host(:not([disabled], [variant='flat'])) .field:focus-within {
+    background: var(--color-canvas);
+    border-color: var(--_theme-focus);
+    box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
+  }
+
+  :host([error]:not([error=''])) .field:focus-within {
+    border-color: var(--color-error);
+    box-shadow: var(--color-error-focus-shadow);
+  }
 
   :host([success]) .field:focus-within {
     border-color: var(--color-success);
@@ -247,97 +257,12 @@
   }
 }
 
-@layer refine.variants {
-  /* Solid (Default) */
-  :host(:not([variant])),
-  :host([variant='solid']) {
-    --_bg: var(--textarea-bg, var(--color-contrast-50));
-    --_border-color: var(--textarea-border-color, var(--color-contrast-300));
-  }
-
-  :host(:not([variant])) .field,
-  :host([variant='solid']) .field {
-    box-shadow: var(--shadow-2xs);
-  }
-
-  :host(:not([variant], [disabled])) .field:focus-within,
-  :host([variant='solid']:not([disabled])) .field:focus-within {
-    box-shadow: var(--_theme-shadow);
-  }
-
-  /* Flat */
-  :host([variant='flat']) {
-    --_bg: var(--textarea-bg, var(--color-contrast-100));
-    --_border-color: var(--textarea-border-color, color-mix(in oklch, var(--_theme-focus) 20%, transparent));
-  }
-
-  :host([variant='flat']) .field {
-    box-shadow: var(--inset-shadow-2xs);
-  }
-
-  :host([variant='flat']) .field:hover {
-    background: var(--textarea-hover-bg, color-mix(in oklch, var(--_theme-base) 6%, var(--color-contrast-100)));
-    border-color: var(
-      --textarea-hover-border-color,
-      color-mix(in oklch, var(--_theme-base) 35%, var(--color-contrast-300))
-    );
-  }
-
-  :host([variant='flat']) .field:focus-within {
-    background: var(--textarea-focus-bg, color-mix(in oklch, var(--_theme-base) 8%, var(--color-canvas)));
-    border-color: var(--textarea-focus-border-color, color-mix(in oklch, var(--_theme-focus) 60%, transparent));
-    box-shadow: var(--_theme-shadow);
-  }
-
-  /* Bordered */
-  :host([variant='bordered']) {
-    --_bg: var(--textarea-bg, var(--_theme-backdrop));
-    --_border-color: var(--textarea-border-color, color-mix(in oklch, var(--_theme-focus) 70%, transparent));
-  }
-
-  :host([variant='bordered']) textarea {
-    color: var(--_theme-base);
-  }
-
-  :host([variant='bordered']) textarea::placeholder {
-    color: var(--textarea-placeholder-color, color-mix(in oklch, var(--_theme-base) 45%, transparent));
-  }
-
-  :host([variant='bordered']) .field:hover {
-    border-color: var(--textarea-hover-border-color, var(--_theme-focus));
-  }
-
-  /* Outline */
-  :host([variant='outline']) {
-    --_bg: var(--textarea-bg, transparent);
-  }
-
-  :host([variant='outline']) .field {
-    box-shadow: none;
-  }
-
-  :host([variant='outline']:not([disabled])) .field:focus-within {
-    box-shadow: var(--_theme-shadow);
-  }
-
-  /* Ghost */
-  :host([variant='ghost']) {
-    --_bg: var(--textarea-bg, transparent);
-    --_border-color: var(--textarea-border-color, transparent);
-  }
-
-  :host([variant='ghost']) .field {
-    box-shadow: none;
-  }
-
-  :host([variant='ghost']) .field:hover {
-    background: var(--textarea-hover-bg, var(--color-contrast-100));
-  }
-
-  :host([variant='ghost']:not([disabled])) .field:focus-within {
-    box-shadow: var(--_theme-shadow);
-  }
-}
+/*
+ * The solid/flat/bordered/outline/ghost variant switch (previously here) now lives in
+ * `fieldVariantMixin({ container: '.field', text: 'textarea', tokenPrefix: 'textarea' })`
+ * in `textarea.ts`'s `styles` array — shared with `ore-input`/`ore-message-composer` instead of
+ * hand-duplicated across all three (see the mixin's own doc comment for what it covers and why).
+ */
 
 @layer refine.utilities {
   /* Auto-resize hides overflow */

@@ -1,17 +1,18 @@
 import { define, html, inject, prop, ref, bind, onCleanup, onElement, useEmit, useSlots } from '@vielzeug/ore';
 import { live } from '@vielzeug/ore/directives';
 import { useField } from '@vielzeug/ore/forms';
-import { computed, signal, watch } from '@vielzeug/ripple';
+import { computed, signal } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';
 import type { InputType, VisualVariant } from '../../types';
 
-import { lifecycleSignal, createTextField } from '../../headless';
+import { bindRefCallback, lifecycleSignal, createTextField } from '../../headless';
 import { disablableBundle, FIELD_SIZE_PRESET, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import '../../content/icon/icon';
-import { fieldMixins, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
+import { fieldMixins, fieldVariantMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 import { errorAttr } from '../shared/field-binding';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { renderStatusIcon } from '../shared/templates';
 import componentStyles from './input.css?inline';
 
 /** Input component properties */
@@ -153,7 +154,7 @@ define<OreInputProps>(INPUT_TAG, {
     pattern: prop.string(),
     placeholder: prop.string(),
     readonly: prop.bool(false),
-    ref: prop.json(undefined as ((el: HTMLInputElement | null) => void) | null | undefined),
+    ref: prop.data<((el: HTMLInputElement | null) => void) | null>(),
     required: prop.bool(false),
     success: prop.bool(false),
     type: prop.oneOf(VALID_INPUT_TYPES, 'text'),
@@ -230,19 +231,10 @@ define<OreInputProps>(INPUT_TAG, {
     onElement(inputRef, (el) => {
       wire(el, abortSignal);
 
-      // Immediate fire for when the prop is already set on mount.
-      props.ref.value?.(el);
-
-      // Reactive watcher so that if props.ref is set *after* the inner
-      // <input> mounts (e.g. parent sets it via a ref callback after render),
-      // the new callback still receives the live element.
-      const sub = watch(props.ref, (cb) => {
-        cb?.(el);
-      });
+      const unwireRef = bindRefCallback(props.ref, el);
 
       return () => {
-        sub.dispose();
-        props.ref.value?.(null);
+        unwireRef();
       };
     });
 
@@ -275,12 +267,6 @@ define<OreInputProps>(INPUT_TAG, {
         : html`<ore-icon name="eye" size="14" stroke-width="2" aria-hidden="true"></ore-icon>`;
     const helperHidden = () => !!errorText.value || !helperText.value;
     const errorHidden = () => !errorText.value;
-    // Error always wins over success — a field can't be both invalid and confirmed at once.
-    const statusIconStatus = () => (errorText.value ? 'error' : 'success');
-    const statusIcon = () =>
-      errorText.value
-        ? html`<ore-icon name="alert-circle" size="14" stroke-width="2" aria-hidden="true"></ore-icon>`
-        : html`<ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>`;
     const counterNearLimit = () => (counter?.value.counterNearLimit && !counter?.value.counterAtLimit ? '' : null);
     const counterAtLimit = () => (counter?.value.counterAtLimit ? '' : null);
     const counterHidden = () => !counter;
@@ -324,9 +310,7 @@ define<OreInputProps>(INPUT_TAG, {
               :aria-busy="${() => (props.loading.value ? 'true' : null)}"
               ref="${inputRef}" />
             <slot name="suffix"></slot>
-            <span class="status-icon" part="status-icon" aria-hidden="true" :data-status="${statusIconStatus}">
-              ${statusIcon}
-            </span>
+            ${renderStatusIcon(errorText)}
             <span class="field-spinner" part="spinner" role="status" aria-label="Loading"></span>
             <button
               class="pwd-toggle-btn"
@@ -367,5 +351,17 @@ define<OreInputProps>(INPUT_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [...fieldMixins, sizeVariantMixin(FIELD_SIZE_PRESET), forcedColorsFocusMixin('input'), componentStyles],
+  styles: [
+    ...fieldMixins,
+    sizeVariantMixin(FIELD_SIZE_PRESET),
+    forcedColorsFocusMixin('input'),
+    componentStyles,
+    // Must come after `componentStyles` — `@layer` precedence is fixed by which layer name is
+    // *first* referenced across this whole array, and `componentStyles` is what establishes
+    // `refine.base` (the unconditional `--_bg`/`--_border-color` defaults this mixin's
+    // `refine.variants` rules need to win over). Placed earlier, `refine.variants` would end up
+    // registered as the *lower*-priority layer, and every variant would silently render as the
+    // base default — exactly the bug this ordering fixes.
+    fieldVariantMixin({ container: '.field', text: 'input', tokenPrefix: 'input' }),
+  ],
 });

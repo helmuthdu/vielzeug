@@ -1,17 +1,18 @@
 import { define, html, inject, prop, ref, bind, onCleanup, onElement, useEmit, watchEffect } from '@vielzeug/ore';
 import { live } from '@vielzeug/ore/directives';
 import { useField } from '@vielzeug/ore/forms';
-import { computed, watch as rippleWatch } from '@vielzeug/ripple';
+import { computed } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
 
-import { counterClassName, createAutoResize, lifecycleSignal, createTextField } from '../../headless';
+import { bindRefCallback, createAutoResize, lifecycleSignal, createTextField } from '../../headless';
 import '../../content/icon/icon';
 import { disablableBundle, roundableBundle, sizableBundle, TEXTAREA_SIZE_PRESET, themableBundle } from '../../shared';
-import { fieldMixins, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
+import { fieldMixins, fieldVariantMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
 import { errorAttr } from '../shared/field-binding';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { renderFieldStatusRegion, renderStatusIcon } from '../shared/templates';
 import componentStyles from './textarea.css?inline';
 
 /** Textarea component properties */
@@ -131,7 +132,7 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
     'no-resize': prop.bool(false),
     placeholder: prop.string(),
     readonly: prop.bool(false),
-    ref: prop.json(undefined as ((el: HTMLTextAreaElement | null) => void) | null | undefined),
+    ref: prop.data<((el: HTMLTextAreaElement | null) => void) | null>(),
     required: prop.bool(false),
     resize: prop.string<'none' | 'both' | 'horizontal' | 'vertical'>(),
     rows: prop.json(undefined as number | undefined),
@@ -205,12 +206,7 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
     onElement(textareaRef, (textareaEl) => {
       const unwireEl = tf.wire(textareaEl);
       const unwireAutoResize = autoResize.wire(textareaEl);
-
-      props.ref.value?.(textareaEl);
-
-      const sub = rippleWatch(props.ref, (cb) => {
-        cb?.(textareaEl);
-      });
+      const unwireRef = bindRefCallback(props.ref, textareaEl);
 
       const stopLayoutEffect = watch(() => {
         textareaEl.style.resize =
@@ -223,8 +219,7 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
       });
 
       return () => {
-        sub.dispose();
-        props.ref.value?.(null);
+        unwireRef();
         unwireEl();
         unwireAutoResize();
         stopLayoutEffect();
@@ -241,18 +236,6 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
         variant: fCtxProps.variant,
       },
     });
-
-    const counterClass = () => counterClassName(counter?.value);
-    const counterHidden = () => !counter;
-    const counterText = () => counter?.value.counterText.replace(' / ', '/') ?? '';
-    const helperHidden = () => !!errorText.value || !helperText.value;
-    const errorHidden = () => !errorText.value;
-    // Error always wins over success — a field can't be both invalid and confirmed at once.
-    const statusIconStatus = () => (errorText.value ? 'error' : 'success');
-    const statusIcon = () =>
-      errorText.value
-        ? html`<ore-icon name="alert-circle" size="14" stroke-width="2" aria-hidden="true"></ore-icon>`
-        : html`<ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>`;
 
     return html`
       <div class="textarea-wrapper" part="wrapper">
@@ -277,21 +260,23 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
             :aria-invalid="${ariaInvalid}"
             :aria-labelledby="${ariaLabelledBy}"
             :aria-busy="${() => (props.loading.value ? 'true' : null)}"></textarea>
-          <span class="status-icon" part="status-icon" aria-hidden="true" :data-status="${statusIconStatus}">
-            ${statusIcon}
-          </span>
+          ${renderStatusIcon(errorText)}
           <span class="field-spinner" part="spinner" role="status" aria-label="Loading"></span>
         </div>
-        <span class="${counterClass}" aria-live="polite" ?hidden="${counterHidden}">${counterText}</span>
-        <div id="${assistiveId}" class="helper-text" aria-live="polite" part="helper" ?hidden="${helperHidden}">
-          ${() => helperText.value}
-        </div>
-        <div id="${errorId}" class="helper-text" role="alert" part="error" ?hidden="${errorHidden}">
-          ${() => errorText.value}
-        </div>
+        ${renderFieldStatusRegion({ assistiveId, counter, errorId, errorText, helperText })}
       </div>
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [...fieldMixins, sizeVariantMixin(TEXTAREA_SIZE_PRESET), forcedColorsFocusMixin('textarea'), componentStyles],
+  styles: [
+    ...fieldMixins,
+    sizeVariantMixin(TEXTAREA_SIZE_PRESET),
+    forcedColorsFocusMixin('textarea'),
+    componentStyles,
+    // Must come after `componentStyles` — see `ore-input`'s identical ordering note for why
+    // (`@layer` precedence is fixed by which layer name is *first* referenced across this whole
+    // array; `componentStyles` establishes `refine.base`, which this mixin's `refine.variants`
+    // rules need to win over).
+    fieldVariantMixin({ container: '.field', text: 'textarea', tokenPrefix: 'textarea' }),
+  ],
 });

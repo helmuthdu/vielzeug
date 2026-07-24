@@ -32,6 +32,8 @@ export {
 } from './mixins/theme.css';
 // Frost Mixin
 export { frostVariantMixin } from './mixins/variants.css';
+// Field Variant Mixin (solid/flat/bordered/outline/ghost, shared by text-entry fields)
+export { fieldVariantMixin, type FieldVariantMixinOptions } from './mixins/field-variants.css';
 // Table Base Mixin
 export { tableBaseMixin } from './mixins/table-base.css';
 

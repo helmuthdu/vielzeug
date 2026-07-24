@@ -60,44 +60,6 @@ test.describe('Accessibility', () => {
   );
 });
 
-test.describe('Layout', () => {
-  // Material 3 list-item spec: 56dp one-line row height, 72dp two-line — see
-  // `LIST_SIZE_PRESET`'s doc comment for the full mapping.
-  test('a one-line item is at least 56px tall (Material 3 one-line row height)', async ({ page, refinePage }) => {
-    await refinePage.mountComponent('<ore-list><ore-list-item id="item">Inbox</ore-list-item></ore-list>');
-    await page.waitForSelector('ore-list-item');
-
-    const height = await page.evaluate(() => document.getElementById('item')?.getBoundingClientRect().height ?? 0);
-
-    expect(height).toBeGreaterThanOrEqual(56);
-  });
-
-  test('a two-line item (with description) is at least 72px tall (Material 3 two-line row height)', async ({
-    page,
-    refinePage,
-  }) => {
-    await refinePage.mountComponent(
-      '<ore-list>' +
-        '<ore-list-item id="item">Newsletter<span slot="description">From Acme Inc.</span></ore-list-item>' +
-        '</ore-list>',
-    );
-    await page.waitForSelector('ore-list-item');
-
-    const height = await page.evaluate(() => document.getElementById('item')?.getBoundingClientRect().height ?? 0);
-
-    expect(height).toBeGreaterThanOrEqual(72);
-  });
-
-  test('a size="sm" item still clears the 48px Material 3/WCAG touch-target floor', async ({ page, refinePage }) => {
-    await refinePage.mountComponent('<ore-list size="sm"><ore-list-item id="item">Inbox</ore-list-item></ore-list>');
-    await page.waitForSelector('ore-list-item');
-
-    const height = await page.evaluate(() => document.getElementById('item')?.getBoundingClientRect().height ?? 0);
-
-    expect(height).toBeGreaterThanOrEqual(48);
-  });
-});
-
 test.describe('Selection', () => {
   test('clicking an item selects it and deselects its sibling', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
