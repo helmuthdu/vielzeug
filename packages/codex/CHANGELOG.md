@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Fri, 03 Jul 2026 10:09:41 GMT and should not be manually modified.
+This log was last generated on Sat, 25 Jul 2026 03:18:07 GMT and should not be manually modified.
+
+## 1.0.3
+Sat, 25 Jul 2026 03:18:07 GMT
+
+### Patches
+
+- chore: refresh bundled docs data
 
 ## 1.0.2
 Fri, 03 Jul 2026 10:09:41 GMT
