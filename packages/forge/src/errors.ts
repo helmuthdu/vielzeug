@@ -13,8 +13,10 @@ export class ForgeError extends Error {
 
 /** Thrown when any method is called on a disposed form. */
 export class ForgeDisposedError extends ForgeError {
-  constructor() {
-    super('Cannot modify a disposed form');
+  /** @param op The public method name that was called (e.g. `'set'`) — included in the
+   * message so a stack trace tells you *what* to guard, not just *that* it's disposed. */
+  constructor(op?: string) {
+    super(op ? `Cannot call ${op}() on a disposed form` : 'Cannot modify a disposed form');
   }
 }
 

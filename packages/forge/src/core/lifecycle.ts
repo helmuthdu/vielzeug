@@ -7,26 +7,17 @@ import { isSafeKey } from '../_utils';
  * Lifecycle operations: `dispose`, `snapshot`, `restore`. Moved verbatim from `createForm()`'s
  * "Lifecycle: dispose" and "Snapshot / Restore" sections.
  */
-export function createLifecycleOps<TValues extends Record<string, unknown>>(ctx: FormContext<TValues>) {
+export function createLifecycleOps<TValues extends Record<string, unknown>>(
+  ctx: FormContext<TValues>,
+  deps: { onDispose?: () => void },
+) {
   function dispose(): void {
-    ctx.disposed = true;
-    ctx.disposeController.abort();
-
-    for (const ctrl of ctx.fieldCtrls.values()) ctrl.abort();
-
-    ctx.fieldCtrls.clear();
-    ctx.runCtrls.clear();
-    ctx.arrayCache.clear();
-    ctx.scopeCache.clear();
-
-    for (const sub of ctx.rippleSubs) sub.dispose();
-
-    ctx.rippleSubs.clear();
-    ctx.fieldSignals.clear();
+    ctx.dispose();
+    deps.onDispose?.();
   }
 
   function snapshot(): FormSnapshot<TValues> {
-    ctx.ensureNotDisposed();
+    ctx.ensureNotDisposed('history.snapshot');
 
     // Cast is irreducible: baseline/store are typed Partial<Record<FlatKeyOf<TValues>, unknown>>, a
     // TValues-dependent mapped type TS cannot verify a plain Object.fromEntries() result against for
@@ -42,7 +33,7 @@ export function createLifecycleOps<TValues extends Record<string, unknown>>(ctx:
   }
 
   function restore(snap: FormSnapshot<TValues>): void {
-    ctx.ensureNotDisposed();
+    ctx.ensureNotDisposed('history.restore');
 
     for (const ctrl of ctx.runCtrls) ctrl.abort();
     for (const ctrl of ctx.fieldCtrls.values()) ctrl.abort();

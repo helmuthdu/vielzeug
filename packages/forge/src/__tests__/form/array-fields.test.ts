@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+
 import type { Form } from '../../types';
 
 import { createForm } from '../../index';
@@ -89,6 +91,18 @@ describe('array field helpers', () => {
 
     expect(() => operation(form)).not.toThrow();
     expect(form.get('x')).toBeNull();
+  });
+
+  test.each(arrayOps)('%s warns in dev when the no-op is hit, naming the field and the actual type', (_, operation) => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const form = createForm({ defaultValues: { x: 1 } }) as unknown as Form<Record<string, unknown>>;
+
+    operation(form);
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("array('x')"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('field is not an array (got number)'));
+
+    warnSpy.mockRestore();
   });
 });
 

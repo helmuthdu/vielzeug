@@ -137,6 +137,22 @@ describe('form.scope()', () => {
     expect(form.get('name')).toBe('Bob');
   });
 
+  test('reset() on scoped form removes a scoped key with no baseline entry entirely, not just to undefined', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+
+    // 'unit' is not part of defaultValues/baseline (unlike city/street/zip) — only ever
+    // written via set().
+    address.set('unit' as never, '4B' as never);
+
+    expect(form.values()).toMatchObject({ address: { unit: '4B' } });
+
+    address.reset();
+
+    expect(address.get('unit' as never)).toBeUndefined();
+    expect(form.values()).not.toHaveProperty('address.unit');
+  });
+
   test('state returns scoped projection — only scoped fields affect flags', () => {
     const form = createForm({
       defaultValues: defaults,
@@ -454,31 +470,31 @@ describe('form.scope()', () => {
   });
 });
 
-describe('scoped snapshot / restore', () => {
-  test('snapshot() on a scoped form captures the full form state', () => {
+describe('scoped history.snapshot / history.restore', () => {
+  test('history.snapshot() on a scoped form captures the full form state', () => {
     const form = createForm({ defaultValues: defaults });
     const address = form.scope('address');
 
     address.set('city', 'Miami');
 
-    const snap = address.snapshot();
+    const snap = address.history.snapshot();
 
     expect(snap.store['address.city']).toBe('Miami');
     expect(snap.store['name']).toBe('Alice');
   });
 
-  test('restore() on a scoped form restores full form state round-trip', () => {
+  test('history.restore() on a scoped form restores full form state round-trip', () => {
     const form = createForm({ defaultValues: defaults });
 
     form.set('address.city', 'Miami');
     form.touch('address.city');
 
-    const snap = form.scope('address').snapshot();
+    const snap = form.scope('address').history.snapshot();
 
     form.set('address.city', 'Dallas');
     form.set('name', 'Bob');
 
-    form.scope('address').restore(snap);
+    form.scope('address').history.restore(snap);
 
     expect(form.get('address.city')).toBe('Miami');
     expect(form.get('name')).toBe('Alice');
@@ -486,14 +502,14 @@ describe('scoped snapshot / restore', () => {
   });
 });
 
-describe('subscribeScoped — change filtering', () => {
+describe('scoped subscribe — change filtering', () => {
   test('non-scoped field changes do NOT fire the scoped listener', () => {
     const form = createForm({ defaultValues: defaults });
     const address = form.scope('address');
 
     const calls: unknown[] = [];
 
-    address.subscribeScoped((s) => calls.push(s), { sync: true });
+    address.subscribe((s) => calls.push(s), { sync: true });
     calls.length = 0; // ignore the initial sync emission
 
     // Mutate a field outside the 'address' scope.
@@ -509,7 +525,7 @@ describe('subscribeScoped — change filtering', () => {
 
     const calls: unknown[] = [];
 
-    address.subscribeScoped((s) => calls.push(s), { sync: true });
+    address.subscribe((s) => calls.push(s), { sync: true });
     calls.length = 0; // ignore the initial sync emission
 
     form.set('address.city', 'London');
@@ -517,13 +533,13 @@ describe('subscribeScoped — change filtering', () => {
     expect(calls).toHaveLength(1);
   });
 
-  test('subscribeScoped sync:true option delivers state synchronously', () => {
+  test('sync:true option delivers state synchronously', () => {
     const form = createForm({ defaultValues: defaults });
     const address = form.scope('address');
 
     let captured: unknown;
 
-    address.subscribeScoped(
+    address.subscribe(
       (s) => {
         captured = s;
       },
@@ -537,7 +553,7 @@ describe('subscribeScoped — change filtering', () => {
     expect((captured as { touchedFields: string[] }).touchedFields).toContain('city');
   });
 
-  test('isValid in subscribeScoped reflects only scoped fields, not unrelated errors', async () => {
+  test('isValid reflects only scoped fields, not unrelated errors', async () => {
     const form = createForm({
       defaultValues: defaults,
       validators: {
@@ -549,7 +565,7 @@ describe('subscribeScoped — change filtering', () => {
 
     const states: boolean[] = [];
 
-    address.subscribeScoped((s) => states.push(s.isValid));
+    address.subscribe((s) => states.push(s.isValid));
 
     // Validate only the unrelated 'name' field — address scope should still be valid.
     form.setError('name', 'Required');
@@ -562,12 +578,12 @@ describe('subscribeScoped — change filtering', () => {
     expect(states.at(-1)).toBe(false);
   });
 
-  test('isDirty in subscribeScoped is true only when a scoped field is dirty', () => {
+  test('isDirty is true only when a scoped field is dirty', () => {
     const form = createForm({ defaultValues: defaults });
     const address = form.scope('address');
     const states: boolean[] = [];
 
-    address.subscribeScoped((s) => states.push(s.isDirty));
+    address.subscribe((s) => states.push(s.isDirty));
 
     // Dirty an unrelated field — scoped isDirty must remain false.
     form.set('name', 'Changed');
@@ -580,12 +596,12 @@ describe('subscribeScoped — change filtering', () => {
     expect(states.at(-1)).toBe(true);
   });
 
-  test('isTouched in subscribeScoped is true only when a scoped field is touched', () => {
+  test('isTouched is true only when a scoped field is touched', () => {
     const form = createForm({ defaultValues: defaults });
     const address = form.scope('address');
     const states: boolean[] = [];
 
-    address.subscribeScoped((s) => states.push(s.isTouched));
+    address.subscribe((s) => states.push(s.isTouched));
 
     // Touch an unrelated field — scoped isTouched must remain false.
     form.touch('name');
@@ -718,6 +734,12 @@ describe('scoped bulk operations — patch, resetErrors, untouchAll', () => {
     expect(form.state.errors['billing.city']).toBe('Billing bad');
   });
 
+  test('resetErrors() on scoped form rejects reserved-segment keys, same as the root form', () => {
+    const form = createForm({ defaultValues: defaults });
+
+    expect(() => form.scope('address').resetErrors({ ['__proto__' as never]: 'bad' })).toThrow('Unsafe key');
+  });
+
   test('untouchAll() on scoped form untouches only scoped fields', () => {
     const form = createForm({ defaultValues: defaults });
 
@@ -728,31 +750,6 @@ describe('scoped bulk operations — patch, resetErrors, untouchAll', () => {
 
     expect(form.field('address.city').touched).toBe(false);
     expect(form.field('billing.city').touched).toBe(true);
-  });
-});
-
-describe('scoped validateStream()', () => {
-  test('yields only scoped fields, with unscoped field names', async () => {
-    const form = createForm({
-      defaultValues: defaults,
-      validators: {
-        'address.city': (v: unknown) => (!v ? 'City required' : undefined),
-        'billing.city': (v: unknown) => (!v ? 'Billing city required' : undefined),
-      },
-    });
-
-    form.set('address.city', '');
-    form.set('billing.city', '');
-
-    const address = form.scope('address');
-    const results: { error: string | undefined; field: string }[] = [];
-
-    for await (const r of address.validateStream()) {
-      results.push(r);
-    }
-
-    // Only the scoped 'address.city' validator result surfaces, renamed to the relative 'city'.
-    expect(results).toEqual([{ error: 'City required', field: 'city' }]);
   });
 });
 
@@ -767,7 +764,7 @@ describe('scoped [Symbol.asyncIterator]', () => {
     const rootFirst = await rootIter.next();
     const scopedFirst = await scopedIter.next();
 
-    // Unlike `.state` / `subscribeScoped`, the async iterator on a scoped form delegates
+    // Unlike `.state` / `subscribe`, the async iterator on a scoped form delegates
     // directly to the root form's iterator — it is not scope-filtered.
     expect(scopedFirst.value).toEqual(rootFirst.value);
 

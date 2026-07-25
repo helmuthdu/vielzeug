@@ -244,7 +244,7 @@ await address.submit((vals) => vals); // validates and submits only address.* fi
 
 1. Call `const address = form.scope('address')` once per UI/module boundary and pass that around.
 2. Use `address.validate()` / `address.submit()` instead of manually feeding `state.touchedFields` into `validate(fields[])`.
-3. Prefer `address.subscribeScoped(...)` for section UIs so sibling/root mutations do not trigger redraws.
+3. Use `address.subscribe(...)` for section UIs — on a scoped form `subscribe` is already prefix-filtered, so sibling/root mutations do not trigger redraws.
 
 **Key characteristics:**
 
@@ -253,12 +253,12 @@ await address.submit((vals) => vals); // validates and submits only address.* fi
 
 ### Scoped Subscriptions
 
-`subscribeScoped` delivers form state filtered to the scope's prefix. `errors`, `touchedFields`, and `validatingFields` use relative keys. `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect **only the scoped fields**. The listener **only fires when the scoped projection changes** — mutations outside the prefix are suppressed.
+On a scoped form, `subscribe()` delivers form state filtered to the scope's prefix. `errors`, `touchedFields`, and `validatingFields` use relative keys. `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect **only the scoped fields**. The listener **only fires when the scoped projection changes** — mutations outside the prefix are suppressed. (On a root form, `subscribe()` behaves identically to today — no filtering applies.)
 
 ```ts
 const address = form.scope('address');
 
-address.subscribeScoped((state) => {
+address.subscribe((state) => {
   // state.errors → { city: 'Required' }  (not 'address.city')
   // state.isDirty → true only when an address.* field is dirty
   // does not fire when form.set('name', 'Alice') is called
@@ -290,29 +290,18 @@ Snapshot semantics:
 - Reference identity is preserved until a relevant mutation occurs.
 - These are directly compatible with external-store patterns such as React `useSyncExternalStore`, Vue `shallowRef`, and the Svelte store protocol.
 
-## Streaming Validation
+## History (Snapshot / Restore)
 
-`validateStream()` runs all field validators in parallel and yields each result as it resolves. It is **read-only** — it does not write errors to form state. The form-level validator, if set, is yielded last with `field: '_form'`.
-
-```ts
-for await (const { field, error } of form.validateStream()) {
-  if (error) showInlineError(field, error);
-}
-// form.state.errors is unchanged after the loop
-```
-
-## Snapshots and Restore
-
-Capture and replay complete form state for undo/redo or "discard changes" flows:
+Capture and replay complete form state for undo/redo or "discard changes" flows, via the `history` namespace:
 
 ```ts
-const draft = form.snapshot();
+const draft = form.history.snapshot();
 
 // ... user edits ...
 form.set('email', 'different@example.com');
 
 // Revert all changes, including errors, touched, dirty, and submitCount
-form.restore(draft);
+form.history.restore(draft);
 ```
 
 ## Arrays

@@ -143,7 +143,7 @@ describe('debugForm', () => {
 
     // Further mutation attempts on a disposed form throw before any subscriber would run —
     // confirms no observer effects from the stale devtools subscription.
-    expect(() => form.set('email', 'b@c.com')).toThrow('Cannot modify a disposed form');
+    expect(() => form.set('email', 'b@c.com')).toThrow('Cannot call set() on a disposed form');
     expect(consoleSpy).not.toHaveBeenCalled();
   });
 

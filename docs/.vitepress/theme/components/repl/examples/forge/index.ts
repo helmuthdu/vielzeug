@@ -8,7 +8,6 @@ import { formSubscriptionsExample } from './form-subscriptions';
 import { formValidationExample } from './form-validation';
 import { schemaIntegrationExample } from './schema-integration';
 import { scopedSubFormsExample } from './scoped-sub-forms';
-import { validateStreamExample } from './validate-stream';
 
 export const forgeExamples = {
   'array-fields': arrayFieldsExample,
@@ -21,5 +20,4 @@ export const forgeExamples = {
   'form-validation': formValidationExample,
   'schema-integration': schemaIntegrationExample,
   'scoped-sub-forms': scopedSubFormsExample,
-  'validate-stream': validateStreamExample,
 };

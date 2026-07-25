@@ -110,8 +110,8 @@ describe('form lifecycle', () => {
 
     form.dispose();
 
-    expect(() => form.set('x', 2)).toThrow('Cannot modify a disposed form');
-    expect(() => form.connect('x')).toThrow('Cannot modify a disposed form');
+    expect(() => form.set('x', 2)).toThrow('Cannot call set() on a disposed form');
+    expect(() => form.connect('x')).toThrow('Cannot call connect() on a disposed form');
   });
 
   test('mutating a disposed form throws a ForgeDisposedError instance, and ForgeError.is() recognizes it', () => {

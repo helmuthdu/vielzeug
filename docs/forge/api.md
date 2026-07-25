@@ -13,13 +13,12 @@ description: Complete API reference for Forge form creation, validation, submiss
 | `form.get()` / `form.set()`                                                 | Read/write field values by dot-path                            | Sync                                           | `set()` after `dispose()` throws                                                                                      |
 | `form.field()` / `form.state`                                               | Read field and form snapshots                                  | Sync                                           | Returns a stable frozen snapshot; re-read on each subscriber call                                                     |
 | `form.validate()`                                                           | Run validation — all fields, a subset, or a single field       | Async                                          | Each call re-runs validators from scratch                                                                             |
-| `form.validateStream()`                                                     | Streaming validation — yields each field result as it resolves | Async (iterator)                               | Read-only — does not write errors to form state                                                                       |
 | `form.submit()`                                                             | Deterministic submit flow returning a `SubmitResult`           | Async                                          | Rejects if called while already submitting — guard with `form.isSubmitting`                                           |
 | `form.connect()`                                                            | Live field binding with DOM event handlers and live getters    | Sync                                           | Do not destructure — live getters lose context; call `dispose()` on unmount                                           |
 | `form.scope()`                                                              | Memoized scoped sub-form with relative field paths             | Sync                                           | Returns the same object for repeated calls with the same prefix; `state` is scoped — flags reflect only prefix fields |
 | `form.array()`                                                              | Array mutation helpers                                         | Sync                                           | Returns a cached helper — call once and reuse                                                                         |
-| `form.subscribe()` / `form.subscribeField()` / `form.subscribeScoped()`     | Synchronous form and field subscriptions                       | Sync                                           | Callbacks receive frozen snapshots                                                                                    |
-| `form.snapshot()` / `form.restore()`                                        | Capture and replay complete form state                         | Sync                                           | Useful for undo/redo and draft saving                                                                                 |
+| `form.subscribe()` / `form.subscribeField()`                                | Synchronous form and field subscriptions                       | Sync                                           | On a scoped form, `subscribe()` is already prefix-filtered — callbacks receive frozen snapshots                       |
+| `form.history.snapshot()` / `form.history.restore()`                        | Capture and replay complete form state                         | Sync                                           | Useful for undo/redo and draft saving                                                                                 |
 | `form.batch()`                                                              | Group mutations into one notification                          | Sync                                           | Nested `batch()` calls are safe — only the outermost flush notifies                                                   |
 | `form.touch()` / `form.touchAll()`                                          | Mark fields touched                                            | Sync                                           | `touchAll()` marks every key currently in the store                                                                   |
 | `form.setError()` / `form.clearError()` / `form.resetErrors()`              | Manual error management                                        | Sync                                           | `setError()` bypasses validators; cleared on next `validate()` run for that field                                     |
@@ -332,11 +331,6 @@ subscribeField<K extends FlatKeyOf<TValues>>(
   options?: SubscribeOptions,
 ): Unsubscribe
 
-subscribeScoped(
-  listener: (state: FormState) => void,
-  options?: SubscribeOptions,
-): Unsubscribe
-
 type SubscribeOptions = { sync?: boolean };
 type Unsubscribe = () => void;
 ```
@@ -345,17 +339,17 @@ Pass `{ sync: true }` to also receive the current snapshot immediately upon subs
 
 Subscriptions fire synchronously whenever the form mutates. Because state snapshots are stable (frozen, reference-equal between mutations), these integrate directly with React `useSyncExternalStore`, Vue `shallowRef`, and the Svelte store protocol.
 
-### subscribeScoped
+### subscribe on a scoped form
 
-`subscribeScoped` is available on both root forms and scoped forms:
+`subscribe` behaves differently depending on which form object it's called on:
 
 - **On a scoped form** — filters `errors`, `touchedFields`, and `validatingFields` to paths within the scope's prefix (remapped to relative paths). The listener is **only called when the scoped projection changes** — mutations outside the scope are suppressed. `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect **only the scoped fields**. `isSubmitting`, `isLoading`, and `submitCount` reflect the full form.
-- **On a root form** — behaves identically to `subscribe`; no filtering is applied.
+- **On a root form** — no filtering is applied; every mutation notifies the listener.
 
 ```ts
 const address = form.scope('address');
 
-address.subscribeScoped((state) => {
+address.subscribe((state) => {
   // state.errors uses relative keys: { city: '...' } not { 'address.city': '...' }
   // only fires when an address.* field changes
   console.log(state.errors, state.touchedFields);
@@ -382,11 +376,13 @@ type ArrayField = {
 
 `append()` and `prepend()` initialize the field as a one-item array when its current value is `undefined` or `null`. If the field already holds a non-array, non-nullish value (e.g. written by `set()`), both are a no-op — they never overwrite an existing scalar with an array. `insert()`, `remove()`, `move()`, `swap()`, and `replace()` are all no-ops when the field's current value is not an array.
 
-## Snapshot / Restore
+## History (Snapshot / Restore)
 
 ```ts
-snapshot(): FormSnapshot<TValues>
-restore(snap: FormSnapshot<TValues>): void
+history: {
+  snapshot(): FormSnapshot<TValues>;
+  restore(snap: FormSnapshot<TValues>): void;
+}
 
 type FormSnapshot<TValues> = {
   readonly baseline: Partial<Record<FlatKeyOf<TValues>, unknown>>;
@@ -398,47 +394,17 @@ type FormSnapshot<TValues> = {
 };
 ```
 
-- `snapshot()` — captures the complete form state (values, baseline, errors, touched, dirty, submitCount) into a plain object.
-- `restore(snap)` — replaces all state with the snapshot. Aborts any in-flight validation.
+- `history.snapshot()` — captures the complete form state (values, baseline, errors, touched, dirty, submitCount) into a plain object.
+- `history.restore(snap)` — replaces all state with the snapshot. Aborts any in-flight validation.
 
-Useful for undo/redo, draft saving, and "discard changes" flows:
+Namespaced off the main `Form<T>` surface since it's a distinctly less common operation than reading/writing values — grouped the same way `fields` already groups dynamic-field-lifecycle operations. Useful for undo/redo, draft saving, and "discard changes" flows:
 
 ```ts
-const draft = form.snapshot();
+const draft = form.history.snapshot();
 
 form.set('email', 'changed@example.com');
 
-form.restore(draft); // reverts all changes
-```
-
-## validateStream()
-
-```ts
-validateStream(signal?: AbortSignal): AsyncIterableIterator<{
-  error: string | undefined;
-  field: string;
-}>
-```
-
-Runs all field validators in parallel and yields each result as soon as its validator resolves. If a form-level validator is configured, all keys it returns are yielded last — including `field: '_form'` and any field-specific keys returned by the form validator.
-
-**Read-only**: `validateStream()` does not write to `fieldErrors` or trigger subscriber notifications. Use `validate()` when you want errors applied to form state.
-
-```ts
-for await (const { field, error } of form.validateStream()) {
-  if (error) showInlineError(field, error);
-}
-// After the loop: form.state.errors is unchanged
-```
-
-Pass an `AbortSignal` to cancel the stream:
-
-```ts
-const ctrl = new AbortController();
-for await (const result of form.validateStream(ctrl.signal)) {
-  processResult(result);
-}
-ctrl.abort(); // cancels any remaining in-flight validators
+form.history.restore(draft); // reverts all changes
 ```
 
 ## Baseline and Value Management
@@ -634,11 +600,14 @@ type ForgeDevtoolsOptions
 
 // Utility types
 type DeepPartial<T>
-type FlatKeyOf<TValues>
+type FlatKeyOf<TValues>              // capped at MAX_TYPED_PATH_DEPTH (5) — see below
 type TypeAtPath<TValues, K>
 type ErrorKeyOf<TValues>
 type ScopedValues<TValues, P>
+const MAX_TYPED_PATH_DEPTH  // = 5 — not user-configurable, see rationale below
 ```
+
+`FlatKeyOf` falls back to plain `string` for paths deeper than `MAX_TYPED_PATH_DEPTH` — nothing throws, you just lose autocomplete/type-checking on that specific path (a dev-only console warning fires once per deep key so this is discoverable, not silent). This is a fixed constant, not a per-form generic parameter: it exists purely to protect TypeScript compile time, which doesn't get safer by letting one form's type param regress it for everyone importing that form's module.
 
 ## Errors
 

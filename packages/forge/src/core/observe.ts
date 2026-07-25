@@ -1,9 +1,7 @@
 import { isAbortError } from '@vielzeug/arsenal';
-import { watch } from '@vielzeug/ripple';
 
 import type { FormContext } from './context';
-import type { ValidationOps } from './validation';
-import type { ValueOps } from './values';
+import type { FieldOps } from './fields';
 
 import { assertSafeKey } from '../_utils';
 import {
@@ -18,34 +16,25 @@ import {
 } from '../types';
 import { createAsyncQueue } from './asyncQueue';
 
-type ObserveDeps<TValues extends Record<string, unknown>> = Pick<ValueOps<TValues>, 'set' | 'touch'> &
-  Pick<ValidationOps<TValues>, 'validateFields'>;
+type ObserveDeps<TValues extends Record<string, unknown>> = Pick<
+  FieldOps<TValues>,
+  'set' | 'touch' | 'validateFields'
+> & {
+  /** Default `connect()` options — form-level, not part of the shared `FormContext` bag. */
+  connectDefaults: ConnectOptions;
+};
 
 /**
- * Observation operations: `subscribe`/`subscribeField`, `connect` (per-binding debounce timer),
- * and the `[Symbol.asyncIterator]` implementation. Moved verbatim from `createForm()`'s
- * "Subscriptions", "Connect", and "Async iterator" sections.
+ * Observation operations: `subscribe`/`subscribeField` (thin pass-throughs to the notifier
+ * owned by `FormContext`), `connect` (per-binding debounce timer), and the
+ * `[Symbol.asyncIterator]` implementation.
  */
 export function createObserveOps<TValues extends Record<string, unknown>>(
   ctx: FormContext<TValues>,
   deps: ObserveDeps<TValues>,
 ) {
   function subscribe(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe {
-    if (ctx.disposed) return () => {};
-
-    // Wrap listener so it always returns void — ripple watch throws on non-function returns.
-    const sub = watch(ctx.formStateSignal, (state) => {
-      listener(state);
-    });
-
-    ctx.rippleSubs.add(sub);
-
-    if (options?.sync) listener(ctx.formStateSignal.value);
-
-    return () => {
-      sub.dispose();
-      ctx.rippleSubs.delete(sub);
-    };
+    return ctx.subscribe(listener, options);
   }
 
   function subscribeField<K extends FlatKeyOf<TValues>>(
@@ -53,26 +42,11 @@ export function createObserveOps<TValues extends Record<string, unknown>>(
     listener: (state: FieldState<TypeAtPath<TValues, K>>) => void,
     options?: SubscribeOptions,
   ): Unsubscribe {
-    if (ctx.disposed) return () => {};
-
     const key = name as string;
 
     assertSafeKey(key);
 
-    const sig = ctx.getOrCreateFieldSignal(key);
-    // Wrap listener so it always returns void — ripple watch throws on non-function returns.
-    const sub = watch(sig, (state) => {
-      (listener as (state: FieldState<unknown>) => void)(state);
-    });
-
-    ctx.rippleSubs.add(sub);
-
-    if (options?.sync) listener(sig.value as FieldState<TypeAtPath<TValues, K>>);
-
-    return () => {
-      sub.dispose();
-      ctx.rippleSubs.delete(sub);
-    };
+    return ctx.subscribeField(key, listener as (state: FieldState<unknown>) => void, options);
   }
 
   /* ======== R5: Connect — per-binding debounce timer ======== */
@@ -81,17 +55,23 @@ export function createObserveOps<TValues extends Record<string, unknown>>(
     name: K,
     config?: ConnectOptions,
   ): ConnectionResult<TypeAtPath<TValues, K>> {
-    ctx.ensureNotDisposed();
+    ctx.ensureNotDisposed('connect');
 
     const key = name as string;
 
     assertSafeKey(key);
 
-    const touchOnBlur = config?.touchOnBlur ?? ctx.connectDefaults.touchOnBlur ?? false;
-    const validateOnBlur = config?.validateOnBlur ?? ctx.connectDefaults.validateOnBlur ?? false;
-    const validateOnChange = config?.validateOnChange ?? ctx.connectDefaults.validateOnChange ?? false;
-    const validateOnTouch = config?.validateOnTouch ?? ctx.connectDefaults.validateOnTouch ?? false;
-    const debounceMs = config?.debounce ?? ctx.connectDefaults.debounce ?? 0;
+    // Three-way fallback (per-call config -> form-level default -> hard default), one place
+    // instead of a copy-pasted `config?.x ?? deps.connectDefaults.x ?? fallback` per option.
+    function resolve<Opt extends keyof ConnectOptions>(option: Opt, fallback: NonNullable<ConnectOptions[Opt]>) {
+      return config?.[option] ?? deps.connectDefaults[option] ?? fallback;
+    }
+
+    const touchOnBlur = resolve('touchOnBlur', false);
+    const validateOnBlur = resolve('validateOnBlur', false);
+    const validateOnChange = resolve('validateOnChange', false);
+    const validateOnTouch = resolve('validateOnTouch', false);
+    const debounceMs = resolve('debounce', 0);
 
     // R5: each connect() call owns its own timer — cancelling one binding never affects another.
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;

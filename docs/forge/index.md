@@ -108,17 +108,15 @@ if (!submission.ok && submission.type === 'validation') {
 
 - Typed field paths with compile-time value inference
 - Explicit validation API: `validate()`, `validate(name)`, and `validate(fields[])`
-- Streaming validation with `validateStream()` — yields each field result as it resolves, read-only
 - Per-connection validation triggers via `connect()` with `ValidationModes` presets
 - `connect()` bindings own independent debounce timers; call `binding.dispose()` on unmount
 - `submit(handler)` — returns `{ ok: true, value }` or `{ ok: false, errors }`
 - Schema integration: pass any `safeParse`-compatible schema directly to `validator`
-- `scope(prefix)` — memoized scoped sub-forms that share parent state with relative field paths
-- `subscribeScoped()` — filtered subscription that only fires on changes within the scope's prefix
-- `snapshot()` / `restore()` — capture and replay complete form state
+- `scope(prefix)` — memoized scoped sub-forms that share parent state with relative field paths; `subscribe()` on a scoped form filters to just that prefix
+- `history.snapshot()` / `history.restore()` — capture and replay complete form state
 - `form.fields.remove(name)` — clean conditional field lifecycle
 - Full array helpers: `append`, `prepend`, `insert`, `remove`, `move`, `swap`, `replace`
-- Explicit synchronous subscriptions: `subscribe`, `subscribeField`, and `subscribeScoped`
+- Explicit synchronous subscriptions: `subscribe` (form or scoped-form state) and `subscribeField` (one field)
 - Stable frozen snapshots for `form.state` and `form.field(name)` (external-store friendly)
 - Explicit touched and error controls: `touch`, `untouch`, `touchAll`, `untouchAll`, `setError`, `resetErrors`
 - Mutation batching with `batch(fn)` and dynamic field validators via `fields.setValidator`

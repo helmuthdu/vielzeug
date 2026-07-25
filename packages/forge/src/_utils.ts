@@ -1,5 +1,6 @@
 import { devOnly, warn } from './_dev';
 import { ForgeConfigError } from './errors';
+import { MAX_TYPED_PATH_DEPTH } from './types';
 
 export { flattenPaths as flattenValues, isPlainObject, unflattenPaths as unflattenValues } from '@vielzeug/arsenal';
 
@@ -21,15 +22,16 @@ export function assertSafeKey(key: string): void {
 const warnedDeepPaths = new Set<string>();
 
 /**
- * FlatKeyOf intentionally caps recursive path typing depth for TS performance.
- * Warn once per deep key in dev so callers notice when path type inference likely fell back to `string`.
+ * FlatKeyOf intentionally caps recursive path typing depth for TS performance (see
+ * `MAX_TYPED_PATH_DEPTH` in types.ts). Warn once per deep key in dev so callers notice
+ * when path type inference likely fell back to `string`.
  */
 function warnIfDeepPathTypeFallback(key: string): void {
   if (!key.includes('.')) return;
 
   const depth = key.split('.').length;
 
-  if (depth <= 5 || warnedDeepPaths.has(key)) return;
+  if (depth <= MAX_TYPED_PATH_DEPTH || warnedDeepPaths.has(key)) return;
 
   warnedDeepPaths.add(key);
 

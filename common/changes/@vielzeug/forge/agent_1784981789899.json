@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor(forge): move snapshot/restore to form.history, remove subscribeScoped()/validateStream(), merge values/validation into core/fields.ts with shared bulk-op primitives, extract core/notifier.ts, fix reset()/replace() dropping validator-only field state",
+      "packageName": "@vielzeug/forge",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/forge"
+}

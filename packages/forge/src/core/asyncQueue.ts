@@ -1,7 +1,7 @@
 /**
  * A minimal push-based async queue exposing an `AsyncIterableIterator`.
- * Shared by `validateStream()` and `form[Symbol.asyncIterator]()`, which otherwise hand-roll
- * near-identical `queue`/`waitingResolve`/`done` plumbing.
+ * Used by `form[Symbol.asyncIterator]()` to turn a `subscribe()` callback into a pull-based
+ * `for await` stream without hand-rolling `waitingResolve`/`done` plumbing at the call site.
  *
  * - `push()` delivers an item to a waiting `next()` call, or buffers it for the next one.
  * - `finish()` marks the queue complete; any items already buffered are still drained by

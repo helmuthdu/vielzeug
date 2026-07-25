@@ -19,57 +19,50 @@ import type {
   Unsubscribe,
   ValidateResult,
 } from '../types';
+import type { FormContext } from './context';
+import type { FieldOps } from './fields';
 
 import { flattenValues, unflattenValues } from '../_utils';
 import { ForgeSubmitError, ForgeValidationError } from '../errors';
 
 /**
- * R3: Slim ScopeContext — delegates simple operations through `root: Form<TValues>`.
- * Only the Maps/Sets needed for bulk scoped operations are passed directly.
+ * Everything a scoped sub-form needs from its parent. Deliberately just three members —
+ * `ctx` (the same `FormContext` the root form's own ops read/write, not a copy of its
+ * fields) and a narrow slice of `fieldOps`'s predicate-based bulk primitives
+ * (`reset`/`replace`/`patch`/`touchAll`/`untouchAll`/`resetErrors`'s shared implementations,
+ * plus `runValidationCore`). Bulk scoped operations call these with an `isScopedKey`
+ * predicate instead of maintaining a second copy of each loop.
  * @internal
  */
 export interface ScopeContext<TValues extends Record<string, unknown> = Record<string, unknown>> {
+  ctx: FormContext<TValues>;
+  fieldOps: Pick<
+    FieldOps<TValues>,
+    | 'patchKeys'
+    | 'replaceKeys'
+    | 'resetErrorsKeys'
+    | 'resetKeys'
+    | 'runValidationCore'
+    | 'touchAllKeys'
+    | 'untouchAllKeys'
+  >;
   /** The fully-featured root form — used for all simple one-field delegations. */
   root: Form<TValues>;
-
-  /* ---- Shared mutable state (passed by reference, needed by bulk scoped ops) ---- */
-  store: Map<string, unknown>;
-  baseline: Map<string, unknown>;
-  validators: Map<string, FieldValidator<unknown>>;
-  fieldErrors: Map<string, string>;
-  touched: Set<string>;
-  dirty: Set<string>;
-  fieldCtrls: Map<string, AbortController>;
-
-  /* ---- Scalar state accessors ---- */
-  isSubmitting(): boolean;
-  setSubmitting(value: boolean): void;
-  incrementSubmitCount(): void;
-  isDisposed(): boolean;
-
-  /* ---- Core helpers ---- */
-  ensureNotDisposed(): void;
-  invalidateErrors(): void;
-  requestNotify(target?: string | Iterable<string>): void;
-  getStateSnapshot(): FormState;
-
-  /* ---- Validation core (needed for scoped validate/submit) ---- */
-  runValidationCore(
-    fields: string[],
-    scope: 'full' | 'partial',
-    signal?: AbortSignal,
-  ): Promise<ValidateResult & { aborted: boolean }>;
 }
 
 /**
  * Creates a scoped sub-form whose field paths are relative to `pfx`.
- * All simple single-field operations delegate to `ctx.root`.
- * Only prefix-aware bulk operations (submit, validate, replace, reset, etc.) contain custom code.
+ * All simple single-field operations delegate to `scopeCtx.root`. Bulk operations
+ * (reset, replace, patch, touchAll, untouchAll, resetErrors) call `scopeCtx.fieldOps`'s
+ * shared predicate-based primitives with an `isScopedKey` filter. Only `validate`/`submit`
+ * (which need to compute a scoped field-name subset before calling `runValidationCore`) and
+ * the handful of read-only projections (`state`, `values`, `fields.list`) contain custom code.
  */
 export function createScopedForm<TValues extends Record<string, unknown>, P extends string>(
-  ctx: ScopeContext<TValues>,
+  scopeCtx: ScopeContext<TValues>,
   pfx: P,
 ): Form<ScopedValues<TValues, P>> {
+  const { ctx, fieldOps, root } = scopeCtx;
   const pfxDot = `${pfx}.`;
 
   function pre(name: string): string {
@@ -149,115 +142,39 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
   }
 
   function scopedTouchAll(): void {
-    ctx.ensureNotDisposed();
-
-    for (const name of ctx.store.keys()) {
-      if (isScopedKey(name)) ctx.touched.add(name);
-    }
-
-    for (const name of ctx.validators.keys()) {
-      if (isScopedKey(name)) ctx.touched.add(name);
-    }
-
+    ctx.ensureNotDisposed('touchAll');
+    fieldOps.touchAllKeys(isScopedKey);
     ctx.requestNotify();
   }
 
   function scopedUntouchAll(): void {
-    ctx.ensureNotDisposed();
-
-    for (const name of [...ctx.touched]) {
-      if (isScopedKey(name)) ctx.touched.delete(name);
-    }
-
+    ctx.ensureNotDisposed('untouchAll');
+    fieldOps.untouchAllKeys(isScopedKey);
     ctx.requestNotify();
   }
 
   function scopedReset(): void {
-    ctx.ensureNotDisposed();
-
-    for (const key of [...ctx.store.keys()]) {
-      if (!isScopedKey(key)) continue;
-
-      ctx.fieldCtrls.get(key)?.abort();
-      ctx.fieldCtrls.delete(key);
-      ctx.store.set(key, ctx.baseline.get(key));
-      ctx.dirty.delete(key);
-      ctx.touched.delete(key);
-
-      if (ctx.fieldErrors.delete(key)) ctx.invalidateErrors();
-    }
-
+    ctx.ensureNotDisposed('reset');
+    fieldOps.resetKeys(isScopedKey);
     ctx.requestNotify();
   }
 
   function scopedReplace(newValues: ScopedValues<TValues, P>): void {
-    ctx.ensureNotDisposed();
-
-    for (const key of [...ctx.fieldCtrls.keys()]) {
-      if (isScopedKey(key)) {
-        ctx.fieldCtrls.get(key)?.abort();
-        ctx.fieldCtrls.delete(key);
-      }
-    }
-
-    const flat = flattenValues(newValues as Record<string, unknown>);
-
-    for (const key of [...ctx.store.keys()]) {
-      if (!isScopedKey(key)) continue;
-
-      ctx.store.delete(key);
-      ctx.baseline.delete(key);
-      ctx.dirty.delete(key);
-      ctx.touched.delete(key);
-      ctx.fieldErrors.delete(key);
-    }
-
-    ctx.invalidateErrors();
-
-    for (const [key, value] of Object.entries(flat)) {
-      const full = pre(key);
-
-      ctx.store.set(full, value);
-      ctx.baseline.set(full, value);
-    }
-
+    ctx.ensureNotDisposed('replace');
+    fieldOps.replaceKeys(isScopedKey, flattenValues(newValues as Record<string, unknown>), pre);
     ctx.requestNotify();
   }
 
   function scopedPatch(partial: Record<string, unknown>): void {
-    ctx.ensureNotDisposed();
-
-    const flat = flattenValues(partial);
-    const changedKeys: string[] = [];
-
-    for (const [key, value] of Object.entries(flat)) {
-      const full = pre(key);
-
-      ctx.baseline.set(full, value);
-      ctx.store.set(full, value);
-      ctx.dirty.delete(full);
-      changedKeys.push(full);
-    }
-
-    ctx.requestNotify(changedKeys);
+    ctx.ensureNotDisposed('patch');
+    ctx.requestNotify(fieldOps.patchKeys(partial, pre));
   }
 
   function scopedResetErrors(
     nextErrors?: Partial<Record<ErrorKeyOf<ScopedValues<TValues, P>>, string | undefined>>,
   ): void {
-    ctx.ensureNotDisposed();
-
-    for (const key of [...ctx.fieldErrors.keys()]) {
-      if (isScopedKey(key)) ctx.fieldErrors.delete(key);
-    }
-
-    if (nextErrors) {
-      for (const [key, message] of Object.entries(nextErrors)) {
-        if (typeof message === 'string') ctx.fieldErrors.set(pre(key), message);
-      }
-    }
-
-    ctx.invalidateErrors();
+    ctx.ensureNotDisposed('resetErrors');
+    fieldOps.resetErrorsKeys(isScopedKey, nextErrors ?? {}, pre);
     ctx.requestNotify();
   }
 
@@ -265,7 +182,7 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     nameOrFieldsOrSignal?: FlatKeyOf<ScopedValues<TValues, P>> | FlatKeyOf<ScopedValues<TValues, P>>[] | AbortSignal,
     signal?: AbortSignal,
   ): Promise<ValidateResult> {
-    ctx.ensureNotDisposed();
+    ctx.ensureNotDisposed('validate');
 
     if (
       nameOrFieldsOrSignal !== undefined &&
@@ -275,7 +192,7 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
       // validate(name) — single field
       const prefixedName = pre(nameOrFieldsOrSignal as string) as FlatKeyOf<TValues>;
 
-      await ctx.runValidationCore([prefixedName as string], 'partial', signal);
+      await fieldOps.runValidationCore([prefixedName as string], 'partial', signal);
 
       const error = ctx.fieldErrors.get(prefixedName as string);
 
@@ -289,7 +206,7 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
       // validate(fields[]) — specific subset
       const prefixedFields = nameOrFieldsOrSignal.map((f) => pre(f as string)) as string[];
 
-      await ctx.runValidationCore(prefixedFields, 'partial', signal);
+      await fieldOps.runValidationCore(prefixedFields, 'partial', signal);
 
       const errors: Record<string, string> = {};
 
@@ -306,7 +223,7 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     const sig = nameOrFieldsOrSignal as AbortSignal | undefined;
     const fields = [...ctx.validators.keys()].filter(isScopedKey);
 
-    await ctx.runValidationCore(fields, 'partial', sig);
+    await fieldOps.runValidationCore(fields, 'partial', sig);
 
     const errors: Record<string, string> = {};
 
@@ -320,22 +237,22 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
   async function scopedSubmit<TResult>(
     handler: (values: ScopedValues<TValues, P>) => MaybePromise<TResult>,
   ): Promise<SubmitResult<TResult>> {
-    ctx.ensureNotDisposed();
+    ctx.ensureNotDisposed('submit');
 
-    if (ctx.isSubmitting()) throw new ForgeSubmitError('submit() called while a submission is already in progress');
+    if (ctx.isSubmittingState) throw new ForgeSubmitError('submit() called while a submission is already in progress');
 
-    ctx.root.batch(() => {
-      ctx.incrementSubmitCount();
-      ctx.setSubmitting(true);
+    ctx.batch(() => {
+      ctx.submitCount++;
+      ctx.isSubmittingState = true;
       scopedTouchAll();
     });
 
     try {
       const fields = [...ctx.validators.keys()].filter(isScopedKey);
 
-      await ctx.runValidationCore(fields, 'partial');
+      await fieldOps.runValidationCore(fields, 'partial');
 
-      ctx.ensureNotDisposed();
+      ctx.ensureNotDisposed('submit');
 
       const errors: Record<string, string> = {};
 
@@ -349,14 +266,14 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
 
       return { ok: true as const, value: await handler(scopedValues()) };
     } finally {
-      ctx.setSubmitting(false);
+      ctx.isSubmittingState = false;
 
-      if (!ctx.isDisposed()) ctx.requestNotify();
+      if (!ctx.disposed) ctx.requestNotify();
     }
   }
 
   /**
-   * Subscribe filtered to scoped fields only.
+   * Subscribe filtered to scoped fields only — this scoped form's `subscribe()` implementation.
    * Errors, touchedFields, and validatingFields are remapped to relative paths.
    * `isValid`, `isDirty`, and `isTouched` reflect only fields within this scope's prefix.
    * `isSubmitting`, `isLoading`, `isValidating`, and `submitCount` reflect the full form.
@@ -364,11 +281,11 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
    * The listener fires only when the scoped projection changes — mutations outside this
    * prefix do not fire the listener.
    */
-  function subscribeScoped(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe {
+  function scopedSubscribe(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe {
     // Track the previous scoped projection for equality comparison.
     let prevState: FormState | null = null;
 
-    return ctx.root.subscribe(() => {
+    return root.subscribe(() => {
       const next = getScopedState();
 
       // Skip if no scoped-relevant state has changed.
@@ -407,57 +324,57 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
   function createScopedAdapter() {
     return {
       array(name: string): ArrayField {
-        return ctx.root.array(pre(name) as FlatKeyOf<TValues>) as ArrayField;
+        return root.array(pre(name) as FlatKeyOf<TValues>) as ArrayField;
       },
       clearError(name: string): void {
-        ctx.root.clearError(pre(name) as ErrorKeyOf<TValues>);
+        root.clearError(pre(name) as ErrorKeyOf<TValues>);
       },
       connect(name: string, config?: ConnectOptions): ConnectionResult<unknown> {
-        return ctx.root.connect(pre(name) as FlatKeyOf<TValues>, config) as ConnectionResult<unknown>;
+        return root.connect(pre(name) as FlatKeyOf<TValues>, config) as ConnectionResult<unknown>;
       },
       field(name: string): FieldState<unknown> {
-        return ctx.root.field(pre(name) as FlatKeyOf<TValues>) as FieldState<unknown>;
+        return root.field(pre(name) as FlatKeyOf<TValues>) as FieldState<unknown>;
       },
       get(name: string): unknown {
-        return ctx.root.get(pre(name) as FlatKeyOf<TValues>);
+        return root.get(pre(name) as FlatKeyOf<TValues>);
       },
       register(name: string, options?: RegisterFieldOptions<unknown>): Unsubscribe {
-        return ctx.root.fields.register(
+        return root.fields.register(
           pre(name) as FlatKeyOf<TValues>,
           options as RegisterFieldOptions<TypeAtPath<TValues, FlatKeyOf<TValues>>>,
         );
       },
       remove(name: string): void {
-        ctx.root.fields.remove(pre(name) as FlatKeyOf<TValues>);
+        root.fields.remove(pre(name) as FlatKeyOf<TValues>);
       },
       resetField(name: string): void {
-        ctx.root.resetField(pre(name) as FlatKeyOf<TValues>);
+        root.resetField(pre(name) as FlatKeyOf<TValues>);
       },
       set(name: string, value: unknown, options?: SetOptions): void {
-        ctx.root.set(pre(name) as FlatKeyOf<TValues>, value as TypeAtPath<TValues, FlatKeyOf<TValues>>, options);
+        root.set(pre(name) as FlatKeyOf<TValues>, value as TypeAtPath<TValues, FlatKeyOf<TValues>>, options);
       },
       setError(name: string, message: string): void {
-        ctx.root.setError(pre(name) as ErrorKeyOf<TValues>, message);
+        root.setError(pre(name) as ErrorKeyOf<TValues>, message);
       },
       setValidator(name: string, validator?: FieldValidator): void {
-        ctx.root.fields.setValidator(pre(name) as FlatKeyOf<TValues>, validator);
+        root.fields.setValidator(pre(name) as FlatKeyOf<TValues>, validator);
       },
       subscribeField(
         name: string,
         listener: (state: FieldState<unknown>) => void,
         options?: SubscribeOptions,
       ): Unsubscribe {
-        return ctx.root.subscribeField(
+        return root.subscribeField(
           pre(name) as FlatKeyOf<TValues>,
           listener as (state: FieldState<TypeAtPath<TValues, FlatKeyOf<TValues>>>) => void,
           options,
         );
       },
       touch(name: string): void {
-        ctx.root.touch(pre(name) as FlatKeyOf<TValues>);
+        root.touch(pre(name) as FlatKeyOf<TValues>);
       },
       untouch(name: string): void {
-        ctx.root.untouch(pre(name) as FlatKeyOf<TValues>);
+        root.untouch(pre(name) as FlatKeyOf<TValues>);
       },
     };
   }
@@ -473,17 +390,17 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
       adapter.array(name as string) as ArrayField<
         TypeAtPath<S, typeof name> extends readonly (infer E)[] ? E : unknown
       >,
-    batch: (fn) => ctx.root.batch(fn),
+    batch: (fn) => root.batch(fn),
     clearError: (name) => adapter.clearError(name as string),
     connect: (name, config?) => adapter.connect(name as string, config) as ConnectionResult<TypeAtPath<S, typeof name>>,
     get disposalSignal() {
-      return ctx.root.disposalSignal;
+      return root.disposalSignal;
     },
     dispose: () => {
       /* Scoped forms share lifecycle with parent — call parentForm.dispose() to tear down */
     },
     get disposed() {
-      return ctx.isDisposed();
+      return ctx.disposed;
     },
     field: (name) => adapter.field(name as string) as FieldState<TypeAtPath<S, typeof name>>,
     fields: {
@@ -493,26 +410,27 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
       setValidator: (name, validator?) => adapter.setValidator(name as string, validator),
     },
     get: (name) => adapter.get(name as string) as TypeAtPath<S, typeof name>,
+    history: {
+      // Casts are irreducible: FormSnapshot<S> and FormSnapshot<TValues> are structurally
+      // unrelated generic instantiations -- TS cannot verify one against the other.
+      restore: (snap) => root.history.restore(snap as FormSnapshot<TValues>),
+      snapshot: () => root.history.snapshot() as FormSnapshot<S>,
+    },
     get isLoading() {
-      return ctx.root.isLoading;
+      return root.isLoading;
     },
     get isSubmitting() {
-      return ctx.root.isSubmitting;
+      return root.isSubmitting;
     },
     patch: scopedPatch as Form<S>['patch'],
     replace: scopedReplace as Form<S>['replace'],
     reset: scopedReset,
     resetErrors: scopedResetErrors as Form<S>['resetErrors'],
     resetField: (name) => adapter.resetField(name as string),
-    // Cast is irreducible: FormSnapshot<ScopedValues<TValues,P>> and FormSnapshot<TValues> are
-    // structurally unrelated generic instantiations -- TS cannot verify one against the other.
-    restore: (snap) => ctx.root.restore(snap as FormSnapshot<TValues>),
-    scope: (subPrefix) => createScopedForm(ctx, pre(subPrefix as string)) as Form<ScopedValues<S, typeof subPrefix>>,
+    scope: (subPrefix) =>
+      createScopedForm(scopeCtx, pre(subPrefix as string)) as Form<ScopedValues<S, typeof subPrefix>>,
     set: (name, value, options?: SetOptions) => adapter.set(name as string, value, options),
     setError: (name, message) => adapter.setError(name as string, message),
-    // Cast is irreducible: FormSnapshot<TValues> and FormSnapshot<ScopedValues<TValues,P>> are
-    // structurally unrelated generic instantiations -- TS cannot verify one against the other.
-    snapshot: () => ctx.root.snapshot() as FormSnapshot<S>,
     get state() {
       return getScopedState();
     },
@@ -524,11 +442,11 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
 
       return result.value;
     },
-    subscribe: (listener, options?) => ctx.root.subscribe(listener, options),
+    // Scoped forms filter+remap; on a root form this method is the unfiltered notifier pass-through.
+    subscribe: scopedSubscribe,
     subscribeField: (name, listener, options?) =>
       adapter.subscribeField(name as string, listener as (state: FieldState<unknown>) => void, options),
-    subscribeScoped,
-    [Symbol.asyncIterator]: () => ctx.root[Symbol.asyncIterator](),
+    [Symbol.asyncIterator]: () => root[Symbol.asyncIterator](),
     [Symbol.dispose]() {
       this.dispose();
     },
@@ -537,30 +455,6 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     untouch: (name) => adapter.untouch(name as string),
     untouchAll: scopedUntouchAll,
     validate: scopedValidate as Form<S>['validate'],
-    validateStream(signal?) {
-      const rootIter = ctx.root.validateStream(signal);
-
-      const iter: AsyncIterableIterator<{ error: string | undefined; field: string }> = {
-        async next() {
-          for (;;) {
-            const item = await rootIter.next();
-
-            if (item.done) return item;
-
-            if (isScopedKey(item.value.field))
-              return { done: false, value: { error: item.value.error, field: unscope(item.value.field) } };
-          }
-        },
-        return() {
-          return rootIter.return ? rootIter.return() : Promise.resolve({ done: true as const, value: undefined });
-        },
-        [Symbol.asyncIterator]() {
-          return this;
-        },
-      };
-
-      return iter;
-    },
     values: scopedValues,
   };
 }

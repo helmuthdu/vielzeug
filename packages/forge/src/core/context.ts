@@ -1,19 +1,20 @@
-import { batch as rippleBatch, signal, type Signal } from '@vielzeug/ripple';
+import { batch as rippleBatch } from '@vielzeug/ripple';
 
 import { assertSafeKey, flattenValues, isSafeKey } from '../_utils';
 import { ForgeDisposedError } from '../errors';
 import {
   type ArrayField,
-  type ConnectOptions,
   type FieldState,
   type FieldValidator,
   FORM_ERROR,
-  type Form,
   type FormOptions,
   type FormState,
   type FormValidator,
   type SafeParseSchema,
+  type SubscribeOptions,
+  type Unsubscribe,
 } from '../types';
+import { createNotifier } from './notifier';
 
 /**
  * Resolves the `validator` option to a FormValidator.
@@ -53,55 +54,52 @@ function resolveFormValidator<TValues extends Record<string, unknown>>(
 }
 
 /**
- * Shared mutable state + primitives passed to every createForm() sub-module factory
- * (`createValueOps`, `createValidationOps`, `createObserveOps`, `createLifecycleOps`).
- * Mirrors the `ScopeContext` pattern already established in `internal/scope.ts`.
+ * Shared mutable state for the field/validator Maps + lifecycle primitives, passed to every
+ * `createForm()` sub-module factory (`createFieldOps`, `createObserveOps`, `createLifecycleOps`).
+ * Mirrors the `ScopeContext` pattern already established in `scope.ts`.
+ *
+ * Notably absent: signals, subscriptions, and derived-state caching. Those have no dependency
+ * on the field/validator Maps below — only on "what does current state look like," computed
+ * here via `computeState`/`buildFieldState` — so they live in their own `Notifier` instance
+ * (`core/notifier.ts`) instead of this shared bag. `requestNotify`/`getStateSnapshot`/
+ * `getFieldSnapshot`/`subscribe`/`subscribeField` below are thin pass-throughs to that
+ * notifier, kept on `FormContext` purely so the other ops modules don't need two objects.
  * @internal
  */
 export type FormContext<TValues extends Record<string, unknown> = Record<string, unknown>> = {
   arrayCache: Map<string, ArrayField>;
   baseline: Map<string, unknown>;
   batch(fn: () => void): void;
-  buildFieldState(name: string): FieldState<unknown>;
-  cachedErrors: Readonly<Record<string, string>> | null;
   cachedValues: TValues | null;
   computeErrors(): Readonly<Record<string, string>>;
-  computeState(): FormState;
-  connectDefaults: ConnectOptions;
   dirty: Set<string>;
+  dispose(): void;
   disposeController: AbortController;
   disposed: boolean;
-  ensureNotDisposed(): void;
+  ensureNotDisposed(op?: string): void;
   fieldCtrls: Map<string, AbortController>;
   fieldErrors: Map<string, string>;
-  fieldSignals: Map<string, Signal<FieldState<unknown>>>;
-  fieldStateCache: Map<string, FieldState<unknown>>;
-  formStateSignal: Signal<FormState>;
   formValidator: FormValidator<TValues> | undefined;
   getFieldSnapshot(name: string): FieldState<unknown>;
-  getOrCreateFieldSignal(key: string): Signal<FieldState<unknown>>;
   getStateSnapshot(): FormState;
   invalidateErrors(): void;
   invalidateValues(): void;
   isSubmittingState: boolean;
   loadingState: boolean;
   requestNotify(target?: string | Iterable<string>): void;
-  rippleSubs: Set<{ dispose(): void }>;
   runCtrls: Set<AbortController>;
-  scopeCache: Map<string, Form<never>>;
   store: Map<string, unknown>;
   submitCount: number;
+  subscribe(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe;
+  subscribeField(name: string, listener: (state: FieldState<unknown>) => void, options?: SubscribeOptions): Unsubscribe;
   touched: Set<string>;
   validatingRuns: Map<string, Set<symbol>>;
   validators: Map<string, FieldValidator<unknown>>;
 };
 
 /**
- * Builds the raw mutable state + shared primitives for a form. This is the "Core state" +
- * "Notification helpers" sections of the original monolithic `createForm()` body, factored
- * out so `internal/values.ts`, `internal/validation.ts`, `internal/observe.ts`, and
- * `internal/lifecycle.ts` can each operate on the same shared state without closing over
- * ad-hoc free variables.
+ * Builds the raw mutable state + shared primitives for a form: the field/validator Maps,
+ * the notifier that turns mutations into signal updates, and the caches derived from both.
  */
 export function createFormContext<TValues extends Record<string, unknown> = Record<string, unknown>>(
   init: FormOptions<TValues>,
@@ -116,7 +114,6 @@ export function createFormContext<TValues extends Record<string, unknown> = Reco
   }
 
   const formValidator: FormValidator<TValues> | undefined = resolveFormValidator(init.validator);
-  const connectDefaults: ConnectOptions = init.connect ?? {};
 
   /* ---- Core state ---- */
 
@@ -145,9 +142,7 @@ export function createFormContext<TValues extends Record<string, unknown> = Reco
 
   let cachedValues: TValues | null = null;
   let cachedErrors: Readonly<Record<string, string>> | null = null;
-  const fieldStateCache = new Map<string, FieldState<unknown>>();
   const arrayCache = new Map<string, ArrayField>();
-  const scopeCache = new Map<string, Form<never>>();
 
   /* ---- Submission state ---- */
 
@@ -158,30 +153,7 @@ export function createFormContext<TValues extends Record<string, unknown> = Reco
 
   let disposed = false;
 
-  /* ---- Reactive signals ---- */
-
-  const fieldSignals = new Map<string, Signal<FieldState<unknown>>>();
-  const rippleSubs = new Set<{ dispose(): void }>();
-
-  function getOrCreateFieldSignal(key: string): Signal<FieldState<unknown>> {
-    if (!fieldSignals.has(key)) {
-      fieldSignals.set(
-        key,
-        signal<FieldState<unknown>>(buildFieldState(key), {
-          equals: (a, b) =>
-            a.value === b.value &&
-            a.error === b.error &&
-            a.hasError === b.hasError &&
-            a.touched === b.touched &&
-            a.dirty === b.dirty,
-        }),
-      );
-    }
-
-    return fieldSignals.get(key)!;
-  }
-
-  /* ======== Notification helpers ======== */
+  /* ======== Derived state (fed to the notifier below) ======== */
 
   function invalidateValues(): void {
     cachedValues = null;
@@ -210,12 +182,6 @@ export function createFormContext<TValues extends Record<string, unknown> = Reco
     });
   }
 
-  const formStateSignal = signal<FormState>(computeState());
-
-  function getStateSnapshot(): FormState {
-    return formStateSignal.value;
-  }
-
   function buildFieldState(name: string): FieldState<unknown> {
     const error = fieldErrors.get(name);
 
@@ -228,75 +194,25 @@ export function createFormContext<TValues extends Record<string, unknown> = Reco
     };
   }
 
-  function getFieldSnapshot(name: string): FieldState<unknown> {
-    const cached = fieldStateCache.get(name);
-
-    if (cached) return cached;
-
-    const snap = Object.freeze(buildFieldState(name));
-
-    fieldStateCache.set(name, snap);
-
-    return snap;
-  }
-
-  /**
-   * R4: Unified notification — replaces requestNotify(field?) + requestNotifyFields(fields).
-   * - undefined  → full-form refresh (all field signals + form signal)
-   * - string     → single field + form signal
-   * - Iterable   → targeted set of fields + form signal
-   * rippleBatch deduplicates signal writes within the synchronous call stack.
-   */
-  function requestNotify(target?: string | Iterable<string>): void {
-    if (disposed) return;
-
-    invalidateValues();
-    cachedErrors = null;
-
-    if (target === undefined) {
-      fieldStateCache.clear();
-      rippleBatch(() => {
-        formStateSignal.value = computeState();
-
-        for (const [name, sig] of fieldSignals) sig.value = buildFieldState(name);
-      });
-    } else if (typeof target === 'string') {
-      fieldStateCache.delete(target);
-      rippleBatch(() => {
-        formStateSignal.value = computeState();
-
-        const sig = fieldSignals.get(target);
-
-        if (sig) sig.value = buildFieldState(target);
-      });
-    } else {
-      // Materialize before rippleBatch so the iterable isn't consumed inside the callback.
-      const fields = [...target];
-
-      for (const field of fields) fieldStateCache.delete(field);
-
-      rippleBatch(() => {
-        formStateSignal.value = computeState();
-
-        for (const field of fields) {
-          const sig = fieldSignals.get(field);
-
-          if (sig) sig.value = buildFieldState(field);
-        }
-      });
-    }
-  }
+  const notifier = createNotifier({
+    buildFieldState,
+    computeState,
+    invalidateCaches() {
+      invalidateValues();
+      invalidateErrors();
+    },
+  });
 
   /* ======== Lifecycle guards ======== */
 
-  function ensureNotDisposed(): void {
-    if (disposed) throw new ForgeDisposedError();
+  function ensureNotDisposed(op?: string): void {
+    if (disposed) throw new ForgeDisposedError(op);
   }
 
   /* ======== Batch ======== */
 
   function batch(fn: () => void): void {
-    ensureNotDisposed();
+    ensureNotDisposed('batch');
 
     try {
       rippleBatch(fn);
@@ -304,22 +220,27 @@ export function createFormContext<TValues extends Record<string, unknown> = Reco
       // rippleBatch clears its pending-subscriber queue on error to prevent
       // stale flushes on future unrelated writes. Re-notify here so subscribers
       // still see the partial mutations that succeeded before the throw.
-      requestNotify();
+      notifier.requestNotify();
       throw e;
     }
+  }
+
+  function dispose(): void {
+    disposed = true;
+    disposeController.abort();
+
+    for (const ctrl of fieldCtrls.values()) ctrl.abort();
+
+    fieldCtrls.clear();
+    runCtrls.clear();
+    arrayCache.clear();
+    notifier.dispose();
   }
 
   return {
     arrayCache,
     baseline,
     batch,
-    buildFieldState,
-    get cachedErrors() {
-      return cachedErrors;
-    },
-    set cachedErrors(value) {
-      cachedErrors = value;
-    },
     get cachedValues() {
       return cachedValues;
     },
@@ -327,26 +248,18 @@ export function createFormContext<TValues extends Record<string, unknown> = Reco
       cachedValues = value;
     },
     computeErrors,
-    computeState,
-    connectDefaults,
     dirty,
+    dispose,
     disposeController,
     get disposed() {
       return disposed;
     },
-    set disposed(value) {
-      disposed = value;
-    },
     ensureNotDisposed,
     fieldCtrls,
     fieldErrors,
-    fieldSignals,
-    fieldStateCache,
-    formStateSignal,
     formValidator,
-    getFieldSnapshot,
-    getOrCreateFieldSignal,
-    getStateSnapshot,
+    getFieldSnapshot: notifier.getFieldSnapshot,
+    getStateSnapshot: notifier.getStateSnapshot,
     invalidateErrors,
     invalidateValues,
     get isSubmittingState() {
@@ -361,10 +274,8 @@ export function createFormContext<TValues extends Record<string, unknown> = Reco
     set loadingState(value) {
       loadingState = value;
     },
-    requestNotify,
-    rippleSubs,
+    requestNotify: notifier.requestNotify,
     runCtrls,
-    scopeCache,
     store,
     get submitCount() {
       return submitCount;
@@ -372,6 +283,8 @@ export function createFormContext<TValues extends Record<string, unknown> = Reco
     set submitCount(value) {
       submitCount = value;
     },
+    subscribe: notifier.subscribe,
+    subscribeField: notifier.subscribeField,
     touched,
     validatingRuns,
     validators,

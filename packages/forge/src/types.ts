@@ -61,14 +61,30 @@ export type SubmitResult<TResult = void> =
 export type DeepPartial<T> = T extends Record<string, unknown> ? { [K in keyof T]?: DeepPartial<T[K]> } : T;
 
 /**
+ * Single source of truth for the typed-path depth ceiling, shared by `FlatKeyOf`'s
+ * type-level cutoff below and `_utils.ts`'s matching runtime dev-warning threshold —
+ * one named constant instead of two hardcoded `5`s that could silently drift apart.
+ *
+ * Deliberately not a per-form generic parameter (e.g. `Form<TValues, MaxDepth>`): the
+ * whole point of this cutoff is protecting TypeScript compile time, which is a
+ * repo-wide concern, not a per-form preference. Making it user-configurable would let
+ * one form's type param silently regress compile performance for everyone who imports
+ * it. If a real shape needs deeper typed paths, flatten it or accept `string` typing
+ * for those leaves — `FlatKeyOf` already falls back to `string` gracefully past this
+ * depth, so nothing is a hard error either way.
+ */
+export const MAX_TYPED_PATH_DEPTH = 5 as const;
+
+/**
  * Recursively extracts all dot-notation leaf keys from a values shape.
- * Depth-limited to 5: TypeScript compilation time grows non-linearly beyond this point.
+ * Depth-limited to {@link MAX_TYPED_PATH_DEPTH}: TypeScript compilation time grows
+ * non-linearly beyond this point.
  */
 export type FlatKeyOf<
   T extends Record<string, unknown>,
   P extends string = '',
   D extends readonly 0[] = [],
-> = D['length'] extends 5
+> = D['length'] extends typeof MAX_TYPED_PATH_DEPTH
   ? string
   : {
       [K in keyof T & string]: T[K] extends unknown[] | File | Blob | Date
@@ -184,7 +200,7 @@ export type RegisterFieldOptions<V = unknown> = {
 };
 
 /**
- * A complete snapshot of form state that can be restored via `form.restore()`.
+ * A complete snapshot of form state that can be restored via `form.history.restore()`.
  * `store` and `baseline` keys are the flattened dot-notation paths used internally.
  * Typed with `TValues` for nominal clarity — structurally both are `Record<string, unknown>`.
  */
@@ -195,6 +211,25 @@ export type FormSnapshot<TValues extends Record<string, unknown> = Record<string
   readonly store: Partial<Record<FlatKeyOf<TValues>, unknown>>;
   readonly submitCount: number;
   readonly touched: readonly string[];
+};
+
+/**
+ * Undo/redo-style snapshotting, namespaced off the main `Form<T>` surface since it's a
+ * distinctly less common operation than reading/writing values — grouped the same way
+ * `fields` already groups dynamic-field-lifecycle operations.
+ */
+export type FormHistory<TValues extends Record<string, unknown> = Record<string, unknown>> = {
+  /**
+   * Restore the form to a previously captured snapshot. Replaces all state:
+   * values, baseline, errors, touched, dirty, and submitCount.
+   * Aborts any in-flight validation.
+   */
+  restore(snapshot: FormSnapshot<TValues>): void;
+  /**
+   * Capture the complete form state into a snapshot that can be passed to `restore()`.
+   * Useful for undo/redo, draft saving, and "discard changes" flows.
+   */
+  snapshot(): FormSnapshot<TValues>;
 };
 
 export type FormOptions<TValues extends Record<string, unknown> = Record<string, unknown>> = {
@@ -305,6 +340,16 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
      */
     setValidator(name: FlatKeyOf<TValues>, validator?: FieldValidator): void;
   };
+  /**
+   * Undo/redo-style snapshotting — see {@link FormHistory}. Namespaced off the main surface
+   * since it's a distinctly less common operation than reading/writing values.
+   *
+   * @example
+   * const before = form.history.snapshot();
+   * form.patch({ status: 'archived' });
+   * form.history.restore(before); // undo
+   */
+  history: FormHistory<TValues>;
   /** Replace values and baseline in one operation. Aborts any in-flight validation. */
   replace(newValues: TValues): void;
   /** Restore values from the current baseline and clear errors/touched/dirty. Aborts any in-flight validation. */
@@ -329,17 +374,6 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   set<K extends FlatKeyOf<TValues>>(name: K, value: TypeAtPath<TValues, K>, options?: SetOptions): void;
   /** Set a field error. */
   setError(name: ErrorKeyOf<TValues>, message: string): void;
-  /**
-   * Capture the complete form state into a snapshot that can be passed to `restore()`.
-   * Useful for undo/redo, draft saving, and "discard changes" flows.
-   */
-  snapshot(): FormSnapshot<TValues>;
-  /**
-   * Restore the form to a previously captured snapshot. Replaces all state:
-   * values, baseline, errors, touched, dirty, and submitCount.
-   * Aborts any in-flight validation.
-   */
-  restore(snapshot: FormSnapshot<TValues>): void;
   readonly state: FormState;
   submit<TResult = void>(handler: (values: TValues) => MaybePromise<TResult>): Promise<SubmitResult<TResult>>;
   /**
@@ -347,19 +381,17 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
    * `{ ok: false, ... }`. Use when you prefer a throw-based control flow.
    *
    * @throws {ForgeValidationError} when validation fails.
-   * @throws {Error} when `submit()` is already in progress.
+   * @throws {ForgeSubmitError} when `submit()` is already in progress.
    */
   submitOrThrow<TResult = void>(handler: (values: TValues) => MaybePromise<TResult>): Promise<TResult>;
-  subscribe(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe;
   /**
-   * Subscribe to form state changes filtered to this scope's prefix.
-   * `errors`, `touchedFields`, and `validatingFields` are remapped to relative paths;
-   * all other state flags reflect the full form.
-   * The listener fires only when the scoped projection changes — unrelated field mutations
-   * outside this prefix are suppressed.
-   * On a root form, behaves identically to `subscribe` — no prefix filtering is applied.
+   * Subscribe to form state changes.
+   * On a scoped form (`form.scope(prefix)`), `errors`, `touchedFields`, and `validatingFields`
+   * are remapped to relative paths, and the listener fires only when the scoped projection
+   * changes — mutations outside the scope's prefix are suppressed. On a root form, no
+   * filtering is applied.
    */
-  subscribeScoped(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe;
+  subscribe(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe;
   subscribeField<K extends FlatKeyOf<TValues>>(
     name: K,
     listener: (state: FieldState<TypeAtPath<TValues, K>>) => void,
@@ -403,15 +435,5 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
    * Returns a `ValidateResult` scoped to the requested fields.
    */
   validate(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>;
-  /**
-   * Streaming validation — yields each field result as soon as its validator resolves.
-   * The final item in the stream is the form-level validator result (field: '_form'), if configured.
-   *
-   * @example
-   * for await (const result of form.validateStream()) {
-   *   console.log(result.field, result.error ?? 'ok');
-   * }
-   */
-  validateStream(signal?: AbortSignal): AsyncIterableIterator<{ error: string | undefined; field: string }>;
   values(): TValues;
 }

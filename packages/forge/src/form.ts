@@ -1,11 +1,10 @@
 import { warn } from './_dev';
 import { sanitizeForLog } from './_utils';
 import { createFormContext } from './core/context';
+import { createFieldOps } from './core/fields';
 import { createLifecycleOps } from './core/lifecycle';
 import { createObserveOps } from './core/observe';
 import { createScopedForm, type ScopeContext } from './core/scope';
-import { createValidationOps } from './core/validation';
-import { createValueOps } from './core/values';
 import { type FlatKeyOf, type Form, type FormOptions, type ScopedValues } from './types';
 
 /* -------------------- createForm -------------------- */
@@ -22,14 +21,17 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   init: FormOptions<TValues> = {},
 ): Form<TValues> {
   const ctx = createFormContext<TValues>(init);
-  const valueOps = createValueOps(ctx);
-  const validationOps = createValidationOps(ctx, { touchAll: valueOps.touchAll, values: valueOps.values });
+  const fieldOps = createFieldOps(ctx);
   const observeOps = createObserveOps(ctx, {
-    set: valueOps.set,
-    touch: valueOps.touch,
-    validateFields: validationOps.validateFields,
+    connectDefaults: init.connect ?? {},
+    set: fieldOps.set,
+    touch: fieldOps.touch,
+    validateFields: fieldOps.validateFields,
   });
-  const lifecycleOps = createLifecycleOps(ctx);
+  // scope() results are memoized per prefix — not part of the shared FormContext bag since
+  // it's purely a Form-object-level cache, not state any core/*.ts module needs to read.
+  const scopeCache = new Map<string, Form<never>>();
+  const lifecycleOps = createLifecycleOps(ctx, { onDispose: () => scopeCache.clear() });
 
   /* ---- Async defaultValues ---- */
 
@@ -41,7 +43,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
         if (ctx.disposed) return;
 
-        valueOps.replace(resolved);
+        fieldOps.replace(resolved);
       })
       .catch((err: unknown) => {
         ctx.loadingState = false;
@@ -57,17 +59,32 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   /* ======== Public form object ======== */
 
   // registerField/removeField/setValidator/listFields are nested under `fields`, not top-level.
-  const { listFields, registerField, removeField, setValidator, ...publicValueOps } = valueOps;
-  // runValidationCore is internal-only — needed by scope(), not part of the public Form<T> surface.
-  const { runValidationCore, ...publicValidationOps } = validationOps;
+  // patchKeys/replaceKeys/resetErrorsKeys/resetKeys/runValidationCore/touchAllKeys/untouchAllKeys
+  // are internal-only — scope() below passes a slice of them to createScopedForm() so scoped
+  // bulk operations share these primitives instead of reimplementing each loop a second time.
+  const {
+    listFields,
+    patchKeys,
+    registerField,
+    removeField,
+    replaceKeys,
+    resetErrorsKeys,
+    resetKeys,
+    runValidationCore,
+    setValidator,
+    touchAllKeys,
+    untouchAllKeys,
+    ...publicFieldOps
+  } = fieldOps;
+  // snapshot/restore are nested under `history`, not top-level.
+  const { restore, snapshot, ...publicLifecycleOps } = lifecycleOps;
 
   // `scope` is defined as a method on publicForm so that `const publicForm` can capture itself
   // via closure without a forward-reference lint disable.
   const publicForm: Form<TValues> = {
-    ...publicValueOps,
-    ...publicValidationOps,
+    ...publicFieldOps,
     ...observeOps,
-    ...lifecycleOps,
+    ...publicLifecycleOps,
     batch: ctx.batch,
     get disposalSignal() {
       return ctx.disposeController.signal;
@@ -81,6 +98,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       remove: removeField,
       setValidator,
     },
+    history: { restore, snapshot },
     get isLoading() {
       return ctx.loadingState;
     },
@@ -89,45 +107,33 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     },
     scope<P extends FlatKeyOf<TValues>>(prefix: P): Form<ScopedValues<TValues, P>> {
       const key = prefix as string;
-      const cached = ctx.scopeCache.get(key);
+      const cached = scopeCache.get(key);
 
       if (cached) return cached as Form<ScopedValues<TValues, P>>;
 
       const scopeCtx: ScopeContext<TValues> = {
-        baseline: ctx.baseline,
-        dirty: ctx.dirty,
-        ensureNotDisposed: ctx.ensureNotDisposed,
-        fieldCtrls: ctx.fieldCtrls,
-        fieldErrors: ctx.fieldErrors,
-        getStateSnapshot: ctx.getStateSnapshot,
-        incrementSubmitCount: () => {
-          ctx.submitCount++;
+        ctx,
+        fieldOps: {
+          patchKeys,
+          replaceKeys,
+          resetErrorsKeys,
+          resetKeys,
+          runValidationCore,
+          touchAllKeys,
+          untouchAllKeys,
         },
-        invalidateErrors: ctx.invalidateErrors,
-        isDisposed: () => ctx.disposed,
-        isSubmitting: () => ctx.isSubmittingState,
-        requestNotify: ctx.requestNotify,
         root: publicForm,
-        runValidationCore,
-        setSubmitting: (v) => {
-          ctx.isSubmittingState = v;
-        },
-        store: ctx.store,
-        touched: ctx.touched,
-        validators: ctx.validators,
       };
 
       const scoped = createScopedForm<TValues, P>(scopeCtx, prefix) as Form<ScopedValues<TValues, P>>;
 
-      ctx.scopeCache.set(key, scoped as Form<never>);
+      scopeCache.set(key, scoped as Form<never>);
 
       return scoped;
     },
     get state() {
       return ctx.getStateSnapshot();
     },
-    // On a root form, subscribeScoped behaves identically to subscribe — no prefix filtering.
-    subscribeScoped: observeOps.subscribe,
     [Symbol.dispose]() {
       this.dispose();
     },

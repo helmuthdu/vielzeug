@@ -46,8 +46,12 @@ describe('ForgeError hierarchy', () => {
     expect(error.message).toBe('Form validation failed');
   });
 
-  test('ForgeDisposedError always carries the same fixed message', () => {
+  test('ForgeDisposedError falls back to a generic message when constructed with no op name', () => {
     expect(new ForgeDisposedError().message).toBe('Cannot modify a disposed form');
+  });
+
+  test('ForgeDisposedError names the operation that triggered it, for a more actionable stack trace', () => {
+    expect(new ForgeDisposedError('set').message).toBe('Cannot call set() on a disposed form');
   });
 
   test('the base ForgeError supports cause chaining via ErrorOptions', () => {

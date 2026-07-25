@@ -86,6 +86,30 @@ describe('form state and values', () => {
     expect(form.values()).toEqual({ x: 99 });
   });
 
+  // A validator with no matching store entry (e.g. a cross-field/virtual-name check) can
+  // still be touched or hold an error — reset()/replace() must not derive "what to clear"
+  // from store.keys() alone, or a field that never had a value silently keeps stale state.
+  test.each([
+    ['reset', (form: ReturnType<typeof createForm>) => form.reset()],
+    ['replace', (form: ReturnType<typeof createForm>) => form.replace({ a: 1 })],
+  ])('%s() clears touched/error state for a validator-only field with no store entry', async (_, operation) => {
+    const form = createForm({
+      defaultValues: { a: 1 },
+      validators: { ghost: () => 'Ghost error' },
+    });
+
+    await form.validate('ghost' as never);
+    form.touch('ghost' as never);
+
+    expect(form.state.errors).toEqual({ ghost: 'Ghost error' });
+    expect(form.state.touchedFields).toContain('ghost');
+
+    operation(form);
+
+    expect(form.state.errors).toEqual({});
+    expect(form.state.touchedFields).not.toContain('ghost');
+  });
+
   test('reset aborts in-flight validation and prevents stale errors', async () => {
     let startedResolve!: () => void;
     const started = new Promise<void>((resolve) => {
@@ -528,8 +552,8 @@ describe('registerField (F1)', () => {
   });
 });
 
-describe('snapshot and restore', () => {
-  test('restore() round-trips values, baseline, errors, dirty, touched, and submitCount', async () => {
+describe('history.snapshot and history.restore', () => {
+  test('history.restore() round-trips values, baseline, errors, dirty, touched, and submitCount', async () => {
     const form = createForm({
       defaultValues: { city: 'NYC', name: 'Alice' },
       validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
@@ -540,13 +564,13 @@ describe('snapshot and restore', () => {
     await form.submit(() => {});
     form.setError('city', 'Bad city');
 
-    const snap = form.snapshot();
+    const snap = form.history.snapshot();
 
     form.set('name', 'Charlie');
     form.untouchAll();
     form.resetErrors();
 
-    form.restore(snap);
+    form.history.restore(snap);
 
     expect(form.get('name')).toBe('Bob');
     expect(form.get('city')).toBe('NYC');

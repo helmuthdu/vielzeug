@@ -1,5 +1,8 @@
 import type { ArrayField, FlatKeyOf, TypeAtPath } from '../types';
 
+import { devOnly, warn } from '../_dev';
+import { sanitizeForLog } from '../_utils';
+
 // Resolves the element type of an array field — mirrored from types.ts.
 type ElementOf<T> = T extends readonly (infer E)[] ? E : unknown;
 
@@ -17,18 +20,40 @@ export function createArrayField<TValues extends Record<string, unknown>, K exte
 
   const key = name as string;
 
+  // Every mutating method below no-ops when the field isn't (yet) an array, instead of
+  // throwing — a field can legitimately not exist yet. But a silent no-op with zero signal
+  // is a debugging trap for the common mistake (typo'd field name, forgot to append() first
+  // to seed the array). Warn once per call in dev so it's discoverable without being a
+  // breaking runtime error for the legitimate "not initialized yet" case.
+  function warnNotArray(apiLabel: string, current: unknown): void {
+    devOnly(() => {
+      warn(
+        `array('${sanitizeForLog(key, 80)}').${apiLabel}(): field is not an array ` +
+          `(got ${current === null ? 'null' : typeof current}) — no-op.`,
+      );
+    });
+  }
+
   return {
     append(value: T) {
       const current = store.get(key);
 
-      if (current !== undefined && !Array.isArray(current)) return;
+      if (current !== undefined && !Array.isArray(current)) {
+        warnNotArray('append', current);
+
+        return;
+      }
 
       set(name, (Array.isArray(current) ? [...current, value] : [value]) as TypeAtPath<TValues, K>);
     },
     insert(index: number, value: T) {
       const current = store.get(key);
 
-      if (!Array.isArray(current)) return;
+      if (!Array.isArray(current)) {
+        warnNotArray('insert', current);
+
+        return;
+      }
 
       const next = [...current];
 
@@ -38,7 +63,11 @@ export function createArrayField<TValues extends Record<string, unknown>, K exte
     move(from: number, to: number) {
       const current = store.get(key);
 
-      if (!Array.isArray(current)) return;
+      if (!Array.isArray(current)) {
+        warnNotArray('move', current);
+
+        return;
+      }
 
       const next = [...current];
 
@@ -48,21 +77,33 @@ export function createArrayField<TValues extends Record<string, unknown>, K exte
     prepend(value: T) {
       const current = store.get(key);
 
-      if (current !== undefined && !Array.isArray(current)) return;
+      if (current !== undefined && !Array.isArray(current)) {
+        warnNotArray('prepend', current);
+
+        return;
+      }
 
       set(name, (Array.isArray(current) ? [value, ...current] : [value]) as TypeAtPath<TValues, K>);
     },
     remove(index: number) {
       const current = store.get(key);
 
-      if (!Array.isArray(current)) return;
+      if (!Array.isArray(current)) {
+        warnNotArray('remove', current);
+
+        return;
+      }
 
       set(name, current.filter((_, i) => i !== index) as TypeAtPath<TValues, K>);
     },
     replace(index: number, value: T) {
       const current = store.get(key);
 
-      if (!Array.isArray(current)) return;
+      if (!Array.isArray(current)) {
+        warnNotArray('replace', current);
+
+        return;
+      }
 
       const next = [...current];
 
@@ -72,7 +113,11 @@ export function createArrayField<TValues extends Record<string, unknown>, K exte
     swap(a: number, b: number) {
       const current = store.get(key);
 
-      if (!Array.isArray(current)) return;
+      if (!Array.isArray(current)) {
+        warnNotArray('swap', current);
+
+        return;
+      }
 
       const next = [...current];
 

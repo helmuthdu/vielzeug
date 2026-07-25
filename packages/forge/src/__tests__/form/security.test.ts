@@ -55,6 +55,12 @@ describe('prototype chain safety', () => {
     expect(() => form.clearError('__proto__' as never)).toThrow('Unsafe key');
   });
 
+  test('resetErrors() throws for an unsafe key in the replacement error map', () => {
+    const form = createForm({ defaultValues: {} as Record<string, unknown> });
+
+    expect(() => form.resetErrors({ ['__proto__' as never]: 'bad' })).toThrow('Unsafe key');
+  });
+
   test('setValidator() throws for an unsafe key', () => {
     const form = createForm({ defaultValues: {} as Record<string, unknown> });
 
@@ -203,9 +209,9 @@ describe('prototype chain safety', () => {
       "store": { "__proto__": "x", "constructor.prototype.polluted": "x", "name": "Bob" },
       "submitCount": 0,
       "touched": ["__proto__", "name"]
-    }`) as Parameters<typeof form.restore>[0];
+    }`) as Parameters<typeof form.history.restore>[0];
 
-    expect(() => form.restore(maliciousSnapshot)).not.toThrow();
+    expect(() => form.history.restore(maliciousSnapshot)).not.toThrow();
 
     expect(form.get('name')).toBe('Bob');
     expect(Object.getPrototypeOf(form.values())).toBe(Object.prototype);
@@ -214,7 +220,7 @@ describe('prototype chain safety', () => {
     // Reserved keys must not have been written into internal state at all — reading them back
     // via the guarded single-key APIs must still throw (they were never accepted), and the
     // resulting snapshot must not carry them forward.
-    const roundTripped = form.snapshot();
+    const roundTripped = form.history.snapshot();
 
     expect(Object.keys(roundTripped.store)).not.toContain('__proto__');
     expect(Object.keys(roundTripped.errors)).not.toContain('__proto__');
