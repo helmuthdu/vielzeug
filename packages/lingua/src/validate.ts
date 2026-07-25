@@ -16,7 +16,8 @@
  * ```
  */
 
-import type { Locale, Messages } from './i18n';
+import type { Messages } from './_catalog';
+import type { Locale } from './_chain';
 
 import { CLDR_FORMS, UNSAFE_KEYS } from './_constants';
 import { parsePipePlural } from './template';

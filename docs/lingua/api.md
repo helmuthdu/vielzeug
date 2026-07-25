@@ -29,13 +29,11 @@ description: Complete API reference for @vielzeug/lingua.
 | `i18n.loadNamespace()`    | Load a registered namespace for a locale                                           | Async          | Deduplicates concurrent and repeated calls; throws `LinguaNamespaceMissingError` if namespace not registered        |
 | `i18n.isNamespaceLoaded()`  | Check if a namespace is loaded for the active (or given) locale                  | Sync           | Returns `false` if not registered or not yet loaded for this locale                                                |
 | `i18n.isNamespaceRegistered()` | Check if a namespace factory has been registered                              | Sync           | `true` after `registerNamespace()` or `extend()`; `false` before                                                   |
-| `i18n.getState()`         | Extract a serializable snapshot of loaded catalogs + active locale                 | Sync           | Equivalent to `serializeI18n(i18n)` — preferred for public API access                                              |
-| `i18n.restoreState()`     | Hydrate instance from serialized state                                             | Sync           | Equivalent to `hydrateI18n(i18n, state)` — preferred for public API access; throws `LinguaRestoreError` if locale missing |
-| `serializeI18n()`         | Serialise loaded catalogs for SSR hydration                                        | Sync           | Loader-only locales are omitted — check `isLoaded()` before calling                                                |
-| `hydrateI18n()`           | Hydrate a client instance from server-serialised state                             | Sync           | Throws `LinguaRestoreError` if `state.locale` has no catalog                                                            |
+| `i18n.getState()`         | Extract a serializable snapshot of loaded catalogs + active locale                 | Sync           | Loader-only locales are omitted — check `isLoaded()` before calling                                                |
+| `i18n.restoreState()`     | Hydrate instance from serialized state                                             | Sync           | Throws `LinguaRestoreError` if `state.locale` has no catalog                                                       |
 | Error classes             | Named error subclasses (`LinguaDisposedError`, `LinguaMissingLocaleError`, …)      | —              | All runtime errors are `instanceof LinguaError`; use `instanceof` for specific handling                            |
 | `createFormatter()`       | Create a standalone Intl formatter                                                 | Sync           | Available from the main entry or `@vielzeug/lingua/format` — pass a getter `() => i18n.locale` to follow locale changes |
-| `validateCatalog()`       | Check a catalog for missing CLDR plural forms and missing `{count}` interpolations | Sync           | Import from `@vielzeug/lingua/validate` — not for production                                                       |
+| `validateCatalog()`       | Check a catalog for missing CLDR plural forms and missing `{count}` interpolations | Sync           | Import from `@vielzeug/lingua/validate` for CI enforcement — `createI18n()` already runs the same check automatically in dev builds |
 
 ## Package Entry Points
 
@@ -233,7 +231,7 @@ Returns `true` if a namespace factory has been registered under `ns` via `regist
 getState(): I18nState
 ```
 
-Extracts a serializable snapshot of all **fully loaded** catalogs and the active locale. Equivalent to `serializeI18n(i18n)` but preferred because it is called directly on the instance without requiring an import.
+Extracts a serializable snapshot of all **fully loaded** catalogs and the active locale.
 
 **Warning:** Only fully resolved catalogs are included. Loader-only locales not yet preloaded are omitted. Use `i18n.isLoaded(locale)` to verify before calling.
 
@@ -248,12 +246,14 @@ const state = i18n.getState();
 restoreState(state: I18nState): void
 ```
 
-Hydrates this instance from an `I18nState` produced by `getState()` or `serializeI18n()`. Equivalent to `hydrateI18n(i18n, state)` but preferred because it is called directly on the instance.
+Hydrates this instance from an `I18nState` produced by `getState()`.
 
 - Replaces all catalogs with those from `state`.
 - Sets the active locale to `state.locale`.
 - Clears all namespace loaded-markers so that `extend()` / `loadNamespace()` can re-apply namespaces.
 - Notifies subscribers.
+
+Unlike `register()` and construction, this does **not** run the automatic dev-mode plural-form check (see [`validateCatalog()`](#validatecatalog)) — `state` is assumed to already have been registered, and therefore already checked, once on whatever system produced it.
 
 Throws `LinguaRestoreError` if `state.locale` has no catalog in `state.catalogs`.
 Throws `LinguaDisposedError` if called on a disposed instance.
@@ -378,13 +378,13 @@ isLoaded(locale: Locale): boolean
 
 Returns `true` if the catalog for `locale` is fully resolved (i.e. not a pending async loader). Returns `false` for unregistered locales, pending loaders, and invalid locale tags — never throws.
 
-Primary use case: guarding `serializeI18n()` in SSR to avoid silently omitting locales that were registered as async loaders but never preloaded.
+Primary use case: guarding `getState()` in SSR to avoid silently omitting locales that were registered as async loaders but never preloaded.
 
 ```ts
 // SSR guard — ensure all locales are loaded before serialising
 const locales = i18n.getSupportedLocales();
 await Promise.all(locales.filter((l) => !i18n.isLoaded(l)).map((l) => i18n.preload(l)));
-const state = serializeI18n(i18n); // now includes all locales
+const state = i18n.getState(); // now includes all locales
 ```
 
 ### `isRegistered()`
@@ -406,7 +406,7 @@ Use `isRegistered` + `isLoaded` together to distinguish the three states:
 ```ts
 if (!i18n.isRegistered('fr')) throw new Error('fr locale not configured');
 if (!i18n.isLoaded('fr')) await i18n.preload('fr');
-const state = serializeI18n(i18n); // 'fr' guaranteed to be present
+const state = i18n.getState(); // 'fr' guaranteed to be present
 ```
 
 ### `disposalSignal`
@@ -489,6 +489,8 @@ validateCatalog(messages: Messages, locale: Locale): ValidationWarning[]
 Checks a flat or nested message catalog against CLDR plural rules for `locale`. Returns an array of `ValidationWarning` objects for every plural branch that is missing one or more expected forms. Import from the separate `@vielzeug/lingua/validate` entry — do not include it in your production bundle.
 
 Returns an empty array when there are no issues.
+
+**Automatic dev-mode checks:** `createI18n()` already calls this internally, in dev builds only, every time a catalog becomes fully available — at construction (`createI18n({ catalogs })`), via `register()`, or once an async loader resolves — logging any warning through `console.warn`. Call `validateCatalog()` directly only when you want CI to fail the build on a warning rather than just log it; the automatic check already covers everyday authoring feedback with zero setup. The automatic check loads `validate.ts`'s logic as a separate, lazily-fetched chunk — it's never part of your production bundle either way.
 
 **Note:** A branch is treated as a plural branch when any of its child keys is a CLDR form (`zero`, `one`, `two`, `few`, `many`, `other`). A mixed-use branch (e.g. `{ count: 'x', one: 'y' }`) will also be flagged and may produce spurious warnings for non-CLDR sibling keys.
 
@@ -609,7 +611,7 @@ type I18nState = {
 };
 ```
 
-Produced by `getState()` / `serializeI18n()` and consumed by `restoreState()` / `hydrateI18n()`. Catalogs are stored as flat dot-notation maps.
+Produced by `getState()` and consumed by `restoreState()`. Catalogs are stored as flat dot-notation maps.
 
 ### `NamespaceFactory`
 
@@ -781,49 +783,24 @@ type ListFormatOptions = {
 };
 ```
 
-## serializeI18n
+## SSR: `getState()` / `restoreState()`
 
-```ts
-import { serializeI18n } from '@vielzeug/lingua';
-
-serializeI18n(i18n: I18n): I18nState
-```
-
-Serialises the current loaded catalogs and active locale into an `I18nState` object. Use this on the server before embedding state in the HTML response. Loader-only locales that have not been preloaded are silently omitted — call `isLoaded()` to verify all locales are resolved before calling `serializeI18n()`.
+No standalone functions — call these directly on an instance (see [`getState()`](#getstate) / [`restoreState()`](#restorestate) above).
 
 ```ts
 // Server
 const i18n = createI18n({ catalogs: { de: deMessages, en: enMessages }, locale: 'de' });
-const state = serializeI18n(i18n);
+const state = i18n.getState();
 // Embed in the HTML response:
 // <script>window.__I18N__ = ${JSON.stringify(state)}</script>
 ```
 
-## hydrateI18n
-
-```ts
-import { hydrateI18n } from '@vielzeug/lingua';
-
-hydrateI18n(i18n: I18n, state: I18nState): void
-```
-
-Hydrates a client-side instance from server-serialised state. Replaces all catalogs and switches the active locale. Notifies subscribers once after hydration.
-
-Throws `LinguaRestoreError` if `state.locale` has no corresponding entry in `state.catalogs`.
-
 ```ts
 // Client
-const i18n = createI18n();
-hydrateI18n(i18n, window.__I18N__);
+const client = createI18n();
+client.restoreState(window.__I18N__);
 // Catalogs from state are immediately available; no network request needed.
 ```
-
-**Parameters:**
-
-| Parameter | Type        | Description                                |
-| --------- | ----------- | ------------------------------------------ |
-| `i18n`    | `I18n`      | The instance to hydrate.                   |
-| `state`   | `I18nState` | State object produced by `serializeI18n()` |
 
 ## Error Classes
 
@@ -852,4 +829,4 @@ try {
 | `LinguaMissingLocaleError`  | `preload()` / `setLocale()` — locale has no registered source                   |
 | `LinguaInvalidLocaleError`  | Any API receiving an invalid BCP 47 tag                                         |
 | `LinguaNamespaceMissingError` | Namespace requested but not loaded for the current locale                     |
-| `LinguaRestoreError`        | `hydrateI18n()` / `restoreState()` — `state.locale` absent from `state.catalogs` |
+| `LinguaRestoreError`        | `restoreState()` — `state.locale` absent from `state.catalogs` |

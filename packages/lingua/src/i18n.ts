@@ -13,20 +13,26 @@ import type {
   Unsubscribe,
 } from './i18n-types';
 
+import { getOrCreate } from './_bounded-cache';
 import { CatalogEntry, type Messages, flattenStrings } from './_catalog';
-import { type CatalogStore, type Loader, type LocaleSource, createCatalogStore } from './_catalog-store';
-import { type LocaleCaches, buildLocaleChain, canon, createLocaleCaches, selectPluralForm } from './_chain';
+import {
+  type CatalogStore,
+  type Loader,
+  type LocaleSource,
+  createCatalogStore,
+  validateCatalogInDev,
+} from './_catalog-store';
+import { type LocaleCaches, buildLocaleChain, canon, createLocaleCaches } from './_chain';
 import { error as logError } from './_dev';
 import { type NamespaceFactory, type NamespaceStore, createNamespaceStore } from './_namespace-store';
 import {
-  LinguaCountInVarsError,
-  LinguaDisposedError,
-  LinguaInvalidCountError,
-  LinguaRestoreError,
-  checkDisposed,
-} from './errors';
+  type TranslateContext,
+  hasKey as hasKeyIn,
+  translate as translateIn,
+  translatePlural as translatePluralIn,
+} from './_translate';
+import { LinguaDisposedError, LinguaRestoreError, checkDisposed } from './errors';
 import { type Formatter, createFormatter } from './format';
-import { type CompiledTemplate, renderTemplate } from './template';
 
 export {
   LinguaCountInVarsError,
@@ -57,6 +63,9 @@ export type { Loader, LocaleSource } from './_catalog-store';
 export type { Messages } from './_catalog';
 export type { NamespaceFactory } from './_namespace-store';
 
+// Bound for the per-instance `scope()` cache — see its declaration below for why it's bounded.
+const SCOPE_CACHE_MAX = 128;
+
 // ─── Locale state ─────────────────────────────────────────────────────────────
 // Replaced atomically on every locale change.
 
@@ -70,21 +79,6 @@ function buildState(locale: Locale, fallback: Locale[], caches: LocaleCaches): L
   const { chain, set } = buildLocaleChain(locale, fallback, caches);
 
   return { chain, chainSet: set, locale };
-}
-
-// ─── Plural key priority ──────────────────────────────────────────────────────
-// Cardinal zero: try .zero override first, then CLDR form, then .other as final fallback.
-// Ordinal / non-zero: try CLDR form, then .other as final fallback.
-function pluralKeyPriority(base: string, form: string, count: number, ordinal: boolean): string[] {
-  const keys: string[] = [];
-
-  if (!ordinal && count === 0) keys.push(`${base}.zero`);
-
-  if (form !== 'zero' || ordinal) keys.push(`${base}.${form}`);
-
-  if (form !== 'other') keys.push(`${base}.other`);
-
-  return keys;
 }
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
@@ -137,6 +131,10 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
   let _fmt: Formatter | undefined;
 
   // ─── Scope cache — stable object references per prefix for reactive framework renders. ──
+  // Bounded the same way format.ts bounds its Intl-formatter caches: `scope()` is meant for a
+  // static, finite set of prefixes (nav sections, form names, ...), but nothing stopped a caller
+  // from passing a dynamic per-item prefix (e.g. `scope(`item.${id}`)` in a list render) and
+  // growing this unboundedly for the instance's lifetime. Oldest entry evicts past the cap.
   const scopeCache = new Map<string, ScopedI18n>();
 
   const getFormatter = (): Formatter => {
@@ -146,84 +144,26 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
   };
 
   // ─── Translate helpers ────────────────────────────────────────────────────
+  // The actual algorithm (fallback-chain lookup, plural-form selection, interpolation) lives in
+  // `_translate.ts` — this instance just supplies fresh context (current locale/chain) per call.
 
-  // Single-pass entry lookup across the active fallback chain.
-  const findEntry = (key: string): { compiled: CompiledTemplate; message: string } | undefined => {
-    for (const candidate of state.chain) {
-      const found = catalogStore.resolve(candidate)?.get(key);
+  const translateContext = (): TranslateContext => ({
+    caches,
+    catalogStore,
+    chain: state.chain,
+    locale: state.locale,
+    onMissingKey,
+    onMissingVar,
+  });
 
-      if (found !== undefined) return found;
-    }
+  // Shared by has() and scope().has().
+  const hasKey = (base: string): boolean => hasKeyIn(translateContext(), base);
 
-    return undefined;
-  };
+  const translate = (key: MessageLeafKeys<M> | (string & {}), vars?: TranslateVars): string =>
+    translateIn(translateContext(), String(key), vars);
 
-  // Shared by has() and scope().has() — true if `base` exists as a leaf key or a plural branch prefix.
-  const hasKey = (base: string): boolean => {
-    if (findEntry(base) !== undefined) return true;
-
-    for (const candidate of state.chain) {
-      const catalog = catalogStore.resolve(candidate);
-
-      if (!catalog) continue;
-
-      if (catalog.prefixes.has(base)) return true;
-    }
-
-    return false;
-  };
-
-  const interpolate = (
-    key: string,
-    found: { compiled: CompiledTemplate; message: string },
-    vars: TranslateVars | undefined,
-  ): string => renderTemplate(found.compiled, vars, key, state.locale, onMissingVar);
-
-  const translate = (key: MessageLeafKeys<M> | (string & {}), vars?: TranslateVars): string => {
-    const base = String(key);
-    const found = findEntry(base);
-
-    if (!found) return onMissingKey(base, state.locale);
-
-    return interpolate(base, found, vars);
-  };
-
-  const translatePlural = (key: MessageBranchKeys<M> | (string & {}), count: number, options?: TpOptions): string => {
-    if (!Number.isFinite(count)) {
-      throw new LinguaInvalidCountError('`count` must be a finite number.');
-    }
-
-    const vars = options?.vars;
-    const ordinal = options?.ordinal ?? false;
-
-    if (vars && Object.hasOwn(vars, 'count')) {
-      throw new LinguaCountInVarsError('`tp` does not allow `vars.count`; `count` is injected automatically.');
-    }
-
-    const base = String(key);
-    const mergedVars = vars ? { count, ...vars } : { count };
-
-    // Walk the fallback chain locale-by-locale, selecting CLDR plural form using each
-    // locale's own rules. This ensures cross-locale fallbacks produce grammatically correct forms.
-    for (const candidate of state.chain) {
-      const catalog = catalogStore.resolve(candidate);
-
-      if (!catalog) continue;
-
-      const form = selectPluralForm(candidate, count, ordinal, caches);
-      const keys = pluralKeyPriority(base, form, count, ordinal);
-
-      for (const k of keys) {
-        const found = catalog.get(k);
-
-        if (found !== undefined) {
-          return interpolate(k, found, mergedVars);
-        }
-      }
-    }
-
-    return onMissingKey(base, state.locale);
-  };
+  const translatePlural = (key: MessageBranchKeys<M> | (string & {}), count: number, options?: TpOptions): string =>
+    translatePluralIn(translateContext(), String(key), count, options);
 
   // ─── bump() ───────────────────────────────────────────────────────────────
   // Rebuilds the snapshot and notifies all current subscribers.
@@ -255,7 +195,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
 
   // ─── Seed from parent fork ─────────────────────────────────────────────────
   if (_seed?.catalogStore) {
-    catalogStore.seedFrom(_seed.catalogStore.catalogs, _seed.catalogStore.pendingLoaders);
+    catalogStore.seedFrom(_seed.catalogStore.snapshotCatalogs(), _seed.catalogStore.snapshotLoaders());
   }
 
   if (_seed?.nsStore) {
@@ -277,6 +217,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
 
         entry.setAll(flattenStrings(source as M));
         staticEntries.set(normalized, entry);
+        validateCatalogInDev(normalized, source as M);
       }
     }
 
@@ -324,8 +265,12 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
   };
 
   // ─── Public object ─────────────────────────────────────────────────────────
+  // Named `const` (not a bare `return { ... }`) so `[Symbol.dispose]` below can close over
+  // `source` directly instead of `this` — `this` inside an object-literal method is only bound
+  // when called as `obj.method()`; detaching it first (`const d = i18n[Symbol.dispose]; d()`,
+  // the exact shape most framework cleanup-hook APIs expect) would otherwise throw.
 
-  return {
+  const source: I18n<M> = {
     get disposalSignal(): AbortSignal {
       return disposeController.signal;
     },
@@ -371,8 +316,8 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
           onSubscriberError: overrides?.onSubscriberError ?? cfg.onSubscriberError,
         },
         {
-          catalogStore: catalogStore as CatalogStore<M>,
-          nsStore: nsStore as NamespaceStore,
+          catalogStore,
+          nsStore,
         },
       );
     },
@@ -384,7 +329,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     getState(): I18nState {
       const catalogsOut: Record<Locale, Record<string, string>> = {};
 
-      for (const [loc, entry] of catalogStore.catalogs) {
+      for (const [loc, entry] of catalogStore.snapshotCatalogs()) {
         catalogsOut[loc] = Object.fromEntries([...entry.entries.entries()].map(([k, { message }]) => [k, message]));
       }
 
@@ -467,6 +412,13 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
         nsStore.clearLocale(knownLocale);
       }
 
+      // No validateCatalogInDev() call here, unlike register()/construction/preload(): `state`
+      // is already flattened dot-notation (I18nState.catalogs), not the nested Messages shape
+      // validateCatalog() expects, and restoreState() exists specifically for cheap SSR
+      // hydration of a payload that was already registered — and therefore already
+      // validated — once on the system that produced it. Re-validating here would mean
+      // un-flattening every restored catalog back into nested form on every hydration, for a
+      // check that's already run.
       for (const [loc, flatCatalog] of Object.entries(st.catalogs)) {
         const normalized = canonL(loc);
         const entry = new CatalogEntry();
@@ -492,22 +444,15 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
 
     scope(prefix: MessageBranchKeys<M> | (string & {})): ScopedI18n {
       const pre = String(prefix);
-      const cached = scopeCache.get(pre);
 
-      if (cached) return cached;
-
-      const scoped: ScopedI18n = {
+      return getOrCreate(scopeCache, pre, SCOPE_CACHE_MAX, () => ({
         get fmt() {
           return getFormatter();
         },
         has: (key) => hasKey(`${pre}.${key}`),
         t: (key, vars?) => translate(`${pre}.${key}`, vars),
         tp: (key, count, options?) => translatePlural(`${pre}.${key}`, count, options),
-      };
-
-      scopeCache.set(pre, scoped);
-
-      return scoped;
+      }));
     },
 
     async setLocale(next: Locale): Promise<void> {
@@ -532,47 +477,13 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     subscribe: subscribeInternal,
 
     [Symbol.dispose](): void {
-      this.dispose();
+      source.dispose();
     },
 
     t: translate,
 
     tp: translatePlural,
   };
-}
 
-// ─── SSR standalone helpers ───────────────────────────────────────────────────
-
-/**
- * Serialises the currently loaded catalogs and active locale into a plain object.
- * Pass the result to `hydrateI18n()` on the client.
- *
- * Prefer calling `i18n.getState()` directly — these standalone functions are provided
- * for convenience when you receive a plain `I18n` reference without the full type.
- *
- * **Warning:** Only fully resolved catalogs are included. Loader-only locales not yet
- * preloaded are omitted. Use `i18n.isLoaded(locale)` to verify before calling.
- *
- * **Warning:** The namespace registry is **not** serialized — factory functions cannot
- * be converted to JSON. After `hydrateI18n()`, call `extend()` again for each namespace
- * before relying on namespace-patched keys.
- */
-export function serializeI18n(i18n: I18n): I18nState {
-  return i18n.getState();
-}
-
-/**
- * Hydrates an i18n instance with pre-loaded state (e.g. from a server-rendered payload).
- *
- * Prefer calling `i18n.restoreState(state)` directly — these standalone functions are
- * provided for convenience.
- *
- * @remarks The namespace registry is **not** included in `I18nState`. After hydrating,
- * call `extend()` for each namespace before relying on namespace-patched keys.
- *
- * @throws `LinguaDisposedError` if called on a disposed instance.
- * @throws `LinguaRestoreError` if the state's locale has no catalog.
- */
-export function hydrateI18n(i18n: I18n, state: I18nState): void {
-  i18n.restoreState(state);
+  return source;
 }

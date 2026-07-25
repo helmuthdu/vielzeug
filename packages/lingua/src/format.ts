@@ -25,21 +25,9 @@
  * ```
  */
 
+import { getOrCreate } from './_bounded-cache';
+
 const FORMAT_CACHE_MAX = 128;
-
-function getOrCreate<F>(cache: Map<string, F>, key: string, build: () => F): F {
-  const cached = cache.get(key);
-
-  if (cached !== undefined) return cached;
-
-  const value = build();
-
-  if (cache.size >= FORMAT_CACHE_MAX) cache.delete(cache.keys().next().value as string);
-
-  cache.set(key, value);
-
-  return value;
-}
 
 export type DurationValue = Partial<
   Record<
@@ -191,17 +179,23 @@ export function createFormatter(source: string | (() => string)): Formatter {
       const locale = getLocale();
       const opts: Intl.NumberFormatOptions = { ...options, currency, style: 'currency' };
 
-      return getOrCreate(currencyCache, cachedKey(locale, opts), () => new Intl.NumberFormat(locale, opts)).format(
-        value,
-      );
+      return getOrCreate(
+        currencyCache,
+        cachedKey(locale, opts),
+        FORMAT_CACHE_MAX,
+        () => new Intl.NumberFormat(locale, opts),
+      ).format(value);
     },
 
     date(value, options) {
       const locale = getLocale();
 
-      return getOrCreate(dateCache, cachedKey(locale, options), () => new Intl.DateTimeFormat(locale, options)).format(
-        value,
-      );
+      return getOrCreate(
+        dateCache,
+        cachedKey(locale, options),
+        FORMAT_CACHE_MAX,
+        () => new Intl.DateTimeFormat(locale, options),
+      ).format(value);
     },
 
     duration(value, options) {
@@ -215,6 +209,7 @@ export function createFormatter(source: string | (() => string)): Formatter {
       return getOrCreate(
         durationCache,
         cachedKey(locale, options),
+        FORMAT_CACHE_MAX,
         () => new IntlExt.DurationFormat!(locale, options),
       ).format(value);
     },
@@ -232,6 +227,7 @@ export function createFormatter(source: string | (() => string)): Formatter {
       return getOrCreate(
         listCache,
         cachedKey(locale, { style, type }),
+        FORMAT_CACHE_MAX,
         () => new Intl.ListFormat(locale, { style, type }),
       ).format(items);
     },
@@ -239,9 +235,12 @@ export function createFormatter(source: string | (() => string)): Formatter {
     number(value, options) {
       const locale = getLocale();
 
-      return getOrCreate(numberCache, cachedKey(locale, options), () => new Intl.NumberFormat(locale, options)).format(
-        value,
-      );
+      return getOrCreate(
+        numberCache,
+        cachedKey(locale, options),
+        FORMAT_CACHE_MAX,
+        () => new Intl.NumberFormat(locale, options),
+      ).format(value);
     },
 
     relative(value, unit, options) {
@@ -250,6 +249,7 @@ export function createFormatter(source: string | (() => string)): Formatter {
       return getOrCreate(
         relativeCache,
         cachedKey(locale, options),
+        FORMAT_CACHE_MAX,
         () => new Intl.RelativeTimeFormat(locale, options),
       ).format(value, unit);
     },

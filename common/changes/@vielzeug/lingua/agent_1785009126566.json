@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(lingua): warn in dev when t() is called on a plural-branch-only key (has() returns true but t() cannot resolve it), automatically run validateCatalog()'s CLDR plural-form checks whenever a catalog is registered/constructed/loaded (dev-only, lazily-chunked via dynamic import so it never enters production bundles), rename CatalogStore.catalogs/.pendingLoaders getters to snapshotCatalogs()/snapshotLoaders() methods for naming parity with NamespaceStore, remove 2 redundant type casts in fork(), and drop phantom [E0xx] labels from test names that referenced a non-existent error-code system",
+      "packageName": "@vielzeug/lingua",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/lingua"
+}

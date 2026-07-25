@@ -1,8 +1,8 @@
 export const ssrHydrationExample = {
-  code: `import { createI18n, serializeI18n, hydrateI18n } from '@vielzeug/lingua'
+  code: `import { createI18n } from '@vielzeug/lingua'
 
-// ── serializeI18n / hydrateI18n ───────────────────────────────────────────────
-// Use serializeI18n() on the server and hydrateI18n() on the client
+// ── getState() / restoreState() ───────────────────────────────────────────────
+// Use getState() on the server and restoreState() on the client
 // to avoid re-fetching catalogs.
 
 // Server: build state from a fully loaded instance
@@ -14,7 +14,7 @@ const server = createI18n({
   },
 })
 
-const state = serializeI18n(server)
+const state = server.getState()
 console.log('serialized locale:', state.locale)            // 'de'
 console.log('serialized keys:', Object.keys(state.catalogs)) // ['en', 'de']
 
@@ -30,16 +30,16 @@ const client = createI18n({
 console.log('before hydrate — locale:', client.locale)       // 'en'
 console.log('before hydrate — de loaded:', client.isLoaded('de')) // false
 
-hydrateI18n(client, state)
+client.restoreState(state)
 
 console.log('after hydrate — locale:', client.locale)        // 'de'
 console.log('after hydrate — de loaded:', client.isLoaded('de'))  // true
 console.log('greeting:', client.t('greeting'))               // 'Hallo!'
 
-// hydrateI18n notifies subscribers once
+// restoreState() notifies subscribers once
 let changes = 0
 client.subscribe(() => { changes++ })
-hydrateI18n(client, state)
+client.restoreState(state)
 console.log('subscriber notifications:', changes)            // 1`,
-  name: 'serializeI18n() / hydrateI18n() — SSR hydration',
+  name: 'getState() / restoreState() — SSR hydration',
 };

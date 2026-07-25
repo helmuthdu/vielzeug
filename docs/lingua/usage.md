@@ -165,7 +165,9 @@ Without `onMissingKey`, missing keys return the key string. Without `onMissingVa
 
 ## Validating Catalogs
 
-Use `validateCatalog()` during development or CI to detect plural branches that are missing CLDR forms for a target locale. Import it from the dedicated `@vielzeug/lingua/validate` entry — never from the main entry or it will end up in your production bundle.
+`createI18n()` already runs this check automatically in dev builds — every time a catalog becomes available (construction, `register()`, or an async loader resolving), it's checked against CLDR plural rules and any issue is logged via `console.warn`. This costs nothing in production: the check runs behind the same dev-only gate as the rest of `@vielzeug/lingua`'s dev warnings, and the validation logic itself only loads as a separate on-demand chunk, never bundled into your app.
+
+For CI enforcement (failing a build rather than just warning), call `validateCatalog()` directly. Import it from the dedicated `@vielzeug/lingua/validate` entry — never from the main entry or it will end up in your production bundle.
 
 ```ts
 import { validateCatalog } from '@vielzeug/lingua/validate';
@@ -204,7 +206,7 @@ Key characteristics:
 
 ## SSR Hydration
 
-Prefer the instance methods `getState()` and `restoreState()` — they are equivalent to `serializeI18n` / `hydrateI18n` but require no extra imports:
+Use the instance methods `getState()` on the server and `restoreState()` on the client:
 
 ```ts
 import { createI18n } from '@vielzeug/lingua';
@@ -221,7 +223,7 @@ i18n.restoreState(window.__I18N__);
 // Catalogs from state are immediately available; no network request needed.
 ```
 
-`restoreState()` replaces all catalogs, switches the active locale, clears namespace loaded-markers, and notifies subscribers once. The free functions `serializeI18n()` and `hydrateI18n()` are equivalent alternatives.
+`restoreState()` replaces all catalogs, switches the active locale, clears namespace loaded-markers, and notifies subscribers once.
 
 **Warning:** `getState()` silently omits locales registered as async loaders but not yet preloaded. Use `isLoaded()` to guard:
 
@@ -371,10 +373,10 @@ router.subscribe(() => {
 - Keep translation keys flat or one level deep — deeply nested keys are harder to refactor.
 - Set `fallback` to a locale with 100% coverage so missing keys degrade gracefully.
 - Use `extend(ns, factory, locale?)` or `registerNamespace()` + `loadNamespace()` for per-route or per-feature key sets.
-- Use `isLoaded(locale)` before `getState()` / `serializeI18n()` in SSR to avoid silently omitting async-loader locales.
+- Use `isLoaded(locale)` before `getState()` in SSR to avoid silently omitting async-loader locales.
 - Use `isRegistered(locale)` to check if a locale is configured; use `isLoaded(locale)` to check if it is ready.
 - Call `dispose()` on route-level or request-scoped `fork()` instances when they are no longer needed.
 - Use `{ signal }` in `subscribe()` for lifecycle-safe subscriptions; use the returned `Unsubscribe` otherwise.
 - Use `onMissingKey` and `onMissingVar` in development to surface authoring errors early; omit them in production.
-- Import `validateCatalog` from `@vielzeug/lingua/validate` in CI only — never in application code.
+- `createI18n()` already validates plural forms automatically in dev builds — only import `validateCatalog` from `@vielzeug/lingua/validate` directly if you want CI to fail the build on a warning.
 - Share one `i18n` instance per app entry point; avoid creating separate instances per component.

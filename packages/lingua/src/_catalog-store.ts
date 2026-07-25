@@ -4,16 +4,37 @@
 import type { NamespaceStore } from './_namespace-store';
 
 import { CatalogEntry, type Messages, flattenStrings } from './_catalog';
-import { warn } from './_dev';
+import { devOnly, warn } from './_dev';
 import { LinguaMissingLocaleError, checkDisposed, checkDisposedAsync } from './errors';
 
 export type Locale = string;
 export type Loader<M extends Messages = Messages> = () => Promise<M>;
 export type LocaleSource<M extends Messages = Messages> = M | Loader<M>;
 
+// Dev-only feedback for the same catalog-authoring mistakes `validateCatalog()` (the CI/build
+// tool at `@vielzeug/lingua/validate`) already catches — most projects never wire that up, so
+// this gives the same signal for free, in the console the author is already watching, the
+// moment a full catalog becomes available: at `createI18n({ catalogs })` construction, via
+// `register()`, or once an async loader resolves. Not run for `patch()` — a namespace overlay is
+// expected to add only a handful of keys, not a complete plural set.
+//
+// Dynamic import, not a static one: `validate.ts`'s own docs promise it stays out of production
+// bundles. A static `import { validateCatalog } from './validate'` here would pull it into every
+// consumer's main bundle regardless of `devOnly()`'s runtime check — bundlers only eliminate
+// that dead branch if the consumer's own build defines `__LINGUA_PROD__` as a literal. The
+// dynamic import keeps validate.ts a genuinely separate, lazily-fetched chunk that's never
+// requested at all when `isDev` is false, no consumer bundler config required.
+export function validateCatalogInDev(loc: Locale, messages: Messages): void {
+  devOnly(() => {
+    void import('./validate').then(({ validateCatalog }) => {
+      for (const w of validateCatalog(messages, loc)) {
+        warn(`catalog('${loc}'): missing plural form '${w.form}' for key '${w.key}'.`);
+      }
+    });
+  });
+}
+
 export type CatalogStore<M extends Messages = Messages> = {
-  /** Direct access to the raw catalogs map (for SSR serialization). */
-  readonly catalogs: ReadonlyMap<Locale, CatalogEntry>;
   dispose(): void;
   isLoaded(loc: Locale): boolean;
   isRegistered(loc: Locale): boolean;
@@ -23,8 +44,6 @@ export type CatalogStore<M extends Messages = Messages> = {
   onChange: ((loc: Locale) => void) | undefined;
   /** Patch a locale catalog with additional flat messages (used by loadNamespace). */
   patch(loc: Locale, messages: Messages): Promise<void>;
-  /** Direct access to the pending loaders map (for fork propagation). */
-  readonly pendingLoaders: ReadonlyMap<Locale, Loader<M>>;
   /** Pre-load a locale catalog without switching. */
   preload(loc: Locale): Promise<void>;
   /** Register (or replace) a locale's source. Returns a Promise that resolves when the catalog is loaded. */
@@ -36,6 +55,10 @@ export type CatalogStore<M extends Messages = Messages> = {
    * Called during fork() — compiled templates are shared by reference.
    */
   seedFrom(entries: ReadonlyMap<Locale, CatalogEntry>, loaderMap: ReadonlyMap<Locale, Loader<M>>): void;
+  /** Snapshot of the raw catalogs map — used for SSR serialization (`getState()`) and fork seeding. */
+  snapshotCatalogs(): ReadonlyMap<Locale, CatalogEntry>;
+  /** Snapshot of the pending (not-yet-resolved) loaders map — used for fork seeding. */
+  snapshotLoaders(): ReadonlyMap<Locale, Loader<M>>;
 };
 
 export function createCatalogStore<M extends Messages = Messages>(disposed: () => boolean): CatalogStore<M> {
@@ -78,6 +101,7 @@ export function createCatalogStore<M extends Messages = Messages>(disposed: () =
 
         loaders.delete(loc);
         registerRaw(loc, flattenStrings(messages));
+        validateCatalogInDev(loc, messages);
         loadingTasks.delete(loc);
         onChange?.(loc);
       },
@@ -94,10 +118,6 @@ export function createCatalogStore<M extends Messages = Messages>(disposed: () =
   };
 
   return {
-    get catalogs() {
-      return catalogs as ReadonlyMap<Locale, CatalogEntry>;
-    },
-
     dispose() {
       catalogs.clear();
       loaders.clear();
@@ -148,10 +168,6 @@ export function createCatalogStore<M extends Messages = Messages>(disposed: () =
       return Promise.resolve();
     },
 
-    get pendingLoaders() {
-      return loaders as ReadonlyMap<Locale, Loader<M>>;
-    },
-
     preload,
 
     register(loc, source, nsStore) {
@@ -180,6 +196,7 @@ export function createCatalogStore<M extends Messages = Messages>(disposed: () =
         loaders.delete(loc);
         catalogs.delete(loc);
         registerRaw(loc, flattenStrings(source as M));
+        validateCatalogInDev(loc, source as M);
         loadPromise = Promise.resolve();
         onChange?.(loc);
       }
@@ -201,6 +218,14 @@ export function createCatalogStore<M extends Messages = Messages>(disposed: () =
         loaders.set(loc, loader);
         known.add(loc);
       }
+    },
+
+    snapshotCatalogs() {
+      return catalogs as ReadonlyMap<Locale, CatalogEntry>;
+    },
+
+    snapshotLoaders() {
+      return loaders as ReadonlyMap<Locale, Loader<M>>;
     },
   };
 }

@@ -69,6 +69,33 @@ describe('createI18n — lifecycle', () => {
       expect(i18n.disposed).toBe(true);
     });
 
+    test('[Symbol.dispose] still works when destructured off the instance and called detached', () => {
+      // Regression test: [Symbol.dispose] used to close over `this`, which is only bound when
+      // called as `i18n[Symbol.dispose]()` — the common "hand a bare cleanup callback to
+      // something else" pattern (`onUnmounted(i18n[Symbol.dispose])`, framework cleanup hooks,
+      // AbortSignal listeners, ...) detaches the function from its receiver first.
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
+      const dispose = i18n[Symbol.dispose];
+
+      expect(() => dispose()).not.toThrow();
+      expect(i18n.disposed).toBe(true);
+    });
+
+    test('using declaration disposes at the end of the block', () => {
+      let disposedInsideBlock: boolean;
+      let i18nRef: ReturnType<typeof createI18n>;
+
+      {
+        using i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
+
+        i18nRef = i18n;
+        disposedInsideBlock = i18n.disposed;
+      }
+
+      expect(disposedInsideBlock).toBe(false);
+      expect(i18nRef.disposed).toBe(true);
+    });
+
     test('t() after dispose returns onMissingKey result for every key', () => {
       const i18n = createI18n({
         catalogs: { en: { hello: 'Hello' } },
@@ -79,21 +106,21 @@ describe('createI18n — lifecycle', () => {
       expect(i18n.t('hello')).toBe('MISSING:hello');
     });
 
-    test('setLocale() after dispose throws [E007]', async () => {
+    test('setLocale() after dispose throws LinguaDisposedError', async () => {
       const i18n = createI18n({ catalogs: { en: {} } });
 
       i18n.dispose();
       await expect(i18n.setLocale('en')).rejects.toThrow(LinguaDisposedError);
     });
 
-    test('subscribe() after dispose throws [E007]', () => {
+    test('subscribe() after dispose throws LinguaDisposedError', () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
 
       i18n.dispose();
       expect(() => i18n.subscribe(() => {})).toThrow(LinguaDisposedError);
     });
 
-    test('extend() after dispose throws [E007]', () => {
+    test('extend() after dispose throws LinguaDisposedError', () => {
       const i18n = createI18n({ catalogs: { en: {} } });
 
       i18n.dispose();
@@ -121,7 +148,7 @@ describe('createI18n — lifecycle', () => {
   });
 
   describe('dispose() — register() guard', () => {
-    test('register() after dispose throws [E007]', () => {
+    test('register() after dispose throws LinguaDisposedError', () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
 
       i18n.dispose();

@@ -5,7 +5,7 @@ package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, l10n, async-loading]
 related: [ripple, wayfinder, courier]
-exports: [createI18n, createFormatter, hydrateI18n, serializeI18n, validateCatalog, LinguaError, LinguaDisposedError, LinguaInvalidCountError, LinguaCountInVarsError, LinguaMissingLocaleError, LinguaInvalidLocaleError, LinguaNamespaceMissingError, LinguaRestoreError]
+exports: [createI18n, createFormatter, validateCatalog, LinguaError, LinguaDisposedError, LinguaInvalidCountError, LinguaCountInVarsError, LinguaMissingLocaleError, LinguaInvalidLocaleError, LinguaNamespaceMissingError, LinguaRestoreError]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -133,7 +133,7 @@ i18n.getSupportedLocales();
 - Namespace lazy loading: `registerNamespace(ns, factory)` + `loadNamespace(ns, locale?)` — or use `extend(ns, factory, locale?)` as a convenience that does both; deduplicates per `ns + locale`; use for per-route or per-feature keys
 - Scoped translation helpers: `scope(prefix)` returns a `{ fmt, t, tp, has }` helper bound to a key prefix
 - Unified key existence check: `has(key)` returns `true` for leaf keys, branch keys, and pipe-plural base keys in the active fallback chain
-- Loaded-locale predicate: `isLoaded(locale)` returns `true` when a catalog is fully resolved — safe for `serializeI18n()` guards
+- Loaded-locale predicate: `isLoaded(locale)` returns `true` when a catalog is fully resolved — safe for `getState()` guards
 - Registered-locale predicate: `isRegistered(locale)` distinguishes "never configured" from "async loader not yet called"
 - Instance disposal: `dispose()` clears all subscribers and catalog state — prevents memory leaks in route-scoped SPA instances
 - Typed error handling: every thrown/rejected error is `instanceof LinguaError`, with named subclasses (`LinguaDisposedError`, `LinguaMissingLocaleError`, `LinguaNamespaceMissingError`, …) for specific `instanceof` branching
@@ -142,6 +142,7 @@ i18n.getSupportedLocales();
 - Deterministic fallback chain using active locale plus configured fallback locales
 - Separate missing handlers: `onMissingKey(key, locale)` and `onMissingVar(varName, key, locale)`
 - Formatting via `createFormatter(source)` — exported from the main entry alongside `createI18n`
+- Automatic dev-mode plural-form validation: every catalog registered or loaded is checked against CLDR rules for its locale, logged via `console.warn` — zero setup, and never bundled into production
 
 </div>
 

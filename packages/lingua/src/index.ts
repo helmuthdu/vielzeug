@@ -39,6 +39,4 @@ export {
   LinguaNamespaceMissingError,
   LinguaRestoreError,
   createI18n,
-  hydrateI18n,
-  serializeI18n,
 } from './i18n';

@@ -173,6 +173,10 @@ export type I18n<M extends Messages = Messages> = {
    * Returns `true` if the given key exists in the active fallback chain — either as a leaf
    * string key or as a plural branch (any key under `key.` prefix).
    *
+   * **Note:** a branch-only key (e.g. `items` when only `items.one`/`items.other` exist) makes
+   * `has()` return `true`, but `t()` can't resolve it — use `tp(key, count)` for those. Calling
+   * `t()` on a branch-only key logs a dev-mode warning pointing at this.
+   *
    * @example
    * i18n.has('inbox')       // true for leaf or pipe-plural expanded branch
    * i18n.has('inbox.one')   // true for explicit sub-key
@@ -234,6 +238,10 @@ export type I18n<M extends Messages = Messages> = {
    * @remarks The namespace registry is **not** included in `I18nState`. After restoring,
    * call `extend()` for each namespace before relying on namespace-patched keys.
    *
+   * @remarks Unlike `register()` and construction, this does **not** run the automatic
+   * dev-mode plural-form check — the assumption is that `state` was already registered (and
+   * therefore already checked) once on whatever system produced it.
+   *
    * @throws `LinguaDisposedError` if called on a disposed instance.
    * @throws `LinguaRestoreError` if the state's locale has no catalog.
    */
@@ -241,7 +249,10 @@ export type I18n<M extends Messages = Messages> = {
   /**
    * Returns a scoped translator. All `t()` / `tp()` calls are automatically prefixed with `${prefix}.`.
    * The returned object is memoized — calling `scope(prefix)` with the same string always returns the
-   * same reference.
+   * same reference, as long as it's still in the cache (bounded at 128 distinct prefixes; oldest
+   * evicts first). Intended for a static, finite set of prefixes (nav sections, form names, ...) —
+   * don't pass a dynamic per-item prefix (e.g. `scope(`item.${id}`)` in a list render), or the
+   * memoization guarantee stops holding once you exceed the bound.
    *
    * @example
    * const nav = i18n.scope('nav');
