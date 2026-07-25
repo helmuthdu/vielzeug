@@ -76,6 +76,12 @@ export interface EffectHandle extends Subscription {
 /**
  * Extended async subscription returned by `effectAsync()`.
  * Adds `run()` for structured concurrency — await the current async run before proceeding.
+ *
+ * Sanctioned hybrid disposal shape (see `.ai/core/conventions.md`'s Teardown section):
+ * `[Symbol.dispose]` (inherited from `Subscription`) aborts immediately and does
+ * **not** wait for in-flight async work to settle; `[Symbol.asyncDispose]` aborts
+ * **and** awaits full teardown. Pick `using` for a fire-and-forget stop, `await using`
+ * when you need to know the last run has actually finished before continuing.
  */
 export interface AsyncSubscription extends Subscription {
   /** Awaits the current async run without disposing the effect. Resolves immediately if idle. */
@@ -139,7 +145,7 @@ export interface Resource<T> extends Computed<ResourceState<T>> {
   refresh(): void;
 }
 
-// ── Store history / time-travel ───────────────────────────────────────────────
+// ── Store history / time-travel (see `@vielzeug/ripple/history`) ──────────────
 
 /**
  * A single snapshot entry in `StoreWithHistory`.
@@ -270,7 +276,8 @@ export interface Scope {
 }
 
 /**
- * An undo/redo adapter wrapping a `Store<T>`.
+ * An undo/redo adapter wrapping a `Store<T>`. Returned by `storeWithHistory()`
+ * from the `@vielzeug/ripple/history` sub-path.
  * Extends `Store<T>` directly — all store mutations (`patch`, `replace`, `reset`, `lens`)
  * work on the history adapter without `.store` indirection.
  *
@@ -278,6 +285,8 @@ export interface Scope {
  *
  * @example
  * ```ts
+ * import { storeWithHistory } from '@vielzeug/ripple/history';
+ *
  * const h = storeWithHistory({ count: 0 });
  *
  * h.patch({ count: 1 });

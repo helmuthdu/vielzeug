@@ -14,7 +14,8 @@ You need undo/redo support for structured state without implementing your own sn
 Use `storeWithHistory()` and call `.push()` (or `.pushNamed(label)`) explicitly after each logical change to record a checkpoint. Then call `undo()` / `redo()` to navigate.
 
 ```ts
-import { storeWithHistory, effect } from '@vielzeug/ripple';
+import { effect } from '@vielzeug/ripple';
+import { storeWithHistory } from '@vielzeug/ripple/history';
 
 const editor = storeWithHistory({ text: '', cursor: 0 }, { maxHistory: 100, name: 'editor' });
 
@@ -50,7 +51,7 @@ console.log(editor.peek().text); // 'He'
 Lens writes do not push snapshots automatically. Call `.push()` after lens writes to record them:
 
 ```ts
-import { storeWithHistory } from '@vielzeug/ripple';
+import { storeWithHistory } from '@vielzeug/ripple/history';
 
 const doc = storeWithHistory({ title: 'Draft', content: '' });
 const titleLens = doc.lens('title');
@@ -87,3 +88,4 @@ console.log(s.historyLength); // 3: [0, 1, 99]
 
 - [Stores](./stores.md)
 - [Batch for Complex Mutations](./pattern-batch-for-complex-mutations.md)
+- [Ledger](https://vielzeug.dev/ledger/) — for async commands or history over more than a `Store<T>`

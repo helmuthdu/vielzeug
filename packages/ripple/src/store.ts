@@ -318,15 +318,45 @@ export class StoreImpl<T extends object> implements Store<T> {
     getDevToolsHook()?.mutate?.({ kind: 'reset', name: this.name });
   }
 
-  lens<P extends string>(path: P): Signal<PathValue<T, P>> {
-    const cached = this.lensCache_.get(path);
+  /**
+   * Top-level lens: backed directly by the per-property signal — no extra graph node.
+   * The store owns propSig's lifecycle, so this lens has no `disposeSource`.
+   */
+  private topLevelLens_<V>(key: string, path: string): LensSignal<V> {
+    return new LensSignal<V>({
+      evict: () => this.lensCache_.delete(path),
+      source: this.propSignalFor_(key) as SignalImpl<V>,
+      write: (v) => {
+        batch(() => this.applyTopLevelChange_(key, v));
+        getDevToolsHook()?.mutate?.({ kind: 'lens', name: this.name, path });
+      },
+    });
+  }
 
-    if (cached !== undefined) return cached as unknown as Signal<PathValue<T, P>>;
+  /**
+   * Nested lens: backed by a derived `computed()` over the root property signal — the
+   * lens owns that computed (disposeSource) since nothing else references it.
+   * Write path batches the update so a nested lens write remains atomic.
+   */
+  private nestedLens_<V>(parts: string[], path: string): LensSignal<V> {
+    const readComputed = computed(() => getNestedValue(this.propSignalFor_(parts[0]!).value, parts.slice(1)) as V);
 
-    const evict = (): void => {
-      this.lensCache_.delete(path);
-    };
+    return new LensSignal<V>({
+      disposeSource: () => readComputed.dispose(),
+      evict: () => this.lensCache_.delete(path),
+      name: this.name ? `${this.name}.${path}` : path,
+      source: readComputed,
+      write: (v) => {
+        if (Object.is(readComputed.peek(), v)) return;
 
+        batch(() => this.setPath_(parts, v));
+        getDevToolsHook()?.mutate?.({ kind: 'lens', name: this.name, path });
+      },
+    });
+  }
+
+  /** Splits `path` on `.` and rejects empty/unsafe/too-deep segments before any lens is built. */
+  private validatedLensParts_(path: string): string[] {
     const parts = path.split('.');
 
     if (parts.length > 32) {
@@ -343,47 +373,23 @@ export class StoreImpl<T extends object> implements Store<T> {
       }
     }
 
-    let lens: LensSignal<unknown>;
+    return parts;
+  }
 
-    if (parts.length === 1) {
-      // Top-level lens: backed directly by the per-property signal.
-      const propSig = this.propSignalFor_(parts[0]!) as SignalImpl<PathValue<T, P>>;
+  lens<P extends string>(path: P): Signal<PathValue<T, P>> {
+    const cached = this.lensCache_.get(path);
 
-      lens = new LensSignal<PathValue<T, P>>({
-        evict,
-        // propSig lifecycle is owned by the store — do not dispose it
-        source: propSig,
-        write: (v) => {
-          batch(() => this.applyTopLevelChange_(parts[0]!, v));
-          getDevToolsHook()?.mutate?.({ kind: 'lens', name: this.name, path });
-        },
-      }) as unknown as LensSignal<unknown>;
-    } else {
-      // Nested lens: backed by a derived computed over the root property signal.
-      // Write path uses batch() here so nested lens writes remain atomic.
-      const readComputed = computed(
-        () => getNestedValue(this.propSignalFor_(parts[0]!).value, parts.slice(1)) as PathValue<T, P>,
-      );
+    if (cached !== undefined) return cached as unknown as Signal<PathValue<T, P>>;
 
-      lens = new LensSignal<PathValue<T, P>>({
-        disposeSource: () => readComputed.dispose(),
-        evict,
-        name: this.name ? `${this.name}.${path}` : path,
-        source: readComputed,
-        write: (v) => {
-          const current = readComputed.peek();
+    const parts = this.validatedLensParts_(path);
+    const lens =
+      parts.length === 1
+        ? this.topLevelLens_<PathValue<T, P>>(parts[0]!, path)
+        : this.nestedLens_<PathValue<T, P>>(parts, path);
 
-          if (Object.is(current, v)) return;
+    this.lensCache_.set(path, lens as unknown as LensSignal<unknown>);
 
-          batch(() => this.setPath_(parts, v));
-          getDevToolsHook()?.mutate?.({ kind: 'lens', name: this.name, path });
-        },
-      }) as unknown as LensSignal<unknown>;
-    }
-
-    this.lensCache_.set(path, lens);
-
-    return lens as unknown as Signal<PathValue<T, P>>;
+    return lens;
   }
 
   get disposed(): boolean {

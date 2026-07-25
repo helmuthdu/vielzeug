@@ -192,7 +192,7 @@ label.dispose();
 - **`.replace(fn)`** — derive next state from current via a function; same-reference return is a no-op
 - **`.reset()`** — restore the initial state baseline
 - **`.lens<P>(path)`** — cached writable `Signal` for a property or dot-path; writes produce an immutable copy
-- **`storeWithHistory(storeOrInit, options?)`** — store with explicit snapshot history; accepts an existing `Store<T>` (not owned) or a plain object; call `.push()` / `.pushNamed(label)` to save checkpoints; `undo()`, `redo()`, `historyAt(i)` returns `HistoryEntry<T>`; reactive `canUndo` / `canRedo`
+- **`storeWithHistory(storeOrInit, options?)`** — store with explicit snapshot history; accepts an existing `Store<T>` (not owned) or a plain object; call `.push()` / `.pushNamed(label)` to save checkpoints; `undo()`, `redo()`, `historyAt(i)` returns `HistoryEntry<T>`; reactive `canUndo` / `canRedo`; import via `@vielzeug/ripple/history`
 - **`getDevToolsHook()`** — returns the currently installed DevTools hook, or `null`; install via `@vielzeug/ripple/devtools`
 - **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot
 - **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations default)

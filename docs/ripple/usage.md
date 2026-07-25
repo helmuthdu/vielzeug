@@ -425,7 +425,7 @@ effect(() => {
 `storeWithHistory(initial, options?)` wraps a store with snapshot-based undo/redo. Mutations do **not** automatically push snapshots — call `.push()` (or `.pushNamed(label)`) explicitly after each logical change. History navigation with `undo()` and `redo()` never re-runs logic — it replays snapshots directly.
 
 ```ts
-import { storeWithHistory } from '@vielzeug/ripple';
+import { storeWithHistory } from '@vielzeug/ripple/history';
 
 const editor = storeWithHistory({ text: '', cursor: 0 }, { maxHistory: 100 });
 

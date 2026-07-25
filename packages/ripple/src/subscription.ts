@@ -37,6 +37,8 @@ export class SubscriptionImpl implements Subscription {
 //
 // Wraps a synchronous stop handle + an async drain function.
 // run() awaits the current in-flight run without stopping the effect.
+// Sanctioned hybrid disposal (see AsyncSubscription's JSDoc in types.ts):
+// [Symbol.dispose] aborts immediately without waiting for in-flight work;
 // [Symbol.asyncDispose] stops the effect synchronously and then awaits full teardown.
 
 export class AsyncSubscriptionImpl implements AsyncSubscription {

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor(ripple): move storeWithHistory to /history sub-path; tighten readonly()/resource() typing",
+      "packageName": "@vielzeug/ripple",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

@@ -1,5 +1,15 @@
+// ── Dependency tracking ────────────────────────────────────────────────────────
+//
+// Owns what a TrackingCtx *means* and how reactive reads (trackSource) record
+// themselves into one. Where the active TrackingCtx is stored/swapped for the
+// duration of a call lives in execution-context.ts — this file only knows how
+// to read and replace the `tracking` field of whatever context that module hands
+// back, via getExecutionContext()/runInContext().
+
 import type { ComputedBase, ReactiveBase } from './reactive-base';
 import type { CleanupFn, Subscriber } from './types';
+
+import { getExecutionContext, getScopeCleanups, runInContext } from './execution-context';
 
 // ── Global revision clock ─────────────────────────────────────────────────────
 //
@@ -12,7 +22,7 @@ let globalRevision = 0;
 export const tickRevision = (): number => ++globalRevision;
 export const getRevision = (): number => globalRevision;
 
-// ── Internal types ────────────────────────────────────────────────────────────
+// ── TrackingCtx ────────────────────────────────────────────────────────────────
 
 export type DepEntry = {
   source: ReactiveBase<unknown>;
@@ -44,117 +54,9 @@ export type TrackingCtx = {
     }
 );
 
-// ── Scheduling state ────────────────────────────────────────────────────────
-//
-// Colocated here (rather than in scheduling.ts) so it can be a field of
-// ExecutionContext without a runtime circular import between tracking.ts and
-// scheduling.ts — scheduling.ts only needs `getSchedulingState()` and the
-// `SchedulingState` type (type-only import, erased at compile time).
-//
-// Isolating this per-request (via the SSR hook) closes the documented gap where
-// concurrent SSR requests share one flush queue: `batchDepth`, `pendingSubscribers`,
-// and the dirty-computed sets are the only scheduling fields that can observably
-// leak across requests (they persist across `await` boundaries via `batch()`
-// spanning shared module-level signals). The propagation epoch/stack in
-// scheduling.ts stay module-level scratch memory — they're only touched within a
-// single synchronous call stack, which JS's run-to-completion model already isolates.
+export const getTracking = (): TrackingCtx | null => getExecutionContext().tracking;
 
-export type SchedulingState = {
-  activeDirty: 'a' | 'b';
-  batchDepth: number;
-  readonly dirtyWithEffectSubsA: Set<ComputedBase<unknown>>;
-  readonly dirtyWithEffectSubsB: Set<ComputedBase<unknown>>;
-  readonly pendingSubscribers: Set<Subscriber>;
-};
-
-export const createSchedulingState = (): SchedulingState => ({
-  activeDirty: 'a',
-  batchDepth: 0,
-  dirtyWithEffectSubsA: new Set(),
-  dirtyWithEffectSubsB: new Set(),
-  pendingSubscribers: new Set(),
-});
-
-// ── ExecutionContext ──────────────────────────────────────────────────────────
-//
-// Unified context replaces two separate globals (_tracking and _scopeStack).
-// Both the dep-tracking context and the innermost scope's cleanup array live here.
-// The SSR hook overrides the entire context per-request — fixing the prior bug
-// where scope cleanups were always a process-wide singleton even with the hook.
-
-export type ExecutionContext = {
-  readonly scheduling: SchedulingState;
-  readonly scopeCleanups: CleanupFn[] | null;
-  readonly tracking: TrackingCtx | null;
-};
-
-export type ContextHook = {
-  get(): ExecutionContext;
-  run<T>(ctx: ExecutionContext, fn: () => T): T;
-};
-
-let _ctx: ExecutionContext = { scheduling: createSchedulingState(), scopeCleanups: null, tracking: null };
-let _hook: ContextHook | null = null;
-
-const getCtx = (): ExecutionContext => (_hook !== null ? _hook.get() : _ctx);
-
-/** Returns the scheduling-state bucket for the active execution context (module-level singleton outside SSR). */
-export const getSchedulingState = (): SchedulingState => getCtx().scheduling;
-
-/** `true` once an SSR context hook is installed — scheduling state is then request-isolated. */
-export const hasContextHook = (): boolean => _hook !== null;
-
-// ── Tracking ──────────────────────────────────────────────────────────────────
-
-export const getTracking = (): TrackingCtx | null => getCtx().tracking;
-
-export const withTracking = <T>(tracking: TrackingCtx | null, fn: () => T): T => {
-  if (_hook !== null) {
-    const current = _hook.get();
-
-    return _hook.run({ ...current, tracking }, fn);
-  }
-
-  const prev = _ctx;
-
-  _ctx = { ..._ctx, tracking };
-
-  try {
-    return fn();
-  } finally {
-    _ctx = prev;
-  }
-};
-
-// ── Scope cleanup ─────────────────────────────────────────────────────────────
-
-/**
- * Pushes `cleanups` as the active scope cleanup array for the duration of `fn`.
- * Any `onCleanup()` calls inside `fn` will register into these cleanups.
- * Effects and computed values created inside `fn` are also auto-registered.
- */
-export const withScopeCleanups = <T>(cleanups: CleanupFn[], fn: () => T): T => {
-  if (_hook !== null) {
-    const current = _hook.get();
-
-    return _hook.run({ ...current, scopeCleanups: cleanups }, fn);
-  }
-
-  const prev = _ctx;
-
-  _ctx = { ..._ctx, scopeCleanups: cleanups };
-
-  try {
-    return fn();
-  } finally {
-    _ctx = prev;
-  }
-};
-
-/**
- * Returns the cleanup array of the innermost active scope, or `null` if not inside a scope.
- */
-export const getScopeCleanups = (): CleanupFn[] | null => getCtx().scopeCleanups;
+export const withTracking = <T>(tracking: TrackingCtx | null, fn: () => T): T => runInContext({ tracking }, fn);
 
 // ── Auto-disposal ───────────────────────────────────────────────────────────────
 //
@@ -186,24 +88,9 @@ export const autoRegisterDisposal = (dispose: CleanupFn): void => {
   }
 };
 
-// ── Context hook (for SSR) ────────────────────────────────────────────────────
-
-/**
- * @internal Used only by `/ripple/ssr`.
- * Installs a context hook that overrides both tracking and scope-cleanup access.
- * Returns the previous hook so callers can restore it.
- */
-export const _installContextHook = (hook: ContextHook | null): ContextHook | null => {
-  const prev = _hook;
-
-  _hook = hook;
-
-  return prev;
-};
-
 // ── Source observer ───────────────────────────────────────────────────────────
 //
-// Observer is now scoped to the active TrackingCtx instead of a process-wide global.
+// Observer is scoped to the active TrackingCtx instead of a process-wide global.
 // This means it only fires for direct deps of the current effect/computed — nested
 // computed recomputes use their own context (no observer) so no identity check needed.
 

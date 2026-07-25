@@ -1,8 +1,26 @@
+/**
+ * @vielzeug/ripple — snapshot-based store undo/redo.
+ *
+ * Import from the dedicated sub-path so it is tree-shaken from bundles that
+ * never use it:
+ * ```ts
+ * import { storeWithHistory } from '@vielzeug/ripple/history';
+ * ```
+ *
+ * This is a thin, synchronous, single-store adapter — for async commands,
+ * multi-step undo grouping, or history over anything other than a `Store<T>`,
+ * use `@vielzeug/ledger` instead.
+ */
+
 import type { HistoryEntry, Store, StoreWithHistory } from './types';
 
 import { signal } from './signal';
 import { store } from './store';
 import { isStore } from './utilities';
+
+// Re-export the history-specific types from the core module so consumers of
+// this sub-path don't need to import from two places.
+export type { HistoryEntry, StoreWithHistory } from './types';
 
 const snapshot = <T extends object>(state: Readonly<T>, label?: string): HistoryEntry<T> => ({
   label,

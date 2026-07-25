@@ -33,6 +33,8 @@ Include `disposalSignal` on long-lived stateful objects a consumer might tie the
 
 Async teardown is reserved for cases that genuinely require `await`.
 
+**Sanctioned hybrid exception:** a handle may implement both `[Symbol.dispose]` (stop immediately, do not wait for in-flight async work) and `[Symbol.asyncDispose]` (stop and await full drain) when callers genuinely need both a cheap synchronous abort and an optional full-drain await — e.g. `ripple`'s `effectAsync()` return value. Document the difference in guarantees right next to each method; do not add this hybrid shape to a handle that only ever needs one of the two.
+
 ## Dev logging
 
 Internal warnings go through a private `src/_dev.ts`. Never mix this with the Layer 2 devtools below.

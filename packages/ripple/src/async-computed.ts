@@ -1,8 +1,9 @@
 import type { Resource, ResourceOptions, ResourceState } from './types';
 
+import { getDevToolsHook } from './devtools-hook';
 import { effect } from './effect';
 import { signal } from './signal';
-import { IS_COMPUTED, IS_SIGNAL } from './symbols';
+import { IS_COMPUTED, IS_SIGNAL, SUPPRESS_RUN_EVENT } from './symbols';
 import { autoRegisterDisposal } from './tracking';
 
 /**
@@ -55,36 +56,43 @@ export const resource = <T>(
   let controller: AbortController | null = null;
   let disposed = false;
 
-  const stop = effect(
-    () => {
-      void epoch.value;
+  // Built unannotated and passed by reference (not as an inline literal) so TypeScript
+  // checks it structurally against EffectOptions instead of excess-property-checking
+  // the SUPPRESS_RUN_EVENT symbol key that isn't part of the public type.
+  const internalEffectOptions = { name, [SUPPRESS_RUN_EVENT]: true };
+  const stop = effect(() => {
+    void epoch.value;
 
-      controller?.abort();
-      controller = new AbortController();
+    // A resource is a derived value like computed() — emit the same 'compute' event
+    // computed.ts fires before recomputing, so DevTools sees a resource re-run as a
+    // derived-value recompute. SUPPRESS_RUN_EVENT below stops the internal effect from
+    // also firing its own 'run' for the same re-run — one signal per re-run, not two.
+    getDevToolsHook()?.compute?.({ name });
 
-      const { signal: abortSignal } = controller;
+    controller?.abort();
+    controller = new AbortController();
 
-      const current = state.peek();
-      const prevData = 'data' in current ? current.data : undefined;
+    const { signal: abortSignal } = controller;
 
-      state.value = { data: prevData, status: 'loading' };
+    const current = state.peek();
+    const prevData = 'data' in current ? current.data : undefined;
 
-      void (async () => {
-        try {
-          const result = await factory(abortSignal);
+    state.value = { data: prevData, status: 'loading' };
 
-          if (!abortSignal.aborted && !disposed) {
-            state.value = { data: result, status: 'ready' };
-          }
-        } catch (err) {
-          if (!abortSignal.aborted && !disposed) {
-            state.value = { data: prevData, error: err, status: 'error' };
-          }
+    void (async () => {
+      try {
+        const result = await factory(abortSignal);
+
+        if (!abortSignal.aborted && !disposed) {
+          state.value = { data: result, status: 'ready' };
         }
-      })();
-    },
-    name ? { name } : undefined,
-  );
+      } catch (err) {
+        if (!abortSignal.aborted && !disposed) {
+          state.value = { data: prevData, error: err, status: 'error' };
+        }
+      }
+    })();
+  }, internalEffectOptions);
 
   const refresh = (): void => {
     if (disposed) return;
@@ -104,7 +112,12 @@ export const resource = <T>(
 
   autoRegisterDisposal(dispose);
 
-  return {
+  // Built unannotated (the brand symbols aren't part of Resource<T>, and annotating the
+  // literal directly would trip excess-property checking on it) then assigned to a
+  // Resource<T>-typed binding — a structural check, not a cast, so a future member added
+  // to Computed<T>/Resource<T> fails this assignment at compile time instead of silently
+  // going missing.
+  const impl = {
     dispose,
     get disposed() {
       return disposed;
@@ -121,5 +134,8 @@ export const resource = <T>(
     get value() {
       return state.value;
     },
-  } as Resource<T>;
+  };
+  const handle: Resource<T> = impl;
+
+  return handle;
 };

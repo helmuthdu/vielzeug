@@ -22,6 +22,12 @@
       "import": "./dist/devtools.js",
       "require": "./dist/devtools.cjs"
     },
+    "./history": {
+      "source": "./src/history.ts",
+      "types": "./dist/history.d.ts",
+      "import": "./dist/history.js",
+      "require": "./dist/history.cjs"
+    },
     "./ssr": {
       "source": "./src/ssr/index.ts",
       "types": "./dist/ssr/index.d.ts",

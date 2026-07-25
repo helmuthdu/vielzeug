@@ -1,6 +1,8 @@
 // Public API — all exports for @vielzeug/ripple
-// Internal implementation files (tracking.ts, reactive-base.ts, scheduling.ts)
-// are intentionally NOT exported to keep the surface stable.
+// Internal implementation files (tracking.ts, execution-context.ts, reactive-base.ts,
+// scheduling.ts) are intentionally NOT exported to keep the surface stable.
+// Snapshot-based store history/undo-redo (storeWithHistory) lives at the
+// @vielzeug/ripple/history sub-path — not part of this core entry point.
 
 export type {
   AsyncEffectCallback,
@@ -15,7 +17,6 @@ export type {
   EffectOptions,
   EffectScheduler,
   EqualityFn,
-  HistoryEntry,
   PathValue,
   Readable,
   Resource,
@@ -25,7 +26,6 @@ export type {
   Signal,
   SignalOptions,
   Store,
-  StoreWithHistory,
   Subscription,
   WatchOptions,
 } from './types';
@@ -54,9 +54,6 @@ export { isComputed, isReactive, isSignal, isStore, readonly, untrack } from './
 
 // Async computed
 export { resource } from './async-computed';
-
-// Store with history / time-travel
-export { storeWithHistory } from './store-history';
 
 // DevTools — read-only access from core; install via @vielzeug/ripple/devtools
 export { getDevToolsHook } from './devtools-hook';

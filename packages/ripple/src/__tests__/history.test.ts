@@ -1,4 +1,5 @@
-import { batch, effect, signal, store, storeWithHistory } from '../';
+import { batch, effect, store } from '../';
+import { storeWithHistory } from '../history';
 
 describe('storeWithHistory', () => {
   it('records and replays history via explicit push()+undo/redo', () => {

@@ -1567,6 +1567,7 @@ export default defineConfig({
             { link: '/ripple/api#types', text: 'Types' },
             { link: '/ripple/api#devtools', text: 'DevTools' },
             { link: '/ripple/api#notification-timing', text: 'Notification Timing' },
+            { link: '/ripple/api#error-handling', text: 'Error Handling' },
           ],
           link: '/ripple/api',
           text: 'API Reference',

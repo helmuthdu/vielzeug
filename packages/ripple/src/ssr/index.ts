@@ -18,7 +18,12 @@
  */
 
 import { RippleEnvironmentError } from '../errors';
-import { _installContextHook, createSchedulingState, type ContextHook, type ExecutionContext } from '../tracking';
+import {
+  _installContextHook,
+  createSchedulingState,
+  type ContextHook,
+  type ExecutionContext,
+} from '../execution-context';
 
 // eslint-disable-next-line no-var
 declare var require: (id: string) => unknown;

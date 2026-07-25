@@ -1,4 +1,4 @@
-import { computed, effect, getDevToolsHook, signal, store } from '../';
+import { computed, effect, getDevToolsHook, resource, signal, store } from '../';
 import { debugEffect, installDevTools } from '../devtools';
 
 describe('DevTools hook', () => {
@@ -72,6 +72,28 @@ describe('DevTools hook', () => {
     c.dispose();
     n.dispose();
     expect(names).toContain('doubled');
+  });
+
+  it('compute event fires once per resource factory run, and its internal effect never fires its own run event', async () => {
+    const computeNames: Array<string | undefined> = [];
+    const runNames: Array<string | undefined> = [];
+
+    installDevTools({ compute: (e) => computeNames.push(e.name), run: (e) => runNames.push(e.name) });
+
+    const id = signal('u1');
+    const r = resource(async () => id.value, { name: 'user' });
+
+    await Promise.resolve();
+    id.value = 'u2'; // triggers a second factory run
+    await Promise.resolve();
+    r.dispose();
+    id.dispose();
+
+    // Initial run + one re-run on id change — exactly two computes, no more, no less.
+    expect(computeNames.filter((n) => n === 'user')).toHaveLength(2);
+    // resource() suppresses its internal effect's own 'run' event — a resource re-run
+    // is one 'compute' signal, not a 'compute' + a redundant anonymous-effect 'run'.
+    expect(runNames.filter((n) => n === 'user')).toHaveLength(0);
   });
 
   it('run event fires with name when effect runs', () => {

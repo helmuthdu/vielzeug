@@ -21,7 +21,7 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `scope()`            | Isolated cleanup context                                              | Sync           | Must call `scope.run()` to activate; `dispose()` is LIFO                          |
 | `debugEffect()`      | Effect that logs changed sources before re-run                        | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; tree-shaken from production           |
 | `store()`            | Create object-like state container                                    | Sync           | Store is a branded signal; use `.patch()`, `.replace()`, `.reset()`               |
-| `storeWithHistory()` | Store with snapshot-based undo/redo history                           | Sync           | Call `.push()` / `.pushNamed()` explicitly to record a checkpoint; `maxHistory` caps the buffer |
+| `storeWithHistory()` | Store with snapshot-based undo/redo history                           | Sync           | Sub-path only: `@vielzeug/ripple/history`; call `.push()` / `.pushNamed()` explicitly to record a checkpoint; `maxHistory` caps the buffer |
 | `installDevTools()`  | Install DevTools observation hook                                     | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; pass `null` to uninstall              |
 | `getDevToolsHook()`  | Return current DevTools hook                                          | Sync           | Returns `null` if none installed                                                  |
 | `isSignal()`         | Type guard for any signal/computed/store                              | Sync           | Uses an internal symbol marker, not duck-typing                                   |
@@ -34,6 +34,7 @@ description: Complete type signatures, parameter docs, and return values for eve
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@vielzeug/ripple`          | All core exports and types                                                                                                                                        |
 | `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect`, and hook types (`RippleDevToolsHook`, `WriteEvent`, `NamedEvent`, `DisposeEvent`, `MutateEvent`) — dev-only, tree-shaken from prod |
+| `@vielzeug/ripple/history`  | `storeWithHistory` and its types (`StoreWithHistory`, `HistoryEntry`) — tree-shaken unless imported |
 | `@vielzeug/ripple/ssr`      | SSR tracking isolation helpers (`setTrackingProvider`, `createAsyncProvider`, `withProvider`, `runWithProvider`). Node.js only — do not import in browser builds. |
 
 ## Signal Primitives
@@ -547,6 +548,10 @@ Creates a reactive store for the given object state. Stores accept `effect()`, `
 
 ### `storeWithHistory`
 
+::: info Sub-path import
+`storeWithHistory` is exported from `@vielzeug/ripple/history`, not the main entry point. This keeps it tree-shaken from bundles that never use it — for async commands or history over anything other than a `Store<T>`, use `@vielzeug/ledger` instead.
+:::
+
 ```ts
 function storeWithHistory<T extends object>(
   storeOrInitial: Store<T> | T,
@@ -561,6 +566,8 @@ The initial state is saved as the first snapshot automatically. Snapshots are de
 **Ownership:** when called with an initial value (`T`), the adapter creates and owns the underlying store — `dispose()` also disposes it. When called with an existing `Store<T>`, the adapter does **not** own it — `dispose()` leaves the store alive.
 
 ```ts
+import { storeWithHistory } from '@vielzeug/ripple/history';
+
 const editor = storeWithHistory({ text: '' }, { maxHistory: 100 });
 
 editor.patch({ text: 'hello' }); // direct — StoreWithHistory extends Store<T>
@@ -1192,3 +1199,17 @@ batch(() => {
 ```
 
 Nested `batch()` calls merge into the outermost — only one flush occurs.
+
+## Error Handling
+
+Ripple has no single error-handling mode — each primitive picks the surface that fits how it's normally consumed. This is one deliberate spectrum, not three unrelated designs:
+
+| Primitive                      | Failure surface                                 | Why                                                                                       |
+| ------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `signal()` / `computed()`       | Throws synchronously                             | Sync code — the caller is already in a position to catch                                   |
+| `effect()`                      | Throws synchronously (rethrown from the run)     | Same as above — no async gap between cause and observation                                 |
+| `watch()`                       | Throws synchronously on an invalid callback return | Programmer-error guard, not a runtime failure mode                                         |
+| `effectAsync()`                 | Routes to `onError` (default: rethrown via `queueMicrotask`) | There's no synchronous caller left to catch by the time the factory rejects — needs an explicit escape hatch |
+| `resource()`                    | Never throws — lands in `ResourceState.status === 'error'` | Failures are render state (show an error UI), not exceptions to unwind past                |
+
+Rule of thumb: if you're inside a synchronous callback, ripple throws (`RippleError` subtypes — see [Errors](#errors)). If the failure only exists after an `await`, ripple gives you a place to observe it instead of throwing into a call stack that's already gone — `onError` for `effectAsync()`, `ResourceState.error` for `resource()`.

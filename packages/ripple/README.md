@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/ripple` &nbsp;·&nbsp; **Category:** State
 
-**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `resource`, `watch`, `batch`, `store`, `storeWithHistory`, `untrack`, `scope`, `onCleanup`, `readonly`, `isSignal`, `isComputed`, `isStore`
+**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `resource`, `watch`, `batch`, `store`, `untrack`, `scope`, `onCleanup`, `readonly`, `isSignal`, `isComputed`, `isStore`
 
 **When to use:** Fine-grained reactivity without a framework. Powers Ore templates. Works in any TS/JS environment including Node, Deno, and SSR.
 
@@ -36,6 +36,7 @@ yarn add @vielzeug/ripple
 | --------------------------- | ------------------------------------------------------------------------ |
 | `@vielzeug/ripple`          | Core primitives and types                                                |
 | `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect` — dev-only, tree-shaken from production |
+| `@vielzeug/ripple/history`  | `storeWithHistory` — snapshot-based store undo/redo, tree-shaken unless imported |
 | `@vielzeug/ripple/ssr`      | SSR tracking isolation helpers (`setTrackingProvider`, `createAsyncProvider`, `withProvider`, `runWithProvider`). Node.js only — do not import in browser builds. |
 
 ## Quick Start
@@ -79,8 +80,8 @@ const userState = resource(async (signal) => {
 });
 // userState.value → { status: 'loading' | 'ready' | 'error', data, error }
 
-// Store with undo/redo history
-import { storeWithHistory } from '@vielzeug/ripple';
+// Store with undo/redo history — dedicated sub-path, tree-shaken unless imported
+import { storeWithHistory } from '@vielzeug/ripple/history';
 
 const editor = storeWithHistory({ text: '' }, { maxHistory: 50 });
 editor.patch({ text: 'hello' });

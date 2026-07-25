@@ -1,4 +1,4 @@
-import type { Computed, Readable, Signal } from './types';
+import type { Computed, Readable, Signal, Store } from './types';
 
 import { IS_COMPUTED, IS_SIGNAL, IS_STORE } from './symbols';
 import { untrack } from './tracking';
@@ -30,7 +30,11 @@ export { untrack };
  * ```
  */
 export const readonly = <T>(source: Readable<T>): Readable<T> => {
-  const wrapper = {
+  // Built unannotated (the [IS_SIGNAL] brand isn't part of Readable<T>, and annotating
+  // the literal directly would trip excess-property checking on it) then assigned to a
+  // Readable<T>-typed binding — a structural check, not a cast, so a future member added
+  // to Readable<T> fails this assignment at compile time instead of silently going missing.
+  const impl = {
     get disposed(): boolean {
       return source.disposed;
     },
@@ -48,8 +52,9 @@ export const readonly = <T>(source: Readable<T>): Readable<T> => {
       return source.value;
     },
   };
+  const wrapper: Readable<T> = impl;
 
-  return wrapper as unknown as Readable<T>;
+  return wrapper;
 };
 
 // ── Type guards ───────────────────────────────────────────────────────────────
@@ -97,5 +102,5 @@ export const isSignal = <T = unknown>(value: unknown): value is Signal<T> =>
 export const isComputed = <T = unknown>(value: unknown): value is Computed<T> =>
   typeof value === 'object' && value !== null && !!(value as Record<typeof IS_COMPUTED, unknown>)[IS_COMPUTED];
 
-export const isStore = <T extends object = object>(value: unknown): value is import('./types').Store<T> =>
+export const isStore = <T extends object = object>(value: unknown): value is Store<T> =>
   typeof value === 'object' && value !== null && !!(value as Record<typeof IS_STORE, unknown>)[IS_STORE];

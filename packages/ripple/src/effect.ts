@@ -19,10 +19,11 @@ import type {
 import { collectErrors, rethrowWith, runAll } from './_error-utils';
 import { getDevToolsHook } from './devtools-hook';
 import { RippleDisposedScopeError, RippleInfiniteLoopError, RippleInvalidCleanupError } from './errors';
+import { getScopeCleanups, withScopeCleanups } from './execution-context';
 import { DEFAULT_MAX_ITERATIONS } from './scheduling';
 import { AsyncSubscriptionImpl, SubscriptionImpl } from './subscription';
-import { IS_COMPUTED } from './symbols';
-import { getScopeCleanups, getTracking, withScopeCleanups, withTracking } from './tracking';
+import { IS_COMPUTED, SUPPRESS_RUN_EVENT } from './symbols';
+import { getTracking, withTracking } from './tracking';
 
 /**
  * Wraps a core `run` function with a microtask-based scheduler that coalesces rapid re-runs.
@@ -69,6 +70,12 @@ const withScheduler = (run: Subscriber, scheduler: EffectOptions['scheduler']): 
 export const effect = (fn: EffectCallback, options?: EffectOptions): EffectHandle => {
   const scheduler = options?.scheduler ?? 'sync';
   const effectName = options?.name;
+  // Internal-only escape hatch — see SUPPRESS_RUN_EVENT's JSDoc in symbols.ts.
+  // No public option can ever reach this: EffectOptions doesn't declare the key, and
+  // the symbol is never exported from index.ts.
+  const suppressRunEvent = (options as Partial<Record<typeof SUPPRESS_RUN_EVENT, boolean>> | undefined)?.[
+    SUPPRESS_RUN_EVENT
+  ];
 
   const runCleanups: CleanupFn[] = [];
   const subscriptions = new Set<CleanupFn>();
@@ -116,7 +123,7 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): EffectHandl
         isDirty = false;
         teardown();
 
-        getDevToolsHook()?.run?.({ name: effectName });
+        if (!suppressRunEvent) getDevToolsHook()?.run?.({ name: effectName });
 
         let returnedCleanup: CleanupFn | void = undefined;
 

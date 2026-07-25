@@ -9,6 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const base = getConfig(__dirname, {
   entry: {
     'src/devtools': resolve(__dirname, 'src/devtools.ts'),
+    'src/history': resolve(__dirname, 'src/history.ts'),
     'src/index': resolve(__dirname, 'src/index.ts'),
     'src/ssr/index': resolve(__dirname, 'src/ssr/index.ts'),
   },

@@ -4,7 +4,7 @@ import type { Subscriber } from './types';
 import { warn } from './_dev';
 import { runAll } from './_error-utils';
 import { RippleInfiniteLoopError } from './errors';
-import { getSchedulingState, hasContextHook, type SchedulingState } from './tracking';
+import { getSchedulingState, hasContextHook, type SchedulingState } from './execution-context';
 
 export const DEFAULT_MAX_ITERATIONS = 100;
 
