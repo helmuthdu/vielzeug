@@ -69,8 +69,7 @@ A new search term has no meaningful relationship to the old cursor position, so 
 ### Pitfalls
 
 - `patch()` on a cursor source only accepts `limit`/`search` — there is no `page` field to patch, unlike
-  `RemoteSource`. Passing `page` through `applyQuery()` is silently ignored (see the
-  [API Reference](../api.md#applyquery) for details).
+  `RemoteSource`. Passing `page` is a compile-time type error, not a silent runtime no-op.
 - Don't assume `total` is always present — many cursor-paginated APIs (DynamoDB in particular) can't
   cheaply compute a total count. Treat `meta.totalItems` as optional-in-spirit even though the type
   requires a number; return `0` from `fetch` if your API has no count.

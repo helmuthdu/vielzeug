@@ -1,8 +1,35 @@
 import type { LibraryFormats } from 'vite';
 
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 type LibraryEntry = string | Record<string, string>;
+
+/**
+ * Reads the calling package's own `dependencies` from `package.json` next to `__dirname`.
+ * Pass the result as `external` to `getConfig()`/`getBundleConfig()` for packages whose
+ * externals are exactly "my own workspace dependencies, nothing more" — avoids hand-listing
+ * the same `@vielzeug/*` names already in `package.json` a second (and third — `vite.config.ts`
+ * and `vite.bundle.config.ts` each need their own copy today) time.
+ *
+ * Deliberately NOT a silent default inside `getConfig`/`getBundleConfig`: several packages
+ * (e.g. `refine`) need a *function* predicate for `external` (to match `@vielzeug/ore/<subpath>`
+ * imports, which Rolldown's array-of-strings `external` only matches by exact equality, not
+ * prefix) layered on afterward via `mergeConfig()`. Rolldown's `external` array only accepts
+ * plain strings/RegExp per element — auto-populating an array here by default would collide
+ * with that pattern the moment a package merges in its own function-shaped override. Opt in
+ * explicitly per package instead.
+ */
+export const readWorkspaceDeps = (__dirname: string): string[] => {
+  // No try/catch — a missing or malformed package.json here is a real configuration error that
+  // should fail the build loudly. Silently falling back to `[]` would instead produce a build
+  // that "succeeds" while inlining every workspace dependency into the package's own output.
+  const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8')) as {
+    dependencies?: Record<string, string>;
+  };
+
+  return Object.keys(pkg.dependencies ?? {});
+};
 
 export type BundleOptions = {
   /** Absolute path to the bundle entry point. Defaults to `src/index.ts`. */
@@ -25,6 +52,8 @@ export const getConfig = (
   __dirname: string,
   options?: {
     entry?: LibraryEntry;
+    /** Modules to mark as external. Not derived automatically — see `readWorkspaceDeps()`. */
+    external?: string[];
     name?: string;
     preserveModules?: boolean;
   },
@@ -32,6 +61,7 @@ export const getConfig = (
   const entry = options?.entry || resolve(__dirname, 'src/index.ts');
   const name = options?.name || 'Vielzeug';
   const preserveModules = options?.preserveModules ?? true;
+  const external = options?.external;
 
   console.log(`|> Building library in ${__dirname}`);
 
@@ -56,6 +86,7 @@ export const getConfig = (
         name,
       },
       rolldownOptions: {
+        ...(external?.length && { external }),
         output: {
           preserveModules,
           ...(preserveModules && { preserveModulesRoot: resolve(__dirname, 'src') }),

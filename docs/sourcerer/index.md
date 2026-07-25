@@ -13,10 +13,9 @@ exports:
     createInfiniteSource,
     deriveSource,
     mergeSource,
-    applyQuery,
-    SourceDisposedError,
+    SourcererDisposedError,
     SourcererError,
-    SourceTimeoutError,
+    SourcererTimeoutError,
     sourceState,
     itemRange,
     prefetchSource,
@@ -172,6 +171,8 @@ console.log(source.current, source.meta.totalItems);
 | `createInfiniteSource()` | Server fetch    | Append (`loadMore`) | `patch()`, `loadedPages`, `ready()`, `queryKey`                     |
 
 </div>
+
+`@vielzeug/sourcerer/devtools`: opt-in `debugSource()` for `console.debug` state-transition logging across any source type, tree-shaken from production.
 
 ## Documentation
 

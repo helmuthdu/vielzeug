@@ -26,6 +26,7 @@ import { createSourceCore } from './core';
 export function deriveSource<T, U, TMeta>(
   parent: {
     readonly current: readonly T[];
+    readonly disposalSignal?: AbortSignal;
     readonly meta: TMeta;
     subscribe(listener: () => void): () => void;
   },
@@ -44,10 +45,6 @@ export function deriveSource<T, U, TMeta>(
     applyTransform();
     core.notify();
   });
-
-  if ('disposalSignal' in parent && parent.disposalSignal instanceof AbortSignal) {
-    parent.disposalSignal.addEventListener('abort', () => core.dispose(), { once: true });
-  }
 
   const source: DerivedSource<U, TMeta> = {
     get current() {
@@ -81,6 +78,14 @@ export function deriveSource<T, U, TMeta>(
       source.dispose();
     },
   };
+
+  // Only tracked when the parent actually exposes a disposalSignal — deriveSource() also
+  // accepts minimal duck-typed parents (per its parameter type) that may not have one.
+  // Routed through the same `dispose()` method above, not `core.dispose()` directly, so there's
+  // exactly one cleanup path regardless of what triggered it.
+  if (parent.disposalSignal instanceof AbortSignal) {
+    parent.disposalSignal.addEventListener('abort', () => source.dispose(), { once: true });
+  }
 
   return source;
 }

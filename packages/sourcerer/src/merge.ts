@@ -10,7 +10,11 @@ import { createSourceCore } from './core';
  * offline/online hybrid UIs (local + remote merged), multi-dataset views, or
  * pagination across multiple backends.
  *
- * Call `dispose()` to unsubscribe from all parent sources.
+ * Call `dispose()` to unsubscribe from all parent sources. If every parent exposes a
+ * `disposalSignal` (the standard `ReactiveSource` shape does), the merge auto-disposes once
+ * every parent has disposed — mirroring `deriveSource()`'s single-parent auto-dispose, scaled
+ * to N parents. If any parent lacks `disposalSignal` (a minimal duck-typed source), auto-dispose
+ * doesn't activate — call `dispose()` yourself.
  *
  * @example
  * ```ts
@@ -29,6 +33,7 @@ import { createSourceCore } from './core';
 export function mergeSource<T>(
   sources: ReadonlyArray<{
     readonly current: readonly T[];
+    readonly disposalSignal?: AbortSignal;
     subscribe(listener: () => void): () => void;
   }>,
   combine: (allItems: ReadonlyArray<readonly T[]>) => readonly T[],
@@ -74,6 +79,40 @@ export function mergeSource<T>(
       source.dispose();
     },
   };
+
+  // Mirrors deriveSource()'s parent-lifetime tracking, scaled to N parents: once every
+  // parent has disposed there's nothing left this merge could ever reflect, so it disposes
+  // itself too instead of staying alive holding now-permanently-stale combined state.
+  // Only tracked when every source actually exposes a disposalSignal — mergeSource() also
+  // accepts minimal duck-typed sources (per its parameter type) that may not have one.
+  // Routed through `source.dispose()` above, not `core.dispose()` directly, so there's exactly
+  // one cleanup path (including unsubscribing from parents) regardless of what triggered it.
+  const disposalSignals = sources
+    .map((s) => s.disposalSignal)
+    .filter((s): s is AbortSignal => s instanceof AbortSignal);
+
+  if (disposalSignals.length === sources.length && disposalSignals.length > 0) {
+    let pendingCount = disposalSignals.filter((s) => !s.aborted).length;
+
+    if (pendingCount === 0) {
+      // Every parent was already disposed before mergeSource() was even called.
+      source.dispose();
+    } else {
+      for (const signal of disposalSignals) {
+        if (signal.aborted) continue;
+
+        signal.addEventListener(
+          'abort',
+          () => {
+            pendingCount--;
+
+            if (pendingCount === 0) source.dispose();
+          },
+          { once: true },
+        );
+      }
+    }
+  }
 
   return source;
 }

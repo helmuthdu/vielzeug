@@ -1,7 +1,7 @@
 import { decodeQuery, encodeQuery } from '../codecs';
 import { itemRange } from '../pagination';
 import { createRemoteSource } from '../remoteSource';
-import { SourceDisposedError, SourceTimeoutError } from '../types';
+import { SourcererDisposedError, SourcererTimeoutError } from '../types';
 
 describe('createRemoteSource', () => {
   beforeEach(() => {
@@ -802,7 +802,7 @@ describe('createRemoteSource', () => {
       const p = source.ready(100);
 
       vi.advanceTimersByTime(101);
-      await expect(p).rejects.toBeInstanceOf(SourceTimeoutError);
+      await expect(p).rejects.toBeInstanceOf(SourcererTimeoutError);
 
       resolveHang();
     });
@@ -980,13 +980,13 @@ describe('createRemoteSource', () => {
   });
 
   describe('dispose', () => {
-    it('ready() rejects immediately with SourceDisposedError when already disposed', async () => {
+    it('ready() rejects immediately with SourcererDisposedError when already disposed', async () => {
       const fetch = vi.fn(async () => ({ items: [], total: 0 }));
       const source = createRemoteSource({ autoFetch: false, fetch });
 
       source.dispose();
 
-      await expect(source.ready()).rejects.toBeInstanceOf(SourceDisposedError);
+      await expect(source.ready()).rejects.toBeInstanceOf(SourcererDisposedError);
     });
 
     it('double-dispose is idempotent (no throw)', () => {
@@ -1045,7 +1045,7 @@ describe('createRemoteSource', () => {
       expect(listener).not.toHaveBeenCalled();
     });
 
-    it('ready() rejects with SourceDisposedError when disposed while waiting', async () => {
+    it('ready() rejects with SourcererDisposedError when disposed while waiting', async () => {
       const fetch = vi.fn(
         () =>
           new Promise<{ items: string[]; total: number }>((resolve) =>
@@ -1060,7 +1060,7 @@ describe('createRemoteSource', () => {
 
       source.dispose();
 
-      await expect(readyPromise).rejects.toBeInstanceOf(SourceDisposedError);
+      await expect(readyPromise).rejects.toBeInstanceOf(SourcererDisposedError);
     });
 
     it('Symbol.dispose calls dispose()', async () => {

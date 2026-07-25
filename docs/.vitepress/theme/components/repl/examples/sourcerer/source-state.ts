@@ -1,6 +1,6 @@
 export const sourceStateExample = {
   code: `// sourceState() derives a discriminated union for clean branching in UI render logic
-import { createRemoteSource, sourceState, SourceTimeoutError } from '@vielzeug/sourcerer'
+import { createRemoteSource, sourceState, SourcererTimeoutError } from '@vielzeug/sourcerer'
 
 const source = createRemoteSource({
   fetch: async ({ page, limit }) => {
@@ -26,7 +26,7 @@ switch (state.status) {
     break
 }
 
-// SourceTimeoutError is thrown by ready(timeoutMs) when loading takes too long
+// SourcererTimeoutError is thrown by ready(timeoutMs) when loading takes too long
 const errorSource = createRemoteSource({
   autoFetch: false,
   fetch: () => new Promise(() => {}), // never resolves
@@ -37,12 +37,12 @@ try {
   void errorSource.reset()
   await errorSource.ready(50) // 50ms timeout
 } catch (err) {
-  if (err instanceof SourceTimeoutError) {
-    console.log('Caught SourceTimeoutError:', err.message)
+  if (err instanceof SourcererTimeoutError) {
+    console.log('Caught SourcererTimeoutError:', err.message)
   }
 }
 
 source.dispose()
 errorSource.dispose()`,
-  name: 'sourceState & SourceTimeoutError',
+  name: 'sourceState & SourcererTimeoutError',
 };

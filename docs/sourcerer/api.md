@@ -15,10 +15,9 @@ description: Complete API surface for @vielzeug/sourcerer.
 | `createInfiniteSource()`               | Async append-mode (infinite scroll) collection                                                | Async          | `loadMore()` is a no-op once `meta.hasMore` is `false`                            |
 | `deriveSource()`                       | Create a reactive projection of another source                                                | Sync           | Derived source disposes automatically when parent disposes                        |
 | `mergeSource()`                        | Combine multiple sources into one `MergedSource<T>`                                           | Sync           | No `meta` field — returned type is `MergedSource<T>`, not `ReactiveSource<T>`     |
-| `applyQuery()`                         | Apply a partial query patch to any source with `patch()` — fires one fetch                    | Async          | Ignores `page` on Cursor/InfiniteSource — no page concept there                    |
 | `SourcererError`                          | Base error class for all sourcerer errors; carries `message`, `cause`, `context`, `attempt`   | Class          | Extends `Error`; access context via getters, not object spread                    |
-| `SourceTimeoutError`                   | Error thrown when `ready()` times out; has `timeoutMs` property                               | Class          | Extends `SourcererError`; also caught by `instanceof SourcererError`                    |
-| `SourceDisposedError`                  | Error thrown by `ready()` when the source is disposed                                         | Class          | Extends `SourcererError`; catch separately from `SourceTimeoutError` if needed       |
+| `SourcererTimeoutError`                   | Error thrown when `ready()` times out; has `timeoutMs` property                               | Class          | Extends `SourcererError`; also caught by `instanceof SourcererError`                    |
+| `SourcererDisposedError`                  | Error thrown by `ready()` when the source is disposed                                         | Class          | Extends `SourcererError`; catch separately from `SourcererTimeoutError` if needed       |
 | `sourceState()`                        | Derive a discriminated union (`loading`/`error`/`success`) from any source                    | Sync           | Returns `'loading'` when `isSearchPending` is true too                            |
 | `itemRange()`                          | Compute 1-based display range from `SourceMeta`                                               | Sync           | Returns `{ start: 0, end: 0 }` when `totalItems === 0`                            |
 | `prefetchSource()`                     | SSR: fetch first page, return serialisable snapshot; source is disposed immediately           | Async          | **Throws `SourcererError`** if fetch fails                                           |
@@ -34,11 +33,12 @@ description: Complete API surface for @vielzeug/sourcerer.
 | `SearchOptions`                        | Options bag for `search()` — only field is `immediate?: boolean`                              | Type           | `search()` always returns `Promise<void>`; debounced unless `{ immediate: true }` |
 | `DecodeQueryOptions`                   | Options for `decodeQuery()` — `defaultLimit` and `strict`                                     | Type           | `strict: true` throws on malformed JSON; default silently drops it                |
 
-## Package Entry Point
+## Package Entry Points
 
-| Import                | Purpose                |
-| --------------------- | ---------------------- |
-| `@vielzeug/sourcerer` | Main exports and types |
+| Import                          | Purpose                                                |
+| -------------------------------- | ------------------------------------------------------ |
+| `@vielzeug/sourcerer`            | Main exports and types                                 |
+| `@vielzeug/sourcerer/devtools`   | Opt-in `debugSource()` — tree-shaken from production   |
 
 ## Core Factories
 
@@ -236,7 +236,7 @@ All methods return `Promise<void>` unless noted.
 | `patch(changes)`       | Apply one or more query changes atomically — a single recompute for any combination of `limit`, `page`, `search`, `filter`, `sort`                                                    |
 | `prev()`               | Navigate to the previous page (no-op at first page)                                                                                                                                   |
 | `query`                | Current state as a `SourceQuery` (`limit`/`page`/`search` only — filter/sort aren't part of the query snapshot) — read-only snapshot; stable between changes                                                                                                   |
-| `ready(timeout?)`      | Resolve when no async computation is pending and no debounce is scheduled; rejects with `SourceDisposedError` if already disposed; optional timeout rejects with `SourceTimeoutError` |
+| `ready(timeout?)`      | Resolve when no async computation is pending and no debounce is scheduled; rejects with `SourcererDisposedError` if already disposed; optional timeout rejects with `SourcererTimeoutError` |
 | `reset()`              | Restore initial config and return to page 1                                                                                                                                           |
 | `search(query, opts?)` | Always returns `Promise<void>`. Debounced by default; pass `{ immediate: true }` to cancel debounce and await immediately                                                             |
 | `setData(data)`        | Replace the dataset and reset to page 1                                                                                                                                               |
@@ -258,7 +258,7 @@ All methods return `Promise<void>` except `optimisticUpdate` and `subscribe`.
 | `patch(changes)`                      | Apply one or more query changes atomically — a single fetch for any combination of `limit`, `page`, `search`, `filter`, `sort`                   |
 | `prev()`                              | Previous page (no-op at first page)                                                                                                              |
 | `query`                               | Current state as a `RemoteSourceQuery` — read-only snapshot; stable between changes                                                             |
-| `ready(timeout?)`                     | Resolve when no requests are pending; rejects with `SourceDisposedError` if already disposed; optional timeout rejects with `SourceTimeoutError` |
+| `ready(timeout?)`                     | Resolve when no requests are pending; rejects with `SourcererDisposedError` if already disposed; optional timeout rejects with `SourcererTimeoutError` |
 | `refresh()`                           | Re-fetch the current query                                                                                                                       |
 | `reset()`                             | Restore initial config and refetch                                                                                                               |
 | `search(query, opts?)`                | Always returns `Promise<void>`. Debounced by default; pass `{ immediate: true }` to cancel debounce and await immediately                        |
@@ -290,7 +290,7 @@ optimisticUpdate(
 | `patch(changes)`       | Apply `limit` and/or `search` atomically — a single fetch; resets cursor position                                                    |
 | `prev()`               | Go back using `prevCursor` (no-op if none)                                                                                             |
 | `query`                | Current state as a `CursorSourceQuery` — read-only snapshot; stable between changes                                                   |
-| `ready(timeout?)`      | Resolve when idle; rejects with `SourceDisposedError` if already disposed; optional timeout rejects with `SourceTimeoutError`          |
+| `ready(timeout?)`      | Resolve when idle; rejects with `SourcererDisposedError` if already disposed; optional timeout rejects with `SourcererTimeoutError`          |
 | `refresh()`            | Re-fetch current cursor position                                                                                                       |
 | `reset()`              | Clear cursors and fetch from the start                                                                                                 |
 | `search(query, opts?)` | Always returns `Promise<void>`. Debounced by default; pass `{ immediate: true }` to cancel debounce and await. Resets cursor position. |
@@ -306,33 +306,22 @@ optimisticUpdate(
 | `loadMore()`           | Fetch the next page and append to `current` (no-op when `meta.hasMore === false`)                                                                               |
 | `patch(changes)`       | Apply `limit` and/or `search` atomically — **clears items immediately** and fetches from page 1                                                                 |
 | `query`                | Current state as an `InfiniteSourceQuery` — read-only snapshot; stable between changes                                                                         |
-| `ready(timeout?)`      | Resolve when idle; rejects with `SourceDisposedError` if already disposed; optional timeout rejects with `SourceTimeoutError`                                   |
+| `ready(timeout?)`      | Resolve when idle; rejects with `SourcererDisposedError` if already disposed; optional timeout rejects with `SourcererTimeoutError`                                   |
 | `reset()`              | Clear accumulated items **immediately** and fetch from page 1                                                                                                   |
 | `search(query, opts?)` | Always returns `Promise<void>`. Debounced by default — **clears items immediately**; fetch fires after debounce. Pass `{ immediate: true }` to skip the window. |
 | `subscribe(listener)`  | Subscribe; returns unsubscribe                                                                                                                                  |
 
 ## Query Utilities
 
-### `applyQuery`
-
-```ts
-applyQuery<T extends { patch(changes: Partial<SourceQuery>): Promise<void> }>(
-  source: T,
-  changes: Partial<SourceQuery>,
-): Promise<void>
-```
-
-Applies a partial `SourceQuery` (`limit`/`page`/`search`) patch to any source that exposes a compatible `patch()` — delegates directly to `source.patch(changes)`. Fires a single fetch or recomputation for any combination of changed fields. No-op when `changes` is empty or all values are unchanged, per each source's own `patch()` implementation.
-
-`CursorSource` and `InfiniteSource` have no page-number concept (keyset/append navigation) — their `patch()` only reads `limit`/`search`, so a `page` field from `decodeQuery()` output is silently ignored on those two source types.
+Restoring URL-decoded state onto a source is a direct `source.patch(decodeQuery(...))` call — no separate wrapper function. `CursorSource` and `InfiniteSource` have no page-number concept (keyset/append navigation), so their `patch()` type only accepts `limit`/`search`; passing a `page` field from `decodeQuery()`'s output to either is a compile-time error, not a silent no-op.
 
 **Example:**
 
 ```ts
-import { applyQuery, decodeQuery } from '@vielzeug/sourcerer';
+import { decodeQuery } from '@vielzeug/sourcerer';
 
 const q = decodeQuery(new URLSearchParams(location.search));
-await applyQuery(source, q);
+await source.patch(q);
 ```
 
 ---
@@ -351,13 +340,13 @@ class SourcererError extends Error {
 }
 ```
 
-Base class for all sourcerer errors. Thrown (and stored as `meta.error`) when a fetch fails. `cause` is the original thrown value. `SourceTimeoutError` and `SourceDisposedError` both extend this class, so a single `instanceof SourcererError` check covers all sourcerer errors.
+Base class for all sourcerer errors. Thrown (and stored as `meta.error`) when a fetch fails. `cause` is the original thrown value. `SourcererTimeoutError` and `SourcererDisposedError` both extend this class, so a single `instanceof SourcererError` check covers all sourcerer errors.
 
-### `SourceTimeoutError`
+### `SourcererTimeoutError`
 
 ```ts
-class SourceTimeoutError extends SourcererError {
-  readonly name = 'SourceTimeoutError';
+class SourcererTimeoutError extends SourcererError {
+  readonly name = 'SourcererTimeoutError';
   readonly timeoutMs: number;
   // message: 'Source.ready() timed out after Nms'
 }
@@ -365,11 +354,11 @@ class SourceTimeoutError extends SourcererError {
 
 Thrown by `ready(timeout)` when the timeout expires before the source becomes idle. Also caught by `instanceof SourcererError`.
 
-### `SourceDisposedError`
+### `SourcererDisposedError`
 
 ```ts
-class SourceDisposedError extends SourcererError {
-  readonly name = 'SourceDisposedError';
+class SourcererDisposedError extends SourcererError {
+  readonly name = 'SourcererDisposedError';
   // message: 'Source disposed while waiting for ready()'
 }
 ```
@@ -558,11 +547,34 @@ Not generic — `filter`/`sort` on the result are always typed `unknown`. Narrow
 **Example:**
 
 ```ts
-import { applyQuery, decodeQuery } from '@vielzeug/sourcerer';
+import { decodeQuery } from '@vielzeug/sourcerer';
 
 // Pass URLSearchParams directly — filter/sort come back as `unknown`, narrow before use
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 20 });
-await applyQuery(source, query);
+await source.patch(query);
+```
+
+## Devtools (`@vielzeug/sourcerer/devtools`)
+
+```ts
+debugSource<TMeta extends Record<string, unknown>>(
+  source: { current: readonly unknown[]; meta: TMeta; subscribe(listener: () => void): () => void },
+  options?: { label?: string },
+): () => void
+```
+
+Attaches a `console.debug`-based observer to any source (or `deriveSource`/`mergeSource` result) — logs a line per changed `meta` field (works generically across `SourceMeta`/`CursorMeta`/`InfiniteMeta`) and `current`'s item count. Development-only by default; a no-op when `__SOURCERER_PROD__` is set. Import from the dedicated `/devtools` sub-path so it's tree-shaken from production bundles.
+
+```ts
+import { createRemoteSource } from '@vielzeug/sourcerer';
+import { debugSource } from '@vielzeug/sourcerer/devtools';
+
+const source = createRemoteSource({ fetch: fetchUsers, limit: 20 });
+const detach = debugSource(source, { label: 'users' });
+// [sourcerer:devtools:users] meta.isLoading: false → true
+// [sourcerer:devtools:users] current: 0 → 20 items
+
+detach(); // stop logging
 ```
 
 ## Types
@@ -707,50 +719,50 @@ type FetchEvent<TQuery = unknown> = Readonly<{
 
 See [Error Utilities > `SourcererError`](#sourcererror) above.
 
-### `SourceTimeoutError`
+### `SourcererTimeoutError`
 
 ```ts
-class SourceTimeoutError extends SourcererError {
-  readonly name = 'SourceTimeoutError';
+class SourcererTimeoutError extends SourcererError {
+  readonly name = 'SourcererTimeoutError';
   readonly timeoutMs: number;
   // message: 'Source.ready() timed out after Nms'
 }
 ```
 
-Thrown by `ready(timeout)` when the source has not become idle within the specified `timeout` milliseconds. Check with `instanceof SourceTimeoutError` for typed catch blocks:
+Thrown by `ready(timeout)` when the source has not become idle within the specified `timeout` milliseconds. Check with `instanceof SourcererTimeoutError` for typed catch blocks:
 
 ```ts
-import { SourceTimeoutError } from '@vielzeug/sourcerer';
+import { SourcererTimeoutError } from '@vielzeug/sourcerer';
 
 try {
   await source.ready(5000);
 } catch (err) {
-  if (err instanceof SourceTimeoutError) {
+  if (err instanceof SourcererTimeoutError) {
     console.warn('Source did not load in time:', err.message);
   }
 }
 ```
 
-### `SourceDisposedError`
+### `SourcererDisposedError`
 
 ```ts
-class SourceDisposedError extends SourcererError {
-  readonly name = 'SourceDisposedError';
+class SourcererDisposedError extends SourcererError {
+  readonly name = 'SourcererDisposedError';
   // message: 'Source disposed while waiting for ready()'
 }
 ```
 
-Thrown by `ready()` when `dispose()` is called on the source while a `ready()` call is still pending. Use `instanceof SourceDisposedError` to distinguish it from `SourceTimeoutError`:
+Thrown by `ready()` when `dispose()` is called on the source while a `ready()` call is still pending. Use `instanceof SourcererDisposedError` to distinguish it from `SourcererTimeoutError`:
 
 ```ts
-import { SourceDisposedError, SourceTimeoutError } from '@vielzeug/sourcerer';
+import { SourcererDisposedError, SourcererTimeoutError } from '@vielzeug/sourcerer';
 
 try {
   await source.ready(5000);
 } catch (err) {
-  if (err instanceof SourceDisposedError) {
+  if (err instanceof SourcererDisposedError) {
     // source was torn down — skip cleanup
-  } else if (err instanceof SourceTimeoutError) {
+  } else if (err instanceof SourcererTimeoutError) {
     console.warn('timed out');
   }
 }

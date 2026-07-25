@@ -1,6 +1,6 @@
 export const lifecycleExample = {
   code: `// Source lifecycle: disposed, disposalSignal, ready() on disposed source
-import { createRemoteSource, SourceDisposedError } from '@vielzeug/sourcerer'
+import { createRemoteSource, SourcererDisposedError } from '@vielzeug/sourcerer'
 
 const dataset = Array.from({ length: 8 }, (_, i) => ({ id: i + 1, name: \`Item \${i + 1}\` }))
 
@@ -34,7 +34,7 @@ console.log('signal aborted after dispose():', source.disposalSignal.aborted) //
 try {
   await source.ready()
 } catch (err) {
-  if (err instanceof SourceDisposedError) {
+  if (err instanceof SourcererDisposedError) {
     console.log('ready() on disposed source:', err.message)
   }
 }

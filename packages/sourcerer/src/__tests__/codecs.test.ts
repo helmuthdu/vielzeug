@@ -1,6 +1,21 @@
 import { decodeQuery, encodeQuery } from '../codecs';
+import { createLocalSource } from '../localSource';
 
 describe('codecs', () => {
+  it('round-trips through a real source via decodeQuery + source.patch()', async () => {
+    const source = createLocalSource([1, 2, 3, 4, 5], { limit: 2 });
+
+    await source.search('2', { immediate: true });
+
+    const params = encodeQuery(source.query);
+    const decoded = decodeQuery(params, { defaultLimit: 2 });
+    const restored = createLocalSource([1, 2, 3, 4, 5], { limit: 10 });
+
+    await restored.patch(decoded);
+
+    expect(restored.query).toEqual({ limit: 2, page: 1, search: '2' });
+  });
+
   it('roundtrips local (page/limit/search) query params', () => {
     const encoded = encodeQuery({ limit: 20, page: 3, search: 'ada' });
     const decoded = decodeQuery(encoded, { defaultLimit: 10 });
@@ -95,6 +110,59 @@ describe('codecs', () => {
 
     expect(decoded.limit).toBe(15);
     expect(decoded.page).toBe(1);
+  });
+
+  it('warns in dev when limit/page is present but invalid, naming the field and fallback used', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    decodeQuery({ limit: '0', page: '-1' }, { defaultLimit: 15 });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('decodeQuery: limit "0" is not a positive integer'));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('decodeQuery: page "-1" is not a positive integer'));
+
+    warnSpy.mockRestore();
+  });
+
+  it('sanitizes control characters out of an untrusted param value before logging it', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    decodeQuery({ limit: '\u001b[31mnot-a-number\u001b[0m' }, { defaultLimit: 15 });
+
+    const [message] = warnSpy.mock.calls[0] ?? [];
+
+    expect(message).not.toContain('\u001b');
+    expect(message).toContain('decodeQuery: limit');
+
+    warnSpy.mockRestore();
+  });
+
+  it('sanitizes control characters out of an untrusted param value in the strict-mode error message', () => {
+    let caught: unknown;
+
+    try {
+      decodeQuery({ filter: '\u001b[31m{"broken\u001b[0m' }, { strict: true });
+    } catch (err) {
+      caught = err;
+    }
+
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as Error).message).not.toContain('\u001b');
+  });
+
+  it('does not warn when limit/page is simply absent — that is the normal, expected case', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    decodeQuery({}, { defaultLimit: 15 });
+
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+
+  it('rejects a fractional limit/page as strictly as any other invalid value (untrusted URL input, unlike a config value)', () => {
+    const decoded = decodeQuery({ limit: '2.5', page: '1.9' }, { defaultLimit: 10 });
+
+    expect(decoded).toEqual({ limit: 10, page: 1 });
   });
 
   it('accepts URLSearchParams as input', () => {

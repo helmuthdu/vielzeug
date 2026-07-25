@@ -1,5 +1,5 @@
 import { sourceState } from '../state';
-import { SourceDisposedError, SourcererError, SourceTimeoutError } from '../types';
+import { SourcererDisposedError, SourcererError, SourcererTimeoutError } from '../types';
 
 const makeSource = (isLoading: boolean, error: SourcererError | null, items: readonly number[]) => ({
   current: items,
@@ -85,29 +85,29 @@ describe('sourceState', () => {
     expect(err.attempt).toBe(3);
   });
 
-  it('SourceTimeoutError is instanceof Error and SourceTimeoutError', () => {
-    const err = new SourceTimeoutError(500);
+  it('SourcererTimeoutError is instanceof Error and SourcererTimeoutError', () => {
+    const err = new SourcererTimeoutError(500);
 
     expect(err).toBeInstanceOf(Error);
-    expect(err).toBeInstanceOf(SourceTimeoutError);
-    expect(err.name).toBe('SourceTimeoutError');
+    expect(err).toBeInstanceOf(SourcererTimeoutError);
+    expect(err.name).toBe('SourcererTimeoutError');
     expect(err.message).toBe('Source.ready() timed out after 500ms');
   });
 
-  it('SourceDisposedError is instanceof Error and SourcererError with the expected message', () => {
-    const err = new SourceDisposedError();
+  it('SourcererDisposedError is instanceof Error and SourcererError with the expected message', () => {
+    const err = new SourcererDisposedError();
 
     expect(err).toBeInstanceOf(Error);
     expect(err).toBeInstanceOf(SourcererError);
-    expect(err).toBeInstanceOf(SourceDisposedError);
-    expect(err.name).toBe('SourceDisposedError');
+    expect(err).toBeInstanceOf(SourcererDisposedError);
+    expect(err.name).toBe('SourcererDisposedError');
     expect(err.message).toBe('Source disposed while waiting for ready()');
   });
 
   it('SourcererError.is() narrows SourcererError and its subclasses, rejects everything else', () => {
     expect(SourcererError.is(new SourcererError('fail'))).toBe(true);
-    expect(SourcererError.is(new SourceTimeoutError(100))).toBe(true);
-    expect(SourcererError.is(new SourceDisposedError())).toBe(true);
+    expect(SourcererError.is(new SourcererTimeoutError(100))).toBe(true);
+    expect(SourcererError.is(new SourcererDisposedError())).toBe(true);
     expect(SourcererError.is(new Error('plain'))).toBe(false);
     expect(SourcererError.is('not an error')).toBe(false);
     expect(SourcererError.is(null)).toBe(false);

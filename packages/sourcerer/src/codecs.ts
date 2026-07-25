@@ -1,5 +1,7 @@
 import type { QueryParams, QueryParamsInput, RemoteSourceQuery, SourceQuery } from './types';
 
+import { devOnly, warn } from './_dev';
+import { sanitizeForLog } from './_utils';
 import { SourcererError } from './errors';
 
 /**
@@ -47,7 +49,7 @@ export type DecodeQueryOptions = Readonly<{
  * Accepts either a plain `Record<string, string | string[] | undefined>` or a `URLSearchParams` instance.
  *
  * - `filter` and `sort` are JSON-parsed and typed as `unknown` — validate and narrow them
- *   with a runtime schema (e.g. Zod) before passing to `applyQuery`.
+ *   with a runtime schema (e.g. Zod) before passing to `source.patch(...)`.
  * - `search` is omitted from the result when the param is absent (rather than defaulting to `''`).
  * - `limit` and `page` are parsed as positive integers; invalid values fall back to defaults.
  */
@@ -60,15 +62,33 @@ export const decodeQuery = (
 
   const { defaultLimit = 20, strict = false } = options;
 
-  const parsePositiveInt = (value: string | string[] | undefined, fallback: number): number => {
+  // Deliberately not `_utils.ts::clampPositiveInt` here: that one truncates a fractional
+  // config value (2.5 -> 2) as a harmless normalization, and always floors invalid input to 1.
+  // A URL param is untrusted network input, not a caller's own config object — "2.5" or "-5"
+  // in a query string is more likely a corrupted/tampered link than a rounding artifact, so
+  // this stays strict (reject anything that isn't a clean positive integer) and falls back to
+  // the caller's own `defaultLimit`/`1`, not an unconditional floor of 1.
+  //
+  // @security `str` is the raw, attacker-controllable param value (this function's whole job
+  // is parsing untrusted `location.search`/route params) — sanitize before interpolating into
+  // the warning to prevent terminal-escape-sequence injection into a developer's console.
+  const parsePositiveInt = (fieldName: string, value: string | string[] | undefined, fallback: number): number => {
     if (value === undefined) return fallback;
 
     const str = Array.isArray(value) ? value[0] : value;
     const n = Number(str);
 
-    return Number.isInteger(n) && n > 0 ? n : fallback;
+    if (Number.isInteger(n) && n > 0) return n;
+
+    devOnly(() =>
+      warn(`decodeQuery: ${fieldName} "${sanitizeForLog(str, 80)}" is not a positive integer — using ${fallback}.`),
+    );
+
+    return fallback;
   };
 
+  // @security Same as `parsePositiveInt` above — `str` is untrusted and may end up in a
+  // terminal/log aggregator via this error's `.message`, not just a direct `console.warn`.
   const parseJson = (key: string, value: string | string[] | undefined): unknown => {
     if (value === undefined) return undefined;
 
@@ -77,7 +97,7 @@ export const decodeQuery = (
     try {
       return JSON.parse(str) as unknown;
     } catch {
-      if (strict) throw new SourcererError(`Invalid query param "${key}": ${str}`);
+      if (strict) throw new SourcererError(`Invalid query param "${key}": ${sanitizeForLog(str, 80)}`);
 
       return undefined;
     }
@@ -96,8 +116,8 @@ export const decodeQuery = (
     ...(filter !== undefined && { filter }),
     ...(sort !== undefined && { sort }),
     ...(rawSearch !== undefined && { search: Array.isArray(rawSearch) ? rawSearch[0] : rawSearch }),
-    limit: parsePositiveInt(rawLimit, defaultLimit),
-    page: parsePositiveInt(rawPage, 1),
+    limit: parsePositiveInt('limit', rawLimit, defaultLimit),
+    page: parsePositiveInt('page', rawPage, 1),
   };
 
   return result;

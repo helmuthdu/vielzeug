@@ -2,13 +2,15 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
-import { getBundleConfig } from '../../vite.config';
+import { getBundleConfig, readWorkspaceDeps } from '../../vite.config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// sourcerer's externals are exactly its own package.json dependencies, nothing more — derive
+// them instead of hand-listing the same names a second time (see readWorkspaceDeps()'s JSDoc).
 export default defineConfig(
   getBundleConfig(__dirname, {
-    external: ['@vielzeug/arsenal', '@vielzeug/ripple'],
+    external: readWorkspaceDeps(__dirname),
     fileName: 'sourcerer',
     name: 'Sourcerer',
   }),

@@ -1,6 +1,6 @@
 import type { InfiniteConfig, InfiniteMeta, InfiniteSource, InfiniteSourceQuery, SearchOptions } from './types';
 
-import { defaultKeyOf, extractError, retry } from './_utils';
+import { clampPositiveInt, defaultKeyOf, extractError, retry } from './_utils';
 import { createAsyncSearchCoordinator } from './asyncSearch';
 import { createAsyncSource } from './asyncSource';
 import { SourcererError } from './errors';
@@ -10,7 +10,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
   const keyOf = cfg.queryKey ?? defaultKeyOf;
 
   // ── Mutable state ───────────────────────────────────────────────────────────
-  let limit = Math.max(1, Math.trunc(cfg.limit ?? 20));
+  let limit = clampPositiveInt(cfg.limit ?? 20, 'createInfiniteSource', 'limit');
   let search = '';
   let currentPage = 1;
   let loadedPages = 0;
@@ -164,7 +164,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       let changed = false;
 
       if (changes.limit !== undefined) {
-        const next = Math.max(1, Math.trunc(changes.limit));
+        const next = clampPositiveInt(changes.limit, 'source.patch', 'limit');
 
         if (next !== limit) {
           limit = next;

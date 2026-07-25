@@ -15,7 +15,7 @@ Restore source state from the active route's query params on mount, and push the
 
 ```ts
 import { createRouter, navigate, useRoute } from '@vielzeug/wayfinder';
-import { applyQuery, createRemoteSource, decodeQuery, encodeQuery } from '@vielzeug/sourcerer';
+import { createRemoteSource, decodeQuery, encodeQuery } from '@vielzeug/sourcerer';
 
 type Item = { id: number; name: string };
 type Filter = { category?: string };
@@ -37,7 +37,7 @@ const source = createRemoteSource<Item, Filter, Sort>({
 
 // Restore from the current URL once on mount — filter/sort come back as `unknown`
 const route = useRoute();
-await applyQuery(source, decodeQuery(route.query, { defaultLimit: 20 }));
+await source.patch(decodeQuery(route.query, { defaultLimit: 20 }));
 
 // Subscribe and push state back to the URL whenever source changes
 const stopSync = source.subscribe(() => {
@@ -53,10 +53,10 @@ Wayfinder emits a navigation event when the URL changes via the browser's back/f
 
 ```ts
 import { onRouteChange } from '@vielzeug/wayfinder';
-import { applyQuery, decodeQuery } from '@vielzeug/sourcerer';
+import { decodeQuery } from '@vielzeug/sourcerer';
 
 const stopRouteSync = onRouteChange((route) => {
-  void applyQuery(source, decodeQuery(route.query, { defaultLimit: 20 }));
+  void source.patch(decodeQuery(route.query, { defaultLimit: 20 }));
 });
 
 // Clean up both subscriptions when leaving the page
@@ -68,7 +68,7 @@ function teardown() {
 
 ### Pitfalls
 
-- Set `autoFetch: false` when you intend to restore from URL params on mount — otherwise Sourcerer fires an initial fetch before `applyQuery()` runs, causing a wasted network request.
+- Set `autoFetch: false` when you intend to restore from URL params on mount — otherwise Sourcerer fires an initial fetch before `source.patch()` runs, causing a wasted network request.
 - Use `replace: true` (not `push`) in `navigate()` for list state changes. Pushing every filter change floods the browser history and breaks the expected back-button behaviour.
 - Guard the `subscribe` callback with `if (source.meta.isLoading) return` to avoid URL churn while requests are in-flight.
 - `decodeQuery` is fault-tolerant by default. Pass `{ strict: true }` if you want malformed params to throw instead of being silently dropped.

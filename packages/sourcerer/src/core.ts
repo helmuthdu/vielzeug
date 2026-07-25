@@ -1,8 +1,32 @@
-import { SourceDisposedError, SourceTimeoutError } from './errors';
+import { SourcererDisposedError, SourcererTimeoutError } from './errors';
 
 /**
- * Shared source infrastructure: listener management, debounce scheduling, and ready() polling.
+ * Shared source infrastructure: change notification, debounce scheduling, and ready() polling.
  * All source factories compose this core rather than duplicating the same patterns.
+ *
+ * Change notification is a plain `Set<listener>` — deliberately NOT `@vielzeug/ripple`, despite
+ * that being the repo-wide convention for "reactive" packages. Tried it; reverted. Two concrete
+ * problems, not just aesthetics:
+ *
+ * 1. `prefetchSource()`/`prefetchSourceAndKeep()` are explicitly documented for SSR, and every
+ *    source factory routes through this file's `signal`-backed notify. Ripple's own scheduler
+ *    warns that its module-level flush queue is shared across concurrent requests in Node.js
+ *    unless the caller opts into `@vielzeug/ripple/ssr`'s per-request isolation — a real,
+ *    unaddressed risk in exactly the code path meant to run on a server handling concurrent
+ *    requests.
+ * 2. `subscribe()`'s public contract is "fire on every notify()", not per-field reactivity —
+ *    ripple's dependency-tracking machinery (a real subscription object per `watch()` call)
+ *    buys nothing over a bare `Set.add()` for that contract, since there's exactly one thing
+ *    ever being watched (an internal version counter, not real data).
+ *
+ * `current`/`meta` themselves were never ripple signals either way — the public shape has
+ * always been plain getters + `subscribe()`, framework-agnostic by design (see `types.ts`'s
+ * `ReactiveSource` doc comment). Nothing about restoring a plain `Set` changes that contract.
+ *
+ * Debounce scheduling and `ready()`'s "resolve when idle, with a timeout" polling were never
+ * ripple's job either way: ripple is a dependency-tracking signal system ("notify when a value
+ * changes"), not an async-coordination library ("wait for a condition, with a timeout, and
+ * reject if disposed first").
  */
 export type SourceCore = {
   /** Cancels any pending timer without invoking the callback. */
@@ -85,7 +109,7 @@ export function createSourceCore(opts?: { onBeforeNotify?: () => void }): Source
       for (const waiter of readyWaiters) {
         if (waiter.timeoutId !== undefined) clearTimeout(waiter.timeoutId);
 
-        waiter.reject(new SourceDisposedError());
+        waiter.reject(new SourcererDisposedError());
       }
 
       readyWaiters.clear();
@@ -126,7 +150,7 @@ export function createSourceCore(opts?: { onBeforeNotify?: () => void }): Source
     },
 
     ready(isIdle, timeoutMs) {
-      if (disposed) return Promise.reject(new SourceDisposedError());
+      if (disposed) return Promise.reject(new SourcererDisposedError());
 
       if (isIdle()) return Promise.resolve();
 
@@ -147,7 +171,7 @@ export function createSourceCore(opts?: { onBeforeNotify?: () => void }): Source
         if (timeoutMs !== undefined) {
           waiter.timeoutId = setTimeout(() => {
             readyWaiters.delete(waiter);
-            reject(new SourceTimeoutError(timeoutMs));
+            reject(new SourcererTimeoutError(timeoutMs));
           }, timeoutMs);
         }
 

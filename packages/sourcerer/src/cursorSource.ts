@@ -1,6 +1,6 @@
 import type { CursorConfig, CursorMeta, CursorSource, CursorSourceQuery, SearchOptions } from './types';
 
-import { defaultKeyOf, extractError, retry } from './_utils';
+import { clampPositiveInt, defaultKeyOf, extractError, retry } from './_utils';
 import { createAsyncSearchCoordinator } from './asyncSearch';
 import { createAsyncSource } from './asyncSource';
 import { SourcererError } from './errors';
@@ -10,7 +10,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
   const keyOf = cfg.queryKey ?? defaultKeyOf;
 
   // ── Mutable state ───────────────────────────────────────────────────────────
-  let limit = Math.max(1, Math.trunc(cfg.limit ?? 20));
+  let limit = clampPositiveInt(cfg.limit ?? 20, 'createCursorSource', 'limit');
   let search = '';
   let afterCursor: TCursor | undefined;
   let beforeCursor: TCursor | undefined;
@@ -158,7 +158,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
       let changed = false;
 
       if (changes.limit !== undefined) {
-        const next = Math.max(1, Math.trunc(changes.limit));
+        const next = clampPositiveInt(changes.limit, 'source.patch', 'limit');
 
         if (next !== limit) {
           limit = next;

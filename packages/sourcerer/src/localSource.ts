@@ -1,11 +1,10 @@
 import type { LocalSource, LocalSourceConfig, LocalSourceQuery, SearchOptions, SourceQuery } from './types';
 
-import { extractError } from './_utils';
+import { clampPositiveInt, extractError } from './_utils';
+import { createAsyncSearchCoordinator } from './asyncSearch';
 import { createSourceCore } from './core';
 import { SourcererError } from './errors';
 import { clampPage, createMeta, pageCount } from './pagination';
-
-type PendingSearch = { promise: Promise<void>; resolve: () => void };
 
 const DEFAULT_LIMIT = 20;
 const DEFAULT_DEBOUNCE_MS = 300;
@@ -46,23 +45,18 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
   let search = '';
   let filter = cfg.filter;
   let sort = cfg.sort;
-  let limit = cfg.limit ?? DEFAULT_LIMIT;
+  let limit = clampPositiveInt(cfg.limit ?? DEFAULT_LIMIT, 'createLocalSource', 'limit');
   let page = 1;
   let processed: readonly T[] = [];
   let isLoading = false;
   let isSearchPending = false;
   let error: SourcererError | null = null;
   let asyncController: AbortController | null = null;
-  let pendingSearch: PendingSearch | null = null;
 
   const commit = () => core.notify();
-
-  const resolvePendingSearch = () => {
-    if (pendingSearch) {
-      pendingSearch.resolve();
-      pendingSearch = null;
-    }
-  };
+  // Shared debounced-search promise coordinator — the same one remote/cursor/infinite use,
+  // instead of a fourth hand-rolled copy of "pendingSearch/resolvePendingSearch" bookkeeping.
+  const searchCoordinator = createAsyncSearchCoordinator(core, commit);
 
   // ── Sync pipeline (used when no async ops) ──────────────────────────────────
   const runSyncPipeline = (): readonly T[] => {
@@ -133,7 +127,8 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
     }
 
     commit();
-    resolvePendingSearch();
+    // Local source never has more than one pipeline run in flight — settling always means idle.
+    searchCoordinator.settleIfIdle(0);
   };
 
   // Internal flush — not part of public API
@@ -143,7 +138,7 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
     isSearchPending = false;
     recompute();
     commit();
-    resolvePendingSearch();
+    searchCoordinator.settleIfIdle(0);
 
     return Promise.resolve();
   };
@@ -171,10 +166,10 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
     dispose() {
       if (core.isDisposed) return;
 
-      core.cancelTimer();
       asyncController?.abort();
       asyncController = null;
-      resolvePendingSearch();
+      searchCoordinator.cancel();
+      searchCoordinator.dispose();
       core.dispose();
     },
 
@@ -217,7 +212,7 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
       let changed = false;
 
       if (changes.limit !== undefined) {
-        const next = Math.max(1, Math.trunc(changes.limit));
+        const next = clampPositiveInt(changes.limit, 'source.patch', 'limit');
 
         if (next !== limit) {
           limit = next;
@@ -255,8 +250,7 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
 
       // patch() is documented as a single atomic recompute — cancel any debounced search()
       // still pending so it doesn't fire a second, redundant recompute afterwards.
-      core.cancelTimer();
-      resolvePendingSearch();
+      searchCoordinator.cancel();
 
       // Reset page only when non-page query fields changed without an explicit page
       if (
@@ -286,13 +280,12 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
     },
 
     reset() {
-      core.cancelTimer();
+      searchCoordinator.cancel();
       isSearchPending = false;
       search = '';
       filter = cfg.filter;
       sort = cfg.sort;
       page = 1;
-      resolvePendingSearch();
 
       return flushInternal();
     },
@@ -303,38 +296,24 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
         // `q === search` alone doesn't mean the recompute already happened.
         if (q === search && !core.isScheduled) return Promise.resolve();
 
-        core.cancelTimer();
+        searchCoordinator.cancel();
         isSearchPending = false;
         search = q;
         page = 1;
-        resolvePendingSearch();
 
         return flushInternal();
       }
 
       if (q === search) return Promise.resolve();
 
-      // Cancel any previous pending search promise
-      resolvePendingSearch();
-
       search = q;
       page = 1;
       isSearchPending = true;
-      commit();
 
-      let resolveSearch!: () => void;
-      const promise = new Promise<void>((res) => {
-        resolveSearch = res;
-      });
-
-      pendingSearch = { promise, resolve: resolveSearch };
-
-      core.schedule(() => {
+      return searchCoordinator.schedule(() => {
         isSearchPending = false;
         void flushInternal();
       }, debounceMs);
-
-      return promise;
     },
 
     setData(d) {

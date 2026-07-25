@@ -18,6 +18,28 @@ const makeSource = (initial: readonly number[]) => {
   };
 };
 
+// Same as makeSource(), but also exposes disposalSignal — the auto-dispose-on-all-parents-gone
+// behavior only activates when every source in the array exposes one (see merge.ts).
+const makeDisposableSource = (initial: readonly number[]) => {
+  const core = createSourceCore();
+  let current: readonly number[] = initial;
+
+  return {
+    get current() {
+      return current;
+    },
+    get disposalSignal() {
+      return core.disposalSignal;
+    },
+    dispose: () => core.dispose(),
+    set(items: readonly number[]) {
+      current = items;
+      core.notify();
+    },
+    subscribe: (l: () => void) => core.subscribe(l),
+  };
+};
+
 describe('mergeSource', () => {
   it('computes initial value from parents at construction', () => {
     const a = makeSource([1, 2]);
@@ -171,5 +193,61 @@ describe('mergeSource', () => {
     dispose();
 
     expect(merged.disposed).toBe(true);
+  });
+
+  describe('auto-dispose when every parent disposes (only when all parents expose disposalSignal)', () => {
+    it('auto-disposes once the single tracked parent disposes', () => {
+      const a = makeDisposableSource([1]);
+      const merged = mergeSource([a], (all) => all.flat());
+
+      expect(merged.disposed).toBe(false);
+
+      a.dispose();
+
+      expect(merged.disposed).toBe(true);
+    });
+
+    it('stays alive until every parent has disposed, not just the first', () => {
+      const a = makeDisposableSource([1]);
+      const b = makeDisposableSource([2]);
+      const merged = mergeSource([a, b], (all) => all.flat());
+
+      a.dispose();
+      expect(merged.disposed).toBe(false);
+
+      b.dispose();
+      expect(merged.disposed).toBe(true);
+    });
+
+    it('auto-disposes immediately when every parent is already disposed before mergeSource() is called', () => {
+      const a = makeDisposableSource([1]);
+      const b = makeDisposableSource([2]);
+
+      a.dispose();
+      b.dispose();
+
+      const merged = mergeSource([a, b], (all) => all.flat());
+
+      expect(merged.disposed).toBe(true);
+    });
+
+    it('does not auto-dispose when any parent lacks a disposalSignal', () => {
+      const a = makeDisposableSource([1]);
+      const b = makeSource([2]);
+      const merged = mergeSource([a, b], (all) => all.flat());
+
+      a.dispose();
+
+      expect(merged.disposed).toBe(false);
+    });
+
+    it('does not auto-dispose when no parent exposes a disposalSignal (existing behavior, unchanged)', () => {
+      const a = makeSource([1]);
+      const merged = mergeSource([a], (all) => all.flat());
+
+      a.dispose();
+
+      expect(merged.disposed).toBe(false);
+    });
   });
 });

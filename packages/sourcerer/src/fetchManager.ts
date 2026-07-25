@@ -7,6 +7,19 @@
  *
  * Not exported from the public API — consumed via `asyncSource.ts` by remoteSource,
  * cursorSource, and infiniteSource.
+ *
+ * Deliberately not `@vielzeug/courier`'s query cache: retry itself already comes from the
+ * one shared implementation both packages use (`retry` from `@vielzeug/arsenal` — see
+ * `_utils.ts`), so there's no retry logic duplicated here to remove. What's left — "only one
+ * query is ever active per source instance; a new query always supersedes and aborts the
+ * previous one, regardless of key" — is a narrower, different contract than courier's, which
+ * is a shared cross-consumer cache keyed by query (many independent entries, each with its own
+ * staleness window, meant to be read by multiple observers). Forcing this single-active-query
+ * source to route through a per-key shared cache would need as much glue code to reconcile the
+ * two models as this file already is, for no behavioral win. See `docs/sourcerer/examples/
+ * sourcerer-with-courier.md` for the actually-intended integration point: pass a courier-backed
+ * client call as the `fetch` callback into `createRemoteSource()` — composition at the
+ * transport layer, not inside this dedup manager.
  */
 
 type InFlightEntry = { controller: AbortController; promise: Promise<void> };

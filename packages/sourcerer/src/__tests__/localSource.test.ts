@@ -1,7 +1,7 @@
 import { decodeQuery, encodeQuery } from '../codecs';
 import { createLocalSource } from '../localSource';
 import { itemRange } from '../pagination';
-import { SourceDisposedError, SourceTimeoutError } from '../types';
+import { SourcererDisposedError, SourcererTimeoutError } from '../types';
 
 describe('createLocalSource', () => {
   beforeEach(() => {
@@ -411,7 +411,7 @@ describe('createLocalSource', () => {
       expect(source.current).toEqual([3, 4, 5]);
     });
 
-    it('rejects ready() with SourceTimeoutError on timeout', async () => {
+    it('rejects ready() with SourcererTimeoutError on timeout', async () => {
       const source = createLocalSource([1, 2, 3], {
         filterAsync: () => new Promise(() => {}),
       });
@@ -424,7 +424,7 @@ describe('createLocalSource', () => {
 
       const result = await p;
 
-      expect(result).toBeInstanceOf(SourceTimeoutError);
+      expect(result).toBeInstanceOf(SourcererTimeoutError);
 
       source.dispose();
     });
@@ -506,14 +506,14 @@ describe('createLocalSource', () => {
       expect(source.disposed).toBe(true);
     });
 
-    it('ready() rejects immediately with SourceDisposedError when already disposed', async () => {
+    it('ready() rejects immediately with SourcererDisposedError when already disposed', async () => {
       const source = createLocalSource([1, 2, 3], {
         filterAsync: async (items) => items,
       });
 
       source.dispose();
 
-      await expect(source.ready()).rejects.toBeInstanceOf(SourceDisposedError);
+      await expect(source.ready()).rejects.toBeInstanceOf(SourcererDisposedError);
     });
 
     it('rejects ready() when source is disposed while waiting', async () => {
@@ -532,7 +532,7 @@ describe('createLocalSource', () => {
       source.dispose();
       resolveFilter([]);
 
-      await expect(readyP).rejects.toBeInstanceOf(SourceDisposedError);
+      await expect(readyP).rejects.toBeInstanceOf(SourcererDisposedError);
     });
 
     it('dispose() aborts a pending async filter and does not notify after disposal', async () => {

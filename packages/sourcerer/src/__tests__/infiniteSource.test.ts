@@ -559,14 +559,14 @@ describe('createInfiniteSource', () => {
   });
 
   describe('dispose', () => {
-    it('ready() rejects immediately with SourceDisposedError when already disposed', async () => {
-      const { SourceDisposedError } = await import('../types');
+    it('ready() rejects immediately with SourcererDisposedError when already disposed', async () => {
+      const { SourcererDisposedError } = await import('../types');
       const fetch = vi.fn(async () => ({ items: [], total: 0 }));
       const source = createInfiniteSource({ autoFetch: false, fetch });
 
       source.dispose();
 
-      await expect(source.ready()).rejects.toBeInstanceOf(SourceDisposedError);
+      await expect(source.ready()).rejects.toBeInstanceOf(SourcererDisposedError);
     });
 
     it('double-dispose is idempotent (no throw)', () => {

@@ -63,7 +63,7 @@ export class SourcererError extends Error {
 }
 
 /** Thrown by `ready()` when the source timed out waiting for the first successful fetch. */
-export class SourceTimeoutError extends SourcererError {
+export class SourcererTimeoutError extends SourcererError {
   /** The configured timeout in milliseconds. */
   readonly timeoutMs: number;
 
@@ -74,7 +74,7 @@ export class SourceTimeoutError extends SourcererError {
 }
 
 /** Thrown by `ready()` when the source is disposed while waiting. */
-export class SourceDisposedError extends SourcererError {
+export class SourcererDisposedError extends SourcererError {
   constructor() {
     super('Source disposed while waiting for ready()');
   }

@@ -6,6 +6,14 @@ export type QueryParamsInput = Record<string, string | string[] | undefined>;
 export type QueryParams = Record<string, string>;
 
 /** Configures automatic retry on fetch failure. */
+/**
+ * Note for anyone also using `@vielzeug/courier` (e.g. as the `fetch` implementation passed
+ * into `createRemoteSource`): courier's own `RetryOptions.times` counts *total* attempts
+ * including the first ("times: 3" = 3 tries total, 2 retries). This `attempts` field counts
+ * only the retries *after* the first failure ("attempts: 3" = 4 tries total). Same underlying
+ * `@vielzeug/arsenal::retry` primitive, deliberately different counting convention per package
+ * — not a bug, but worth knowing before assuming the two numbers mean the same thing.
+ */
 export type RetryConfig = Readonly<{
   /** Number of retry attempts after the first failure. Default: 0 (no retries). */
   attempts?: number;
@@ -45,7 +53,7 @@ export type InfiniteSourceQuery = Readonly<{
   search?: string;
 }>;
 
-export { SourceDisposedError, SourcererError, SourceTimeoutError } from './errors';
+export { SourcererDisposedError, SourcererError, SourcererTimeoutError } from './errors';
 export type { SourcererErrorContext } from './errors';
 
 /**
@@ -172,7 +180,7 @@ export type PageNavigator<T> = ReactiveSource<T, SourceMeta> & {
   readonly query: SourceQuery;
   /**
    * Resolves when the source is idle (no pending async computation).
-   * Rejects with `SourceTimeoutError` after `timeout` ms if still busy.
+   * Rejects with `SourcererTimeoutError` after `timeout` ms if still busy.
    */
   ready(timeout?: number): Promise<void>;
   reset(): Promise<void>;
@@ -321,7 +329,8 @@ export type CursorSource<T, TCursor = string> = ReactiveSource<T, CursorMeta> & 
   next(): Promise<void>;
   /**
    * Applies one or more query changes atomically — a single fetch for any combination
-   * of limit and search updates.
+   * of limit and search updates. No `page` field — cursor pagination has no page-number
+   * concept; use `next()`/`prev()` to navigate.
    */
   patch(changes: Partial<Pick<CursorSourceQuery<TCursor>, 'limit' | 'search'>>): Promise<void>;
   prev(): Promise<void>;
@@ -369,7 +378,8 @@ export type InfiniteSource<T> = ReactiveSource<T, InfiniteMeta> & {
   loadMore(): Promise<void>;
   /**
    * Applies one or more query changes atomically — a single fetch for any combination
-   * of limit and search updates. Resets accumulated pages.
+   * of limit and search updates. Resets accumulated pages. No `page` field — infinite
+   * scroll has no page-number concept to patch; use `loadMore()` to append pages.
    */
   patch(changes: Partial<Pick<InfiniteSourceQuery, 'limit' | 'search'>>): Promise<void>;
   /** The current query state. Use `encodeQuery(source.query)` to serialize to URL params. */

@@ -80,13 +80,13 @@ await source.reset(); // restore initial filter/sort, reset to page 1
 
 ### Restoring from URL state
 
-Use `applyQuery()` + `decodeQuery()` to restore URL-decoded state in a single atomic recompute.
+Use `decodeQuery()` + `source.patch()` to restore URL-decoded state in a single atomic recompute.
 
 ```ts
-import { applyQuery, decodeQuery } from '@vielzeug/sourcerer';
+import { decodeQuery } from '@vielzeug/sourcerer';
 
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 10 });
-await applyQuery(source, query);
+await source.patch(query);
 ```
 
 ## Remote Source
@@ -169,13 +169,13 @@ await source.refresh(); // re-fetch current query
 
 ### Restoring from URL state
 
-`applyQuery()` is a no-op when `changes` is empty — safe to call on every page load.
+`source.patch()` is a no-op when `changes` is empty — safe to call on every page load.
 
 ```ts
-import { applyQuery, decodeQuery } from '@vielzeug/sourcerer';
+import { decodeQuery } from '@vielzeug/sourcerer';
 
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 25 });
-await applyQuery(source, query);
+await source.patch(query);
 ```
 
 ### Optimistic updates
@@ -278,13 +278,13 @@ await source.reset(); // clear all, restart from page 1
 
 ### Restoring from URL state
 
-Use `applyQuery()` + `decodeQuery()` to restore `limit` and `search`. `patch()` clears accumulated items and refetches from page 1 if any value changed.
+Use `decodeQuery()` + `source.patch()` to restore `limit` and `search`. `patch()` clears accumulated items and refetches from page 1 if any value changed.
 
 ```ts
-import { applyQuery, decodeQuery } from '@vielzeug/sourcerer';
+import { decodeQuery } from '@vielzeug/sourcerer';
 
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 20 });
-await applyQuery(source, { limit: query.limit, search: query.search });
+await source.patch({ limit: query.limit, search: query.search });
 ```
 
 ## Error Handling
@@ -418,7 +418,7 @@ const params = encodeQuery(source.query);
 
 // Restore from URLSearchParams directly
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 25 });
-await applyQuery(source, query);
+await source.patch(query);
 ```
 
 `decodeQuery` is fault-tolerant by default — malformed `filter`/`sort` JSON is silently dropped. Pass `{ strict: true }` to throw instead.
@@ -584,9 +584,9 @@ effect(() => {
 - Pass the `AbortSignal` from the `fetch` callback to your HTTP client so superseded requests are cancelled.
 - Call `ready()` in server-side rendering or test setup — not in every render cycle.
 - Always call the unsubscribe function returned by `subscribe()` when the component is torn down.
-- For URL sync, use `decodeQuery()` + `applyQuery()` rather than reconstructing source state from params manually.
+- For URL sync, use `decodeQuery()` + `source.patch()` rather than reconstructing source state from params manually.
 - Use `staleTime` with `refreshInterval` for stale-while-revalidate patterns on dashboards.
 - If you use `optimisticUpdate()`, call `refresh()` after mutation confirmation; it bypasses `staleTime` while optimistic state is active.
 - Only one `optimisticUpdate()` can be active at a time — always handle the thrown error or check before calling.
 - When using `decodeQuery()`, validate the parsed `filter` and `sort` with a type guard before passing to the server — they are returned as-is without runtime validation.
-- For infinite sources, pass `{ limit: query.limit, search: query.search }` to `applyQuery()` for URL state sync — `page` is not restorable since items accumulate across pages.
+- For infinite sources, pass `{ limit: query.limit, search: query.search }` to `source.patch()` for URL state sync — `page` isn't part of `InfiniteSource`'s `patch()` type at all, since items accumulate across pages rather than jumping to one.

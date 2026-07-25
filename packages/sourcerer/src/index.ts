@@ -1,4 +1,3 @@
-export { applyQuery } from './applyQuery';
 export { decodeQuery, encodeQuery } from './codecs';
 export type { DecodeQueryOptions } from './codecs';
 export { createCursorSource } from './cursorSource';
@@ -11,7 +10,7 @@ export { prefetchSource, prefetchSourceAndKeep } from './prefetch';
 export { filterContains, filterEquals, filterRange, searchBy, sortBy } from './presets';
 export { createRemoteSource } from './remoteSource';
 export { sourceState } from './state';
-export { SourceDisposedError, SourcererError, SourceTimeoutError } from './errors';
+export { SourcererDisposedError, SourcererError, SourcererTimeoutError } from './errors';
 export type {
   CursorConfig,
   CursorMeta,

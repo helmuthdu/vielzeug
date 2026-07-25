@@ -1,6 +1,6 @@
 import type { RemoteConfig, RemoteSource, RemoteSourceQuery, SearchOptions } from './types';
 
-import { defaultKeyOf, extractError, retry } from './_utils';
+import { clampPositiveInt, defaultKeyOf, extractError, retry } from './_utils';
 import { createAsyncSearchCoordinator } from './asyncSearch';
 import { createAsyncSource } from './asyncSource';
 import { SourcererError } from './errors';
@@ -16,7 +16,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
   const staleTimeMs = cfg.staleTime ?? 0;
 
   // ── Mutable state ───────────────────────────────────────────────────────────
-  let limit = Math.max(1, Math.trunc(cfg.limit ?? 20));
+  let limit = clampPositiveInt(cfg.limit ?? 20, 'createRemoteSource', 'limit');
   let page = 1;
   let search = '';
   let filter: TFilter | undefined = cfg.filter;
@@ -197,7 +197,8 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     },
 
     goTo(target) {
-      const clamped = total > 0 ? clampPage(target, pageCount(total, limit)) : Math.max(1, Math.trunc(target));
+      const clamped =
+        total > 0 ? clampPage(target, pageCount(total, limit)) : clampPositiveInt(target, 'source.goTo', 'target');
 
       if (clamped === page) return Promise.resolve();
 
@@ -267,7 +268,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       let changed = false;
 
       if (changes.limit !== undefined) {
-        const next = Math.max(1, Math.trunc(changes.limit));
+        const next = clampPositiveInt(changes.limit, 'source.patch', 'limit');
 
         if (next !== limit) {
           limit = next;
@@ -294,7 +295,9 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
 
       if (changes.page !== undefined) {
         const next =
-          total > 0 ? clampPage(changes.page, pageCount(total, limit)) : Math.max(1, Math.trunc(changes.page));
+          total > 0
+            ? clampPage(changes.page, pageCount(total, limit))
+            : clampPositiveInt(changes.page, 'source.patch', 'page');
 
         if (next !== page) {
           page = next;

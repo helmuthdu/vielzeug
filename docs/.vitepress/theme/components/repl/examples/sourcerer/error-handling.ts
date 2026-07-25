@@ -1,6 +1,6 @@
 export const errorHandlingExample = {
-  code: `// SourcererError, SourceDisposedError, SourceTimeoutError — typed error handling
-import { createRemoteSource, SourceDisposedError, SourcererError, SourceTimeoutError } from '@vielzeug/sourcerer'
+  code: `// SourcererError, SourcererDisposedError, SourcererTimeoutError — typed error handling
+import { createRemoteSource, SourcererDisposedError, SourcererError, SourcererTimeoutError } from '@vielzeug/sourcerer'
 
 // --- SourcererError: structured fetch failure ---
 const failing = createRemoteSource({
@@ -17,7 +17,7 @@ if (SourcererError.is(failing.meta.error)) {
 
 failing.dispose()
 
-// --- SourceTimeoutError: ready() timed out ---
+// --- SourcererTimeoutError: ready() timed out ---
 const slow = createRemoteSource({
   autoFetch: false,
   fetch: () => new Promise(() => {}), // never resolves
@@ -28,14 +28,14 @@ slow.refresh()
 try {
   await slow.ready(50) // 50 ms timeout
 } catch (err) {
-  if (err instanceof SourceTimeoutError) {
+  if (err instanceof SourcererTimeoutError) {
     console.log('Timed out:', err.message)
   }
 }
 
 slow.dispose()
 
-// --- SourceDisposedError: disposed while waiting ---
+// --- SourcererDisposedError: disposed while waiting ---
 const disposed = createRemoteSource({
   autoFetch: false,
   fetch: () => new Promise(() => {}),
@@ -44,7 +44,7 @@ const disposed = createRemoteSource({
 disposed.refresh()
 
 const waiting = disposed.ready().catch(err => {
-  if (err instanceof SourceDisposedError) {
+  if (err instanceof SourcererDisposedError) {
     console.log('Disposed while waiting:', err.message)
   }
 })
