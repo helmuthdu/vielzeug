@@ -20,6 +20,7 @@ MCP (Model Context Protocol) server and CLI that exposes all Vielzeug docs to AI
 - **No hand-duplicated package internals.** Don't hand-author reference data that mirrors another package's real exports (e.g. a curated list of another package's functions/types) — it drifts silently. If a tool needs that information, derive it from the already-bundled `apiSource`/`docs`/`typeSignatures` (see `get-type-signature`, `get-docs`) or from real generated build output (see refine's Custom Elements Manifest in `readRefineDeclarations` / REPL examples in `scripts/repl-examples.ts` / exported-symbol text in `scripts/type-signatures.ts`), not from a second, hand-maintained copy.
 - Scripts stderr output must go through `scripts/_log.ts` (`log()`). Never use bare `process.stderr.write` in scripts.
 - After changing docs in `docs/`, rebuild to refresh the bundle: `pnpm --filter @vielzeug/codex build`.
+- **codex has no `@vielzeug/*` dependency edge, so it never rides along on another package's release** — but it bundles all of `docs/` into its published `data/` dir at build time, so a docs-only change still changes codex's shipped npm content and needs its own release. A pre-commit hook (`scripts/auto-change-codex.mjs`, wired in `lefthook.yml` as `change:codex`, glob `docs/**`) auto-writes a patch change file for codex whenever docs change and none is already pending — don't hand-write a duplicate one.
 
 ## Testing
 

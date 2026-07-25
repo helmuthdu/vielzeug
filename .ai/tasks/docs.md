@@ -20,7 +20,7 @@ Keep docs technically correct, concise, and aligned with the documented page str
 2. Compare it with `docs/<name>/`.
 3. Update `api.md` first, then `usage.md`, `index.md`, `examples.md`, and `examples/*.md`.
 4. Rebuild docs.
-5. Rebuild `codex` so the bundled MCP data matches the docs.
+5. Rebuild `codex` so the bundled MCP data matches the docs. A pre-commit hook auto-writes codex's release change file when docs change (`scripts/auto-change-codex.mjs`) — no manual change file needed.
 
 ## Output shape
 

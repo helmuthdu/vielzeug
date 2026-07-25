@@ -27,3 +27,6 @@ pre-commit:
     check:ai-data:
       glob: '.ai/{data/**,tasks/**,reference/**,core/**}'
       run: node scripts/sync-ai-data.mjs --check
+    change:codex:
+      glob: 'docs/**'
+      run: node scripts/auto-change-codex.mjs && git add common/changes/@vielzeug/codex
