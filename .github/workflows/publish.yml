@@ -55,7 +55,7 @@ jobs:
       folder: ${{ steps.project.outputs.folder }}
       version: ${{ steps.project.outputs.version }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -140,7 +140,7 @@ jobs:
       has-releases: ${{ steps.plan.outputs.has-releases }}
       matrix: ${{ steps.plan.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -254,7 +254,7 @@ jobs:
       packages: write
       id-token: write # required for npm Trusted Publishing (OIDC)
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 1
 
