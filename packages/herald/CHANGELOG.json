@@ -2,6 +2,20 @@
   "name": "@vielzeug/herald",
   "entries": [
     {
+      "version": "1.0.5",
+      "tag": "@vielzeug/herald_v1.0.5",
+      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(herald): remove dead @vielzeug/arsenal vite external — no longer imported and never declared as a dependency; derive the (now empty) external list via readWorkspaceDeps() instead of a hand-listed array",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.4",
       "tag": "@vielzeug/herald_v1.0.4",
       "date": "Fri, 24 Jul 2026 05:28:41 GMT",

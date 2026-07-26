@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ripple
 
-This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+
+## 1.3.0
+Sun, 26 Jul 2026 06:43:54 GMT
+
+### Minor changes
+
+- refactor(ripple): move storeWithHistory to /history sub-path; tighten readonly()/resource() typing
 
 ## 1.2.3
 Fri, 24 Jul 2026 05:28:41 GMT

@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+
+## 1.3.0
+Sun, 26 Jul 2026 06:43:54 GMT
+
+### Minor changes
+
+- refactor(ore): extract query/event/wait testing primitives into new @vielzeug/assay dependency (waitFor/waitForEvent now throw AssayTimeoutError instead of OreTimeoutError), move OreTimeoutError and debugFlush() to @vielzeug/ore/testing (remove ./devtools entirely), make testing/flush() deterministic via pending-work tracking instead of a fixed microtask-turn guess (FLUSH_DEEP/maxTurns removed), let Fixture extend QueryScope, merge aria attributes into bind()'s HostBindConfig (aria() now delegates through bind()), rename resetIdCounter() to resetStableIdCounter(), fix useSlots() creating a duplicate MutationObserver when called from onMounted(), move each/when/classMap/styleMap/model to the main entry point, and open the custom-directive authoring API (createDirectiveResult/createSpreadObject) from @vielzeug/ore/directives
+
+### Patches
+
+- refactor(ore): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies
 
 ## 1.2.3
 Fri, 24 Jul 2026 05:28:41 GMT

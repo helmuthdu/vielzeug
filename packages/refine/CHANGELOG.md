@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Fri, 24 Jul 2026 21:50:50 GMT and should not be manually modified.
+This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+
+## 1.8.0
+Sun, 26 Jul 2026 06:43:54 GMT
+
+### Minor changes
+
+- refactor(refine): adopt @vielzeug/assay in @vielzeug/refine/testing — queryInShadow/queryAllInShadow/queryPart/getSlotted/nextTick/wait are now re-exported from assay instead of duplicated (same names, same behavior). dispatchPointer() is removed — use fire.pointer* from @vielzeug/ore/testing (which re-exports assay's dispatchers) instead. The unused keyEvent() helper is also removed — use fire.keyDown/fire.keyboard, which construct and dispatch in one call. Also updates to @vielzeug/ore's renamed resetStableIdCounter() and testing/flush()'s removed FLUSH_DEEP option
+
+### Patches
+
+- fix(refine): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies — fixes @vielzeug/keymap missing from the tree-shakeable build's externals (was being silently inlined into refine's own dist instead of staying external) and removes a dead @vielzeug/scroll entry from the bundle config (never imported, not a dependency)
 
 ## 1.7.0
 Fri, 24 Jul 2026 21:50:49 GMT

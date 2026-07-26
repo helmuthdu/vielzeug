@@ -2,6 +2,35 @@
   "name": "@vielzeug/ore",
   "entries": [
     {
+      "version": "1.3.0",
+      "tag": "@vielzeug/ore_v1.3.0",
+      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "refactor(ore): extract query/event/wait testing primitives into new @vielzeug/assay dependency (waitFor/waitForEvent now throw AssayTimeoutError instead of OreTimeoutError), move OreTimeoutError and debugFlush() to @vielzeug/ore/testing (remove ./devtools entirely), make testing/flush() deterministic via pending-work tracking instead of a fixed microtask-turn guess (FLUSH_DEEP/maxTurns removed), let Fixture extend QueryScope, merge aria attributes into bind()'s HostBindConfig (aria() now delegates through bind()), rename resetIdCounter() to resetStableIdCounter(), fix useSlots() creating a duplicate MutationObserver when called from onMounted(), move each/when/classMap/styleMap/model to the main entry point, and open the custom-directive authoring API (createDirectiveResult/createSpreadObject) from @vielzeug/ore/directives",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "d16e2d64bc8f6b1d1b0afbf0ffa7ce837848522c"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "refactor(ore): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/assay\" to `1.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.3.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.2.3",
       "tag": "@vielzeug/ore_v1.2.3",
       "date": "Fri, 24 Jul 2026 05:28:41 GMT",

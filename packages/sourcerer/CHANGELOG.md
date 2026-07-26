@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/sourcerer
 
-This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+
+## 1.1.0
+Sun, 26 Jul 2026 06:43:54 GMT
+
+### Minor changes
+
+- refactor(sourcerer): add dev-diagnostics layer, rename SourceTimeoutError/SourceDisposedError to SourcererTimeoutError/SourcererDisposedError for consistency with the SourcererError base, remove applyQuery() (use source.patch() directly), add debugSource() devtools sub-path (works with mergeSource() too, which has no meta), localSource reuses the shared debounced-search coordinator, mergeSource/deriveSource auto-dispose once every parent disposes (routed through the public dispose() method), sanitize untrusted decodeQuery() input before logging it, dedupe clampPositiveInt's dev warning per call site. core.ts stays a plain Set-based pub/sub (no @vielzeug/ripple dependency) after finding a real SSR/concurrent-request risk in ripple's scheduler for prefetchSource()'s documented SSR use case
 
 ## 1.0.6
 Fri, 24 Jul 2026 05:28:41 GMT

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/flux
 
-This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+
+## 1.0.8
+Sun, 26 Jul 2026 06:43:54 GMT
+
+### Patches
+
+- refactor(flux): derive the @vielzeug/ripple portion of the vite external list from package.json via readWorkspaceDeps(), keeping the herald/pulse/courier optional-peer adapters explicit since they aren't regular dependencies
 
 ## 1.0.7
 Fri, 24 Jul 2026 05:28:41 GMT

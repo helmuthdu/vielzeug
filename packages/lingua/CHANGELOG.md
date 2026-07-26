@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/lingua
 
-This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+
+## 1.1.4
+Sun, 26 Jul 2026 06:43:54 GMT
+
+### Patches
+
+- fix(lingua): warn in dev when t() is called on a plural-branch-only key (has() returns true but t() cannot resolve it), automatically run validateCatalog()'s CLDR plural-form checks whenever a catalog is registered/constructed/loaded (dev-only, lazily-chunked via dynamic import so it never enters production bundles), rename CatalogStore.catalogs/.pendingLoaders getters to snapshotCatalogs()/snapshotLoaders() methods for naming parity with NamespaceStore, remove 2 redundant type casts in fork(), and drop phantom [E0xx] labels from test names that referenced a non-existent error-code system
 
 ## 1.1.3
 Fri, 24 Jul 2026 05:28:41 GMT

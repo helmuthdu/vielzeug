@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/assay",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "tag": "@vielzeug/assay_v1.0.0",
+      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "feat(assay)!: initial release — framework-agnostic DOM testing primitives (within/queryByText/queryAllByText, queryInShadow/queryAllInShadow/queryPart/getSlotted, fire.*/createPointerEvent, waitFor/waitForEvent/nextTick/wait, AssayError/AssayTimeoutError). Extracted from @vielzeug/ore/testing so @vielzeug/refine and other DOM-output packages can share the same primitives instead of duplicating them",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "2fbc71272a07eec3c748e335a44a0c513688dcda"
+          }
+        ]
+      }
+    }
+  ]
+}

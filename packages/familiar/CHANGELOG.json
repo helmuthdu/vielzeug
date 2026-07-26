@@ -2,6 +2,20 @@
   "name": "@vielzeug/familiar",
   "entries": [
     {
+      "version": "1.0.6",
+      "tag": "@vielzeug/familiar_v1.0.6",
+      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "refactor(familiar): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.5",
       "tag": "@vielzeug/familiar_v1.0.5",
       "date": "Fri, 24 Jul 2026 05:28:41 GMT",

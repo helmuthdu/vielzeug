@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/assay",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Framework-agnostic DOM testing primitives — scoped queries and synchronous event dispatchers",
   "type": "module",
   "files": [

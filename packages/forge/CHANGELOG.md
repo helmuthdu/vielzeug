@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/forge
 
-This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+
+## 1.4.0
+Sun, 26 Jul 2026 06:43:54 GMT
+
+### Minor changes
+
+- refactor(forge): move snapshot/restore to form.history, remove subscribeScoped()/validateStream(), merge values/validation into core/fields.ts with shared bulk-op primitives, extract core/notifier.ts, fix reset()/replace() dropping validator-only field state
+
+### Patches
+
+- refactor(forge): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies
 
 ## 1.3.1
 Fri, 24 Jul 2026 05:28:41 GMT
