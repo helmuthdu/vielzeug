@@ -14,8 +14,7 @@ You need both prop and event contracts checked at the type level. Ore's `define<
 Combine `prop.*` helpers on `define()` with a typed `useEmit<Events>()` call in `setup()`.
 
 ```ts
-import { when } from '@vielzeug/ore/directives';
-import { define, html, prop, useEmit } from '@vielzeug/ore';
+import { define, html, prop, useEmit, when } from '@vielzeug/ore';
 
 type AlertBoxProps = {
   message: string;

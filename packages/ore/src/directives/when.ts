@@ -4,7 +4,7 @@ import type { RegisterCleanup } from '../template';
 
 import { invariant } from '../errors';
 import { createDirectiveResult, type DirectiveResult, type HTMLResult, isHtmlResult } from '../types/bindings';
-import { removeNodes, runAll } from '../utils/dom';
+import { createReplaceableSlot, removeNodes } from '../utils/dom';
 
 type MaybeReactive<T> = T | (() => T) | Readable<T>;
 
@@ -66,31 +66,23 @@ export function when(
 
     parent.insertBefore(endMarker, anchor.nextSibling);
 
-    let currentNodes: Node[] = [];
-    let currentCleanups: (() => void)[] = [];
+    const slot = createReplaceableSlot();
 
     const sub = rawEffect(() => {
       const next = conditionSignal.value;
 
-      runAll(currentCleanups);
-      removeNodes(currentNodes);
-      currentCleanups = [];
-      currentNodes = [];
+      slot.clear();
 
       const branch = next ? truthy() : falsy ? falsy() : null;
 
       if (!branch || !isHtmlResult(branch)) return;
 
-      const branchCleanups: (() => void)[] = [];
-
-      currentNodes = untrack(() => mountBranch(branch, parent, endMarker, (fn) => branchCleanups.push(fn)));
-      currentCleanups = branchCleanups;
+      slot.setNodes(untrack(() => mountBranch(branch, parent, endMarker, slot.registerCleanup)));
     });
 
     registerCleanup(() => sub.dispose());
     registerCleanup(() => {
-      runAll(currentCleanups);
-      removeNodes(currentNodes);
+      slot.clear();
       endMarker.remove();
     });
   });

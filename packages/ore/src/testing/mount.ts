@@ -4,6 +4,8 @@
 
 import type { Readable } from '@vielzeug/ripple';
 
+import { queryAllByText, queryByText, type QueryScope } from '@vielzeug/assay';
+
 import { type ComponentDefinition } from '../component-types';
 import { define } from '../define';
 import { _resetLiveSignals } from '../directives/live';
@@ -12,11 +14,19 @@ import { type HTMLResult } from '../types/bindings';
 import { _clearStylesheetCache } from '../utils/css';
 import { _resetIdCounter } from '../utils/id';
 import { flush, type FlushOptions } from './flush';
-import { queryAllByText, queryByText, type QueryScope } from './query';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export interface Fixture<T extends HTMLElement = HTMLElement> {
+// Fixture's query/queryAll/queryBy*/queryAllBy* methods are exactly QueryScope's surface —
+// extending it (rather than redeclaring all six signatures a second time) means a future
+// addition to one is automatically part of the other, with the type system enforcing it.
+/**
+ * A mounted component ready for assertions. Every inherited `QueryScope` method (`query`,
+ * `queryAll`, `queryByText`, `queryAllByText`, `queryByTestId`, `queryAllByTestId`) is scoped
+ * to `element.shadowRoot` — falling back to `element` itself for light-DOM components
+ * (`shadow: false` / no shadow root).
+ */
+export interface Fixture<T extends HTMLElement = HTMLElement> extends QueryScope {
   /** Delegates to `dispose()`. Enables `using` declarations. */
   [Symbol.dispose](): void;
   /** Run a callback then flush — the standard way to trigger and assert a reactive update */
@@ -33,18 +43,6 @@ export interface Fixture<T extends HTMLElement = HTMLElement> {
   element: T;
   /** Wait for all reactive updates and animation frames */
   flush(options?: FlushOptions): Promise<void>;
-  /** Query a single element within shadow root */
-  query<E extends Element = Element>(selector: string): E | null;
-  /** Query all elements within shadow root */
-  queryAll<E extends Element = Element>(selector: string): E[];
-  /** Query all elements by their `data-testid` attribute */
-  queryAllByTestId<E extends Element = Element>(testId: string): E[];
-  /** Query all elements whose trimmed text content matches */
-  queryAllByText<E extends Element = Element>(text: string, selector?: string): E[];
-  /** Query a single element by its `data-testid` attribute */
-  queryByTestId<E extends Element = Element>(testId: string): E | null;
-  /** Query the first element whose trimmed text content matches */
-  queryByText<E extends Element = Element>(text: string, selector?: string): E | null;
   /** The component's shadow root (null for light-DOM components) */
   readonly shadow: ShadowRoot | null;
 }

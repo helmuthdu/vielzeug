@@ -5,8 +5,8 @@
 
 import { computed, signal } from '@vielzeug/ripple';
 
-import { classMap, each, live, model, raw, setRawSanitizer, styleMap, when } from '../directives/index';
-import { html } from '../index';
+import { createDirectiveResult, createSpreadObject, live, raw, setRawSanitizer } from '../directives/index';
+import { classMap, each, html, model, styleMap, when } from '../index';
 import { fire, mount } from '../testing';
 import { register } from './test-utils';
 
@@ -381,8 +381,12 @@ describe('Directive: each()', () => {
     expect(queryAll('.item').map((node) => node.textContent)).toEqual(['B']);
   });
 
-  it('warns and does not throw when list contains duplicate keys', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('reports via ore:error and does not throw when list contains duplicate keys', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const oreErrorHandler = vi.fn();
+
+    document.addEventListener('ore:error', oreErrorHandler);
+
     const items = signal([
       { id: 1, value: 'A' },
       { id: 1, value: 'B' },
@@ -401,12 +405,21 @@ describe('Directive: each()', () => {
       ),
     ).resolves.toBeDefined();
 
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('duplicate key'));
-    warnSpy.mockRestore();
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('each-reconcile'),
+      expect.objectContaining({ message: expect.stringContaining('duplicate key') }),
+    );
+    // ore:error fires unconditionally (not gated by dev/prod) — this is the signal a consumer
+    // is meant to observe in production, where the console log above is stripped.
+    expect(oreErrorHandler).toHaveBeenCalledTimes(1);
+    expect(oreErrorHandler.mock.calls[0]?.[0].detail.phase).toBe('each-reconcile');
+
+    document.removeEventListener('ore:error', oreErrorHandler);
+    errorSpy.mockRestore();
   });
 
   it('leaves no orphaned DOM nodes after duplicate-key error recovery', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const items = signal([
       { id: 1, value: 'A' },
       { id: 1, value: 'B' },
@@ -431,11 +444,11 @@ describe('Directive: each()', () => {
     expect(queryAll('.item')).toHaveLength(1);
     expect(queryAll('.item')[0]?.textContent).toBe('C');
 
-    warnSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 
-  it('warns and recovers when a subsequent update (not just the initial mount) introduces duplicate keys', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('reports via ore:error and recovers when a subsequent update (not just the initial mount) introduces duplicate keys', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const items = signal([
       { id: 1, value: 'A' },
       { id: 2, value: 'B' },
@@ -461,7 +474,10 @@ describe('Directive: each()', () => {
     ];
     await flush();
 
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('duplicate key'));
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('each-reconcile'),
+      expect.objectContaining({ message: expect.stringContaining('duplicate key') }),
+    );
     expect(queryAll('.item')).toHaveLength(0);
 
     // The list can still recover cleanly on the next update after the bad one.
@@ -469,7 +485,7 @@ describe('Directive: each()', () => {
     await flush();
     expect(queryAll('.item').map((node) => node.textContent)).toEqual(['E']);
 
-    warnSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 
   it('renders a plain static array as a one-time snapshot', async () => {
@@ -1123,5 +1139,51 @@ describe('Directive: live()', () => {
     await flush();
 
     expect(input.checked).toBe(false);
+  });
+});
+
+describe('Directive authoring: createDirectiveResult() / createSpreadObject()', () => {
+  it('a custom directive built via createDirectiveResult() mounts real DOM through the template engine', async () => {
+    const banner = () =>
+      createDirectiveResult((anchor, registerCleanup) => {
+        const el = document.createElement('span');
+
+        el.className = 'custom-banner';
+        el.textContent = 'from a custom directive';
+        anchor.parentNode?.insertBefore(el, anchor);
+        registerCleanup(() => el.remove());
+      });
+
+    const { query } = await mount(() => html`<div>${banner()}</div>`);
+
+    expect(query('.custom-banner')?.textContent).toBe('from a custom directive');
+  });
+
+  it("an unbranded object matching DirectiveResult's shape is NOT recognized (must go through createDirectiveResult)", async () => {
+    // Regression guard for the "closed extension point" gap: hand-building an object with the
+    // same { mount } shape as DirectiveResult, without the factory's brand, must not be treated
+    // as a directive by the template engine.
+    const fakeDirective = { mount: () => {} };
+    const { element } = await mount(() => html`<div>${fakeDirective}</div>`);
+
+    expect(element.shadowRoot?.textContent).toContain('[object Object]');
+  });
+
+  it('a custom two-way binding built via createSpreadObject() applies to the target element', async () => {
+    let appliedTo: HTMLElement | undefined;
+
+    const markApplied = () =>
+      createSpreadObject((el, registerCleanup) => {
+        appliedTo = el;
+        el.setAttribute('data-marked', 'true');
+        registerCleanup(() => el.removeAttribute('data-marked'));
+      });
+
+    const { query } = await mount(() => html`<input class="field" ${markApplied()} />`);
+
+    const input = query<HTMLInputElement>('.field');
+
+    expect(appliedTo).toBe(input);
+    expect(input?.getAttribute('data-marked')).toBe('true');
   });
 });

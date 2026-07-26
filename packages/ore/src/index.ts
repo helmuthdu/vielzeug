@@ -1,11 +1,4 @@
-export {
-  OreApiError,
-  OreError,
-  type OreErrorPhase,
-  OreInternalError,
-  OreLifecycleError,
-  OreTimeoutError,
-} from './errors';
+export { OreApiError, OreError, type OreErrorPhase, OreInternalError, OreLifecycleError } from './errors';
 
 export { define, prop } from './define';
 export type { ComponentDefinition } from './component-types';
@@ -43,8 +36,21 @@ export { useEmit, type EmitFn } from './utils/emit';
 
 export { html } from './template';
 
+// Near-universal template directives — used in most non-trivial components (lists,
+// conditionals, class/style maps, two-way form binding). Kept in the main entry alongside
+// `html`/`define` rather than a separate sub-path: tree-shaking already means an unused export
+// costs nothing in a bundled consumer, so splitting these off only adds an extra import line
+// for functionality most components need on day one. Contrast with `@vielzeug/ore/directives`,
+// which holds the genuinely niche/advanced pieces (`raw()` — security-sensitive HTML injection,
+// `live()` — form-control-specific) plus the custom-directive authoring API.
+export { classMap } from './directives/classMap';
+export { each } from './directives/each';
+export { model } from './directives/model';
+export { styleMap } from './directives/styleMap';
+export { when } from './directives/when';
+
 export { css, type CSSResult } from './utils/css';
 
-export { createId, createStableId, resetIdCounter } from './utils/id';
+export { createId, createStableId, resetStableIdCounter } from './utils/id';
 
-export { ref, type DirectiveResult, type HTMLResult, type Ref, type RefCallback } from './types/bindings';
+export { ref, type HTMLResult, type Ref, type RefCallback } from './types/bindings';

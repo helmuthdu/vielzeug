@@ -1,6 +1,7 @@
-import { debugFlush } from '../devtools';
 import { invariant, OreInternalError, OreLifecycleError, OreError, reportRuntimeError } from '../errors';
 import { html } from '../index';
+import { beginPendingWork, hasPendingWork } from '../runtime';
+import { debugFlush, flush, OreTimeoutError } from '../testing';
 import {
   createDirectiveResult,
   createHtmlResult,
@@ -221,12 +222,50 @@ describe('debugFlush()', () => {
     await expect(debugFlush()).resolves.toBeUndefined();
   });
 
-  it('passes logger messages to console.debug', async () => {
+  it('logs messages to console.debug', async () => {
     const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
 
-    await debugFlush({ maxTurns: 1 });
+    await debugFlush();
 
     expect(spy).toHaveBeenCalled();
     spy.mockRestore();
+  });
+});
+
+describe('runtime: beginPendingWork() / hasPendingWork()', () => {
+  it('reports pending while a unit of work is open, and clear once ended', () => {
+    expect(hasPendingWork()).toBe(false);
+
+    const end = beginPendingWork();
+
+    expect(hasPendingWork()).toBe(true);
+
+    end();
+
+    expect(hasPendingWork()).toBe(false);
+  });
+
+  it('is idempotent — calling the returned end() twice does not double-decrement', () => {
+    const endA = beginPendingWork();
+    const endB = beginPendingWork();
+
+    expect(hasPendingWork()).toBe(true);
+
+    endA();
+    endA(); // second call must be a no-op
+    expect(hasPendingWork()).toBe(true); // endB's unit is still open
+
+    endB();
+    expect(hasPendingWork()).toBe(false);
+  });
+
+  it('flush() throws OreTimeoutError if pending work never settles', async () => {
+    const end = beginPendingWork();
+
+    try {
+      await expect(flush()).rejects.toBeInstanceOf(OreTimeoutError);
+    } finally {
+      end();
+    }
   });
 });

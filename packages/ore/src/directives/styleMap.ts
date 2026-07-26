@@ -1,6 +1,6 @@
-import { computed, isReactive, type Readable } from '@vielzeug/ripple';
+import { computed, type Readable } from '@vielzeug/ripple';
 
-import { toKebab } from '../utils/dom';
+import { resolveMaybeReactive, sanitizeCssToken, toKebab } from '../utils/dom';
 
 type StyleInput =
   | string
@@ -12,20 +12,12 @@ type StyleInput =
   | Readable<string | number | null | undefined | false>;
 
 const toStyleValue = (value: StyleInput): string => {
-  const resolved = typeof value === 'function' ? value() : isReactive(value) ? value.value : value;
+  const resolved = resolveMaybeReactive(value);
 
   if (resolved == null || resolved === false) return '';
 
-  // Strip characters that can break out of a CSS declaration in inline styles.
-  // Semicolons end the current declaration; braces are meaningful in stylesheets
-  // but not inline style values and signal injection attempts.
-  return String(resolved).replace(/[;{}]/g, '');
+  return sanitizeCssToken(String(resolved));
 };
-
-// Strip characters that can break out of a CSS declaration in inline styles.
-// This is applied to both property names and values: semicolons end declarations
-// and braces are meaningful in stylesheet rules (but not inline style values).
-const UNSAFE_CSS_CHARS = /[;{}]/g;
 
 /**
  * Builds a reactive inline style string from a style object.
@@ -56,7 +48,7 @@ export const styleMap = (record: Record<string, StyleInput>): Readable<string> =
 
       if (!value) continue;
 
-      const safeName = toKebab(name).replace(UNSAFE_CSS_CHARS, '');
+      const safeName = sanitizeCssToken(toKebab(name));
 
       if (!safeName) continue;
 

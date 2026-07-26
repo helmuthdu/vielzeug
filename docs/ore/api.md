@@ -37,9 +37,9 @@ All symbols below (except `useField`/`createFormContext`, under `@vielzeug/ore/f
 
 | Import                       | Purpose                                                            |
 | ---------------------------- | ------------------------------------------------------------------ |
-| `@vielzeug/ore`            | Core authoring/runtime API                                         |
+| `@vielzeug/ore`            | Core authoring/runtime API, including the everyday template directives (`each`, `when`, `classMap`, `styleMap`, `model`) |
 | `@vielzeug/ore/devtools`   | `debugFlush` — verbose flush for timing diagnostics                |
-| `@vielzeug/ore/directives` | Standalone directive imports (`each`, `when`, `classMap`, …)       |
+| `@vielzeug/ore/directives` | The advanced/niche directives (`raw`, `live`) plus the custom-directive authoring API (`createDirectiveResult`, `createSpreadObject`) |
 | `@vielzeug/ore/forms`      | Form-association helpers (`useField`, `createFormContext`)        |
 | `@vielzeug/ore/observers`  | Resize, intersection, mutation, and media observers                |
 | `@vielzeug/ore/testing`    | DOM-oriented test helpers                                          |
@@ -293,7 +293,7 @@ Slot signals update reactively when assigned content changes, including when slo
 - `ref<T>()` — Create a `Signal<T | null>` element reference. Set to the element via `ref=` in templates.
 - `createId(prefix = 'id')` — Generate a unique incremental string ID (e.g. `'id-1'`, `'id-2'`). Each call returns a new ID — it does not deduplicate by prefix.
 - `createStableId(prefix = 'id')` — Generate a unique ID that also embeds a short random tag shared across all IDs generated in the session (e.g. `'field-a3k21'`), reducing collision risk when multiple app instances run on the same page. Like `createId()`, every call returns a new ID.
-- `resetIdCounter()` — Reset the `createStableId()` counter to 0. Call in test `beforeEach` for deterministic IDs.
+- `resetStableIdCounter()` — Reset the `createStableId()` counter to 0. Call in test `beforeEach` for deterministic IDs. Scoped to `createStableId()` only — `createId()` has no public reset (it's for uniqueness, not cross-test determinism).
 
 ## Form-Associated API
 

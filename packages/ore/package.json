@@ -16,12 +16,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./devtools": {
-      "source": "./src/devtools.ts",
-      "types": "./dist/devtools.d.ts",
-      "import": "./dist/devtools.js",
-      "require": "./dist/devtools.cjs"
-    },
     "./directives": {
       "source": "./src/directives/index.ts",
       "types": "./dist/directives/index.d.ts",
@@ -65,6 +59,7 @@
     "node": ">=22"
   },
   "dependencies": {
+    "@vielzeug/assay": "workspace:*",
     "@vielzeug/ripple": "workspace:*"
   },
   "devDependencies": {

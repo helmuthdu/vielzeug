@@ -5,7 +5,7 @@ package: ore
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, refine, orbit]
-exports: [define, prop, html, css, ref, createContext, inject, injectStrict, provide, onMounted, onCleanup, useEmit, useSlots, getHost, bind, aria, createId, createStableId, resetIdCounter, setRawSanitizer, OreError, BindOptions]
+exports: [define, prop, html, css, ref, createContext, inject, injectStrict, provide, onMounted, onCleanup, useEmit, useSlots, getHost, bind, aria, each, when, classMap, styleMap, model, createId, createStableId, resetStableIdCounter, setRawSanitizer, OreError, BindOptions]
 environments: [browser]
 ---
 
@@ -142,9 +142,9 @@ define('my-counter', {
 
 | Import                      | Purpose                                                                       |
 | --------------------------- | ----------------------------------------------------------------------------- |
-| `@vielzeug/ore`            | Core component API and utilities (`define`, `prop`, `html`, `css`, context)  |
+| `@vielzeug/ore`            | Core component API and utilities (`define`, `prop`, `html`, `css`, context), plus the everyday template directives (`each`, `when`, `model`, `classMap`, `styleMap`) |
 | `@vielzeug/ore/devtools`   | `debugFlush` — verbose flush for timing diagnostics (dev only)                |
-| `@vielzeug/ore/directives` | `each`, `when`, `model`, `live`, `raw`, `classMap`, `styleMap`                |
+| `@vielzeug/ore/directives` | The advanced/niche directives (`live`, `raw`) and the custom-directive authoring API (`createDirectiveResult`, `createSpreadObject`) |
 | `@vielzeug/ore/forms`      | `useField`, `createFormContext`, `FORM_CONTEXT_KEY`                          |
 | `@vielzeug/ore/observers`  | `resizeObserver`, `intersectionObserver`, `mediaObserver`, `mutationObserver` |
 | `@vielzeug/ore/testing`    | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers                    |

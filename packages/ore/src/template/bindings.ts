@@ -26,7 +26,7 @@ import {
   type SpreadBinding,
   type TextBinding,
 } from '../types/bindings';
-import { isStructuredValue, listen, removeNodes, runAll, setAttr } from '../utils/dom';
+import { createReplaceableSlot, isStructuredValue, listen, setAttr } from '../utils/dom';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -222,31 +222,23 @@ const insertHtmlValues = (
 export const applyHtmlBinding = (binding: HtmlBinding, registerCleanup: RegisterCleanup): void => {
   const { anchor, signal } = binding;
 
-  let currentCleanups: (() => void)[] = [];
-  const clearCurrent = (): void => {
-    runAll(currentCleanups);
-    currentCleanups = [];
-  };
-  let currentNodes: Node[] = [];
+  const slot = createReplaceableSlot();
 
   const stop = rawEffect(() => {
     const raw = readSignalSafe(signal);
 
-    clearCurrent();
-    removeNodes(currentNodes);
-    currentNodes = [];
+    slot.clear();
 
     if (raw == null || raw.length === 0) return;
 
     untrack(() => {
-      currentNodes = insertHtmlValues(raw, anchor, (fn) => currentCleanups.push(fn));
+      slot.setNodes(insertHtmlValues(raw, anchor, slot.registerCleanup));
     });
   });
 
   registerCleanup(() => {
     stop.dispose();
-    clearCurrent();
-    removeNodes(currentNodes);
+    slot.clear();
   });
 };
 

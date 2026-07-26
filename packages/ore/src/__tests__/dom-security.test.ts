@@ -1,7 +1,88 @@
+import { signal } from '@vielzeug/ripple';
 import { describe, expect, it, vi } from 'vitest';
 
 import { OreLifecycleError as OreError } from '../errors';
-import { setAttr } from '../utils/dom';
+import { createReplaceableSlot, resolveMaybeReactive, sanitizeCssToken, setAttr } from '../utils/dom';
+
+describe('resolveMaybeReactive()', () => {
+  it('returns a plain value unchanged', () => {
+    expect(resolveMaybeReactive(42)).toBe(42);
+    expect(resolveMaybeReactive('hi')).toBe('hi');
+    expect(resolveMaybeReactive(false)).toBe(false);
+  });
+
+  it('calls a getter function and returns its result', () => {
+    expect(resolveMaybeReactive(() => 'from-getter')).toBe('from-getter');
+  });
+
+  it('reads .value from a reactive signal', () => {
+    const s = signal('from-signal');
+
+    expect(resolveMaybeReactive(s)).toBe('from-signal');
+  });
+});
+
+describe('sanitizeCssToken()', () => {
+  it('strips semicolons and braces', () => {
+    expect(sanitizeCssToken('red; }body{color:red')).toBe('red bodycolor:red');
+  });
+
+  it('leaves an already-safe token untouched', () => {
+    expect(sanitizeCssToken('background-color')).toBe('background-color');
+  });
+});
+
+describe('createReplaceableSlot()', () => {
+  it('starts empty', () => {
+    const slot = createReplaceableSlot();
+
+    expect(slot.nodes).toEqual([]);
+  });
+
+  it('tracks nodes set via setNodes()', () => {
+    const slot = createReplaceableSlot();
+    const nodes = [document.createElement('div'), document.createElement('span')];
+
+    slot.setNodes(nodes);
+    expect(slot.nodes).toBe(nodes);
+  });
+
+  it('clear() removes tracked nodes from the DOM and resets to empty', () => {
+    const parent = document.createElement('div');
+    const child = document.createElement('span');
+
+    parent.appendChild(child);
+
+    const slot = createReplaceableSlot();
+
+    slot.setNodes([child]);
+    slot.clear();
+
+    expect(parent.contains(child)).toBe(false);
+    expect(slot.nodes).toEqual([]);
+  });
+
+  it('clear() runs registered cleanups in reverse registration order', () => {
+    const calls: number[] = [];
+    const slot = createReplaceableSlot();
+
+    slot.registerCleanup(() => calls.push(1));
+    slot.registerCleanup(() => calls.push(2));
+    slot.registerCleanup(() => calls.push(3));
+    slot.clear();
+
+    expect(calls).toEqual([3, 2, 1]);
+  });
+
+  it('clear() is safe to call repeatedly with nothing tracked', () => {
+    const slot = createReplaceableSlot();
+
+    expect(() => {
+      slot.clear();
+      slot.clear();
+    }).not.toThrow();
+  });
+});
 
 describe('setAttr — URL security', () => {
   it('blocks javascript: href', () => {

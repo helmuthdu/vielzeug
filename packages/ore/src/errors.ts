@@ -39,8 +39,9 @@ export class OreInternalError extends OreError {
  * - `'async-setup'` — async setup() promise rejected
  * - `'mounted'` — an onMounted callback threw
  * - `'form-reset'` — an onFormReset callback threw
+ * - `'each-reconcile'` — `each()` failed to reconcile a list update (e.g. duplicate keys)
  */
-export type OreErrorPhase = 'async-setup' | 'form-reset' | 'mounted' | 'setup';
+export type OreErrorPhase = 'async-setup' | 'each-reconcile' | 'form-reset' | 'mounted' | 'setup';
 
 /**
  * Structured error thrown by the Ore runtime when component setup fails.
@@ -59,11 +60,23 @@ export class OreLifecycleError extends OreError {
 
 /**
  * Report a runtime error via the ore:error event and console.
+ *
+ * `target` only needs to be an `EventTarget` (not specifically an `HTMLElement`) — component
+ * lifecycle errors dispatch on the host element, but non-lifecycle failures (e.g. `each()`
+ * reconciliation, which has no single "component" to attribute the error to) dispatch on
+ * whatever live DOM node is available, such as the directive's own anchor `Comment`. Either way
+ * the event still bubbles and crosses shadow boundaries (`composed: true`), so a listener on
+ * `document`/`window` observes every report regardless of where it originated.
+ *
+ * The console log (via `_dev.ts`'s `error()`) is still dev-gated like the rest of the package's
+ * console diagnostics, but the `ore:error` DOM event dispatch below is **not** — it fires in
+ * every build, so consumers always have a way to observe runtime failures programmatically even
+ * when console output is stripped in production.
  */
-export function reportRuntimeError(error: OreLifecycleError, element: HTMLElement): void {
+export function reportRuntimeError(error: OreLifecycleError, target: EventTarget): void {
   logError(`<${error.component}> setup error (phase: ${error.phase}):`, error.cause);
 
-  element.dispatchEvent(
+  target.dispatchEvent(
     new CustomEvent('ore:error', {
       bubbles: true,
       composed: true,
@@ -74,7 +87,7 @@ export function reportRuntimeError(error: OreLifecycleError, element: HTMLElemen
 
 // ─── Error message constants ─────────────────────────────────────────────────
 
-/** Thrown by `waitFor` and `waitForEvent` in the testing sub-path when a condition is not met within the timeout. */
+/** Thrown by `flush()` in the testing sub-path when pending component work doesn't settle within the timeout. */
 export class OreTimeoutError extends OreError {}
 
 export const ORE_ERRORS = {

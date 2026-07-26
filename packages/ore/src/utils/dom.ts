@@ -2,7 +2,27 @@
  * Low-level DOM utilities used throughout the runtime and binding layers.
  */
 
+import { isReactive, type Readable } from '@vielzeug/ripple';
+
 import { warn } from '../_dev';
+
+/**
+ * Resolves a value that may be a plain value, a getter function, or a reactive signal — the
+ * same three-way branch `classMap`/`styleMap`/`bind()`'s class-map binding each used to
+ * hand-implement separately (with one silently diverging: only the `bind()` copy coerced with
+ * `Boolean(...)`). One shared implementation here is the single source of truth.
+ */
+export const resolveMaybeReactive = <T>(value: T | Readable<T> | (() => T)): T =>
+  typeof value === 'function' ? (value as () => T)() : isReactive(value) ? value.value : value;
+
+/**
+ * Characters that can break out of a CSS declaration in an inline style value or property name.
+ * Semicolons end the current declaration; braces are meaningful in stylesheet rules but not
+ * inline style values, and signal an injection attempt there.
+ */
+export const UNSAFE_CSS_CHARS = /[;{}]/g;
+
+export const sanitizeCssToken = (value: string): string => value.replace(UNSAFE_CSS_CHARS, '');
 
 export const runAll = (fns: (() => void)[]): void => {
   for (let i = fns.length - 1; i >= 0; i--) fns[i]!();
@@ -12,6 +32,50 @@ export const removeNodes = (nodes: Node[]): void => {
   for (const node of nodes) {
     (node as ChildNode).remove();
   }
+};
+
+/**
+ * Tracks "whatever is currently rendered in one spot" — a list of live DOM nodes plus the
+ * cleanup functions that were registered while mounting them. `clear()` tears both down and
+ * resets to empty, ready for the next render.
+ *
+ * Every directive/binding that swaps its rendered content when a reactive source changes
+ * (`when()`, `raw()`, `each()`'s empty-list fallback, `applyHtmlBinding()`) needs exactly this
+ * bookkeeping — this is the one shared implementation instead of four independently-maintained
+ * `currentNodes`/`currentCleanups` variable pairs.
+ */
+export type ReplaceableSlot = {
+  /** Tears down every registered cleanup and removes every tracked node, then resets to empty. */
+  clear(): void;
+  /** Currently tracked nodes — read after mounting to know what's live. */
+  readonly nodes: Node[];
+  /** Pass as the `registerCleanup` callback to whatever mounts the next render. */
+  registerCleanup(fn: () => void): void;
+  /** Replace the tracked node list (call once mounting the next render is complete). */
+  setNodes(nodes: Node[]): void;
+};
+
+export const createReplaceableSlot = (): ReplaceableSlot => {
+  let nodes: Node[] = [];
+  let cleanups: (() => void)[] = [];
+
+  return {
+    clear() {
+      runAll(cleanups);
+      removeNodes(nodes);
+      cleanups = [];
+      nodes = [];
+    },
+    get nodes() {
+      return nodes;
+    },
+    registerCleanup(fn) {
+      cleanups.push(fn);
+    },
+    setNodes(next) {
+      nodes = next;
+    },
+  };
 };
 
 /**

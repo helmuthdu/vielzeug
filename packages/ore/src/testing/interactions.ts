@@ -2,7 +2,8 @@
  * Higher-level async user interaction helpers for test environments.
  */
 
-import { fire } from './events';
+import { fire } from '@vielzeug/assay';
+
 import { flush } from './flush';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

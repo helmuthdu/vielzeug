@@ -152,12 +152,11 @@ define('profile-name', {
 
 ## directives
 
-Ore includes `each`, `classMap`, `styleMap`, `when`, `live`, and `raw` — import them from `@vielzeug/ore/directives`.
+Ore includes `each`, `classMap`, `styleMap`, `when`, and `model` — the everyday template directives most components need, imported directly from `@vielzeug/ore` alongside `define`/`html`. The advanced/niche ones (`live`, `raw`) live behind a separate `@vielzeug/ore/directives` import — see below.
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { classMap, each, styleMap, when } from '@vielzeug/ore/directives';
-import { define, html } from '@vielzeug/ore';
+import { classMap, define, each, html, styleMap, when } from '@vielzeug/ore';
 
 define('task-list', {
   setup() {
@@ -330,8 +329,7 @@ define('button-wrapper', {
 ## slots and emits
 
 ```ts
-import { when } from '@vielzeug/ore/directives';
-import { define, html, useEmit, useSlots } from '@vielzeug/ore';
+import { define, html, useEmit, useSlots, when } from '@vielzeug/ore';
 
 define('card-with-footer', {
   setup(_props) {

@@ -3,7 +3,7 @@ import { computed, effect as rawEffect, isReactive, type Readable, type Signal }
 import { warn } from '../_dev';
 import { invariant } from '../errors';
 import { createDirectiveResult, type DirectiveResult } from '../types/bindings';
-import { removeNodes } from '../utils/dom';
+import { createReplaceableSlot } from '../utils/dom';
 
 type RawSanitizer = (html: string) => string;
 
@@ -78,17 +78,17 @@ export function raw(value: (() => string) | string | Signal<string> | Readable<s
     parent.insertBefore(endMarker, anchor.nextSibling);
 
     if (isReactive(value)) {
-      let currentNodes: Node[] = [];
+      const slot = createReplaceableSlot();
       const src = value as Readable<string>;
 
       const stop = rawEffect(() => {
-        removeNodes(currentNodes);
-        currentNodes = parseRaw(sanitize(src.value), parent, endMarker);
+        slot.clear();
+        slot.setNodes(parseRaw(sanitize(src.value), parent, endMarker));
       });
 
       registerCleanup(() => stop.dispose());
       registerCleanup(() => {
-        removeNodes(currentNodes);
+        slot.clear();
         endMarker.remove();
       });
     } else {

@@ -4,8 +4,8 @@
  */
 import { signal } from '@vielzeug/ripple';
 
-import { html, OreTimeoutError, prop } from '../index';
-import { cleanup, fire, mock, mount, mountComponent, user, waitFor, waitForEvent, within } from '../testing';
+import { html, prop } from '../index';
+import { cleanup, fire, mock, mount, mountComponent, user } from '../testing';
 
 describe('Testing: Render Utilities', () => {
   describe('mount()', () => {
@@ -47,29 +47,14 @@ describe('Testing: Render Utilities', () => {
   });
 
   describe('fire', () => {
+    // fire.*'s own dispatch behavior is covered exhaustively in @vielzeug/assay's own test
+    // suite (it has no ore-specific logic) — this is the one integration point worth keeping
+    // here: firing against a real mounted ore component's rendered DOM.
     it('should fire click events', async () => {
       const spy = vi.fn();
       const { query } = await mount(() => html`<button @click=${spy}>Click</button>`);
 
       fire.click(query('button')!);
-      expect(spy).toHaveBeenCalledTimes(1);
-    });
-
-    it('should fire input events', () => {
-      const spy = vi.fn();
-      const input = document.createElement('input');
-
-      input.addEventListener('input', spy);
-      fire.input(input);
-      expect(spy).toHaveBeenCalledTimes(1);
-    });
-
-    it('should fire custom events', () => {
-      const spy = vi.fn();
-      const div = document.createElement('div');
-
-      div.addEventListener('custom', spy);
-      fire.custom(div, 'custom', { detail: 123 });
       expect(spy).toHaveBeenCalledTimes(1);
     });
   });
@@ -152,116 +137,6 @@ describe('Testing: Render Utilities', () => {
       await user.dblClick(button);
       expect(spy).toHaveBeenCalledOnce();
       button.remove();
-    });
-  });
-
-  describe('waitFor', () => {
-    it('should wait for boolean condition', async () => {
-      let ready = false;
-
-      setTimeout(() => (ready = true), 50);
-      await waitFor(() => ready);
-      expect(ready).toBe(true);
-    });
-
-    it('should wait for expect() assertion', async () => {
-      let count = 0;
-
-      setTimeout(() => count++, 50);
-      await waitFor(() => expect(count).toBeGreaterThan(0));
-      expect(count).toBeGreaterThan(0);
-    });
-
-    it('should timeout if condition not met', async () => {
-      await expect(waitFor(() => false, { timeout: 100 })).rejects.toThrow();
-    });
-  });
-
-  describe('waitFor (element appearance)', () => {
-    it('should wait for element to appear', async () => {
-      const container = document.createElement('div');
-
-      document.body.appendChild(container);
-      setTimeout(() => {
-        const el = document.createElement('button');
-
-        container.appendChild(el);
-      }, 50);
-      await waitFor(() => container.querySelector('button'));
-      expect(container.querySelector('button')).not.toBeNull();
-      container.remove();
-    });
-  });
-
-  describe('waitFor (element removal)', () => {
-    it('should wait for element removal', async () => {
-      const container = document.createElement('div');
-      const el = document.createElement('div');
-
-      container.appendChild(el);
-      document.body.appendChild(container);
-      setTimeout(() => el.remove(), 50);
-      await waitFor(() => !container.querySelector('div'));
-      expect(container.querySelector('div')).toBeNull();
-      container.remove();
-    });
-  });
-
-  describe('waitForEvent', () => {
-    it('resolves with the event when it fires', async () => {
-      const el = document.createElement('div');
-      const promise = waitForEvent<CustomEvent>(el, 'my-event');
-
-      fire.custom(el, 'my-event', { detail: 42 });
-
-      const event = await promise;
-
-      expect(event.detail).toBe(42);
-    });
-
-    it('rejects with OreTimeoutError when the event never fires', async () => {
-      const el = document.createElement('div');
-
-      await expect(waitForEvent(el, 'never-fires', 50)).rejects.toBeInstanceOf(OreTimeoutError);
-    });
-
-    it('removes its event listener when the wait times out (no dangling listener)', async () => {
-      const el = document.createElement('div');
-      const removeSpy = vi.spyOn(el, 'removeEventListener');
-
-      await expect(waitForEvent(el, 'never-fires', 20)).rejects.toBeInstanceOf(OreTimeoutError);
-
-      expect(removeSpy).toHaveBeenCalledWith('never-fires', expect.any(Function));
-    });
-  });
-
-  describe('within()', () => {
-    it('scopes query/queryAll to the given element', () => {
-      const root = document.createElement('div');
-
-      root.innerHTML = '<p class="a">First</p><p class="a">Second</p>';
-
-      const { query, queryAll } = within(root);
-
-      expect(query('.a')?.textContent).toBe('First');
-      expect(queryAll('.a')).toHaveLength(2);
-    });
-
-    it('scopes queryByText/queryAllByText/queryByTestId/queryAllByTestId to the given element', () => {
-      const root = document.createElement('div');
-
-      root.innerHTML = `
-        <span data-testid="label">Hello</span>
-        <span data-testid="label">Hello</span>
-        <span data-testid="other">World</span>
-      `;
-
-      const { queryAllByTestId, queryAllByText, queryByTestId, queryByText } = within(root);
-
-      expect(queryByText('Hello')?.getAttribute('data-testid')).toBe('label');
-      expect(queryAllByText('Hello')).toHaveLength(2);
-      expect(queryByTestId('other')?.textContent).toBe('World');
-      expect(queryAllByTestId('label')).toHaveLength(2);
     });
   });
 

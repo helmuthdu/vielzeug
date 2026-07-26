@@ -6,8 +6,8 @@
 import { isReactive, type Readable } from '@vielzeug/ripple';
 
 import { getHost, tryRegisterCleanup, watchEffect } from './runtime';
-import { normalizeHostAttrKey } from './utils/aria';
-import { listen, setAttr, toKebab } from './utils/dom';
+import { normalizeAriaKey, normalizeHostAttrKey } from './utils/aria';
+import { listen, resolveMaybeReactive, sanitizeCssToken, setAttr, toKebab } from './utils/dom';
 
 /**
  * Describes a reactive or static host binding value.
@@ -31,6 +31,12 @@ type HostClassBindingValue = Readable<boolean> | (() => boolean) | boolean;
 type HostEventListener = { bivarianceHack(event: Event): void }['bivarianceHack'];
 
 export type HostBindConfig = {
+  /**
+   * ARIA attributes, keyed by bare property name (`expanded`) or fully-qualified
+   * (`aria-expanded`) — both normalize to the same attribute. A separate key from `attr`
+   * only so bare names can be normalized; the underlying write path is identical.
+   */
+  aria?: ReflectConfig;
   attr?: ReflectConfig;
   class?: (() => Record<string, boolean>) | Record<string, HostClassBindingValue>;
   on?: Record<string, HostEventListener | undefined>;
@@ -63,6 +69,15 @@ export const bind: HostBindFn = (config: HostBindConfig, options?: BindOptions):
   if (config.attr) {
     for (const [key, value] of Object.entries(config.attr)) {
       const name = toHostAttr(key);
+      const dispose = applyAttribute(el, name, value);
+
+      if (dispose) disposers.push(dispose);
+    }
+  }
+
+  if (config.aria) {
+    for (const [key, value] of Object.entries(config.aria)) {
+      const name = normalizeAriaKey(key);
       const dispose = applyAttribute(el, name, value);
 
       if (dispose) disposers.push(dispose);
@@ -123,10 +138,8 @@ function applyAttribute(host: HTMLElement, name: string, value: HostBindingValue
   return applyReactiveBinding(value, (next) => setAttr(host, name, next));
 }
 
-const UNSAFE_CSS_CHARS = /[;{}]/g;
-
 function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | void {
-  const cssName = (name.startsWith('--') ? name : toKebab(name)).replace(UNSAFE_CSS_CHARS, '');
+  const cssName = sanitizeCssToken(name.startsWith('--') ? name : toKebab(name));
 
   if (!cssName) return;
 
@@ -134,7 +147,7 @@ function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (
   const setStyle = (v: string | number | boolean | null | undefined): void => {
     if (v != null && v !== '') {
       owned = true;
-      host.style.setProperty(cssName, String(v).replace(UNSAFE_CSS_CHARS, ''));
+      host.style.setProperty(cssName, sanitizeCssToken(String(v)));
     } else if (owned) host.style.removeProperty(cssName);
   };
 
@@ -152,7 +165,7 @@ function applyClassMap(
           const result: Record<string, boolean> = {};
 
           for (const [cls, entry] of Object.entries(value)) {
-            result[cls] = typeof entry === 'function' ? entry() : isReactive(entry) ? entry.value : Boolean(entry);
+            result[cls] = resolveMaybeReactive(entry);
           }
 
           return result;

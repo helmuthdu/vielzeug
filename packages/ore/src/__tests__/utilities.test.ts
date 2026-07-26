@@ -1,4 +1,4 @@
-import { createId, createStableId, resetIdCounter } from '../utils/id';
+import { createId, createStableId, resetStableIdCounter } from '../utils/id';
 
 describe('core/id-helpers', () => {
   describe('createId()', () => {
@@ -23,7 +23,7 @@ describe('core/id-helpers', () => {
   });
 
   describe('createStableId()', () => {
-    beforeEach(() => resetIdCounter());
+    beforeEach(() => resetStableIdCounter());
 
     it('uses default "id" prefix when none is supplied', () => {
       const id = createStableId();
@@ -59,17 +59,29 @@ describe('core/id-helpers', () => {
     });
   });
 
-  describe('resetIdCounter()', () => {
-    beforeEach(() => resetIdCounter());
+  describe('resetStableIdCounter()', () => {
+    beforeEach(() => resetStableIdCounter());
 
     it('resets the createStableId counter so IDs are equal after each reset', () => {
       const id1 = createStableId('r');
 
-      resetIdCounter();
+      resetStableIdCounter();
 
       const id2 = createStableId('r');
 
       expect(id1).toBe(id2);
+    });
+
+    it("does not affect createId()'s separate, non-resettable counter", () => {
+      // Regression guard: resetStableIdCounter() is scoped to createStableId() only —
+      // createId() has no public reset by design (see createId()'s own docstring).
+      const before = createId('c');
+
+      resetStableIdCounter();
+
+      const after = createId('c');
+
+      expect(before).not.toBe(after);
     });
   });
 });

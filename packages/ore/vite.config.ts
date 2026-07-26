@@ -6,13 +6,12 @@ import { getConfig } from '../../vite.config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const oreExternals = ['@vielzeug/ripple'];
+const oreExternals = ['@vielzeug/assay', '@vielzeug/ripple'];
 
 export default defineConfig(
   mergeConfig(
     getConfig(__dirname, {
       entry: {
-        devtools: resolve(__dirname, 'src/devtools.ts'),
         directives: resolve(__dirname, 'src/directives/index.ts'),
         forms: resolve(__dirname, 'src/forms/index.ts'),
         index: resolve(__dirname, 'src/index.ts'),

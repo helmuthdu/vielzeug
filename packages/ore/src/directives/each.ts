@@ -1,7 +1,6 @@
 import { batch, computed, effect as rawEffect, type Readable, signal, type Signal, untrack } from '@vielzeug/ripple';
 
-import { warn } from '../_dev';
-import { invariant, OreApiError, ORE_ERRORS } from '../errors';
+import { invariant, OreApiError, ORE_ERRORS, OreLifecycleError, reportRuntimeError } from '../errors';
 import { createDirectiveResult, type DirectiveResult, type HTMLResult } from '../types/bindings';
 import { removeNodes, runAll } from '../utils/dom';
 
@@ -144,7 +143,14 @@ const reconcileItems = <T>(
  * array index — an index-based key reassigns to a different item whenever the
  * list is reordered or an item is inserted/removed before it, causing full
  * item teardown/recreation instead of the in-place update `each()` is built
- * for. Duplicate keys within one render throw immediately (see `eachDuplicateKey`).
+ * for.
+ *
+ * **Duplicate keys:** a reconciliation failure (e.g. duplicate keys, see `eachDuplicateKey`)
+ * does not throw past this function — an uncaught exception inside the reactive effect that
+ * drives `each()` would risk corrupting unrelated effects scheduled in the same update batch.
+ * Instead the list is cleared and the failure is reported via the `ore:error` DOM event (see
+ * `OreLifecycleError`, phase `'each-reconcile'`) plus a dev-only console log — listen for
+ * `ore:error` on `document`/`window` to observe this in every build, including production.
  */
 export function each<T>(
   list: MaybeReactiveArray<T>,
@@ -207,7 +213,19 @@ export function each<T>(
       try {
         itemsOrdered = untrack(() => reconcileItems(itemsMap, nextList, keyFn, render, parent, endMarker));
       } catch (err) {
-        warn(`each() reconciliation error: ${err instanceof Error ? err.message : String(err)}`);
+        const cause = err instanceof Error ? err : new Error(String(err));
+
+        // Dispatched on the anchor comment (always a live DOM node) rather than the enclosing
+        // component's host element, which each() has no direct reference to — the event still
+        // bubbles/composes up to any ancestor listener, including a global one on document.
+        reportRuntimeError(
+          new OreLifecycleError(`each() failed to reconcile a list update: ${cause.message}`, {
+            cause,
+            component: 'each()',
+            phase: 'each-reconcile',
+          }),
+          anchor,
+        );
 
         for (const entry of itemsMap.values()) removeItem(entry);
         itemsMap = new Map();

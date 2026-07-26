@@ -4,7 +4,7 @@
  * Two flavours are needed across the codebase:
  *
  * - `normalizeAriaKey`  — always adds the `aria-` prefix for non-role keys.
- *   Used by `syncAria()` where every config key is an ARIA attribute.
+ *   Used by `aria()` and `bind({ aria: ... })`, where every config key is an ARIA attribute.
  *
  * - `normalizeHostAttrKey` — passes non-ARIA keys through unchanged.
  *   Used by `host.bind({ attr: ... })` where keys may be arbitrary HTML attributes.

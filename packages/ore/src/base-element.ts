@@ -6,6 +6,7 @@ import { warn } from './_dev';
 import { type OreErrorPhase, OreLifecycleError, reportRuntimeError } from './errors';
 import { createProps, getPropMeta, type InferProps, type PropInputDefs, type PropsDef } from './props';
 import {
+  beginPendingWork,
   type OnFormResetCallback,
   type OnMountedCallback,
   onCleanup,
@@ -194,6 +195,13 @@ export class BaseElement extends HTMLElement {
         // Capture the current generation so the async handler can detect staleness:
         // if the element disconnects+reconnects before the promise resolves, generation is
         // incremented and the old promise result must be discarded.
+        //
+        // Deliberately NOT tracked via beginPendingWork(): the awaited promise is
+        // arbitrary, user-controlled application code (e.g. a real network fetch) with no
+        // upper bound — the LOADING template it renders in the meantime is a valid, stable
+        // state, not a transient one to wait out. `testing/flush()` only needs to wait for
+        // ore's own bounded internal scheduling (queueMicrotask'd mount callbacks below),
+        // never for how long a consumer's setup() takes to resolve.
         void this._runSetupAsync(
           setupResult as Promise<HTMLResult | null>,
           pendingCallbacks,
@@ -304,45 +312,54 @@ export class BaseElement extends HTMLElement {
     if (this._component.mountCallbacks.length === 0) return;
 
     const capturedGeneration = this._component.generation;
+    // Tracked as pending work for the duration of this microtask — ended in a `finally`
+    // so a thrown callback (already caught per-callback below, but defensive here too)
+    // never leaves the counter stuck above zero. See runtime.ts's beginPendingWork().
+    const endWork = beginPendingWork();
 
     queueMicrotask(() => {
-      if (this._isStale(capturedGeneration)) return;
+      try {
+        if (this._isStale(capturedGeneration)) return;
 
-      // Snapshot callbacks so in-loop registrations don't extend this iteration.
-      const batch = this._component.mountCallbacks.splice(0);
+        // Snapshot callbacks so in-loop registrations don't extend this iteration.
+        const batch = this._component.mountCallbacks.splice(0);
 
-      for (const callback of batch) {
-        try {
-          const nestedCtx = {
-            element: this,
-            formResetCallbacks: [] as typeof this._component.formResetCallbacks,
-            mountCallbacks: [] as typeof this._component.mountCallbacks,
-          };
+        for (const callback of batch) {
+          try {
+            const nestedCtx = {
+              element: this,
+              formResetCallbacks: [] as typeof this._component.formResetCallbacks,
+              mountCallbacks: [] as typeof this._component.mountCallbacks,
+            };
 
-          this._component.scope.run(() => {
-            runWithContext(nestedCtx, () => {
-              const cleanup = callback();
+            this._component.scope.run(() => {
+              runWithContext(nestedCtx, () => {
+                const cleanup = callback();
 
-              if (typeof cleanup === 'function') onCleanup(cleanup);
+                if (typeof cleanup === 'function') onCleanup(cleanup);
+              });
             });
-          });
 
-          if (nestedCtx.mountCallbacks.length > 0) {
-            this._component.mountCallbacks.push(...nestedCtx.mountCallbacks);
-          }
+            if (nestedCtx.mountCallbacks.length > 0) {
+              this._component.mountCallbacks.push(...nestedCtx.mountCallbacks);
+            }
 
-          if (nestedCtx.formResetCallbacks.length > 0) {
-            this._component.formResetCallbacks.push(...nestedCtx.formResetCallbacks);
+            if (nestedCtx.formResetCallbacks.length > 0) {
+              this._component.formResetCallbacks.push(...nestedCtx.formResetCallbacks);
+            }
+          } catch (error) {
+            this._handleSetupError(error, 'mounted');
           }
-        } catch (error) {
-          this._handleSetupError(error, 'mounted');
         }
-      }
 
-      // If nested onMounted calls registered new callbacks, schedule them with
-      // a fresh token check in the next microtask.
-      if (this._component.mountCallbacks.length > 0) {
-        this._scheduleMountCallbacks();
+        // If nested onMounted calls registered new callbacks, schedule them with
+        // a fresh token check in the next microtask. This happens *before* endWork()
+        // below runs so the counter never dips to zero between the two schedules.
+        if (this._component.mountCallbacks.length > 0) {
+          this._scheduleMountCallbacks();
+        }
+      } finally {
+        endWork();
       }
     });
   }

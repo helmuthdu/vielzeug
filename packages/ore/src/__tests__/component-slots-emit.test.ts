@@ -1,7 +1,6 @@
 import { signal } from '@vielzeug/ripple';
 
-import { when } from '../directives/index';
-import { define, html, prop, useEmit, useSlots } from '../index';
+import { define, html, prop, useEmit, useSlots, when } from '../index';
 import { onMounted } from '../runtime';
 import { mount, waitForEvent } from '../testing';
 import { expectType, uniqueTag } from './test-utils';
@@ -44,6 +43,61 @@ describe('component slots and emit', () => {
 
     expect(defaultAssigned).toBe(true);
     expect(triggerAssigned).toBe(true);
+  });
+
+  it('useSlots() called from setup() and from within onMounted() returns the same registry', async () => {
+    // Regression test: onMounted() callbacks each run with their own freshly-created
+    // RuntimeContext (see base-element.ts's _scheduleMountCallbacks), so the registry cache
+    // must key on the host element, not that ephemeral context — otherwise this pair of calls
+    // would silently create two independent MutationObservers over the same shadow root.
+    let fromSetup: ReturnType<typeof useSlots> | undefined;
+    let fromMounted: ReturnType<typeof useSlots> | undefined;
+
+    const { flush } = await mount((_props) => {
+      fromSetup = useSlots();
+
+      onMounted(() => {
+        fromMounted = useSlots();
+      });
+
+      return html`<slot></slot>`;
+    });
+
+    await flush();
+
+    expect(fromSetup).toBeDefined();
+    expect(fromMounted).toBe(fromSetup);
+  });
+
+  it('useSlots() rebuilds a live registry after disconnect + reconnect', async () => {
+    let assigned = false;
+
+    const { element, flush } = await mount(
+      (_props) => {
+        const slots = useSlots();
+
+        onMounted(() => {
+          assigned = slots.has().value;
+        });
+
+        return html`<slot></slot>`;
+      },
+      { html: '<span>Body</span>' },
+    );
+
+    await flush();
+    expect(assigned).toBe(true);
+
+    // Simulate disconnect + reconnect of the same element instance — setup() re-runs, and
+    // useSlots() must return a freshly-observing registry, not a torn-down cached one.
+    const parent = element.parentNode;
+
+    element.remove();
+    parent?.appendChild(element);
+
+    assigned = false;
+    await flush();
+    expect(assigned).toBe(true);
   });
 
   it('supports typed setup emit usage', async () => {

@@ -7,7 +7,7 @@
 
 import { type Readable, signal, type Signal } from '@vielzeug/ripple';
 
-import { onCleanup, onMounted, type RuntimeContext, requireSetupContext } from './runtime';
+import { onCleanup, onMounted, requireSetupContext } from './runtime';
 
 export type ComponentSlots<SlotNames extends string = string> = {
   elements: (name?: SlotNames) => Readable<Element[]>;
@@ -157,6 +157,11 @@ const createSlots = (host: HTMLElement): ComponentSlots<string> => {
     slotCleanupMap.clear();
     slotNodesByName.clear();
     slotSignals.clear();
+
+    // The element instance survives disconnect/reconnect (custom elements aren't recreated),
+    // but this registry's observer/listeners are torn down above — drop the cache entry so a
+    // subsequent reconnect's setup() rebuilds a live registry instead of reusing a dead one.
+    slotsByElement.delete(host);
   });
 
   return {
@@ -165,8 +170,14 @@ const createSlots = (host: HTMLElement): ComponentSlots<string> => {
   };
 };
 
+// Keyed by the host element, not the ephemeral `RuntimeContext` — `onMounted()` callbacks each
+// run with their own freshly-created context object (see base-element.ts's
+// `_scheduleMountCallbacks`), so keying this on `RuntimeContext` would silently create a second,
+// independent registry (a second `MutationObserver`, a second signal set) every time `useSlots()`
+// was called from inside `onMounted()` rather than directly in `setup()` — a real bug the
+// "one registry per instance" doc comment below never actually held for that (common) case.
 /** One slot registry per component instance — reused across repeated `useSlots()` calls. */
-const slotsByContext = new WeakMap<RuntimeContext, ComponentSlots<string>>();
+const slotsByElement = new WeakMap<HTMLElement, ComponentSlots<string>>();
 
 /**
  * Returns reactive slot presence / element signals for the current component.
@@ -181,11 +192,11 @@ const slotsByContext = new WeakMap<RuntimeContext, ComponentSlots<string>>();
  */
 export const useSlots = <SlotNames extends string = string>(): ComponentSlots<SlotNames> => {
   const ctx = requireSetupContext('useSlots');
-  let entry = slotsByContext.get(ctx);
+  let entry = slotsByElement.get(ctx.element);
 
   if (!entry) {
     entry = createSlots(ctx.element);
-    slotsByContext.set(ctx, entry);
+    slotsByElement.set(ctx.element, entry);
   }
 
   return entry as ComponentSlots<SlotNames>;

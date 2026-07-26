@@ -49,6 +49,26 @@ describe('core/host.ts', () => {
       expect(element.classList.contains('is-open')).toBe(true);
     });
 
+    it('applies attr and aria together in one call, normalizing bare aria keys', async () => {
+      const open = signal(false);
+      const { element, flush } = await mount((_props) => {
+        bind({
+          aria: { expanded: () => String(open.value) },
+          attr: { 'data-widget': 'disclosure' },
+        });
+
+        return html`<button>Open</button>`;
+      });
+
+      expect(element.getAttribute('data-widget')).toBe('disclosure');
+      expect(element.getAttribute('aria-expanded')).toBe('false');
+
+      open.value = true;
+      await flush();
+
+      expect(element.getAttribute('aria-expanded')).toBe('true');
+    });
+
     it('applies class records with static and reactive values', async () => {
       const { element, flush } = await mount((_props) => {
         const open = signal(false);

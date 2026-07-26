@@ -73,10 +73,12 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
     const tagName = String(value);
 
-    // Same "fail immediately, every build" treatment as each()'s duplicate-key
-    // guard: a malformed dynamic tag name is a programming bug in the template,
-    // not a runtime race — degrading to a silently-broken partial render would
-    // hide it instead of surfacing it at the call site.
+    // Throws immediately, every build: a malformed dynamic tag name is a programming bug in
+    // the template, not a runtime race, and this happens synchronously during instantiation
+    // (not inside a reactive effect) — there's no risk of an uncaught throw here corrupting an
+    // unrelated batch of effects the way rethrowing from each()'s reconciliation would (see
+    // each.ts's duplicate-key handling, which instead reports via reportRuntimeError() since it
+    // runs inside a reactive effect).
     if (!/^[a-z][a-z0-9._-]*$/i.test(tagName)) {
       throw new OreApiError(ORE_ERRORS.invalidDynamicTagName(tagName));
     }
