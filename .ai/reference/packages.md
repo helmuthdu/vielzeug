@@ -7,6 +7,7 @@ Human-readable package catalogue derived from `.ai/data/packages.json`.
 | Package | Category | DOM | Description | Dependencies | Optional peers | Test command |
 | --- | --- | --- | --- | --- | --- | --- |
 | `@vielzeug/arsenal` | Utilities | no | 75+ tree-shakeable array/object/string/async helpers | — | — | — |
+| `@vielzeug/assay` | Testing | no | Framework-agnostic DOM testing primitives — scoped queries, event dispatch, async waiting | — | — | — |
 | `@vielzeug/clockwork` | State | no | Finite state machine interpreter with typed events | `ripple` | — | — |
 | `@vielzeug/codex` | AI | no | MCP server exposing all Vielzeug docs to AI clients | — | — | — |
 | `@vielzeug/coins` | Finance | no | Currency formatting and exchange utilities for monetary arithmetic | — | — | — |
@@ -21,10 +22,10 @@ Human-readable package catalogue derived from `.ai/data/packages.json`.
 | `@vielzeug/ledger` | State | no | Async undo/redo command history with Ripple reactive state | `ripple` | — | — |
 | `@vielzeug/lingua` | i18n | no | Typed i18n with pluralization and async loading | — | — | — |
 | `@vielzeug/orbit` | UI | no | Floating element positioning (tooltip, popover) | `arsenal`, `ripple` | — | — |
-| `@vielzeug/ore` | UI | yes | Functional web-component authoring on top of ripple | `ripple` | — | — |
+| `@vielzeug/ore` | UI | yes | Functional web-component authoring on top of ripple | `assay`, `ripple` | — | — |
 | `@vielzeug/prism` | Charts | yes | Reactive SVG charting library — line, bar, area, pie, sparkline | `orbit`, `ripple` | — | — |
 | `@vielzeug/pulse` | WebSockets | no | Typed WebSocket client with channels, rooms, presence, reconnect | `ripple` | — | — |
-| `@vielzeug/refine` | UI | yes | Accessible, themeable web components built on ore | `arsenal`, `dnd`, `keymap`, `orbit`, `ore`, `ripple`, `tempo` | — | `pnpm --filter @vielzeug/refine test` |
+| `@vielzeug/refine` | UI | yes | Accessible, themeable web components built on ore | `arsenal`, `assay`, `dnd`, `keymap`, `orbit`, `ore`, `ripple`, `tempo` | — | `pnpm --filter @vielzeug/refine test` |
 | `@vielzeug/ripple` | State | no | Reactive signals, computed, effects, stores | — | — | — |
 | `@vielzeug/rune` | Logging | no | Structured scoped logger with remote transport | — | — | — |
 | `@vielzeug/sandbox` | AI | no | Sandboxed iframe runtime with typed postMessage state bridge | — | — | — |

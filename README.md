@@ -617,6 +617,25 @@ pnpm add @vielzeug/codex
 
 ---
 
+### [@vielzeug/assay](packages/assay) – DOM Testing Primitives
+
+Framework-agnostic DOM testing primitives — scoped queries, synchronous event dispatch, and deterministic async waiting.
+
+```bash
+pnpm add -D @vielzeug/assay
+```
+
+**Key Features:**
+
+- `within()` — scoped `query`/`queryAll`/`queryByText`/`queryByTestId` and shadow-DOM-aware `queryInShadow`/`queryPart`
+- `fire.*` — low-level synchronous DOM event dispatchers (click, keyboard, pointer, custom, and more)
+- `waitFor()`/`waitForEvent()` — deterministic async waiting with a dedicated `AssayTimeoutError`
+- Zero dependencies, no coupling to any UI framework — used by `@vielzeug/ore/testing` and `@vielzeug/refine/testing`
+
+[📖 Documentation](https://vielzeug.dev/assay/) • [Examples](https://vielzeug.dev/assay/examples)
+
+---
+
 ## 🏁 Quick Start
 
 Install individual packages as needed:
@@ -709,6 +728,7 @@ pnpm docs:dev
 vielzeug/
 ├── packages/
 │   ├── arsenal/       # 75+ utility functions
+│   ├── assay/         # DOM testing primitives
 │   ├── clockwork/     # Finite state machines
 │   ├── codex/         # AI / MCP server
 │   ├── coins/         # Monetary arithmetic & formatting
@@ -763,12 +783,13 @@ All sizes are **minified + gzipped** production builds:
 | Package                  | Minified                     | Gzipped        | Dependencies |
 | ------------------------ | ---------------------------- | -------------- | ------------ |
 | `@vielzeug/arsenal`      | **25.0 KB** (full bundle)    | **9.0 KB**     | 0            |
+| `@vielzeug/assay`        | **4.2 KB**                   | **1.5 KB**     | 0            |
 | `@vielzeug/clockwork`    | **8.5 KB**                   | **3.1 KB**     | 1\*          |
 | `@vielzeug/codex`        | **0.7 KB**                   | **0.4 KB**     | 0            |
 | `@vielzeug/coins`        | **9.5 KB**                   | **3.5 KB**     | 0            |
 | `@vielzeug/conduit`      | **7.8 KB**                   | **2.6 KB**     | 0            |
 | `@vielzeug/courier`      | **21.9 KB**                  | **7.4 KB**     | 1\*          |
-| `@vielzeug/ore`        | **28.9 KB**                  | **10.5 KB**    | 1\*          |
+| `@vielzeug/ore`        | **28.9 KB**                  | **10.5 KB**    | 2\*          |
 | `@vielzeug/dnd`          | **9.7 KB**                   | **3.7 KB**     | 0            |
 | `@vielzeug/familiar`     | **11.3 KB**                  | **4.2 KB**     | 0            |
 | `@vielzeug/flux`         | **12.9 KB**                  | **3.6 KB**     | 1\*          |

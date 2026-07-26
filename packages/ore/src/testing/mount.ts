@@ -4,7 +4,15 @@
 
 import type { Readable } from '@vielzeug/ripple';
 
-import { queryAllByText, queryByText, type QueryScope } from '@vielzeug/assay';
+import {
+  query,
+  queryAll,
+  queryAllByTestId,
+  queryAllByText,
+  queryByTestId,
+  queryByText,
+  type QueryScope,
+} from '@vielzeug/assay';
 
 import { type ComponentDefinition } from '../component-types';
 import { define } from '../define';
@@ -232,15 +240,15 @@ export async function mount<T extends HTMLElement = HTMLElement>(
     flush,
 
     query<E extends Element = Element>(selector: string): E | null {
-      return (element.shadowRoot ?? element).querySelector<E>(selector);
+      return query<E>((element.shadowRoot ?? element) as Element, selector);
     },
 
     queryAll<E extends Element = Element>(selector: string): E[] {
-      return Array.from((element.shadowRoot ?? element).querySelectorAll<E>(selector));
+      return queryAll<E>((element.shadowRoot ?? element) as Element, selector);
     },
 
     queryAllByTestId<E extends Element = Element>(testId: string): E[] {
-      return Array.from((element.shadowRoot ?? element).querySelectorAll<E>(`[data-testid="${testId}"]`));
+      return queryAllByTestId<E>((element.shadowRoot ?? element) as Element, testId);
     },
 
     queryAllByText<E extends Element = Element>(text: string, selector = '*'): E[] {
@@ -248,7 +256,7 @@ export async function mount<T extends HTMLElement = HTMLElement>(
     },
 
     queryByTestId<E extends Element = Element>(testId: string): E | null {
-      return (element.shadowRoot ?? element).querySelector<E>(`[data-testid="${testId}"]`);
+      return queryByTestId<E>((element.shadowRoot ?? element) as Element, testId);
     },
 
     queryByText<E extends Element = Element>(text: string, selector = '*'): E | null {

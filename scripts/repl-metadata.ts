@@ -9,6 +9,7 @@
 
 export const DESCRIPTIONS: Record<string, string> = {
   arsenal: 'Utility library with functions for arrays, objects, and more.',
+  assay: 'Framework-agnostic DOM testing primitives — scoped queries, event dispatch, and async waiting.',
   clockwork: 'Typed finite state machines with guards, async invokes, and more.',
   coins: 'Currency formatting and exchange utilities for monetary arithmetic.',
   conduit: 'Lightweight dependency injection container with IoC principles.',

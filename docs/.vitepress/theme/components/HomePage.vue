@@ -149,6 +149,7 @@ const categories = [
     icon: 'wrench',
     packages: [
       { id: 'arsenal', tagline: '75+ utility functions' },
+      { id: 'assay', tagline: 'DOM testing primitives' },
       { id: 'codex', tagline: 'AI / MCP server' },
       { id: 'coins', tagline: 'Monetary arithmetic' },
       { id: 'ledger', tagline: 'Async undo / redo history' },
@@ -162,6 +163,7 @@ const categories = [
 
 const heroPackages = [
   { id: 'arsenal', name: 'arsenal', cmd: 'pnpm add @vielzeug/arsenal', tagline: '75+ utility functions' },
+  { id: 'assay', name: 'assay', cmd: 'pnpm add -D @vielzeug/assay', tagline: 'DOM testing primitives' },
   { id: 'clockwork', name: 'clockwork', cmd: 'pnpm add @vielzeug/clockwork', tagline: 'Finite state machines' },
   { id: 'coins', name: 'coins', cmd: 'pnpm add @vielzeug/coins', tagline: 'Monetary arithmetic' },
   { id: 'conduit', name: 'conduit', cmd: 'pnpm add @vielzeug/conduit', tagline: 'Dependency injection' },

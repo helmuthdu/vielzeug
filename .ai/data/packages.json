@@ -11,6 +11,15 @@
       "optionalPeers": []
     },
     {
+      "slug": "assay",
+      "name": "@vielzeug/assay",
+      "category": "Testing",
+      "description": "Framework-agnostic DOM testing primitives — scoped queries, event dispatch, async waiting",
+      "domOutput": false,
+      "dependencies": [],
+      "optionalPeers": []
+    },
+    {
       "slug": "clockwork",
       "name": "@vielzeug/clockwork",
       "category": "State",
@@ -142,7 +151,7 @@
       "category": "UI",
       "description": "Functional web-component authoring on top of ripple",
       "domOutput": true,
-      "dependencies": ["ripple"],
+      "dependencies": ["assay", "ripple"],
       "optionalPeers": []
     },
     {
@@ -170,7 +179,7 @@
       "description": "Accessible, themeable web components built on ore",
       "domOutput": true,
       "testCommand": "pnpm --filter @vielzeug/refine test",
-      "dependencies": ["arsenal", "dnd", "keymap", "orbit", "ore", "ripple", "tempo"],
+      "dependencies": ["arsenal", "assay", "dnd", "keymap", "orbit", "ore", "ripple", "tempo"],
       "optionalPeers": []
     },
     {

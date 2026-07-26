@@ -149,6 +149,7 @@ export default defineConfig({
           {
             items: [
               { link: '/arsenal/', text: 'Arsenal' },
+              { link: '/assay/', text: 'Assay' },
               { link: '/codex/', text: 'Codex' },
               { link: '/coins/', text: 'Coins' },
               { link: '/ledger/', text: 'Ledger' },
@@ -386,6 +387,42 @@ export default defineConfig({
             },
           ],
           link: '/arsenal/examples',
+          text: 'Examples',
+        },
+      ],
+      '/assay/': [
+        { link: '/assay/', text: 'Overview' },
+        {
+          items: [
+            { link: '/assay/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/assay/usage#firing-events', text: 'Firing Events' },
+            { link: '/assay/usage#waiting-for-async-conditions', text: 'Waiting for Async Conditions' },
+            { link: '/assay/usage#testing-custom-elements', text: 'Testing Custom Elements' },
+            { link: '/assay/usage#working-with-other-vielzeug-libraries', text: 'Vielzeug Integration' },
+            { link: '/assay/usage#best-practices', text: 'Best Practices' },
+          ],
+          link: '/assay/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/assay/api#api-overview', text: 'Overview' },
+            { link: '/assay/api#package-entry-point', text: 'Entry Point' },
+            { link: '/assay/api#query-helpers', text: 'Query Helpers' },
+            { link: '/assay/api#event-dispatch', text: 'Event Dispatch' },
+            { link: '/assay/api#async-waiting', text: 'Async Waiting' },
+            { link: '/assay/api#types', text: 'Types' },
+            { link: '/assay/api#errors', text: 'Errors' },
+          ],
+          link: '/assay/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/assay/examples/custom-element-interaction', text: 'Custom Element Interaction' },
+            { link: '/assay/examples/waiting-for-async-updates', text: 'Waiting for Async Updates' },
+          ],
+          link: '/assay/examples',
           text: 'Examples',
         },
       ],

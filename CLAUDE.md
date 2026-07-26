@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Vielzeug** (German for "many tools") is a monorepo of **30 independent, zero-dependency, tree-shakeable TypeScript packages** published to npm. Each package targets ES2022 and ships both ESM and CJS formats.
+**Vielzeug** (a new German word for "many things") is a monorepo of **31 independent, zero-dependency, tree-shakeable TypeScript packages** published to npm. Each package targets ES2022 and ships both ESM and CJS formats.
 
 For the AI system entrypoint see `.ai/README.md`. For the full package catalogue and dependency graph see `.ai/data/packages.json` and `.ai/reference/packages.md`. For toolchain details see `.ai/core/workspace.md`. For engineering conventions see `.ai/core/conventions.md`.
 
@@ -55,7 +55,7 @@ Standard command (all other packages): `pnpm vitest run packages/<name>/src/__te
 
 ### Monorepo Structure
 
-- **`packages/`** — 30 publishable npm packages, each self-contained with its own `package.json`, `vite.config.ts`, `tsconfig.json`, and `vitest.config.ts`
+- **`packages/`** — 31 publishable npm packages, each self-contained with its own `package.json`, `vite.config.ts`, `tsconfig.json`, and `vitest.config.ts`
 - **`docs/`** — VitePress documentation site with one sub-directory per package
 - **`common/`** — Rush shared configs, git hooks, and scripts
 - **`rush.json`** — defines all packages and the `vielzeug-packages` version policy
@@ -78,17 +78,17 @@ flux      → ripple
 forge     → arsenal, ripple
 ledger    → ripple
 orbit     → arsenal, ripple
-ore       → ripple
+ore       → assay, ripple
 prism     → orbit, ripple
 pulse     → ripple
-refine    → arsenal, dnd, keymap, orbit, ore, ripple, tempo
+refine    → arsenal, assay, dnd, keymap, orbit, ore, ripple, tempo
 scout     → ripple
 scroll    → ripple
 sourcerer → arsenal
 spell     → arsenal
 ```
 
-Fully independent (no `@vielzeug/*` deps): `arsenal`, `codex`, `conduit`, `dnd`, `herald`, `keymap`, `lingua`, `ripple`, `rune`, `sandbox`, `tempo`, `vault`, `ward`, `wayfinder`.
+Fully independent (no `@vielzeug/*` deps): `arsenal`, `assay`, `codex`, `conduit`, `dnd`, `herald`, `keymap`, `lingua`, `ripple`, `rune`, `sandbox`, `tempo`, `vault`, `ward`, `wayfinder`.
 
 ### Package Categories
 
@@ -100,6 +100,7 @@ Fully independent (no `@vielzeug/*` deps): `arsenal`, `codex`, `conduit`, `dnd`,
 | Routing & i18n | `wayfinder` (client-side router + middleware), `lingua` (i18n + pluralization) |
 | Cross-cutting | `spell` (schema validation), `ward` (RBAC), `herald` (typed event bus), `rune` (structured logging), `conduit` (DI container), `arsenal` (utility functions), `familiar` (Web Worker pool), `tempo`, `sourcerer`, `scout` (fuzzy search), `keymap` (keyboard shortcuts), `codex` (AI/MCP server), `sandbox` (sandboxed iframe runtime) |
 | Finance | `coins` (precise monetary arithmetic) |
+| Testing | `assay` (framework-agnostic DOM testing primitives — queries, event dispatch, async waiting) |
 
 ### Standard Package Layout
 

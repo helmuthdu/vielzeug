@@ -191,6 +191,12 @@
       "projectFolder": "packages/sandbox",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/assay",
+      "projectFolder": "packages/assay",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     }
   ],
   "repository": {

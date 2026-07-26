@@ -317,6 +317,7 @@ const api = await container.resolve(ApiToken);
 | **[Familiar](/familiar/)**       | Typed Web Worker pool with task queuing, streaming, and AbortSignal cancellation                   |
 | **[Tempo](/tempo/)**             | Date and time utilities — timezone conversion, DST-safe arithmetic, and Intl formatting            |
 | **[Coins](/coins/)**             | Bigint-based monetary arithmetic with currency formatting and rounding policies                    |
+| **[Assay](/assay/)**             | Framework-agnostic DOM testing primitives — scoped queries, event dispatch, and async waiting      |
 
 ## Packages That Work Well Together
 

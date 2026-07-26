@@ -102,6 +102,24 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.1.0)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.3(@types/node@26.1.0)(esbuild@0.27.7)(jiti@2.7.0))
 
+  packages/assay:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.1.0
+        version: 26.1.0
+      jsdom:
+        specifier: ^29.1.1
+        version: 29.1.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.1.3
+        version: 8.1.3(@types/node@26.1.0)(esbuild@0.27.7)(jiti@2.7.0)
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.1.0)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.3(@types/node@26.1.0)(esbuild@0.27.7)(jiti@2.7.0))
+
   packages/clockwork:
     dependencies:
       '@vielzeug/ripple':
@@ -358,6 +376,9 @@ importers:
 
   packages/ore:
     dependencies:
+      '@vielzeug/assay':
+        specifier: workspace:*
+        version: link:../assay
       '@vielzeug/ripple':
         specifier: workspace:*
         version: link:../ripple
@@ -427,6 +448,9 @@ importers:
       '@vielzeug/arsenal':
         specifier: workspace:*
         version: link:../arsenal
+      '@vielzeug/assay':
+        specifier: workspace:*
+        version: link:../assay
       '@vielzeug/dnd':
         specifier: workspace:*
         version: link:../dnd
