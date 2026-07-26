@@ -2,7 +2,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, mergeConfig } from 'vite';
 
-import { getConfig } from '../../vite.config';
+import { getConfig, readWorkspaceDeps } from '../../vite.config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -17,12 +17,12 @@ export default defineConfig(
         reactive: resolve(__dirname, 'src/reactive.ts'),
         ssr: resolve(__dirname, 'src/ssr.ts'),
       },
+      external: readWorkspaceDeps(__dirname),
       name: 'orbit',
     }),
     {
       build: {
         rolldownOptions: {
-          external: ['@vielzeug/arsenal', '@vielzeug/ripple'],
           output: {
             minify: true,
           },

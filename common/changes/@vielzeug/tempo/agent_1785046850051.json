@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor(tempo): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies",
+      "packageName": "@vielzeug/tempo",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tempo"
+}

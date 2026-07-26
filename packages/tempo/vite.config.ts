@@ -1,17 +1,9 @@
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { defineConfig, mergeConfig } from 'vite';
+import { defineConfig } from 'vite';
 
-import { getConfig } from '../../vite.config';
+import { getConfig, readWorkspaceDeps } from '../../vite.config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export default defineConfig(
-  mergeConfig(getConfig(__dirname, { name: 'tempo' }), {
-    build: {
-      rolldownOptions: {
-        external: ['@js-temporal/polyfill'],
-      },
-    },
-  }),
-);
+export default defineConfig(getConfig(__dirname, { external: readWorkspaceDeps(__dirname), name: 'tempo' }));

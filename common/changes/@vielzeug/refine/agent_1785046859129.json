@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(refine): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies — fixes @vielzeug/keymap missing from the tree-shakeable build's externals (was being silently inlined into refine's own dist instead of staying external) and removes a dead @vielzeug/scroll entry from the bundle config (never imported, not a dependency)",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

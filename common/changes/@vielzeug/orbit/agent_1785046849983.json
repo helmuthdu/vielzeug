@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor(orbit): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies",
+      "packageName": "@vielzeug/orbit",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/orbit"
+}

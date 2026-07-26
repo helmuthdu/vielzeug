@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(coins): remove dead @vielzeug/arsenal vite external — no longer imported and never declared as a dependency; derive the (now empty) external list via readWorkspaceDeps() instead of a hand-listed array",
+      "packageName": "@vielzeug/coins",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/coins"
+}

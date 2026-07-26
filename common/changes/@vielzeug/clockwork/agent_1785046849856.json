@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor(clockwork): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies",
+      "packageName": "@vielzeug/clockwork",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/clockwork"
+}

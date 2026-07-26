@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, mergeConfig } from 'vite';
 
-import { getConfig } from '../../vite.config';
+import { getConfig, readWorkspaceDeps } from '../../vite.config';
 // @ts-expect-error - .mjs files don't have type declarations in this context
 import { getRefineLibraryEntries } from './scripts/refine-manifest.mjs';
 
@@ -13,16 +13,11 @@ const processEnv = (globalThis as typeof globalThis & { process?: { env?: Record
   .process?.env;
 const disablePluginTimings = processEnv?.CI === 'true' || processEnv?.RUSHSTACK_FILE_ERROR_BASE_FOLDER !== undefined;
 
-const refineExternals = [
-  '@vielzeug/ore',
-  '@vielzeug/assay',
-  '@vielzeug/dnd',
-  '@vielzeug/orbit',
-  '@vielzeug/ripple',
-  '@vielzeug/arsenal',
-  '@vielzeug/tempo',
-  'lucide',
-];
+// Derived from package.json instead of hand-listed — the hand-listed version had silently
+// drifted (missing '@vielzeug/keymap', a real dependency), which meant keymap was getting
+// inlined into refine's own dist instead of staying external. readWorkspaceDeps() can't drift
+// the same way because it reads the one place a dependency is actually declared.
+const refineExternals = readWorkspaceDeps(__dirname);
 
 // Rollup/Rolldown's `external` matches array-of-strings entries by exact equality only — it
 // does NOT treat them as prefixes. Without this, subpath imports like `@vielzeug/ore/forms` or

@@ -2,7 +2,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, mergeConfig } from 'vite';
 
-import { getConfig } from '../../vite.config';
+import { getConfig, readWorkspaceDeps } from '../../vite.config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -13,12 +13,12 @@ export default defineConfig(
         devtools: resolve(__dirname, 'src/devtools.ts'),
         'src/index': resolve(__dirname, 'src/index.ts'),
       },
+      external: readWorkspaceDeps(__dirname),
       name: 'courier',
     }),
     {
       build: {
         rolldownOptions: {
-          external: ['@vielzeug/arsenal'],
           output: {
             minify: true,
           },

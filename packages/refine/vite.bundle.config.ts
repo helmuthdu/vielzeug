@@ -4,23 +4,19 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, mergeConfig } from 'vite';
 
-import { getBundleConfig } from '../../vite.config';
+import { getBundleConfig, readWorkspaceDeps } from '../../vite.config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// Base list derived from package.json (also fixes '@vielzeug/scroll' being hand-listed here
+// despite src/ never importing it — a dead entry from some earlier version of this package)
+// plus the three ore sub-paths this bundle's entry imports, needed for the `globals` mapping
+// below since Rolldown's array-of-strings `external` only matches by exact equality.
 const refineExternals = [
-  '@vielzeug/arsenal',
-  '@vielzeug/ore',
+  ...readWorkspaceDeps(__dirname),
   '@vielzeug/ore/directives',
   '@vielzeug/ore/forms',
   '@vielzeug/ore/observers',
-  '@vielzeug/dnd',
-  '@vielzeug/keymap',
-  '@vielzeug/orbit',
-  '@vielzeug/ripple',
-  '@vielzeug/scroll',
-  '@vielzeug/tempo',
-  'lucide',
 ];
 
 export default defineConfig(
