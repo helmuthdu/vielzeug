@@ -2,8 +2,7 @@ import '@vielzeug/refine/badge';
 import '@vielzeug/refine/avatar';
 import '@vielzeug/refine/chip';
 import '@vielzeug/refine/icon';
-import { bind, define, getHost, html, prop, useEmit } from '@vielzeug/ore';
-import { when } from '@vielzeug/ore/directives';
+import { bind, define, getHost, html, prop, useEmit, when } from '@vielzeug/ore';
 
 import type { Task } from '../../core/types';
 

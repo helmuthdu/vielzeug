@@ -5,8 +5,7 @@ import '@vielzeug/refine/select';
 import '@vielzeug/refine/date-picker';
 import '@vielzeug/refine/number-input';
 import '@vielzeug/refine/button';
-import { define, html } from '@vielzeug/ore';
-import { when } from '@vielzeug/ore/directives';
+import { define, html, when } from '@vielzeug/ore';
 import { computed, effect, signal } from '@vielzeug/ripple';
 import { s } from '@vielzeug/spell';
 
@@ -72,7 +71,7 @@ const TaskDraftSchema = s.object({
  * (via the `:value=` bindings below) — typing into the field updates its own internal render
  * state and fires an `input`/`change` event, but never writes back into that prop. Reading
  * `el.value` at save time would silently return the pre-edit value, not what the user typed.
- * `@vielzeug/ore/directives`' `model()` doesn't help here either — it hardcodes native
+ * `@vielzeug/ore`'s `model()` doesn't help here either — it hardcodes native
  * `<input>`/`<select>`/`<textarea>` event/value shapes, not these components' custom event
  * `detail` payloads (`values`/`isoValue`/etc. — see each field's `@change`/`@input` below). Each
  * field's own event listener keeps this draft signal current instead.

@@ -8,8 +8,7 @@ import '@vielzeug/refine/toast';
 import type { ToastElement } from '@vielzeug/refine/toast';
 
 import { createKeymap } from '@vielzeug/keymap';
-import { define, html, onCleanup, ref } from '@vielzeug/ore';
-import { each, when } from '@vielzeug/ore/directives';
+import { define, each, html, onCleanup, ref, when } from '@vielzeug/ore';
 import { computed, effect, signal } from '@vielzeug/ripple';
 
 import type { RouteNames } from '../core/router';

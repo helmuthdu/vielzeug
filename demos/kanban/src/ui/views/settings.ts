@@ -5,8 +5,7 @@ import '@vielzeug/refine/accordion';
 import '@vielzeug/refine/accordion-item';
 import type { LogEntry } from '@vielzeug/rune';
 
-import { define, html, onCleanup, ref } from '@vielzeug/ore';
-import { each, when } from '@vielzeug/ore/directives';
+import { define, each, html, onCleanup, ref, when } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
 
 import { currentUser } from '../../core/board-store';

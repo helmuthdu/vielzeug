@@ -1,7 +1,6 @@
 import '@vielzeug/refine/button';
 import { createSortable, createSortableScope } from '@vielzeug/dnd';
-import { bind, define, getHost, html, onCleanup, onMounted, prop, ref } from '@vielzeug/ore';
-import { when } from '@vielzeug/ore/directives';
+import { bind, define, getHost, html, onCleanup, onMounted, prop, ref, when } from '@vielzeug/ore';
 import { computed, effect } from '@vielzeug/ripple';
 
 import { boardSignal } from '../../core/board-store';

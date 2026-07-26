@@ -2,8 +2,7 @@ import '@vielzeug/refine/grid';
 import '@vielzeug/refine/grid-item';
 
 import '../components/column';
-import { define, html } from '@vielzeug/ore';
-import { each } from '@vielzeug/ore/directives';
+import { define, each, html } from '@vielzeug/ore';
 
 import { boardSignal } from '../../core/board-store';
 
