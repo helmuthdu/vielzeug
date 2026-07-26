@@ -479,6 +479,7 @@
   },
   "dependencies": {
     "@vielzeug/arsenal": "workspace:*",
+    "@vielzeug/assay": "workspace:*",
     "@vielzeug/dnd": "workspace:*",
     "@vielzeug/keymap": "workspace:*",
     "@vielzeug/orbit": "workspace:*",

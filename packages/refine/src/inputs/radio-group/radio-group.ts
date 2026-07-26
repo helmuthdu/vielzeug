@@ -12,8 +12,8 @@ import {
   useEmit,
   useSlots,
   watchEffect,
+  when,
 } from '@vielzeug/ore';
-import { when } from '@vielzeug/ore/directives';
 import { useField } from '@vielzeug/ore/forms';
 import { type Readable } from '@vielzeug/ripple';
 

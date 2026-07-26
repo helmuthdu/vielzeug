@@ -12,8 +12,8 @@ import {
   onEvent,
   onMounted,
   useEmit,
+  when,
 } from '@vielzeug/ore';
-import { when } from '@vielzeug/ore/directives';
 import { useField } from '@vielzeug/ore/forms';
 import { computed, signal, watch } from '@vielzeug/ripple';
 

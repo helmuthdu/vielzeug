@@ -15,6 +15,7 @@ const disablePluginTimings = processEnv?.CI === 'true' || processEnv?.RUSHSTACK_
 
 const refineExternals = [
   '@vielzeug/ore',
+  '@vielzeug/assay',
   '@vielzeug/dnd',
   '@vielzeug/orbit',
   '@vielzeug/ripple',

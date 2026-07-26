@@ -1,5 +1,4 @@
-import { define, html, prop, getHost, watchEffect } from '@vielzeug/ore';
-import { styleMap } from '@vielzeug/ore/directives';
+import { define, html, prop, getHost, watchEffect, styleMap } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';

@@ -59,68 +59,13 @@ export const getRole = (el: Element): null | string => el.getAttribute('role');
 // ── DOM query helpers ─────────────────────────────────────────────────────────
 
 /**
- * Queries the shadow root of a custom element for a matching CSS selector.
- * Returns null if the element has no shadow root or no match is found.
+ * Generic, framework-agnostic — re-exported from `@vielzeug/assay` rather than duplicated here.
+ * `dispatchPointer(el, type, init)` from earlier versions of this module is now
+ * `fire.pointer<Type>(el, init)` (e.g. `fire.pointerEnter`/`fire.pointerLeave`), imported from
+ * `@vielzeug/ore/testing` alongside `mount()` — pass `{ composed: true }` explicitly if you need
+ * the event to cross shadow boundaries.
  */
-export const queryInShadow = <T extends Element = Element>(host: Element, selector: string): null | T => {
-  return host.shadowRoot?.querySelector<T>(selector) ?? null;
-};
-
-/**
- * Queries all matching elements inside the shadow root of a custom element.
- * Returns an empty array if the element has no shadow root.
- */
-export const queryAllInShadow = <T extends Element = Element>(host: Element, selector: string): T[] => {
-  return Array.from(host.shadowRoot?.querySelectorAll<T>(selector) ?? []);
-};
-
-/**
- * Queries a shadow DOM element by its CSS `part` attribute.
- * Shorthand for `queryInShadow(host, '[part="name"]')`.
- *
- * @example
- * ```ts
- * const btn = queryPart(carousel, 'prev-btn');
- * expect(btn).not.toBeNull();
- * ```
- */
-export const queryPart = <T extends Element = Element>(host: Element, part: string): null | T =>
-  queryInShadow<T>(host, `[part="${part}"]`);
-
-/**
- * Returns an array of light-DOM children assigned to a named slot,
- * or all slotted children if no name is given.
- *
- * @example
- * ```ts
- * const slides = getSlotted(carousel);
- * expect(slides).toHaveLength(3);
- * ```
- */
-export const getSlotted = (host: Element, slotName?: string): Element[] => {
-  const selector = slotName ? `[slot="${slotName}"]` : ':not([slot])';
-
-  return Array.from(host.querySelectorAll(`:scope > ${selector}`));
-};
-
-/**
- * Dispatches a `PointerEvent` on the given element.
- * Useful for testing hover, drag, and pointer interactions without
- * relying on the fire helper from @vielzeug/ore/testing.
- *
- * @example
- * ```ts
- * dispatchPointer(el, 'enter');
- * dispatchPointer(el, 'leave');
- * ```
- */
-export const dispatchPointer = (
-  el: Element,
-  type: 'cancel' | 'down' | 'enter' | 'leave' | 'move' | 'up',
-  init?: PointerEventInit,
-): void => {
-  el.dispatchEvent(new PointerEvent(`pointer${type}`, { bubbles: true, composed: true, ...init }));
-};
+export { queryInShadow, queryAllInShadow, queryPart, getSlotted } from '@vielzeug/assay';
 
 // ── Form-associated component helpers ─────────────────────────────────────────
 
@@ -141,48 +86,29 @@ export const isFormValid = (el: HTMLElement & { validity?: ValidityState }): boo
   return el.validity?.valid ?? true;
 };
 
-// ── Event helpers ─────────────────────────────────────────────────────────────
+// ── Timing helpers ────────────────────────────────────────────────────────────
 
 /**
- * Creates a synthetic `KeyboardEvent` with the given key.
- * Useful for testing keyboard navigation in headless controls.
+ * Generic, framework-agnostic — re-exported from `@vielzeug/assay` rather than duplicated here.
+ * `keyEvent(key, init)` from earlier versions of this module (construct-only, no dispatch, and
+ * unused anywhere in this package's own tests) has been removed — use `fire.keyDown`/
+ * `fire.keyboard` from `@vielzeug/ore/testing`, which construct and dispatch in one call.
  */
-export const keyEvent = (key: string, init?: KeyboardEventInit): KeyboardEvent => {
-  return new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key, ...init });
-};
-
-/**
- * Returns a Promise that resolves after a microtask tick (one `queueMicrotask`).
- * Use when you need to wait for reactivity (signal effects) to settle without
- * moving into the macrotask queue.
- */
-export const nextTick = (): Promise<void> =>
-  new Promise((resolve) => {
-    queueMicrotask(resolve);
-  });
-
-/**
- * Returns a Promise that resolves after `ms` milliseconds.
- * Use sparingly — prefer `nextTick()` for reactive updates.
- */
-export const wait = (ms = 0): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
+export { nextTick, wait } from '@vielzeug/assay';
 
 // ── ID counter ────────────────────────────────────────────────────────────────
 
 /**
- * Resets the headless ID counter to 0. Use in test `beforeEach` hooks when you need
+ * Resets the headless stable-ID counter to 0. Use in test `beforeEach` hooks when you need
  * deterministic IDs across test runs.
  *
  * @example
  * ```ts
- * import { resetIdCounter } from '@vielzeug/refine/testing';
- * beforeEach(() => resetIdCounter());
+ * import { resetStableIdCounter } from '@vielzeug/refine/testing';
+ * beforeEach(() => resetStableIdCounter());
  * ```
  */
-export { resetIdCounter } from '@vielzeug/ore';
+export { resetStableIdCounter } from '@vielzeug/ore';
 
 // ── ARIA snapshot helper ───────────────────────────────────────────────────────
 

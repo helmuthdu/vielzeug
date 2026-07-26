@@ -7,6 +7,7 @@ import {
   getAriaLabelledBy,
   getAriaState,
   getRole,
+  getSlotted,
   isAriaChecked,
   isAriaDisabled,
   isAriaExpanded,
@@ -15,10 +16,12 @@ import {
   isAriaInvalid,
   isAriaPressed,
   isAriaRequired,
-  keyEvent,
+  nextTick,
   propsToAttrs,
   queryAllInShadow,
   queryInShadow,
+  queryPart,
+  wait,
 } from '..';
 
 // ── ARIA attribute helpers ────────────────────────────────────────────────────
@@ -138,23 +141,39 @@ describe('queryAllInShadow()', () => {
   });
 });
 
-// ── keyEvent ──────────────────────────────────────────────────────────────────
+describe('queryPart()', () => {
+  it('matches a [part] attribute inside the shadow root', () => {
+    const el = document.createElement('div');
+    const shadow = el.attachShadow({ mode: 'open' });
 
-describe('keyEvent()', () => {
-  it('creates a keyboard event with the given key', () => {
-    const event = keyEvent('Enter');
+    shadow.innerHTML = '<button part="trigger">Open</button>';
 
-    expect(event.type).toBe('keydown');
-    expect(event.key).toBe('Enter');
-    expect(event.bubbles).toBe(true);
-    expect(event.cancelable).toBe(true);
+    expect(queryPart(el, 'trigger')?.textContent).toBe('Open');
+    expect(queryPart(el, 'missing')).toBeNull();
   });
+});
 
-  it('merges custom init options', () => {
-    const event = keyEvent('Escape', { ctrlKey: true });
+describe('getSlotted()', () => {
+  it('returns light-DOM children assigned to a slot', () => {
+    const el = document.createElement('div');
 
-    expect(event.key).toBe('Escape');
-    expect(event.ctrlKey).toBe(true);
+    el.innerHTML = '<span slot="footer">Actions</span><span>Default</span>';
+
+    expect(getSlotted(el, 'footer')).toHaveLength(1);
+    expect(getSlotted(el)).toHaveLength(1);
+  });
+});
+
+describe('nextTick() / wait()', () => {
+  it('nextTick() resolves on a microtask, before a macrotask wait()', async () => {
+    const order: string[] = [];
+
+    void nextTick().then(() => order.push('tick'));
+    order.push('sync');
+
+    await wait(0);
+
+    expect(order).toEqual(['sync', 'tick']);
   });
 });
 

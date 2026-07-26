@@ -1,5 +1,4 @@
-import { define, html, prop, ref, bind, watchEffect } from '@vielzeug/ore';
-import { when } from '@vielzeug/ore/directives';
+import { define, html, prop, ref, bind, watchEffect, when } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 import * as lucideModule from 'lucide';
 

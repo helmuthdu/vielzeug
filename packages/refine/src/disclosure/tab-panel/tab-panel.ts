@@ -1,5 +1,4 @@
-import { define, html, inject, prop, ref, bind, getHost, onMounted, watchEffect } from '@vielzeug/ore';
-import { styleMap, when } from '@vielzeug/ore/directives';
+import { define, html, inject, prop, ref, bind, getHost, onMounted, watchEffect, styleMap, when } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
 import { setAriaReflection } from '../../headless';

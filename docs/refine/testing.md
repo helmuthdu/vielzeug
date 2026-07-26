@@ -9,7 +9,7 @@ description: ARIA helpers, typed mount wrappers, and event utilities for testing
 
 `@vielzeug/refine/testing` provides helpers for writing component tests on top of `@vielzeug/ore/testing`. All helpers are tree-shakeable with no runtime side-effects.
 
-The module groups into four concerns: **ARIA assertions** (check what the DOM exposes to assistive technology), **shadow DOM queries** (reach inside component internals), **form helpers** (read form-associated values), and **event / timing utilities** (simulate keyboard input and wait for reactive updates).
+The module groups into three concerns: **ARIA assertions** (check what the DOM exposes to assistive technology — refine-specific, since they're about testing a component's accessibility *contract*), **form helpers** (read form-associated values), and **typed mount wrappers**. The generic, framework-agnostic pieces — shadow DOM queries, event dispatch, async timing — are re-exported from [`@vielzeug/assay`](/assay/) rather than duplicated here.
 
 ```ts
 import { isAriaInvalid, queryInShadow, mountOreInput } from '@vielzeug/refine/testing';
@@ -45,12 +45,20 @@ expect(getAriaState(input)).toMatchObject({ invalid: 'true', required: 'true' })
 
 ## Shadow DOM Queries
 
+Re-exported from [`@vielzeug/assay`](/assay/api#query-helpers) — return `null`/`[]` instead of throwing when the host has no shadow root:
+
 ```ts
 // Query a single element inside the host's shadow root
 const inner = queryInShadow(host, 'input');
 
 // Query all matching elements
 const items = queryAllInShadow(host, '[role="option"]');
+
+// Query by CSS `part` attribute — shorthand for queryInShadow(host, '[part="x"]')
+const trigger = queryPart(host, 'trigger');
+
+// Light-DOM children assigned to a slot
+const footerActions = getSlotted(host, 'footer');
 ```
 
 ## Form-Associated Helpers
@@ -63,21 +71,24 @@ const value = getFormValue(el);
 const valid = isFormValid(el);
 ```
 
-## Event Helpers
+## Event and Timing Helpers
+
+Simulate interactions with [`@vielzeug/ore/testing`](/ore/usage#testing-utilities)'s `fire.*` (it re-exports `@vielzeug/assay`'s dispatchers):
 
 ```ts
-// Synthetic KeyboardEvent for keyboard navigation tests
-const ev = keyEvent('ArrowDown', { shiftKey: true });
-element.dispatchEvent(ev);
+import { fire } from '@vielzeug/ore/testing';
+
+fire.keyDown(element, { key: 'ArrowDown', shiftKey: true });
+fire.pointerEnter(trigger); // replaces the removed dispatchPointer(el, 'enter')
 ```
 
-## Timing Helpers
+`nextTick()`/`wait()` are re-exported from `@vielzeug/refine/testing` (sourced from `@vielzeug/assay`):
 
 ```ts
 // Wait for reactive signal effects to settle (microtask flush)
 await nextTick();
 
-// Wait a fixed number of milliseconds — use sparingly
+// Wait a fixed number of milliseconds — use sparingly, prefer nextTick()/waitFor()
 await wait(50);
 ```
 
@@ -86,9 +97,9 @@ await wait(50);
 Refine components generate stable IDs for ARIA associations. Reset the counter in `beforeEach` when you need deterministic IDs across test runs:
 
 ```ts
-import { resetIdCounter } from '@vielzeug/refine/testing';
+import { resetStableIdCounter } from '@vielzeug/refine/testing';
 
-beforeEach(() => resetIdCounter());
+beforeEach(() => resetStableIdCounter());
 ```
 
 ## Typed Mount Wrappers

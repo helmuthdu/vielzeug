@@ -1,5 +1,4 @@
-import { define, html, prop, bind, useEmit } from '@vielzeug/ore';
-import { styleMap } from '@vielzeug/ore/directives';
+import { define, html, prop, bind, useEmit, styleMap } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore/forms';
 import { computed, signal } from '@vielzeug/ripple';
 import { Temporal, format } from '@vielzeug/tempo';

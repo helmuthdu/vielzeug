@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor(refine): adopt @vielzeug/assay in @vielzeug/refine/testing — queryInShadow/queryAllInShadow/queryPart/getSlotted/nextTick/wait are now re-exported from assay instead of duplicated (same names, same behavior). dispatchPointer() is removed — use fire.pointer* from @vielzeug/ore/testing (which re-exports assay's dispatchers) instead. The unused keyEvent() helper is also removed — use fire.keyDown/fire.keyboard, which construct and dispatch in one call. Also updates to @vielzeug/ore's renamed resetStableIdCounter() and testing/flush()'s removed FLUSH_DEEP option",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

@@ -1,5 +1,4 @@
-import { define, html, prop, bind, useEmit } from '@vielzeug/ore';
-import { when } from '@vielzeug/ore/directives';
+import { define, html, prop, bind, useEmit, when } from '@vielzeug/ore';
 import { type Readable, signal } from '@vielzeug/ripple';
 
 import { reducedMotionMixin } from '../../styles';

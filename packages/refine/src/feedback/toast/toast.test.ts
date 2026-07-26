@@ -1,4 +1,4 @@
-import { FLUSH_DEEP, type Fixture, mount, user, waitFor } from '@vielzeug/ore/testing';
+import { type Fixture, mount, user, waitFor } from '@vielzeug/ore/testing';
 
 import type { ToastElement } from './toast';
 
@@ -166,9 +166,9 @@ describe('ore-toast', () => {
       fixture.element.add({ duration: 0, message: 'Second' });
       fixture.element.add({ duration: 0, message: 'Third' });
 
-      // Deep flush: reactive update + queueMicrotask in removeToast runs,
-      // attaching transitionend listener to the re-rendered .toast-inner.exiting.
-      await fixture.flush(FLUSH_DEEP);
+      // flush() now waits deterministically for all pending component work (reactive
+      // update + queueMicrotask in removeToast), however many turns that actually takes.
+      await fixture.flush();
 
       // First toast should be in exiting state (animated eviction).
       expect(fixture.queryAll('.toast-inner.exiting').length).toBeGreaterThanOrEqual(1);
@@ -192,8 +192,8 @@ describe('ore-toast', () => {
 
       fixture.element.add({ duration: 0, message: 'Second' });
 
-      // Deep flush: reactive render + queueMicrotask listener setup.
-      await fixture.flush(FLUSH_DEEP);
+      // flush() waits deterministically for the reactive render + queueMicrotask listener setup.
+      await fixture.flush();
 
       await completeAllExits(fixture, () => fixture.flush());
 

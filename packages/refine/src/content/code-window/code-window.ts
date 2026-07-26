@@ -1,5 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
-import { when } from '@vielzeug/ore/directives';
+import { define, html, prop, when } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import componentStyles from './code-window.css?inline';
