@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(refine): ore-slider no longer forces width:100% by default, breaking layout next to other fields in a flex/grid row; add fullwidth opt-in matching ore-input/ore-select/ore-number-input convention",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

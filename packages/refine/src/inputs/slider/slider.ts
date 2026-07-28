@@ -49,6 +49,8 @@ export type OreSliderProps = {
   from?: number | string;
   /** Range mode a11y label for the start thumb (e.g. "$20") */
   'from-value-text'?: string;
+  /** Stretch to full width of container */
+  fullwidth?: boolean;
   /** Helper text displayed below the slider (fallback when the `helper` slot is empty) */
   helper?: string;
   /** Maximum value */
@@ -93,6 +95,7 @@ export type OreSliderProps = {
  * @attr {string}  size  - 'sm' | 'md' | 'lg'
  * @attr {string}  helper - Helper text below the slider
  * @attr {string}  error  - Error message below the slider
+ * @attr {boolean} fullwidth - Stretch to full width of container
  *
  * @fires change - detail always includes `value`; single mode: { value: number }, range mode: { value: { from, to }, from, to }, plus optional originalEvent
  *
@@ -129,6 +132,7 @@ define<OreSliderProps>(SLIDER_TAG, {
     error: prop.string(),
     from: prop.number(0),
     'from-value-text': prop.string(),
+    fullwidth: prop.bool(false),
     helper: prop.string(),
     max: prop.number(100),
     min: prop.number(0),

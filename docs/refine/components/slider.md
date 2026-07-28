@@ -146,6 +146,7 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 | `max`             | `number`                                                                  | `100`   | Maximum allowed value                                                      |
 | `step`            | `number`                                                                  | `1`     | Value increment/decrement step                                             |
 | `disabled`        | `boolean`                                                                 | `false` | Disable slider interaction                                                 |
+| `fullwidth`       | `boolean`                                                                 | `false` | Expand to full width                                                       |
 | `name`            | `string`                                                                  | —       | Form field name (single mode only)                                         |
 | `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Semantic color                                                             |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Slider size                                                                |
