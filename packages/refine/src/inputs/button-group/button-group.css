@@ -7,7 +7,7 @@
     display: inline-flex;
 
     --group-gap: var(--size-2);
-    --group-radius: var(--rounded-lg);
+    --group-radius: var(--_radius, var(--rounded-lg));
   }
 
   .button-group {

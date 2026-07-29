@@ -467,7 +467,8 @@ define<OreSelectProps>(SELECT_TAG, {
       };
     });
 
-    return html`<slot style="display:none"></slot>
+    return html`
+      <slot style="display:none"></slot>
       <ore-input
         class="trigger"
         part="trigger"
@@ -499,8 +500,8 @@ define<OreSelectProps>(SELECT_TAG, {
         <div slot="prefix" class="chips-row" ?hidden="${() => !showChips.value}">
           ${() =>
             selectedChipItems.value.map(
-              (item) =>
-                html`<ore-chip
+              (item) => html`
+                <ore-chip
                   value="${item.value}"
                   label="${item.label}"
                   mode="removable"
@@ -509,7 +510,8 @@ define<OreSelectProps>(SELECT_TAG, {
                   color="${props.color}"
                   @remove="${removeChip}">
                   ${item.label}
-                </ore-chip>`,
+                </ore-chip>
+              `,
             )}
         </div>
         <span slot="suffix" class="trigger-suffix" aria-hidden="true">
@@ -536,33 +538,38 @@ define<OreSelectProps>(SELECT_TAG, {
           ${() =>
             flatRows.value.map((row) =>
               row.type === 'group'
-                ? html`<div class="optgroup-label" role="presentation">${row.label}</div>`
-                : html`<div
-                    class="option"
-                    role="option"
-                    id="${`${selectId}-opt-${row.idx}`}"
-                    data-option-index="${String(row.idx)}"
-                    data-option-value="${row.opt.value}"
-                    aria-selected="${() => String(selectedValues.value.includes(row.opt.value))}"
-                    aria-disabled="${() => String(row.opt.disabled)}"
-                    ?data-focused="${() => focusedIndex.value === row.idx}"
-                    ?data-selected="${() => selectedValues.value.includes(row.opt.value)}"
-                    ?data-disabled="${() => row.opt.disabled}"
-                    @click="${(e: MouseEvent) => {
-                      e.stopPropagation();
-                      selectOption(row.opt, e);
-                    }}"
-                    @pointerenter="${() => {
-                      optionList.set(row.idx);
-                    }}">
-                    <span>${row.opt.label}</span>
-                    <span class="option-check" aria-hidden="true">
-                      <ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>
-                    </span>
-                  </div>`,
+                ? html`
+                    <div class="optgroup-label" role="presentation">${row.label}</div>
+                  `
+                : html`
+                    <div
+                      class="option"
+                      role="option"
+                      id="${`${selectId}-opt-${row.idx}`}"
+                      data-option-index="${String(row.idx)}"
+                      data-option-value="${row.opt.value}"
+                      aria-selected="${() => String(selectedValues.value.includes(row.opt.value))}"
+                      aria-disabled="${() => String(row.opt.disabled)}"
+                      ?data-focused="${() => focusedIndex.value === row.idx}"
+                      ?data-selected="${() => selectedValues.value.includes(row.opt.value)}"
+                      ?data-disabled="${() => row.opt.disabled}"
+                      @click="${(e: MouseEvent) => {
+                        e.stopPropagation();
+                        selectOption(row.opt, e);
+                      }}"
+                      @pointerenter="${() => {
+                        optionList.set(row.idx);
+                      }}">
+                      <span>${row.opt.label}</span>
+                      <span class="option-check" aria-hidden="true">
+                        <ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>
+                      </span>
+                    </div>
+                  `,
             )}
         </div>
-      </div>`;
+      </div>
+    `;
   },
   shadow: { delegatesFocus: true },
   styles: [colorThemeMixin, reducedMotionMixin, roundedVariantMixin, componentStyles],

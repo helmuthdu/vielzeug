@@ -273,7 +273,9 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
             (i) => html`
               ${() =>
                 separatorIdx.value > 0 && i === separatorIdx.value
-                  ? html`<span class="separator" aria-hidden="true">${() => props.separator.value || '-'}</span>`
+                  ? html`
+                      <span class="separator" aria-hidden="true">${() => props.separator.value || '-'}</span>
+                    `
                   : ''}
               <input
                 class="cell"

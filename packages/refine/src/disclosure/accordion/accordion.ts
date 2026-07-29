@@ -151,7 +151,9 @@ define<OreAccordionProps>(ACCORDION_TAG, {
       },
     });
 
-    return html`<slot></slot>`;
+    return html`
+      <slot></slot>
+    `;
   },
 
   styles: [styles],

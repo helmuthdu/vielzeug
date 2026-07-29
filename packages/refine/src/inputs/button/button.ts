@@ -208,17 +208,21 @@ define<OreButtonProps>(BUTTON_TAG, {
     return html`
       ${() =>
         isLink.value
-          ? html`<a
-              part="button"
-              role="presentation"
-              tabindex="-1"
-              href="${props.href}"
-              :rel="${effectiveRel}"
-              :target="${props.target}"
-              @click="${handleClick}">
-              ${buttonContent}
-            </a>`
-          : html`<span part="button" role="presentation" @click="${handleClick}">${buttonContent}</span>`}
+          ? html`
+              <a
+                part="button"
+                role="presentation"
+                tabindex="-1"
+                href="${props.href}"
+                :rel="${effectiveRel}"
+                :target="${props.target}"
+                @click="${handleClick}">
+                ${buttonContent}
+              </a>
+            `
+          : html`
+              <span part="button" role="presentation" @click="${handleClick}">${buttonContent}</span>
+            `}
     `;
   },
   shadow: { delegatesFocus: false },

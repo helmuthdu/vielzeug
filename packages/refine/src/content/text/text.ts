@@ -110,7 +110,9 @@ define<OreTextProps>(TEXT_TAG, {
       },
     });
 
-    return html`<slot></slot>`;
+    return html`
+      <slot></slot>
+    `;
   },
   styles: [styles],
 });

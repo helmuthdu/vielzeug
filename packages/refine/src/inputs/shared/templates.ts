@@ -20,18 +20,20 @@ export const renderHelperRegion = (
   helperText: Readable<string>,
   setRef?: (el: HTMLElement | null) => void,
 ) => {
-  return html`<div
-    class="helper-text"
-    part="helper-text"
-    id="${assistiveId}"
-    :role="${() => (errorText.value ? 'alert' : null)}"
-    aria-live="polite"
-    ?hidden="${() => !errorText.value && !helperText.value}"
-    ref=${(el: HTMLElement | null) => {
-      setRef?.(el);
-    }}>
-    ${() => errorText.value || helperText.value}
-  </div>`;
+  return html`
+    <div
+      class="helper-text"
+      part="helper-text"
+      id="${assistiveId}"
+      :role="${() => (errorText.value ? 'alert' : null)}"
+      aria-live="polite"
+      ?hidden="${() => !errorText.value && !helperText.value}"
+      ref=${(el: HTMLElement | null) => {
+        setRef?.(el);
+      }}>
+      ${() => errorText.value || helperText.value}
+    </div>
+  `;
 };
 
 /**
@@ -47,8 +49,12 @@ export const renderStatusIcon = (errorText: Readable<string>) => html`
     :data-status="${() => (errorText.value ? 'error' : 'success')}">
     ${() =>
       errorText.value
-        ? html`<ore-icon name="alert-circle" size="14" stroke-width="2" aria-hidden="true"></ore-icon>`
-        : html`<ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>`}
+        ? html`
+            <ore-icon name="alert-circle" size="14" stroke-width="2" aria-hidden="true"></ore-icon>
+          `
+        : html`
+            <ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>
+          `}
   </span>
 `;
 

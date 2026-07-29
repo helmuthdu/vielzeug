@@ -27,7 +27,9 @@ describe('field controls', () => {
             value: signal(''),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -52,7 +54,9 @@ describe('field controls', () => {
             value,
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -73,7 +77,9 @@ describe('field controls', () => {
             value: signal<string | undefined>(undefined),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -94,7 +100,9 @@ describe('field controls', () => {
             value,
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -122,7 +130,9 @@ describe('field controls', () => {
             value: signal('a'),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -181,7 +191,9 @@ describe('field controls', () => {
             value: signal('us, gb ,, de'),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -209,7 +221,9 @@ describe('field controls', () => {
             value: signal('alpha'),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -244,7 +258,9 @@ describe('field controls', () => {
             value: signal(['alpha', 'beta', 'gamma']),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -266,7 +282,9 @@ describe('field controls', () => {
             value: signal(['alpha', 'beta']),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -289,7 +307,9 @@ describe('field controls', () => {
             value: signal(['alpha']),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -311,7 +331,9 @@ describe('field controls', () => {
             value: signal(''),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -339,7 +361,9 @@ describe('field controls', () => {
             value,
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -363,7 +387,9 @@ describe('field controls', () => {
             value,
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -387,7 +413,9 @@ describe('field controls', () => {
             value,
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -472,10 +500,12 @@ describe('field controls', () => {
           value: signal(''),
         });
 
-        return html`<input
-          ref=${(el: HTMLInputElement | null) => {
-            if (el) tf.wire(el);
-          }} />`;
+        return html`
+          <input
+            ref=${(el: HTMLInputElement | null) => {
+              if (el) tf.wire(el);
+            }} />
+        `;
       });
 
       const input = fixture.query('input') as HTMLInputElement;
@@ -498,10 +528,12 @@ describe('field controls', () => {
           value: signal(''),
         });
 
-        return html`<input
-          ref=${(el: HTMLInputElement | null) => {
-            if (el) tf.wire(el);
-          }} />`;
+        return html`
+          <input
+            ref=${(el: HTMLInputElement | null) => {
+              if (el) tf.wire(el);
+            }} />
+        `;
       });
 
       const input = fixture.query('input') as HTMLInputElement;
@@ -517,10 +549,12 @@ describe('field controls', () => {
       const fixture = await mount(() => {
         const tf = createTextField({ prefix: 'test', signal: new AbortController().signal, value: signal('') });
 
-        return html`<input
-          ref=${(el: HTMLInputElement | null) => {
-            if (el) tf.wire(el);
-          }} />`;
+        return html`
+          <input
+            ref=${(el: HTMLInputElement | null) => {
+              if (el) tf.wire(el);
+            }} />
+        `;
       });
 
       const input = fixture.query('input') as HTMLInputElement;
@@ -548,7 +582,9 @@ describe('field controls', () => {
             value: signal('opt'),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -575,7 +611,9 @@ describe('field controls', () => {
             value: signal('opt'),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -601,7 +639,9 @@ describe('field controls', () => {
             value: signal('opt'),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -624,7 +664,9 @@ describe('field controls', () => {
             value: signal('opt'),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -650,7 +692,9 @@ describe('field controls', () => {
             value: signal('val'),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -683,7 +727,9 @@ describe('field controls', () => {
             value: signal(''),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -714,7 +760,9 @@ describe('field controls', () => {
             value: signal(''),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -742,7 +790,9 @@ describe('field controls', () => {
             value: externalValue,
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -774,7 +824,9 @@ describe('field controls', () => {
             value: signal('hello'),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -804,7 +856,9 @@ describe('field controls', () => {
             value: valueSignal,
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -832,7 +886,9 @@ describe('field controls', () => {
             value: valueSignal,
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -858,16 +914,18 @@ describe('field controls', () => {
           value: signal(''),
         });
 
-        return html`<input
-          ref=${(el: HTMLInputElement | null) => {
-            if (el) {
-              const detach = tf.wire(el);
+        return html`
+          <input
+            ref=${(el: HTMLInputElement | null) => {
+              if (el) {
+                const detach = tf.wire(el);
 
-              // Call detach twice immediately to exercise the guard
-              detach();
-              detach();
-            }
-          }} />`;
+                // Call detach twice immediately to exercise the guard
+                detach();
+                detach();
+              }
+            }} />
+        `;
       });
 
       const input = fixture.query('input') as HTMLInputElement;
@@ -892,12 +950,14 @@ describe('field controls', () => {
           value: signal(''),
         });
 
-        return html`<input
-          ref=${(el: HTMLInputElement | null) => {
-            if (el) {
-              detach = tf.wire(el, controller.signal);
-            }
-          }} />`;
+        return html`
+          <input
+            ref=${(el: HTMLInputElement | null) => {
+              if (el) {
+                detach = tf.wire(el, controller.signal);
+              }
+            }} />
+        `;
       });
 
       const input = fixture.query('input') as HTMLInputElement;
@@ -998,7 +1058,9 @@ describe('field controls', () => {
             value: signal(''),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -1030,7 +1092,9 @@ describe('field controls', () => {
             value,
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -1061,7 +1125,9 @@ describe('field controls', () => {
             value: signal(''),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -1083,7 +1149,9 @@ describe('field controls', () => {
             value: signal(''),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -1103,7 +1171,9 @@ describe('field controls', () => {
             value,
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -1127,7 +1197,9 @@ describe('field controls', () => {
             value,
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -1154,7 +1226,9 @@ describe('field controls', () => {
             value: signal(''),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );

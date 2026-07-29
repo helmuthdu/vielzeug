@@ -274,7 +274,7 @@ define<OreChipComponentProps>(CHIP_TAG, {
         :aria-label="${props.label}"
         :disabled="${props.disabled}"
         @click="${handleSelectableActivate}">
-        <span class="chip" part="chip"> ${renderChipContent()} </span>
+        <span class="chip" part="chip">${renderChipContent()}</span>
       </button>
     `;
 
@@ -286,14 +286,16 @@ define<OreChipComponentProps>(CHIP_TAG, {
         :aria-label="${props.label}"
         :disabled="${props.disabled}"
         @click="${handleActionClick}">
-        <span class="chip" part="chip"> ${renderChipContent()} </span>
+        <span class="chip" part="chip">${renderChipContent()}</span>
       </button>
     `;
 
-    const renderStaticChip = () => html` <span class="chip" part="chip"> ${renderChipContent()} </span> `;
+    const renderStaticChip = () => html`
+      <span class="chip" part="chip">${renderChipContent()}</span>
+    `;
 
     const renderRemovableChip = () => html`
-      <span class="chip" part="chip"> ${renderChipContent()} ${renderRemoveButton()} </span>
+      <span class="chip" part="chip">${renderChipContent()} ${renderRemoveButton()}</span>
     `;
 
     // ============================================

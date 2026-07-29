@@ -819,7 +819,9 @@ describe('ore-combobox', () => {
 
         optionsRef = options;
 
-        return html`<ore-combobox options=${options}></ore-combobox>`;
+        return html`
+          <ore-combobox options=${options}></ore-combobox>
+        `;
       });
 
       const combobox = fixture.query<HTMLElement>('ore-combobox')!;
@@ -852,7 +854,9 @@ describe('ore-combobox', () => {
       fixture = await mount(() => {
         const options = signal([{ value: 'alpha' }]);
 
-        return html`<ore-combobox options=${options}></ore-combobox>`;
+        return html`
+          <ore-combobox options=${options}></ore-combobox>
+        `;
       });
 
       const combobox = fixture.query<HTMLElement>('ore-combobox')!;

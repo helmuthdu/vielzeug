@@ -261,7 +261,9 @@ define<OreCheckboxGroupProps>(CHECKBOX_GROUP_TAG, {
         <legend id="${legendId}" ?hidden=${() => !props.label.value}>
           ${props.label}${when(
             () => Boolean(props.required.value),
-            () => html`<span aria-hidden="true"> *</span>`,
+            () => html`
+              <span aria-hidden="true">*</span>
+            `,
           )}
         </legend>
         <div class="checkbox-group-items" part="items">

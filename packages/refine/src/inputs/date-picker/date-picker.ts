@@ -573,8 +573,9 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
             :aria-label="${() =>
               `Switch to ${currentView.value === 'day' ? 'month' : currentView.value === 'month' ? 'year' : 'day'} view`}"
             @click="${handleHeaderClick}">
-            <span class="cal-label-month">${displayMonth_}</span><span class="cal-label-sep" aria-hidden="true">/</span
-            ><span class="cal-label-year">${displayYear_}</span>
+            <span class="cal-label-month">${displayMonth_}</span>
+            <span class="cal-label-sep" aria-hidden="true">/</span>
+            <span class="cal-label-year">${displayYear_}</span>
           </button>
           <button class="nav-btn" type="button" aria-label="Next" @click="${handleNext}">
             <ore-icon name="chevron-right" size="16" stroke-width="2" aria-hidden="true"></ore-icon>
@@ -591,7 +592,9 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
           <div role="row" class="cal-grid-row">
             ${() =>
               weekdayLabels.value.map(
-                (lbl) => html`<div class="cal-cell cal-cell-head" role="columnheader" aria-label="${lbl}">${lbl}</div>`,
+                (lbl) => html`
+                  <div class="cal-cell cal-cell-head" role="columnheader" aria-label="${lbl}">${lbl}</div>
+                `,
               )}
           </div>
           ${() => {
@@ -601,11 +604,11 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
             for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
 
             return rows.map(
-              (row) =>
-                html`<div role="row" class="cal-grid-row">
+              (row) => html`
+                <div role="row" class="cal-grid-row">
                   ${row.map(
-                    (cell) =>
-                      html`<div
+                    (cell) => html`
+                      <div
                         class="cal-cell cal-cell-day"
                         role="gridcell"
                         part="day"
@@ -621,9 +624,11 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
                         @click="${() => handleSelectDay(cell.iso)}"
                         @keydown="${handleDayKeydown}">
                         ${String(cell.day)}
-                      </div>`,
+                      </div>
+                    `,
                   )}
-                </div>`,
+                </div>
+              `,
             );
           }}
         </div>
@@ -641,11 +646,11 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
             for (let i = 0; i < cells.length; i += 4) rows.push(cells.slice(i, i + 4));
 
             return rows.map(
-              (row) =>
-                html`<div role="row">
+              (row) => html`
+                <div role="row">
                   ${row.map(
-                    (cell) =>
-                      html`<div
+                    (cell) => html`
+                      <div
                         class="cal-cell cal-cell-month"
                         role="gridcell"
                         :aria-selected="${() => String(cell.isSelected)}"
@@ -661,9 +666,11 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
                             if (!cell.isDisabled) handleSelectMonth(cell.month);
                           })}">
                         ${cell.shortLabel}
-                      </div>`,
+                      </div>
+                    `,
                   )}
-                </div>`,
+                </div>
+              `,
             );
           }}
         </div>
@@ -681,11 +688,11 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
             for (let i = 0; i < cells.length; i += 4) rows.push(cells.slice(i, i + 4));
 
             return rows.map(
-              (row) =>
-                html`<div role="row">
+              (row) => html`
+                <div role="row">
                   ${row.map(
-                    (cell) =>
-                      html`<div
+                    (cell) => html`
+                      <div
                         class="cal-cell cal-cell-year"
                         role="gridcell"
                         :aria-selected="${() => String(cell.isSelected)}"
@@ -701,9 +708,11 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
                             if (!cell.isDisabled) handleSelectYear(cell.year);
                           })}">
                         ${String(cell.year)}
-                      </div>`,
+                      </div>
+                    `,
                   )}
-                </div>`,
+                </div>
+              `,
             );
           }}
         </div>

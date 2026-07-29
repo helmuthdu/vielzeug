@@ -853,9 +853,9 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
         id="${() => `${comboId}-error`}"
         role="alert"
         aria-live="assertive"
-        ?hidden="${() => !props.error.value}"
-        >${() => props.error.value ?? ''}</span
-      >
+        ?hidden="${() => !props.error.value}">
+        ${() => props.error.value ?? ''}
+      </span>
       <div
         class="dropdown"
         part="dropdown"
@@ -878,44 +878,49 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
             if (!isOpen.value) return '';
 
             if (isLoading()) {
-              return html`<div class="dropdown-loading">Loading...</div>`;
+              return html`
+                <div class="dropdown-loading">Loading...</div>
+              `;
             }
 
             if (filteredOptions.value.length === 0) {
               if (creatableLabel.value) {
-                return html`<button
-                  type="button"
-                  class="no-results-create"
-                  ?data-focused=${() => focusedIndex.value === -1}>
-                  ${creatableLabel.value}
-                </button>`;
+                return html`
+                  <button type="button" class="no-results-create" ?data-focused=${() => focusedIndex.value === -1}>
+                    ${creatableLabel.value}
+                  </button>
+                `;
               }
 
-              return html`<div class="no-results" role="presentation">No results found</div>`;
+              return html`
+                <div class="no-results" role="presentation">No results found</div>
+              `;
             }
 
             return filteredOptions.value.map((option, index) => {
-              return html`<div
-                class="option"
-                role="option"
-                id="${`${comboId}-opt-${index}`}"
-                data-option-index="${index}"
-                data-option-value="${option.value}"
-                :aria-selected="${() =>
-                  String(
-                    isMultiple() ? selectedValues.value.includes(option.value) : selectedValue.value === option.value,
-                  )}"
-                aria-disabled="${String(option.disabled)}"
-                style="${`position:absolute;top:0;left:0;right:0;transform:translateY(${index * 36}px);`}"
-                ?data-focused=${() => focusedIndex.value === index}
-                ?data-selected=${() =>
-                  isMultiple() ? selectedValues.value.includes(option.value) : selectedValue.value === option.value}
-                ?data-disabled=${option.disabled}>
-                <span>${option.label}</span>
-                <span class="option-check" aria-hidden="true"
-                  ><ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon
-                ></span>
-              </div>`;
+              return html`
+                <div
+                  class="option"
+                  role="option"
+                  id="${`${comboId}-opt-${index}`}"
+                  data-option-index="${index}"
+                  data-option-value="${option.value}"
+                  :aria-selected="${() =>
+                    String(
+                      isMultiple() ? selectedValues.value.includes(option.value) : selectedValue.value === option.value,
+                    )}"
+                  aria-disabled="${String(option.disabled)}"
+                  style="${`position:absolute;top:0;left:0;right:0;transform:translateY(${index * 36}px);`}"
+                  ?data-focused=${() => focusedIndex.value === index}
+                  ?data-selected=${() =>
+                    isMultiple() ? selectedValues.value.includes(option.value) : selectedValue.value === option.value}
+                  ?data-disabled=${option.disabled}>
+                  <span>${option.label}</span>
+                  <span class="option-check" aria-hidden="true">
+                    <ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>
+                  </span>
+                </div>
+              `;
             });
           }}
         </div>

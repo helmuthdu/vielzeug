@@ -325,20 +325,22 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
             ${() =>
               slots.has('send').value
                 ? ''
-                : html`<ore-button
-                    class="send-btn"
-                    part="send-button"
-                    type="button"
-                    icon-only
-                    variant="solid"
-                    :color="${() => props.color.value || 'primary'}"
-                    :size="${fCtxProps.size}"
-                    :label="${() => props['send-label'].value || DEFAULT_SEND_LABEL}"
-                    ?loading="${() => Boolean(props.loading.value)}"
-                    ?disabled="${() => !composer.canSend.value}"
-                    @click="${(e: MouseEvent) => composer.send(e)}">
-                    <ore-icon name="${() => props['send-icon'].value || SEND_ICON}" size="16"></ore-icon>
-                  </ore-button>`}
+                : html`
+                    <ore-button
+                      class="send-btn"
+                      part="send-button"
+                      type="button"
+                      icon-only
+                      variant="solid"
+                      :color="${() => props.color.value || 'primary'}"
+                      :size="${fCtxProps.size}"
+                      :label="${() => props['send-label'].value || DEFAULT_SEND_LABEL}"
+                      ?loading="${() => Boolean(props.loading.value)}"
+                      ?disabled="${() => !composer.canSend.value}"
+                      @click="${(e: MouseEvent) => composer.send(e)}">
+                      <ore-icon name="${() => props['send-icon'].value || SEND_ICON}" size="16"></ore-icon>
+                    </ore-button>
+                  `}
           </div>
         </div>
       </div>

@@ -239,9 +239,9 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
 
     return html`
       <div class="textarea-wrapper" part="wrapper">
-        <label class="label" part="label" for="${textareaId}" id="${labelId}" ?hidden="${() => !labelVisible.value}"
-          >${props.label}</label
-        >
+        <label class="label" part="label" for="${textareaId}" id="${labelId}" ?hidden="${() => !labelVisible.value}">
+          ${props.label}
+        </label>
         <div class="field" part="field">
           <textarea
             part="textarea"

@@ -211,8 +211,8 @@ define<OreRatingProps>(RATING_TAG, {
         :aria-describedby="${ariaDescribedBy}">
         ${() =>
           stars.value.map(
-            (star) =>
-              html`<button
+            (star) => html`
+              <button
                 class="star-btn"
                 part="star"
                 type="button"
@@ -231,7 +231,8 @@ define<OreRatingProps>(RATING_TAG, {
                 }}"
                 @keydown="${(e: KeyboardEvent) => handleKeydown(e, star)}">
                 <ore-icon name="star" size="var(--_star-size)" stroke-width="1.5" aria-hidden="true"></ore-icon>
-              </button>`,
+              </button>
+            `,
           )}
         <div class="sparkle-layer"></div>
       </div>

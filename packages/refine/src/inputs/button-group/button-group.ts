@@ -1,10 +1,11 @@
 import { createContext, define, html, prop, provide } from '@vielzeug/ore';
 import { type Readable } from '@vielzeug/ripple';
 
-import type { ComponentSize, ThemeColor } from '../../shared';
+import type { ComponentSize, RoundedSize, ThemeColor } from '../../shared';
 import type { ButtonVariant } from '../button/button';
 
-import { sizableBundle, themableBundle } from '../../shared';
+import { roundableBundle, sizableBundle, themableBundle } from '../../shared';
+import { roundedVariantMixin } from '../../styles';
 import componentStyles from './button-group.css?inline';
 
 /** Button group properties */
@@ -19,6 +20,8 @@ export type OreButtonGroupProps = {
   label?: string;
   /** Layout direction */
   orientation?: 'horizontal' | 'vertical';
+  /** Corner radius of the group container (and its attached-mode end buttons) */
+  rounded?: RoundedSize | '';
   /** Shared size for all child buttons */
   size?: ComponentSize;
   /** Shared visual variant for all child buttons */
@@ -45,20 +48,21 @@ export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext | undefined>('O
  * @attr {boolean} fullwidth - Group spans full width
  * @attr {string} label - Accessible label
  * @attr {string} orientation - 'horizontal' | 'vertical'
+ * @attr {string} rounded - Corner radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full' (bare attribute defaults to 'full')
  * @attr {string} size - Shared size: 'sm' | 'md' | 'lg'
  * @attr {string} variant - Shared visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'frost'
  *
  * @slot - Place ore-button elements here
  *
  * @cssprop --group-gap - Gap between buttons (non-attached mode)
- * @cssprop --group-radius - Border radius of the group container
+ * @cssprop --group-radius - Border radius of the group container, defaults to the `rounded` attribute's token
  * @cssprop --button-radius - Passed through to child buttons to control corner radius
  * @cssprop --button-border-start - Passed through to suppress start borders in attached mode
  * @cssprop --button-border-top - Passed through to suppress top borders in vertical attached mode
  * @part group - Group container.
  * @example
  * ```html
- * <ore-button-group attached>
+ * <ore-button-group attached rounded="full">
  *   <ore-button variant="solid" color="primary">Save</ore-button>
  *   <ore-button variant="solid" color="primary">Save &amp; Continue</ore-button>
  * </ore-button-group>
@@ -74,6 +78,7 @@ define<OreButtonGroupProps>(BUTTON_GROUP_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,
+    ...roundableBundle,
     attached: prop.bool(false),
     fullwidth: prop.bool(false),
     label: prop.string(),
@@ -93,5 +98,5 @@ define<OreButtonGroupProps>(BUTTON_GROUP_TAG, {
       </div>
     `;
   },
-  styles: [componentStyles],
+  styles: [roundedVariantMixin, componentStyles],
 });

@@ -299,45 +299,67 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
             ${() =>
               rows.value.map((row) =>
                 row.type === 'group'
-                  ? html`<div class="group-heading" role="presentation">${row.group}</div>`
-                  : html`<div
-                      class="item"
-                      part="item"
-                      role="option"
-                      id="${`${listboxId}-opt-${row.idx}`}"
-                      aria-selected="${() => String(focusedIndex.value === row.idx)}"
-                      aria-disabled="${() => String(row.item.disabled)}"
-                      ?data-focused="${() => focusedIndex.value === row.idx}"
-                      ?data-disabled="${() => row.item.disabled}"
-                      @click="${(e: MouseEvent) => {
-                        e.stopPropagation();
-                        selectItem(row.item);
-                      }}"
-                      @pointerenter="${() => {
-                        list.set(row.idx);
-                      }}">
-                      ${
-                        row.item.icon
-                          ? html`<span class="item-icon" aria-hidden="true"
-                              ><ore-icon name="${row.item.icon}" size="16"></ore-icon
-                            ></span>`
-                          : ''
-                      }
-                      <span class="item-label">${row.item.label}</span>
-                      ${
-                        row.item.shortcut
-                          ? html`<span class="item-shortcut"
-                              >${splitShortcutKeys(row.item.shortcut).map((key) => html`<kbd>${key}</kbd>`)}</span
-                            >`
-                          : ''
-                      }
-                    </div>`,
+                  ? html`
+                      <div class="group-heading" role="presentation">${row.group}</div>
+                    `
+                  : html`
+                      <div
+                        class="item"
+                        part="item"
+                        role="option"
+                        id="${`${listboxId}-opt-${row.idx}`}"
+                        aria-selected="${() => String(focusedIndex.value === row.idx)}"
+                        aria-disabled="${() => String(row.item.disabled)}"
+                        ?data-focused="${() => focusedIndex.value === row.idx}"
+                        ?data-disabled="${() => row.item.disabled}"
+                        @click="${(e: MouseEvent) => {
+                          e.stopPropagation();
+                          selectItem(row.item);
+                        }}"
+                        @pointerenter="${() => {
+                          list.set(row.idx);
+                        }}">
+                        ${
+                          row.item.icon
+                            ? html`
+                                <span class="item-icon" aria-hidden="true">
+                                  <ore-icon name="${row.item.icon}" size="16"></ore-icon>
+                                </span>
+                              `
+                            : ''
+                        }
+                        <span class="item-label">${row.item.label}</span>
+                        ${
+                          row.item.shortcut
+                            ? html`
+                                <span class="item-shortcut">
+                                  ${splitShortcutKeys(row.item.shortcut).map(
+                                    (key) => html`
+                                      <kbd>${key}</kbd>
+                                    `,
+                                  )}
+                                </span>
+                              `
+                            : ''
+                        }
+                      </div>
+                    `,
               )}
           </div>
           <div class="footer" part="footer">
-            <span class="footer-hint"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
-            <span class="footer-hint"><kbd>Enter</kbd> Select</span>
-            <span class="footer-hint"><kbd>Esc</kbd> Close</span>
+            <span class="footer-hint">
+              <kbd>↑</kbd>
+              <kbd>↓</kbd>
+              Navigate
+            </span>
+            <span class="footer-hint">
+              <kbd>Enter</kbd>
+              Select
+            </span>
+            <span class="footer-hint">
+              <kbd>Esc</kbd>
+              Close
+            </span>
           </div>
         </div>
       </dialog>

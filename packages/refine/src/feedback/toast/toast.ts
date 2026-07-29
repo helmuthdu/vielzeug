@@ -171,9 +171,9 @@ function renderToastActions(entry: ToastEntry, onDismiss: () => void) {
             @click=${() => {
               action.onClick?.();
               onDismiss();
-            }}
-            >${action.label}</ore-button
-          >
+            }}>
+            ${action.label}
+          </ore-button>
         `,
       )}
     </div>
@@ -497,8 +497,14 @@ define<OreToastProps>(TOAST_TAG, {
               heading=${entry.heading || ''}
               ?dismissible=${entry.dismissible !== false}
               @dismiss=${dismiss}>
-              ${entry.meta ? html`<span slot="meta">${entry.meta}</span>` : ''} ${entry.message}
-              ${renderToastActions(entry, dismiss)}
+              ${
+                entry.meta
+                  ? html`
+                      <span slot="meta">${entry.meta}</span>
+                    `
+                  : ''
+              }
+              ${entry.message} ${renderToastActions(entry, dismiss)}
             </ore-alert>
           </div>
         </div>

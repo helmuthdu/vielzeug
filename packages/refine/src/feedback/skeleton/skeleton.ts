@@ -145,11 +145,9 @@ define<OreSkeletonProps>(SKELETON_TAG, {
             const isLastLine =
               props.variant.value === 'text' && renderLineCount() > 1 && index === renderLineCount() - 1;
 
-            return html`<div
-              class="bone"
-              part="bone"
-              aria-hidden="true"
-              :data-last="${() => (isLastLine ? 'true' : null)}"></div>`;
+            return html`
+              <div class="bone" part="bone" aria-hidden="true" :data-last="${() => (isLastLine ? 'true' : null)}"></div>
+            `;
           })}
       </div>
     `;

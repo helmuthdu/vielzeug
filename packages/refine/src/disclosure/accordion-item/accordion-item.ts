@@ -273,31 +273,33 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
       };
     });
 
-    return html` <details part="item" ?open="${props.expanded}" ref="${detailsRef}">
-      <summary
-        part="summary"
-        :aria-expanded="${() => String(props.expanded.value)}"
-        :aria-disabled="${() => (props.disabled.value ? 'true' : 'false')}"
-        :tabindex="${() => (props.disabled.value ? '-1' : null)}"
-        ref="${summaryRef}">
-        <slot name="prefix"></slot>
-        <div class="header-content" part="header">
-          <span class="title" part="title" id="${titleId}">
-            <slot name="title"></slot>
-          </span>
-          <span class="subtitle" part="subtitle">
-            <slot name="subtitle"></slot>
-          </span>
+    return html`
+      <details part="item" ?open="${props.expanded}" ref="${detailsRef}">
+        <summary
+          part="summary"
+          :aria-expanded="${() => String(props.expanded.value)}"
+          :aria-disabled="${() => (props.disabled.value ? 'true' : 'false')}"
+          :tabindex="${() => (props.disabled.value ? '-1' : null)}"
+          ref="${summaryRef}">
+          <slot name="prefix"></slot>
+          <div class="header-content" part="header">
+            <span class="title" part="title" id="${titleId}">
+              <slot name="title"></slot>
+            </span>
+            <span class="subtitle" part="subtitle">
+              <slot name="subtitle"></slot>
+            </span>
+          </div>
+          <slot name="suffix"></slot>
+          <ore-icon class="chevron" name="chevron-down" size="20" stroke-width="2" aria-hidden="true"></ore-icon>
+        </summary>
+        <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
+          <div class="content-inner">
+            <slot></slot>
+          </div>
         </div>
-        <slot name="suffix"></slot>
-        <ore-icon class="chevron" name="chevron-down" size="20" stroke-width="2" aria-hidden="true"></ore-icon>
-      </summary>
-      <div class="content-wrapper" part="content" role="region" aria-labelledby="${titleId}">
-        <div class="content-inner">
-          <slot></slot>
-        </div>
-      </div>
-    </details>`;
+      </details>
+    `;
   },
 
   styles: [coarsePointerMixin, styles],

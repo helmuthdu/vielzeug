@@ -549,8 +549,10 @@ describe('ore-select', () => {
           { label: 'Beta', value: 'b' },
         ]);
 
-        return html` <button @click=${() => (options.value = [{ label: 'Gamma', value: 'g' }])}>Update</button>
-          <ore-select options=${options}></ore-select>`;
+        return html`
+          <button @click=${() => (options.value = [{ label: 'Gamma', value: 'g' }])}>Update</button>
+          <ore-select options=${options}></ore-select>
+        `;
       });
 
       const select = fixture.query<HTMLElement>('ore-select')!;
@@ -587,7 +589,9 @@ describe('ore-select', () => {
       fixture = await mount(() => {
         const options = signal([{ value: 'alpha' }]);
 
-        return html`<ore-select options=${options}></ore-select>`;
+        return html`
+          <ore-select options=${options}></ore-select>
+        `;
       });
 
       const select = fixture.query<HTMLElement>('ore-select')!;

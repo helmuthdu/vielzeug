@@ -263,8 +263,12 @@ define<OreInputProps>(INPUT_TAG, {
     const passwordTogglePressed = () => String(showPassword.value);
     const passwordToggleIcon = () =>
       showPassword.value
-        ? html`<ore-icon name="eye-off" size="14" stroke-width="2" aria-hidden="true"></ore-icon>`
-        : html`<ore-icon name="eye" size="14" stroke-width="2" aria-hidden="true"></ore-icon>`;
+        ? html`
+            <ore-icon name="eye-off" size="14" stroke-width="2" aria-hidden="true"></ore-icon>
+          `
+        : html`
+            <ore-icon name="eye" size="14" stroke-width="2" aria-hidden="true"></ore-icon>
+          `;
     const helperHidden = () => !!errorText.value || !helperText.value;
     const errorHidden = () => !errorText.value;
     const counterNearLimit = () => (counter?.value.counterNearLimit && !counter?.value.counterAtLimit ? '' : null);
@@ -282,9 +286,9 @@ define<OreInputProps>(INPUT_TAG, {
 
     return html`
       <div class="input-wrapper" part="wrapper">
-        <label class="label" for="${inputId}" id="${labelId}" part="label" ?hidden="${labelHidden}"
-          ><slot name="label">${props.label}</slot></label
-        >
+        <label class="label" for="${inputId}" id="${labelId}" part="label" ?hidden="${labelHidden}">
+          <slot name="label">${props.label}</slot>
+        </label>
         <div class="field" part="field">
           <div class="input-row" part="input-row">
             <slot name="prefix"></slot>

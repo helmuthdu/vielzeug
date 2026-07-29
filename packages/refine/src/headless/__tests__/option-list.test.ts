@@ -48,7 +48,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       const handle = get();
@@ -63,7 +65,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       expect(get().getActiveItem()).toBeUndefined();
@@ -77,7 +81,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -90,7 +96,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -104,7 +112,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().toggle();
@@ -120,7 +130,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -133,7 +145,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().toggle();
@@ -147,7 +161,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open('click');
@@ -161,7 +177,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -177,7 +195,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -191,7 +211,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -205,7 +227,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -220,7 +244,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -235,7 +261,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -250,7 +278,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -264,7 +294,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -278,7 +310,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -301,7 +335,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().toggle();
@@ -319,7 +355,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().toggle('keyboard', 'escape');
@@ -338,7 +376,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -360,7 +400,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       // Closed: handleKeydown should return false for Escape.
@@ -379,7 +421,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -396,7 +440,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       get().open();
@@ -415,7 +461,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       const handle = get();
@@ -437,7 +485,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       const handle = get();
@@ -454,7 +504,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       const handle = get();
@@ -476,7 +528,9 @@ describe('createOptionList()', () => {
       await mount(() => {
         setup();
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       const handle = get();
@@ -509,7 +563,9 @@ describe('createOptionList()', () => {
           signal: controller.signal,
         });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }, {});
 
       handle.open();

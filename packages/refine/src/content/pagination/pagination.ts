@@ -136,37 +136,43 @@ define<OrePaginationProps>(PAGINATION_TAG, {
         <ol class="pagination" part="list">
           ${() =>
             props['show-first-last'].value
-              ? html`<li>
-                  <button
-                    type="button"
-                    class="nav-btn"
-                    part="first-btn"
-                    aria-label="First page"
-                    ?disabled=${isFirst}
-                    @click=${() => goTo(1)}>
-                    <ore-icon name="chevrons-left" size="16" aria-hidden="true"></ore-icon>
-                  </button>
-                </li>`
+              ? html`
+                  <li>
+                    <button
+                      type="button"
+                      class="nav-btn"
+                      part="first-btn"
+                      aria-label="First page"
+                      ?disabled=${isFirst}
+                      @click=${() => goTo(1)}>
+                      <ore-icon name="chevrons-left" size="16" aria-hidden="true"></ore-icon>
+                    </button>
+                  </li>
+                `
               : ''}
           ${() =>
             props['show-prev-next'].value
-              ? html`<li>
-                  <button
-                    type="button"
-                    class="nav-btn"
-                    part="prev-btn"
-                    aria-label="Previous page"
-                    ?disabled=${isFirst}
-                    @click=${() => goTo((props.page.value || 1) - 1)}>
-                    <ore-icon name="chevron-left" size="16" aria-hidden="true"></ore-icon>
-                  </button>
-                </li>`
+              ? html`
+                  <li>
+                    <button
+                      type="button"
+                      class="nav-btn"
+                      part="prev-btn"
+                      aria-label="Previous page"
+                      ?disabled=${isFirst}
+                      @click=${() => goTo((props.page.value || 1) - 1)}>
+                      <ore-icon name="chevron-left" size="16" aria-hidden="true"></ore-icon>
+                    </button>
+                  </li>
+                `
               : ''}
           <li style="display: contents;">
             ${() =>
               pageItems.value.map((item) => {
                 if (item === 'ellipsis-start' || item === 'ellipsis-end') {
-                  return html`<span class="ellipsis" aria-hidden="true">&hellip;</span>`;
+                  return html`
+                    <span class="ellipsis" aria-hidden="true">&hellip;</span>
+                  `;
                 }
 
                 const pg = item as number;
@@ -174,46 +180,54 @@ define<OrePaginationProps>(PAGINATION_TAG, {
                 const pgLabel = `Page ${pg}`;
 
                 return isCurrent
-                  ? html`<button
-                      type="button"
-                      part="page-btn"
-                      aria-label="${pgLabel}"
-                      aria-current="page"
-                      @click=${() => goTo(pg)}>
-                      ${pg}
-                    </button>`
-                  : html`<button type="button" part="page-btn" aria-label="${pgLabel}" @click=${() => goTo(pg)}>
-                      ${pg}
-                    </button>`;
+                  ? html`
+                      <button
+                        type="button"
+                        part="page-btn"
+                        aria-label="${pgLabel}"
+                        aria-current="page"
+                        @click=${() => goTo(pg)}>
+                        ${pg}
+                      </button>
+                    `
+                  : html`
+                      <button type="button" part="page-btn" aria-label="${pgLabel}" @click=${() => goTo(pg)}>
+                        ${pg}
+                      </button>
+                    `;
               })}
           </li>
           ${() =>
             props['show-prev-next'].value
-              ? html`<li>
-                  <button
-                    type="button"
-                    class="nav-btn"
-                    part="next-btn"
-                    aria-label="Next page"
-                    ?disabled=${isLast}
-                    @click=${() => goTo((props.page.value || 1) + 1)}>
-                    <ore-icon name="chevron-right" size="16" aria-hidden="true"></ore-icon>
-                  </button>
-                </li>`
+              ? html`
+                  <li>
+                    <button
+                      type="button"
+                      class="nav-btn"
+                      part="next-btn"
+                      aria-label="Next page"
+                      ?disabled=${isLast}
+                      @click=${() => goTo((props.page.value || 1) + 1)}>
+                      <ore-icon name="chevron-right" size="16" aria-hidden="true"></ore-icon>
+                    </button>
+                  </li>
+                `
               : ''}
           ${() =>
             props['show-first-last'].value
-              ? html`<li>
-                  <button
-                    type="button"
-                    class="nav-btn"
-                    part="last-btn"
-                    aria-label="Last page"
-                    ?disabled=${isLast}
-                    @click=${() => goTo(props['total-pages'].value || 1)}>
-                    <ore-icon name="chevrons-right" size="16" aria-hidden="true"></ore-icon>
-                  </button>
-                </li>`
+              ? html`
+                  <li>
+                    <button
+                      type="button"
+                      class="nav-btn"
+                      part="last-btn"
+                      aria-label="Last page"
+                      ?disabled=${isLast}
+                      @click=${() => goTo(props['total-pages'].value || 1)}>
+                      <ore-icon name="chevrons-right" size="16" aria-hidden="true"></ore-icon>
+                    </button>
+                  </li>
+                `
               : ''}
         </ol>
       </nav>

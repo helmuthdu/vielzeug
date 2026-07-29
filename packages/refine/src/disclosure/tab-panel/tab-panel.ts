@@ -121,7 +121,12 @@ define<OreTabPanelProps>(TAB_PANEL_TAG, {
         aria-hidden="${() => String(!isActive.value)}"
         :style="${panelStyle}"
         tabindex="0">
-        ${when(shouldRender, () => html`<slot></slot>`)}
+        ${when(
+          shouldRender,
+          () => html`
+            <slot></slot>
+          `,
+        )}
       </div>
     `;
   },

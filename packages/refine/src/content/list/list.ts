@@ -215,7 +215,9 @@ define<OreListProps>(LIST_TAG, {
       },
     });
 
-    return html`<slot></slot>`;
+    return html`
+      <slot></slot>
+    `;
   },
 
   styles: [sizeVariantMixin(LIST_SIZE_PRESET), componentStyles],

@@ -338,7 +338,9 @@ define<OreTableProps>(TABLE_TAG, {
       };
     });
 
-    return html`<div class="scroll-container"></div>`;
+    return html`
+      <div class="scroll-container"></div>
+    `;
   },
 
   styles: [reducedMotionMixin, tableBaseMixin('table'), componentStyles],

@@ -165,6 +165,14 @@ export type OreNavbarItemProps = {
   disabled?: boolean;
   /** Link target URL. Renders an anchor when provided. */
   href?: string;
+  /**
+   * Icon-only mode — hides the (empty) label region and switches to compact, symmetric
+   * padding instead of the icon+label layout's wider horizontal padding. Set this whenever
+   * the default slot is intentionally left empty (name conveyed via `aria-label` instead),
+   * otherwise the empty label still reserves its inter-element gap and the item ends up
+   * with lopsided padding around the icon.
+   */
+  'icon-only'?: boolean;
   /** Relationship of linked URL (anchor-only) */
   rel?: string;
   /** Browsing context for link (anchor-only) */
@@ -730,6 +738,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
  * @attr {boolean} active - Marks item as the current active route
  * @attr {boolean} disabled - Disables interaction
  * @attr {string} href - Link URL; renders as `<a>` when set
+ * @attr {boolean} icon-only - Compact, symmetric padding for items with no visible label
  * @attr {string} rel - Anchor `rel` attribute (links only)
  * @attr {string} target - Anchor `target` attribute (links only)
  *
@@ -747,6 +756,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
  * <ore-navbar-item href="/docs" active>Docs</ore-navbar-item>
  * <ore-navbar-item href="/about" target="_blank" rel="noopener">About</ore-navbar-item>
  * <ore-navbar-item disabled>Disabled</ore-navbar-item>
+ * <ore-navbar-item icon-only aria-label="Search"><ore-icon slot="icon" name="search"></ore-icon></ore-navbar-item>
  * ```
  */
 export const NAVBAR_ITEM_TAG = 'ore-navbar-item' as const;
@@ -755,6 +765,7 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
     active: prop.bool(false),
     disabled: prop.bool(false),
     href: prop.string(),
+    'icon-only': prop.bool(false),
     rel: prop.string(),
     target: prop.string(),
   },
@@ -814,12 +825,14 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
         }
 
         if (props.disabled.value) {
-          return html`<div class="item" part="item" tabindex="-1" aria-disabled="true">${renderItemContent()}</div>`;
+          return html`
+            <div class="item" part="item" tabindex="-1" aria-disabled="true">${renderItemContent()}</div>
+          `;
         }
 
-        return html`<button class="item" part="item" type="button" @click=${closeMobileMenuIfOpen}>
-          ${renderItemContent()}
-        </button>`;
+        return html`
+          <button class="item" part="item" type="button" @click=${closeMobileMenuIfOpen}>${renderItemContent()}</button>
+        `;
       }}
     `;
   },

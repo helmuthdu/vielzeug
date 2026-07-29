@@ -83,10 +83,19 @@ define<OreCodeWindowProps>(CODE_WINDOW_TAG, {
             isCode,
             () => html`
               <span class="lang" part="lang">${props.lang}</span>
-              ${when(hasFilename, () => html`<span class="filename" part="filename">${props.filename}</span>`)}
+              ${when(
+                hasFilename,
+                () => html`
+                  <span class="filename" part="filename">${props.filename}</span>
+                `,
+              )}
             `,
             () => html`
-              <div class="dots" part="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+              <div class="dots" part="dots" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
               <span class="title" part="title">${props.title}</span>
             `,
           )}

@@ -64,6 +64,12 @@ describe('ore-button-group', () => {
 
       expect(fixture.element.getAttribute('orientation')).toBe('vertical');
     });
+
+    it('applies rounded', async () => {
+      fixture = await mount('ore-button-group', { attrs: { rounded: 'full' } });
+
+      expect(fixture.element.getAttribute('rounded')).toBe('full');
+    });
   });
 
   describe('Colors', () => {

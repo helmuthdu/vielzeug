@@ -132,12 +132,18 @@ define<OreCopyCommandProps>(COPY_COMMAND_TAG, {
           <span class="copy-icon" part="copy-icon" aria-hidden="true">
             ${() => {
               if (copied.value)
-                return html`<ore-icon name="check" size="14" class="icon-copied" aria-hidden="true"></ore-icon>`;
+                return html`
+                  <ore-icon name="check" size="14" class="icon-copied" aria-hidden="true"></ore-icon>
+                `;
 
               if (copyFailed.value)
-                return html`<ore-icon name="circle-alert" size="14" class="icon-failed" aria-hidden="true"></ore-icon>`;
+                return html`
+                  <ore-icon name="circle-alert" size="14" class="icon-failed" aria-hidden="true"></ore-icon>
+                `;
 
-              return html`<ore-icon name="copy" size="14" aria-hidden="true"></ore-icon>`;
+              return html`
+                <ore-icon name="copy" size="14" aria-hidden="true"></ore-icon>
+              `;
             }}
           </span>
         </button>

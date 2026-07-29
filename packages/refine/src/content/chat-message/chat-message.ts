@@ -221,30 +221,32 @@ define<OreChatMessageProps>(CHAT_MESSAGE_TAG, {
               class="timestamp"
               part="timestamp"
               datetime="${props.timestamp}"
-              ?hidden="${() => !formattedTime.value}"
-              >${formattedTime}</time
-            >
+              ?hidden="${() => !formattedTime.value}">
+              ${formattedTime}
+            </time>
             <span class="status" part="status" data-status="${props.status}" ?hidden="${() => !props.status.value}">
               ${() => {
                 switch (props.status.value) {
                   case 'error':
-                    return html`<ore-icon
-                      name="alert-circle"
-                      size="12"
-                      stroke-width="2.5"
-                      aria-hidden="true"></ore-icon>`;
+                    return html`
+                      <ore-icon name="alert-circle" size="12" stroke-width="2.5" aria-hidden="true"></ore-icon>
+                    `;
                   case 'sending':
-                    return html`<span class="spinner" aria-hidden="true"></span>`;
+                    return html`
+                      <span class="spinner" aria-hidden="true"></span>
+                    `;
                   case 'sent':
-                    return html`<ore-icon name="check" size="12" stroke-width="2.5" aria-hidden="true"></ore-icon>`;
+                    return html`
+                      <ore-icon name="check" size="12" stroke-width="2.5" aria-hidden="true"></ore-icon>
+                    `;
                   default:
                     return '';
                 }
               }}
             </span>
-            <span class="error-text" part="error" role="alert" ?hidden="${() => !props.error.value}"
-              >${props.error}</span
-            >
+            <span class="error-text" part="error" role="alert" ?hidden="${() => !props.error.value}">
+              ${props.error}
+            </span>
             <button
               class="retry"
               part="retry"

@@ -339,6 +339,19 @@
     white-space: nowrap;
   }
 
+  /* Icon-only items (no visible label — name conveyed via aria-label) hide the empty label
+     region so it stops reserving a `gap` slot next to the icon, and switch to compact,
+     symmetric padding instead of the icon+label layout's wider horizontal padding. Without
+     this, an icon-only item ends up lopsided: too much horizontal space around the icon plus
+     a phantom gap left over for a label that never renders. */
+  :host([icon-only]) .item-label {
+    display: none;
+  }
+
+  :host([icon-only]) .item {
+    padding: var(--size-1-5);
+  }
+
   :host([navbar-mobile]) {
     display: block;
     width: 100%;

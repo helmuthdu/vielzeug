@@ -539,20 +539,22 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
                   const h24 = fmt.value === '12' ? to24Hour(h, pendingPeriod.value) : h;
                   const disabled = isTimeDisabled(h24, pendingMinute.value);
 
-                  return html`<div
-                    class="option"
-                    part="option"
-                    role="option"
-                    tabindex="${() => (pendingHour.value === h && !disabled ? '0' : '-1')}"
-                    :aria-selected="${() => String(pendingHour.value === h)}"
-                    :aria-disabled="${() => String(disabled)}"
-                    ?data-disabled="${() => disabled}"
-                    @click="${() => {
-                      if (!disabled) pendingHour.value = h;
-                    }}"
-                    @keydown="${handleHourKeydown}">
-                    ${String(h).padStart(2, '0')}
-                  </div>`;
+                  return html`
+                    <div
+                      class="option"
+                      part="option"
+                      role="option"
+                      tabindex="${() => (pendingHour.value === h && !disabled ? '0' : '-1')}"
+                      :aria-selected="${() => String(pendingHour.value === h)}"
+                      :aria-disabled="${() => String(disabled)}"
+                      ?data-disabled="${() => disabled}"
+                      @click="${() => {
+                        if (!disabled) pendingHour.value = h;
+                      }}"
+                      @keydown="${handleHourKeydown}">
+                      ${String(h).padStart(2, '0')}
+                    </div>
+                  `;
                 })}
             </div>
           </div>
@@ -568,20 +570,22 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
                   const h24 = fmt.value === '12' ? to24Hour(pendingHour.value, pendingPeriod.value) : pendingHour.value;
                   const disabled = isTimeDisabled(h24, m);
 
-                  return html`<div
-                    class="option"
-                    part="option"
-                    role="option"
-                    tabindex="${() => (pendingMinute.value === m && !disabled ? '0' : '-1')}"
-                    :aria-selected="${() => String(pendingMinute.value === m)}"
-                    :aria-disabled="${() => String(disabled)}"
-                    ?data-disabled="${() => disabled}"
-                    @click="${() => {
-                      if (!disabled) commitFromMinute(m);
-                    }}"
-                    @keydown="${handleMinuteKeydown}">
-                    ${String(m).padStart(2, '0')}
-                  </div>`;
+                  return html`
+                    <div
+                      class="option"
+                      part="option"
+                      role="option"
+                      tabindex="${() => (pendingMinute.value === m && !disabled ? '0' : '-1')}"
+                      :aria-selected="${() => String(pendingMinute.value === m)}"
+                      :aria-disabled="${() => String(disabled)}"
+                      ?data-disabled="${() => disabled}"
+                      @click="${() => {
+                        if (!disabled) commitFromMinute(m);
+                      }}"
+                      @keydown="${handleMinuteKeydown}">
+                      ${String(m).padStart(2, '0')}
+                    </div>
+                  `;
                 })}
             </div>
           </div>
@@ -589,26 +593,29 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
           <!-- AM/PM column (12h mode only) -->
           ${() =>
             fmt.value === '12'
-              ? html` <div class="col col-period" part="column" role="group" aria-label="Period">
-                  <div class="col-label" aria-hidden="true">AM/PM</div>
-                  <div class="col-scroll">
-                    ${(['AM', 'PM'] as const).map(
-                      (p) =>
-                        html`<div
-                          class="option"
-                          part="option"
-                          role="option"
-                          tabindex="${() => (pendingPeriod.value === p ? '0' : '-1')}"
-                          :aria-selected="${() => String(pendingPeriod.value === p)}"
-                          @click="${() => {
-                            pendingPeriod.value = p;
-                          }}"
-                          @keydown="${handlePeriodKeydown}">
-                          ${p}
-                        </div>`,
-                    )}
+              ? html`
+                  <div class="col col-period" part="column" role="group" aria-label="Period">
+                    <div class="col-label" aria-hidden="true">AM/PM</div>
+                    <div class="col-scroll">
+                      ${(['AM', 'PM'] as const).map(
+                        (p) => html`
+                          <div
+                            class="option"
+                            part="option"
+                            role="option"
+                            tabindex="${() => (pendingPeriod.value === p ? '0' : '-1')}"
+                            :aria-selected="${() => String(pendingPeriod.value === p)}"
+                            @click="${() => {
+                              pendingPeriod.value = p;
+                            }}"
+                            @keydown="${handlePeriodKeydown}">
+                            ${p}
+                          </div>
+                        `,
+                      )}
+                    </div>
                   </div>
-                </div>`
+                `
               : html``}
         </div>
       </div>

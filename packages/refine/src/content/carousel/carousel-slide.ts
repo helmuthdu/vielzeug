@@ -14,7 +14,9 @@ define(CAROUSEL_SLIDE_TAG, {
       },
     });
 
-    return html`<slot></slot>`;
+    return html`
+      <slot></slot>
+    `;
   },
   styles: [slideStyles],
 });

@@ -67,7 +67,9 @@ define<OreBoxProps>(BOX_TAG, {
     variant: prop.string<'flat' | 'solid' | 'frost' | 'glass'>(),
   },
   setup() {
-    return html`<div class="box" part="box"><slot></slot></div>`;
+    return html`
+      <div class="box" part="box"><slot></slot></div>
+    `;
   },
 
   styles: [...surfaceMixins, frostVariantMixin('.box'), rainbowEffectMixin('.box'), componentStyles],

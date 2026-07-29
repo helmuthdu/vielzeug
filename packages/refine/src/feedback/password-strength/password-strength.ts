@@ -171,7 +171,9 @@ define<OrePasswordStrengthProps>(PASSWORD_STRENGTH_TAG, {
       </div>
       ${() =>
         props['show-label'].value
-          ? html`<span class="level-label" aria-live="polite" aria-atomic="true">${() => levelLabel.value}</span>`
+          ? html`
+              <span class="level-label" aria-live="polite" aria-atomic="true">${() => levelLabel.value}</span>
+            `
           : ''}
     `;
   },

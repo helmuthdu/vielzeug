@@ -265,7 +265,9 @@ define<OreGridProps>(GRID_TAG, {
       });
     });
 
-    return html`<slot></slot>`;
+    return html`
+      <slot></slot>
+    `;
   },
 
   styles: [styles],

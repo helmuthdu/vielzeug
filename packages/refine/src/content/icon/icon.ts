@@ -207,10 +207,14 @@ define<OreIconProps>(ICON_TAG, {
       svg.replaceChildren(...children);
     });
 
-    return html`${when(
-      () => !!iconNode.value,
-      () => html`<svg ref="${svgRef}" part="svg" style="width:100%;height:100%"></svg>`,
-    )}`;
+    return html`
+      ${when(
+        () => !!iconNode.value,
+        () => html`
+          <svg ref="${svgRef}" part="svg" style="width:100%;height:100%"></svg>
+        `,
+      )}
+    `;
   },
   styles: [styles],
 });

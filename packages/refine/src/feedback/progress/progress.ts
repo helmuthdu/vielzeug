@@ -125,8 +125,8 @@ define<OreProgressProps>(PROGRESS_TAG, {
       el.style.setProperty('--_percent', props.indeterminate.value ? '0%' : percent.value);
     });
 
-    const circularTemplate = () =>
-      html` <div
+    const circularTemplate = () => html`
+      <div
         class="circular-track"
         role="progressbar"
         :aria-valuenow="${ariaValueNow}"
@@ -149,10 +149,11 @@ define<OreProgressProps>(PROGRESS_TAG, {
           <span class="circular-label">${() => props.label.value ?? ''}</span>
           <span class="circular-title">${() => props.title.value ?? ''}</span>
         </div>
-      </div>`;
+      </div>
+    `;
 
-    const barTemplate = () =>
-      html` <div class="wrapper">
+    const barTemplate = () => html`
+      <div class="wrapper">
         <div class="header">
           <span class="progress-title">${() => props.title.value ?? ''}</span>
           <span class="end-label header-label">${() => props.label.value ?? ''}</span>
@@ -169,13 +170,21 @@ define<OreProgressProps>(PROGRESS_TAG, {
               :aria-valuetext="${props['value-text']}">
               <div class="fill" part="fill" :style="${linearFillStyle}"></div>
             </div>
-            ${() => (!isVertical.value ? html`<span class="floating-label">${props['floating-label']}</span>` : null)}
+            ${() =>
+              !isVertical.value
+                ? html`
+                    <span class="floating-label">${props['floating-label']}</span>
+                  `
+                : null}
           </div>
           <span class="end-label row-label">${() => props.label.value ?? ''}</span>
         </div>
-      </div>`;
+      </div>
+    `;
 
-    return html` ${() => (props.type.value === 'circular' ? circularTemplate() : barTemplate())} `;
+    return html`
+      ${() => (props.type.value === 'circular' ? circularTemplate() : barTemplate())}
+    `;
   },
 
   styles: [colorThemeMixin, forcedColorsMixin, reducedMotionMixin, componentStyles],

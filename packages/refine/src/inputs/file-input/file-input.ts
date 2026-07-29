@@ -403,9 +403,9 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
 
     return html`
       <div class="file-input-wrapper" part="wrapper">
-        <label class="label-outside" id="${labelId}" part="label" ?hidden=${() => !props.label.value}
-          >${props.label}</label
-        >
+        <label class="label-outside" id="${labelId}" part="label" ?hidden=${() => !props.label.value}>
+          ${props.label}
+        </label>
         <div
           class="dropzone"
           part="dropzone"
@@ -433,19 +433,30 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
             <span class="dropzone-icon" aria-hidden="true" :data-status="${() => (isInvalid.value ? 'error' : null)}">
               ${() =>
                 isInvalid.value
-                  ? html`<ore-icon name="alert-circle" size="36" stroke-width="1.5" aria-hidden="true"></ore-icon>`
-                  : html`<ore-icon name="upload" size="36" stroke-width="1.5" aria-hidden="true"></ore-icon>`}
+                  ? html`
+                      <ore-icon name="alert-circle" size="36" stroke-width="1.5" aria-hidden="true"></ore-icon>
+                    `
+                  : html`
+                      <ore-icon name="upload" size="36" stroke-width="1.5" aria-hidden="true"></ore-icon>
+                    `}
             </span>
             <!-- Signal 01: the copy itself shifts on drag-entry (not just border/glow) — a
                  static "Drop files here" during an active drag reads as if the drop target
                  hasn't noticed the file yet. -->
             ${when(
               () => isDragging.value,
-              () => html`<span class="dropzone-title dropzone-title-active">Release to upload</span>`,
+              () => html`
+                <span class="dropzone-title dropzone-title-active">Release to upload</span>
+              `,
             )}
             ${when(
               () => !isDragging.value,
-              () => html`<span class="dropzone-title">Drop files here or <u>click to browse</u></span>`,
+              () => html`
+                <span class="dropzone-title">
+                  Drop files here or
+                  <u>click to browse</u>
+                </span>
+              `,
             )}
             <span class="dropzone-hint" ?hidden=${() => !hintText.value}>${hintText}</span>
           </div>
@@ -474,55 +485,63 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
                               // instead, bypassing that string-based check. Safe here: the value
                               // comes from `URL.createObjectURL(file)` on a real `File` object we
                               // control, never from untrusted text.
-                              html`<img
-                                class="file-thumb"
-                                alt=""
-                                ref="${(el: HTMLImageElement | null) => {
-                                  if (el) el.src = getPreviewUrl(file);
-                                }}" />`
-                            : html`<span class="file-thumb file-thumb-generic" aria-hidden="true">
-                                <ore-icon name="file" size="28" stroke-width="1.5" aria-hidden="true"></ore-icon>
-                              </span>`
+                              html`
+                                <img
+                                  class="file-thumb"
+                                  alt=""
+                                  ref="${(el: HTMLImageElement | null) => {
+                                    if (el) el.src = getPreviewUrl(file);
+                                  }}" />
+                              `
+                            : html`
+                                <span class="file-thumb file-thumb-generic" aria-hidden="true">
+                                  <ore-icon name="file" size="28" stroke-width="1.5" aria-hidden="true"></ore-icon>
+                                </span>
+                              `
                         }
                         ${when(
                           () => queue.fileState(file).status === 'success',
-                          () =>
-                            html`<span class="file-status-badge file-status-badge-success" aria-hidden="true">
+                          () => html`
+                            <span class="file-status-badge file-status-badge-success" aria-hidden="true">
                               <ore-icon name="check" size="11" stroke-width="3" aria-hidden="true"></ore-icon>
-                            </span>`,
+                            </span>
+                          `,
                         )}
                         ${when(
                           () => queue.fileState(file).status === 'error',
-                          () =>
-                            html`<span class="file-status-badge file-status-badge-error" aria-hidden="true">
+                          () => html`
+                            <span class="file-status-badge file-status-badge-error" aria-hidden="true">
                               <ore-icon name="alert-circle" size="12" stroke-width="2.5" aria-hidden="true"></ore-icon>
-                            </span>`,
+                            </span>
+                          `,
                         )}
                         <span class="file-card-actions">
                           ${when(
                             () => queue.fileState(file).status === 'error',
-                            () =>
-                              html`<button
+                            () => html`
+                              <button
                                 class="file-card-action"
                                 type="button"
                                 aria-label="${`Retry uploading ${file.name}`}"
                                 @click=${() => queue.retryUpload(file)}>
                                 <ore-icon name="refresh-cw" size="12" stroke-width="2.5" aria-hidden="true"></ore-icon>
-                              </button>`,
+                              </button>
+                            `,
                           )}
                           ${when(
                             () =>
                               queue.fileState(file).status === 'success' &&
                               Boolean(props.multiple.value) &&
                               Boolean(props.upload.value),
-                            () =>
-                              html`<button
+                            () => html`
+                              <button
                                 class="file-card-action"
                                 type="button"
                                 aria-label="${`Replace ${file.name}`}"
                                 @click=${() => beginReplace(file)}>
                                 <ore-icon name="upload" size="12" stroke-width="2.5" aria-hidden="true"></ore-icon>
-                              </button>`,
+                              </button>
+                            `,
                           )}
                           <button
                             class="file-card-action file-card-remove"
@@ -547,7 +566,9 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
                       )}
                       ${when(
                         () => queue.fileState(file).status === 'error',
-                        () => html`<span class="file-error-text">${() => queue.fileState(file).error}</span>`,
+                        () => html`
+                          <span class="file-error-text">${() => queue.fileState(file).error}</span>
+                        `,
                       )}
                     </li>
                   `
@@ -575,38 +596,44 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
                         )}
                         ${when(
                           () => queue.fileState(file).status === 'error',
-                          () => html`<span class="file-error-text">${() => queue.fileState(file).error}</span>`,
+                          () => html`
+                            <span class="file-error-text">${() => queue.fileState(file).error}</span>
+                          `,
                         )}
                         ${when(
                           () => queue.fileState(file).status === 'idle' || queue.fileState(file).status === 'success',
-                          () => html`<span class="file-size">${formatBytes(file.size)}</span>`,
+                          () => html`
+                            <span class="file-size">${formatBytes(file.size)}</span>
+                          `,
                         )}
                       </span>
                       <span class="file-actions">
                         ${when(
                           () => queue.fileState(file).status === 'error',
-                          () =>
-                            html`<button
+                          () => html`
+                            <button
                               class="file-action"
                               type="button"
                               aria-label="${`Retry uploading ${file.name}`}"
                               @click=${() => queue.retryUpload(file)}>
                               <ore-icon name="refresh-cw" size="14" stroke-width="2" aria-hidden="true"></ore-icon>
-                            </button>`,
+                            </button>
+                          `,
                         )}
                         ${when(
                           () =>
                             queue.fileState(file).status === 'success' &&
                             Boolean(props.multiple.value) &&
                             Boolean(props.upload.value),
-                          () =>
-                            html`<button
+                          () => html`
+                            <button
                               class="file-action"
                               type="button"
                               aria-label="${`Replace ${file.name}`}"
                               @click=${() => beginReplace(file)}>
                               <ore-icon name="upload" size="14" stroke-width="2" aria-hidden="true"></ore-icon>
-                            </button>`,
+                            </button>
+                          `,
                         )}
                         <button
                           class="file-remove"

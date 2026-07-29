@@ -447,8 +447,9 @@ define<OreCalendarProps>(CALENDAR_TAG, {
               `Switch to ${currentView.value === 'day' ? 'month' : currentView.value === 'month' ? 'year' : 'day'} view`}"
             ?disabled="${isDisabled}"
             @click="${handleHeaderClick}">
-            <span class="cal-label-month">${displayMonth_}</span><span class="cal-label-sep" aria-hidden="true">/</span
-            ><span class="cal-label-year">${displayYear_}</span>
+            <span class="cal-label-month">${displayMonth_}</span>
+            <span class="cal-label-sep" aria-hidden="true">/</span>
+            <span class="cal-label-year">${displayYear_}</span>
           </button>
 
           <button class="nav-btn" type="button" aria-label="Next" ?disabled="${isDisabled}" @click="${handleNext}">
@@ -466,7 +467,9 @@ define<OreCalendarProps>(CALENDAR_TAG, {
           <div role="row" class="cal-grid-row">
             ${() =>
               weekdayLabels.value.map(
-                (lbl) => html`<div class="cal-cell cal-cell-head" role="columnheader" aria-label="${lbl}">${lbl}</div>`,
+                (lbl) => html`
+                  <div class="cal-cell cal-cell-head" role="columnheader" aria-label="${lbl}">${lbl}</div>
+                `,
               )}
           </div>
           ${() => {
@@ -476,11 +479,11 @@ define<OreCalendarProps>(CALENDAR_TAG, {
             for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
 
             return rows.map(
-              (row) =>
-                html`<div role="row" class="cal-grid-row">
+              (row) => html`
+                <div role="row" class="cal-grid-row">
                   ${row.map(
-                    (cell) =>
-                      html`<div
+                    (cell) => html`
+                      <div
                         class="cal-cell cal-cell-day"
                         role="gridcell"
                         part="day"
@@ -506,58 +509,73 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                           const overflow = evts.length - MAX_EVENTS;
 
                           if (isExpanded.value) {
-                            return html`<div
-                              class="cal-events"
+                            // Text node is written tag-tight (no inner line breaks) — this custom
+                            // `html` tagged template does not collapse whitespace at runtime like a
+                            // browser parser would, so a pretty-printed multi-line `<span>...</span>`
+                            // here would render literal newlines/indentation into `textContent`.
+                            // prettier-ignore
+                            const overflowPill = overflow > 0
+                              ? html`<span class="cal-event-pill-overflow" aria-hidden="true"
+                                  >+${overflow} more</span
+                                >`
+                              : html``;
+
+                            return html`
+                              <div
+                                class="cal-events"
+                                aria-label="${() => `${evts.length} event${evts.length > 1 ? 's' : ''}`}">
+                                ${shown.map(
+                                  (evt) => html`
+                                    <ore-badge
+                                      class="cal-event-pill"
+                                      size="xs"
+                                      rounded="sm"
+                                      aria-label="${evt.label}"
+                                      :style="${styleMap({
+                                        '--badge-bg': evt.color,
+                                        '--badge-border-color': evt.color,
+                                      })}">
+                                      ${evt.label}
+                                    </ore-badge>
+                                  `,
+                                )}
+                                ${overflowPill}
+                              </div>
+                            `;
+                          }
+
+                          return html`
+                            <div
+                              class="cal-dots"
                               aria-label="${() => `${evts.length} event${evts.length > 1 ? 's' : ''}`}">
                               ${shown.map(
-                                (evt) =>
-                                  html`<ore-badge
-                                    class="cal-event-pill"
+                                (evt) => html`
+                                  <ore-badge
+                                    class="cal-dot"
+                                    dot
                                     size="xs"
-                                    rounded="sm"
-                                    aria-label="${evt.label}"
+                                    aria-hidden="true"
                                     :style="${styleMap({
                                       '--badge-bg': evt.color,
                                       '--badge-border-color': evt.color,
-                                    })}">
-                                    ${evt.label}
-                                  </ore-badge>`,
+                                    })}"></ore-badge>
+                                `,
                               )}
                               ${
                                 overflow > 0
-                                  ? html`<span class="cal-event-pill-overflow" aria-hidden="true"
-                                      >+${overflow} more</span
-                                    >`
+                                  ? html`
+                                      <span class="cal-dot-overflow" aria-hidden="true">+${overflow}</span>
+                                    `
                                   : html``
                               }
-                            </div>`;
-                          }
-
-                          return html`<div
-                            class="cal-dots"
-                            aria-label="${() => `${evts.length} event${evts.length > 1 ? 's' : ''}`}">
-                            ${shown.map(
-                              (evt) =>
-                                html`<ore-badge
-                                  class="cal-dot"
-                                  dot
-                                  size="xs"
-                                  aria-hidden="true"
-                                  :style="${styleMap({
-                                    '--badge-bg': evt.color,
-                                    '--badge-border-color': evt.color,
-                                  })}"></ore-badge>`,
-                            )}
-                            ${
-                              overflow > 0
-                                ? html`<span class="cal-dot-overflow" aria-hidden="true">+${overflow}</span>`
-                                : html``
-                            }
-                          </div>`;
+                            </div>
+                          `;
                         }}
-                      </div>`,
+                      </div>
+                    `,
                   )}
-                </div>`,
+                </div>
+              `,
             );
           }}
         </div>
@@ -575,11 +593,11 @@ define<OreCalendarProps>(CALENDAR_TAG, {
             for (let i = 0; i < cells.length; i += 4) rows.push(cells.slice(i, i + 4));
 
             return rows.map(
-              (row) =>
-                html`<div role="row">
+              (row) => html`
+                <div role="row">
                   ${row.map(
-                    (cell) =>
-                      html`<div
+                    (cell) => html`
+                      <div
                         class="cal-cell cal-cell-month"
                         role="gridcell"
                         :aria-selected="${() => String(cell.isSelected)}"
@@ -591,9 +609,11 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                         @keydown="${(e: KeyboardEvent) =>
                           handleGridKeydown(e, '.cal-cell-month', 4, () => handleSelectMonth(cell.month))}">
                         ${cell.shortLabel}
-                      </div>`,
+                      </div>
+                    `,
                   )}
-                </div>`,
+                </div>
+              `,
             );
           }}
         </div>
@@ -611,11 +631,11 @@ define<OreCalendarProps>(CALENDAR_TAG, {
             for (let i = 0; i < cells.length; i += 4) rows.push(cells.slice(i, i + 4));
 
             return rows.map(
-              (row) =>
-                html`<div role="row">
+              (row) => html`
+                <div role="row">
                   ${row.map(
-                    (cell) =>
-                      html`<div
+                    (cell) => html`
+                      <div
                         class="cal-cell cal-cell-year"
                         role="gridcell"
                         :aria-selected="${() => String(cell.isSelected)}"
@@ -627,9 +647,11 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                         @keydown="${(e: KeyboardEvent) =>
                           handleGridKeydown(e, '.cal-cell-year', 4, () => handleSelectYear(cell.year))}">
                         ${String(cell.year)}
-                      </div>`,
+                      </div>
+                    `,
                   )}
-                </div>`,
+                </div>
+              `,
             );
           }}
         </div>

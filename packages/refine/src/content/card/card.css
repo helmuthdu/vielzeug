@@ -198,7 +198,28 @@
     will-change: transform;
   }
 
-  :host([interactive]:not([disabled]):active) .card {
+  /* `:active` bubbles to every ancestor of whatever element is actually being pressed, so
+     without the `:not(:has(...))` guard, pressing a nested interactive descendant (a swatch
+     button, a slotted `<ore-button>`, a link, etc. — kept in sync with card.ts's
+     `INTERACTIVE_DESCENDANT_SELECTOR`) would *also* visually "press" the whole card even though
+     `handleClick` already ignores the click for activation purposes. `:host(:has(...))`
+     (`:has()` as `:host()`'s functional argument) is invalid — `:host()` only accepts a compound
+     selector and doesn't accept `:has()` inside it, so the bare `:host` pseudo-class chained
+     directly with the rest (no parentheses around it) is used instead — same reasoning as
+     list-item.css's identical `:host:has(...)` rules. */
+  :host[interactive]:not([disabled]):active:not(
+      :has(
+        button:active,
+        a[href]:active,
+        input:active,
+        select:active,
+        textarea:active,
+        summary:active,
+        [role='button']:active,
+        [role='link']:active
+      )
+    )
+    .card {
     box-shadow: var(--_shadow);
     transform: translateY(0) scale(0.99);
     transition:

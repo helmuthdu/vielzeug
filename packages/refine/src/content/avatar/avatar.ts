@@ -139,26 +139,34 @@ define<OreAvatarProps>(AVATAR_TAG, {
       <span class="avatar" part="avatar" :aria-label="${avatarLabel}" :role="${avatarRole}">
         ${() =>
           props.src.value
-            ? html`<img
-                ref="${attachImgListeners}"
-                part="img"
-                :src="${props.src}"
-                :alt="${props.alt}"
-                ?hidden="${() => !showImage.value}"
-                aria-hidden="true" />`
+            ? html`
+                <img
+                  ref="${attachImgListeners}"
+                  part="img"
+                  :src="${props.src}"
+                  :alt="${props.alt}"
+                  ?hidden="${() => !showImage.value}"
+                  aria-hidden="true" />
+              `
             : ''}
         ${() =>
           showInitials.value
-            ? html`<span class="initials" part="initials" aria-hidden="true">${derivedInitials}</span>`
+            ? html`
+                <span class="initials" part="initials" aria-hidden="true">${derivedInitials}</span>
+              `
             : ''}
         ${() =>
           showFallback.value
-            ? html`<ore-icon class="icon-fallback" part="fallback" name="user" size="50%"></ore-icon>`
+            ? html`
+                <ore-icon class="icon-fallback" part="fallback" name="user" size="50%"></ore-icon>
+              `
             : ''}
       </span>
       ${() =>
         props.status.value
-          ? html`<span class="status" part="status" :data-status="${props.status}" aria-hidden="true"></span>`
+          ? html`
+              <span class="status" part="status" :data-status="${props.status}" aria-hidden="true"></span>
+            `
           : ''}
     `;
   },
@@ -247,7 +255,9 @@ define<OreAvatarGroupProps>(AVATAR_GROUP_TAG, {
       <slot></slot>
       ${() =>
         overflowCount.value > 0
-          ? html`<span class="overflow-badge" part="overflow" aria-label="${overflowLabel}"> ${overflowText} </span>`
+          ? html`
+              <span class="overflow-badge" part="overflow" aria-label="${overflowLabel}">${overflowText}</span>
+            `
           : ''}
     `;
   },

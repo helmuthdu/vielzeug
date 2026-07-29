@@ -88,7 +88,11 @@ define<OreAsyncProps>(ASYNC_TAG, {
     });
 
     const renderText = (className: 'title' | 'description', text: Readable<string | undefined> | undefined) => () =>
-      text?.value ? html`<p class="${className}">${text}</p>` : '';
+      text?.value
+        ? html`
+            <p class="${className}">${text}</p>
+          `
+        : '';
 
     // All four regions are always in the shadow DOM — CSS on :host([status="…"])
     // toggles their visibility. This means:
@@ -129,7 +133,7 @@ define<OreAsyncProps>(ASYNC_TAG, {
           () => html`
             <div class="empty-state" role="status">
               <div class="icon">
-                <ore-icon name="inbox" size="100%" stroke-width="1.75" aria-hidden="true"></ore-icon>
+                <ore-icon name="package" size="100%" stroke-width="1.75" aria-hidden="true"></ore-icon>
               </div>
               ${renderText('title', props['empty-label'])} ${renderText('description', props['empty-description'])}
             </div>
