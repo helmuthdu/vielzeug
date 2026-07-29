@@ -202,9 +202,9 @@ define<{ status: TaskStatus }>('board-column', {
             const wipLimit = meta().wipLimit;
 
             return wipLimit && tasksComputed.value.length > wipLimit ? 'true' : null;
-          }}
-          >${() => tasksComputed.value.length}</span
-        >
+          }}>
+          ${() => tasksComputed.value.length}
+        </span>
       </div>
       <div class="board__column-items" ref=${itemsRef}></div>
       ${when(
@@ -214,9 +214,9 @@ define<{ status: TaskStatus }>('board-column', {
             class="board__column-add"
             variant="ghost"
             size="sm"
-            @click=${() => openTaskDialog({ kind: 'create', status: props.status.value })}
-            >+ Add task</ore-button
-          >
+            @click=${() => openTaskDialog({ kind: 'create', status: props.status.value })}>
+            + Add task
+          </ore-button>
         `,
       )}
     `;

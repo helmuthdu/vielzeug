@@ -250,13 +250,13 @@ define('backlog-view', {
       </div>
       <div class="backlog__list-area" ref=${listAreaRef}></div>
       <div class="backlog__pagination">
-        <ore-button variant="bordered" size="sm" ?disabled=${() => !canGoPrev.value} @click=${() => void source.prev()}
-          >${() => t('backlog.prev')}</ore-button
-        >
+        <ore-button variant="bordered" size="sm" ?disabled=${() => !canGoPrev.value} @click=${() => void source.prev()}>
+          ${() => t('backlog.prev')}
+        </ore-button>
         <span class="backlog__pagination-info">${pageInfoText}</span>
-        <ore-button variant="bordered" size="sm" ?disabled=${() => !canGoNext.value} @click=${() => void source.next()}
-          >${() => t('backlog.next')}</ore-button
-        >
+        <ore-button variant="bordered" size="sm" ?disabled=${() => !canGoNext.value} @click=${() => void source.next()}>
+          ${() => t('backlog.next')}
+        </ore-button>
       </div>
     `;
   },

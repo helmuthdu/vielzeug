@@ -30,7 +30,9 @@ define('board-view', {
           // then reconnects it per the DOM spec) for every item, every render, defeating the
           // whole point of the optimization. Fatal for anything that calls `attachInternals()` —
           // e.g. `ore-button` — since that throws the second time it runs.
-          (col) => html`<ore-grid-item><board-column :status=${() => col.value.id}></board-column></ore-grid-item>`,
+          (col) => html`
+            <ore-grid-item><board-column :status=${() => col.value.id}></board-column></ore-grid-item>
+          `,
         )}
       </ore-grid>
     `;

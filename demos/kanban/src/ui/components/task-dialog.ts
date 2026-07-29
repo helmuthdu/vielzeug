@@ -325,17 +325,22 @@ define('task-dialog', {
         <div slot="footer" style="display:flex;justify-content:space-between;width:100%">
           ${when(
             canDelete,
-            () =>
-              html`<ore-button variant="ghost" color="error" @click=${onDeleteRequest}
-                >${() => t('taskDialog.deleteTask')}</ore-button
-              >`,
-            () => html`<span></span>`,
+            () => html`
+              <ore-button variant="ghost" color="error" @click=${onDeleteRequest}>
+                ${() => t('taskDialog.deleteTask')}
+              </ore-button>
+            `,
+            () => html`
+              <span></span>
+            `,
           )}
           <div style="display:flex;gap:var(--size-2)">
             <ore-button variant="bordered" @click=${onCancel}>${() => t('taskDialog.close')}</ore-button>
             ${when(
               canSave,
-              () => html`<ore-button variant="solid" color="primary" @click=${onSave}>${saveLabel}</ore-button>`,
+              () => html`
+                <ore-button variant="solid" color="primary" @click=${onSave}>${saveLabel}</ore-button>
+              `,
             )}
           </div>
         </div>
@@ -350,12 +355,12 @@ define('task-dialog', {
           ${() => t('taskDialog.deleteConfirmBody', { title: editingTask.value?.title ?? t('taskDialog.thisTask') })}
         </p>
         <div slot="footer" style="display:flex;justify-content:flex-end;gap:var(--size-2);width:100%">
-          <ore-button variant="bordered" @click=${onDeleteCancel}
-            >${() => t('taskDialog.deleteConfirmCancel')}</ore-button
-          >
-          <ore-button variant="solid" color="error" @click=${onDeleteConfirm}
-            >${() => t('taskDialog.deleteConfirmConfirm')}</ore-button
-          >
+          <ore-button variant="bordered" @click=${onDeleteCancel}>
+            ${() => t('taskDialog.deleteConfirmCancel')}
+          </ore-button>
+          <ore-button variant="solid" color="error" @click=${onDeleteConfirm}>
+            ${() => t('taskDialog.deleteConfirmConfirm')}
+          </ore-button>
         </div>
       </ore-dialog>
     `;

@@ -10,7 +10,7 @@ import path from 'node:path';
  * Returns an empty map if there's no sibling `packages/` directory (StackBlitz, or anyone who
  * copied just this demo's own folder) — callers fall back to the real npm dependencies.
  *
- * @param demoRoot absolute path to this demo's own directory (e.g. `demos/kanban`)
+ * @param demoRoot absolute path to this demo's own directory (e.g. `demos/eshop`)
  * @returns specifier (e.g. '@vielzeug/ore/directives') -> absolute source path
  */
 export function collectLocalPackageMap(demoRoot: string): Record<string, string> {

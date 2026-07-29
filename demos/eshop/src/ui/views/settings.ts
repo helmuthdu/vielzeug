@@ -1,18 +1,21 @@
 import '@vielzeug/refine/select';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/icon';
+import '@vielzeug/refine/slider';
 import '@vielzeug/refine/accordion';
 import '@vielzeug/refine/accordion-item';
+
 import type { LogEntry } from '@vielzeug/rune';
 
 import { define, each, html, onCleanup, ref, when } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
 
-import { currentUser } from '../../core/board-store';
+import { currentUser } from '../../core/auth';
+import { SUPPORTED_CURRENCIES, currentCurrency, setCurrency } from '../../core/currency';
 import { currentLocale, setLocale, t } from '../../core/i18n';
 import { ringBuffer } from '../../core/logger';
 import { seedUsers } from '../../core/seed-data';
-import { setThemePreference, themePreference } from '../../core/theme';
+import { accentHue, setAccentHue, setThemePreference, themePreference } from '../../core/theme';
 
 const LEVEL_COLORS: Record<string, string> = {
   debug: '#888',
@@ -34,6 +37,7 @@ const THEMES: Array<{ code: 'dark' | 'light' | 'system'; label: () => string }> 
 ];
 
 const USER_OPTIONS = seedUsers.map((user) => ({ label: `${user.name} (${user.role})`, value: user.id }));
+const CURRENCY_OPTIONS = SUPPORTED_CURRENCIES.map((c) => ({ label: c, value: c }));
 
 function formatTimestamp(date: Date): string {
   const hh = String(date.getHours()).padStart(2, '0');
@@ -53,8 +57,6 @@ define('settings-view', {
     function refreshLog(): void {
       logEntries.value = ringBuffer.slice(-50) as LogEntry[];
 
-      // Reflects the DOM `each()` just synchronously updated above (ripple effects run
-      // synchronously on the signal write, same tick) — safe to read the new scrollHeight now.
       const container = logRef.value;
 
       if (container) container.scrollTop = container.scrollHeight;
@@ -85,12 +87,13 @@ define('settings-view', {
           <div class="settings-view__row-text">
             <span class="settings-view__row-label">${() => t('settings.languageLabel')}</span>
           </div>
-          <div class="settings-view__option-buttons" role="group" :aria-label=${() => t('settings.languageLabel')}>
+          <div class="settings-view__option-buttons">
             ${each(
               LANGUAGES,
               (lang) => lang.code,
               (lang) => html`
                 <ore-button
+                  rounded
                   size="sm"
                   :variant=${() => (currentLocale.value === lang.value.code ? 'solid' : 'bordered')}
                   @click=${() => setLocale(lang.value.code)}>
@@ -107,12 +110,13 @@ define('settings-view', {
             <span class="settings-view__row-label">${() => t('settings.themeLabel')}</span>
             <span class="settings-view__row-hint">${() => t('settings.themeHint')}</span>
           </div>
-          <div class="settings-view__option-buttons" role="group" :aria-label=${() => t('settings.themeLabel')}>
+          <div class="settings-view__option-buttons">
             ${each(
               THEMES,
               (theme) => theme.code,
               (theme) => html`
                 <ore-button
+                  rounded
                   size="sm"
                   :variant=${() => (themePreference.value === theme.value.code ? 'solid' : 'bordered')}
                   @click=${() => setThemePreference(theme.value.code)}>
@@ -121,6 +125,30 @@ define('settings-view', {
               `,
             )}
           </div>
+        </div>
+
+        <div class="settings-view__row">
+          <ore-icon name="droplet" size="18" stroke-width="2"></ore-icon>
+          <div class="settings-view__row-text">
+            <span class="settings-view__row-label">${() => t('settings.accentLabel')}</span>
+            <span class="settings-view__row-hint">${() => t('settings.accentHint')}</span>
+          </div>
+          <ore-slider
+            min="0"
+            max="360"
+            :value=${() => accentHue.value}
+            @change=${(e: Event) => setAccentHue((e as CustomEvent<{ value: number }>).detail.value)}></ore-slider>
+        </div>
+
+        <div class="settings-view__row">
+          <ore-icon name="banknote" size="18" stroke-width="2"></ore-icon>
+          <div class="settings-view__row-text">
+            <span class="settings-view__row-label">${() => t('settings.currencyLabel')}</span>
+          </div>
+          <ore-select
+            :options=${CURRENCY_OPTIONS}
+            :value=${() => currentCurrency.value}
+            @change=${(e: Event) => setCurrency((e as CustomEvent<{ values: string[] }>).detail.values[0] as never)}></ore-select>
         </div>
 
         <div class="settings-view__row">
@@ -156,11 +184,6 @@ define('settings-view', {
                 `,
                 () => html`
                   ${each(
-                    // Index as key is normally discouraged (see each()'s own docs) because it
-                    // causes stale DOM reuse across reorders — but these rows are read-only text
-                    // with no per-item state/animation to preserve, `LogEntry` has no natural
-                    // unique id, and entries here only ever append/trim from a fixed-size ring
-                    // buffer (never reorder), so the one caveat that actually matters doesn't apply.
                     logEntries,
                     (_entry, i) => i,
                     (entry) => html`

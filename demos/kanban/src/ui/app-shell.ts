@@ -183,20 +183,21 @@ define('app-shell', {
 
     return html`
       <ore-navbar sticky elevation="1">
-        <span slot="logo" style="font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--color-primary)"
-          >✦ Kanban</span
-        >
+        <span slot="logo" style="font-weight:700;font-size:1.1rem;letter-spacing:-0.02em;color:var(--color-primary)">
+          ✦ Kanban
+        </span>
         ${each(
           VIEWS,
           (route) => route,
           // No leading/trailing whitespace outside the root tag — see the equivalent comment in
           // views/board.ts's `each()` call for why (spurious disconnect/reconnect on every render).
-          (route) =>
-            html`<ore-navbar-item
+          (route) => html`
+            <ore-navbar-item
               ?active=${() => activeRoute.value === route.value}
-              @click=${() => void router.navigate({ name: route.value })}
-              >${() => t(`nav.${route.value}`)}</ore-navbar-item
-            >`,
+              @click=${() => void router.navigate({ name: route.value })}>
+              ${() => t(`nav.${route.value}`)}
+            </ore-navbar-item>
+          `,
         )}
         <!--
           Mirrors the routes/actions above into the mobile-menu slot — ore-navbar hides the
@@ -208,44 +209,45 @@ define('app-shell', {
         ${each(
           VIEWS,
           (route) => route,
-          (route) =>
-            html`<ore-navbar-item
+          (route) => html`
+            <ore-navbar-item
               slot="mobile-menu"
               ?active=${() => activeRoute.value === route.value}
-              @click=${() => void router.navigate({ name: route.value })}
-              >${() => t(`nav.${route.value}`)}</ore-navbar-item
-            >`,
+              @click=${() => void router.navigate({ name: route.value })}>
+              ${() => t(`nav.${route.value}`)}
+            </ore-navbar-item>
+          `,
         )}
-        <ore-navbar-item slot="mobile-menu" ?disabled=${() => !ledger.canUndo.value} @click=${() => void ledger.undo()}
-          ><ore-icon name="undo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
-          ${() => t('action.undo')}</ore-navbar-item
-        >
-        <ore-navbar-item slot="mobile-menu" ?disabled=${() => !ledger.canRedo.value} @click=${() => void ledger.redo()}
-          ><ore-icon name="redo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
-          ${() => t('action.redo')}</ore-navbar-item
-        >
+        <ore-navbar-item slot="mobile-menu" ?disabled=${() => !ledger.canUndo.value} @click=${() => void ledger.undo()}>
+          <ore-icon name="undo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
+          ${() => t('action.undo')}
+        </ore-navbar-item>
+        <ore-navbar-item slot="mobile-menu" ?disabled=${() => !ledger.canRedo.value} @click=${() => void ledger.redo()}>
+          <ore-icon name="redo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
+          ${() => t('action.redo')}
+        </ore-navbar-item>
         <ore-navbar-item slot="mobile-menu" @click=${openPalette}>${() => t('action.search')}</ore-navbar-item>
         <ore-navbar-item slot="mobile-menu" @click=${() => void exportTasksAsCsv()}>
-          ${() => t('action.export')} CSV</ore-navbar-item
-        >
+          ${() => t('action.export')} CSV
+        </ore-navbar-item>
         <div slot="end" style="display:flex;align-items:center;gap:0.5rem">
           <div class="presence-avatars">
             ${each(
               presenceUsers,
               (u) => u.id,
-              (u) =>
-                html`<ore-avatar
+              (u) => html`
+                <ore-avatar
                   size="xs"
                   status="online"
                   :alt=${() => u.value.name}
-                  :initials=${() => initialsFromName(u.value.name)}></ore-avatar>`,
+                  :initials=${() => initialsFromName(u.value.name)}></ore-avatar>
+              `,
             )}
             ${when(
               () => presenceCount.value > 0,
-              () =>
-                html`<span class="presence-count"
-                  >${() => t('presence.viewing', { count: presenceCount.value })}</span
-                >`,
+              () => html`
+                <span class="presence-count">${() => t('presence.viewing', { count: presenceCount.value })}</span>
+              `,
             )}
           </div>
           <ore-button
@@ -254,21 +256,21 @@ define('app-shell', {
             icon-only
             label=${() => t('action.undo')}
             ?disabled=${() => !ledger.canUndo.value}
-            @click=${() => void ledger.undo()}
-            ><ore-icon name="undo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon
-          ></ore-button>
+            @click=${() => void ledger.undo()}>
+            <ore-icon name="undo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
+          </ore-button>
           <ore-button
             variant="ghost"
             size="sm"
             icon-only
             label=${() => t('action.redo')}
             ?disabled=${() => !ledger.canRedo.value}
-            @click=${() => void ledger.redo()}
-            ><ore-icon name="redo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon
-          ></ore-button>
+            @click=${() => void ledger.redo()}>
+            <ore-icon name="redo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
+          </ore-button>
           <ore-button variant="ghost" size="sm" @click=${() => void exportTasksAsCsv()}>
-            ${() => t('action.export')} CSV</ore-button
-          >
+            ${() => t('action.export')} CSV
+          </ore-button>
           <ore-button variant="ghost" size="sm" @click=${openPalette}>${() => t('action.search')} ⌘K</ore-button>
         </div>
       </ore-navbar>

@@ -1,0 +1,1765 @@
+/* ========================================================================
+   Vielzeug Motors demo — global layout + brand styles
+   Built on top of @vielzeug/refine theme tokens. Modeled on real OEM
+   configurator retail sites (Mercedes-Benz Store, BMW's Neuwagensuche): a
+   bright, neutral canvas, restrained color spent only on links/CTAs/selection
+   states, small (2–4px) corner radii, and calm, mostly-static product
+   presentation — not a dark "showroom stage" or a saturated brand palette.
+   ======================================================================== */
+
+:root {
+  --color-primary-hue: 222deg;
+
+  /* Off the training-data-reflex list on purpose (not Inter/Plus Jakarta, refine's own
+     defaults) — see index.html for the font load. One family carries UI, body, and data alike,
+     matching how both reference sites use a single typeface throughout rather than a
+     display/body/mono split. */
+  --font-sans: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Shared easing for this app's own transitions (swatches, hover states) — fast start, no
+     overshoot, matches the skill's "ease-out-quart/quint" motion guidance. */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+
+  /* A small, retail-site corner radius scale — real configurator UI tops out around 3–4px on
+     cards/buttons/inputs, never the 12–24px "app" rounding this demo used before. Overriding
+     refine's own `--rounded-*` scale (rather than only the two custom tokens below) reshapes
+     every refine component — buttons, inputs, selects, dialogs — from one place. */
+  --rounded-sm: 2px;
+  --rounded-md: 3px;
+  --rounded-lg: 3px;
+  --rounded-xl: 4px;
+  --rounded-2xl: 4px;
+  --rounded-3xl: 6px;
+  --radius-control: 3px;
+  --radius-surface: 4px;
+
+  /* `.app-footer`'s own fixed-dark palette — deliberately NOT `--color-contrast-*` (those flip
+     via `light-dark()` with the app's own light/dark theme toggle in Settings). A footer that
+     stays a dark plinth regardless of the shopper's theme choice is the same pattern every
+     reference OEM site uses (Mercedes-Benz Store, BMW's Neuwagensuche): one deliberately dark
+     band at the very bottom, independent of the rest of the page. `--footer-bg`'s 9% lightness
+     is deliberately well below `--color-contrast-50`'s own *dark-mode* value (`oklch(17% ...)`,
+     theme.css) — an earlier 18% sat almost exactly on top of it, so the footer band all but
+     disappeared into the page canvas whenever the shopper switched to dark mode in Settings;
+     9% keeps it reading as a distinct, deliberately darker plinth in both themes. */
+  --footer-bg: oklch(9% 0.006 var(--color-primary-hue));
+  --footer-ink: oklch(97% 0.002 var(--color-primary-hue));
+  --footer-ink-muted: oklch(66% 0.01 var(--color-primary-hue));
+  --footer-divider: oklch(24% 0.01 var(--color-primary-hue));
+}
+
+html,
+body {
+  height: 100dvh;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--text-color-body);
+  background: var(--color-contrast-50);
+}
+
+#app {
+  display: contents;
+}
+
+.brand-logo {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-color-heading);
+  letter-spacing: -0.01em;
+}
+
+/* Fixed to the viewport height (not `min-height`) — `.app-main` below is the one scrolling
+   region. A `min-height` shell lets its content grow past the viewport and pushes scrolling onto
+   `document`/`body` instead, which silently defeats `.app-main`'s own `overflow: auto` and any
+   `position: sticky` element inside it (sticky resolves against the nearest ancestor that
+   actually scrolls, not the visually-scrolling one) — exactly the bug that broke
+   `.configurator__sticky-bar` until this was fixed. */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+
+/* The scroll container only — full-bleed edge to edge, so a full-width child (`.app-footer`)
+   can paint corner to corner. `.app-content` below carries the max-width/centering/padding that
+   used to live here, wrapping only the per-route view. */
+.app-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+
+.app-content {
+  width: 100%;
+  max-width: var(--size-7xl);
+  padding: var(--size-5) var(--size-6) var(--size-10);
+  margin: 0 auto;
+}
+
+/* Pinned to the bottom of `.app-main` via `margin-top: auto` on its flex column — the standard
+   sticky-footer trick, so the footer sits right after the page content once it's tall enough to
+   scroll, or sinks to the bottom of the viewport on short pages (Settings, an empty cart)
+   instead of leaving a dead gap beneath it. Full-bleed (background spans the whole scroll
+   container, not just `.app-content`'s column) — `.app-footer__inner` below re-applies
+   `.app-content`'s own max-width/padding so the footer's columns line up with the page content
+   above it, without the dark band itself stopping short of the viewport edges. */
+.app-footer {
+  flex-shrink: 0;
+  margin-top: auto;
+  background: var(--footer-bg);
+  border-top: 1px solid var(--footer-divider);
+}
+
+.app-footer__inner {
+  max-width: var(--size-7xl);
+  padding: var(--size-8) var(--size-6) var(--size-6);
+  margin: 0 auto;
+}
+
+.app-footer__grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.6fr) repeat(3, minmax(120px, 1fr));
+  gap: var(--size-8) var(--size-6);
+}
+
+.app-footer__brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+  max-width: 320px;
+}
+
+.app-footer__brand .brand-logo {
+  color: var(--footer-ink);
+}
+
+.app-footer__tagline {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--footer-ink-muted);
+}
+
+.app-footer__blurb {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed, 1.5);
+  color: var(--footer-ink-muted);
+}
+
+.app-footer__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-3);
+}
+
+.app-footer__heading {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--footer-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.app-footer__links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+}
+
+/* Plain-text nav, not `ore-button` — a footer link list reads as a set of destinations, not a
+   row of actions, and full button chrome (padding/border/background) here would look heavier
+   than every reference OEM footer this demo's own design brief is modeled on. */
+.app-footer__link {
+  padding: 0;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--footer-ink-muted);
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
+  transition: color 150ms var(--ease-out-quart);
+}
+
+.app-footer__link:hover {
+  color: var(--footer-ink);
+}
+
+.app-footer__link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.app-footer__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2) var(--size-6);
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: var(--size-6);
+  margin-top: var(--size-8);
+  border-top: 1px solid var(--footer-divider);
+}
+
+.app-footer__copyright,
+.app-footer__disclaimer {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--footer-ink-muted);
+}
+
+.navbar-end {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+}
+
+/* ── Catalog ───────────────────────────────────────────────────────────── */
+
+.catalog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-6);
+}
+
+.catalog__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4);
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: var(--size-4);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.catalog__header h1 {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  color: var(--text-color-heading);
+  letter-spacing: -0.01em;
+}
+
+.catalog__count {
+  margin: var(--size-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-color-tertiary);
+}
+
+.catalog__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-3);
+  align-items: center;
+}
+
+.catalog__search {
+  min-width: 240px;
+}
+
+.catalog__sort {
+  min-width: 200px;
+}
+
+/* ── Catalog hero (the one deliberate break in the grid rhythm — see catalog.ts) ────────── */
+
+.catalog__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: var(--size-6) var(--size-8);
+  align-items: center;
+  padding: var(--size-6);
+  background: var(--color-contrast-100);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.catalog__hero-media car-silhouette {
+  width: 100%;
+}
+
+.catalog__hero-segment {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+}
+
+.catalog__hero-name {
+  margin: var(--size-1) 0 0;
+  font-size: var(--text-3xl);
+  font-weight: 300;
+  color: var(--text-color-heading);
+  letter-spacing: -0.01em;
+}
+
+.catalog__hero-tagline {
+  margin: var(--size-2) 0 0;
+  color: var(--text-color-secondary);
+}
+
+.catalog__hero-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4) var(--size-6);
+  padding: var(--size-4) 0;
+  margin-top: var(--size-4);
+  border-top: 1px solid var(--color-divider);
+}
+
+.catalog__hero-actions {
+  display: flex;
+  gap: var(--size-3);
+  margin-top: var(--size-4);
+}
+
+/* `ore-card`'s own `elevation`/default-variant rules own every border/background/shadow pixel
+   here — this class only ever contributes layout. Painting a second border/background directly
+   on the host (the previous approach) stacked a mismatched-radius box behind the primitive's
+   own and left an unused `backdrop-filter` blurring nothing. */
+.model-card {
+  display: flex;
+  height: 100%;
+}
+
+.model-card__surface {
+  height: 100%;
+}
+
+.model-card__media {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: var(--aspect-photo);
+  background: var(--color-contrast-100);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.model-card__media car-silhouette {
+  width: 88%;
+}
+
+/* Hidden until the card's hovered/focused — a preview affordance, not something that should
+   compete with the photo at rest. `focus-within` (not just `:hover`) so tabbing a swatch into
+   view works without a pointer, matching `spec-tooltip`'s own pointer-or-focus reveal pattern. */
+.model-card__swatches {
+  position: absolute;
+  bottom: var(--size-2);
+  left: 0;
+  display: flex;
+  gap: var(--size-1-5);
+  justify-content: center;
+  width: 100%;
+  padding: var(--size-1-5) var(--size-2);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms var(--ease-out-quart);
+}
+
+.model-card__media:hover .model-card__swatches,
+.model-card__media:focus-within .model-card__swatches {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.model-card__name {
+  margin: var(--size-0-5) 0 0;
+}
+
+.model-card__tagline {
+  margin: var(--size-1) 0 0;
+}
+
+.model-card__specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-1) var(--size-4);
+}
+
+.model-card__footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-0-5);
+}
+
+.model-card__price {
+  font-variant-numeric: tabular-nums;
+}
+
+.model-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2);
+  width: 100%;
+}
+
+.model-card__view-btn {
+  flex: 1;
+}
+
+/* ── Compare drawer (global — see ui/components/compare-drawer.ts) ───────
+   No dedicated page: a compact drag-reorderable chip row for managing the
+   selection, then the full spec comparison below it, laid out with
+   `ore-grid`'s `responsive` auto-fit mode so it collapses to one column on
+   narrow/mobile drawers instead of forcing a horizontally-scrolling table. */
+
+.compare-drawer__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2);
+  margin-bottom: var(--size-4);
+}
+
+.compare-drawer__chip {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+  padding: var(--size-1-5) var(--size-2);
+  cursor: grab;
+  background: var(--color-contrast-100);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-control);
+}
+
+.compare-drawer__chip-name {
+  font-size: var(--text-sm);
+}
+
+.compare-drawer__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-3);
+  padding: var(--size-4);
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.compare-drawer__card-name {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--text-color-heading);
+}
+
+.compare-drawer__specs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+  margin: 0;
+}
+
+.compare-drawer__spec-row {
+  display: flex;
+  gap: var(--size-3);
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: var(--size-2);
+  font-size: var(--text-sm);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.compare-drawer__spec-row dt {
+  color: var(--text-color-tertiary);
+}
+
+.compare-drawer__spec-row dd {
+  margin: 0;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-color-heading);
+  text-align: right;
+}
+
+.compare-drawer__toolbar {
+  display: flex;
+  gap: var(--size-2);
+  margin-bottom: var(--size-3);
+}
+
+/* "Best value" is a color+weight cue on the value itself, not a second badge/background —
+   consistent with this app's overall restraint on decorative chrome (see `:root`'s own comment
+   on where color gets spent). */
+.compare-drawer__spec-row--best dd {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+/* ── Configurator ──────────────────────────────────────────────────────── */
+
+/* `container-type: inline-size` makes `.configurator` itself the query container the
+   `@container` rule below measures — deliberately matching what `ore-navbar`'s own mobile
+   detection measures for `.configurator__sticky-bar` (its nearest non-`ore-grid-item` ancestor,
+   resolved via `resolveContainerElement()`), which is *this* element. A `@media (width <= …)`
+   viewport query here was measuring something different: the navbar collapses to its mobile
+   mode off its container's width, not the viewport's, and `.app-content`'s own padding makes
+   that container narrower than the viewport — around 45px narrower at this app's current spacing.
+   That gap was enough for the navbar to flip into mobile mode (hiding the spec sheet, running
+   total, and "Add to cart") at viewport widths still comfortably above a `768px` viewport media
+   query's threshold, with no fallback yet visible to replace it — a real dead zone confirmed live
+   between roughly 769–844px viewport width. Querying the same container the navbar measures
+   closes that gap structurally instead of chasing the exact pixel offset. */
+.configurator {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+  gap: var(--size-4) var(--size-8);
+  container-type: inline-size;
+}
+
+/* Full width (`grid-column: 1 / -1`) — the photo is the reason a shopper opened this page.
+   `.configurator__intro` is nested inside it (not a sibling underneath) and pinned to the bottom
+   left corner, the same caption placement the reference OEM hero shots (Mercedes-Benz Store,
+   BMW's Neuwagensuche) use over a product photo instead of a plain line of text below it. */
+.configurator__hero {
+  position: relative;
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: center;
+  padding: var(--size-6);
+  background: var(--color-contrast-100);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+/* A corner-anchored radial scrim, not a full-width gradient bar — it only needs to guarantee the
+   caption's own contrast against whatever paint color happens to sit behind it, not dim the
+   photo generally. Sized/positioned off the caption's own box, so it travels with the text
+   instead of needing separate tuning. */
+.configurator__intro {
+  position: absolute;
+  bottom: var(--size-5);
+  left: var(--size-5);
+  max-width: min(360px, calc(100% - var(--size-10)));
+  padding: var(--size-4) var(--size-5) var(--size-3);
+  background: radial-gradient(120% 140% at 0% 100%, var(--color-contrast-100) 45%, transparent 80%);
+}
+
+.configurator__intro h1 {
+  margin: 0;
+  font-size: var(--text-3xl);
+  font-weight: 300;
+  color: var(--text-color-heading);
+  letter-spacing: -0.01em;
+}
+
+.configurator__tagline {
+  margin: var(--size-1) 0 0;
+  color: var(--text-color-secondary);
+}
+
+/* Lives inside `.configurator__sticky-bar` now (not its own full-width strip) — one row that
+   carries model name, specs, running total, and the CTA together, instead of two separate
+   full-width bars stacked back to back. Compact single-line label+value pairs, sized for a
+   ~48px bar rather than the stacked card layout a standalone spec sheet would use. */
+.configurator__specs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.spec {
+  display: flex;
+  gap: var(--size-1);
+  align-items: baseline;
+  padding-inline: var(--size-3);
+  white-space: nowrap;
+  border-inline-start: 1px solid var(--color-divider);
+}
+
+.spec:first-child {
+  padding-inline-start: 0;
+  border-inline-start: none;
+}
+
+.model-card__specs .spec {
+  flex-direction: column;
+}
+
+.spec__label {
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+}
+
+/* `ore-navbar`'s own `sticky` mode owns position/z-index (the same primitive the app shell's
+   main nav renders with) — but re-themed via its own cssprops + `::part()` so it reads as this
+   page's own compact summary strip, not a second copy of the main nav's translucent glass bar
+   (same height, same blur, same bg made the two visually indistinguishable — a real "duplicate
+   header" tell). Solid surface color (no blur), a shorter bar, and a primary-colored top edge
+   instead. */
+.configurator__sticky-bar {
+  --navbar-height: var(--size-12);
+  --navbar-bg: var(--color-contrast-50);
+  --navbar-backdrop-filter: none;
+  --navbar-border-color: transparent;
+
+  grid-column: 1 / -1;
+  padding: var(--size-2);
+  background-color: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--rounded-md);
+}
+
+.configurator__sticky-bar::part(sticky) {
+  border: 1px solid var(--color-divider);
+}
+
+.configurator__sticky-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  color: var(--text-color-heading);
+  white-space: nowrap;
+}
+
+.configurator__sticky-total {
+  display: flex;
+  flex: 1;
+  gap: var(--size-2);
+  align-items: baseline;
+  justify-content: flex-end;
+  padding-inline-start: var(--size-4);
+  font-variant-numeric: tabular-nums;
+  border-inline-start: 1px solid var(--color-divider);
+}
+
+.configurator__sticky-total-label {
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+}
+
+/* Hidden by default — shown only below the `768px` breakpoint (see the media query at the
+   bottom of this file), where it replaces `.configurator__sticky-bar` entirely. Real
+   `position: fixed` (not `sticky`): it needs to pin to the actual viewport regardless of which
+   ancestor is the scrolling container, the opposite of the desktop bar's `sticky` mode, which
+   only ever resolves against `.app-main`. */
+.configurator__mobile-bar {
+  display: none;
+}
+
+.configurator__section {
+  grid-column: 1 / -1;
+  padding-top: var(--size-4);
+  border-top: 1px solid var(--color-divider);
+}
+
+.configurator__section h2 {
+  margin: 0 0 var(--size-3);
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.configurator__helper {
+  margin: var(--size-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-color-tertiary);
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2);
+}
+
+.swatch {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  cursor: pointer;
+  background: var(--swatch-color);
+  border: 1px solid var(--color-divider);
+  border-radius: 999px;
+  transition:
+    transform 200ms var(--ease-out-quart),
+    box-shadow 200ms var(--ease-out-quart);
+}
+
+.swatch:hover {
+  transform: scale(1.08);
+}
+
+/* The two hand-rolled JS animations (`animated-price`, `car-silhouette`'s repaint) already gate
+   on `prefersReducedMotion()` via `core/motion.ts` — this CSS-only hover transform can't reach
+   that JS check, so it needs its own media query to honor the same preference. */
+@media (prefers-reduced-motion: reduce) {
+  .swatch:hover {
+    transform: none;
+  }
+}
+
+/* Distinct from the selected-state outline below (`--text-color-heading`, "this is picked") —
+   this is "this has keyboard focus", so it borrows the app's own primary-color token instead of
+   the browser's unstyled default blue ring. */
+.swatch:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.swatch[aria-checked='true'] {
+  outline: 2px solid var(--text-color-heading);
+  outline-offset: 2px;
+}
+
+/* Compact variant for the model card's hover swatch strip — the full 28px size (tuned for the
+   configurator's own dedicated "Paint" section) crowds a small photo overlay once a model has
+   5-6 colors. Deliberately NOT bumped to the 44px touch target below: it's a secondary preview
+   only (hover/focus-revealed, not the primary decision point), and the same color choice is
+   always available at full touch-target size in the configurator's own Paint section — a real,
+   equivalent-size control exists elsewhere for the one action this swatch performs. */
+.swatch--sm {
+  width: 18px;
+  height: 18px;
+}
+
+/* The Paint picker is a required, primary configurator decision — at 28px (fine-pointer size)
+   it falls short of the 44px touch-target minimum for the coarse pointers (touch) that make up
+   most mobile traffic. `pointer: coarse` (not a viewport-width breakpoint): a touchscreen
+   laptop at desktop width has the same thumb/finger precision problem a phone does. */
+@media (pointer: coarse) {
+  .swatches {
+    gap: var(--size-3);
+  }
+
+  .swatch {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.package-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2);
+  margin-bottom: var(--size-3);
+}
+
+/* Financing and Price breakdown are the same decision (see model-detail.ts) — side by side on
+   desktop, in matched panels, instead of two stacked sections that read as unrelated. The whole
+   row still needs to read as a deliberate stop rather than a continuation of the option-to-option
+   rhythm above it, the same job `margin-top` (well past the page's ambient inter-section gap) did
+   here before this became a two-panel row. */
+.configurator__summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-column: 1 / -1;
+  gap: var(--size-4) var(--size-8);
+  align-items: start;
+  padding-top: var(--size-8);
+  margin-block: var(--size-4);
+  border-top: 1px solid var(--color-divider);
+}
+
+.configurator__summary h2 {
+  margin: 0 0 var(--size-3);
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+/* `--color-contrast-200` — one step deeper than `.feature-card`'s own `--color-contrast-100` —
+   so this row is a visibly different surface, not the same gray box the feature grid just used. */
+.configurator__finance,
+.configurator__breakdown {
+  padding: var(--size-5);
+  background: var(--color-contrast-100);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.configurator__breakdown dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--size-1) var(--size-4);
+}
+
+.configurator__breakdown dt,
+.configurator__breakdown dd {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.configurator__breakdown dd {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.configurator__breakdown .total {
+  padding-top: var(--size-2);
+  font-size: var(--text-lg);
+  font-weight: 500;
+  border-top: 1px solid var(--color-divider);
+}
+
+/* Capped, not full-bleed — at wide desktop widths the breakdown panel is easily 1000px+ wide,
+   and full-width buttons stretched across all of it (900px+ "Add to cart") read as an
+   unintentional layout bug, not a considered CTA. Full-width returns on tablet/mobile (see the
+   `900px` breakpoint below), where edge-to-edge buttons are the right call for touch. */
+.configurator__actions {
+  display: flex;
+  gap: var(--size-3);
+  margin-top: var(--size-3);
+}
+
+.configurator__actions ore-button {
+  flex: 1;
+}
+
+.configurator__actions ore-button[color='primary'] {
+  flex: 1;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--size-3);
+}
+
+.feature-card {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+  padding: var(--size-3) var(--size-4);
+  font-size: var(--text-sm);
+  color: var(--text-color-heading);
+  background: var(--color-contrast-100);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.feature-card ore-icon {
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+/* Stacked, not a side-by-side row — down payment, term, and the monthly estimate are read in
+   that order (input, input, result), and a vertical stack keeps each control full-width and
+   scannable instead of three cramped columns competing for the panel's width. */
+.finance-calculator {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4);
+}
+
+.finance-calculator__result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--size-2) var(--size-4);
+  text-align: left;
+  background: var(--color-contrast-100);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.finance-calculator__result strong {
+  font-size: var(--text-xl);
+  font-variant-numeric: tabular-nums;
+}
+
+/* `ore-number-input`'s stepper buttons default to a fine-pointer-sized 24px — same touch-target
+   gap as the paint swatches above, fixed the same way via the parts refine exposes for exactly
+   this (`decrement-btn`/`increment-btn`), no change to the shared component needed. */
+@media (pointer: coarse) {
+  .finance-calculator ore-number-input::part(decrement-btn),
+  .finance-calculator ore-number-input::part(increment-btn) {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.finance-calculator__result strong span {
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--text-color-tertiary);
+}
+
+.finance-calculator__result span:first-child {
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+}
+
+.related-models {
+  display: flex;
+  gap: var(--size-4);
+  padding-bottom: var(--size-2);
+  overflow-x: auto;
+}
+
+.related-models model-card {
+  flex: 0 0 320px;
+}
+
+.configurator--not-found {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-3);
+  align-items: center;
+  padding: var(--size-10) var(--size-6);
+  text-align: center;
+}
+
+.configurator--not-found h2 {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  color: var(--text-color-heading);
+}
+
+.configurator--not-found p {
+  max-width: 40ch;
+  margin: 0;
+  color: var(--text-color-secondary);
+}
+
+/* ── Cart ──────────────────────────────────────────────────────────────── */
+
+.cart-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-5);
+  max-width: var(--size-4xl);
+  margin: 0 auto;
+}
+
+.cart-line {
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
+  gap: var(--size-4);
+  align-items: center;
+  padding: var(--size-4);
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.cart-line car-silhouette {
+  width: 100%;
+}
+
+.cart-line__info h3 {
+  margin: 0 0 var(--size-1);
+  font-weight: 500;
+}
+
+.cart-line__config {
+  margin: 0 0 var(--size-2);
+  font-size: var(--text-sm);
+  color: var(--text-color-tertiary);
+}
+
+.cart-line__price {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+  align-items: flex-end;
+  text-align: right;
+}
+
+.cart-line__price strong {
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.cart-view__promo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2);
+  align-items: center;
+}
+
+.cart-view__summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4);
+  padding: var(--size-5);
+  background: var(--color-contrast-100);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.cart-view__summary dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--size-1);
+  margin: 0;
+}
+
+.cart-view__summary dt,
+.cart-view__summary dd {
+  margin: 0;
+}
+
+.cart-view__summary dd {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.cart-view__summary .total {
+  padding-top: var(--size-2);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  border-top: 1px solid var(--color-divider);
+}
+
+/* ── Checkout ──────────────────────────────────────────────────────────── */
+
+.checkout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-5);
+  max-width: var(--size-3xl);
+  margin: 0 auto;
+}
+
+.checkout-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4);
+}
+
+.checkout-form__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--size-4);
+}
+
+.checkout-form__hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+}
+
+.checkout-actions {
+  display: flex;
+  justify-content: space-between;
+  padding-top: var(--size-4);
+  border-top: 1px solid var(--color-divider);
+}
+
+/* Shared by `ui/views/checkout.ts`'s in-progress stepper and `ui/components/order-timeline.ts`'s
+   read-only, already-placed-order equivalent — same track/marker/label shape, driven by a
+   `data-state="done" | "active" | "upcoming"` attribute on each `__step` rather than a modifier
+   class, since both callers already compute that state as a plain string. */
+.checkout-stepper {
+  display: flex;
+  padding: 0;
+  margin: 0 0 var(--size-2);
+  list-style: none;
+}
+
+.checkout-stepper__step {
+  display: flex;
+  flex: 1;
+  gap: var(--size-2);
+  align-items: center;
+}
+
+.checkout-stepper__step:not(:last-child)::after {
+  flex: 1;
+  height: 1px;
+  content: '';
+  background: var(--color-divider);
+}
+
+.checkout-stepper__marker {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+
+  /* Secondary, not tertiary — at this 12px/non-bold size, tertiary's dark-mode contrast against
+     this same background dips just under the 4.5:1 body-text minimum. */
+  color: var(--text-color-secondary);
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: 999px;
+}
+
+.checkout-stepper__step[data-state='done'] .checkout-stepper__marker {
+  color: var(--color-primary-content);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.checkout-stepper__step[data-state='active'] .checkout-stepper__marker {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.checkout-stepper__label {
+  font-size: var(--text-sm);
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+}
+
+.checkout-stepper__step[data-state='active'] .checkout-stepper__label,
+.checkout-stepper__step[data-state='done'] .checkout-stepper__label {
+  color: var(--text-color-heading);
+}
+
+.order-timeline {
+  margin: var(--size-2) 0;
+}
+
+.order-timeline .checkout-stepper__step:not(:last-child)::after {
+  margin-inline: var(--size-1);
+}
+
+.order-timeline__cancelled {
+  margin: var(--size-2) 0;
+  font-size: var(--text-sm);
+  color: var(--color-error);
+}
+
+.checkout-delivery,
+.checkout-tradein {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-3);
+  padding-top: var(--size-4);
+  border-top: 1px solid var(--color-divider);
+}
+
+.checkout-delivery h2,
+.checkout-tradein h2 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.checkout-tradein__photos {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+  padding: var(--size-3) var(--size-4);
+  font-size: var(--text-sm);
+  color: var(--text-color-tertiary);
+  background: var(--color-contrast-100);
+  border: 1px dashed var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.checkout-review__lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+}
+
+.checkout-review__line {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--size-2) 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.checkout-review__line strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.checkout-review__total {
+  display: flex;
+  justify-content: space-between;
+  padding-top: var(--size-2);
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 500;
+}
+
+.checkout-review__total dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.checkout-review__address {
+  font-size: var(--text-sm);
+  color: var(--text-color-secondary);
+}
+
+.checkout-review__financing {
+  padding: var(--size-4);
+  background: var(--color-contrast-100);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.checkout-review__financing h2 {
+  margin: 0 0 var(--size-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.checkout-review__financing dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--size-1) var(--size-4);
+  margin: 0;
+}
+
+.checkout-review__financing dt,
+.checkout-review__financing dd {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.checkout-review__financing dd {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ── Orders / Admin shared order-card ─────────────────────────────────── */
+
+.orders-view,
+.admin-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-5);
+}
+
+.orders-view__list,
+.admin__orders {
+  display: grid;
+
+  /* `min(320px, 100%)` instead of a bare `320px` floor — keeps the card grid from forcing
+     horizontal overflow on narrow phones (~360px viewport minus this page's own inline padding
+     leaves less than 320px of content width) while still preferring 320px+ columns everywhere
+     else. */
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: var(--size-4);
+}
+
+/* `.orders-view__list` is a `<ul>` (screen readers get list/item-count context when scanning
+   many orders) — reset the browser's default list box styling since each `<li>` already
+   supplies its own visual shape (an `<ore-card>` for `orders-view`, `.order-card` below for
+   `admin.ts`'s compact rows). */
+ul.orders-view__list {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+/* `admin.ts`'s compact order-row chrome only — `orders-view`'s customer-facing cards moved to
+   `<ore-card>` (see `.order-card__surface` below); this block stays for the admin table view,
+   whose header/id/meta classes it still shares with orders-view's markup. */
+
+.orders-view__empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4);
+  align-items: center;
+}
+
+.order-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+  padding: var(--size-4);
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.order-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.order-card__header-left {
+  display: flex;
+  gap: var(--size-2);
+  align-items: center;
+}
+
+.order-card__id {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--text-color-secondary);
+}
+
+.order-card__meta {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-color-secondary);
+}
+
+.order-card__items {
+  padding: 0;
+  margin: 0;
+  font-size: var(--text-sm);
+  list-style: none;
+}
+
+/* `orders-view` only — `.order-card` above stays a plain chrome-bearing div for `admin.ts`'s
+   compact order rows, but the customer-facing list renders each order through `<ore-card>`
+   instead (richer footer/actions affordances warrant the primitive's real slot structure). Same
+   convention as `.model-card__surface`: this class only ever contributes layout — `ore-card`'s
+   own `elevation`/default-variant rules own every border/background/shadow pixel. */
+.order-card__surface {
+  height: 100%;
+}
+
+.order-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+}
+
+.order-card__price {
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.order-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2);
+  justify-content: flex-end;
+  width: 100%;
+}
+
+/* ── Orders — current-order spotlight ─────────────────────────────────────
+   The one order most relevant right now (see `pickCurrentOrder` in
+   `ui/views/orders.ts`) gets the same overlay-caption hero treatment as
+   `.configurator__hero`/`.configurator__intro` — a full-width product shot
+   with the headline/status/meta scrimmed into its bottom-left corner —
+   instead of just another card in the grid below. */
+.order-spotlight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4);
+}
+
+.order-spotlight__hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  padding: var(--size-6);
+  background: var(--color-contrast-100);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.order-spotlight__hero car-silhouette {
+  width: min(420px, 60%);
+}
+
+.order-spotlight__intro {
+  position: absolute;
+  bottom: var(--size-5);
+  left: var(--size-5);
+  max-width: min(380px, calc(100% - var(--size-10)));
+  padding: var(--size-4) var(--size-5) var(--size-3);
+  background: radial-gradient(120% 140% at 0% 100%, var(--color-contrast-100) 45%, transparent 80%);
+}
+
+.order-spotlight__eyebrow {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-color-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.order-spotlight__headline {
+  margin: var(--size-1) 0 0;
+  font-size: var(--text-3xl);
+  font-weight: 300;
+  color: var(--text-color-heading);
+  letter-spacing: -0.01em;
+}
+
+.order-spotlight__subline {
+  margin: var(--size-1) 0 0;
+  color: var(--text-color-secondary);
+}
+
+.order-spotlight__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-1) var(--size-4);
+  margin: var(--size-3) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-color-secondary);
+}
+
+.order-spotlight__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+  gap: var(--size-4) var(--size-6);
+}
+
+.order-spotlight__panels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4);
+}
+
+.order-spotlight__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-3);
+  padding: var(--size-5);
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.order-spotlight__panel h3 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--text-color-heading);
+}
+
+.order-spotlight__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-3);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.order-spotlight__item {
+  display: flex;
+  gap: var(--size-3);
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: var(--size-3);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.order-spotlight__item:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.order-spotlight__item-name {
+  margin: 0;
+  font-weight: 500;
+  color: var(--text-color-heading);
+}
+
+.order-spotlight__item-config {
+  margin: var(--size-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-color-secondary);
+}
+
+/* `.configurator__breakdown` (see the configurator section above) supplies the surface chrome
+   and `dl` grid — this modifier only adds the spotlight's own action row underneath it. */
+.order-spotlight__pricing h3 {
+  margin: 0 0 var(--size-2);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--text-color-heading);
+}
+
+.order-spotlight__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2);
+  margin-top: var(--size-4);
+}
+
+.order-spotlight__actions ore-button {
+  flex: 1;
+}
+
+/* ── Orders — previous purchases (the pre-existing card grid, now demoted below the spotlight) */
+.orders-view__previous {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4);
+}
+
+/* ── Admin ─────────────────────────────────────────────────────────────── */
+
+.admin__chart-section {
+  padding: var(--size-5);
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.admin__chart {
+  position: relative;
+  height: 220px;
+}
+
+.admin__toolbar {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+}
+
+.admin__toolbar ore-input {
+  flex: 1;
+}
+
+.admin__bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-3);
+  align-items: center;
+  padding: var(--size-3) var(--size-4);
+  background: var(--color-contrast-100);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.admin__bulk-bar ore-select {
+  min-width: 180px;
+}
+
+.admin__pagination {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Share build dialog ────────────────────────────────────────────────── */
+
+.share-build__preview {
+  min-height: 220px;
+  margin-bottom: var(--size-3);
+  overflow: hidden;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.share-build__preview iframe {
+  width: 100%;
+  height: 220px;
+  border: 0;
+}
+
+/* ── Settings (shared with kanban demo's layout conventions) ────────────── */
+
+.settings-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-5);
+  max-width: 560px;
+}
+
+.settings-view h1 {
+  margin: 0 0 var(--size-2);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+}
+
+.settings-view__group {
+  padding: var(--size-5) var(--size-6);
+  background: var(--color-contrast-50);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-surface);
+}
+
+.settings-view h2 {
+  margin: 0 0 var(--size-1);
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.settings-view__row {
+  display: flex;
+  gap: var(--size-3);
+  align-items: center;
+  padding: var(--size-4) 0;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.settings-view__row:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.settings-view__row > ore-icon {
+  flex-shrink: 0;
+  color: var(--text-color-tertiary);
+}
+
+.settings-view__row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.settings-view__row-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.settings-view__row-hint {
+  font-size: var(--text-xs);
+  color: var(--text-color-tertiary);
+}
+
+.settings-view__option-buttons {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--size-2);
+}
+
+.settings-view__debug-log {
+  max-height: 280px;
+  padding: var(--size-2);
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  background: #111;
+  border-radius: var(--rounded-md);
+}
+
+.settings-view__debug-entry {
+  display: flex;
+  gap: var(--size-2);
+  padding: 2px 0;
+  font-size: var(--text-xs);
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.settings-view__debug-ts {
+  color: #666;
+  white-space: nowrap;
+}
+
+.settings-view__debug-level {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.settings-view__debug-msg {
+  color: #ddd;
+  overflow-wrap: anywhere;
+}
+
+.settings-view__debug-empty {
+  padding: var(--size-2);
+  font-size: var(--text-sm);
+  color: var(--text-color-tertiary);
+}
+
+@media (width <= 900px) {
+  /* `minmax(0, 1fr)`, not bare `1fr` — a bare `1fr` track's automatic minimum width is
+     content-based (`auto`), so `.related-models`' horizontal-scroll row (fixed 260px cards,
+     `overflow-x: auto`) was forcing this *whole* single-column track — and everything else
+     inside it, including the price breakdown and its buttons — to grow to the cards' combined
+     width instead of the viewport's. `overflow: auto` alone doesn't stop a descendant's
+     max-content size from propagating up through a grid track; only zeroing the track's own
+     minimum does. Verified live: this was the exact cause of `.configurator__breakdown`
+     rendering ~810px wide on a 390px viewport. */
+  .configurator {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .configurator__summary {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog__hero {
+    grid-template-columns: 1fr;
+  }
+
+  .order-spotlight__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .order-spotlight__hero car-silhouette {
+    width: 80%;
+  }
+
+  .checkout-form__row {
+    grid-template-columns: 1fr;
+  }
+
+  .configurator__actions {
+    max-width: none;
+  }
+
+  .app-footer__grid {
+    grid-template-columns: minmax(0, 1.6fr) repeat(2, minmax(0, 1fr));
+  }
+
+  .app-footer__brand {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+}
+
+@media (width <= 640px) {
+  /* Markers + connecting line still communicate progress on a narrow viewport — the text labels
+     are the part that crowds four-to-five steps onto one line. */
+  .checkout-stepper__label {
+    display: none;
+  }
+
+  .app-footer__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--size-6);
+  }
+
+  .app-footer__bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Matches `ore-navbar`'s own default `breakpoint` prop (`(max-width: 768px)`) exactly, so the
+   configurator's mobile bar takes over at the same width the desktop sticky bar's spec sheet
+   would otherwise start getting cramped. */
+
+/* Matches `ore-navbar`'s own default `breakpoint` prop `(max-width: 768px)` — but as a
+   `@container` query against `.configurator` (see its own comment above), not a viewport
+   `@media` query, since that's what the navbar itself actually measures for this instance. */
+@container (width <= 768px) {
+  .configurator__sticky-bar {
+    display: none;
+  }
+
+  /* Clears the fixed mobile bar so the last section (Related Models) isn't hidden behind it. */
+  .configurator {
+    padding-bottom: calc(var(--size-20) + env(safe-area-inset-bottom));
+  }
+
+  .configurator__mobile-bar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--z-fixed);
+    display: flex;
+    gap: var(--size-4);
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--size-3) var(--size-4);
+    padding-bottom: calc(var(--size-3) + env(safe-area-inset-bottom));
+    background: var(--color-contrast-50);
+    border-top: 1px solid var(--color-divider);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .configurator__mobile-bar-total {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+}

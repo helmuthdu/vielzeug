@@ -96,14 +96,16 @@ define<TaskCardProps>('task-card', {
           :label=${() => task().priority}
           :color=${() => PRIORITY_COLOR[task().priority]}
           variant="flat"
-          size="sm"
-          >${() => task().priority}</ore-chip
-        >
+          size="sm">
+          ${() => task().priority}
+        </ore-chip>
         <span class="task-card__title">${() => task().title}</span>
       </div>
       ${when(
         () => Boolean(task().description),
-        () => html`<p class="task-card__description">${() => task().description}</p>`,
+        () => html`
+          <p class="task-card__description">${() => task().description}</p>
+        `,
       )}
       ${when(
         hasFooter,
@@ -122,13 +124,16 @@ define<TaskCardProps>('task-card', {
               () => Boolean(task().dueDate),
               () => html`
                 <span :class=${dueClass}>
-                  <ore-icon name="calendar-days" size="12"></ore-icon>${() => formatDueDate(task().dueDate!)}
+                  <ore-icon name="calendar-days" size="12"></ore-icon>
+                  ${() => formatDueDate(task().dueDate!)}
                 </span>
               `,
             )}
             ${when(
               () => budgetLabel() !== null,
-              () => html`<span class="task-card__budget">${budgetLabel}</span>`,
+              () => html`
+                <span class="task-card__budget">${budgetLabel}</span>
+              `,
             )}
           </div>
         `,
