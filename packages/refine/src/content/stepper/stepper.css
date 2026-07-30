@@ -1,0 +1,37 @@
+@layer refine.base {
+  :host {
+    display: block;
+    width: 100%;
+  }
+
+  nav {
+    display: block;
+    width: 100%;
+  }
+
+  .steps {
+    /* Spacing between steps comes from each ore-step's own `padding-inline-start` /
+       `padding-block-start` (see step.css), not a flex `gap` here — that lets each step's
+       connector line be drawn from its own edge to its own indicator using the exact same
+       length it was given room for, with no separate gap value to keep in sync by hand. */
+    display: flex;
+    gap: 0;
+    align-items: flex-start;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .stepper-message {
+    display: block;
+    margin-top: var(--size-3);
+  }
+}
+
+@layer refine.orientation {
+  :host([orientation='vertical']) .steps {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

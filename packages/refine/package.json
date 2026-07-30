@@ -118,10 +118,10 @@
       "types": "./dist/content/avatar/avatar.d.ts"
     },
     "./avatar-group": {
-      "source": "./src/content/avatar/avatar.ts",
+      "source": "./src/content/avatar/avatar-group.ts",
       "import": "./dist/avatar-group.js",
       "require": "./dist/avatar-group.cjs",
-      "types": "./dist/content/avatar/avatar.d.ts"
+      "types": "./dist/content/avatar/avatar-group.d.ts"
     },
     "./badge": {
       "source": "./src/feedback/badge/badge.ts",
@@ -392,6 +392,18 @@
       "import": "./dist/sidebar.js",
       "require": "./dist/sidebar.cjs",
       "types": "./dist/layout/sidebar/sidebar.d.ts"
+    },
+    "./step": {
+      "source": "./src/content/stepper/step.ts",
+      "import": "./dist/step.js",
+      "require": "./dist/step.cjs",
+      "types": "./dist/content/stepper/step.d.ts"
+    },
+    "./stepper": {
+      "source": "./src/content/stepper/stepper.ts",
+      "import": "./dist/stepper.js",
+      "require": "./dist/stepper.cjs",
+      "types": "./dist/content/stepper/stepper.d.ts"
     },
     "./switch": {
       "source": "./src/inputs/switch/switch.ts",

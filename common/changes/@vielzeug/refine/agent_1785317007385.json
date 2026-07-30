@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(refine): fix broken stepper/avatar-group subpath exports, move ore-step/ore-stepper to context-based coordination, remove duplicate toast-like message feature from ore-stepper",
+      "packageName": "@vielzeug/refine",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

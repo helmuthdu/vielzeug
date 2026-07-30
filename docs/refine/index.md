@@ -63,6 +63,8 @@ exports:
     ore-sidebar-item,
     ore-skeleton,
     ore-slider,
+    ore-step,
+    ore-stepper,
     ore-switch,
     ore-tab-item,
     ore-tab-panel,
@@ -202,7 +204,7 @@ Headless widget controllers (`createTextField`, `createListControl`, `createOver
 
 ### Components
 
-**Content:** `ore-avatar`, `ore-avatar-group`, `ore-breadcrumb`, `ore-card`, `ore-carousel`, `ore-carousel-slide`, `ore-chat-message`, `ore-icon`, `ore-list`, `ore-list-item`, `ore-pagination`, `ore-separator`, `ore-table`, `ore-text`
+**Content:** `ore-avatar`, `ore-avatar-group`, `ore-breadcrumb`, `ore-card`, `ore-carousel`, `ore-carousel-slide`, `ore-chat-message`, `ore-icon`, `ore-list`, `ore-list-item`, `ore-pagination`, `ore-separator`, `ore-step`, `ore-stepper`, `ore-table`, `ore-text`
 
 **Disclosure:** `ore-accordion`, `ore-accordion-item`, `ore-tabs`, `ore-tab-item`, `ore-tab-panel`
 

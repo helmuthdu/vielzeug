@@ -97,6 +97,8 @@ import '@vielzeug/refine/separator';
 import '@vielzeug/refine/sidebar';
 import '@vielzeug/refine/skeleton';
 import '@vielzeug/refine/slider';
+import '@vielzeug/refine/step';
+import '@vielzeug/refine/stepper';
 import '@vielzeug/refine/switch';
 import '@vielzeug/refine/tab-item';
 import '@vielzeug/refine/tab-panel';
@@ -180,6 +182,7 @@ Per-component API — attributes, events, slots, CSS custom properties:
 - [List (+ List Item)](./components/list.md)
 - [Pagination](./components/pagination.md)
 - [Separator](./components/separator.md)
+- [Stepper (+ Step)](./components/stepper.md)
 - [Table](./components/table.md)
 - [Text](./components/text.md)
 
