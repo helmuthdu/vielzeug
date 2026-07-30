@@ -32,14 +32,6 @@ describe('createI18n — lifecycle', () => {
       expect(i18n.isLoaded('en')).toBe(false);
     });
 
-    test('isRegistered returns false for all locales after dispose', () => {
-      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
-
-      expect(i18n.isRegistered('en')).toBe(true);
-      i18n.dispose();
-      expect(i18n.isRegistered('en')).toBe(false);
-    });
-
     test('disposed getter is false before dispose and true after', () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
 
@@ -120,12 +112,12 @@ describe('createI18n — lifecycle', () => {
       expect(() => i18n.subscribe(() => {})).toThrow(LinguaDisposedError);
     });
 
-    test('extend() after dispose throws LinguaDisposedError', () => {
+    test('loadNamespace() with a factory after dispose throws LinguaDisposedError', () => {
       const i18n = createI18n({ catalogs: { en: {} } });
 
       i18n.dispose();
 
-      expect(() => i18n.extend('ui', () => Promise.resolve({ btn: 'Click me' }))).toThrow(LinguaDisposedError);
+      expect(() => i18n.loadNamespace('ui', () => Promise.resolve({ btn: 'Click me' }))).toThrow(LinguaDisposedError);
     });
 
     test('setLocale() dispose race — silent return when disposed mid-await', async () => {

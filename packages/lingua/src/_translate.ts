@@ -38,9 +38,10 @@ function findEntry(ctx: TranslateContext, key: string): CatalogEntryData | undef
 }
 
 // True if `base` exists as a plural branch prefix (e.g. `items` when only `items.one`/
-// `items.other` are registered) anywhere in the fallback chain. Shared by `hasKey()` and
-// `translate()`'s dev-mode miss diagnostic below — both need to distinguish "key genuinely
-// doesn't exist" from "key exists, but only as a plural branch — you want tp(), not t()".
+// `items.other` are registered) anywhere in the fallback chain. Shared by
+// `has(key, { kind: 'branch' })` and `translate()`'s dev-mode miss diagnostic below —
+// both need to distinguish "key genuinely doesn't exist" from "key exists, but only
+// as a plural branch — you want tp(), not t()".
 function isPluralBranch(ctx: TranslateContext, base: string): boolean {
   for (const candidate of ctx.chain) {
     const catalog = ctx.catalogStore.resolve(candidate);
@@ -51,9 +52,14 @@ function isPluralBranch(ctx: TranslateContext, base: string): boolean {
   return false;
 }
 
-/** True if `base` exists as a leaf key or a plural branch prefix, anywhere in the fallback chain. */
-export function hasKey(ctx: TranslateContext, base: string): boolean {
-  return findEntry(ctx, base) !== undefined || isPluralBranch(ctx, base);
+/** True if `base` exists as a leaf key anywhere in the fallback chain (resolvable by `t()`). */
+export function hasLeaf(ctx: TranslateContext, base: string): boolean {
+  return findEntry(ctx, base) !== undefined;
+}
+
+/** True if `base` exists as a plural branch prefix anywhere in the fallback chain (resolvable by `tp()`). */
+export function hasPluralBranch(ctx: TranslateContext, base: string): boolean {
+  return isPluralBranch(ctx, base);
 }
 
 function interpolate(
@@ -69,9 +75,10 @@ export function translate(ctx: TranslateContext, key: string, vars?: TranslateVa
   const found = findEntry(ctx, key);
 
   if (!found) {
-    // has(key) returns true for a plural-branch-only key (no leaf entry), but t() can't resolve
-    // one — the common `if (i18n.has(key)) i18n.t(key)` pattern silently returns the raw key in
-    // that case, indistinguishable from a genuinely missing key without this warning.
+    // hasPlural(key) returns true for a plural-branch-only key (no leaf entry), but t()
+    // can't resolve one — the common `if (i18n.hasPlural(key)) i18n.t(key)` pattern silently
+    // returns the raw key in that case, indistinguishable from a genuinely missing key
+    // without this warning.
     devOnly(() => {
       if (isPluralBranch(ctx, key)) {
         warn(

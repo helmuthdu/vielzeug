@@ -11,17 +11,17 @@ const ward = createWard([
 
 const user = ward.forUser({ id: 'alice', roles: ['editor'] })
 
-console.log('read:         ', user.explain('posts', 'read').allowed)
-console.log('update:       ', user.explain('posts', 'update').allowed)
+console.log('read:         ', user.explain({ action: 'read', resource: 'posts' }).allowed)
+console.log('update:       ', user.explain({ action: 'update', resource: 'posts' }).allowed)
 
 // delete requires ownership
 const myPost    = { authorId: 'alice' }
 const otherPost = { authorId: 'bob' }
-console.log('delete own:   ', user.explain('posts', 'delete', myPost).allowed)
-console.log('delete other: ', user.explain('posts', 'delete', otherPost).allowed)
+console.log('delete own:   ', user.explain({ action: 'delete', data: myPost, resource: 'posts' }).allowed)
+console.log('delete other: ', user.explain({ action: 'delete', data: otherPost, resource: 'posts' }).allowed)
 
 // allowedActions — enumerate what alice can do
-const actions = user.allowedActions('posts', ['read', 'update', 'delete'], myPost)
+const actions = user.allowedActions({ data: myPost, knownActions: ['read', 'update', 'delete'], resource: 'posts' })
 console.log('allowed:      ', actions)`,
   name: 'Bound View',
 };

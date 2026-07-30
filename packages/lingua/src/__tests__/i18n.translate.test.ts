@@ -264,29 +264,32 @@ describe('createI18n — translation (t/tp/has)', () => {
       expect(i18n.has('nav.home')).toBe(true);
     });
 
-    test('returns true for a branch key (has() checks both leaf and branch presence)', () => {
+    test('returns false for a branch-only key by default (has() is leaf-only unless kind: branch)', () => {
       const i18n = createI18n({ catalogs: { en: { nav: { home: 'Home' } } } });
 
-      expect(i18n.has('nav')).toBe(true);
+      expect(i18n.has('nav')).toBe(false);
+      expect(i18n.has('nav', { kind: 'branch' })).toBe(true);
     });
 
-    test('has() true + t() on the same branch-only key warns and returns the raw key, not a translation', () => {
+    test("has(key, { kind: 'branch' }) accepts branch keys of a strictly typed catalog (compile-time check)", () => {
+      const catalog = { inbox: { one: 'One', other: '{count} messages' } };
+      const i18n = createI18n({ catalogs: { en: catalog } });
+
+      // 'inbox' is a MessageBranchKeys<typeof catalog> member, not a leaf — this call
+      // only compiles because has() accepts both key unions.
+      expect(i18n.has('inbox', { kind: 'branch' })).toBe(true);
+      expect(i18n.has('inbox')).toBe(false);
+    });
+
+    test('t() on a branch-only key warns and returns the raw key, not a translation', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const i18n = createI18n({ catalogs: { en: { items: { one: '1 item', other: '{count} items' } } } });
 
-      expect(i18n.has('items')).toBe(true);
+      expect(i18n.has('items', { kind: 'branch' })).toBe(true);
       expect(i18n.t('items' as any)).toBe('items');
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("use tp('items', count) instead"));
 
       warnSpy.mockRestore();
-    });
-
-    test('returns true for the base key of a pipe-plural shorthand', () => {
-      const i18n = createI18n({ catalogs: { en: { inbox: 'One message|{count} messages' } } });
-
-      expect(i18n.has('inbox')).toBe(true);
-      expect(i18n.has('inbox.one')).toBe(true);
-      expect(i18n.has('inbox.other')).toBe(true);
     });
   });
 
@@ -318,7 +321,7 @@ describe('createI18n — translation (t/tp/has)', () => {
     test('namespace-loaded keys support interpolation', async () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
 
-      await i18n.extend('extra', () => Promise.resolve({ farewell: 'Bye, {name}!' }));
+      await i18n.loadNamespace('extra', () => Promise.resolve({ farewell: 'Bye, {name}!' }));
       expect(i18n.t('farewell', { name: 'Bob' })).toBe('Bye, Bob!');
     });
 
@@ -339,133 +342,31 @@ describe('createI18n — translation (t/tp/has)', () => {
     });
   });
 
-  describe('pipe-delimited plural shorthand', () => {
-    test('2-part pipe maps to one | other', () => {
-      const i18n = createI18n({ catalogs: { en: { inbox: 'One message|{count} messages' } } });
-
-      expect(i18n.tp('inbox', 1)).toBe('One message');
-      expect(i18n.tp('inbox', 5)).toBe('5 messages');
-    });
-
-    test('3-part pipe maps to zero | one | other', () => {
-      const i18n = createI18n({ catalogs: { en: { inbox: 'No messages|One message|{count} messages' } } });
-
-      expect(i18n.tp('inbox', 0)).toBe('No messages');
-      expect(i18n.tp('inbox', 1)).toBe('One message');
-      expect(i18n.tp('inbox', 5)).toBe('5 messages');
-    });
-
-    test('6-part pipe maps to all CLDR forms', () => {
-      const i18n = createI18n({
-        catalogs: { ar: { items: 'صفر|واحد|اثنان|قليل|كثير|أخرى' } },
-        locale: 'ar',
-      });
-
-      expect(i18n.tp('items', 0)).toBe('صفر');
-      expect(i18n.tp('items', 1)).toBe('واحد');
-      expect(i18n.tp('items', 2)).toBe('اثنان');
-    });
-
-    test('4-part pipe is treated as a plain string (no expansion)', () => {
-      const i18n = createI18n({ catalogs: { en: { value: 'a|b|c|d' } } });
-
-      expect(i18n.t('value')).toBe('a|b|c|d');
-    });
-
-    test('5-part pipe is treated as a plain string (no expansion)', () => {
-      const i18n = createI18n({ catalogs: { en: { value: 'a|b|c|d|e' } } });
-
-      expect(i18n.t('value')).toBe('a|b|c|d|e');
-    });
-
-    test('string without pipe is unaffected', () => {
-      const i18n = createI18n({ catalogs: { en: { greeting: 'Hello, {name}!' } } });
-
-      expect(i18n.t('greeting', { name: 'Alice' })).toBe('Hello, Alice!');
-    });
-
-    test('pipe plural works via extend()', async () => {
-      const i18n = createI18n({ catalogs: { en: {} } });
-
-      await i18n.extend('items', () => Promise.resolve({ items: 'One item|{count} items' }));
-      expect(i18n.tp('items', 1)).toBe('One item');
-      expect(i18n.tp('items', 3)).toBe('3 items');
-    });
-
-    test('pipe plural works via register()', () => {
-      const i18n = createI18n({ catalogs: { en: {} } });
-
-      i18n.register('en', { items: 'One item|{count} items' });
-      expect(i18n.tp('items', 1)).toBe('One item');
-      expect(i18n.tp('items', 3)).toBe('3 items');
-    });
-
-    test('pipe plural is visible in getState() as expanded flat keys', () => {
-      const i18n = createI18n({ catalogs: { en: { inbox: 'One message|{count} messages' } } });
-      const state = i18n.getState();
-
-      expect(state.catalogs['en']?.['inbox.one']).toBe('One message');
-      expect(state.catalogs['en']?.['inbox.other']).toBe('{count} messages');
-      expect(state.catalogs['en']?.['inbox']).toBeUndefined();
-    });
-
-    test('round-trips through getState() and restoreState()', () => {
-      const original = createI18n({ catalogs: { en: { inbox: 'One message|{count} messages' } } });
-      const state = original.getState();
-      const hydrated = createI18n();
-
-      hydrated.restoreState(state);
-      expect(hydrated.tp('inbox', 1)).toBe('One message');
-      expect(hydrated.tp('inbox', 5)).toBe('5 messages');
-    });
-  });
-
-  describe('pipe-plural edge cases', () => {
-    test('pipe with a leading empty segment is treated as a plain string', () => {
-      const i18n = createI18n({ catalogs: { en: { value: '|{count} items' } } });
-
-      // Not expanded — the pipe value has an empty first part.
-      expect(i18n.t('value')).toBe('|{count} items');
-    });
-
-    test('pipe with a trailing empty segment is treated as a plain string', () => {
-      const i18n = createI18n({ catalogs: { en: { value: 'One item|' } } });
-
-      expect(i18n.t('value')).toBe('One item|');
-    });
-
-    test('pipe with an internal empty segment is treated as a plain string', () => {
-      const i18n = createI18n({ catalogs: { en: { value: 'zero||other' } } });
-
-      expect(i18n.t('value')).toBe('zero||other');
-    });
-  });
-
-  describe('has() — branch/plural keys', () => {
+  describe("has() with { kind: 'branch' } — branch keys", () => {
     test('returns true for an explicit plural branch', () => {
       const i18n = createI18n({ catalogs: { en: { inbox: { one: 'One', other: '{count}' } } } });
 
-      expect(i18n.has('inbox')).toBe(true);
+      expect(i18n.has('inbox', { kind: 'branch' })).toBe(true);
+      // ...while the leaf-level sub-keys are plain leaves
+      expect(i18n.has('inbox.one')).toBe(true);
     });
 
-    test('returns true for a pipe-plural expanded branch', () => {
-      const i18n = createI18n({ catalogs: { en: { inbox: 'One message|{count} messages' } } });
+    test('returns false for a plain leaf key (a leaf is not a branch)', () => {
+      const i18n = createI18n({ catalogs: { en: { greeting: 'Hello' } } });
 
-      // has() returns true — branch sub-keys (inbox.one / inbox.other) are found
-      expect(i18n.has('inbox')).toBe(true);
-      expect(i18n.has('inbox.one')).toBe(true);
+      expect(i18n.has('greeting', { kind: 'branch' })).toBe(false);
     });
 
     test('returns false for a non-branch non-leaf key', () => {
       const i18n = createI18n({ catalogs: { en: { greeting: 'Hello' } } });
 
-      expect(i18n.has('greeting.nonexistent')).toBe(false);
+      expect(i18n.has('greeting.nonexistent', { kind: 'branch' })).toBe(false);
     });
 
     test('returns false for an unregistered key', () => {
       const i18n = createI18n({ catalogs: { en: { greeting: 'Hello' } } });
 
-      expect(i18n.has('missing')).toBe(false);
+      expect(i18n.has('missing', { kind: 'branch' })).toBe(false);
     });
 
     test('checks fallback chain', () => {
@@ -479,7 +380,7 @@ describe('createI18n — translation (t/tp/has)', () => {
       });
 
       // 'fr' has no inbox branch; fallback 'en' does
-      expect(i18n.has('inbox')).toBe(true);
+      expect(i18n.has('inbox', { kind: 'branch' })).toBe(true);
     });
 
     test('returns false when no catalog loaded for active locale and no fallback', () => {
@@ -498,11 +399,11 @@ describe('createI18n — translation (t/tp/has)', () => {
       });
 
       // All intermediate prefixes should be detectable as branch keys
-      expect(i18n.has('a')).toBe(true);
-      expect(i18n.has('a.b')).toBe(true);
-      expect(i18n.has('a.b.c')).toBe(true);
+      expect(i18n.has('a', { kind: 'branch' })).toBe(true);
+      expect(i18n.has('a.b', { kind: 'branch' })).toBe(true);
+      expect(i18n.has('a.b.c', { kind: 'branch' })).toBe(true);
       expect(i18n.has('a.b.c.d')).toBe(true);
-      expect(i18n.has('a.b.c.d.e')).toBe(false);
+      expect(i18n.has('a.b.c.d.e', { kind: 'branch' })).toBe(false);
     });
   });
 

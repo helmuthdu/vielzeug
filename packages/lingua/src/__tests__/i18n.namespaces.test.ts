@@ -8,7 +8,6 @@ describe('createI18n — namespaces', () => {
       const i18n = createI18n({ catalogs: { en: {} } });
 
       i18n.registerNamespace('ui', async () => ({ btn: 'Click' }));
-      expect(i18n.isNamespaceRegistered('ui')).toBe(true);
       expect(i18n.isNamespaceLoaded('ui')).toBe(false);
       expect(i18n.t('btn')).toBe('btn');
     });
@@ -58,41 +57,55 @@ describe('createI18n — namespaces', () => {
       await expect(i18n.loadNamespace('unregistered')).rejects.toBeInstanceOf(LinguaError);
     });
 
-    test('isNamespaceRegistered() returns false for an unregistered namespace', () => {
-      const i18n = createI18n({ catalogs: { en: {} } });
-
-      expect(i18n.isNamespaceRegistered('missing')).toBe(false);
-    });
-
     test('isNamespaceLoaded() with explicit locale argument', async () => {
       const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
 
       i18n.registerNamespace('ui', async (locale) => (locale === 'fr' ? { btn: 'Cliquer' } : { btn: 'Click' }));
-      await i18n.loadNamespace('ui', 'fr');
+      await i18n.loadNamespace('ui', undefined, 'fr');
       expect(i18n.isNamespaceLoaded('ui', 'fr')).toBe(true);
       expect(i18n.isNamespaceLoaded('ui', 'en')).toBe(false);
     });
 
-    test('isNamespaceLoaded() returns false for invalid locale tags', () => {
+    test('isNamespaceLoaded() throws for invalid locale tags', () => {
       const i18n = createI18n({ catalogs: { en: {} } });
 
-      expect(() => i18n.isNamespaceLoaded('ui', 'not-a-valid-locale!!!')).not.toThrow();
-      expect(i18n.isNamespaceLoaded('ui', 'not-a-valid-locale!!!')).toBe(false);
+      expect(() => i18n.isNamespaceLoaded('ui', 'not-a-valid-locale!!!')).toThrow(/BCP 47/);
     });
 
-    test('extend() = registerNamespace + loadNamespace in one call', async () => {
+    test('loadNamespace(ns, factory) = registerNamespace + load in one call', async () => {
       let calls = 0;
       const i18n = createI18n({ catalogs: { en: {} } });
 
-      await i18n.extend('ui', async () => {
+      await i18n.loadNamespace('ui', async () => {
         calls++;
 
         return { btn: 'Click' };
       });
       expect(calls).toBe(1);
-      expect(i18n.isNamespaceRegistered('ui')).toBe(true);
       expect(i18n.isNamespaceLoaded('ui')).toBe(true);
       expect(i18n.t('btn')).toBe('Click');
+    });
+
+    test('a new factory after loading updates the registry but does not reload until the marker is cleared', async () => {
+      const i18n = createI18n({ catalogs: { en: { base: 'Base' } } });
+
+      await i18n.loadNamespace('ui', () => Promise.resolve({ btn: 'Click A' }));
+      expect(i18n.t('btn')).toBe('Click A');
+
+      // New factory: registered for future loads, but no reload while the marker stands.
+      await i18n.loadNamespace('ui', () => Promise.resolve({ btn: 'Click B' }));
+      expect(i18n.t('btn')).toBe('Click A');
+
+      // register() clears the marker — the new factory takes effect on the next load.
+      i18n.register('en', { base: 'Base' });
+      await i18n.loadNamespace('ui', () => Promise.resolve({ btn: 'Click B' }));
+      expect(i18n.t('btn')).toBe('Click B');
+    });
+
+    test('loadNamespace() with a non-function factory throws a migration error (old two-arg form)', () => {
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      expect(() => i18n.loadNamespace('ui', 'fr' as never)).toThrow(/factory must be a function/);
     });
 
     test('loadNamespace() for a specific locale does not notify when locale is not in active chain', async () => {
@@ -101,7 +114,7 @@ describe('createI18n — namespaces', () => {
 
       i18n.registerNamespace('ui', async () => ({ btn: 'Cliquer' }));
       i18n.subscribe(listener);
-      await i18n.loadNamespace('ui', 'fr');
+      await i18n.loadNamespace('ui', undefined, 'fr');
       expect(listener).not.toHaveBeenCalled();
     });
   });
@@ -117,25 +130,25 @@ describe('createI18n — namespaces', () => {
         return { btn: 'Click' };
       });
 
-      await i18n.loadNamespace('ui', 'fr');
+      await i18n.loadNamespace('ui', undefined, 'fr');
       expect(i18n.isNamespaceLoaded('ui', 'fr')).toBe(true);
       expect(calls).toBe(1);
 
-      i18n.restoreState({ catalogs: { en: {} }, locale: 'en' });
+      i18n.restoreState({ catalogs: { en: {} }, locale: 'en', version: 1 });
 
       expect(i18n.isNamespaceLoaded('ui', 'fr')).toBe(false);
 
-      await i18n.loadNamespace('ui', 'fr');
+      await i18n.loadNamespace('ui', undefined, 'fr');
       expect(calls).toBe(2);
       expect(i18n.isNamespaceLoaded('ui', 'fr')).toBe(true);
     });
   });
 
-  describe('extend() as catalog overlay', () => {
+  describe('loadNamespace() as catalog overlay', () => {
     test('adds new keys to an existing static catalog', async () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
 
-      await i18n.extend('extra', () => Promise.resolve({ world: 'World' }));
+      await i18n.loadNamespace('extra', () => Promise.resolve({ world: 'World' }));
       expect(i18n.t('hello')).toBe('Hello');
       expect(i18n.t('world')).toBe('World');
     });
@@ -143,14 +156,16 @@ describe('createI18n — namespaces', () => {
     test('overlays keys into existing catalog via namespace', async () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
 
-      await i18n.extend('patch', () => Promise.resolve({ hello: 'Hi' }));
+      await i18n.loadNamespace('patch', () => Promise.resolve({ hello: 'Hi' }));
       expect(i18n.t('hello')).toBe('Hi');
     });
 
     test('supports nested message objects and preserves sibling keys', async () => {
       const i18n = createI18n({ catalogs: { en: { nav: { home: 'Home' } } } });
 
-      await i18n.extend('extra', () => Promise.resolve({ footer: { contact: 'Contact' }, nav: { about: 'About' } }));
+      await i18n.loadNamespace('extra', () =>
+        Promise.resolve({ footer: { contact: 'Contact' }, nav: { about: 'About' } }),
+      );
       expect(i18n.t('nav.home')).toBe('Home');
       expect(i18n.t('nav.about')).toBe('About');
       expect(i18n.t('footer.contact')).toBe('Contact');
@@ -161,7 +176,7 @@ describe('createI18n — namespaces', () => {
       const listener = vi.fn();
 
       i18n.subscribe(listener);
-      await i18n.extend('extra', () => Promise.resolve({ world: 'World' }));
+      await i18n.loadNamespace('extra', () => Promise.resolve({ world: 'World' }));
       expect(listener).toHaveBeenCalledTimes(1);
     });
 
@@ -173,11 +188,11 @@ describe('createI18n — namespaces', () => {
       const listener = vi.fn();
 
       i18n.subscribe(listener);
-      await i18n.extend('extra', () => Promise.resolve({ world: 'Monde' }), 'fr');
+      await i18n.loadNamespace('extra', () => Promise.resolve({ world: 'Monde' }), 'fr');
       expect(listener).not.toHaveBeenCalled();
     });
 
-    test('concurrent extend() calls are deduped — factory called once', async () => {
+    test('concurrent loadNamespace() calls are deduped — factory called once', async () => {
       let factoryCalls = 0;
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
       const factory = () => {
@@ -186,16 +201,16 @@ describe('createI18n — namespaces', () => {
         return Promise.resolve({ a: 'A', b: 'B' });
       };
 
-      await Promise.all([i18n.extend('extra', factory), i18n.extend('extra', factory)]);
+      await Promise.all([i18n.loadNamespace('extra', factory), i18n.loadNamespace('extra', factory)]);
       expect(factoryCalls).toBe(1);
       expect(i18n.t('a')).toBe('A');
       expect(i18n.t('b')).toBe('B');
     });
 
-    test('register() after extend() fully replaces the catalog, discarding overlay keys', async () => {
+    test('register() after loadNamespace() fully replaces the catalog, discarding overlay keys', async () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } }, locale: 'en' });
 
-      await i18n.extend('extra', () => Promise.resolve({ world: 'World' }));
+      await i18n.loadNamespace('extra', () => Promise.resolve({ world: 'World' }));
       expect(i18n.t('world')).toBe('World');
 
       i18n.register('en', { hello: 'Hi' });
@@ -212,7 +227,7 @@ describe('createI18n — namespaces', () => {
       const listener = vi.fn();
 
       i18n.subscribe(listener);
-      await i18n.extend('extra', () => Promise.resolve({ extra: 'Supplément' }), 'fr');
+      await i18n.loadNamespace('extra', () => Promise.resolve({ extra: 'Supplément' }), 'fr');
 
       expect(listener).toHaveBeenCalledTimes(1);
       expect(i18n.t('extra')).toBe('Supplément');
@@ -220,20 +235,20 @@ describe('createI18n — namespaces', () => {
   });
 
   describe('namespaces', () => {
-    test('extend() patches translations into the active locale catalog', async () => {
+    test('loadNamespace() patches translations into the active locale catalog', async () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
 
-      await i18n.extend('settings', () => Promise.resolve({ lang: 'Language', theme: 'Theme' }) as any);
+      await i18n.loadNamespace('settings', () => Promise.resolve({ lang: 'Language', theme: 'Theme' }) as any);
 
       expect(i18n.t('theme')).toBe('Theme');
       expect(i18n.t('lang')).toBe('Language');
       expect(i18n.t('hello')).toBe('Hello');
     });
 
-    test('extend() loads for a specific locale', async () => {
+    test('loadNamespace() loads for a specific locale', async () => {
       const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
 
-      await i18n.extend(
+      await i18n.loadNamespace(
         'nav',
         (locale) => Promise.resolve(locale === 'fr' ? { home: 'Accueil' } : { home: 'Home' }),
         'fr',
@@ -243,7 +258,7 @@ describe('createI18n — namespaces', () => {
       expect(i18n.t('home')).toBe('Accueil');
     });
 
-    test('extend() deduplicates concurrent calls (source loaded at most once)', async () => {
+    test('loadNamespace() deduplicates concurrent calls (source loaded at most once)', async () => {
       let calls = 0;
       const i18n = createI18n({ catalogs: { en: {} } });
       const factory = () => {
@@ -253,14 +268,14 @@ describe('createI18n — namespaces', () => {
       };
 
       await Promise.all([
-        i18n.extend('settings', factory),
-        i18n.extend('settings', factory),
-        i18n.extend('settings', factory),
+        i18n.loadNamespace('settings', factory),
+        i18n.loadNamespace('settings', factory),
+        i18n.loadNamespace('settings', factory),
       ]);
       expect(calls).toBe(1);
     });
 
-    test('extend() is a no-op on repeated calls after loading', async () => {
+    test('loadNamespace() is a no-op on repeated calls after loading', async () => {
       let calls = 0;
       const i18n = createI18n({ catalogs: { en: {} } });
       const factory = () => {
@@ -269,26 +284,26 @@ describe('createI18n — namespaces', () => {
         return Promise.resolve({ x: 'X' });
       };
 
-      await i18n.extend('settings', factory);
-      await i18n.extend('settings', factory);
-      await i18n.extend('settings', factory);
+      await i18n.loadNamespace('settings', factory);
+      await i18n.loadNamespace('settings', factory);
+      await i18n.loadNamespace('settings', factory);
       expect(calls).toBe(1);
     });
 
-    test('extend() uses the active locale when locale argument is omitted', async () => {
+    test('loadNamespace() uses the active locale when locale argument is omitted', async () => {
       const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'fr' });
 
-      await i18n.extend('ui', (locale) =>
+      await i18n.loadNamespace('ui', (locale) =>
         Promise.resolve(locale === 'fr' ? { save: 'Sauvegarder' } : { save: 'Save' }),
       );
 
       expect(i18n.t('save')).toBe('Sauvegarder');
     });
 
-    test('extend() supports async factory sources', async () => {
+    test('loadNamespace() supports async factory sources', async () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
 
-      await i18n.extend('settings', async () => ({ lang: 'Language' }) as any);
+      await i18n.loadNamespace('settings', async () => ({ lang: 'Language' }) as any);
 
       expect(i18n.t('lang')).toBe('Language');
       expect(i18n.t('hello')).toBe('Hello');
@@ -305,11 +320,11 @@ describe('createI18n — namespaces', () => {
         return Promise.resolve(locale === 'fr' ? { save: 'Sauvegarder' } : { save: 'Save' });
       };
 
-      await i18n.extend('ui', factory, 'en');
-      await i18n.extend('ui', factory, 'fr');
+      await i18n.loadNamespace('ui', factory, 'en');
+      await i18n.loadNamespace('ui', factory, 'fr');
       // Repeat — should not re-load
-      await i18n.extend('ui', factory, 'en');
-      await i18n.extend('ui', factory, 'fr');
+      await i18n.loadNamespace('ui', factory, 'en');
+      await i18n.loadNamespace('ui', factory, 'fr');
 
       expect(enCalls).toBe(1);
       expect(frCalls).toBe(1);
@@ -324,7 +339,7 @@ describe('createI18n — namespaces', () => {
         return Promise.resolve({ extra: 'Extra' }) as any;
       };
 
-      await i18n.extend('ui', factory);
+      await i18n.loadNamespace('ui', factory);
       expect(calls).toBe(1);
       expect(i18n.t('extra')).toBe('Extra');
 
@@ -332,8 +347,8 @@ describe('createI18n — namespaces', () => {
       i18n.register('en', { base: 'NewBase' });
       expect(i18n.t('extra')).toBe('extra'); // key gone — returns key string
 
-      // extend() should re-apply since register() cleared the marker
-      await i18n.extend('ui', factory);
+      // loadNamespace() should re-apply since register() cleared the marker
+      await i18n.loadNamespace('ui', factory);
       expect(calls).toBe(2);
       expect(i18n.t('extra')).toBe('Extra');
     });
@@ -347,16 +362,16 @@ describe('createI18n — namespaces', () => {
         return Promise.resolve({ extra: 'Extra' }) as any;
       };
 
-      await i18n.extend('ui', factory);
+      await i18n.loadNamespace('ui', factory);
       expect(calls).toBe(1);
       expect(i18n.t('extra')).toBe('Extra');
 
       // restoreState() replaces the catalog — namespace keys are gone
-      i18n.restoreState({ catalogs: { en: { base: 'RestoredBase' } }, locale: 'en' });
+      i18n.restoreState({ catalogs: { en: { base: 'RestoredBase' } }, locale: 'en', version: 1 });
       expect(i18n.t('extra')).toBe('extra'); // key gone
 
-      // extend() should re-apply since restoreState() cleared the marker
-      await i18n.extend('ui', factory);
+      // loadNamespace() should re-apply since restoreState() cleared the marker
+      await i18n.loadNamespace('ui', factory);
       expect(calls).toBe(2);
       expect(i18n.t('extra')).toBe('Extra');
     });
@@ -370,19 +385,19 @@ describe('createI18n — namespaces', () => {
         return Promise.resolve({ profile: 'Profile' });
       };
 
-      await i18n.extend('user:settings', factory);
-      await i18n.extend('user:settings', factory); // no-op
+      await i18n.loadNamespace('user:settings', factory);
+      await i18n.loadNamespace('user:settings', factory); // no-op
 
       expect(calls).toBe(1);
       expect(i18n.t('profile')).toBe('Profile');
     });
   });
 
-  describe('extend() on unregistered locale', () => {
+  describe('loadNamespace() on an unregistered locale', () => {
     test('creates a new catalog for the locale via namespace', async () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } }, fallback: 'fr', locale: 'en' });
 
-      await i18n.extend('farewell', () => Promise.resolve({ bye: 'Au revoir' }), 'fr');
+      await i18n.loadNamespace('farewell', () => Promise.resolve({ bye: 'Au revoir' }), 'fr');
 
       await i18n.setLocale('fr');
       expect(i18n.t('bye')).toBe('Au revoir');

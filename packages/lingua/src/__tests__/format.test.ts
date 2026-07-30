@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import { createI18n } from '../';
 import { createFormatter } from '../format';
@@ -9,6 +9,19 @@ describe('createFormatter', () => {
   describe('number()', () => {
     test('formats a number for the given locale', () => {
       expect(createFormatter('en').number(1_234.56)).toContain('1,234');
+    });
+
+    test('warns at most once per instance when options cannot be serialized for the cache key', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const fmt = createFormatter('en');
+      const unserializable = { maximumFractionDigits: 2, weird: 10n } as unknown as Intl.NumberFormatOptions;
+
+      fmt.number(1_234.56, unserializable);
+      fmt.number(7_654.32, unserializable);
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('could not be serialized'));
+      warnSpy.mockRestore();
     });
 
     test('accepts Intl.NumberFormatOptions', () => {
@@ -85,29 +98,6 @@ describe('createFormatter', () => {
 
     test('stringifies numbers in the list', () => {
       expect(createFormatter('en').list([1, 2, 3])).toBe('1, 2, and 3');
-    });
-  });
-
-  // ─── clear() ──────────────────────────────────────────────────────────────
-
-  describe('clear()', () => {
-    test('resets all internal caches without breaking subsequent calls', () => {
-      const fmt = createFormatter('en');
-
-      // Prime the caches.
-      fmt.number(1_234);
-      fmt.currency(9.99, 'USD');
-      fmt.date(new Date('2024-01-15'));
-      fmt.relative(-1, 'day');
-      fmt.list(['A', 'B']);
-
-      // clear() must not throw.
-      expect(() => fmt.clear()).not.toThrow();
-
-      // All methods must still work correctly after clearing.
-      expect(fmt.number(1_234)).toContain('1,234');
-      expect(fmt.currency(9.99, 'USD')).toContain('$');
-      expect(fmt.list(['A', 'B', 'C'])).toBe('A, B, and C');
     });
   });
 

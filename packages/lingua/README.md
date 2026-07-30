@@ -58,13 +58,8 @@ i18n.tp('inbox', 3);
 const nav = i18n.scope('nav');
 nav.t('home'); // resolves 'nav.home'
 
-// Bind a cached per-key function for hot-path rendering
-const greet = i18n.bind('greeting');
-const users = [{ name: 'Alice' }, { name: 'Bob' }];
-users.forEach((u) => greet({ name: u.name }));
-
-// Merge route-specific keys on top of the base catalog
-await i18n.merge('en', () => import('./routes/settings.i18n.json').then((m) => m.default));
+// Load route-specific keys as a namespace on top of the base catalog
+await i18n.loadNamespace('settings', (locale) => import(`./routes/${locale}/settings.i18n.json`).then((m) => m.default));
 
 // Fork the shared instance for SSR per-request isolation
 const reqI18n = i18n.fork({ locale: req.locale });

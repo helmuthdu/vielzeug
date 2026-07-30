@@ -1,4 +1,5 @@
 import type {
+  HasOptions,
   I18n,
   I18nOptions,
   I18nSnapshot,
@@ -23,15 +24,16 @@ import {
   validateCatalogInDev,
 } from './_catalog-store';
 import { type LocaleCaches, buildLocaleChain, canon, createLocaleCaches } from './_chain';
-import { error as logError } from './_dev';
+import { error as logError, warn } from './_dev';
 import { type NamespaceFactory, type NamespaceStore, createNamespaceStore } from './_namespace-store';
 import {
   type TranslateContext,
-  hasKey as hasKeyIn,
+  hasLeaf as hasLeafIn,
+  hasPluralBranch as hasPluralBranchIn,
   translate as translateIn,
   translatePlural as translatePluralIn,
 } from './_translate';
-import { LinguaDisposedError, LinguaRestoreError, checkDisposed } from './errors';
+import { LinguaDisposedError, LinguaError, LinguaRestoreError, checkDisposed } from './errors';
 import { type Formatter, createFormatter } from './format';
 
 export {
@@ -46,6 +48,7 @@ export {
 } from './errors';
 
 export type {
+  HasOptions,
   I18n,
   I18nOptions,
   I18nSnapshot,
@@ -65,6 +68,10 @@ export type { NamespaceFactory } from './_namespace-store';
 
 // Bound for the per-instance `scope()` cache — see its declaration below for why it's bounded.
 const SCOPE_CACHE_MAX = 128;
+
+// Wire format version for getState()/restoreState() payloads — tests pin the literal
+// value, so bumping this is a deliberate, test-visible format change.
+const STATE_VERSION = 1;
 
 // ─── Locale state ─────────────────────────────────────────────────────────────
 // Replaced atomically on every locale change.
@@ -98,6 +105,12 @@ type I18nSeed<M extends Messages> = {
   nsStore?: NamespaceStore;
 };
 
+/**
+ * The i18n instance is the sole orchestrator: it owns both stores and every piece of
+ * cross-store coordination (catalog → namespace marker clearing, namespace → catalog
+ * patching, catalog change → subscriber notification). The stores never reference
+ * each other — data flow reads top-to-bottom in this file.
+ */
 function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>, _seed?: I18nSeed<M>): I18n<M> {
   const cfg: I18nOptions<M> = config ?? {};
 
@@ -156,8 +169,10 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     onMissingVar,
   });
 
-  // Shared by has() and scope().has().
-  const hasKey = (base: string): boolean => hasKeyIn(translateContext(), base);
+  // Shared by has() and scope().has(): leaf lookup by default, branch-prefix lookup
+  // with `{ kind: 'branch' }`.
+  const hasKey = (base: string, options?: HasOptions): boolean =>
+    options?.kind === 'branch' ? hasPluralBranchIn(translateContext(), base) : hasLeafIn(translateContext(), base);
 
   const translate = (key: MessageLeafKeys<M> | (string & {}), vars?: TranslateVars): string =>
     translateIn(translateContext(), String(key), vars);
@@ -188,10 +203,14 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     }
   };
 
-  // ─── Wire catalog store onChange → bump ───────────────────────────────────
-  catalogStore.onChange = (loc: Locale) => {
-    if (state.chainSet.has(loc)) bump();
+  // ─── Catalog change wiring — the single site, used at construction and by restoreState() ──
+  const wireCatalog = (): void => {
+    catalogStore.onChange = (loc: Locale) => {
+      if (state.chainSet.has(loc)) bump();
+    };
   };
+
+  wireCatalog();
 
   // ─── Seed from parent fork ─────────────────────────────────────────────────
   if (_seed?.catalogStore) {
@@ -228,6 +247,35 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
   // ─── Preload helper ───────────────────────────────────────────────────────
 
   const preload = (loc: Locale): Promise<void> => catalogStore.preload(canonL(loc));
+
+  // ─── Namespace loading — orchestrates nsStore.load → catalogStore.patch → markLoaded ──
+  // Not an async function: the disposed check must throw synchronously (callers see a
+  // thrown LinguaDisposedError at the call site, not a rejected promise).
+  const loadNamespaceImpl = (ns: string, factory: NamespaceFactory | undefined, loc?: Locale): Promise<void> => {
+    checkDisposed(disposed);
+
+    // Loud migration signal for the old two-arg form `loadNamespace(ns, locale)` —
+    // a string 2nd argument is a locale, not a factory (JS consumers get no TS help).
+    if (factory !== undefined && typeof factory !== 'function') {
+      throw new LinguaError(
+        `loadNamespace('${ns}'): factory must be a function — did you mean loadNamespace('${ns}', undefined, locale)?`,
+      );
+    }
+
+    if (factory) nsStore.registerNamespace(ns, factory);
+
+    const normalized = loc ? canonL(loc) : state.locale;
+
+    if (nsStore.isLoaded(ns, normalized)) return Promise.resolve();
+
+    return nsStore.load(ns, normalized).then(async (messages) => {
+      await catalogStore.patch(normalized, messages);
+
+      // Mark loaded only after the merge succeeded — a failed patch must not leave a
+      // false marker that suppresses future loads.
+      nsStore.markLoaded(ns, normalized);
+    });
+  };
 
   // ─── Monotonic generation counter — last writer wins for concurrent setLocale() ──
   let switchGen = 0;
@@ -292,16 +340,6 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
       return disposed;
     },
 
-    extend(ns: string, factory: NamespaceFactory, loc?: Locale): Promise<void> {
-      checkDisposed(disposed);
-
-      nsStore.registerNamespace(ns, factory);
-
-      const normalized = loc ? canonL(loc) : state.locale;
-
-      return nsStore.loadNamespace(ns, normalized, (l, messages) => catalogStore.patch(l, messages));
-    },
-
     get fmt(): Formatter {
       return getFormatter();
     },
@@ -333,53 +371,29 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
         catalogsOut[loc] = Object.fromEntries([...entry.entries.entries()].map(([k, { message }]) => [k, message]));
       }
 
-      return { catalogs: catalogsOut, locale: state.locale };
+      return { catalogs: catalogsOut, locale: state.locale, version: STATE_VERSION };
     },
 
-    getSupportedLocales(sorted?: boolean): Locale[] {
+    getSupportedLocales(options?: { sorted?: boolean }): Locale[] {
       const locales = [...catalogStore.knownLocales()];
 
-      return sorted === true ? locales.sort() : locales;
+      return options?.sorted === true ? locales.sort() : locales;
     },
 
-    has(key: MessageLeafKeys<M> | MessageBranchKeys<M> | (string & {})): boolean {
-      return hasKey(String(key));
+    has(key: MessageBranchKeys<M> | MessageLeafKeys<M> | (string & {}), options?: HasOptions): boolean {
+      return hasKey(String(key), options);
     },
 
     isLoaded(loc: Locale): boolean {
-      try {
-        return catalogStore.isLoaded(canonL(loc));
-      } catch {
-        return false;
-      }
+      return catalogStore.isLoaded(canonL(loc));
     },
 
     isNamespaceLoaded(ns: string, loc?: Locale): boolean {
-      if (!loc) return nsStore.isLoaded(ns, state.locale);
-
-      try {
-        return nsStore.isLoaded(ns, canonL(loc));
-      } catch {
-        return false;
-      }
+      return nsStore.isLoaded(ns, loc ? canonL(loc) : state.locale);
     },
 
-    isNamespaceRegistered(ns: string): boolean {
-      return nsStore.isRegistered(ns);
-    },
-
-    isRegistered(loc: Locale): boolean {
-      try {
-        return catalogStore.isRegistered(canonL(loc));
-      } catch {
-        return false;
-      }
-    },
-
-    loadNamespace(ns: string, loc?: Locale): Promise<void> {
-      const normalized = loc ? canonL(loc) : state.locale;
-
-      return nsStore.loadNamespace(ns, normalized, (l, messages) => catalogStore.patch(l, messages));
+    loadNamespace(ns: string, factory?: NamespaceFactory, loc?: Locale): Promise<void> {
+      return loadNamespaceImpl(ns, factory, loc);
     },
 
     get locale(): Locale {
@@ -389,9 +403,21 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     preload,
 
     register(loc: Locale, source: LocaleSource<M>): Promise<void> {
+      checkDisposed(disposed);
+
       const normalized = canonL(loc);
 
-      return catalogStore.register(normalized, source, nsStore);
+      // Clear namespace loaded-markers for this locale so namespaces can be re-applied
+      // after catalog replacement.
+      const clearedNs = nsStore.clearLocale(normalized);
+
+      if (clearedNs.length > 0) {
+        warn(
+          `register('${normalized}') cleared loaded namespace markers for: ${clearedNs.map((ns) => `'${ns}'`).join(', ')}. Call loadNamespace() again to reload.`,
+        );
+      }
+
+      return catalogStore.register(normalized, source);
     },
 
     registerNamespace(ns: string, factory: NamespaceFactory): void {
@@ -401,14 +427,19 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     restoreState(st: I18nState): void {
       checkDisposed(disposed);
 
+      if (st.version !== STATE_VERSION) {
+        throw new LinguaRestoreError(
+          `restoreState: unsupported state version "${String(st.version)}" (expected ${STATE_VERSION}).`,
+        );
+      }
+
       if (!Object.hasOwn(st.catalogs, st.locale)) {
         throw new LinguaRestoreError(`restoreState: locale "${st.locale}" has no catalog in the provided state.`);
       }
 
       const freshEntries = new Map<Locale, CatalogEntry>();
-      const knownLocales = catalogStore.knownLocales();
 
-      for (const knownLocale of knownLocales) {
+      for (const knownLocale of catalogStore.knownLocales()) {
         nsStore.clearLocale(knownLocale);
       }
 
@@ -427,18 +458,12 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
         freshEntries.set(normalized, entry);
       }
 
-      // Dispose and re-seed the catalog store with the restored entries.
-      // onChange is re-wired immediately after dispose.
-      catalogStore.dispose();
-      catalogStore.onChange = (loc: Locale) => {
-        if (state.chainSet.has(loc)) bump();
-      };
-      catalogStore.seedFrom(freshEntries, new Map());
+      // Replace all catalog state in one explicit operation.
+      catalogStore.reset(freshEntries);
 
       const normalized = canonL(st.locale);
 
       state = buildState(normalized, fallback, caches);
-      _fmt?.clear();
       bump();
     },
 
@@ -449,7 +474,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
         get fmt() {
           return getFormatter();
         },
-        has: (key) => hasKey(`${pre}.${key}`),
+        has: (key, options?) => hasKey(`${pre}.${key}`, options),
         t: (key, vars?) => translate(`${pre}.${key}`, vars),
         tp: (key, count, options?) => translatePlural(`${pre}.${key}`, count, options),
       }));
@@ -470,7 +495,6 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
       if (disposed || switchGen !== gen) return;
 
       state = buildState(normalized, fallback, caches);
-      _fmt?.clear();
       bump();
     },
 

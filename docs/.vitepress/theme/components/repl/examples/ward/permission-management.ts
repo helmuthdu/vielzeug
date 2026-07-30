@@ -10,8 +10,8 @@ const ward = createWard([
 const moderator = { id: 'm1', roles: ['moderator'] }
 const bannedModerator = { id: 'm2', roles: ['moderator', 'banned'] }
 
-console.log('Rules in scope for moderator:', ward.rulesInScope(moderator, 'comments'))
-console.log('Single decision:', ward.explain(bannedModerator, 'comments', 'delete'))
+console.log('Rules in scope for moderator:', ward.rulesInScope({ principal: moderator, resource: 'comments' }))
+console.log('Single decision:', ward.explain({ action: 'delete', principal: bannedModerator, resource: 'comments' }))
 console.log('Batch decisions:', ward.checkAll(bannedModerator, [
   { resource: 'comments', action: 'read' },
   { resource: 'comments', action: 'delete' },

@@ -1,14 +1,13 @@
-import type { Messages } from './_catalog';
+import type { Locale, Messages } from './_catalog';
 import type { LocaleSource } from './_catalog-store';
 import type { NamespaceFactory } from './_namespace-store';
 import type { Formatter } from './format';
 
-export type Locale = string;
-export type Unsubscribe = () => void;
-
-export type { Messages } from './_catalog';
+export type { Locale, Messages } from './_catalog';
 export type { Loader, LocaleSource } from './_catalog-store';
 export type { NamespaceFactory } from './_namespace-store';
+
+export type Unsubscribe = () => void;
 
 export type TranslateVars = Record<string, unknown>;
 
@@ -24,10 +23,16 @@ export type I18nSnapshot = {
   readonly tp: (key: string, count: number, options?: TpOptions) => string;
 };
 
-/** Shape of the serialised state produced by `serializeI18n()`. Pass to `hydrateI18n()` on the client. */
+/** Shape of the serialised state produced by `getState()`. Pass to `restoreState()` on the client. */
 export type I18nState = {
   readonly catalogs: Record<Locale, Record<string, string>>;
   readonly locale: Locale;
+  /**
+   * State format version — currently always `1`. `restoreState()` rejects any other
+   * version, so a future compiled/packed format can be introduced without silently
+   * misreading older payloads.
+   */
+  readonly version: 1;
 };
 
 export type SubscribeOptions = {
@@ -43,10 +48,21 @@ export type TpOptions = {
   vars?: TranslateVars;
 };
 
+export type HasOptions = {
+  /**
+   * Which key shape to check:
+   * - `'leaf'` (default) — a plain key resolvable by `t()`.
+   * - `'branch'` — a prefix with keys beneath it (plural branches, nested sections),
+   *   resolvable by `tp()` for plural branches.
+   */
+  kind?: 'branch' | 'leaf';
+};
+
 export type ScopedI18n = {
   /** Intl formatter inherited from the parent instance. Follows locale changes automatically. */
   readonly fmt: Formatter;
-  has(key: string): boolean;
+  /** True if `key` exists under this scope's prefix — as a leaf (default) or a branch (`{ kind: 'branch' }`). */
+  has(key: string, options?: HasOptions): boolean;
   t(key: string, vars?: TranslateVars): string;
   tp(key: string, count: number, options?: TpOptions): string;
 };
@@ -118,22 +134,6 @@ export type I18n<M extends Messages = Messages> = {
   dispose(): void;
   /** `true` after `dispose()` has been called. */
   readonly disposed: boolean;
-  /**
-   * Registers a namespace factory and immediately starts loading it for the given locale
-   * (defaults to the active locale). Deduplicates concurrent and repeated calls.
-   *
-   * @remarks
-   * Call `registerNamespace()` first if you only want to register without loading.
-   * `extend()` is a convenience that does both in one call.
-   *
-   * @throws `LinguaDisposedError` if called on a disposed instance.
-   *
-   * @example
-   * await i18n.extend('settings', (locale) =>
-   *   import(`./locales/${locale}/settings.json`).then((m) => m.default),
-   * );
-   */
-  extend(ns: string, factory: NamespaceFactory, locale?: Locale): Promise<void>;
   /** Intl formatter bound to this instance's locale. Follows locale changes automatically. */
   readonly fmt: Formatter;
   /**
@@ -141,8 +141,10 @@ export type I18n<M extends Messages = Messages> = {
    * namespace registry, and loaded-namespace markers, but has its own locale, fallback chain,
    * and subscribers. Catalog mutations on the fork do not affect the parent.
    *
-   * Resolved catalog entries are shared by reference (no template re-compilation), making
-   * `fork()` cheap for SSR fork-per-request patterns with large catalogs.
+   * Each catalog entry is shallow-cloned into the fork (so `patch()` on one side never
+   * mutates the other) while per-message compiled templates are shared by reference —
+   * `fork()` never re-compiles a message, making it cheap for SSR fork-per-request
+   * patterns with large catalogs.
    *
    * @example
    * // SSR: per-request locale without touching the shared instance
@@ -153,62 +155,68 @@ export type I18n<M extends Messages = Messages> = {
   getSnapshot(): I18nSnapshot;
   /**
    * Extracts a serializable snapshot of all loaded catalogs and the active locale.
-   * Pass the result to `hydrateI18n()` on the client.
+   * Pass the result to `restoreState()` on the client.
    *
    * **Warning:** Only fully resolved catalogs are included. Loader-only locales not yet
    * preloaded are omitted. Use `i18n.isLoaded(locale)` to verify before calling.
    *
    * **Warning:** The namespace registry is **not** serialized — factory functions cannot
-   * be converted to JSON. After `hydrateI18n()`, call `extend()` again for each namespace
-   * before relying on namespace-patched keys.
+   * be converted to JSON. After `restoreState()`, call `loadNamespace()` with a factory
+   * again for each namespace before relying on namespace-patched keys.
    */
   getState(): I18nState;
   /**
    * Returns all registered locales.
    * - Default (no argument): locales in registration order.
-   * - `getSupportedLocales(true)`: sorted in ascending code-point order.
+   * - `getSupportedLocales({ sorted: true })`: sorted in ascending code-point order.
    */
-  getSupportedLocales(sorted?: boolean): Locale[];
+  getSupportedLocales(options?: { sorted?: boolean }): Locale[];
   /**
-   * Returns `true` if the given key exists in the active fallback chain — either as a leaf
-   * string key or as a plural branch (any key under `key.` prefix).
+   * Returns `true` if the given key exists in the active fallback chain.
    *
-   * **Note:** a branch-only key (e.g. `items` when only `items.one`/`items.other` exist) makes
-   * `has()` return `true`, but `t()` can't resolve it — use `tp(key, count)` for those. Calling
-   * `t()` on a branch-only key logs a dev-mode warning pointing at this.
+   * Default checks for a **leaf** key — resolvable by `t()`. Pass
+   * `{ kind: 'branch' }` to check for a **branch** prefix instead (a plural
+   * branch resolvable by `tp()`, or any prefix with keys beneath it).
    *
    * @example
-   * i18n.has('inbox')       // true for leaf or pipe-plural expanded branch
-   * i18n.has('inbox.one')   // true for explicit sub-key
+   * i18n.has('inbox.title')                    // true for a leaf key
+   * i18n.has('inbox')                          // false when `inbox` only has plural sub-keys…
+   * i18n.has('inbox', { kind: 'branch' })      // …which this detects
    */
-  has(key: MessageLeafKeys<M> | MessageBranchKeys<M> | (string & {})): boolean;
+  has(key: MessageBranchKeys<M> | MessageLeafKeys<M> | (string & {}), options?: HasOptions): boolean;
   /**
    * Returns `true` if the catalog for `locale` is fully resolved.
    * Returns `false` for locales registered as async loaders not yet preloaded, and for unknown locales.
+   *
+   * @throws `LinguaInvalidLocaleError` for an invalid BCP 47 tag — a typo'd locale is a bug,
+   * not a `false`.
    */
   isLoaded(locale: Locale): boolean;
   /**
    * Returns `true` if the namespace has been fully loaded for the given locale.
    * Returns `false` if it is not registered or not yet loaded for this locale.
+   *
+   * @throws `LinguaInvalidLocaleError` for an invalid BCP 47 tag (when `locale` is passed).
    */
   isNamespaceLoaded(ns: string, locale?: Locale): boolean;
   /**
-   * Returns `true` if a namespace factory is registered under the given name.
-   */
-  isNamespaceRegistered(ns: string): boolean;
-  /**
-   * Returns `true` if `locale` is in the known locale registry — either resolved or pending loader.
-   * Returns `false` for locales that have never been registered.
-   */
-  isRegistered(locale: Locale): boolean;
-  /**
-   * Loads a previously registered namespace for the given locale (defaults to the active locale).
+   * Loads a previously registered namespace for the given locale (defaults to the active
+   * locale). Pass `factory` to register it first — one call does register + load.
    * Deduplicates concurrent and repeated calls.
    *
-   * @throws `LinguaNamespaceMissingError` if the namespace has not been registered with `registerNamespace()` first.
+   * Re-registering with a **new factory** after the namespace is already loaded updates the
+   * registry for future reloads but does **not** reload immediately — the new factory takes
+   * effect the next time the namespace marker is cleared (by `register()` or `restoreState()`).
+   *
+   * @throws `LinguaNamespaceMissingError` if no factory is passed and the namespace was never registered.
    * @throws `LinguaDisposedError` if called on a disposed instance.
+   *
+   * @example
+   * await i18n.loadNamespace('settings', (locale) =>
+   *   import(`./locales/${locale}/settings.json`).then((m) => m.default),
+   * );
    */
-  loadNamespace(ns: string, locale?: Locale): Promise<void>;
+  loadNamespace(ns: string, factory?: NamespaceFactory, locale?: Locale): Promise<void>;
   readonly locale: Locale;
   preload(locale: Locale): Promise<void>;
   /**
@@ -217,17 +225,17 @@ export type I18n<M extends Messages = Messages> = {
    * If the source is a static message object, it is synchronously registered and the returned
    * Promise resolves immediately.
    *
+   * Replacing a catalog clears every namespace's loaded-marker for that locale — call
+   * `loadNamespace()` again to re-apply them. Note: an *in-flight* namespace factory is
+   * not cancelled — if it resolves after the replacement, its keys are patched into the
+   * new catalog.
+   *
    * @throws `LinguaDisposedError` if called on a disposed instance.
    */
-  register(locale: Locale, source: LocaleSource<M>): Promise<void>;
+  register(loc: Locale, source: LocaleSource<M>): Promise<void>;
   /**
    * Registers a namespace factory without loading it. Use `loadNamespace()` to trigger loading,
-   * or use `extend()` to register and load in one call.
-   *
-   * @remarks
-   * Re-registering a namespace updates the factory for future loads but does **not** reload
-   * the namespace if it is already loaded. The new factory takes effect the next time the
-   * namespace marker is cleared (by a `register()` or `restoreState()` call).
+   * or pass the factory to `loadNamespace()` to do both in one call.
    *
    * @throws `LinguaDisposedError` if called on a disposed instance.
    */
@@ -236,14 +244,15 @@ export type I18n<M extends Messages = Messages> = {
    * Hydrates this instance with pre-loaded state (e.g. from a server-rendered payload).
    *
    * @remarks The namespace registry is **not** included in `I18nState`. After restoring,
-   * call `extend()` for each namespace before relying on namespace-patched keys.
+   * call `loadNamespace()` with a factory for each namespace before relying on
+   * namespace-patched keys.
    *
    * @remarks Unlike `register()` and construction, this does **not** run the automatic
    * dev-mode plural-form check — the assumption is that `state` was already registered (and
    * therefore already checked) once on whatever system produced it.
    *
    * @throws `LinguaDisposedError` if called on a disposed instance.
-   * @throws `LinguaRestoreError` if the state's locale has no catalog.
+   * @throws `LinguaRestoreError` if the state's locale has no catalog, or the state version is unsupported.
    */
   restoreState(state: I18nState): void;
   /**

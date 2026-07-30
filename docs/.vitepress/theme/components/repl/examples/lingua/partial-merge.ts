@@ -14,8 +14,8 @@ const i18n = createI18n({
 console.log('Before load:', i18n.t('nav.home'))
 console.log('Missing key before load:', i18n.t('settings.heading'))
 
-// extend() registers the factory and immediately loads it — merges keys into the catalog
-await i18n.extend('settings', (_locale) => Promise.resolve({
+// loadNamespace(ns, factory) registers the factory and immediately loads it — merges keys into the catalog
+await i18n.loadNamespace('settings', (_locale) => Promise.resolve({
   settings: {
     heading: 'Account Settings',
     saved: 'Changes saved',
@@ -29,5 +29,5 @@ console.log('Base keys still present:', i18n.t('nav.home'))
 const s = i18n.scope('settings')
 console.log(s.t('heading'))
 console.log(s.t('saved'))`,
-  name: 'Namespace Lazy Loading with extend()',
+  name: 'Namespace Lazy Loading with loadNamespace()',
 };

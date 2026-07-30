@@ -1,13 +1,17 @@
 // Internal — not part of the public API.
 // Owns all locale → CatalogEntry state, loaders, and in-flight loading tasks.
+//
+// This store knows nothing about namespaces: cross-store coordination (clearing
+// namespace markers on catalog replacement, patching namespace messages in after
+// a load) is orchestrated by the i18n instance in `i18n.ts`, which owns both
+// stores. Data flow reads top-to-bottom in one file instead of zig-zagging
+// through a store-to-store parameter or a patch callback.
 
-import type { NamespaceStore } from './_namespace-store';
-
-import { CatalogEntry, type Messages, flattenStrings } from './_catalog';
+import { CatalogEntry, type Locale, type Messages, flattenStrings } from './_catalog';
 import { devOnly, warn } from './_dev';
 import { LinguaMissingLocaleError, checkDisposed, checkDisposedAsync } from './errors';
 
-export type Locale = string;
+export type { Locale } from './_catalog';
 export type Loader<M extends Messages = Messages> = () => Promise<M>;
 export type LocaleSource<M extends Messages = Messages> = M | Loader<M>;
 
@@ -20,10 +24,10 @@ export type LocaleSource<M extends Messages = Messages> = M | Loader<M>;
 //
 // Dynamic import, not a static one: `validate.ts`'s own docs promise it stays out of production
 // bundles. A static `import { validateCatalog } from './validate'` here would pull it into every
-// consumer's main bundle regardless of `devOnly()`'s runtime check — bundlers only eliminate
-// that dead branch if the consumer's own build defines `__LINGUA_PROD__` as a literal. The
-// dynamic import keeps validate.ts a genuinely separate, lazily-fetched chunk that's never
-// requested at all when `isDev` is false, no consumer bundler config required.
+// consumer's main bundle. The dynamic import keeps validate.ts a genuinely separate,
+// lazily-fetched chunk, and the whole call site is compiled out of production dist via the
+// `__LINGUA_PROD__` define baked into the build (see vite.config.ts) — no consumer bundler
+// config required.
 export function validateCatalogInDev(loc: Locale, messages: Messages): void {
   devOnly(() => {
     void import('./validate').then(({ validateCatalog }) => {
@@ -47,7 +51,12 @@ export type CatalogStore<M extends Messages = Messages> = {
   /** Pre-load a locale catalog without switching. */
   preload(loc: Locale): Promise<void>;
   /** Register (or replace) a locale's source. Returns a Promise that resolves when the catalog is loaded. */
-  register(loc: Locale, source: LocaleSource<M>, nsStore: NamespaceStore): Promise<void>;
+  register(loc: Locale, source: LocaleSource<M>): Promise<void>;
+  /**
+   * Clear all state and seed with the given entries in one operation.
+   * Used by `restoreState()` — explicit replacement, not dispose-then-revive.
+   */
+  reset(entries: ReadonlyMap<Locale, CatalogEntry>): void;
   /** Resolve a compiled CatalogEntry for a locale (undefined if not loaded). */
   resolve(loc: Locale): CatalogEntry | undefined;
   /**
@@ -78,6 +87,18 @@ export function createCatalogStore<M extends Messages = Messages>(disposed: () =
     }
 
     entry.setAll(flat);
+  };
+
+  const seed = (entries: ReadonlyMap<Locale, CatalogEntry>, loaderMap: ReadonlyMap<Locale, Loader<M>>): void => {
+    for (const [loc, entry] of entries) {
+      catalogs.set(loc, entry);
+      known.add(loc);
+    }
+
+    for (const [loc, loader] of loaderMap) {
+      loaders.set(loc, loader);
+      known.add(loc);
+    }
   };
 
   const preload = (loc: Locale): Promise<void> => {
@@ -170,21 +191,11 @@ export function createCatalogStore<M extends Messages = Messages>(disposed: () =
 
     preload,
 
-    register(loc, source, nsStore) {
+    register(loc, source) {
       checkDisposed(disposed());
 
       loadingTasks.delete(loc);
       known.add(loc);
-
-      // Clear namespace loaded-markers for this locale so namespaces can be re-applied
-      // after catalog replacement.
-      const clearedNs = nsStore.clearLocale(loc);
-
-      if (clearedNs.length > 0) {
-        warn(
-          `register('${loc}') cleared loaded namespace markers for: ${clearedNs.map((ns) => `'${ns}'`).join(', ')}. Call loadNamespace() again to reload.`,
-        );
-      }
 
       let loadPromise: Promise<void>;
 
@@ -202,6 +213,14 @@ export function createCatalogStore<M extends Messages = Messages>(disposed: () =
       }
 
       return loadPromise;
+    },
+
+    reset(entries) {
+      catalogs.clear();
+      loaders.clear();
+      loadingTasks.clear();
+      known.clear();
+      seed(entries, new Map());
     },
 
     resolve(loc) {

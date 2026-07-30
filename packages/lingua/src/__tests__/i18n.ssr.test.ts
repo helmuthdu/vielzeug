@@ -11,6 +11,7 @@ describe('createI18n — SSR (getState/restoreState)', () => {
       });
       const state = i18n.getState();
 
+      expect(state.version).toBe(1);
       expect(state.locale).toBe('en');
       expect(state.catalogs['en']?.['hello']).toBe('Hello');
       expect(state.catalogs['en']?.['nav.home']).toBe('Home');
@@ -53,7 +54,8 @@ describe('createI18n — SSR (getState/restoreState)', () => {
       const state = {
         catalogs: { fr: { greeting: 'Bonjour' } },
         locale: 'fr',
-      };
+        version: 1,
+      } as const;
       const i18n = createI18n();
 
       i18n.restoreState(state);
@@ -66,7 +68,7 @@ describe('createI18n — SSR (getState/restoreState)', () => {
       const listener = vi.fn();
 
       i18n.subscribe(listener);
-      i18n.restoreState({ catalogs: { de: {} }, locale: 'de' });
+      i18n.restoreState({ catalogs: { de: {} }, locale: 'de', version: 1 });
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener.mock.calls[0]?.[0]?.locale).toBe('de');
     });
@@ -74,7 +76,7 @@ describe('createI18n — SSR (getState/restoreState)', () => {
     test('restoreState() then t() resolves from restored catalog', () => {
       const i18n = createI18n();
 
-      i18n.restoreState({ catalogs: { es: { hello: 'Hola' } }, locale: 'es' });
+      i18n.restoreState({ catalogs: { es: { hello: 'Hola' } }, locale: 'es', version: 1 });
       expect(i18n.t('hello')).toBe('Hola');
     });
 
@@ -116,13 +118,21 @@ describe('createI18n — SSR (getState/restoreState)', () => {
     test('throws LinguaRestoreError when state.locale is absent from state.catalogs', () => {
       const i18n = createI18n();
 
-      expect(() => i18n.restoreState({ catalogs: {}, locale: 'fr' })).toThrow(LinguaRestoreError);
+      expect(() => i18n.restoreState({ catalogs: {}, locale: 'fr', version: 1 })).toThrow(LinguaRestoreError);
+    });
+
+    test('throws LinguaRestoreError for an unsupported state version', () => {
+      const i18n = createI18n();
+
+      expect(() => i18n.restoreState({ catalogs: { en: {} }, locale: 'en', version: 99 as never })).toThrow(
+        /unsupported state version/,
+      );
     });
 
     test('active locale appears in getSupportedLocales() after valid restoreState()', () => {
       const i18n = createI18n();
 
-      i18n.restoreState({ catalogs: { fr: { hello: 'Bonjour' } }, locale: 'fr' });
+      i18n.restoreState({ catalogs: { fr: { hello: 'Bonjour' } }, locale: 'fr', version: 1 });
       expect(i18n.getSupportedLocales()).toContain('fr');
     });
   });
@@ -131,25 +141,25 @@ describe('createI18n — SSR (getState/restoreState)', () => {
     test('getState() includes namespace-patched keys in the flat catalog', async () => {
       const i18n = createI18n({ catalogs: { en: { base: 'Base' } }, locale: 'en' });
 
-      await i18n.extend('ui', () => Promise.resolve({ btn: 'Click me' }));
+      await i18n.loadNamespace('ui', () => Promise.resolve({ btn: 'Click me' }));
 
       const state = i18n.getState();
 
       expect(state.catalogs['en']).toMatchObject({ base: 'Base', btn: 'Click me' });
     });
 
-    test('after restoreState(), extend() re-applies namespace keys', async () => {
+    test('after restoreState(), loadNamespace() re-applies namespace keys', async () => {
       const source = createI18n({ catalogs: { en: { base: 'Base' } }, locale: 'en' });
 
-      await source.extend('ui', () => Promise.resolve({ btn: 'Click me' }));
+      await source.loadNamespace('ui', () => Promise.resolve({ btn: 'Click me' }));
 
       const state = source.getState();
       const target = createI18n();
 
       target.restoreState(state);
 
-      // Namespace registry not serialized — extend() re-registers and re-loads
-      await target.extend('ui', () => Promise.resolve({ btn: 'Click me' }));
+      // Namespace registry not serialized — loadNamespace(factory) re-registers and re-loads
+      await target.loadNamespace('ui', () => Promise.resolve({ btn: 'Click me' }));
 
       expect(target.t('btn')).toBe('Click me');
     });
@@ -160,26 +170,26 @@ describe('createI18n — SSR (getState/restoreState)', () => {
       const i18n = createI18n();
 
       i18n.dispose();
-      expect(() => i18n.restoreState({ catalogs: { en: {} }, locale: 'en' })).toThrow(LinguaDisposedError);
+      expect(() => i18n.restoreState({ catalogs: { en: {} }, locale: 'en', version: 1 })).toThrow(LinguaDisposedError);
     });
 
-    test('restoreState() clears namespace markers so extend() can re-apply', async () => {
+    test('restoreState() clears namespace markers so loadNamespace() can re-apply', async () => {
       let calls = 0;
       const i18n = createI18n({ catalogs: { en: { base: 'Base' } }, locale: 'en' });
 
-      await i18n.extend('ui', async () => {
+      await i18n.loadNamespace('ui', async () => {
         calls++;
 
         return { btn: 'Click' };
       });
       expect(calls).toBe(1);
 
-      i18n.restoreState({ catalogs: { en: { base: 'Base2' } }, locale: 'en' });
+      i18n.restoreState({ catalogs: { en: { base: 'Base2' } }, locale: 'en', version: 1 });
       // btn is gone after restore
       expect(i18n.t('btn')).toBe('btn');
 
-      // extend() re-applies because restoreState cleared the marker
-      await i18n.extend('ui', async () => {
+      // loadNamespace() re-applies because restoreState cleared the marker
+      await i18n.loadNamespace('ui', async () => {
         calls++;
 
         return { btn: 'Click' };

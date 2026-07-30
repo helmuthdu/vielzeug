@@ -1,58 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import { compileTemplate, parsePipePlural, renderTemplate } from '../template';
-
-// ─── parsePipePlural ──────────────────────────────────────────────────────────
-
-describe('parsePipePlural', () => {
-  test('returns null for a string with no pipe', () => {
-    expect(parsePipePlural('Hello')).toBeNull();
-    expect(parsePipePlural('')).toBeNull();
-  });
-
-  test('2-part → one | other', () => {
-    expect(parsePipePlural('One item|{count} items')).toEqual({
-      one: 'One item',
-      other: '{count} items',
-    });
-  });
-
-  test('3-part → zero | one | other', () => {
-    expect(parsePipePlural('No items|One item|{count} items')).toEqual({
-      one: 'One item',
-      other: '{count} items',
-      zero: 'No items',
-    });
-  });
-
-  test('6-part → zero | one | two | few | many | other', () => {
-    expect(parsePipePlural('0|1|2|few|many|other')).toEqual({
-      few: 'few',
-      many: 'many',
-      one: '1',
-      other: 'other',
-      two: '2',
-      zero: '0',
-    });
-  });
-
-  test('returns null for part counts other than 2, 3, or 6', () => {
-    expect(parsePipePlural('a|b|c|d')).toBeNull(); // 4 parts
-    expect(parsePipePlural('a|b|c|d|e')).toBeNull(); // 5 parts
-  });
-
-  test('returns null when any part is empty or whitespace-only', () => {
-    expect(parsePipePlural('One| ')).toBeNull();
-    expect(parsePipePlural('|other')).toBeNull();
-    expect(parsePipePlural('  |other')).toBeNull();
-  });
-
-  test('preserves leading/trailing spaces within parts (only full-whitespace parts are rejected)', () => {
-    const result = parsePipePlural(' One item |{count} items');
-
-    expect(result).toEqual({ one: ' One item ', other: '{count} items' });
-  });
-});
+import { compileTemplate, renderTemplate } from '../template';
 
 // ─── compileTemplate ──────────────────────────────────────────────────────────
 

@@ -28,7 +28,7 @@ const i18n = createI18n({ locale: 'de', fallback: 'en', catalogs: messages });
 const greeting = i18n.t('greeting', { name: 'Alice' });
 ```
 
-- Minimal API: `t`, `tp`, `extend`, `registerNamespace`, `loadNamespace`, `preload`, `setLocale`, `register`, `scope`, `fork`, `getSnapshot`, `getState`, `restoreState`, `subscribe`, `has`, `isLoaded`, `isRegistered`, `isNamespaceLoaded`, `isNamespaceRegistered`, `dispose`, `getSupportedLocales`
+- Minimal API: `t`, `tp`, `loadNamespace`, `registerNamespace`, `preload`, `setLocale`, `register`, `scope`, `fork`, `getSnapshot`, `getState`, `restoreState`, `subscribe`, `has`, `isLoaded`, `isNamespaceLoaded`, `dispose`, `getSupportedLocales`
 - Deterministic locale fallback chain resolution
 - Typed leaf and plural branch keys with explicit APIs (`t` and `tp`)
 - Explicit locale source model (static messages or async loaders)
@@ -42,7 +42,7 @@ const greeting = i18n.t('greeting', { name: 'Alice' });
 | Typed key ergonomics              | <ore-icon name="check" size="16"></ore-icon>                             | Partial                                    | Partial                                    |
 | Deterministic fallback chain      | <ore-icon name="check" size="16"></ore-icon>                             | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | Async locale preload              | <ore-icon name="check" size="16"></ore-icon>                             | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Namespace lazy loading            | <ore-icon name="check" size="16"></ore-icon> (`extend()`)                | Partial                                    | <ore-icon name="x" size="16"></ore-icon>     |
+| Namespace lazy loading            | <ore-icon name="check" size="16"></ore-icon> (`loadNamespace()`)                | Partial                                    | <ore-icon name="x" size="16"></ore-icon>     |
 | Runtime snapshots + subscriptions | <ore-icon name="check" size="16"></ore-icon>                             | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
 | External formatter bridge         | <ore-icon name="check" size="16"></ore-icon> (`createFormatter` in main entry) | Partial                                    | <ore-icon name="check" size="16"></ore-icon> |
 | Framework agnostic                | <ore-icon name="check" size="16"></ore-icon>                             | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
@@ -105,7 +105,7 @@ const nav = i18n.scope('nav');
 nav.t('home'); // resolves 'nav.home'
 
 // Namespace-based lazy loading for route-specific keys
-await i18n.extend('settings', (locale) => import(`./routes/${locale}/settings.i18n.json`).then((m) => m.default));
+await i18n.loadNamespace('settings', (locale) => import(`./routes/${locale}/settings.i18n.json`).then((m) => m.default));
 
 // Formatter bound to the current locale — follows locale changes automatically
 const fmt = createFormatter(() => i18n.locale);
@@ -130,11 +130,10 @@ i18n.getSupportedLocales();
 - One runtime primitive: `createI18n(options)`
 - Explicit translation methods: `t(leafKey, vars?)` and `tp(branchKey, count, options?)`
 - Explicit locale lifecycle: `register`, `preload`, `setLocale`
-- Namespace lazy loading: `registerNamespace(ns, factory)` + `loadNamespace(ns, locale?)` — or use `extend(ns, factory, locale?)` as a convenience that does both; deduplicates per `ns + locale`; use for per-route or per-feature keys
+- Namespace lazy loading: `loadNamespace(ns, factory?, locale?)` — pass a factory for register + load in one call, or split with `registerNamespace(ns, factory)` first; deduplicates per `ns + locale`; use for per-route or per-feature keys
 - Scoped translation helpers: `scope(prefix)` returns a `{ fmt, t, tp, has }` helper bound to a key prefix
-- Unified key existence check: `has(key)` returns `true` for leaf keys, branch keys, and pipe-plural base keys in the active fallback chain
+- Key existence check: `has(key)` for leaf keys, `has(key, { kind: 'branch' })` for branch keys in the active fallback chain
 - Loaded-locale predicate: `isLoaded(locale)` returns `true` when a catalog is fully resolved — safe for `getState()` guards
-- Registered-locale predicate: `isRegistered(locale)` distinguishes "never configured" from "async loader not yet called"
 - Instance disposal: `dispose()` clears all subscribers and catalog state — prevents memory leaks in route-scoped SPA instances
 - Typed error handling: every thrown/rejected error is `instanceof LinguaError`, with named subclasses (`LinguaDisposedError`, `LinguaMissingLocaleError`, `LinguaNamespaceMissingError`, …) for specific `instanceof` branching
 - Instance forking: `fork(overrides?)` creates an isolated child for SSR or test isolation

@@ -48,7 +48,22 @@ const main = async () => {
     return;
   }
 
-  console.log(`OK — all ${Object.keys(packageJson.exports).length} export(s) resolve.`);
+  // The prod gate (`__LINGUA_PROD__`) must be baked into every built artifact as a
+  // literal (see vite.config.ts / vite.bundle.config.ts `define`). If the raw global
+  // reference survives into any emitted file, the define was lost from that build
+  // config and every dev warn + the lazy validate-chunk fetch is live in production again.
+  for (const artifact of ['dist/index.js', 'dist/format.js', 'dist/lingua.iife.js']) {
+    const contents = await readFile(path.join(packageRoot, artifact), 'utf8');
+
+    if (contents.includes('__LINGUA_PROD__')) {
+      console.error(`${artifact} still references __LINGUA_PROD__ — the prod-gate define is missing from the build config.`);
+      process.exitCode = 1;
+
+      return;
+    }
+  }
+
+  console.log(`OK — all ${Object.keys(packageJson.exports).length} export(s) resolve, prod gate baked in.`);
 };
 
 await main();

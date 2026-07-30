@@ -9,7 +9,7 @@ const user1 = { id: 'user1', roles: ['user'] }
 const user2 = { id: 'user2', roles: ['user'] }
 const post  = { id: 'post1', authorId: 'user1', title: 'My Post' }
 
-console.log('Author can update:     ', ward.explain(user1, 'posts', 'update', post).allowed)
-console.log('Non-author can update: ', ward.explain(user2, 'posts', 'update', post).allowed)`,
+console.log('Author can update:     ', ward.explain({ action: 'update', data: post, principal: user1, resource: 'posts' }).allowed)
+console.log('Non-author can update: ', ward.explain({ action: 'update', data: post, principal: user2, resource: 'posts' }).allowed)`,
   name: 'Dynamic Permissions — Ownership Rules',
 };

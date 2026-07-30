@@ -48,13 +48,13 @@ export async function renderDocument(locale: string) {
 }
 ```
 
-If namespaces are extended on the shared instance before forking, the dedup markers are copied to the fork:
+If namespaces are loaded on the shared instance before forking, the dedup markers are copied to the fork:
 
 ```ts
-// In the request handler, extend() runs at most once per ns + locale
+// In the request handler, the factory runs at most once per ns + locale
 const reqI18n = sharedI18n.fork({ locale: req.locale });
 await reqI18n.setLocale(req.locale);
-await reqI18n.extend('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default)); // loads for req.locale only; no-op if already loaded
+await reqI18n.loadNamespace('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default)); // loads for req.locale only; no-op if already loaded
 ```
 
 To pass the server-rendered locale state to the client, use `getState()` and `restoreState()`:

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(lingua): removed extend(), isRegistered(), isNamespaceRegistered(), Formatter.clear(), and the pipe-plural shorthand. has() is leaf-only by default (use { kind: 'branch' }). isLoaded()/isNamespaceLoaded() now throw on invalid locale tags. getSupportedLocales() takes { sorted }. I18nState is versioned. loadNamespace(ns, factory?, locale?) now does register+load in one call.",
+      "packageName": "@vielzeug/lingua",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/lingua"
+}

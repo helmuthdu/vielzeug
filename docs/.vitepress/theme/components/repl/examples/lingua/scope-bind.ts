@@ -6,11 +6,11 @@ const i18n = createI18n({
   catalogs: {
     en: {
       nav: { home: 'Home', about: 'About', contact: 'Contact' },
-      inbox: 'One message|{count} messages',
+      inbox: { one: 'One message', other: '{count} messages' },
     },
     de: {
       nav: { home: 'Startseite', about: 'Über uns', contact: 'Kontakt' },
-      inbox: 'Eine Nachricht|{count} Nachrichten',
+      inbox: { one: 'Eine Nachricht', other: '{count} Nachrichten' },
     },
   },
 })
@@ -29,30 +29,32 @@ console.log('nav.home (de):', nav.t('home'))    // 'Startseite'
 // scope() is memoized per prefix — same object reference for the same prefix
 console.log('same ref?', i18n.scope('nav') === i18n.scope('nav')) // true
 
-// ── has() ────────────────────────────────────────────────────────────────────
-// has() returns true for leaf keys, branch keys, and pipe-plural base keys.
+// ── has(key, { kind }) ──────────────────────────────────────────────────────
+// has() is leaf-only by default (resolvable by t()); { kind: 'branch' } checks
+// branch keys (resolvable by tp()).
 await i18n.setLocale('en')
-console.log('has("inbox"):', i18n.has('inbox'))         // true — pipe-plural branch
-console.log('has("inbox.one"):', i18n.has('inbox.one')) // true — explicit sub-key
-console.log('has("missing"):', i18n.has('missing'))     // false
+console.log('has("inbox"):', i18n.has('inbox'))                                // false — branch, not a leaf
+console.log('has("inbox", branch):', i18n.has('inbox', { kind: 'branch' }))    // true — plural branch
+console.log('has("inbox.one"):', i18n.has('inbox.one'))                        // true — explicit sub-key
+console.log('has("missing"):', i18n.has('missing'))                            // false
 
 // ── isLoaded() ───────────────────────────────────────────────────────────────
 // Safe predicate — never throws, even for invalid or unregistered locales.
 console.log('isLoaded("en"):', i18n.isLoaded('en')) // true
 console.log('isLoaded("fr"):', i18n.isLoaded('fr')) // false (not registered)
 
-// ── extend() ─────────────────────────────────────────────────────────────────
-// extend() registers and loads a namespace in one call; deduped per ns + locale.
-await i18n.extend('actions', (locale) => Promise.resolve({
+// ── loadNamespace(ns, factory) ──────────────────────────────────────────────
+// Registers and loads a namespace in one call; deduped per ns + locale.
+await i18n.loadNamespace('actions', (locale) => Promise.resolve({
   save: locale === 'de' ? 'Speichern' : 'Save',
   cancel: locale === 'de' ? 'Abbrechen' : 'Cancel',
 }))
 console.log('actions.save:', i18n.t('save'))   // 'Save' (en)
 await i18n.setLocale('de')
-await i18n.extend('actions', (locale) => Promise.resolve({
+await i18n.loadNamespace('actions', (locale) => Promise.resolve({
   save: locale === 'de' ? 'Speichern' : 'Save',
   cancel: locale === 'de' ? 'Abbrechen' : 'Cancel',
 }))
 console.log('actions.save (de):', i18n.t('save')) // 'Speichern'`,
-  name: 'scope(), has(), isLoaded(), extend()',
+  name: 'scope(), has(), isLoaded(), loadNamespace()',
 };

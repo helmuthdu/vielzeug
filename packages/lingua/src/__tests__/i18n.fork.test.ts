@@ -157,7 +157,7 @@ describe('createI18n — fork()', () => {
       const parent = createI18n({ catalogs: { en: { base: 'Base' } }, locale: 'en' });
       const child = parent.fork();
 
-      await child.extend('ui', () => Promise.resolve({ btn: 'Click me' }) as any);
+      await child.loadNamespace('ui', () => Promise.resolve({ btn: 'Click me' }) as any);
       expect(child.t('btn')).toBe('Click me');
     });
 
@@ -165,16 +165,16 @@ describe('createI18n — fork()', () => {
       const parent = createI18n({ catalogs: { en: {} }, locale: 'en' });
       const child = parent.fork();
 
-      await child.extend('ui', () => Promise.resolve({ btn: 'Click me' }));
+      await child.loadNamespace('ui', () => Promise.resolve({ btn: 'Click me' }));
       expect(child.t('btn')).toBe('Click me');
       expect(parent.t('btn')).toBe('btn'); // parent did not load the namespace
     });
 
-    test('extend() on fork does not affect the parent registry', async () => {
+    test('loadNamespace() on fork does not affect the parent registry', async () => {
       const parent = createI18n({ catalogs: { en: {} }, locale: 'en' });
       const child = parent.fork();
 
-      await child.extend('childOnly', () => Promise.resolve({ x: 'X' }));
+      await child.loadNamespace('childOnly', () => Promise.resolve({ x: 'X' }));
       expect(child.t('x')).toBe('X');
       expect(parent.t('x')).toBe('x');
     });

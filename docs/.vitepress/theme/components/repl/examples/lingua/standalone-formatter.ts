@@ -24,10 +24,6 @@ console.log(reactiveFormatter.list(['Äpfel', 'Birnen', 'Orangen']))
 // => 'Äpfel, Birnen und Orangen'
 
 console.log(reactiveFormatter.duration({ hours: 1, minutes: 30 }))
-// => '1h 30min' (labeled fallback where Intl.DurationFormat is unavailable — e.g. this REPL's runtime)
-
-// clear() drops cached Intl formatter instances — rarely needed manually,
-// since createI18n()'s setLocale() already calls it automatically for i18n.fmt.
-reactiveFormatter.clear()`,
+// => '1h 30min' (labeled fallback where Intl.DurationFormat is unavailable — e.g. this REPL's runtime)`,
   name: 'createFormatter() — standalone (no createI18n)',
 };

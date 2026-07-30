@@ -14,7 +14,7 @@ const editor   = { id: 'u2', roles: ['editor'] }
 const blocked  = { id: 'u3', roles: ['blocked'] }
 
 const explain = (p: typeof viewer | null, action: string) =>
-  ward.explain(p, 'posts', action).allowed
+  ward.explain({ action, principal: p, resource: 'posts' }).allowed
 
 console.log('viewer  read:  ', explain(viewer,  'read'))    // true
 console.log('viewer  update:', explain(viewer,  'update'))  // false

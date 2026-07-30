@@ -1,62 +1,9 @@
-// ─── Template helpers ─────────────────────────────────────────────────────────
-// Shared by i18n.ts — extracted for navigability. Not part of the public API.
-
-import { warn } from './_dev';
-
-type Locale = string;
-type TranslateVars = Record<string, unknown>;
-
-interface Messages {
-  [key: string]: string | Messages;
-}
-
-// ─── Pipe-plural shorthand (F1) ───────────────────────────────────────────────
-// A leaf string containing '|' is parsed as a pipe-delimited plural shorthand.
-// Supported part counts and their form mappings (positional, left-to-right):
-//   2 parts → one | other
-//   3 parts → zero | one | other
-//   6 parts → zero | one | two | few | many | other
-// Any other part count is treated as a plain string with no expansion.
-
-const PIPE_FORM_MAPS: Readonly<Partial<Record<number, readonly string[]>>> = {
-  2: ['one', 'other'],
-  3: ['zero', 'one', 'other'],
-  6: ['zero', 'one', 'two', 'few', 'many', 'other'],
-};
-
-export function parsePipePlural(value: string): Messages | null {
-  const pipeIdx = value.indexOf('|');
-
-  if (pipeIdx === -1) return null;
-
-  const parts = value.split('|');
-  const forms = PIPE_FORM_MAPS[parts.length];
-
-  if (!forms) {
-    warn(
-      `Pipe-plural shorthand with ${parts.length} parts is not recognized (valid counts: 2, 3, 6). Treating as a plain string: "${value.slice(0, 60)}${value.length > 60 ? '…' : ''}"`,
-    );
-
-    return null;
-  }
-
-  // An empty part is almost certainly a catalog authoring error.
-  // Treat the whole value as a plain string rather than silently producing an empty form.
-  if (parts.some((p) => p.trim() === '')) return null;
-
-  const result: Messages = {};
-
-  for (let i = 0; i < parts.length; i++) {
-    result[forms[i]] = parts[i];
-  }
-
-  return result;
-}
-
 // ─── Template compilation ─────────────────────────────────────────────────────
 // Message strings are parsed once at registration time into a pre-compiled form:
 // an array of static strings and variable names. Rendering a compiled template
-// skips the regex entirely.
+// skips the regex entirely. Not part of the public API.
+
+import type { Locale } from './_catalog';
 
 type TemplatePart = string | { var: string };
 export type CompiledTemplate = TemplatePart[];
@@ -88,7 +35,7 @@ export function compileTemplate(template: string): CompiledTemplate {
 
 export function renderTemplate(
   parts: CompiledTemplate,
-  vars: TranslateVars | undefined,
+  vars: Record<string, unknown> | undefined,
   key: string,
   locale: Locale,
   onMissingVar: (varName: string, key: string, locale: Locale) => string,

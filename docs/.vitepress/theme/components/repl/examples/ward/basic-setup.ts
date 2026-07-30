@@ -14,7 +14,7 @@ const editor = { id: '2', roles: ['editor'] }
 const admin  = { id: '3', roles: ['admin'] }
 
 const can = (p: typeof viewer | null, action: string) =>
-  ward.explain(p, 'posts', action).allowed
+  ward.explain({ action, principal: p, resource: 'posts' }).allowed
 
 console.log('Viewer can read:',    can(viewer, 'read'))   // true
 console.log('Viewer can update:',  can(viewer, 'update')) // false

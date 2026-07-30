@@ -8,11 +8,11 @@ const ward = createWard([
   { role: 'blocked',  resource: 'posts', action: 'read', effect: 'deny',  priority: 5 },
 ])
 
-const { decision, candidates } = ward.trace(
-  { id: 'u1', roles: ['editor', 'blocked'] },
-  'posts',
-  'read',
-)
+const { decision, candidates } = ward.trace({
+  action: 'read',
+  principal: { id: 'u1', roles: ['editor', 'blocked'] },
+  resource: 'posts',
+})
 
 candidates.forEach(({ index, rule, priority, score, won }) => {
   console.log(

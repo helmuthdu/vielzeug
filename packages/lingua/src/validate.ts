@@ -16,11 +16,9 @@
  * ```
  */
 
-import type { Messages } from './_catalog';
-import type { Locale } from './_chain';
+import type { Locale, Messages } from './_catalog';
 
 import { CLDR_FORMS, UNSAFE_KEYS } from './_constants';
-import { parsePipePlural } from './template';
 
 export type ValidationWarning = {
   form: string;
@@ -53,14 +51,7 @@ function findPluralBranches(messages: Messages, prefix = ''): Array<{ key: strin
 
     const fullKey = prefix ? `${prefix}.${k}` : k;
 
-    if (typeof v === 'string') {
-      // Expand pipe-plural shorthand so it can be validated like a nested plural branch.
-      const expanded = parsePipePlural(v);
-
-      if (expanded) result.push({ key: fullKey, obj: expanded });
-
-      continue;
-    }
+    if (typeof v === 'string') continue;
 
     const obj = v as Messages;
     const childKeys = Object.keys(obj);

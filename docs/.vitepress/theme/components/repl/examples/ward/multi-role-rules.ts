@@ -22,7 +22,7 @@ const admin     = { id: '3', roles: ['admin'] }
 const ACTIONS = ['read', 'comment', 'delete', 'pin'] as const
 
 for (const [label, principal] of [['guest', guest], ['user', user], ['moderator', moderator], ['admin', admin]] as const) {
-  const allowed = ward.allowedActions(principal, 'articles', ACTIONS)
+  const allowed = ward.allowedActions({ knownActions: ACTIONS, principal, resource: 'articles' })
   console.log(\`\${label} can:\`, allowed)
 }`,
   name: 'Multi-Role Rules',

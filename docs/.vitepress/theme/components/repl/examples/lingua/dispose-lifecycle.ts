@@ -10,21 +10,20 @@ const i18n = createI18n({
   },
 })
 
-// ── isRegistered() ────────────────────────────────────────────────────────────
-// Distinguishes "locale never configured" from "loader registered but not loaded".
-console.log('isRegistered("en"):', i18n.isRegistered('en'))  // true (static catalog)
-console.log('isRegistered("de"):', i18n.isRegistered('de'))  // true (pending loader)
-console.log('isRegistered("fr"):', i18n.isRegistered('fr'))  // false (never configured)
-
+// ── isLoaded() ────────────────────────────────────────────────────────────────
+// Distinguishes "resolved catalog" from "loader registered but not yet loaded".
 console.log('isLoaded("en"):', i18n.isLoaded('en'))  // true
 console.log('isLoaded("de"):', i18n.isLoaded('de'))  // false — not yet preloaded
+console.log('isLoaded("fr"):', i18n.isLoaded('fr'))  // false — never configured
 
-// Safe for invalid locale tags — both predicates never throw
-console.log('isRegistered("!!"):', i18n.isRegistered('!!'))  // false
-console.log('isLoaded("!!"):', i18n.isLoaded('!!'))           // false
+// Invalid BCP 47 tags throw — a typo'd locale is a bug, not a false
+try {
+  i18n.isLoaded('!!')
+} catch (err) {
+  console.log('isLoaded("!!"):', (err as Error).name)  // 'LinguaInvalidLocaleError'
+}
 
 // ── Conditional preload pattern ───────────────────────────────────────────────
-if (!i18n.isRegistered('de')) throw new Error('de locale not configured')
 if (!i18n.isLoaded('de')) await i18n.preload('de')
 
 console.log('isLoaded("de") after preload:', i18n.isLoaded('de'))  // true
@@ -48,8 +47,7 @@ console.log('disposed after:', routeI18n.disposed)                   // true
 console.log('signal aborted after:', routeI18n.disposalSignal.aborted)   // true
 
 // All state is cleared after disposal
-console.log('after dispose — isRegistered("en"):', routeI18n.isRegistered('en'))  // false
-console.log('after dispose — isLoaded("en"):', routeI18n.isLoaded('en'))           // false
+console.log('after dispose — isLoaded("en"):', routeI18n.isLoaded('en'))  // false
 
 // Post-dispose: register() throws LinguaDisposedError — consistent with all other mutation methods
 try {
@@ -75,5 +73,5 @@ console.log('double dispose — no error')
 
 // The parent instance is unaffected
 console.log('parent still works:', i18n.t('greeting'))  // 'Hallo' (de)`,
-  name: 'isRegistered(), dispose() — lifecycle management',
+  name: 'isLoaded(), dispose() — lifecycle management',
 };

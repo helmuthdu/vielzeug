@@ -153,7 +153,8 @@ describe('createI18n — locale, catalog, and formatter state', () => {
   });
 
   describe('prototype pollution guard', () => {
-    test('__proto__ key in catalog is silently skipped', () => {
+    test('__proto__ key in catalog is skipped with a dev warning', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const evil = JSON.parse('{"__proto__": "hacked", "hello": "Hello"}') as Record<string, string>;
 
       expect(() => {
@@ -163,9 +164,12 @@ describe('createI18n — locale, catalog, and formatter state', () => {
         // __proto__ key must not appear as a catalog entry
         expect(i18n.has('__proto__' as any)).toBe(false);
       }).not.toThrow();
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("'__proto__' is reserved and was skipped"));
+      warnSpy.mockRestore();
     });
 
-    test('nested __proto__ key in catalog is silently skipped', () => {
+    test('nested __proto__ key in catalog is skipped', () => {
       const evil = JSON.parse('{"nav": {"__proto__": "hacked", "home": "Home"}}') as Record<string, unknown>;
 
       const i18n = createI18n({ catalogs: { en: evil as any } });
@@ -437,11 +441,10 @@ describe('createI18n — locale, catalog, and formatter state', () => {
       expect(i18n.isLoaded('fr')).toBe(false);
     });
 
-    test('returns false for an invalid locale tag without throwing', () => {
+    test('throws for an invalid locale tag', () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
 
-      expect(() => i18n.isLoaded('not-a-valid-locale!!!')).not.toThrow();
-      expect(i18n.isLoaded('not-a-valid-locale!!!')).toBe(false);
+      expect(() => i18n.isLoaded('not-a-valid-locale!!!')).toThrow(/BCP 47/);
     });
 
     test('canonicalizes locale before checking', () => {
@@ -474,7 +477,7 @@ describe('createI18n — locale, catalog, and formatter state', () => {
       const i18n = createI18n({ catalogs: { de: {}, 'en-US': {}, 'zh-Hant': {} } });
 
       // Code-point sort: '-' (0x2D) < uppercase letters < lowercase, so 'de' < 'en-US' < 'zh-Hant'.
-      expect(i18n.getSupportedLocales(true)).toEqual(['de', 'en-US', 'zh-Hant']);
+      expect(i18n.getSupportedLocales({ sorted: true })).toEqual(['de', 'en-US', 'zh-Hant']);
     });
   });
 
@@ -504,7 +507,7 @@ describe('createI18n — locale, catalog, and formatter state', () => {
         catalogs: { de: { a: 'a' }, en: { a: 'a' }, fr: { a: 'a' }, zh: { a: 'a' } },
       });
 
-      expect(i18n.getSupportedLocales(true)).toEqual(['de', 'en', 'fr', 'zh']);
+      expect(i18n.getSupportedLocales({ sorted: true })).toEqual(['de', 'en', 'fr', 'zh']);
     });
 
     test('sorted=false preserves registration order', () => {
@@ -515,41 +518,7 @@ describe('createI18n — locale, catalog, and formatter state', () => {
       i18n.register('de', { a: 'a' });
       i18n.register('en', { a: 'a' });
 
-      expect(i18n.getSupportedLocales(false)).toEqual(['zh', 'fr', 'de', 'en']);
-    });
-  });
-
-  describe('isRegistered()', () => {
-    test('returns true for a statically registered locale', () => {
-      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
-
-      expect(i18n.isRegistered('en')).toBe(true);
-    });
-
-    test('returns true for a loader-only locale (not yet loaded)', () => {
-      const i18n = createI18n({ catalogs: { de: async () => ({ hello: 'Hallo' }), en: { hello: 'Hello' } } });
-
-      expect(i18n.isRegistered('de')).toBe(true);
-    });
-
-    test('returns false for an unregistered locale', () => {
-      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
-
-      expect(i18n.isRegistered('fr')).toBe(false);
-    });
-
-    test('returns false for an invalid locale tag without throwing', () => {
-      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
-
-      expect(() => i18n.isRegistered('not-a-valid-locale!!!')).not.toThrow();
-      expect(i18n.isRegistered('not-a-valid-locale!!!')).toBe(false);
-    });
-
-    test('isRegistered true + isLoaded false for pending loader', () => {
-      const i18n = createI18n({ catalogs: { de: async () => ({ hello: 'Hallo' }), en: { hello: 'Hello' } } });
-
-      expect(i18n.isRegistered('de')).toBe(true);
-      expect(i18n.isLoaded('de')).toBe(false);
+      expect(i18n.getSupportedLocales({ sorted: false })).toEqual(['zh', 'fr', 'de', 'en']);
     });
   });
 

@@ -10,12 +10,12 @@ const ward = createWard([
 const editor = { id: '1', roles: ['editor'] }
 const viewer = { id: '2', roles: ['viewer'] }
 
-console.log('Editor can read:   ', ward.explain(editor, 'articles', 'read').allowed)
-console.log('Editor can delete: ', ward.explain(editor, 'articles', 'delete').allowed)
-console.log('Viewer can create: ', ward.explain(viewer, 'articles', 'create').allowed)
+console.log('Editor can read:   ', ward.explain({ action: 'read', principal: editor, resource: 'articles' }).allowed)
+console.log('Editor can delete: ', ward.explain({ action: 'delete', principal: editor, resource: 'articles' }).allowed)
+console.log('Viewer can create: ', ward.explain({ action: 'create', principal: viewer, resource: 'articles' }).allowed)
 
 // Full decision object with deny reason
-const decision = ward.explain(editor, 'articles', 'delete')
+const decision = ward.explain({ action: 'delete', principal: editor, resource: 'articles' })
 if (!decision.allowed) console.log('Deny reason:', decision.reason)`,
   name: 'Permission Checks',
 };

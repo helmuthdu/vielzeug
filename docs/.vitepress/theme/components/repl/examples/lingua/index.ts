@@ -9,7 +9,6 @@ import { formattingHelpersExample } from './formatting-helpers';
 import { namespacesExample } from './namespaces';
 import { nestedObjectsExample } from './nested-objects';
 import { partialMergeExample } from './partial-merge';
-import { pipePluralExample } from './pipe-plural';
 import { pluralizationExample } from './pluralization';
 import { preloadPatternExample } from './preload-pattern';
 import { scopeBindExample } from './scope-bind';
@@ -29,7 +28,6 @@ export const linguaExamples = {
   namespaces: namespacesExample,
   'nested-objects': nestedObjectsExample,
   'partial-merge': partialMergeExample,
-  'pipe-plural': pipePluralExample,
   pluralization: pluralizationExample,
   'preload-pattern': preloadPatternExample,
   'scope-bind': scopeBindExample,

@@ -9,8 +9,8 @@ const ward = createWard([
 const user  = { id: '42', roles: ['editor', 'moderator'] }
 const bound = ward.forUser(user)
 
-console.log('Can read posts:   ', bound.explain('posts', 'read').allowed)
-console.log('Can delete posts: ', bound.explain('posts', 'delete').allowed)
-console.log('Allowed actions:  ', bound.allowedActions('posts', ['read', 'delete', 'update']))`,
+console.log('Can read posts:   ', bound.explain({ action: 'read', resource: 'posts' }).allowed)
+console.log('Can delete posts: ', bound.explain({ action: 'delete', resource: 'posts' }).allowed)
+console.log('Allowed actions:  ', bound.allowedActions({ knownActions: ['read', 'delete', 'update'], resource: 'posts' }))`,
   name: 'Bound Multi-Role Access',
 };

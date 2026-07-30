@@ -111,23 +111,25 @@ describe('createI18n — scope()', () => {
       expect(board.tp('place', 4, { ordinal: true })).toBe('4th');
     });
 
-    test('has() returns true for a direct nested branch key (non-CLDR)', () => {
+    test("has(key, { kind: 'branch' }) returns true for a direct nested branch key (non-CLDR)", () => {
       const i18n = createI18n({
         catalogs: { en: { ui: { nav: { about: 'About', home: 'Home' } } } },
       });
       const ui = i18n.scope('ui');
 
-      expect(ui.has('nav')).toBe(true);
+      expect(ui.has('nav', { kind: 'branch' })).toBe(true);
       expect(ui.has('nav.home')).toBe(true);
       expect(ui.has('nav.missing')).toBe(false);
+      expect(ui.has('nav')).toBe(false);
     });
 
-    test('has() returns true for a plural branch within scope (CLDR forms)', () => {
+    test("has(key, { kind: 'branch' }) returns true for a plural branch within scope (CLDR forms)", () => {
       const i18n = createI18n({ catalogs });
       const msgs = i18n.scope('messages');
 
-      expect(msgs.has('inbox')).toBe(true);
+      expect(msgs.has('inbox', { kind: 'branch' })).toBe(true);
       expect(msgs.has('inbox.one')).toBe(true);
+      expect(msgs.has('inbox')).toBe(false);
     });
   });
 

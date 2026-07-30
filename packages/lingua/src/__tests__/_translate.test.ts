@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { CatalogEntry } from '../_catalog';
 import { createLocaleCaches } from '../_chain';
-import { type TranslateContext, hasKey, translate, translatePlural } from '../_translate';
+import { type TranslateContext, hasLeaf, hasPluralBranch, translate, translatePlural } from '../_translate';
 import { LinguaCountInVarsError, LinguaInvalidCountError } from '../errors';
 
 // Direct unit tests for the translation algorithm, independent of `createI18n()` — a minimal
@@ -103,23 +103,43 @@ describe('_translate', () => {
     });
   });
 
-  describe('hasKey()', () => {
+  describe('hasLeaf()', () => {
     test('true for a leaf key', () => {
       const ctx = makeContext([['en', catalog({ hello: 'Hello' })]]);
 
-      expect(hasKey(ctx, 'hello')).toBe(true);
+      expect(hasLeaf(ctx, 'hello')).toBe(true);
     });
 
-    test('true for a plural branch prefix', () => {
+    test('false for a plural branch prefix (use hasPluralBranch for those)', () => {
       const ctx = makeContext([['en', catalog({ 'items.one': '1 item', 'items.other': '{count} items' })]]);
 
-      expect(hasKey(ctx, 'items')).toBe(true);
+      expect(hasLeaf(ctx, 'items')).toBe(false);
     });
 
     test('false when the key is absent from every locale in the chain', () => {
       const ctx = makeContext([['en', catalog({ hello: 'Hello' })]]);
 
-      expect(hasKey(ctx, 'missing')).toBe(false);
+      expect(hasLeaf(ctx, 'missing')).toBe(false);
+    });
+  });
+
+  describe('hasPluralBranch()', () => {
+    test('true for a plural branch prefix', () => {
+      const ctx = makeContext([['en', catalog({ 'items.one': '1 item', 'items.other': '{count} items' })]]);
+
+      expect(hasPluralBranch(ctx, 'items')).toBe(true);
+    });
+
+    test('false for a plain leaf key', () => {
+      const ctx = makeContext([['en', catalog({ hello: 'Hello' })]]);
+
+      expect(hasPluralBranch(ctx, 'hello')).toBe(false);
+    });
+
+    test('false when the key is absent from every locale in the chain', () => {
+      const ctx = makeContext([['en', catalog({ hello: 'Hello' })]]);
+
+      expect(hasPluralBranch(ctx, 'missing')).toBe(false);
     });
   });
 

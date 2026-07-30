@@ -60,13 +60,14 @@ i18n.tp('position', 1, { vars: { name: 'Alice' }, ordinal: true });
 
 ## Key Inspection
 
-Use `has(key)` to check whether a key exists in the active fallback chain. It returns `true` for leaf keys, branch keys, and pipe-plural base keys.
+Use `has(key)` to check whether a key exists in the active fallback chain. By default it checks **leaf** keys (resolvable by `t()`); pass `{ kind: 'branch' }` to check **branch** keys (plural branches, resolvable by `tp()`).
 
 ```ts
-// catalog: { inbox: 'One message|{count} messages' }  (expands to inbox.one, inbox.other)
-i18n.has('inbox'); // true  — branch exists after pipe-plural expansion
-i18n.has('inbox.one'); // true  — explicit sub-key
-i18n.has('missing'); // false
+// catalog: { inbox: { one: 'One message', other: '{count} messages' } }
+i18n.has('inbox');                      // false — branch, not a leaf
+i18n.has('inbox', { kind: 'branch' });  // true  — plural branch exists
+i18n.has('inbox.one');                  // true  — explicit sub-key
+i18n.has('missing');                    // false
 ```
 
 `has()` walks the full fallback chain, so it returns `true` if any fallback locale provides the key.
@@ -110,19 +111,19 @@ const price = i18n.fmt.currency(49.95, 'USD');
 
 ## Namespace-based Lazy Loading
 
-There are two ways to load namespaces. Use `extend()` as a one-call convenience, or split the steps with `registerNamespace()` + `loadNamespace()` when you want to defer loading.
+There are two ways to load namespaces. Pass a factory to `loadNamespace()` for a one-call convenience, or split the steps with `registerNamespace()` + `loadNamespace()` when you want to defer loading.
 
-**`extend(ns, factory, locale?)`** — register and load in one call:
+**`loadNamespace(ns, factory, locale?)`** — register and load in one call:
 
 ```ts
 // Load when entering the settings route
 async function onEnterSettings() {
-  await i18n.extend('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default));
+  await i18n.loadNamespace('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default));
   // Keys from settings.json are now merged into the active locale catalog
 }
 
 // Pre-load for a specific locale
-await i18n.extend('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default), 'de');
+await i18n.loadNamespace('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default), 'de');
 ```
 
 **`registerNamespace()` + `loadNamespace()`** — register eagerly, load on demand:
@@ -142,8 +143,7 @@ async function onEnterSettings() {
 
 Key characteristics:
 
-- All three methods (`extend`, `registerNamespace`, `loadNamespace`) deduplicate per `ns + locale` — the factory runs at most once.
-- `isNamespaceRegistered(ns)` returns `true` after `registerNamespace()` or `extend()`.
+- Both methods deduplicate per `ns + locale` — the factory runs at most once.
 - `isNamespaceLoaded(ns, locale?)` returns `true` only after a successful load for that locale.
 
 ## Missing Handling
@@ -201,7 +201,7 @@ const testI18n = i18n.fork({ onMissingKey: (k) => `MISSING:${k}` });
 Key characteristics:
 
 - Catalog mutations on the fork do not affect the parent, and vice versa.
-- Namespace dedup markers are copied at fork time. Calling `extend()` on a fork for an already-loaded `ns + locale` pair is a no-op.
+- Namespace dedup markers are copied at fork time. Calling `loadNamespace()` on a fork for an already-loaded `ns + locale` pair is a no-op.
 - Forks do not inherit subscribers.
 
 ## SSR Hydration
@@ -372,9 +372,9 @@ router.subscribe(() => {
 - Use lazy catalog functions (`() => import('./locales/de.json')`) for locales not needed at startup.
 - Keep translation keys flat or one level deep — deeply nested keys are harder to refactor.
 - Set `fallback` to a locale with 100% coverage so missing keys degrade gracefully.
-- Use `extend(ns, factory, locale?)` or `registerNamespace()` + `loadNamespace()` for per-route or per-feature key sets.
+- Use `loadNamespace(ns, factory, locale?)` or `registerNamespace()` + `loadNamespace()` for per-route or per-feature key sets.
 - Use `isLoaded(locale)` before `getState()` in SSR to avoid silently omitting async-loader locales.
-- Use `isRegistered(locale)` to check if a locale is configured; use `isLoaded(locale)` to check if it is ready.
+- Use `isLoaded(locale)` to check whether a locale's catalog is fully resolved.
 - Call `dispose()` on route-level or request-scoped `fork()` instances when they are no longer needed.
 - Use `{ signal }` in `subscribe()` for lifecycle-safe subscriptions; use the returned `Unsubscribe` otherwise.
 - Use `onMissingKey` and `onMissingVar` in development to surface authoring errors early; omit them in production.

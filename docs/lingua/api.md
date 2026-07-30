@@ -12,23 +12,20 @@ description: Complete API reference for @vielzeug/lingua.
 | `createI18n()`           | Create an i18n instance with locale catalogs                                       | Sync           | Catalogs are lazy; call `preload()` before SSR render                                                              |
 | `i18n.t()`               | Translate a leaf key with optional vars                                            | Sync           | Missing keys use `onMissingKey` or return the key itself                                                           |
 | `i18n.tp()`              | Translate a plural branch key                                                      | Sync           | `count` is injected automatically — do not pass it in `vars`                                                       |
-| `i18n.extend()`          | Register and immediately load a namespace                                          | Async          | Deduplicates per `ns + locale`; new factory updates registry but does not reload; throws synchronously if disposed |
+| `i18n.loadNamespace()`   | Register (optional) and load a namespace                                            | Async          | Deduplicates per `ns + locale`; new factory updates registry but does not reload; throws synchronously if disposed |
 | `i18n.setLocale()`       | Switch the active locale                                                           | Async          | Await before rendering; throws if locale is not registered                                                         |
 | `i18n.preload()`         | Pre-load a locale catalog without switching                                        | Async          | Locale must be registered first                                                                                    |
 | `i18n.register()`              | Register or replace a locale source; loads it immediately                          | Async          | Returns `Promise<void>`; awaiting ensures the catalog is ready before rendering                                    |
 | `i18n.scope()`           | Return a prefix-bound `{ fmt, t, tp, has }` helper                                 | Sync           | Memoized per prefix — same object returned for same prefix string                                                  |
-| `i18n.fork()`            | Create an isolated child instance from current state                               | Sync           | Catalog snapshot is copied; post-fork extend() calls are independent                                               |
-| `i18n.has()`             | Check if a leaf or branch key exists in the active chain                           | Sync           | Returns `true` for branch keys and pipe-plural base keys                                                           |
-| `i18n.isLoaded()`        | Check if a locale catalog is fully resolved                                        | Sync           | Returns `false` for async loaders not yet preloaded; safe predicate                                                |
-| `i18n.isRegistered()`    | Check if a locale is in the known registry                                         | Sync           | `true` for both resolved catalogs and pending loaders; never throws                                                |
+| `i18n.fork()`            | Create an isolated child instance from current state                               | Sync           | Catalog snapshot is copied; post-fork loadNamespace() calls are independent                                        |
+| `i18n.has()`             | Check if a key exists in the active chain                                          | Sync           | Leaf-only by default; pass `{ kind: 'branch' }` for branch keys                                                    |
+| `i18n.isLoaded()`        | Check if a locale catalog is fully resolved                                        | Sync           | Returns `false` for async loaders not yet preloaded; throws on invalid BCP 47 tag                                  |
 | `i18n.disposalSignal`    | `AbortSignal` aborted on disposal                                                  | Sync getter    | Tie external lifetimes (SSE, polling) to this i18n instance                                                        |
 | `i18n.dispose()`         | Release all subscribers and catalog state                                          | Sync           | After disposal, `t()` falls back to `onMissingKey` for every key                                                   |
 | `i18n.disposed`          | `true` after `dispose()` is called                                                 | Sync getter    | —                                                                                                                  |
 | `i18n[Symbol.dispose]()` | Delegates to `dispose()`                                                           | Sync           | Enables `using` declarations                                                                                       |
-| `i18n.registerNamespace()` | Register a namespace factory without loading                                       | Sync           | Call `loadNamespace()` when ready to load, or use `extend()` for register+load in one call                         |
-| `i18n.loadNamespace()`    | Load a registered namespace for a locale                                           | Async          | Deduplicates concurrent and repeated calls; throws `LinguaNamespaceMissingError` if namespace not registered        |
+| `i18n.registerNamespace()` | Register a namespace factory without loading                                       | Sync           | Call `loadNamespace()` when ready, or pass the factory to `loadNamespace()` to do both in one call                 |
 | `i18n.isNamespaceLoaded()`  | Check if a namespace is loaded for the active (or given) locale                  | Sync           | Returns `false` if not registered or not yet loaded for this locale                                                |
-| `i18n.isNamespaceRegistered()` | Check if a namespace factory has been registered                              | Sync           | `true` after `registerNamespace()` or `extend()`; `false` before                                                   |
 | `i18n.getState()`         | Extract a serializable snapshot of loaded catalogs + active locale                 | Sync           | Loader-only locales are omitted — check `isLoaded()` before calling                                                |
 | `i18n.restoreState()`     | Hydrate instance from serialized state                                             | Sync           | Throws `LinguaRestoreError` if `state.locale` has no catalog                                                       |
 | Error classes             | Named error subclasses (`LinguaDisposedError`, `LinguaMissingLocaleError`, …)      | —              | All runtime errors are `instanceof LinguaError`; use `instanceof` for specific handling                            |
@@ -92,26 +89,23 @@ Every `createI18n` call returns an `I18n<M>` instance.
 | ------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `t(key, vars?)`                 | `(key: MessageLeafKeys<M> \| string, vars?: TranslateVars) => string`                     | Translate a leaf key with optional variable interpolation.                                                                     |
 | `tp(key, count, options?)`      | `(key: MessageBranchKeys<M> \| string, count: number, options?: TpOptions) => string`     | Translate a plural branch key.                                                                                                 |
-| `extend(ns, factory, locale?)`  | `(ns: string, factory: NamespaceFactory, locale?: Locale) => Promise<void>`            | Register a namespace factory and immediately load it for `locale` (defaults to active locale). Deduplicates per `ns + locale`. |
+| `loadNamespace(ns, factory?, locale?)` | `(ns: string, factory?: NamespaceFactory, locale?: Locale) => Promise<void>` | Load a registered namespace for `locale` (defaults to active locale). Pass `factory` to register first — one call does register + load. Deduplicates per `ns + locale`. |
 | `preload(locale)`               | `(locale: Locale) => Promise<void>`                                                       | Load a catalog without switching the active locale.                                                                            |
 | `setLocale(locale)`             | `(locale: Locale) => Promise<void>`                                                       | Load if needed, then switch and notify subscribers. On load failure, locale is unchanged.                                      |
 | `register(locale, source)`      | `(locale: Locale, source: LocaleSource<M>) => Promise<void>`                              | Register or replace a locale source. Returns a Promise that resolves when loading is complete. Async loaders start immediately. |
-| `registerNamespace(ns, factory)` | `(ns: string, factory: NamespaceFactory) => void`                                    | Register a namespace factory without loading. Use `loadNamespace()` to trigger, or `extend()` to do both.                     |
-| `loadNamespace(ns, locale?)`    | `(ns: string, locale?: Locale) => Promise<void>`                                          | Load a registered namespace for `locale` (defaults to active locale). Deduplicates concurrent and repeated calls.             |
+| `registerNamespace(ns, factory)` | `(ns: string, factory: NamespaceFactory) => void`                                    | Register a namespace factory without loading. Use `loadNamespace()` to trigger loading.                                      |
 | `scope(prefix)`                 | `(prefix: MessageBranchKeys<M> \| string) => ScopedI18n`                                  | Return a prefix-bound `{ fmt, t, tp, has }` helper. Memoized per prefix — same object reference for the same prefix string.    |
 | `fork(overrides?)`              | `(overrides?: Omit<I18nOptions<M>, 'catalogs'>) => I18n<M>`                               | Create an isolated child instance from the current catalog snapshot.                                                           |
 | `getState()`                    | `() => I18nState`                                                                         | Extract a serializable snapshot of loaded catalogs and the active locale.                                                      |
 | `restoreState(state)`           | `(state: I18nState) => void`                                                              | Hydrate this instance from serialized state. Clears namespace markers. Notifies subscribers.                                   |
-| `has(key)`                      | `(key: MessageLeafKeys<M> \| MessageBranchKeys<M> \| string) => boolean`                  | Check if a leaf or branch key exists in the active fallback chain.                                                             |
-| `isLoaded(locale)`              | `(locale: Locale) => boolean`                                                             | Return `true` if the catalog for `locale` is fully resolved. Never throws.                                                     |
-| `isRegistered(locale)`          | `(locale: Locale) => boolean`                                                             | Return `true` if `locale` is in the known registry (resolved **or** pending loader). Never throws.                             |
-| `isNamespaceLoaded(ns, locale?)` | `(ns: string, locale?: Locale) => boolean`                                               | Return `true` if the namespace is loaded for `locale` (defaults to active locale). Never throws.                               |
-| `isNamespaceRegistered(ns)`     | `(ns: string) => boolean`                                                                 | Return `true` if a namespace factory is registered under `ns`. Never throws.                                                   |
+| `has(key, options?)`            | `(key: MessageLeafKeys<M> \| string, options?: HasOptions) => boolean`                   | Check if a key exists in the active fallback chain. Leaf-only by default; `{ kind: 'branch' }` checks branch keys.             |
+| `isLoaded(locale)`              | `(locale: Locale) => boolean`                                                             | Return `true` if the catalog for `locale` is fully resolved. Throws on an invalid BCP 47 tag.                                  |
+| `isNamespaceLoaded(ns, locale?)` | `(ns: string, locale?: Locale) => boolean`                                               | Return `true` if the namespace is loaded for `locale` (defaults to active locale). Throws on an invalid BCP 47 tag.            |
 | `disposalSignal`                | `AbortSignal`                                                                             | Aborted when `dispose()` is called.                                                                                            |
 | `dispose()`                     | `() => void`                                                                              | Release all subscribers, catalogs, loaders, and namespace state. Idempotent.                                                   |
 | `disposed`                      | `boolean`                                                                                 | `true` after `dispose()` has been called.                                                                                      |
 | `[Symbol.dispose]()`            | `() => void`                                                                              | Delegates to `dispose()`. Enables `using` declarations.                                                                        |
-| `getSupportedLocales(sorted?)`  | `(sorted?: boolean) => Locale[]`                                                          | Return all registered locales.                                                                                                 |
+| `getSupportedLocales(options?)` | `(options?: { sorted?: boolean }) => Locale[]`                                            | Return all registered locales.                                                                                                 |
 | `getSnapshot()`                 | `() => I18nSnapshot`                                                                      | Return the current `{ locale, t, tp }` snapshot. Object identity changes on each observable change.                           |
 | `subscribe(callback, options?)` | `(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions) => Unsubscribe` | Subscribe to changes. Supports `{ immediate, signal }`. Already-aborted signal skips registration.                             |
 
@@ -147,43 +141,13 @@ i18n.tp('pos', 1, { ordinal: true, vars: { name: 'Alice' } }); // ordinal + extr
 
 `count` is injected automatically. Do not include `count` in `vars`.
 
-**Pipe-delimited shorthand** — a leaf string containing `|` is expanded into a plural branch at registration time:
-
-```ts
-// Equivalent to { inbox: { one: 'One message', other: '{count} messages' } }
-const i18n = createI18n({ catalogs: { en: { inbox: 'One message|{count} messages' } } });
-```
-
-Supported part counts: `2` (one | other), `3` (zero | one | other), `6` (zero | one | two | few | many | other).
-Any other count, or any part that is empty, is treated as a plain string and not expanded.
-
-### `extend()`
-
-```ts
-extend(ns: string, factory: NamespaceFactory, locale?: Locale): Promise<void>
-```
-
-Registers a namespace factory and immediately loads it for `locale` (defaults to the active locale). The factory receives the target locale string and must return `Promise<Messages>` — namespace content is independent of the instance's catalog type `M`. Concurrent and repeated calls for the same `ns + locale` pair are deduplicated — the factory runs at most once per locale.
-
-> **Note:** Calling `extend()` with a **new factory** after the namespace is already loaded updates the registry for future reloads (e.g. after `register()` replaces the catalog) but does **not** reload the namespace immediately. The new factory takes effect the next time the namespace marker is cleared.
-
-```ts
-// Load settings keys when entering the settings route
-await i18n.extend('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default));
-
-// Pre-load for a specific locale
-await i18n.extend('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default), 'de');
-```
-
-Throws `LinguaDisposedError` synchronously if called on a disposed instance.
-
 ### `registerNamespace()`
 
 ```ts
 registerNamespace(ns: string, factory: NamespaceFactory): void
 ```
 
-Registers a namespace factory without loading it. Use `loadNamespace()` to trigger loading when needed, or use `extend()` to register and load in one call.
+Registers a namespace factory without loading it. Use `loadNamespace()` to trigger loading when needed, or pass the factory to `loadNamespace()` to register and load in one call.
 
 Re-registering a namespace updates the factory for future loads but does **not** reload if the namespace is already loaded. The new factory takes effect the next time the namespace marker is cleared (by a `register()` or `restoreState()` call).
 
@@ -192,20 +156,27 @@ Throws `LinguaDisposedError` if called on a disposed instance.
 ### `loadNamespace()`
 
 ```ts
-loadNamespace(ns: string, locale?: Locale): Promise<void>
+loadNamespace(ns: string, factory?: NamespaceFactory, locale?: Locale): Promise<void>
 ```
 
-Loads a registered namespace for `locale` (defaults to the active locale). Concurrent and repeated calls for the same `ns + locale` pair are deduplicated — the factory runs at most once per locale.
+Loads a registered namespace for `locale` (defaults to the active locale). Pass `factory` to register it first — one call does register + load. The factory receives the target locale string and must return `Promise<Messages>` — namespace content is independent of the instance's catalog type `M`. Concurrent and repeated calls for the same `ns + locale` pair are deduplicated — the factory runs at most once per locale.
 
-Throws if the namespace has not been registered with `registerNamespace()` first.
-Throws `LinguaDisposedError` if called on a disposed instance.
+> **Note:** Calling `loadNamespace()` with a **new factory** after the namespace is already loaded updates the registry for future reloads (e.g. after `register()` replaces the catalog) but does **not** reload the namespace immediately. The new factory takes effect the next time the namespace marker is cleared.
+
+Throws `LinguaNamespaceMissingError` if no factory is passed and the namespace was never registered.
+Throws `LinguaDisposedError` synchronously if called on a disposed instance.
 
 ```ts
+// Register + load in one call — e.g. when entering the settings route
+await i18n.loadNamespace('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default));
+
+// Pre-load for a specific locale
+await i18n.loadNamespace('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default), 'de');
+
+// Or split the steps
 i18n.registerNamespace('settings', (locale) =>
   import(`./locales/${locale}/settings.json`).then((m) => m.default),
 );
-
-// Load on demand (e.g. when the settings route is activated)
 await i18n.loadNamespace('settings');
 ```
 
@@ -215,15 +186,7 @@ await i18n.loadNamespace('settings');
 isNamespaceLoaded(ns: string, locale?: Locale): boolean
 ```
 
-Returns `true` if the namespace `ns` has been fully loaded for `locale` (defaults to active locale). Returns `false` if not registered, not yet loaded for this locale, or if the instance is disposed. Never throws.
-
-### `isNamespaceRegistered()`
-
-```ts
-isNamespaceRegistered(ns: string): boolean
-```
-
-Returns `true` if a namespace factory has been registered under `ns` via `registerNamespace()` or `extend()`. Returns `false` otherwise. Never throws.
+Returns `true` if the namespace `ns` has been fully loaded for `locale` (defaults to active locale). Returns `false` if not registered, not yet loaded for this locale, or if the instance is disposed. Throws `LinguaInvalidLocaleError` for an invalid BCP 47 tag (when `locale` is passed).
 
 ### `getState()`
 
@@ -250,7 +213,7 @@ Hydrates this instance from an `I18nState` produced by `getState()`.
 
 - Replaces all catalogs with those from `state`.
 - Sets the active locale to `state.locale`.
-- Clears all namespace loaded-markers so that `extend()` / `loadNamespace()` can re-apply namespaces.
+- Clears all namespace loaded-markers so that `loadNamespace()` can re-apply namespaces.
 - Notifies subscribers.
 
 Unlike `register()` and construction, this does **not** run the automatic dev-mode plural-form check (see [`validateCatalog()`](#validatecatalog)) — `state` is assumed to already have been registered, and therefore already checked, once on whatever system produced it.
@@ -295,7 +258,7 @@ Creates an isolated child instance from the current catalog snapshot and loader 
 - Has its own locale, fallback chain, and subscribers.
 - Catalog and namespace mutations on the fork do not affect the parent, and vice versa.
 - Namespace registrations made **after** the fork are not propagated in either direction.
-- **Loaded-namespace markers are copied.** If the parent has already loaded a namespace, calling `extend()` on the fork for the same `ns + locale` pair is a no-op. This avoids redundant refetches in SSR fork-per-request patterns.
+- **Loaded-namespace markers are copied.** If the parent has already loaded a namespace, calling `loadNamespace()` on the fork for the same `ns + locale` pair is a no-op. This avoids redundant refetches in SSR fork-per-request patterns.
 
 This is the preferred pattern for SSR: fork the shared instance once per request rather than re-creating the full instance and re-registering all catalogs.
 
@@ -348,26 +311,26 @@ Returns all registered locales. Without arguments, returns locales in registrati
 
 ```ts
 i18n.getSupportedLocales(); // => ['en', 'de', 'fr']  (insertion order)
-i18n.getSupportedLocales(true); // => ['de', 'en', 'fr']  (sorted)
+i18n.getSupportedLocales({ sorted: true }); // => ['de', 'en', 'fr']
 ```
 
 ### `has()`
 
 ```ts
-has(key: MessageLeafKeys<M> | MessageBranchKeys<M> | string): boolean
+has(key: MessageLeafKeys<M> | MessageBranchKeys<M> | string, options?: HasOptions): boolean
 ```
 
-Returns `true` if a leaf or branch key exists in the active fallback chain. Checks all locales in the chain in order.
+Returns `true` if the key exists in the active fallback chain. Checks all locales in the chain in order.
 
-- **Leaf keys**: returns `true` if the key maps to a string value.
-- **Branch keys**: returns `true` if the key maps to a nested object (e.g. a plural branch).
-- **Pipe-plural base keys**: the base key is expanded at registration time into sub-keys (`inbox.one`, `inbox.other`); `has('inbox')` returns `true` because the branch exists.
+- **Default (`kind: 'leaf'`)**: returns `true` only if the key maps to a string value — i.e. is resolvable by `t()`.
+- **`{ kind: 'branch' }`**: returns `true` if the key is a prefix with keys beneath it — a plural branch resolvable by `tp()`, or any nested section.
 
 ```ts
-// catalog: { inbox: 'One message|{count} messages' }  (pipe-plural → inbox.one, inbox.other)
-i18n.has('inbox'); // true  — branch exists
-i18n.has('inbox.one'); // true  — explicit sub-key
-i18n.has('missing'); // false
+// catalog: { inbox: { one: 'One message', other: '{count} messages' } }
+i18n.has('inbox');                      // false — branch, not a leaf
+i18n.has('inbox', { kind: 'branch' });  // true
+i18n.has('inbox.one');                  // true  — explicit sub-key
+i18n.has('missing');                    // false
 ```
 
 ### `isLoaded()`
@@ -376,7 +339,7 @@ i18n.has('missing'); // false
 isLoaded(locale: Locale): boolean
 ```
 
-Returns `true` if the catalog for `locale` is fully resolved (i.e. not a pending async loader). Returns `false` for unregistered locales, pending loaders, and invalid locale tags — never throws.
+Returns `true` if the catalog for `locale` is fully resolved (i.e. not a pending async loader). Returns `false` for unregistered locales and pending loaders. Throws `LinguaInvalidLocaleError` for an invalid BCP 47 tag — a typo'd locale is a bug, not a `false`.
 
 Primary use case: guarding `getState()` in SSR to avoid silently omitting locales that were registered as async loaders but never preloaded.
 
@@ -385,28 +348,6 @@ Primary use case: guarding `getState()` in SSR to avoid silently omitting locale
 const locales = i18n.getSupportedLocales();
 await Promise.all(locales.filter((l) => !i18n.isLoaded(l)).map((l) => i18n.preload(l)));
 const state = i18n.getState(); // now includes all locales
-```
-
-### `isRegistered()`
-
-```ts
-isRegistered(locale: Locale): boolean
-```
-
-Returns `true` if `locale` is in the known locale registry — either as a resolved catalog or as a pending async loader. Returns `false` for locales that have never been registered, and for invalid locale tags (never throws).
-
-Use `isRegistered` + `isLoaded` together to distinguish the three states:
-
-| Condition                               | `isRegistered` | `isLoaded` |
-| --------------------------------------- | -------------- | ---------- |
-| Locale never configured                 | `false`        | `false`    |
-| Async loader registered, not yet called | `true`         | `false`    |
-| Catalog fully resolved                  | `true`         | `true`     |
-
-```ts
-if (!i18n.isRegistered('fr')) throw new Error('fr locale not configured');
-if (!i18n.isLoaded('fr')) await i18n.preload('fr');
-const state = i18n.getState(); // 'fr' guaranteed to be present
 ```
 
 ### `disposalSignal`
@@ -462,12 +403,12 @@ Releases all subscribers, catalogs, loaders, and namespace state. Calling `dispo
 After disposal:
 
 - `t()` / `tp()` fall back to `onMissingKey` for every key (returning the key string by default).
-- `isLoaded()` and `isRegistered()` return `false` for all locales.
+- `isLoaded()` returns `false` for all locales.
 - No subscribers are notified of further changes.
 - `setLocale()` and `preload()` reject with `LinguaDisposedError`.
 - `register()` throws `LinguaDisposedError`.
 - `subscribe()` throws `LinguaDisposedError`.
-- `extend()` throws `LinguaDisposedError`.
+- `loadNamespace()` throws `LinguaDisposedError`.
 
 Primarily useful for long-lived SPA instances that are replaced at runtime (e.g. route-level i18n) to prevent subscriber and catalog memory from accumulating.
 
@@ -619,7 +560,7 @@ Produced by `getState()` and consumed by `restoreState()`. Catalogs are stored a
 type NamespaceFactory<M extends Messages = Messages> = (locale: Locale) => Promise<M>;
 ```
 
-Factory passed to `registerNamespace()` / `extend()`. Receives the target locale and must return a `Promise<Messages>` with the namespace messages for that locale. Namespace content is independent of the instance's catalog type `M` — a namespace can introduce keys not present in the initial catalog shape.
+Factory passed to `registerNamespace()` / `loadNamespace()`. Receives the target locale and must return a `Promise<Messages>` with the namespace messages for that locale. Namespace content is independent of the instance's catalog type `M` — a namespace can introduce keys not present in the initial catalog shape.
 
 ### `TpOptions`
 

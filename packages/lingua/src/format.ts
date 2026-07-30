@@ -26,6 +26,7 @@
  */
 
 import { getOrCreate } from './_bounded-cache';
+import { warn } from './_dev';
 
 const FORMAT_CACHE_MAX = 128;
 
@@ -61,15 +62,6 @@ export type ListFormatOptions = {
 };
 
 export type Formatter = {
-  /**
-   * Clears all cached `Intl` formatter instances. Useful after a locale change on a long-running
-   * SSR server, or to reclaim memory.
-   *
-   * @note This clears the cache for **all callers sharing this formatter instance**. When called on
-   * `i18n.fmt`, the cache is cleared for every part of the application that reads `i18n.fmt`.
-   * `setLocale()` already calls `clear()` automatically — manual calls are rarely needed.
-   */
-  clear(): void;
   currency(value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'currency' | 'style'>): string;
   date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
   /**
@@ -147,6 +139,10 @@ export function createFormatter(source: string | (() => string)): Formatter {
 
   const getLocale = typeof source === 'string' ? () => source : source;
 
+  // Warn at most once per formatter instance on the unserializable-options fallback —
+  // a hot render loop with such options must not spam the console on every call.
+  let warnedUnserializable = false;
+
   function cachedKey(locale: string, options?: object): string {
     if (!options) return locale;
 
@@ -160,21 +156,18 @@ export function createFormatter(source: string | (() => string)): Formatter {
       return `${locale}:${JSON.stringify(sorted)}`;
     } catch {
       // Circular references or BigInt values — fall back to locale-only key.
-      // Multiple callers with different unserializable options will share the same formatter instance.
+      // Multiple callers with different unserializable options will share the same
+      // formatter instance; never silently.
+      if (!warnedUnserializable) {
+        warnedUnserializable = true;
+        warn('formatter options could not be serialized — falling back to a shared per-locale formatter instance.');
+      }
+
       return locale;
     }
   }
 
   return {
-    clear() {
-      numberCache.clear();
-      currencyCache.clear();
-      dateCache.clear();
-      relativeCache.clear();
-      listCache.clear();
-      durationCache.clear();
-    },
-
     currency(value, currency, options) {
       const locale = getLocale();
       const opts: Intl.NumberFormatOptions = { ...options, currency, style: 'currency' };

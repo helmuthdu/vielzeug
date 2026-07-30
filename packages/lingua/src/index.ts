@@ -8,6 +8,7 @@
  */
 
 export type {
+  HasOptions,
   I18n,
   I18nOptions,
   I18nSnapshot,

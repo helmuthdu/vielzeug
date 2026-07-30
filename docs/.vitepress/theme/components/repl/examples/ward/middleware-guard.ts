@@ -19,7 +19,7 @@ for (const [label, principal, action] of [
   ['viewer  read',   viewer,  'read'],
   ['blocked update', blocked, 'update'],
 ] as const) {
-  const result = guardRequest(ward, principal, 'posts:42', action)
+  const result = guardRequest({ action, principal, resource: 'posts:42', ward })
   const status = result.granted ? '✅ granted' : \`❌ denied (\${result.reason})\`
   console.log(label.padEnd(15), status)
 }
@@ -31,7 +31,7 @@ async function getPrincipal(req: typeof fakeReq) {
   return req.headers.authorization.includes('editor') ? editor : null
 }
 
-const asyncResult = await guardRequestWith(ward, fakeReq, getPrincipal, 'posts:42', 'update')
+const asyncResult = await guardRequestWith({ action: 'update', extractPrincipal: getPrincipal, req: fakeReq, resource: 'posts:42', ward })
 console.log('\\nasync guard:', asyncResult.granted ? '✅ granted' : \`❌ \${asyncResult.reason}\`)`,
   name: 'Framework-Agnostic Guard',
 };
