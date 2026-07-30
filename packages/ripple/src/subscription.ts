@@ -1,4 +1,4 @@
-import type { AsyncSubscription, CleanupFn, Subscription } from './types';
+import type { AsyncSubscription, CleanupFn, EffectHandle, Subscription } from './types';
 
 // ── SubscriptionImpl ────────────────────────────────────────────────────────
 //
@@ -44,13 +44,17 @@ export class SubscriptionImpl implements Subscription {
 export class AsyncSubscriptionImpl implements AsyncSubscription {
   private awaitDone_: () => Promise<void>;
   private getCurrentRun_: () => Promise<void> | null;
-  private syncStop_: Subscription;
+  private syncStop_: EffectHandle;
   private asyncDisposePromise_: Promise<void> | null = null;
 
-  constructor(syncStop: Subscription, awaitDone: () => Promise<void>, getCurrentRun: () => Promise<void> | null) {
+  constructor(syncStop: EffectHandle, awaitDone: () => Promise<void>, getCurrentRun: () => Promise<void> | null) {
     this.awaitDone_ = awaitDone;
     this.getCurrentRun_ = getCurrentRun;
     this.syncStop_ = syncStop;
+  }
+
+  get disposalSignal(): AbortSignal {
+    return this.syncStop_.disposalSignal;
   }
 
   get disposed(): boolean {

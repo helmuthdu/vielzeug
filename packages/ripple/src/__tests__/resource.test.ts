@@ -103,6 +103,14 @@ describe('resource', () => {
     await new Promise((r) => setTimeout(r, 0));
   });
 
+  it('disposalSignal is aborted when dispose() is called', () => {
+    const ac = resource(() => Promise.resolve(1));
+
+    expect(ac.disposalSignal.aborted).toBe(false);
+    ac.dispose();
+    expect(ac.disposalSignal.aborted).toBe(true);
+  });
+
   it('disposed getter is false before dispose and true after', () => {
     const ac = resource(() => Promise.resolve(1));
 

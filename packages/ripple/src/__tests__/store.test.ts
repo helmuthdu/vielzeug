@@ -117,7 +117,9 @@ describe('store — peek() frozen snapshot', () => {
     const s = store({ outer: { inner: 0 } });
     const snap = s.peek();
 
-    (snap as { outer: { inner: number } }).outer.inner = 999;
+    expect(() => {
+      (snap as { outer: { inner: number } }).outer.inner = 999;
+    }).toThrow(TypeError);
     expect(s.peek().outer.inner).toBe(0);
   });
 });
@@ -154,6 +156,28 @@ describe('store.value — reactive tracked read', () => {
     s.patch({ x: 5 });
     stop.dispose();
     expect(log).toEqual([5]);
+  });
+
+  it('nested values reached through store.value are deep-frozen — direct mutation throws instead of silently corrupting live state', () => {
+    const s = store({ user: { profile: { city: 'NY' } } });
+
+    expect(() => {
+      (s.value.user.profile as { city: string }).city = 'LA';
+    }).toThrow(TypeError);
+    expect(s.value.user.profile.city).toBe('NY');
+  });
+
+  it("patch() defensively clones a caller-supplied nested object — mutating the caller's own object after patch() does not affect store state", () => {
+    const s = store<{ profile: { city: string } }>({ profile: { city: 'NY' } });
+    const callerOwned = { city: 'LA' };
+
+    s.patch({ profile: callerOwned });
+    callerOwned.city = 'mutated-after-patch';
+
+    expect(s.peek().profile.city).toBe('LA');
+    expect(() => {
+      callerOwned.city = 'still-mutable';
+    }).not.toThrow(); // the caller's own object is never frozen — only the store's clone is
   });
 });
 
@@ -245,6 +269,33 @@ describe('store.lens()', () => {
     expect(nameLens.disposed).toBe(false);
     nameLens.dispose();
     expect(nameLens.disposed).toBe(true);
+  });
+
+  it('top-level lens disposalSignal is aborted on dispose()', () => {
+    const s = store({ x: 1 });
+    const lens = s.lens('x');
+
+    expect(lens.disposalSignal.aborted).toBe(false);
+    lens.dispose();
+    expect(lens.disposalSignal.aborted).toBe(true);
+  });
+
+  it('a disposed top-level lens is inert — writes are ignored, reads return the last value, new subscriptions are no-op', () => {
+    const s = store({ x: 1 });
+    const lens = s.lens('x');
+
+    lens.dispose();
+    lens.value = 999; // ignored — the lens no longer forwards to the store's live prop signal
+
+    expect(lens.peek()).toBe(1);
+    expect(s.peek().x).toBe(1); // the store itself is untouched by the ignored write
+
+    const listener = vi.fn();
+    const sub = lens.subscribe(listener);
+
+    expect(sub.disposed).toBe(true);
+    s.patch({ x: 2 });
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it('with dot-notation path reads nested values', () => {
@@ -470,6 +521,21 @@ describe('store.patch() — prototype pollution guard', () => {
   });
 });
 
+describe('store.lens() — LensPath compile-time validation', () => {
+  it("accepts every real path and rejects a typo'd one at compile time (runtime is just a smoke check)", () => {
+    const s = store({ user: { address: { city: 'NY' }, name: 'Alice' } });
+
+    expect(s.lens('user').value.name).toBe('Alice');
+    expect(s.lens('user.name').value).toBe('Alice');
+    expect(s.lens('user.address.city').value).toBe('NY');
+
+    // @ts-expect-error 'usr' is not a key of the store shape — LensPath<T> rejects it
+    s.lens('usr');
+    // @ts-expect-error 'user.nam' is not a valid nested path — LensPath<T> rejects it
+    s.lens('user.nam');
+  });
+});
+
 describe('store.lens() — unsafe path guard', () => {
   it('throws RippleInvalidStoreError for __proto__ path segment', () => {
     const s = store({ x: 0 } as Record<string, unknown>);
@@ -658,8 +724,8 @@ describe('store.replace() / reset() — key removal', () => {
   });
 });
 
-describe('store.replace() — callback receives plain object, not proxy', () => {
-  it('mutations on the callback argument do not throw', () => {
+describe('store.replace() — callback receives a deep-frozen snapshot, not a live proxy', () => {
+  it('the snapshot argument is frozen — direct mutation throws instead of silently succeeding', () => {
     const s = store({ count: 0 });
 
     expect(() => {
@@ -668,13 +734,14 @@ describe('store.replace() — callback receives plain object, not proxy', () => 
 
         return { count: state.count + 1 };
       });
-    }).not.toThrow();
-    expect(s.peek().count).toBe(100);
+    }).toThrow(TypeError);
+    // The throw happens before replace() applies anything — state is untouched.
+    expect(s.peek().count).toBe(0);
   });
 });
 
 describe('store.replace() — deep snapshot safety', () => {
-  it('mutating a nested object in the snapshot does not corrupt live state', () => {
+  it('the returned nested object is defensively cloned — mutating it later does not corrupt live state', () => {
     const s = store({ outer: { inner: 0 } });
     const runs: number[] = [];
     const stop = effect(() => {
@@ -682,17 +749,18 @@ describe('store.replace() — deep snapshot safety', () => {
     });
 
     runs.length = 0;
-    s.replace((state) => {
-      (state as { outer: { inner: number } }).outer.inner = 42;
 
-      return { outer: { inner: 99 } };
-    });
+    const returnedNested = { inner: 99 };
+
+    s.replace(() => ({ outer: returnedNested }));
+    returnedNested.inner = 42; // mutate the caller's own object after handing it to replace()
+
     expect(s.peek().outer.inner).toBe(99);
     expect(runs).toHaveLength(1);
     stop.dispose();
   });
 
-  it('no-op when fn returns the same snapshot ref — nested mutation has no effect', () => {
+  it('no-op when fn returns the same snapshot ref — attempting a nested mutation on it throws', () => {
     const s = store({ outer: { inner: 0 } });
     const runs: number[] = [];
     const stop = effect(() => {
@@ -700,11 +768,14 @@ describe('store.replace() — deep snapshot safety', () => {
     });
 
     runs.length = 0;
-    s.replace((state) => {
-      (state as { outer: { inner: number } }).outer.inner = 42;
 
-      return state;
-    });
+    expect(() => {
+      s.replace((state) => {
+        (state as { outer: { inner: number } }).outer.inner = 42;
+
+        return state;
+      });
+    }).toThrow(TypeError);
     expect(s.peek().outer.inner).toBe(0);
     expect(runs).toHaveLength(0);
     stop.dispose();
@@ -716,6 +787,14 @@ describe('store.dispose()', () => {
     const s = store({ x: 1, y: 2 });
 
     expect(() => s.dispose()).not.toThrow();
+  });
+
+  it('disposalSignal is aborted on dispose()', () => {
+    const s = store({ x: 1 });
+
+    expect(s.disposalSignal.aborted).toBe(false);
+    s.dispose();
+    expect(s.disposalSignal.aborted).toBe(true);
   });
 
   it('is idempotent', () => {

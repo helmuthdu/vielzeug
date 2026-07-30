@@ -10,12 +10,17 @@ export class SignalImpl<T> extends ReactiveBase<T> implements Signal<T> {
   private value_: T;
   private equals_: (a: T, b: T) => boolean;
   private disposed_: boolean;
+  private readonly disposalController_ = new AbortController();
 
   constructor(initial: T, equals?: (a: T, b: T) => boolean, name?: string) {
     super(name);
     this.value_ = initial;
     this.equals_ = equals ?? Object.is;
     this.disposed_ = false;
+  }
+
+  get disposalSignal(): AbortSignal {
+    return this.disposalController_.signal;
   }
 
   get value(): T {
@@ -74,6 +79,7 @@ export class SignalImpl<T> extends ReactiveBase<T> implements Signal<T> {
 
     this.disposed_ = true;
     this.clearSubscribers();
+    this.disposalController_.abort();
     getDevToolsHook()?.dispose?.({ kind: 'signal', name: this.name });
   }
 

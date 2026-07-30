@@ -1,10 +1,12 @@
-import type { PathValue, Readable, Signal, Store, Subscription } from './types';
+import type { LensPath, PathValue, Readable, Signal, Store, Subscription } from './types';
 
+import { deepFreeze, freezeValues } from './_deep-freeze';
 import { computed } from './computed';
 import { getDevToolsHook } from './devtools-hook';
 import { RippleInvalidStoreError } from './errors';
 import { batch } from './scheduling';
 import { SignalImpl } from './signal';
+import { SubscriptionImpl } from './subscription';
 import { IS_SIGNAL, IS_STORE } from './symbols';
 
 // ── Key safety ────────────────────────────────────────────────────────────────
@@ -17,6 +19,26 @@ import { IS_SIGNAL, IS_STORE } from './symbols';
 const assertSafeKey = (key: string): void => {
   if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
     throw new RippleInvalidStoreError(`Unsafe key "${key}" rejected to prevent prototype pollution.`);
+  }
+};
+
+// ── Immutability ──────────────────────────────────────────────────────────────
+
+/**
+ * Deep-clones and deep-freezes `value` before it enters store state. Cloning first
+ * guarantees the store never shares an object graph with anything the caller still
+ * holds a reference to (freezing a caller's own live object in place would be a
+ * surprising side effect); freezing after makes every nested mutation attempt on the
+ * stored value throw a real `TypeError` instead of silently corrupting live state.
+ */
+const freezeClone = <T>(value: T): T => {
+  try {
+    return deepFreeze(structuredClone(value));
+  } catch (error) {
+    throw new RippleInvalidStoreError(
+      'store state must be structured-cloneable (no functions, symbols, or non-cloneable class instances).',
+      { cause: error instanceof Error ? error : undefined },
+    );
   }
 };
 
@@ -74,6 +96,12 @@ class LensSignal<V> implements Signal<V> {
   // handle disposed?". Nested lenses still cascade into `source_.disposed`
   // via `disposeSource_`, so the getter below ORs both signals.
   private disposed_ = false;
+  private readonly disposalController_ = new AbortController();
+  // Cached at dispose() time — a top-level lens's source (the store's own prop
+  // signal) outlives the lens handle, so once disposed this lens must stop
+  // forwarding the store's live value and instead behave like a disposed signal:
+  // reads return the last value seen, writes and new subscriptions are no-ops.
+  private lastValue_: V | undefined;
 
   get name(): string | undefined {
     return this.name_ ?? this.source_.name;
@@ -88,18 +116,28 @@ class LensSignal<V> implements Signal<V> {
   }
 
   get value(): V {
-    return this.source_.value;
+    return this.disposed_ ? (this.lastValue_ as V) : this.source_.value;
   }
 
   set value(next: V) {
+    if (this.disposed_) return;
+
     this.write_(next);
   }
 
   peek(): V {
-    return this.source_.peek();
+    return this.disposed_ ? (this.lastValue_ as V) : this.source_.peek();
   }
 
   subscribe(listener: () => void): Subscription {
+    if (this.disposed_) {
+      const noop = new SubscriptionImpl(() => {});
+
+      noop.dispose();
+
+      return noop;
+    }
+
     return this.source_.subscribe(listener);
   }
 
@@ -107,8 +145,16 @@ class LensSignal<V> implements Signal<V> {
     return this.disposed_ || this.source_.disposed;
   }
 
+  get disposalSignal(): AbortSignal {
+    return this.disposalController_.signal;
+  }
+
   dispose(): void {
+    if (this.disposed_) return;
+
+    this.lastValue_ = this.source_.peek();
     this.disposed_ = true;
+    this.disposalController_.abort();
     this.evict_();
     this.disposeSource_?.();
   }
@@ -141,6 +187,7 @@ export class StoreImpl<T extends object> implements Store<T> {
 
   private current_: T;
   private disposed_: boolean;
+  private readonly disposalController_ = new AbortController();
   private readonly initial_: T;
   private readonly lensCache_: Map<string, LensSignal<unknown>>;
   private readonly propSignals_: Map<string, SignalImpl<unknown>>;
@@ -149,17 +196,23 @@ export class StoreImpl<T extends object> implements Store<T> {
 
   constructor(initial: T, name?: string) {
     this.name = name;
-    this.current_ = structuredClone(initial);
+    // freezeValues() deep-freezes every top-level property value without freezing
+    // current_/initial_ themselves — their own top-level slots stay assignable for
+    // applyTopLevelChange_()/deleteTopLevelKey_(), while every value living in them
+    // is immutable from the moment it enters store state.
+    this.current_ = freezeValues(structuredClone(initial));
     this.disposed_ = false;
-    this.initial_ = structuredClone(initial);
+    this.initial_ = freezeValues(structuredClone(initial));
     this.lensCache_ = new Map();
     this.propSignals_ = new Map();
     this.version_ = new SignalImpl(0, undefined, name ? `${name}.version` : undefined);
 
-    // Shallow proxy: throws on any top-level mutation attempt.
+    // Shallow proxy: throws on any top-level mutation attempt (set/delete traps).
     // All external reads go through this proxy; internal writes use this.current_ directly.
-    // NOTE: nested objects are plain references — mutations on nested properties
-    // bypass reactivity. Use store.lens('a.b') or store.replace() to update nested state.
+    // Nested objects need no proxy of their own — every value that enters store state is
+    // deep-frozen (see freezeValues()/freezeClone() above), so `store.value.user.name = 'x'`
+    // already throws a real TypeError at the nested object itself. Use store.lens('a.b') or
+    // store.replace() for actual nested updates.
     this.readonlyProxy_ = new Proxy(this.current_, {
       deleteProperty(_target, key): never {
         throw new RippleInvalidStoreError(
@@ -210,8 +263,10 @@ export class StoreImpl<T extends object> implements Store<T> {
 
     if (Object.is(current, newValue)) return;
 
-    (this.current_ as Record<string, unknown>)[key] = newValue;
-    this.propSignalFor_(key).value = newValue as never;
+    const safeValue = freezeClone(newValue);
+
+    (this.current_ as Record<string, unknown>)[key] = safeValue;
+    this.propSignalFor_(key).value = safeValue as never;
     this.version_.value = this.version_.peek() + 1;
   }
 
@@ -271,7 +326,7 @@ export class StoreImpl<T extends object> implements Store<T> {
    * For reactive reads, use `store.lens(path)` instead.
    */
   peek(): Readonly<T> {
-    return Object.freeze(structuredClone(this.current_)) as Readonly<T>;
+    return deepFreeze(structuredClone(this.current_)) as Readonly<T>;
   }
 
   readonly subscribe = (listener: () => void): Subscription => {
@@ -302,7 +357,7 @@ export class StoreImpl<T extends object> implements Store<T> {
   }
 
   replace(fn: (state: Readonly<T>) => T): void {
-    const snapshot = structuredClone(this.current_) as Readonly<T>;
+    const snapshot = deepFreeze(structuredClone(this.current_)) as Readonly<T>;
     const next = fn(snapshot);
 
     if (next === snapshot) return;
@@ -376,7 +431,7 @@ export class StoreImpl<T extends object> implements Store<T> {
     return parts;
   }
 
-  lens<P extends string>(path: P): Signal<PathValue<T, P>> {
+  lens<P extends LensPath<T>>(path: P): Signal<PathValue<T, P>> {
     const cached = this.lensCache_.get(path);
 
     if (cached !== undefined) return cached as unknown as Signal<PathValue<T, P>>;
@@ -396,6 +451,10 @@ export class StoreImpl<T extends object> implements Store<T> {
     return this.disposed_;
   }
 
+  get disposalSignal(): AbortSignal {
+    return this.disposalController_.signal;
+  }
+
   dispose(): void {
     if (this.disposed_) return;
 
@@ -413,6 +472,7 @@ export class StoreImpl<T extends object> implements Store<T> {
 
     this.propSignals_.clear();
     this.version_.dispose();
+    this.disposalController_.abort();
     getDevToolsHook()?.dispose?.({ kind: 'store', name: this.name });
   }
 

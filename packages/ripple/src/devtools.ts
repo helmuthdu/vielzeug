@@ -21,6 +21,24 @@ import { withSourceObserver } from './tracking';
 // sub-path don't need to import from two places.
 export type { DisposeEvent, MutateEvent, NamedEvent, RippleDevToolsHook, WriteEvent } from './types';
 
+// getDevToolsHook() reads the hook installed by installDevTools() below — moved here
+// (out of the core entry point) so nothing outside the devtools sub-path exposes hook
+// internals. The hot-path write in signal.ts/computed.ts/effect.ts/store.ts still
+// imports it directly from devtools-hook.ts, which stays out of this sub-path's bundle.
+export { getDevToolsHook } from './devtools-hook';
+
+/**
+ * Bumped whenever a `RippleDevToolsHook` event's shape changes in a way that could
+ * break an external DevTools extension parsing raw events. Extension authors should
+ * check this before assuming a payload shape.
+ *
+ * DevTools events (`WriteEvent.newValue`/`oldValue`, `name` fields, etc.) carry whatever
+ * values and debug names your own code passed into `signal()`/`computed()`/`store()` —
+ * `installDevTools()` does no redaction. Do not attach a hook that logs/forwards these
+ * events somewhere in production if your signals may carry sensitive data.
+ */
+export const RIPPLE_DEVTOOLS_PROTOCOL_VERSION = 1;
+
 // ── installDevTools ───────────────────────────────────────────────────────────
 
 /**

@@ -23,7 +23,7 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `store()`            | Create object-like state container                                    | Sync           | Store is a branded signal; use `.patch()`, `.replace()`, `.reset()`               |
 | `storeWithHistory()` | Store with snapshot-based undo/redo history                           | Sync           | Sub-path only: `@vielzeug/ripple/history`; call `.push()` / `.pushNamed()` explicitly to record a checkpoint; `maxHistory` caps the buffer |
 | `installDevTools()`  | Install DevTools observation hook                                     | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; pass `null` to uninstall              |
-| `getDevToolsHook()`  | Return current DevTools hook                                          | Sync           | Returns `null` if none installed                                                  |
+| `getDevToolsHook()`  | Return current DevTools hook                                          | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; returns `null` if none installed      |
 | `isSignal()`         | Type guard for any signal/computed/store                              | Sync           | Uses an internal symbol marker, not duck-typing                                   |
 | `isComputed()`       | Type guard for computed signals                                       | Sync           | Returns `false` for plain signals, stores, and `readonly()` wrappers             |
 | `isStore()`          | Type guard for stores                                                 | Sync           | Returns `false` for plain signals and computed signals                            |
@@ -33,9 +33,9 @@ description: Complete type signatures, parameter docs, and return values for eve
 | Import                      | Purpose                                                                                                                                                           |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@vielzeug/ripple`          | All core exports and types                                                                                                                                        |
-| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect`, and hook types (`RippleDevToolsHook`, `WriteEvent`, `NamedEvent`, `DisposeEvent`, `MutateEvent`) — dev-only, tree-shaken from prod |
-| `@vielzeug/ripple/history`  | `storeWithHistory` and its types (`StoreWithHistory`, `HistoryEntry`) — tree-shaken unless imported |
-| `@vielzeug/ripple/ssr`      | SSR tracking isolation helpers (`setTrackingProvider`, `createAsyncProvider`, `withProvider`, `runWithProvider`). Node.js only — do not import in browser builds. |
+| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect`, `getDevToolsHook`, `RIPPLE_DEVTOOLS_PROTOCOL_VERSION`, and hook types (`RippleDevToolsHook`, `WriteEvent`, `NamedEvent`, `DisposeEvent`, `MutateEvent`) — dev-only, tree-shaken from prod |
+| `@vielzeug/ripple/history`  | `storeWithHistory`, `RippleInvalidHistoryError`, and its types (`StoreWithHistory`, `HistoryEntry`) — tree-shaken unless imported |
+| `@vielzeug/ripple/ssr`      | Node-only SSR tracking isolation: `createAsyncProvider()` and `runWithProvider(provider, fn)`. Do not import in browser builds. |
 
 ## Signal Primitives
 
@@ -597,7 +597,7 @@ h.dispose(); // h is gone; s is still alive
 | Parameter            | Type            | Default | Description                                                              |
 | -------------------- | --------------- | ------- | ------------------------------------------------------------------------ |
 | `storeOrInitial`     | `Store<T> \| T` |         | Existing `Store<T>` (not owned) or a plain object to create a store from |
-| `options.maxHistory` | `number`        | `50`    | Maximum number of snapshots in the history buffer                        |
+| `options.maxHistory` | `number`        | `50`    | Maximum number of snapshots in the history buffer. Must be a positive safe integer — throws `RippleInvalidHistoryError` otherwise |
 | `options.name`       | `string`        |         | Name passed to the underlying `store()` when creating a new one          |
 
 **Returns** — `StoreWithHistory<T>`
@@ -609,10 +609,10 @@ See also: [`StoreWithHistory<T>`](#storewithhistory)
 ### `store.lens`
 
 ```ts
-store.lens<P extends string>(path: P): Signal<PathValue<T, P>>;
+store.lens<P extends LensPath<T>>(path: P): Signal<PathValue<T, P>>;
 ```
 
-Returns a writable `Signal` scoped to a specific property or nested dot-path within the store. The lens is cached — calling `.lens('a.b')` twice on the same store returns the same instance. Writes through the lens produce an immutable structural copy of the store state; intermediary objects must not be `null` or a primitive or a `RippleInvalidStoreError` is thrown. Path segments `__proto__`, `constructor`, and `prototype` are forbidden and throw `RippleInvalidStoreError` immediately.
+Returns a writable `Signal` scoped to a specific property or nested dot-path within the store. `path` is checked against [`LensPath<T>`](#lenspatht) at compile time — a typo'd or non-existent path is a type error, not just a runtime one. The lens is cached — calling `.lens('a.b')` twice on the same store returns the same instance. Writes through the lens produce an immutable structural copy of the store state; intermediary objects must not be `null` or a primitive or a `RippleInvalidStoreError` is thrown. Path segments `__proto__`, `constructor`, and `prototype` are forbidden and throw `RippleInvalidStoreError` immediately.
 
 The lens `Signal` is disposed and evicted from the cache when `store.lens()` is called with that same path after the lens was disposed.
 
@@ -693,10 +693,10 @@ try {
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `RippleComputedCycleError`   | A computed function reads another computed that depends on it                                                                                                                                                                                                                                                            |
 | `RippleDisposedScopeError`   | `scope.run()` or `scope.add()` is called after `scope.dispose()`                                                                                                                                                                                                                                                         |
-| `RippleEnvironmentError`     | An SSR API is used in a browser environment                                                                                                                                                                                                                                                                               |
 | `RippleInfiniteLoopError`    | Flush or effect loop exceeds the built-in guard limit (default 100 iterations)                                                                                                                                                                                                                                            |
 | `RippleInvalidCleanupError`  | `onCleanup()` is called outside an active effect or scope                                                                                                                                                                                                                                                                |
-| `RippleInvalidStoreError`    | `store()` is called with a non-object, or its initial state has an unsafe top-level key (`__proto__`, `constructor`, `prototype`); `patch()`/`replace()` receive a non-object, or any top-level key is unsafe — validated upfront, before any key is applied; `store.lens()` path traverses a `null` or non-object intermediate; a lens path has an empty segment (e.g. `'a..b'`), a forbidden segment (`__proto__`, `constructor`, `prototype`), or exceeds 32 segments; or `store.value` is mutated directly |
+| `RippleInvalidStoreError`    | `store()` is called with a non-object, or its initial state has an unsafe top-level key (`__proto__`, `constructor`, `prototype`); state passed to `patch()`/`replace()`/a lens write is not structured-cloneable; `patch()`/`replace()` receive a non-object, or any top-level key is unsafe — validated upfront, before any key is applied; `store.lens()` path traverses a `null` or non-object intermediate; a lens path has an empty segment (e.g. `'a..b'`), a forbidden segment (`__proto__`, `constructor`, `prototype`), or exceeds 32 segments; or `store.value`/a nested value reached through it is mutated directly (every value in store state is deep-frozen) |
+| `RippleInvalidHistoryError`  | `storeWithHistory()` is given a `maxHistory` that is not a positive safe integer. Exported from `@vielzeug/ripple/history`, not the core entry point.                                                                                                                                                                    |
 
 Errors from multiple subscribers or cleanup functions in the same flush are aggregated into a standard `AggregateError` with each original error as an element.
 
@@ -707,13 +707,13 @@ Each subclass extends `RippleError` with no additional members — they exist so
 ```ts
 class RippleComputedCycleError  extends RippleError {}
 class RippleDisposedScopeError  extends RippleError {}
-class RippleEnvironmentError    extends RippleError {}
 class RippleInfiniteLoopError   extends RippleError {}
 class RippleInvalidCleanupError extends RippleError {}
 class RippleInvalidStoreError   extends RippleError {}
+class RippleInvalidHistoryError extends RippleError {}
 ```
 
-All six classes are exported from `@vielzeug/ripple`. `RippleEnvironmentError` is also exported from `@vielzeug/ripple/ssr` for use in SSR entry points.
+The first five are exported from `@vielzeug/ripple`. `RippleInvalidHistoryError` is exported from `@vielzeug/ripple/history` alongside `storeWithHistory()`, since it's the only thing that can throw it.
 
 ---
 
@@ -757,11 +757,12 @@ interface Readable<T> {
 ```ts
 interface Computed<T> extends Readable<T> {
   dispose(): void;
+  readonly disposalSignal: AbortSignal;
   [Symbol.dispose](): void;
 }
 ```
 
-Returned by `computed()`. A read-only derived signal with an explicit dispose method. `disposed` is `true` after `dispose()` is called. `readonly()` returns `Readable<T>` (no dispose) — use `computed()` when ownership and explicit disposal are needed.
+Returned by `computed()`, `resource()`, and `store()`. A read-only derived signal with an explicit dispose method. `disposed` is `true` after `dispose()` is called. `disposalSignal` is an `AbortSignal` aborted when `dispose()` is called — use it to tie an external resource's lifetime (an observer, a subscription) to this value without writing your own boolean flag. `readonly()` returns `Readable<T>` (no dispose, no `disposalSignal` — it doesn't own its source) — use `computed()` when ownership and explicit disposal are needed.
 
 ---
 
@@ -769,7 +770,7 @@ Returned by `computed()`. A read-only derived signal with an explicit dispose me
 
 ```ts
 interface Store<T extends object> extends Computed<Readonly<T>> {
-  lens<P extends string>(path: P): Signal<PathValue<T, P>>;
+  lens<P extends LensPath<T>>(path: P): Signal<PathValue<T, P>>;
   patch(partial: Partial<T>): void;
   peek(): Readonly<T>;
   replace(fn: (state: Readonly<T>) => T): void;
@@ -789,10 +790,10 @@ interface Store<T extends object> extends Computed<Readonly<T>> {
 | `.reset()`        | Restore the original `initial` state (deep-clones the stored baseline); any key added after construction (e.g. via `.replace()`) and absent from `initial` is **removed**                                            |
 | `.subscribe()`    | Fires on any mutation (`patch` / `replace` / `reset` / lens write) — use for external adapters; prefer `store.lens()` for reactive reads |
 
-`Store<T>` extends `Computed<Readonly<T>>` — `dispose()`, `disposed`, `name`, and `[Symbol.dispose]()` are all inherited.
+`Store<T>` extends `Computed<Readonly<T>>` — `dispose()`, `disposed`, `disposalSignal`, `name`, and `[Symbol.dispose]()` are all inherited.
 
-::: tip store.value is a read-only proxy
-`store.value` returns a proxy that throws `RippleInvalidStoreError` on any direct top-level set or delete. Use `.patch()`, `.replace()`, or `.lens()` to mutate state.
+::: tip store state is deep-frozen, not just a read-only proxy
+`store.value` returns a proxy that throws `RippleInvalidStoreError` on any direct top-level set or delete — but that's only half the story. Every value that ever enters store state (via the initial state, `patch()`, `replace()`, `reset()`, or a lens write) is deep-cloned and deep-frozen first, so a **nested** mutation attempt (`store.value.user.name = 'x'`) throws a plain `TypeError` at the nested object itself, not a `RippleInvalidStoreError` from a proxy trap. Use `.patch()`, `.replace()`, or `.lens()` to mutate state.
 :::
 
 ---
@@ -838,12 +839,13 @@ sub.dispose(); // dispose
 
 ```ts
 interface AsyncSubscription extends Subscription {
+  readonly disposalSignal: AbortSignal;
   run(): Promise<void>;
   [Symbol.asyncDispose](): Promise<void>; // ES2024 await using compatible
 }
 ```
 
-Returned by `effectAsync()`. `run()` awaits the current in-flight async run without disposing. Use `[Symbol.asyncDispose]` for structured teardown with `await using`.
+Returned by `effectAsync()`. `run()` awaits the current in-flight async run without disposing. `disposalSignal` is aborted **immediately** on `dispose()` — it does not wait for `[Symbol.asyncDispose]`'s drain. Use `[Symbol.asyncDispose]` for structured teardown with `await using`.
 
 ```ts
 // Await the current run without disposing:
@@ -948,6 +950,26 @@ type CityType = PathValue<Settings, 'user.address.city'>; // string
 
 ---
 
+### `LensPath<T>`
+
+```ts
+type LensPath<T, Depth extends number = 8> = ...; // bounded recursive conditional type
+```
+
+Union of every valid dot-separated lens path into `T`, up to 8 levels deep. Constrains `store.lens<P>(path: P)`'s `path` parameter — passing a path that doesn't exist on `T` is a compile-time type error, not just a runtime `RippleInvalidStoreError`. Arrays, `Date`, and primitives are treated as leaves (matching `PathValue`, which doesn't address into them either).
+
+```ts
+type Settings = { user: { name: string; address: { city: string } }; theme: 'light' | 'dark' };
+
+type SettingsPaths = LensPath<Settings>;
+// → 'user' | 'user.name' | 'user.address' | 'user.address.city' | 'theme'
+
+settings.lens('user.address.city'); // ok
+settings.lens('user.address.cty'); // type error — not assignable to LensPath<Settings>
+```
+
+---
+
 ### `ResourceState<T>`
 
 ```ts
@@ -1033,6 +1055,7 @@ Returned by `storeWithHistory()`. Extends `Store<T>` directly — all store meth
 | `undo()`             | Move cursor back one step; no-op at the oldest state                                                                                         |
 | `redo()`             | Move cursor forward one step; no-op at the newest state                                                                                      |
 | `dispose()`          | Disposes the history adapter and cursor signal. Also disposes the underlying store only when the adapter created it (ownership). Idempotent. |
+| `disposalSignal`     | `AbortSignal` aborted when the **adapter** disposes — reflects the adapter's own lifecycle, not the wrapped store's (when wrapping an existing store, disposing the adapter never aborts that store's own `disposalSignal`) |
 | `[Symbol.dispose]()` | Same as `dispose()` — enables `using h = storeWithHistory(...)` declarations                                                                 |
 | `store`              | The underlying `Store<T>` — escape hatch for adapters; prefer calling mutations directly on `h`                                             |
 
@@ -1042,6 +1065,7 @@ Returned by `storeWithHistory()`. Extends `Store<T>` directly — all store meth
 
 ```ts
 interface EffectHandle extends Subscription {
+  readonly disposalSignal: AbortSignal;
   getDependencies(): ReadonlyArray<DepInfo>;
 }
 
@@ -1051,7 +1075,7 @@ type DepInfo = {
 };
 ```
 
-Returned by `effect()` and `debugEffect()`. `getDependencies()` returns the reactive sources the effect is currently subscribed to, as collected during the last completed run. Returns an empty array after `dispose()`.
+Returned by `effect()` and `debugEffect()`. `getDependencies()` returns the reactive sources the effect is currently subscribed to, as collected during the last completed run. Returns an empty array after `dispose()`. `disposalSignal` is an `AbortSignal` aborted when `dispose()` is called.
 
 ```ts
 const count = signal(0, { name: 'count' });
@@ -1139,7 +1163,7 @@ type WatchOptions<T> = {
 ## DevTools
 
 ::: info Sub-path import
-`installDevTools` and `debugEffect` are exported from `@vielzeug/ripple/devtools`, not the main entry point. This keeps them tree-shaken from production bundles.
+`installDevTools`, `debugEffect`, and `getDevToolsHook` are exported from `@vielzeug/ripple/devtools`, not the main entry point. This keeps them tree-shaken from production bundles.
 :::
 
 ### `installDevTools`
@@ -1172,6 +1196,20 @@ function getDevToolsHook(): RippleDevToolsHook | null;
 ```
 
 Returns the currently installed hook, or `null` if none is installed.
+
+---
+
+### `RIPPLE_DEVTOOLS_PROTOCOL_VERSION`
+
+```ts
+const RIPPLE_DEVTOOLS_PROTOCOL_VERSION: number;
+```
+
+Bumped whenever a `RippleDevToolsHook` event's shape changes in a way that could break an external DevTools extension parsing raw events. Extension authors should check this before assuming a payload shape.
+
+::: warning No redaction
+DevTools events (`WriteEvent.newValue`/`oldValue`, `name` fields, etc.) carry whatever values and debug names your own code passed into `signal()`/`computed()`/`store()` — `installDevTools()` does no redaction. Do not attach a hook that logs or forwards these events somewhere in production if your signals may carry sensitive data.
+:::
 
 ## Notification Timing
 

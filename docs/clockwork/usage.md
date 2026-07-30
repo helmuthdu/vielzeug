@@ -782,14 +782,13 @@ onUnmounted(() => { unsub?.(); m?.dispose(); });
 
 Clockwork's `state` and `context` are `@vielzeug/ripple` signals, so every machine shares ripple's module-level flush queue by default. That's fine for a single long-running Node process with one machine tree, but if you create machines **per incoming request** (e.g. an SSR handler that runs `createMachine(config).start()` on every request), concurrent requests can share scheduling state and interleave `batch()` flushes.
 
-Install `@vielzeug/ripple`'s SSR tracking provider once at server bootstrap to give each request its own isolated scheduling context — clockwork needs no special import or configuration, it automatically picks up whatever provider ripple has installed:
+Create one `@vielzeug/ripple` SSR provider at server bootstrap, then wrap each request in `runWithProvider()` to give it its own isolated scheduling context — clockwork needs no special import or configuration, it automatically picks up whatever provider is active for the duration of that call:
 
 ```ts
 // server bootstrap (once, at startup)
-import { createAsyncProvider, setTrackingProvider } from '@vielzeug/ripple/ssr';
+import { createAsyncProvider } from '@vielzeug/ripple/ssr';
 
 const provider = createAsyncProvider();
-setTrackingProvider(provider);
 ```
 
 ```ts
@@ -810,7 +809,7 @@ async function handleRequest(req: Request): Promise<Response> {
 }
 ```
 
-Single-page apps, static builds, and Node scripts that never run concurrent request handlers don't need this — the default (no provider installed) is correct there. See the `@vielzeug/ripple/ssr` entry in `@vielzeug/ripple`'s [API reference](/ripple/api#package-entry-point) for the full provider API.
+`runWithProvider()` installs the tracking hook only for the duration of that call (and, for an async `fn`, until its returned promise settles) — there's no separate "install a persistent provider" step, and nothing to leak between requests. Single-page apps, static builds, and Node scripts that never run concurrent request handlers don't need this — the default (no provider installed) is correct there. See the `@vielzeug/ripple/ssr` entry in `@vielzeug/ripple`'s [API reference](/ripple/api#package-entry-point) for the full provider API.
 
 ## Working with Other Vielzeug Libraries
 

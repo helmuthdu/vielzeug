@@ -118,6 +118,16 @@ describe('effects and cleanup', () => {
   });
 });
 
+describe('effect disposalSignal', () => {
+  it('is aborted when the effect is disposed', () => {
+    const stop = effect(() => {});
+
+    expect(stop.disposalSignal.aborted).toBe(false);
+    stop.dispose();
+    expect(stop.disposalSignal.aborted).toBe(true);
+  });
+});
+
 describe('effect throws on non-function returns', () => {
   it('throws RippleInvalidCleanupError when effect returns a number', () => {
     let caught: unknown;
@@ -490,6 +500,24 @@ describe('effectAsync — onError option', () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(errors).toHaveLength(2);
     await stop.dispose();
+  });
+});
+
+describe('effectAsync disposalSignal', () => {
+  it('is aborted immediately on dispose() — does not wait for in-flight work', async () => {
+    let resolveFactory!: () => void;
+    const stop = effectAsync(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFactory = resolve;
+        }),
+    );
+
+    expect(stop.disposalSignal.aborted).toBe(false);
+    stop.dispose();
+    expect(stop.disposalSignal.aborted).toBe(true);
+    resolveFactory();
+    await stop.run();
   });
 });
 

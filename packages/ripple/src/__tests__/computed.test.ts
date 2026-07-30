@@ -284,6 +284,15 @@ describe('computed', () => {
     expect(disposeCount).toBe(1);
     stop.dispose();
   });
+
+  it('disposalSignal is aborted when dispose() is called', () => {
+    const n = signal(1);
+    const c = computed(() => n.value + 1);
+
+    expect(c.disposalSignal.aborted).toBe(false);
+    c.dispose();
+    expect(c.disposalSignal.aborted).toBe(true);
+  });
 });
 
 describe('diamond dep deduplication', () => {

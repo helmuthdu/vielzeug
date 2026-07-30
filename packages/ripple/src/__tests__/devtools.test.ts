@@ -1,5 +1,12 @@
-import { computed, effect, getDevToolsHook, resource, signal, store } from '../';
-import { debugEffect, installDevTools } from '../devtools';
+import { computed, effect, resource, signal, store } from '../';
+import { getDevToolsHook, installDevTools, RIPPLE_DEVTOOLS_PROTOCOL_VERSION } from '../devtools';
+
+describe('RIPPLE_DEVTOOLS_PROTOCOL_VERSION', () => {
+  it('is a stable positive integer extension authors can branch on', () => {
+    expect(Number.isInteger(RIPPLE_DEVTOOLS_PROTOCOL_VERSION)).toBe(true);
+    expect(RIPPLE_DEVTOOLS_PROTOCOL_VERSION).toBeGreaterThan(0);
+  });
+});
 
 describe('DevTools hook', () => {
   let savedHook: ReturnType<typeof getDevToolsHook>;

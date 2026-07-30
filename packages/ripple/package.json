@@ -40,10 +40,11 @@
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
-    "prepublishOnly": "pnpm run build",
+    "prepublishOnly": "pnpm run build && pnpm run verify:exports",
     "preview": "vite preview",
     "test": "vitest",
-    "build:bundle": "vite build --config vite.bundle.config.ts"
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "verify:exports": "node ./scripts/verify-exports.mjs"
   },
   "publishConfig": {
     "access": "public",

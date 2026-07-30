@@ -65,6 +65,8 @@ export type DepInfo = {
  * ```
  */
 export interface EffectHandle extends Subscription {
+  /** `AbortSignal` that is aborted when `dispose()` is called. Use to tie external lifetimes to this effect. */
+  readonly disposalSignal: AbortSignal;
   /**
    * Returns the reactive sources the effect is currently subscribed to.
    * Reflects the deps collected during the last completed run.
@@ -84,6 +86,8 @@ export interface EffectHandle extends Subscription {
  * when you need to know the last run has actually finished before continuing.
  */
 export interface AsyncSubscription extends Subscription {
+  /** `AbortSignal` that is aborted when `dispose()` is called (immediately — does not wait for `[Symbol.asyncDispose]`'s drain). */
+  readonly disposalSignal: AbortSignal;
   /** Awaits the current async run without disposing the effect. Resolves immediately if idle. */
   run(): Promise<void>;
   /** ES2024 `await using` compatible async disposal. Stops the effect and awaits full teardown. */
@@ -179,10 +183,13 @@ export interface Readable<T> {
 
 /**
  * A disposable derived value. The holder is responsible for calling `dispose()`.
- * Returned by `computed()`, `readonly()`, and `resource()`.
+ * Returned by `computed()` and `resource()` (`readonly()` returns `Readable<T>` — it
+ * doesn't own its source, so it has no `dispose()`/`disposalSignal` of its own).
  */
 export interface Computed<T> extends Readable<T> {
   dispose(): void;
+  /** `AbortSignal` that is aborted when `dispose()` is called. Use to tie external lifetimes to this value. */
+  readonly disposalSignal: AbortSignal;
   [Symbol.dispose](): void;
 }
 
@@ -209,6 +216,32 @@ export type PathValue<T, P extends string> = P extends keyof T
       : never
     : never;
 
+/** Leaf types `LensPath` does not walk into any further — a path segment reaching one of these is final. */
+type LensLeaf = Date | ReadonlyArray<unknown> | bigint | boolean | number | string | symbol | null | undefined;
+
+/** Decrements a bounded recursion depth for `LensPath` — stops runaway recursion on recursive/self-referential shapes. */
+type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7];
+
+/**
+ * Union of every valid dot-separated lens path into `T`, up to 8 levels deep.
+ * Gives `store.lens()` compile-time path validation — `store.lens('usr.name')` (a typo)
+ * is now a type error, not just a runtime `RippleInvalidStoreError`. Arrays, `Date`, and
+ * primitives are treated as leaves (matching `PathValue`, which doesn't address into them
+ * either). Bounded depth (not full recursion) keeps this practical for deeply nested or
+ * recursive object shapes without degrading type-checker performance.
+ *
+ * @example
+ * type Paths = LensPath<{ user: { address: { city: string }; name: string } }>;
+ * // → 'user' | 'user.name' | 'user.address' | 'user.address.city'
+ */
+export type LensPath<T, Depth extends number = 8> = Depth extends 0
+  ? never
+  : T extends LensLeaf
+    ? never
+    : {
+        [K in keyof T & string]: T[K] extends LensLeaf ? K : K | `${K}.${LensPath<T[K], Prev[Depth]>}`;
+      }[keyof T & string];
+
 /**
  * A fine-grained reactive store for objects.
  * Extends `Computed<Readonly<T>>` — `store.value` provides a tracked whole-store read.
@@ -224,8 +257,9 @@ export interface Store<T extends object> extends Computed<Readonly<T>> {
    * Reads register a fine-grained dependency on that property's signal —
    * unrelated patches do NOT re-run effects watching this lens.
    * Lenses are cached — `store.lens('x') === store.lens('x')`.
+   * `path` is checked against `LensPath<T>` at compile time — see its docs for depth limits.
    */
-  lens<P extends string>(path: P): Signal<PathValue<T, P>>;
+  lens<P extends LensPath<T>>(path: P): Signal<PathValue<T, P>>;
   /** Atomic partial update — only changed keys notify their subscribers. */
   patch(partial: Partial<T>): void;
   /**

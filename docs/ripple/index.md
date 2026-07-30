@@ -24,19 +24,19 @@ exports:
     isSignal,
     isComputed,
     isStore,
-    getDevToolsHook,
     RippleError,
     RippleComputedCycleError,
     RippleDisposedScopeError,
-    RippleEnvironmentError,
     RippleInfiniteLoopError,
     RippleInvalidCleanupError,
     RippleInvalidStoreError,
+    RippleInvalidHistoryError,
     ResourceOptions,
     ResourceState,
     HistoryEntry,
     EffectHandle,
     PathValue,
+    LensPath,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -191,9 +191,10 @@ label.dispose();
 - **`.patch(partial)`** — shallow-merge a `Partial<T>` into state
 - **`.replace(fn)`** — derive next state from current via a function; same-reference return is a no-op
 - **`.reset()`** — restore the initial state baseline
-- **`.lens<P>(path)`** — cached writable `Signal` for a property or dot-path; writes produce an immutable copy
+- **`.lens<P>(path)`** — cached writable `Signal` for a property or dot-path, checked against `LensPath<T>` at compile time; writes produce an immutable copy
 - **`storeWithHistory(storeOrInit, options?)`** — store with explicit snapshot history; accepts an existing `Store<T>` (not owned) or a plain object; call `.push()` / `.pushNamed(label)` to save checkpoints; `undo()`, `redo()`, `historyAt(i)` returns `HistoryEntry<T>`; reactive `canUndo` / `canRedo`; import via `@vielzeug/ripple/history`
-- **`getDevToolsHook()`** — returns the currently installed DevTools hook, or `null`; install via `@vielzeug/ripple/devtools`
+- **`disposalSignal`** — every disposable value (`Signal`, `Computed`, `Store`, `Resource`, `EffectHandle`, `AsyncSubscription`, `Scope`) exposes an `AbortSignal` aborted on `dispose()` — tie an external resource's lifetime to it instead of tracking your own boolean
+- **Deep-frozen store state** — every value that enters a store (initial state, `patch()`, `replace()`, `reset()`, lens writes) is deep-cloned and deep-frozen; nested mutation throws a `TypeError`, not just top-level
 - **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot
 - **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations default)
 - **Automatic computed disposal** — `computed()` created inside `effect()` auto-disposes with the effect
@@ -205,8 +206,9 @@ label.dispose();
 | Import                      | Purpose                                                                                                  |
 | --------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `@vielzeug/ripple`          | All exports and types                                                                                    |
-| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect` — DevTools hook and reactive source tracing (dev-only, tree-shaken)     |
-| `@vielzeug/ripple/ssr`      | SSR tracking isolation helpers (`withProvider`, `runWithProvider`, `createAsyncProvider`). Node.js only. |
+| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect`, `getDevToolsHook` — DevTools hook and reactive source tracing (dev-only, tree-shaken) |
+| `@vielzeug/ripple/history`  | `storeWithHistory`, `RippleInvalidHistoryError` — snapshot-based undo/redo, tree-shaken unless imported   |
+| `@vielzeug/ripple/ssr`      | Node-only SSR tracking isolation: `createAsyncProvider`, `runWithProvider`.                                |
 
 ## Documentation
 

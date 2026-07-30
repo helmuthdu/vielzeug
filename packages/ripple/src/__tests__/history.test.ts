@@ -1,5 +1,5 @@
 import { batch, effect, store } from '../';
-import { storeWithHistory } from '../history';
+import { RippleInvalidHistoryError, storeWithHistory } from '../history';
 
 describe('storeWithHistory', () => {
   it('records and replays history via explicit push()+undo/redo', () => {
@@ -118,6 +118,27 @@ describe('storeWithHistory', () => {
     expect(h.historyAt(2)).toBeUndefined();
     expect(h.historyAt(999)).toBeUndefined();
   });
+
+  it('exposes disposalSignal — aborted on dispose()', () => {
+    const h = storeWithHistory({ n: 0 });
+
+    expect(h.disposalSignal.aborted).toBe(false);
+    h.dispose();
+    expect(h.disposalSignal.aborted).toBe(true);
+  });
+});
+
+describe('storeWithHistory — maxHistory validation', () => {
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    'throws RippleInvalidHistoryError for maxHistory: %s',
+    (maxHistory) => {
+      expect(() => storeWithHistory({ n: 0 }, { maxHistory })).toThrow(RippleInvalidHistoryError);
+    },
+  );
+
+  it('accepts maxHistory: 1', () => {
+    expect(() => storeWithHistory({ n: 0 }, { maxHistory: 1 })).not.toThrow();
+  });
 });
 
 describe('storeWithHistory — wrap existing store', () => {
@@ -138,6 +159,16 @@ describe('storeWithHistory — wrap existing store', () => {
     h.dispose();
     expect(s.disposed).toBe(false);
     void s.value;
+    s.dispose();
+  });
+
+  it("disposalSignal reflects the adapter's own lifecycle, not the wrapped store's", () => {
+    const s = store({ x: 0 });
+    const h = storeWithHistory(s);
+
+    h.dispose();
+    expect(h.disposalSignal.aborted).toBe(true);
+    expect(s.disposalSignal.aborted).toBe(false);
     s.dispose();
   });
 });

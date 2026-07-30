@@ -1,5 +1,6 @@
 import type { Resource, ResourceOptions, ResourceState } from './types';
 
+import { createAbortSwap } from './_abort-swap';
 import { getDevToolsHook } from './devtools-hook';
 import { effect } from './effect';
 import { signal } from './signal';
@@ -52,8 +53,9 @@ export const resource = <T>(
   // value) inside the effect purely so it becomes a tracked dep; refresh() bumps it
   // to force a re-run without requiring a real dependency to change.
   const epoch = signal(0);
+  const abortSwap = createAbortSwap();
+  const disposalController = new AbortController();
 
-  let controller: AbortController | null = null;
   let disposed = false;
 
   // Built unannotated and passed by reference (not as an inline literal) so TypeScript
@@ -69,10 +71,7 @@ export const resource = <T>(
     // also firing its own 'run' for the same re-run — one signal per re-run, not two.
     getDevToolsHook()?.compute?.({ name });
 
-    controller?.abort();
-    controller = new AbortController();
-
-    const { signal: abortSignal } = controller;
+    const abortSignal = abortSwap.next();
 
     const current = state.peek();
     const prevData = 'data' in current ? current.data : undefined;
@@ -104,10 +103,11 @@ export const resource = <T>(
     if (disposed) return;
 
     disposed = true;
-    controller?.abort();
+    abortSwap.abort();
     stop.dispose();
     state.dispose();
     epoch.dispose();
+    disposalController.abort();
   };
 
   autoRegisterDisposal(dispose);
@@ -118,6 +118,9 @@ export const resource = <T>(
   // to Computed<T>/Resource<T> fails this assignment at compile time instead of silently
   // going missing.
   const impl = {
+    get disposalSignal() {
+      return disposalController.signal;
+    },
     dispose,
     get disposed() {
       return disposed;

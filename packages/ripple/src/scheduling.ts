@@ -1,10 +1,9 @@
 import type { ComputedBase, ReactiveBase } from './reactive-base';
 import type { Subscriber } from './types';
 
-import { warn } from './_dev';
 import { runAll } from './_error-utils';
 import { RippleInfiniteLoopError } from './errors';
-import { getSchedulingState, hasContextHook, type SchedulingState } from './execution-context';
+import { getSchedulingState, type SchedulingState } from './execution-context';
 
 export const DEFAULT_MAX_ITERATIONS = 100;
 
@@ -14,7 +13,6 @@ export const DEFAULT_MAX_ITERATIONS = 100;
 // context hook that already isolates tracking), closing the gap where concurrent SSR
 // requests previously shared one flush queue. Outside SSR (no hook installed), this is
 // a single module-level singleton with identical behavior and cost to before.
-let ssrWarnFired = false;
 
 // ── F1: Simplified flush — no topological sort ─────────────────────────────
 //
@@ -147,23 +145,8 @@ const flushEffects = (s: SchedulingState): void => {
   }
 };
 
-// Fire the warning once per module load in environments that look like Node.js,
-// and only when no SSR context hook is installed (once installed, the flush queue
-// is genuinely request-isolated via SchedulingState — see tracking.ts).
-// window-check is unreliable (jsdom sets window in tests); check for process.versions instead.
-// Access entirely via globalThis to avoid requiring @types/node in downstream tsconfigs.
-const isNodeLike = (globalThis as { process?: { versions?: unknown } }).process?.versions != null;
-
 export const notifyNodeChange = (node: ReactiveBase<unknown>): void => {
   if (!node.hasSubscribers()) return;
-
-  if (!ssrWarnFired && isNodeLike && !hasContextHook()) {
-    ssrWarnFired = true;
-    warn(
-      'Signal updated in a Node.js-like environment. The module-level flush queue is shared across concurrent requests ' +
-        '— use per-request worker isolation or the @vielzeug/ripple/ssr sub-path for request-isolated scheduling.',
-    );
-  }
 
   const s = getSchedulingState();
 

@@ -20,6 +20,7 @@ export class ComputedImpl<T> extends ComputedBase<T> implements Computed<T> {
   private equals_: (a: unknown, b: unknown) => boolean;
   // Global revision at last successful compute — enables O(1) "nothing changed" fast-path.
   private maxRevision_: number;
+  private readonly disposalController_ = new AbortController();
 
   constructor(compute: () => T, options?: ComputedOptions<T>) {
     const { equals, name } = options ?? {};
@@ -216,6 +217,10 @@ export class ComputedImpl<T> extends ComputedBase<T> implements Computed<T> {
     return this.disposed_;
   }
 
+  get disposalSignal(): AbortSignal {
+    return this.disposalController_.signal;
+  }
+
   dispose(): void {
     if (this.disposed_) return;
 
@@ -228,6 +233,7 @@ export class ComputedImpl<T> extends ComputedBase<T> implements Computed<T> {
 
     this.deps_ = [];
     this.clearSubscribers();
+    this.disposalController_.abort();
     getDevToolsHook()?.dispose?.({ kind: 'computed', name: this.name });
   }
 

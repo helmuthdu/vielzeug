@@ -16,6 +16,7 @@ import type {
   WatchOptions,
 } from './types';
 
+import { createAbortSwap } from './_abort-swap';
 import { collectErrors, rethrowWith, runAll } from './_error-utils';
 import { getDevToolsHook } from './devtools-hook';
 import { RippleDisposedScopeError, RippleInfiniteLoopError, RippleInvalidCleanupError } from './errors';
@@ -160,11 +161,13 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): EffectHandl
   // Always run synchronously on creation to establish initial tracking.
   run();
 
+  const disposalController = new AbortController();
   const sub = new SubscriptionImpl(() => {
     if (isDisposed) return;
 
     isDisposed = true;
     teardown();
+    disposalController.abort();
     getDevToolsHook()?.dispose?.({ kind: 'effect', name: effectName });
   });
 
@@ -173,6 +176,9 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): EffectHandl
   getScopeCleanups()?.push(() => sub.dispose());
 
   const handle: EffectHandle = {
+    get disposalSignal() {
+      return disposalController.signal;
+    },
     dispose: () => sub.dispose(),
     get disposed() {
       return sub.disposed;
@@ -212,7 +218,7 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): EffectHandl
  * ```
  */
 export const effectAsync = (fn: AsyncEffectCallback, options?: EffectAsyncOptions): AsyncSubscription => {
-  let controller: AbortController | null = null;
+  const abortSwap = createAbortSwap();
   let asyncCleanup: CleanupFn | null = null;
   let currentRunPromise: Promise<void> | null = null;
 
@@ -226,13 +232,10 @@ export const effectAsync = (fn: AsyncEffectCallback, options?: EffectAsyncOption
 
   const syncStop = effect(
     () => {
-      controller?.abort();
       asyncCleanup?.();
       asyncCleanup = null;
 
-      controller = new AbortController();
-
-      const { signal } = controller;
+      const signal = abortSwap.next();
       const runOwner = scope(); // per-run owner scope for async body resources
 
       let theRun!: Promise<void>;
@@ -259,7 +262,7 @@ export const effectAsync = (fn: AsyncEffectCallback, options?: EffectAsyncOption
       })();
 
       return () => {
-        controller?.abort();
+        abortSwap.abort();
         asyncCleanup?.();
         asyncCleanup = null;
       };

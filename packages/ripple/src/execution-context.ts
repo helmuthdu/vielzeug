@@ -93,9 +93,6 @@ export const runInContext = <T>(patch: Partial<ExecutionContext>, fn: () => T): 
 /** Returns the scheduling-state bucket for the active execution context. */
 export const getSchedulingState = (): SchedulingState => getExecutionContext().scheduling;
 
-/** `true` once an SSR context hook is installed — scheduling state is then request-isolated. */
-export const hasContextHook = (): boolean => _hook !== null;
-
 // ── Scope cleanup ─────────────────────────────────────────────────────────────
 
 /** Returns the cleanup array of the innermost active scope, or `null` if not inside a scope. */

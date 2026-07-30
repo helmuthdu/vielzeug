@@ -19,9 +19,6 @@ export class RippleComputedCycleError extends RippleError {}
 /** Thrown when a method is called on a scope that has already been disposed. */
 export class RippleDisposedScopeError extends RippleError {}
 
-/** Thrown when the current runtime environment does not support the requested feature (e.g. SSR APIs in the browser). */
-export class RippleEnvironmentError extends RippleError {}
-
 /** Thrown when an effect or flush loop exceeds the maximum iteration count. */
 export class RippleInfiniteLoopError extends RippleError {}
 
@@ -30,3 +27,6 @@ export class RippleInvalidCleanupError extends RippleError {}
 
 /** Thrown when a store is created or mutated with an invalid value or path. */
 export class RippleInvalidStoreError extends RippleError {}
+
+/** Thrown when `storeWithHistory()` is given an invalid `maxHistory` option. */
+export class RippleInvalidHistoryError extends RippleError {}

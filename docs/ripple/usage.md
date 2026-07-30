@@ -303,6 +303,17 @@ error propagates as-is.
 
 `scope()` creates an isolated cleanup context that is not tied to any reactive effect. Use it when you want to collect teardown callbacks and release them all at once — without needing an effect or a component lifecycle hook.
 
+::: tip disposalSignal
+Every disposable ripple value — `signal()`, `computed()`, `store()`, `resource()`, `effect()`, `effectAsync()`, and `scope()` — exposes a `disposalSignal: AbortSignal` that fires when `dispose()` is called. Tie an external resource's lifetime to it instead of tracking your own boolean flag:
+
+```ts
+const s = signal(0);
+
+document.addEventListener('click', handler, { signal: s.disposalSignal });
+```
+
+:::
+
 Pass an optional `setup` function to register cleanups inline at construction time. This is equivalent to calling `scope.run(setup)` immediately after creation:
 
 ```ts
@@ -600,6 +611,10 @@ theme.value = theme.value === 'light' ? 'dark' : 'light';
 ```
 
 Lenses are cached: `settings.lens('theme')` called twice returns the same `Signal`. Disposing a lens removes it from the cache — the next call to `settings.lens('theme')` creates a fresh instance.
+
+::: tip Compile-time path checking
+`path` is constrained by `LensPath<T>` — `settings.lens('user.nam')` (a typo) is a TypeScript error at the call site, not just a runtime `RippleInvalidStoreError`.
+:::
 
 ::: warning Path constraints
 Every intermediate segment of the path must resolve to a non-null object. Writing through `settings.lens('user.address.city')` will throw `RippleInvalidStoreError` if `settings.value.user` or `settings.value.user.address` is `null` or not an object.

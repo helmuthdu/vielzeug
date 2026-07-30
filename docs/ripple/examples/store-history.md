@@ -81,7 +81,7 @@ console.log(s.historyLength); // 3: [0, 1, 99]
 ### Pitfalls
 
 - Mutations do **not** automatically push snapshots — you must call `.push()` explicitly after any `patch()`, `replace()`, `reset()`, or lens write.
-- Snapshots are deep clones (`structuredClone`). `maxHistory` is a ring buffer; oldest snapshots are evicted silently when the cap is reached.
+- Snapshots are deep-frozen clones (`structuredClone` + recursive `Object.freeze`). `maxHistory` is a ring buffer; oldest snapshots are evicted silently when the cap is reached. `maxHistory` must be a positive safe integer — anything else throws `RippleInvalidHistoryError`.
 - To bundle multiple lens writes into one undo step, wrap them in `batch()` then call `.push()` once after.
 
 ### Related

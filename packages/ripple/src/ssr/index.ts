@@ -1,23 +1,31 @@
 /**
  * /ripple/ssr
  *
- * SSR helpers for installing a custom tracking context provider.
- * Import this sub-entry **only** in server-side code — it is not needed for browser builds.
+ * SSR helpers for request-scoped reactive tracking isolation. Import this sub-entry
+ * **only** in server-side code — it statically imports `node:async_hooks` and must
+ * not be imported in browser builds.
+ *
+ * `runWithProvider()` is the sole entry point: it installs the tracking hook, runs
+ * `fn` inside a fresh per-request `ExecutionContext`, and restores whatever hook was
+ * active before — for the duration of `fn` if it's synchronous, or until the returned
+ * promise settles if it's async. There is no separate "install a persistent provider"
+ * step and no module-level provider variable to leak across requests: every call is
+ * self-contained, so concurrent requests never observe each other's hook installation.
  *
  * @example
  * ```ts
  * // frameworks/hono.ts
- * import { createAsyncProvider, setTrackingProvider } from '@vielzeug/ripple/ssr';
+ * import { createAsyncProvider, runWithProvider } from '@vielzeug/ripple/ssr';
  *
  * const provider = createAsyncProvider();
- * setTrackingProvider(provider);
  *
  * // Inside a request handler:
- * await runWithProvider(provider, () => renderToString(App));
+ * const html = await runWithProvider(provider, () => renderToString(App));
  * ```
  */
 
-import { RippleEnvironmentError } from '../errors';
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import {
   _installContextHook,
   createSchedulingState,
@@ -25,28 +33,11 @@ import {
   type ExecutionContext,
 } from '../execution-context';
 
-// eslint-disable-next-line no-var
-declare var require: (id: string) => unknown;
-
-interface AsyncLocalStorageType<T> {
-  getStore(): T | undefined;
-  run<R>(store: T, callback: () => R): R;
-}
-
-// ── Public interfaces ─────────────────────────────────────────────────────────
-
-/**
- * The clean starting context used as a fallback when no request is active
- * (e.g. a signal write outside any `runWithProvider`/`withProvider` call) —
- * a single shared instance is fine here since there's no concurrent request to isolate from.
- */
-const EMPTY_CTX: ExecutionContext = { scheduling: createSchedulingState(), scopeCleanups: null, tracking: null };
-
 /**
  * Builds a fresh, isolated starting context for one request — no tracking, no scope,
  * and its own `SchedulingState` so this request's `batch()`/flush queue never shares
- * state with a concurrently-running request. Must be called anew per `run()` — reusing
- * a single context object across requests would defeat scheduling isolation.
+ * state with a concurrently-running request. Built fresh on every `runWithProvider()`
+ * call — never reused across requests.
  */
 const freshRequestContext = (): ExecutionContext => ({
   scheduling: createSchedulingState(),
@@ -59,88 +50,56 @@ export interface TrackingProvider {
   run<T>(ctx: ExecutionContext, fn: () => T): T;
 }
 
-// ── Sync provider (simple stack-based) ───────────────────────────────────────
-
-let _currentProvider: TrackingProvider | null = null;
-
-const syncHook: ContextHook = {
-  get: () => _currentProvider?.get() ?? EMPTY_CTX,
-  run: <T>(ctx: ExecutionContext, fn: () => T): T => {
-    if (_currentProvider) return _currentProvider.run(ctx, fn);
-
-    return fn();
-  },
-};
-
-export const setTrackingProvider = (provider: TrackingProvider | null): void => {
-  _currentProvider = provider;
-  _installContextHook(provider !== null ? syncHook : null);
-};
-
-// ── Async provider (AsyncLocalStorage-based) ─────────────────────────────────
-
 /**
  * Creates a provider that uses `AsyncLocalStorage` to carry the full execution
- * context (tracking + scope cleanups) across async boundaries.
- * Requires Node.js 16+ or a compatible runtime.
- *
- * @example
- * ```ts
- * const provider = createAsyncProvider();
- * setTrackingProvider(provider);
- *
- * // In a request handler:
- * await runWithProvider(provider, requestHandler);
- * ```
+ * context (tracking + scope cleanups) across async boundaries. Node.js only.
  */
 export const createAsyncProvider = (): TrackingProvider => {
-  // Dynamic require so this module can be bundled for environments without AsyncLocalStorage.
-  // In browser builds, this code path should never be reached.
-  if (typeof require === 'undefined') {
-    throw new RippleEnvironmentError(
-      'createAsyncProvider() requires Node.js (async_hooks) and cannot be used in browser environments.',
-    );
-  }
-
-  const { AsyncLocalStorage } = require('async_hooks') as { AsyncLocalStorage: new <T>() => AsyncLocalStorageType<T> };
   const storage = new AsyncLocalStorage<ExecutionContext>();
+  const empty = freshRequestContext();
 
   return {
-    get: () => storage.getStore() ?? EMPTY_CTX,
+    get: () => storage.getStore() ?? empty,
     run: <T>(ctx: ExecutionContext, fn: () => T): T => storage.run(ctx, fn),
   };
 };
 
 /**
- * Runs `fn` inside the given provider with a clean (no tracking, no scope) context.
- * Signals read inside `fn` will not register any tracking deps — equivalent to
- * starting a clean reactive root for each request.
+ * Runs `fn` inside `provider` with a clean, request-scoped execution context.
+ *
+ * Installs the tracking hook before calling `fn`, then restores the previously active
+ * hook (`null` if none was installed) once `fn` completes. If `fn` returns a promise,
+ * restoration is deferred to that promise's settlement — reactive reads/writes anywhere
+ * in the request's async chain keep resolving through `provider` until then. Safe to
+ * call concurrently from multiple requests as long as they share the same `provider`
+ * instance (its `AsyncLocalStorage` is what actually isolates them from each other).
  *
  * @example
  * ```ts
  * const html = await runWithProvider(provider, () => renderToString(App));
  * ```
  */
-export const runWithProvider = <T>(provider: TrackingProvider, fn: () => T): T =>
-  provider.run(freshRequestContext(), fn);
+export const runWithProvider = <T>(provider: TrackingProvider, fn: () => T): T => {
+  const hook: ContextHook = { get: () => provider.get(), run: (ctx, f) => provider.run(ctx, f) };
+  const prevHook = _installContextHook(hook);
+  const restore = (): void => {
+    _installContextHook(prevHook);
+  };
 
-// ── Convenience: run once without installing a persistent provider ─────────────
-
-/**
- * Temporarily installs a provider, runs `fn`, then restores the previous provider.
- * Useful for one-off server renders without modifying global state.
- */
-export const withProvider = <T>(provider: TrackingProvider, fn: () => T): T => {
-  const prevProvider = _currentProvider;
-
-  _currentProvider = provider;
-
-  const prevHook = _installContextHook(syncHook);
+  let result: T;
 
   try {
-    return provider.run(freshRequestContext(), fn);
-  } finally {
-    _currentProvider = prevProvider;
-    _installContextHook(prevHook);
+    result = provider.run(freshRequestContext(), fn);
+  } catch (error) {
+    restore();
+    throw error;
   }
+
+  if (result instanceof Promise) {
+    return result.finally(restore) as T;
+  }
+
+  restore();
+
+  return result;
 };

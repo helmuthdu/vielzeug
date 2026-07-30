@@ -35,9 +35,9 @@ yarn add @vielzeug/ripple
 | Import                      | Purpose                                                                  |
 | --------------------------- | ------------------------------------------------------------------------ |
 | `@vielzeug/ripple`          | Core primitives and types                                                |
-| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect` — dev-only, tree-shaken from production |
-| `@vielzeug/ripple/history`  | `storeWithHistory` — snapshot-based store undo/redo, tree-shaken unless imported |
-| `@vielzeug/ripple/ssr`      | SSR tracking isolation helpers (`setTrackingProvider`, `createAsyncProvider`, `withProvider`, `runWithProvider`). Node.js only — do not import in browser builds. |
+| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect`, `getDevToolsHook` — dev-only, tree-shaken from production |
+| `@vielzeug/ripple/history`  | `storeWithHistory`, `RippleInvalidHistoryError` — snapshot-based store undo/redo, tree-shaken unless imported |
+| `@vielzeug/ripple/ssr`      | Node-only SSR tracking isolation: `createAsyncProvider()`, `runWithProvider(provider, fn)`. Do not import in browser builds. |
 
 ## Quick Start
 

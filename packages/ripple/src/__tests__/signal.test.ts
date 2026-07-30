@@ -102,6 +102,14 @@ describe('signals', () => {
 
     expect(n.name).toBeUndefined();
   });
+
+  it('disposalSignal is aborted when dispose() is called', () => {
+    const n = signal(0);
+
+    expect(n.disposalSignal.aborted).toBe(false);
+    n.dispose();
+    expect(n.disposalSignal.aborted).toBe(true);
+  });
 });
 
 describe('subscriptions and interop', () => {

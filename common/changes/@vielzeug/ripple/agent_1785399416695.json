@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor(ripple): fix sub-path export packaging, add disposalSignal lifecycle contract, deep-freeze store state, redesign SSR provider API, compile-time lens path validation",
+      "packageName": "@vielzeug/ripple",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

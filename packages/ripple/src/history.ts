@@ -12,8 +12,10 @@
  * use `@vielzeug/ledger` instead.
  */
 
-import type { HistoryEntry, Store, StoreWithHistory } from './types';
+import type { HistoryEntry, LensPath, Store, StoreWithHistory } from './types';
 
+import { deepFreeze } from './_deep-freeze';
+import { RippleInvalidHistoryError } from './errors';
 import { signal } from './signal';
 import { store } from './store';
 import { isStore } from './utilities';
@@ -21,10 +23,11 @@ import { isStore } from './utilities';
 // Re-export the history-specific types from the core module so consumers of
 // this sub-path don't need to import from two places.
 export type { HistoryEntry, StoreWithHistory } from './types';
+export { RippleInvalidHistoryError } from './errors';
 
 const snapshot = <T extends object>(state: Readonly<T>, label?: string): HistoryEntry<T> => ({
   label,
-  state: Object.freeze(structuredClone({ ...state })) as Readonly<T>,
+  state: deepFreeze(structuredClone(state)) as Readonly<T>,
 });
 
 /**
@@ -68,6 +71,11 @@ export const storeWithHistory = <T extends object>(
   options?: { maxHistory?: number; name?: string },
 ): StoreWithHistory<T> => {
   const maxHistory = options?.maxHistory ?? 50;
+
+  if (!Number.isSafeInteger(maxHistory) || maxHistory < 1) {
+    throw new RippleInvalidHistoryError(`maxHistory must be a positive safe integer, got ${maxHistory}.`);
+  }
+
   const ownsStore = !isStore(storeOrInitial);
   const base: Store<T> = ownsStore ? store(storeOrInitial as T, { name: options?.name }) : (storeOrInitial as Store<T>);
 
@@ -77,6 +85,10 @@ export const storeWithHistory = <T extends object>(
   const cursor = signal(0, { name: options?.name ? `${options.name}.cursor` : undefined });
 
   let disposed = false;
+  // Own controller — this adapter's disposalSignal reflects its own lifecycle, not the
+  // wrapped store's: when wrapping an existing store (ownsStore: false), dispose() here
+  // leaves that store alive, so its disposalSignal must not fire when the adapter is disposed.
+  const disposalController = new AbortController();
 
   const pushSnapshot = (label?: string): void => {
     if (disposed) return;
@@ -116,6 +128,7 @@ export const storeWithHistory = <T extends object>(
 
     disposed = true;
     cursor.dispose();
+    disposalController.abort();
 
     if (ownsStore) base.dispose();
   };
@@ -130,6 +143,9 @@ export const storeWithHistory = <T extends object>(
     get canUndo() {
       return cursor.value > 0;
     },
+    get disposalSignal() {
+      return disposalController.signal;
+    },
     dispose,
     get disposed() {
       return disposed;
@@ -138,7 +154,7 @@ export const storeWithHistory = <T extends object>(
     get historyLength() {
       return snapshots.length;
     },
-    lens: <P extends string>(path: P) => base.lens(path),
+    lens: <P extends LensPath<T>>(path: P) => base.lens(path),
     // Store<T> delegation
     get name() {
       return base.name;
