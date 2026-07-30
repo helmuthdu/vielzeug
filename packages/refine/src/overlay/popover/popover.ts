@@ -4,7 +4,7 @@ import {
   define,
   html,
   prop,
-  aria,
+  bind,
   getHost,
   onCleanup,
   onMounted,
@@ -116,12 +116,17 @@ define<OrePopoverProps>(POPOVER_TAG, {
 
     const floating = useFloatingTrigger({
       bindTriggerAria: (triggerEl) =>
-        aria(triggerEl, {
-          controls: () => panelId,
-          disabled: () => String(isDisabled.value),
-          expanded: () => String(floating.visible.value),
-          haspopup: 'dialog',
-        }),
+        bind(
+          {
+            aria: {
+              controls: () => panelId,
+              disabled: () => String(isDisabled.value),
+              expanded: () => String(floating.visible.value),
+              haspopup: 'dialog',
+            },
+          },
+          { target: triggerEl },
+        ),
       disabled: isDisabled,
       getHost: () => el,
       getPanel: () => panelEl,

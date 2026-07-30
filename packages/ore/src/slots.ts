@@ -124,29 +124,33 @@ const createSlots = (host: HTMLElement): ComponentSlots<string> => {
   // Watch for dynamically-inserted <slot> elements (e.g. inside when(), each()).
   let observer: MutationObserver | null = null;
 
-  // Start MutationObserver immediately in setup so any slots inserted synchronously
-  // before the first render are captured without a timing gap.
-  if (host.shadowRoot) {
-    observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const node of mutation.removedNodes) {
-          if (node instanceof HTMLSlotElement) unbindSlot(node);
-        }
-      }
-
-      bindAllSlots();
-      recomputeAllSlots();
-    });
-    observer.observe(host.shadowRoot, { childList: true, subtree: true });
-  }
-
-  // Bind slots already present in the shadow root (pre-upgrade scenarios)
-  // and schedule a post-render pass to pick up slots injected by the template.
-  bindAllSlots();
-  onMounted(() => {
+  // Single init pass, run after the first render: binds slots already present
+  // (pre-upgrade markup and template-rendered ones alike) and starts observation
+  // for slots inserted later. The observer must stay connected for the component's
+  // lifetime — it is the only way to detect a *first* <slot> appearing dynamically
+  // (e.g. a when() branch that renders a slot), so it cannot be disconnected when
+  // the bound-slot count drops to zero.
+  const initSlots = (): void => {
     bindAllSlots();
     recomputeAllSlots();
-  });
+
+    if (!observer && host.shadowRoot) {
+      observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          for (const node of mutation.removedNodes) {
+            if (node instanceof HTMLSlotElement) unbindSlot(node);
+          }
+        }
+
+        bindAllSlots();
+
+        if (slotCleanupMap.size > 0) recomputeAllSlots();
+      });
+      observer.observe(host.shadowRoot, { childList: true, subtree: true });
+    }
+  };
+
+  onMounted(initSlots);
 
   onCleanup(() => {
     observer?.disconnect();

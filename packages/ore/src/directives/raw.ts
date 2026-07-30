@@ -2,7 +2,7 @@ import { computed, effect as rawEffect, isReactive, type Readable, type Signal }
 
 import { warn } from '../_dev';
 import { invariant } from '../errors';
-import { createDirectiveResult, type DirectiveResult } from '../types/bindings';
+import { createDirectiveResult, type DirectiveResult } from '../template/result';
 import { createReplaceableSlot } from '../utils/dom';
 
 type RawSanitizer = (html: string) => string;

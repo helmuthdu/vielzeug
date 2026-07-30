@@ -6,7 +6,6 @@ import {
   inject,
   type InjectionKey,
   injectStrict,
-  aria,
   bind,
   onCleanup,
   onMounted,
@@ -35,7 +34,9 @@ describe('core/host.ts', () => {
           },
         });
 
-        return html`<button>Open</button>`;
+        return html`
+          <button>Open</button>
+        `;
       });
 
       expect(element.getAttribute('role')).toBe('button');
@@ -57,7 +58,9 @@ describe('core/host.ts', () => {
           attr: { 'data-widget': 'disclosure' },
         });
 
-        return html`<button>Open</button>`;
+        return html`
+          <button>Open</button>
+        `;
       });
 
       expect(element.getAttribute('data-widget')).toBe('disclosure');
@@ -84,7 +87,9 @@ describe('core/host.ts', () => {
         open.value = true;
         active.value = false;
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       await flush();
@@ -101,7 +106,9 @@ describe('core/host.ts', () => {
           on: { click: () => clickCount++ },
         });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       element.dispatchEvent(new MouseEvent('click'));
@@ -129,7 +136,9 @@ describe('core/host.ts', () => {
           { once: true },
         );
 
-        return html`<div>Host listener</div>`;
+        return html`
+          <div>Host listener</div>
+        `;
       });
 
       element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -142,7 +151,9 @@ describe('core/host.ts', () => {
       const { element } = await mount((_props) => {
         bind({ style: { color: 'red', fontSize: '14px' } });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       expect(element.style.getPropertyValue('color')).toBe('red');
@@ -154,7 +165,9 @@ describe('core/host.ts', () => {
       const { element, flush } = await mount((_props) => {
         bind({ style: { color } });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       expect(element.style.getPropertyValue('color')).toBe('blue');
@@ -169,7 +182,9 @@ describe('core/host.ts', () => {
       const { element } = await mount((_props) => {
         bind({ style: { '--theme-color': '#ff0000' } });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       expect(element.style.getPropertyValue('--theme-color')).toBe('#ff0000');
@@ -180,7 +195,9 @@ describe('core/host.ts', () => {
       const { element, flush } = await mount((_props) => {
         bind({ style: { color } });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       expect(element.style.getPropertyValue('color')).toBe('red');
@@ -195,7 +212,9 @@ describe('core/host.ts', () => {
       const { element } = await mount((_props) => {
         bind({ style: { color: 'red; display:none' } });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       expect(element.style.getPropertyValue('display')).toBe('');
@@ -205,7 +224,9 @@ describe('core/host.ts', () => {
       const { element } = await mount((_props) => {
         bind({ style: { color: 'red} body{display:none' } });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       const colorVal = element.style.getPropertyValue('color');
@@ -218,7 +239,9 @@ describe('core/host.ts', () => {
       const { element } = await mount((_props) => {
         bind({ style: { ';{}': 'red' } });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       expect(element.getAttribute('style') ?? '').toBe('');
@@ -234,7 +257,9 @@ describe('core/host.ts', () => {
         onCleanup(() => externalEl.remove());
         bind({ attr: { 'aria-pressed': () => String(visible.value) } }, { target: externalEl });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       expect(externalEl.getAttribute('aria-pressed')).toBe('false');
@@ -246,7 +271,7 @@ describe('core/host.ts', () => {
     });
   });
 
-  describe('aria()', () => {
+  describe('bind({ aria }, { target })', () => {
     it('applies static ARIA attributes to a target element', async () => {
       const externalEl = document.createElement('div');
 
@@ -254,9 +279,11 @@ describe('core/host.ts', () => {
 
       await mount((_props) => {
         onCleanup(() => externalEl.remove());
-        aria(externalEl, { label: 'Close dialog', role: 'dialog' });
+        bind({ aria: { label: 'Close dialog', role: 'dialog' } }, { target: externalEl });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       expect(externalEl.getAttribute('aria-label')).toBe('Close dialog');
@@ -277,9 +304,11 @@ describe('core/host.ts', () => {
 
       await mount((_props) => {
         onCleanup(() => externalEl.remove());
-        aria(externalEl, { expanded: () => expanded.value });
+        bind({ aria: { expanded: () => expanded.value } }, { target: externalEl });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       expect(externalEl.getAttribute('aria-expanded')).toBe('false');
@@ -298,9 +327,11 @@ describe('core/host.ts', () => {
 
       await mount((_props) => {
         onCleanup(() => externalEl.remove());
-        aria(externalEl, { label: () => label.value });
+        bind({ aria: { label: () => label.value } }, { target: externalEl });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       expect(externalEl.hasAttribute('aria-label')).toBe(true);
@@ -318,9 +349,11 @@ describe('core/host.ts', () => {
 
       await mount((_props) => {
         onCleanup(() => externalEl.remove());
-        aria(externalEl, { expanded: 'true' });
+        bind({ aria: { expanded: 'true' } }, { target: externalEl });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       expect(externalEl.getAttribute('aria-expanded')).toBe('true');
@@ -333,9 +366,11 @@ describe('core/host.ts', () => {
 
       await mount((_props) => {
         onCleanup(() => externalEl.remove());
-        aria(externalEl, { 'aria-label': 'Fully qualified' });
+        bind({ aria: { 'aria-label': 'Fully qualified' } }, { target: externalEl });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       expect(externalEl.getAttribute('aria-label')).toBe('Fully qualified');
@@ -351,9 +386,11 @@ describe('core/host.ts', () => {
 
       await mount((_props) => {
         onCleanup(() => externalEl.remove());
-        cleanup = aria(externalEl, { expanded: () => expanded.value });
+        cleanup = bind({ aria: { expanded: () => expanded.value } }, { target: externalEl });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       });
 
       expect(externalEl.getAttribute('aria-expanded')).toBe('false');
@@ -377,7 +414,9 @@ describe('core/host.ts', () => {
           provide(ThemeKey, 'dark');
           received = inject(ThemeKey);
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         });
 
         expect(received).toBe('dark');
@@ -389,7 +428,9 @@ describe('core/host.ts', () => {
         const { query } = await mount(() => {
           const value = inject(AbsentKey, 'fallback');
 
-          return html`<div>${value}</div>`;
+          return html`
+            <div>${value}</div>
+          `;
         });
 
         expect(query('div')?.textContent).toBe('fallback');
@@ -402,7 +443,9 @@ describe('core/host.ts', () => {
         await mount(() => {
           received = inject(MissingKey);
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         });
 
         expect(received).toBeUndefined();
@@ -419,7 +462,9 @@ describe('core/host.ts', () => {
         register(consumerTag, () => {
           consumerValue = inject(CountKey);
 
-          return html`<div class="v">${consumerValue}</div>`;
+          return html`
+            <div class="v">${consumerValue}</div>
+          `;
         });
         register(innerTag, (_p) => {
           provide(CountKey, 2);
@@ -453,7 +498,9 @@ describe('core/host.ts', () => {
           provide(ThemeKey, 'dark');
           received = injectStrict(ThemeKey);
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         });
 
         expect(received).toBe('dark');
@@ -470,7 +517,9 @@ describe('core/host.ts', () => {
             captured = err;
           }
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         });
 
         expect(captured).toBeInstanceOf(Error);
@@ -486,6 +535,10 @@ describe('core/host.ts', () => {
         expect(KeyA).not.toBe(KeyB);
       });
 
+      it('returns the same key for the same description (Symbol.for — survives duplicated module graphs)', () => {
+        expect(createContext('shared-desc')).toBe(createContext('shared-desc'));
+      });
+
       it('enables type-safe context sharing between parent and child components', async () => {
         const UserCtx = createContext<{ name: string; role: string }>();
         const childTag = `test-ctx-child-${Math.random().toString(36).slice(2)}`;
@@ -493,7 +546,9 @@ describe('core/host.ts', () => {
         register(childTag, () => {
           const user = inject(UserCtx);
 
-          return html`<div class="info">${user?.name} (${user?.role})</div>`;
+          return html`
+            <div class="info">${user?.name} (${user?.role})</div>
+          `;
         });
 
         const { element, flush } = await mount((_p) => {
@@ -524,7 +579,10 @@ describe('core/host.ts', () => {
           headerAssigned = slots.has('header');
           defaultAssigned = slots.has();
 
-          return html`<slot name="header"></slot><slot></slot>`;
+          return html`
+            <slot name="header"></slot>
+            <slot></slot>
+          `;
         },
         { html: '<span slot="header">Title</span><span>Default content</span>' },
       );
@@ -544,7 +602,9 @@ describe('core/host.ts', () => {
 
           triggerElements = slots.elements('trigger');
 
-          return html`<slot name="trigger"></slot>`;
+          return html`
+            <slot name="trigger"></slot>
+          `;
         },
         { html: '<button slot="trigger">Open</button>' },
       );
@@ -565,7 +625,9 @@ describe('core/host.ts', () => {
           callback(slots.elements('nonexistent').value);
         });
 
-        return html`<div>No slots here</div>`;
+        return html`
+          <div>No slots here</div>
+        `;
       });
 
       await flush();
@@ -581,7 +643,9 @@ describe('core/host.ts', () => {
 
         defaultElements = slots.elements();
 
-        return html`<slot></slot>`;
+        return html`
+          <slot></slot>
+        `;
       });
 
       await flush();
@@ -621,7 +685,9 @@ describe('mount slot timing', () => {
         expect(assigned?.length).toBeGreaterThanOrEqual(1);
       });
 
-      return html`<slot></slot>`;
+      return html`
+        <slot></slot>
+      `;
     });
 
     const el = document.createElement('test-slot-timing-element');
@@ -649,7 +715,9 @@ describe('mount slot timing', () => {
         slotFn(slots.elements().value.length);
       });
 
-      return html`<slot></slot>`;
+      return html`
+        <slot></slot>
+      `;
     });
 
     const el = document.createElement('test-slot-change-element');

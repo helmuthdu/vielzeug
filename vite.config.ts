@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 type LibraryEntry = string | Record<string, string>;
 
 /**
- * Reads the calling package's own `dependencies` from `package.json` next to `__dirname`.
+ * Reads the calling package's own `dependencies` + `peerDependencies` from `package.json` next to `__dirname`.
  * Pass the result as `external` to `getConfig()`/`getBundleConfig()` for packages whose
  * externals are exactly "my own workspace dependencies, nothing more" — avoids hand-listing
  * the same `@vielzeug/*` names already in `package.json` a second (and third — `vite.config.ts`
@@ -26,9 +26,13 @@ export const readWorkspaceDeps = (__dirname: string): string[] => {
   // that "succeeds" while inlining every workspace dependency into the package's own output.
   const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8')) as {
     dependencies?: Record<string, string>;
+    peerDependencies?: Record<string, string>;
   };
 
-  return Object.keys(pkg.dependencies ?? {});
+  // Peer deps are external by definition — the consumer installs them, the package
+  // must never inline them (e.g. ore's optional `@vielzeug/assay` peer, used only
+  // by its `/testing` sub-path).
+  return Object.keys({ ...pkg.dependencies, ...pkg.peerDependencies });
 };
 
 export type BundleOptions = {

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore(refine): replace removed aria() with bind({ aria }, { target }); opt into form-internals polyfill via install(afterEach, { formInternals: true }); narrow headless option-list close reasons to DropdownCloseReason (latent type bug exposed by ore's strict EmitFn)",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

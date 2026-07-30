@@ -248,11 +248,11 @@ The `bind` config supports `attr`, `class`, `style`, and `on` sections.
 
 ## ARIA bindings
 
-Use `aria(target, config)` to reactively sync ARIA attributes to any element. Shorthand keys are normalised to `aria-*` automatically — `expanded` becomes `aria-expanded`, `role` is set verbatim.
+Use `bind({ aria: config }, { target })` to reactively sync ARIA attributes to any element. Shorthand keys are normalised to `aria-*` automatically — `expanded` becomes `aria-expanded`, `role` is set verbatim.
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { aria, bind, define, html, onMounted } from '@vielzeug/ore';
+import { bind, define, html, onMounted } from '@vielzeug/ore';
 
 define('x-disclosure', {
   setup(_props) {
@@ -267,12 +267,17 @@ define('x-disclosure', {
     onMounted(() => {
       const trigger = document.querySelector('#trigger') as HTMLElement;
       if (trigger) {
-        // aria() registers cleanup automatically when called inside setup
-        aria(trigger, {
-          controls: panelId,
-          expanded: () => String(open.value),
-          haspopup: 'region',
-        });
+        // bind() registers cleanup automatically when called inside setup
+        bind(
+          {
+            aria: {
+              controls: panelId,
+              expanded: () => String(open.value),
+              haspopup: 'region',
+            },
+          },
+          { target: trigger },
+        );
       }
     });
 
@@ -283,12 +288,12 @@ define('x-disclosure', {
 
 Static values are applied once. Getter functions create reactive effects. Setting a value to `null`, `undefined`, or `false` removes the attribute.
 
-`aria()` always returns a cleanup function. Use it to stop syncing early when a trigger element can be swapped out:
+`bind()` always returns a cleanup function. Use it to stop syncing early when a trigger element can be swapped out:
 
 ```ts
 onMounted(() => {
   const trigger = document.querySelector('#trigger') as HTMLElement;
-  const stopAria = aria(trigger, { expanded: () => String(open.value) });
+  const stopAria = bind({ aria: { expanded: () => String(open.value) } }, { target: trigger });
 
   // Stop syncing when the trigger is replaced
   onCleanup(stopAria);

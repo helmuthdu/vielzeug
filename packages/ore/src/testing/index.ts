@@ -35,21 +35,30 @@ export { installFormInternalsPolyfill } from './form-internals-polyfill';
 export { user } from './interactions';
 export { cleanup, mock, mount, mountComponent, type Fixture, type MountOptions, type MountSetup } from './mount';
 export { renderHook, type HookFixture } from './render-hook';
+export { resetOreForTests } from './reset';
+
+export type InstallOptions = {
+  /**
+   * Polyfill the jsdom/happy-dom gaps in `ElementInternals`/`FormData`/`<form>.reset()`
+   * that `useField()` needs (see `installFormInternalsPolyfill`). Global monkey-patches,
+   * so opt in only when the suite tests form-associated components.
+   * @default false
+   */
+  formInternals?: boolean;
+};
 
 /**
- * Register auto-cleanup after each test, and polyfill the jsdom/happy-dom gaps in
- * `ElementInternals`/`FormData`/`<form>.reset()` that `useField()` needs (see
- * `installFormInternalsPolyfill` — safe to call even in a suite with no form-associated
- * components; every patch it installs is a guarded no-op when its target is missing).
- * Call once in your test setup file.
+ * Register auto-cleanup after each test. Call once in your test setup file.
+ * Pass `{ formInternals: true }` when testing form-associated (`useField`) components.
  *
  * @example
  * // vitest.setup.ts
  * import { afterEach } from 'vitest';
  * import { install } from '@vielzeug/ore/testing';
- * install(afterEach);
+ * install(afterEach, { formInternals: true });
  */
-export function install(afterEachHook: (fn: () => void) => void): void {
+export function install(afterEachHook: (fn: () => void) => void, options: InstallOptions = {}): void {
   afterEachHook(cleanup);
-  installFormInternalsPolyfill();
+
+  if (options.formInternals) installFormInternalsPolyfill();
 }

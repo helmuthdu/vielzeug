@@ -1,7 +1,6 @@
 import { invariant, OreInternalError, OreLifecycleError, OreError, reportRuntimeError } from '../errors';
 import { html } from '../index';
 import { beginPendingWork, hasPendingWork } from '../runtime';
-import { debugFlush, flush, OreTimeoutError } from '../testing';
 import {
   createDirectiveResult,
   createHtmlResult,
@@ -9,7 +8,8 @@ import {
   isDirectiveResult,
   isHtmlResult,
   isSpreadObject,
-} from '../types/bindings';
+} from '../template/result';
+import { debugFlush, flush, OreTimeoutError } from '../testing';
 
 describe('OreLifecycleError', () => {
   it('is an instance of Error', () => {
@@ -158,7 +158,9 @@ describe('reportRuntimeError()', () => {
 describe('Type guards', () => {
   describe('isHtmlResult()', () => {
     it('returns true for a real HTMLResult', () => {
-      const result = html`<div></div>`;
+      const result = html`
+        <div></div>
+      `;
 
       expect(isHtmlResult(result)).toBe(true);
     });

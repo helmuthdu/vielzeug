@@ -129,12 +129,12 @@ define('my-counter', {
 - Lifecycle hooks — `onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect` — plain functions imported from `@vielzeug/ore`, called directly from `setup()` or any composable it calls
 - Directives: `each` (keyed reactive list rendering), `classMap`, `styleMap`, `when`, `model`, `raw`
 - Host bindings via `bind({ attr, class, style, on })` — pass `{ target: el }` to bind any off-host element
-- Reactive ARIA sync via `aria(target, config)` — applies `aria-*` attributes reactively to any element, auto-cleanup on disconnect
+- Reactive ARIA sync via `bind({ aria }, { target })` — applies `aria-*` attributes reactively to any element, auto-cleanup on disconnect
 - Context via `provide(key, value)` / `inject(key)`; typed emit/slots via `useEmit<Emits>()` / `useSlots<SlotNames>()`
 - Form-associated helpers (`@vielzeug/ore/forms`): `useField()`, `createFormContext()`
 - Observers (`@vielzeug/ore/observers`)
 - Testing utilities (`@vielzeug/ore/testing`) — `mount`, `renderHook`, `fire`, `user`, `waitFor`, `cleanup`
-- Debug utilities (`@vielzeug/ore/devtools`) — `debugFlush()` for diagnosing update timing
+- Debug utilities (`@vielzeug/ore/testing`) — `debugFlush()` for diagnosing update timing
 
 </div>
 
@@ -143,11 +143,10 @@ define('my-counter', {
 | Import                      | Purpose                                                                       |
 | --------------------------- | ----------------------------------------------------------------------------- |
 | `@vielzeug/ore`            | Core component API and utilities (`define`, `prop`, `html`, `css`, context), plus the everyday template directives (`each`, `when`, `model`, `classMap`, `styleMap`) |
-| `@vielzeug/ore/devtools`   | `debugFlush` — verbose flush for timing diagnostics (dev only)                |
 | `@vielzeug/ore/directives` | The advanced/niche directives (`live`, `raw`) and the custom-directive authoring API (`createDirectiveResult`, `createSpreadObject`) |
 | `@vielzeug/ore/forms`      | `useField`, `createFormContext`, `FORM_CONTEXT_KEY`                          |
 | `@vielzeug/ore/observers`  | `resizeObserver`, `intersectionObserver`, `mediaObserver`, `mutationObserver` |
-| `@vielzeug/ore/testing`    | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers                    |
+| `@vielzeug/ore/testing`    | `mount`, `fire`, `user`, `waitFor`, `cleanup`, `debugFlush`, and helpers      |
 
 ## Documentation
 

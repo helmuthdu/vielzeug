@@ -22,7 +22,7 @@ import {
   createChoiceField,
   createInteraction,
   createOptionList,
-  type DialogCloseReason,
+  type DropdownCloseReason,
   type OverlayOpenReason,
 } from '../../headless';
 import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
@@ -363,7 +363,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
       }
     }
 
-    function closePopup(reason: DialogCloseReason = 'programmatic') {
+    function closePopup(reason: DropdownCloseReason = 'programmatic') {
       optionList.close(reason);
     }
 

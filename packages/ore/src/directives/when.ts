@@ -1,9 +1,7 @@
 import { computed, effect as rawEffect, isReactive, type Readable, untrack } from '@vielzeug/ripple';
 
-import type { RegisterCleanup } from '../template';
-
 import { invariant } from '../errors';
-import { createDirectiveResult, type DirectiveResult, type HTMLResult, isHtmlResult } from '../types/bindings';
+import { createDirectiveResult, type DirectiveResult, type HTMLResult, isHtmlResult } from '../template/result';
 import { createReplaceableSlot, removeNodes } from '../utils/dom';
 
 type MaybeReactive<T> = T | (() => T) | Readable<T>;
@@ -11,13 +9,6 @@ type MaybeReactive<T> = T | (() => T) | Readable<T>;
 type WhenRenderable = HTMLResult | null | undefined | false;
 
 const NO_PARENT_MSG = 'when() anchor comment has no parent node';
-
-const mountBranch = (
-  result: HTMLResult,
-  parent: ParentNode,
-  insertBefore: Node,
-  registerCleanup: RegisterCleanup,
-): Node[] => result.mount(parent, insertBefore, registerCleanup);
 
 /**
  * Conditionally renders one of two branches as a `DirectiveResult`.
@@ -46,7 +37,7 @@ export function when(
 
       invariant(parent, NO_PARENT_MSG);
 
-      const nodes = mountBranch(branch, parent, anchor, registerCleanup);
+      const nodes = branch.mount(parent, anchor, registerCleanup);
 
       registerCleanup(() => removeNodes(nodes));
     });
@@ -77,7 +68,7 @@ export function when(
 
       if (!branch || !isHtmlResult(branch)) return;
 
-      slot.setNodes(untrack(() => mountBranch(branch, parent, endMarker, slot.registerCleanup)));
+      slot.setNodes(untrack(() => branch.mount(parent, endMarker, slot.registerCleanup)));
     });
 
     registerCleanup(() => sub.dispose());

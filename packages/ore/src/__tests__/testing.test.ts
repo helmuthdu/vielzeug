@@ -10,25 +10,39 @@ import { cleanup, fire, mock, mount, mountComponent, user } from '../testing';
 describe('Testing: Render Utilities', () => {
   describe('mount()', () => {
     it('should mount component', async () => {
-      const { element, shadow } = await mount(() => html`<div>Test</div>`);
+      const { element, shadow } = await mount(
+        () => html`
+          <div>Test</div>
+        `,
+      );
 
       expect(element).toBeInstanceOf(HTMLElement);
       expect(shadow).not.toBeNull();
     });
 
     it('should set attrs', async () => {
-      const { element } = await mount(() => html`<div>Test</div>`, {
-        attrs: { disabled: true, variant: 'primary' },
-      });
+      const { element } = await mount(
+        () => html`
+          <div>Test</div>
+        `,
+        {
+          attrs: { disabled: true, variant: 'primary' },
+        },
+      );
 
       expect(element.getAttribute('variant')).toBe('primary');
       expect(element.hasAttribute('disabled')).toBe(true);
     });
 
     it('should set innerHTML', async () => {
-      const { element } = await mount(() => html`<slot></slot>`, {
-        html: '<span>Content</span>',
-      });
+      const { element } = await mount(
+        () => html`
+          <slot></slot>
+        `,
+        {
+          html: '<span>Content</span>',
+        },
+      );
 
       expect(element.innerHTML).toContain('Content');
     });
@@ -52,7 +66,11 @@ describe('Testing: Render Utilities', () => {
     // here: firing against a real mounted ore component's rendered DOM.
     it('should fire click events', async () => {
       const spy = vi.fn();
-      const { query } = await mount(() => html`<button @click=${spy}>Click</button>`);
+      const { query } = await mount(
+        () => html`
+          <button @click=${spy}>Click</button>
+        `,
+      );
 
       fire.click(query('button')!);
       expect(spy).toHaveBeenCalledTimes(1);
@@ -157,8 +175,16 @@ describe('Testing: Render Utilities', () => {
 
   describe('cleanup()', () => {
     it('should remove all mounted components', async () => {
-      await mount(() => html`<div>1</div>`);
-      await mount(() => html`<div>2</div>`);
+      await mount(
+        () => html`
+          <div>1</div>
+        `,
+      );
+      await mount(
+        () => html`
+          <div>2</div>
+        `,
+      );
       expect(document.body.children.length).toBeGreaterThan(0);
       cleanup();
       expect(document.body.children.length).toBe(0);
@@ -167,7 +193,11 @@ describe('Testing: Render Utilities', () => {
 
   describe('Fixture — additional query helpers and lifecycle', () => {
     it('sets multiple attributes via attrs()', async () => {
-      const fixture = await mount(() => html`<div>Test</div>`);
+      const fixture = await mount(
+        () => html`
+          <div>Test</div>
+        `,
+      );
 
       await fixture.attrs({ 'aria-label': 'Widget', open: true });
       expect(fixture.element.getAttribute('aria-label')).toBe('Widget');
@@ -176,10 +206,11 @@ describe('Testing: Render Utilities', () => {
 
     it('queries by data-testid and by text content within the shadow root', async () => {
       const fixture = await mount(
-        () =>
-          html`<p data-testid="greeting">Hello</p>
-            <p data-testid="greeting">Hello</p>
-            <p>Other</p>`,
+        () => html`
+          <p data-testid="greeting">Hello</p>
+          <p data-testid="greeting">Hello</p>
+          <p>Other</p>
+        `,
       );
 
       expect(fixture.queryByTestId('greeting')?.textContent).toBe('Hello');
@@ -189,7 +220,11 @@ describe('Testing: Render Utilities', () => {
     });
 
     it('exposes disposed and shadow, and disposes idempotently via Symbol.dispose', async () => {
-      const fixture = await mount(() => html`<div>Test</div>`);
+      const fixture = await mount(
+        () => html`
+          <div>Test</div>
+        `,
+      );
 
       expect(fixture.disposed).toBe(false);
       expect(fixture.shadow).toBeInstanceOf(ShadowRoot);
@@ -207,7 +242,9 @@ describe('Testing: Render Utilities', () => {
     it('registers and mounts a component definition in one call', async () => {
       const { query } = await mountComponent('mount-component-demo', {
         props: { label: prop.string('hi') },
-        setup: (props) => html`<span>${props.label}</span>`,
+        setup: (props) => html`
+          <span>${props.label}</span>
+        `,
       });
 
       expect(query('span')?.textContent).toBe('hi');

@@ -8,7 +8,9 @@ describe('ref()', () => {
     await mount(() => {
       capturedRef = ref<HTMLDivElement>();
 
-      return html`<div ref=${capturedRef}></div>`;
+      return html`
+        <div ref=${capturedRef}></div>
+      `;
     });
 
     expect(capturedRef.value).toBeInstanceOf(HTMLDivElement);
@@ -23,7 +25,9 @@ describe('ref()', () => {
       // Capture during setup before shadow DOM is rendered.
       refValueAtSetupTime = divRef.value;
 
-      return html`<div ref=${divRef}></div>`;
+      return html`
+        <div ref=${divRef}></div>
+      `;
     });
 
     expect(refValueAtSetupTime).toBeNull();
@@ -37,8 +41,10 @@ describe('ref()', () => {
       divRef = ref<HTMLDivElement>();
       spanRef = ref<HTMLSpanElement>();
 
-      return html`<div ref=${divRef}>Div</div>
-        <span ref=${spanRef}>Span</span>`;
+      return html`
+        <div ref=${divRef}>Div</div>
+        <span ref=${spanRef}>Span</span>
+      `;
     });
 
     expect(divRef.value).toBeInstanceOf(HTMLDivElement);
@@ -48,7 +54,11 @@ describe('ref()', () => {
   it('callback ref is invoked with the element on mount', async () => {
     const calls: Array<HTMLElement | null> = [];
 
-    await mount(() => html`<div ref=${(el: HTMLDivElement | null) => calls.push(el)}>Test</div>`);
+    await mount(
+      () => html`
+        <div ref=${(el: HTMLDivElement | null) => calls.push(el)}>Test</div>
+      `,
+    );
 
     expect(calls).toHaveLength(1);
     expect(calls[0]).toBeInstanceOf(HTMLDivElement);
@@ -57,7 +67,11 @@ describe('ref()', () => {
   it('callback ref is invoked with null when the component unmounts', async () => {
     const calls: Array<HTMLElement | null> = [];
 
-    const fixture = await mount(() => html`<div ref=${(el: HTMLDivElement | null) => calls.push(el)}>Test</div>`);
+    const fixture = await mount(
+      () => html`
+        <div ref=${(el: HTMLDivElement | null) => calls.push(el)}>Test</div>
+      `,
+    );
 
     fixture.dispose();
 

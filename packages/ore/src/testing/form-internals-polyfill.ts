@@ -6,8 +6,11 @@ import { walkFlatTree } from './dom';
  * mixin real browsers put on every `formAssociated: true` element, not even `FormData`
  * collecting a form-associated element's set value, or `<form>.reset()` invoking
  * `formResetCallback()`. Every one of those gaps is exercised by `useField()` (`@vielzeug/ore/forms`),
- * so any package testing a form-associated component needs all of them, not just one — this is
- * called once, automatically, by `install()`.
+ * so any package testing a form-associated component needs all of them, not just one.
+ *
+ * Opt-in via `install(afterEach, { formInternals: true })` (or call this directly) —
+ * the patches are global monkey-patches, so suites without form-associated components
+ * shouldn't pay for them. Returns an `uninstall()` that restores every patched global.
  *
  * Deliberately lives here rather than in each consuming package's own `vitest.setup.ts`: the
  * gap is in `ore`'s own form-association feature, not in any one consumer, so the fix belongs
@@ -15,24 +18,34 @@ import { walkFlatTree } from './dom';
  * are slotted into a shadow `<form>` — which `walkFlatTree` already handles here, so refine
  * doesn't need a second, package-local copy of this polyfill at all.
  */
-export const installFormInternalsPolyfill = (): void => {
+export const installFormInternalsPolyfill = (): (() => void) => {
   // Checked *before* consuming the flag below — an environment without `ElementInternals`
   // installs nothing and should stay eligible to install for real later (e.g. a differently
   // configured environment in the same process), not get marked "already installed" for having
   // done nothing.
-  if (typeof ElementInternals === 'undefined') return;
+  if (typeof ElementInternals === 'undefined') return () => {};
 
   const INSTALLED_FLAG = Symbol.for('vielzeug.ore.testing.formInternalsPolyfillInstalled');
   const flagHost = globalThis as Record<symbol, boolean | undefined>;
 
-  if (flagHost[INSTALLED_FLAG]) return;
+  if (flagHost[INSTALLED_FLAG]) return () => {};
 
   flagHost[INSTALLED_FLAG] = true;
+
+  // Every patch pushes its inverse here, so uninstall() restores the environment exactly.
+  const restorers: Array<() => void> = [];
 
   const proto = ElementInternals.prototype as unknown as Record<string, unknown>;
   const validityState = new WeakMap<ElementInternals, { flags: ValidityStateFlags; message: string }>();
   const formValueByHost = new WeakMap<HTMLElement, File | FormData | string | null>();
   const hostByInternals = new WeakMap<ElementInternals, HTMLElement>();
+
+  const patchProto = (name: string, descriptor: PropertyDescriptor): void => {
+    if (name in proto) return;
+
+    Object.defineProperty(proto, name, descriptor);
+    restorers.push(() => delete proto[name]);
+  };
 
   const isValid = (internals: ElementInternals): boolean => {
     const state = validityState.get(internals);
@@ -40,78 +53,90 @@ export const installFormInternalsPolyfill = (): void => {
     return !state || !Object.values(state.flags).some(Boolean);
   };
 
-  if (!('setFormValue' in proto)) {
-    Object.defineProperty(proto, 'setFormValue', {
-      configurable: true,
-      value: function (this: ElementInternals, value: File | FormData | string | null) {
-        const host = hostByInternals.get(this);
+  patchProto('setFormValue', {
+    configurable: true,
+    value: function (this: ElementInternals, value: File | FormData | string | null) {
+      const host = hostByInternals.get(this);
 
-        if (host) formValueByHost.set(host, value);
-      },
-      writable: true,
-    });
-  }
+      if (host) formValueByHost.set(host, value);
+    },
+    writable: true,
+  });
 
-  if (!('setValidity' in proto)) {
-    Object.defineProperty(proto, 'setValidity', {
-      configurable: true,
-      // Matches the real platform contract: throws if any flag is true and message is empty.
-      // `useField()` itself already guards against triggering this — see forms/field.ts — but
-      // the polyfill enforcing it too means a test would still catch a *different* caller doing
-      // the same thing wrong, instead of that bug only surfacing in a real browser.
-      value: function (this: ElementInternals, flags: ValidityStateFlags = {}, message = '') {
-        if (Object.values(flags).some(Boolean) && !message) {
-          throw new TypeError(
-            "Failed to execute 'setValidity' on 'ElementInternals': The second argument must not be empty if " +
-              'one or more flags in the first argument are true.',
-          );
-        }
+  patchProto('setValidity', {
+    configurable: true,
+    // Matches the real platform contract: throws if any flag is true and message is empty.
+    // `useField()` itself already guards against triggering this — see forms/field.ts — but
+    // the polyfill enforcing it too means a test would still catch a *different* caller doing
+    // the same thing wrong, instead of that bug only surfacing in a real browser.
+    value: function (this: ElementInternals, flags: ValidityStateFlags = {}, message = '') {
+      if (Object.values(flags).some(Boolean) && !message) {
+        throw new TypeError(
+          "Failed to execute 'setValidity' on 'ElementInternals': The second argument must not be empty if " +
+            'one or more flags in the first argument are true.',
+        );
+      }
 
-        validityState.set(this, { flags, message });
-      },
-      writable: true,
-    });
-  }
+      validityState.set(this, { flags, message });
+    },
+    writable: true,
+  });
 
-  if (!('checkValidity' in proto)) {
-    Object.defineProperty(proto, 'checkValidity', {
-      configurable: true,
-      value: function (this: ElementInternals) {
-        return isValid(this);
-      },
-      writable: true,
-    });
-  }
+  patchProto('checkValidity', {
+    configurable: true,
+    value: function (this: ElementInternals) {
+      return isValid(this);
+    },
+    writable: true,
+  });
 
-  if (!('reportValidity' in proto)) {
-    Object.defineProperty(proto, 'reportValidity', {
-      configurable: true,
-      value: function (this: ElementInternals) {
-        return isValid(this);
-      },
-      writable: true,
-    });
-  }
+  patchProto('reportValidity', {
+    configurable: true,
+    value: function (this: ElementInternals) {
+      return isValid(this);
+    },
+    writable: true,
+  });
 
-  if (!('validationMessage' in proto)) {
-    Object.defineProperty(proto, 'validationMessage', {
-      configurable: true,
-      get(this: ElementInternals) {
-        return isValid(this) ? '' : (validityState.get(this)?.message ?? '');
-      },
-    });
-  }
+  patchProto('validationMessage', {
+    configurable: true,
+    get(this: ElementInternals) {
+      return isValid(this) ? '' : (validityState.get(this)?.message ?? '');
+    },
+  });
 
-  if (!('states' in proto)) {
-    Object.defineProperty(proto, 'states', {
-      configurable: true,
-      get: function (this: ElementInternals & { _states?: Set<string> }) {
-        this._states ??= new Set();
+  // A ValidityState-shaped view of the flags passed to setValidity — every known
+  // flag defaults to false, `valid` reflects whether any flag is set.
+  patchProto('validity', {
+    configurable: true,
+    get(this: ElementInternals): ValidityState {
+      const state = validityState.get(this);
 
-        return this._states;
-      },
-    });
-  }
+      return {
+        badInput: false,
+        customError: false,
+        patternMismatch: false,
+        rangeOverflow: false,
+        rangeUnderflow: false,
+        stepMismatch: false,
+        tooLong: false,
+        tooShort: false,
+        typeMismatch: false,
+        valid: isValid(this),
+        valueMissing: false,
+        ...(state?.flags ?? {}),
+      } as ValidityState;
+    },
+  });
+
+  patchProto('states', {
+    configurable: true,
+    get: function (this: ElementInternals & { _states?: Set<string> }) {
+      this._states ??= new Set();
+
+      return this._states;
+    },
+  });
 
   // Real browsers mix `checkValidity`/`reportValidity`/`validity`/`validationMessage` onto any
   // `formAssociated: true` custom element itself (delegating to its internals) — not just onto
@@ -134,6 +159,9 @@ export const installFormInternalsPolyfill = (): void => {
 
     return internals;
   };
+  restorers.push(() => {
+    HTMLElement.prototype.attachInternals = originalAttachInternals;
+  });
 
   const appendFormValue = (formData: FormData, name: string, value: File | FormData | string): void => {
     if (value instanceof FormData) {
@@ -165,6 +193,9 @@ export const installFormInternalsPolyfill = (): void => {
       });
     }
   };
+  restorers.push(() => {
+    globalThis.FormData = NativeFormData;
+  });
 
   // jsdom never invokes the native `formResetCallback` lifecycle method on form-associated
   // custom elements when their form resets — patch `reset()` to do it (via the same flat-tree
@@ -179,5 +210,15 @@ export const installFormInternalsPolyfill = (): void => {
     walkFlatTree(this, (element) => {
       (element as Partial<{ formResetCallback: () => void }>).formResetCallback?.();
     });
+  };
+  restorers.push(() => {
+    HTMLFormElement.prototype.reset = originalReset;
+  });
+
+  return () => {
+    for (const restore of restorers) restore();
+
+    restorers.length = 0;
+    flagHost[INSTALLED_FLAG] = false;
   };
 };

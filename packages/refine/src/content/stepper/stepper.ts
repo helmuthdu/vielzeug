@@ -239,11 +239,16 @@ define<OreStepperProps>(STEPPER_TAG, {
         const steps = getNavigableSteps();
         const nextStep = steps[index];
 
-        focusStep(nextStep);
-
+        // Select BEFORE focusing: changing `currentValue` re-renders each step's
+        // control (the step's navigable/button node-slot depends on the current
+        // index), which destroys the previously focused button. Ripple flushes
+        // effects synchronously, so by the time focusStep() runs the replacement
+        // button exists.
         const value = nextStep?.getAttribute('value');
 
         if (value) setSelection(value, true);
+
+        focusStep(nextStep);
       },
       orientation: () => (props.orientation.value === 'vertical' ? 'vertical' : 'horizontal'),
       signal: lifecycleSignal(onCleanup),
@@ -259,6 +264,9 @@ define<OreStepperProps>(STEPPER_TAG, {
       const value = step.getAttribute('value');
 
       setSelection(value ?? undefined, true);
+      // The click focused the step's old control; the selection re-render replaced
+      // it — restore focus onto the new one (see onNavigate's ordering note).
+      focusStep(step);
     };
 
     const activateFocusedStep = (): void => {
@@ -268,7 +276,10 @@ define<OreStepperProps>(STEPPER_TAG, {
       );
       const value = focusedStep?.getAttribute('value');
 
-      if (value) setSelection(value, true);
+      if (value) {
+        setSelection(value, true);
+        focusStep(focusedStep);
+      }
     };
 
     const activationPress = createInteraction({ onPress: activateFocusedStep });

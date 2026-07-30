@@ -59,11 +59,19 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@vielzeug/assay": "workspace:*",
     "@vielzeug/ripple": "workspace:*"
+  },
+  "peerDependencies": {
+    "@vielzeug/assay": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@vielzeug/assay": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^26.1.0",
+    "@vielzeug/assay": "workspace:*",
     "axe-core": "^4.12.1",
     "jsdom": "^29.1.1",
     "typescript": "^6.0.3",

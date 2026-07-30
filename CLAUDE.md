@@ -78,7 +78,7 @@ flux      → ripple
 forge     → arsenal, ripple
 ledger    → ripple
 orbit     → arsenal, ripple
-ore       → assay, ripple
+ore       → ripple (assay as optional peer, testing sub-path only)
 prism     → orbit, ripple
 pulse     → ripple
 refine    → arsenal, assay, dnd, keymap, orbit, ore, ripple, tempo

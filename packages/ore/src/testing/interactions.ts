@@ -8,7 +8,17 @@ import { flush } from './flush';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const tick = (): Promise<void> => flush();
+/** Type characters into a focused field, firing the full per-char event sequence. */
+const typeChars = async (el: HTMLInputElement | HTMLTextAreaElement, text: string): Promise<void> => {
+  for (const char of text) {
+    el.value += char;
+    fire.input(el);
+    fire.keyDown(el, { key: char });
+    fire.keyUp(el, { key: char });
+    await flush();
+  }
+  fire.change(el);
+};
 
 // ─── API ─────────────────────────────────────────────────────────────────────
 
@@ -27,13 +37,15 @@ export const user = {
     el.value = '';
     fire.input(el);
     fire.change(el);
-    await tick();
+    await flush();
   },
 
   async click(el: Element, opts?: PointerEventInit): Promise<void> {
     fire.pointerEnter(el, opts);
+    fire.pointerDown(el, opts);
+    fire.pointerUp(el, opts);
     fire.click(el, opts);
-    await tick();
+    await flush();
   },
 
   async dblClick(el: Element): Promise<void> {
@@ -43,33 +55,26 @@ export const user = {
       fire.click(el);
     }
     el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
-    await tick();
+    await flush();
   },
 
   /** Clear existing value and type new text (select-all-and-replace semantics) */
   async fill(el: HTMLInputElement | HTMLTextAreaElement, text: string): Promise<void> {
     el.focus();
     el.value = '';
-    for (const char of text) {
-      el.value += char;
-      fire.input(el);
-      fire.keyDown(el, { key: char });
-      fire.keyUp(el, { key: char });
-      await tick();
-    }
-    fire.change(el);
+    await typeChars(el, text);
   },
 
   async hover(el: Element): Promise<void> {
     fire.pointerEnter(el);
-    await tick();
+    await flush();
   },
 
   /** Dispatch keydown + keyup for a single key */
   async press(el: Element, key: string, opts?: KeyboardEventInit): Promise<void> {
     fire.keyDown(el, { key, ...opts });
     fire.keyUp(el, { key, ...opts });
-    await tick();
+    await flush();
   },
 
   async select(el: HTMLSelectElement, value: string | string[]): Promise<void> {
@@ -77,24 +82,17 @@ export const user = {
 
     for (const opt of el.options) opt.selected = values.includes(opt.value);
     fire.change(el);
-    await tick();
+    await flush();
   },
 
   /** Type text character-by-character, appending to any existing value */
   async type(el: HTMLInputElement | HTMLTextAreaElement, text: string): Promise<void> {
     el.focus();
-    for (const char of text) {
-      el.value += char;
-      fire.input(el);
-      fire.keyDown(el, { key: char });
-      fire.keyUp(el, { key: char });
-      await tick();
-    }
-    fire.change(el);
+    await typeChars(el, text);
   },
 
   async unhover(el: Element): Promise<void> {
     fire.pointerLeave(el);
-    await tick();
+    await flush();
   },
 } as const;

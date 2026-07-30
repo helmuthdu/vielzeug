@@ -7,9 +7,17 @@ import { expectType, uniqueTag } from './test-utils';
 
 describe('component slots and emit', () => {
   it('supports default and named slots', async () => {
-    const { element } = await mount(() => html`<div><slot name="header"></slot><slot></slot></div>`, {
-      html: '<div slot="header">Header</div><div>Content</div>',
-    });
+    const { element } = await mount(
+      () => html`
+        <div>
+          <slot name="header"></slot>
+          <slot></slot>
+        </div>
+      `,
+      {
+        html: '<div slot="header">Header</div><div>Content</div>',
+      },
+    );
 
     expect(element.innerHTML).toContain('Header');
     expect(element.innerHTML).toContain('Content');
@@ -34,7 +42,10 @@ describe('component slots and emit', () => {
           triggerAssigned = slots.has('trigger').value;
         });
 
-        return html`<slot name="trigger"></slot><slot></slot>`;
+        return html`
+          <slot name="trigger"></slot>
+          <slot></slot>
+        `;
       },
       { html: '<button slot="trigger">Open</button><span>Body</span>' },
     );
@@ -60,7 +71,9 @@ describe('component slots and emit', () => {
         fromMounted = useSlots();
       });
 
-      return html`<slot></slot>`;
+      return html`
+        <slot></slot>
+      `;
     });
 
     await flush();
@@ -80,7 +93,9 @@ describe('component slots and emit', () => {
           assigned = slots.has().value;
         });
 
-        return html`<slot></slot>`;
+        return html`
+          <slot></slot>
+        `;
       },
       { html: '<span>Body</span>' },
     );
@@ -106,13 +121,15 @@ describe('component slots and emit', () => {
     const { element, flush, query } = await mount((_props) => {
       const typedEmit = useEmit<{ close: undefined; ping: { ok: boolean } }>();
 
-      return html`<button
-        @click=${() => {
-          typedEmit('close');
-          typedEmit('ping', { ok: true });
-        }}>
-        Emit
-      </button>`;
+      return html`
+        <button
+          @click=${() => {
+            typedEmit('close');
+            typedEmit('ping', { ok: true });
+          }}>
+          Emit
+        </button>
+      `;
     });
 
     element.addEventListener('close', closeSpy);
@@ -140,7 +157,9 @@ describe('component slots and emit', () => {
           emit('retry');
         };
 
-        return html`<button @click=${fire}>Emit</button>`;
+        return html`
+          <button @click=${fire}>Emit</button>
+        `;
       },
     });
 
@@ -163,7 +182,9 @@ describe('component slots and emit', () => {
 
       setTimeout(() => emit('ping', { ok: true }), 30);
 
-      return html`<div></div>`;
+      return html`
+        <div></div>
+      `;
     }) as import('../index').ComponentDefinition['setup']);
 
     const event = await waitForEvent<CustomEvent<{ ok: boolean }>>(element, 'ping');
@@ -180,7 +201,9 @@ describe('component slots and emit', () => {
     const { element } = await mount((_props) => {
       const emit = useEmit<{ send: { value: string } }>();
 
-      return html`<button @click=${() => results.push(emit('send', { value: 'hi' }))}>Emit</button>`;
+      return html`
+        <button @click=${() => results.push(emit('send', { value: 'hi' }))}>Emit</button>
+      `;
     });
 
     element.addEventListener('send', (e) => {
@@ -214,7 +237,9 @@ describe('component slots and emit', () => {
         expectType<import('@vielzeug/ripple').Readable<boolean | undefined>>(props.checked);
         expectType<import('@vielzeug/ripple').Readable<string | undefined>>(props.label);
 
-        return html`<button @click=${() => emit('toggle', { checked: !props.checked.value })}>${props.label}</button>`;
+        return html`
+          <button @click=${() => emit('toggle', { checked: !props.checked.value })}>${props.label}</button>
+        `;
       },
     });
 
@@ -240,7 +265,16 @@ describe('slots: stale slot cleanup (C1)', () => {
 
         hasDefault = slots.has();
 
-        return html`<div>${when(showSlot, () => html`<slot></slot>`)}</div>`;
+        return html`
+          <div>
+            ${when(
+              showSlot,
+              () => html`
+                <slot></slot>
+              `,
+            )}
+          </div>
+        `;
       },
       { html: '<span>content</span>' },
     );
@@ -263,7 +297,16 @@ describe('slots: stale slot cleanup (C1)', () => {
 
         hasDefault = slots.has();
 
-        return html`<div>${when(showSlot, () => html`<slot></slot>`)}</div>`;
+        return html`
+          <div>
+            ${when(
+              showSlot,
+              () => html`
+                <slot></slot>
+              `,
+            )}
+          </div>
+        `;
       },
       { html: '<span>content</span>' },
     );

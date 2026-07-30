@@ -4,11 +4,15 @@
  * Context values are stored on the providing element via a WeakMap registry and
  * resolved by walking up the DOM tree (including through shadow boundaries).
  * Providing is done via `provide(key, value)` inside `setup()`.
+ *
+ * Keys are `Symbol.for`-based (see `createContext`) so provide/inject still match
+ * across a duplicated module graph — the same cross-copy survival rule as the
+ * object brands in `utils/brand.ts`.
  */
 
 import { warn } from './_dev';
 import { OreApiError, ORE_ERRORS } from './errors';
-import { getHost, requireSetupContext } from './runtime';
+import { requireSetupContext, type RuntimeContext } from './runtime';
 
 const contextRegistry = new WeakMap<HTMLElement, Map<InjectionKey<unknown>, unknown>>();
 
@@ -16,7 +20,11 @@ export type InjectionKey<T> = symbol & {
   readonly __ore_injection_key?: T;
 };
 
-/** @internal Build a linear ancestor chain (including shadow host boundaries). */
+/**
+ * Build a linear ancestor chain (including shadow host boundaries).
+ * Walks `parentNode` (not `parentElement`) so non-HTML intermediate parents
+ * (e.g. an `SVGElement` between child and provider) don't break the chain.
+ */
 const buildAncestorChain = (start: HTMLElement): HTMLElement[] => {
   const chain: HTMLElement[] = [];
   let node: Node | null = start;
@@ -24,9 +32,8 @@ const buildAncestorChain = (start: HTMLElement): HTMLElement[] => {
   while (node) {
     if (node instanceof HTMLElement) chain.push(node);
 
-    const root = node.getRootNode() as Node;
-
-    node = (node as HTMLElement).parentElement ?? (root instanceof ShadowRoot ? root.host : null);
+    // A ShadowRoot's parentNode is null — hop to its host to keep walking.
+    node = node.parentNode ?? (node instanceof ShadowRoot ? node.host : null);
   }
 
   return chain;
@@ -61,7 +68,9 @@ const provideOnElement = <T>(el: HTMLElement, key: InjectionKey<T>, value: T): v
  * need to observe later changes — `inject()` resolves and caches the value once
  * per consumer, so re-calling `provide()` with a new raw value later is not seen.
  */
-export const provide = <T>(key: InjectionKey<T>, value: T): void => provideOnElement(getHost(), key, value);
+export const provide = <T>(key: InjectionKey<T>, value: T): void => {
+  provideOnElement(requireSetupContext('provide').element, key, value);
+};
 
 const NOT_FOUND_SENTINEL = Symbol('inject.not_found');
 
@@ -80,11 +89,8 @@ const walkAndFind = <T>(element: HTMLElement, key: InjectionKey<T>): T | typeof 
   return NOT_FOUND_SENTINEL;
 };
 
-export function inject<T>(key: InjectionKey<T>): T | undefined;
-export function inject<T>(key: InjectionKey<T>, fallback: T): T;
-export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
-  const ctx = requireSetupContext('inject');
-
+/** Cached ancestor-walk lookup shared by `inject()` and `injectStrict()`. */
+const lookup = <T>(ctx: RuntimeContext, key: InjectionKey<T>): T | typeof NOT_FOUND_SENTINEL => {
   let cache = resolvedCache.get(ctx);
 
   if (!cache) {
@@ -94,17 +100,15 @@ export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
 
   const cacheKey = key as InjectionKey<unknown>;
 
-  if (cache.has(cacheKey)) {
-    const cached = cache.get(cacheKey);
+  if (!cache.has(cacheKey)) cache.set(cacheKey, walkAndFind(ctx.element, key));
 
-    if (cached === NOT_FOUND_SENTINEL) return rest.length > 0 ? rest[0] : undefined;
+  return cache.get(cacheKey) as T | typeof NOT_FOUND_SENTINEL;
+};
 
-    return cached as T;
-  }
-
-  const found = walkAndFind(ctx.element, key);
-
-  cache.set(cacheKey, found);
+export function inject<T>(key: InjectionKey<T>): T | undefined;
+export function inject<T>(key: InjectionKey<T>, fallback: T): T;
+export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
+  const found = lookup(requireSetupContext('inject'), key);
 
   if (found === NOT_FOUND_SENTINEL) return rest.length > 0 ? rest[0] : undefined;
 
@@ -112,15 +116,22 @@ export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
 }
 
 export const injectStrict = <T>(key: InjectionKey<T>): T => {
-  const resolved = inject<T>(key, NOT_FOUND_SENTINEL as unknown as T);
+  const ctx = requireSetupContext('injectStrict');
+  const found = lookup(ctx, key);
 
-  if (resolved !== (NOT_FOUND_SENTINEL as unknown)) return resolved;
+  if (found !== NOT_FOUND_SENTINEL) return found;
 
-  const host = getHost();
-
-  throw new OreApiError(ORE_ERRORS.injectStrictFailed(String(key), host.localName));
+  throw new OreApiError(ORE_ERRORS.injectStrictFailed(String(key), ctx.element.localName));
 };
 
+let anonymousKeyCounter = 0;
+
+/**
+ * Create a typed context key. `Symbol.for`-keyed (`ore:context:<description>`) so
+ * a provider and an injector loaded from two bundled copies of ore still match
+ * (see module header). Two `createContext('theme')` calls intentionally produce
+ * the same key — use distinct descriptions for distinct contexts.
+ */
 export function createContext<T>(description?: string): InjectionKey<T> {
-  return Symbol(description) as InjectionKey<T>;
+  return Symbol.for(`ore:context:${description ?? `anonymous-${++anonymousKeyCounter}`}`) as InjectionKey<T>;
 }

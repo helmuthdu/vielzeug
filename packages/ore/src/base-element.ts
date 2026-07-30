@@ -7,15 +7,32 @@ import { type OreErrorPhase, OreLifecycleError, reportRuntimeError } from './err
 import { createProps, getPropMeta, type InferProps, type PropInputDefs, type PropsDef } from './props';
 import {
   beginPendingWork,
+  createRuntimeContext,
   type OnFormResetCallback,
   type OnMountedCallback,
   onCleanup,
-  type RuntimeContext,
   runWithContext,
 } from './runtime';
-import { ComponentPhase, LIFECYCLE_EVENTS } from './types';
-import { type HTMLResult } from './types/bindings';
+import { type HTMLResult } from './template/result';
 import { loadStylesheet } from './utils/css';
+
+// ─── Component phases & lifecycle events ──────────────────────────────────────
+// Internal to BaseElement — the only state machine and event dispatcher in the package.
+
+const ComponentPhase = {
+  LOADING: 'loading',
+  SETUP_DONE: 'setup_done',
+  SETUP_RUNNING: 'setup_running',
+  UNINITIALIZED: 'uninitialized',
+  UNMOUNTED: 'unmounted',
+} as const;
+
+type ComponentPhase = (typeof ComponentPhase)[keyof typeof ComponentPhase];
+
+const LIFECYCLE_EVENTS = {
+  CONNECT: 'ore:connect',
+  DISCONNECT: 'ore:disconnect',
+} as const;
 
 // ─── Internal component state ─────────────────────────────────────────────────
 
@@ -164,7 +181,7 @@ export class BaseElement extends HTMLElement {
 
     const def = (this.constructor as typeof BaseElement)._definition;
     const normalizedPropDefs = (this.constructor as typeof BaseElement)._normalizedPropDefs;
-    const ctx: RuntimeContext = { element: this, formResetCallbacks: [], mountCallbacks: [] };
+    const ctx = createRuntimeContext(this);
 
     try {
       let setupResult: HTMLResult | null | Promise<HTMLResult | null> | undefined;
@@ -278,9 +295,11 @@ export class BaseElement extends HTMLElement {
 
     const host: Element | ShadowRoot = this.shadowRoot ?? this;
 
-    host.replaceChildren(result.fragment);
+    // Clear previous content (e.g. a LOADING template being swapped out), then
+    // insert + wire in one step via the result's mount().
+    host.replaceChildren();
     this._component.scope.run(() => {
-      result.apply(onCleanup);
+      result.mount(host, null, onCleanup);
     });
   }
 
@@ -326,11 +345,7 @@ export class BaseElement extends HTMLElement {
 
         for (const callback of batch) {
           try {
-            const nestedCtx = {
-              element: this,
-              formResetCallbacks: [] as typeof this._component.formResetCallbacks,
-              mountCallbacks: [] as typeof this._component.mountCallbacks,
-            };
+            const nestedCtx = createRuntimeContext(this);
 
             this._component.scope.run(() => {
               runWithContext(nestedCtx, () => {

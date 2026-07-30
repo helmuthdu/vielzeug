@@ -50,8 +50,12 @@ export type FormFieldHandle = {
   checkValidity: () => boolean;
   readonly internals: ElementInternals;
   reportValidity: () => boolean;
+  /**
+   * Set (non-empty message) or clear (empty string) a custom validity error.
+   * Guards the platform's throw-on-empty-message contract — prefer this over
+   * calling `internals.setValidity` directly.
+   */
   setCustomValidity: (message: string) => void;
-  setValidity: ElementInternals['setValidity'];
 };
 
 export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHandle => {
@@ -63,7 +67,7 @@ export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHa
   }
 
   if (internalsRegistry.has(host)) {
-    throw new OreApiError(`useField() was already called on <${host.localName}>. Call it only once per component.`);
+    throw new OreApiError(ORE_ERRORS.useFieldAlreadyCalled(host.localName));
   }
 
   const internals = host.attachInternals();
@@ -139,6 +143,5 @@ export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHa
     internals,
     reportValidity,
     setCustomValidity,
-    setValidity: internals.setValidity.bind(internals),
   };
 };

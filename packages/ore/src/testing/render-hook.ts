@@ -7,7 +7,7 @@ import { onCleanup as _onCleanup, scope as _scope } from '@vielzeug/ripple';
 
 import { OreLifecycleError, reportRuntimeError } from '../errors';
 import { createProps, type InferProps, type PropInputDefs } from '../props';
-import { runWithContext } from '../runtime';
+import { createRuntimeContext, runWithContext } from '../runtime';
 import { flush } from './flush';
 
 export interface HookFixture<T> {
@@ -66,9 +66,12 @@ export async function renderHook<D extends PropInputDefs, T>(
 
   document.body.appendChild(hostEl);
 
-  const mountCallbacks: Array<() => void | (() => void)> = [];
-  const formResetCallbacks: Array<() => void> = [];
-  const ctx = { element: hostEl, formResetCallbacks, mountCallbacks };
+  // Built via the runtime's own factory, so the harness can never desync from a
+  // new required RuntimeContext field. Note: `onFormReset()` registrations land
+  // in this context's formResetCallbacks but are never fired — renderHook has no
+  // ancestor <form>; test form-reset behaviour through mount() instead.
+  const ctx = createRuntimeContext(hostEl);
+  const { mountCallbacks } = ctx;
 
   let result!: T;
 

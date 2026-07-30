@@ -8,8 +8,6 @@ export { createContext, inject, injectStrict, provide, type InjectionKey } from 
 
 export { useSlots, type ComponentSlots } from './slots';
 
-export { aria, type AriaConfig } from './aria';
-
 export {
   bind,
   type BindOptions,
@@ -34,7 +32,8 @@ export {
 
 export { useEmit, type EmitFn } from './utils/emit';
 
-export { html } from './template';
+export { html } from './template/instantiator';
+export { type HTMLResult, ref, type Ref, type RefCallback } from './template/result';
 
 // Near-universal template directives — used in most non-trivial components (lists,
 // conditionals, class/style maps, two-way form binding). Kept in the main entry alongside
@@ -52,5 +51,3 @@ export { when } from './directives/when';
 export { css, type CSSResult } from './utils/css';
 
 export { createId, createStableId, resetStableIdCounter } from './utils/id';
-
-export { ref, type HTMLResult, type Ref, type RefCallback } from './types/bindings';

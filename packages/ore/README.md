@@ -89,7 +89,7 @@ Register `cleanup` once so mounted elements don't leak between tests:
 import { afterEach } from 'vitest';
 import { install } from '@vielzeug/ore/testing';
 
-install(afterEach);
+install(afterEach); // add { formInternals: true } when testing form-associated (useField) components
 ```
 
 Also available from `@vielzeug/ore/testing`: `renderHook` (test a composable in isolation, without a full template), `fire`/`user` (dispatch DOM/user-interaction events), `waitFor`/`waitForEvent`, and `within` (scoped queries for slotted content). See the [Usage Guide](https://vielzeug.dev/ore/usage) for the full API.

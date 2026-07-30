@@ -5,7 +5,6 @@ import {
   define,
   html,
   prop,
-  aria,
   bind,
   getHost,
   onCleanup,
@@ -390,12 +389,17 @@ define<OreMenuProps>(MENU_TAG, {
       if (!triggerEl) return;
 
       const cleanups: Array<() => void> = [];
-      const removeAria = aria(triggerEl, {
-        controls: () => menuId,
-        disabled: () => isDisabled.value,
-        expanded: () => String(isOpenSignal.value),
-        haspopup: 'menu',
-      });
+      const removeAria = bind(
+        {
+          aria: {
+            controls: () => menuId,
+            disabled: () => isDisabled.value,
+            expanded: () => String(isOpenSignal.value),
+            haspopup: 'menu',
+          },
+        },
+        { target: triggerEl },
+      );
 
       const onTriggerClick = (event: MouseEvent) => {
         event.stopPropagation();

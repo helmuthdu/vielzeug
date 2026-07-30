@@ -10,14 +10,20 @@ describe('component definition and rendering', () => {
       const tag = uniqueTag('test-basic');
 
       define(tag, {
-        setup: () => html`<div>Hello</div>`,
+        setup: () => html`
+          <div>Hello</div>
+        `,
       });
 
       expect(document.createElement(tag)).toBeInstanceOf(HTMLElement);
     });
 
     it('renders template content into shadow root', async () => {
-      const { query } = await mount(() => html`<div class="content">Content</div>`);
+      const { query } = await mount(
+        () => html`
+          <div class="content">Content</div>
+        `,
+      );
 
       expect(query('.content')?.textContent).toBe('Content');
     });
@@ -26,12 +32,16 @@ describe('component definition and rendering', () => {
       const tag = uniqueTag('test-dup');
 
       define(tag, {
-        setup: () => html`<div>First</div>`,
+        setup: () => html`
+          <div>First</div>
+        `,
       });
 
       expect(() => {
         define(tag, {
-          setup: () => html`<div>Second</div>`,
+          setup: () => html`
+            <div>Second</div>
+          `,
         });
       }).toThrow(`define('${tag}') called twice`);
     });
@@ -40,13 +50,19 @@ describe('component definition and rendering', () => {
       const tag = uniqueTag('test-dup-msg');
 
       define(tag, {
-        setup: () => html`<div>First</div>`,
+        setup: () => html`
+          <div>First</div>
+        `,
       });
 
       let caught: unknown;
 
       try {
-        define(tag, { setup: () => html`<div>Second</div>` });
+        define(tag, {
+          setup: () => html`
+            <div>Second</div>
+          `,
+        });
       } catch (e) {
         caught = e;
       }
@@ -66,7 +82,9 @@ describe('component definition and rendering', () => {
       const { act, query } = await mount(() => {
         count = signal(0);
 
-        return html`<div>${count}</div>`;
+        return html`
+          <div>${count}</div>
+        `;
       });
 
       expect(query('div')?.textContent).toBe('0');
@@ -82,7 +100,9 @@ describe('component definition and rendering', () => {
       const setup = () => {
         const count = signal(0);
 
-        return html`<div>${count}</div>`;
+        return html`
+          <div>${count}</div>
+        `;
       };
 
       const { query: query1 } = await mount(setup);
@@ -95,7 +115,9 @@ describe('component definition and rendering', () => {
     it('rebuilds setup state correctly after reconnect', async () => {
       const fixture = await mount(
         (props) => {
-          return html`<div class="count">${() => props.count.value}</div>`;
+          return html`
+            <div class="count">${() => props.count.value}</div>
+          `;
         },
         { componentOptions: { props: { count: prop.number(0) } } },
       );
@@ -115,7 +137,11 @@ describe('component definition and rendering', () => {
 
   describe('shadow dom and template boundaries', () => {
     it('creates a shadow root', async () => {
-      const { shadow } = await mount(() => html`<div>Shadow Content</div>`);
+      const { shadow } = await mount(
+        () => html`
+          <div>Shadow Content</div>
+        `,
+      );
 
       expect(shadow?.querySelector('div')?.textContent).toBe('Shadow Content');
     });

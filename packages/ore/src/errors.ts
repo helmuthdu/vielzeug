@@ -1,5 +1,21 @@
 import { error as logError } from './_dev';
 
+// ─── Error policy ─────────────────────────────────────────────────────────────
+// One rule for the whole package — decide by whose code failed and whether it
+// can continue, never ad hoc per call site:
+//
+//   API misuse (wrong arguments, hook outside setup, duplicate define)
+//     → throw `OreApiError`, immediately, every build.
+//   User-authored code failing inside ore's execution (setup, onMounted,
+//     onFormReset, each() reconciliation)
+//     → wrap in `OreLifecycleError` and report via `reportRuntimeError()`
+//       (`ore:error` DOM event + dev console) so other callbacks keep running.
+//   Recoverable oddity (unknown event modifier, non-spread interpolation,
+//     overwrite warnings, blocked attribute writes)
+//     → dev `warn()`/`error()` and continue. Never swallow silently.
+//   Internal impossibility (compiled template metadata out of sync)
+//     → `invariant()` throws `OreInternalError`, every build.
+
 // ─── Structured error types ───────────────────────────────────────────────────
 
 /** Base class for all Ore errors. Use `instanceof OreError` to catch any Ore-originated error. */
@@ -101,8 +117,14 @@ export const ORE_ERRORS = {
     `html\`...\`: dynamic tag name "${tagName}" is not a valid HTML element name`,
   invariantViolated: (message: string): string => `invariant violated: ${message}`,
   lifecycleOutsideSetup: 'Lifecycle hooks must be called during component setup',
+  listenNullTarget: (eventName: string): string =>
+    `listen() called with a null/undefined target for event "${eventName}" — listener not attached`,
   mismatchedDynamicCloseTag: 'html`...`: dynamic closing tag has no matching dynamic opening tag',
   propInvalidReflect: 'Structured props cannot use reflect:true — use prop.json() with reflect:false',
+  unknownEventModifier: (modifier: string, eventName: string): string =>
+    `@${eventName}.${modifier}: unknown event modifier ".${modifier}" — supported: prevent, stop, self, capture, once, passive`,
+  useFieldAlreadyCalled: (tag: string): string =>
+    `useField() was already called on <${tag}>. Call it only once per component.`,
   validationFailed: (tag: string, errors: string[]): string => `Validation failed for <${tag}>:\n${errors.join('\n')}`,
 } as const;
 

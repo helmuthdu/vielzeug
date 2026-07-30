@@ -16,7 +16,7 @@
 
 import type { OreLifecycleError } from './errors';
 import type { InferProps, PropsDef } from './props';
-import type { HTMLResult } from './types/bindings';
+import type { HTMLResult } from './template/result';
 import type { CSSResult } from './utils/css';
 
 export type ComponentDefinition<Props extends Record<string, unknown> = Record<never, never>> = {

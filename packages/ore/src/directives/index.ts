@@ -4,7 +4,7 @@
  * (renders trusted HTML unescaped) and `live()` is form-control-specific, so both stay behind
  * a deliberate, separate import.
  */
-export { live, type LiveSignal } from './live';
+export { live, type LiveBinding } from './live';
 export { raw, setRawSanitizer } from './raw';
 
 /**
@@ -33,5 +33,5 @@ export { raw, setRawSanitizer } from './raw';
  * }
  * ```
  */
-export { createDirectiveResult, createSpreadObject, isDirectiveResult, isSpreadObject } from '../types/bindings';
-export type { DirectiveResult, SpreadObject } from '../types/bindings';
+export { createDirectiveResult, createSpreadObject, isDirectiveResult, isSpreadObject } from '../template/result';
+export type { DirectiveResult, SpreadObject } from '../template/result';

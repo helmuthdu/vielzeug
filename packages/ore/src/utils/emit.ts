@@ -9,14 +9,15 @@ type KeysWithoutDetail<T extends Record<string, unknown>> = {
   [P in keyof T]: [T[P]] extends [NoDetail] ? P : never;
 }[keyof T];
 
-type StrictEmitFn<T extends Record<string, unknown>> = {
+/**
+ * Typed emit function: only declared event names type-check, and `detail` is
+ * required exactly when its payload type is non-void. Dynamic event names must
+ * be cast at the call site — an intentional speed bump, not a silent escape.
+ */
+export type EmitFn<T extends Record<string, unknown>> = {
   <K extends KeysWithoutDetail<T>>(event: K): boolean;
   <K extends Exclude<keyof T, KeysWithoutDetail<T>>>(event: K, detail: T[K]): boolean;
 };
-
-type LooseEmitFn = (event: string, detail?: unknown) => boolean;
-
-export type EmitFn<T extends Record<string, unknown>> = StrictEmitFn<T> & LooseEmitFn;
 
 const DEFAULT_FIRE_OPTIONS = { bubbles: true, cancelable: true, composed: false };
 
@@ -29,6 +30,10 @@ const DEFAULT_FIRE_OPTIONS = { bubbles: true, cancelable: true, composed: false 
  * own boolean result — `false` when a listener called `preventDefault()`. Components
  * that need to know whether a listener cancelled an event (e.g. to skip a default
  * action) read this return value directly instead of hand-rolling `dispatchEvent`.
+ *
+ * Events do **not** cross the shadow boundary by default (`composed: false`) — a
+ * listener outside the component's shadow root will not observe them. Dispatch a
+ * `CustomEvent` with `composed: true` by hand if an event must escape the shadow root.
  *
  * @example
  * ```ts

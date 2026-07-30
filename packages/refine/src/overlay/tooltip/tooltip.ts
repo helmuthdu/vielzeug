@@ -1,6 +1,6 @@
 import type { Placement } from '@vielzeug/orbit';
 
-import { createStableId, define, html, prop, aria, getHost, onCleanup, onMounted, useSlots } from '@vielzeug/ore';
+import { createStableId, define, html, prop, bind, getHost, onCleanup, onMounted, useSlots } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize } from '../../types';
@@ -141,7 +141,7 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
     };
 
     const floating = useFloatingTrigger({
-      bindTriggerAria: (triggerEl) => aria(triggerEl, { describedby: () => tooltipId }),
+      bindTriggerAria: (triggerEl) => bind({ aria: { describedby: () => tooltipId } }, { target: triggerEl }),
       disabled: isDisabled,
       getPanel: () => tooltipEl,
       offset: 8,

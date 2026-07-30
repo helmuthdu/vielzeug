@@ -36,6 +36,18 @@ export type RuntimeContext = {
 
 let currentContext: RuntimeContext | null = null;
 
+/**
+ * @internal Create a fresh runtime context for a component element. The single
+ * construction site for `RuntimeContext` — used by `BaseElement` (setup and
+ * per-callback mount contexts) and by `testing/render-hook.ts`, so the test
+ * harness can never silently desync from a new required field.
+ */
+export const createRuntimeContext = (element: HTMLElement): RuntimeContext => ({
+  element,
+  formResetCallbacks: [],
+  mountCallbacks: [],
+});
+
 // ─── Pending work tracking ──────────────────────────────────────────────────
 // A single counter of "in-flight scheduled work" across every live component
 // instance on the page — incremented when a mount-callback microtask is scheduled

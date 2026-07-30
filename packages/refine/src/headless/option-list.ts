@@ -2,7 +2,7 @@ import { computed, type Readable, signal } from '@vielzeug/ripple';
 
 import { RefineConfigError } from '../errors';
 import { createListControl, type ListKeyAction, type ListNavigationAction } from './nav';
-import { createOverlayControl, type DialogCloseReason, type OverlayOpenReason } from './overlay';
+import { createOverlayControl, type DropdownCloseReason, type OverlayOpenReason } from './overlay';
 import { createDropdownPositioner, type DropdownPositionerOptions } from './positioner';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ export type OptionListOptions<T extends BaseOptionItem> = {
   /** Whether list navigation wraps around at the first/last item. Default: `true`. */
   loop?: boolean;
   /** Called when the list closes. */
-  onClose?: (reason: DialogCloseReason) => void;
+  onClose?: (reason: DropdownCloseReason) => void;
   /**
    * Called when keyboard navigation lands on an item.
    * `event` is the originating `KeyboardEvent`, or `undefined` for programmatic navigation.
@@ -73,7 +73,7 @@ export type OptionListHandle<T extends BaseOptionItem> = {
   readonly ariaActiveDescendant: Readable<string | null>;
   /** Reactive `aria-expanded` value as string (`'true'` / `'false'`). */
   readonly ariaExpanded: Readable<string>;
-  close(reason?: DialogCloseReason): void;
+  close(reason?: DropdownCloseReason): void;
   /**
    * Focused item index (read-only). Write via `set(index)` to update through
    * the list control — this ensures scroll-into-view and disabled-item checks.
@@ -101,7 +101,7 @@ export type OptionListHandle<T extends BaseOptionItem> = {
    * - Opens with `openReason` (default `'click'`).
    * - Closes with `closeReason` (default `'trigger'`).
    */
-  toggle(openReason?: OverlayOpenReason, closeReason?: DialogCloseReason): void;
+  toggle(openReason?: OverlayOpenReason, closeReason?: DropdownCloseReason): void;
   /** Imperatively re-run dropdown positioning (e.g. after filter changes list height). */
   updatePosition(): void;
 };
@@ -169,7 +169,13 @@ export const createOptionList = <T extends BaseOptionItem>(options: OptionListOp
     getTrigger: options.getTrigger,
     isDisabled: options.isDisabled,
     isOpen: () => isOpen.value,
-    onClose: options.onClose,
+    // The shared overlay control speaks DialogCloseReason (includes 'swipe' for
+    // drawers); dropdowns never close via swipe, so narrow at the boundary.
+    onClose: options.onClose
+      ? (reason) => {
+          if (reason !== 'swipe') options.onClose?.(reason);
+        }
+      : undefined,
     onOpen: options.onOpen,
     positioner,
     restoreFocus: options.restoreFocus,

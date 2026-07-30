@@ -8,31 +8,55 @@
 
 import { computed, isReactive, type Readable } from '@vielzeug/ripple';
 
+import { warn } from '../_dev';
 import { invariant, ORE_ERRORS, OreApiError } from '../errors';
+import { applyModifiers } from '../utils/event-modifiers';
+import { type Binding, type HtmlBindingValue } from './binding-types';
+import { applyBinding, createAttrBindingFromValue, resolveStaticText } from './bindings';
+import { followPath, getStaticTemplate, SlotKind } from './compiler';
 import {
-  type Binding,
+  type CompiledHTMLResult,
   createHtmlResult,
-  type HtmlBindingValue,
   type HTMLResult,
   isDirectiveResult,
   isHtmlResult,
   isSpreadObject,
   type Ref,
   type RefCallback,
-} from '../types/bindings';
-import { applyModifiers } from '../utils/event-modifiers';
-import { applyBinding, createAttrBindingFromValue, resolveStaticText } from './bindings';
-import { followPath, getStaticTemplate, SlotKind } from './compiler';
+} from './result';
 
 // ─── Template instantiation ──────────────────────────────────────────────────
+
+const NODE_SLOT_NO_PARENT_MSG = 'html`...`: node-slot comment anchor has no parent node';
+
+/** Normalize a reactive node-slot value to the HtmlBinding signal's array shape. */
+const toHtmlValues = (raw: unknown): HtmlBindingValue[] =>
+  Array.isArray(raw) ? (raw as HtmlBindingValue[]) : [raw as HtmlBindingValue];
+
+/**
+ * Static-embed an already-created HTMLResult at a node-slot anchor: move its
+ * fragment children into place and chain its apply into the outer apply phase
+ * (so embedded reactive wiring starts when the host template mounts, not now).
+ */
+const embedStaticResult = (
+  result: CompiledHTMLResult,
+  anchor: Comment,
+  chainedApplies: Array<(rc: (fn: () => void) => void) => void>,
+): void => {
+  const parent = anchor.parentNode;
+
+  invariant(parent, NODE_SLOT_NO_PARENT_MSG);
+
+  while (result.fragment.firstChild) parent.insertBefore(result.fragment.firstChild, anchor);
+
+  chainedApplies.push(result.apply.bind(result));
+};
 
 /**
  * Instantiate a compiled template: clone the cached DOM template, navigate
  * to each binding target using pre-recorded paths, and build bindings with
- * direct node references. Returns an HTMLResult whose fragment is ready to insert.
+ * direct node references. Returns an HTMLResult ready to mount.
  */
-const NODE_SLOT_NO_PARENT_MSG = 'html`...`: node-slot comment anchor has no parent node';
-
 export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]): HTMLResult => {
   const compiled = getStaticTemplate(strings);
   const fragment = compiled.element.content.cloneNode(true) as DocumentFragment;
@@ -51,14 +75,14 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
     }
 
     if (slot.kind === SlotKind.NODE) {
-      const commentPath = compiled.commentPaths.get(slot.commentId!);
+      const commentPath = slot.commentId !== undefined ? compiled.commentPaths.get(slot.commentId) : undefined;
 
       invariant(commentPath, `compiled template is missing a comment path for node slot ${slot.commentId}`);
 
       return { comment: followPath(fragment, commentPath) as Comment, slot, value };
     }
 
-    const elementPath = compiled.elementPaths.get(slot.elementId!);
+    const elementPath = slot.elementId !== undefined ? compiled.elementPaths.get(slot.elementId) : undefined;
 
     invariant(elementPath, `compiled template is missing an element path for slot ${slot.elementId}`);
 
@@ -69,7 +93,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
   const tagReplacements = new Map<HTMLElement, HTMLElement>();
 
   for (const { el, slot, value } of boundSlots) {
-    if (slot.kind !== SlotKind.TAG_NAME) continue;
+    if (slot.kind !== SlotKind.TAG_NAME || !el) continue;
 
     const tagName = String(value);
 
@@ -85,12 +109,12 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
     const realEl = document.createElement(tagName);
 
-    for (const attr of Array.from(el!.attributes)) realEl.setAttribute(attr.name, attr.value);
+    for (const attr of Array.from(el.attributes)) realEl.setAttribute(attr.name, attr.value);
 
-    while (el!.firstChild) realEl.appendChild(el!.firstChild);
+    while (el.firstChild) realEl.appendChild(el.firstChild);
 
-    el!.replaceWith(realEl);
-    tagReplacements.set(el!, realEl);
+    el.replaceWith(realEl);
+    tagReplacements.set(el, realEl);
   }
 
   // Phase 2b: Build bindings (may modify DOM for static content)
@@ -101,7 +125,9 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
     const el = rawEl ? (tagReplacements.get(rawEl) ?? rawEl) : rawEl;
 
     if (slot.kind === SlotKind.NODE) {
-      const anchor = comment!;
+      const anchor = comment;
+
+      invariant(anchor, 'compiled template produced a node slot without a comment anchor');
 
       if (isDirectiveResult(value)) {
         bindings.push({ anchor, directive: value, type: 'directive' });
@@ -110,53 +136,32 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
       if (isHtmlResult(value)) {
         // Static embed: move fragment children into place, chain apply
-        const parent = anchor.parentNode;
-
-        invariant(parent, NODE_SLOT_NO_PARENT_MSG);
-
-        while (value.fragment.firstChild) parent.insertBefore(value.fragment.firstChild, anchor);
-
+        embedStaticResult(value, anchor, chainedApplies);
         anchor.remove();
-        chainedApplies.push(value.apply.bind(value));
         continue;
       }
 
-      if (typeof value === 'function') {
-        const sig = computed(() => {
-          const res = (value as () => unknown)();
-
-          return Array.isArray(res) ? (res as HtmlBindingValue[]) : [res as HtmlBindingValue];
-        });
-
-        bindings.push({ anchor, signal: sig, type: 'html' });
-        continue;
-      }
-
-      if (isReactive(value)) {
-        // Always use the html binding for signals — it handles both text values and
-        // HTMLResult values, preventing silent "[object Object]" corruption when a
-        // signal's runtime type changes from null/string to HTMLResult.
-        const sig = computed(() => {
-          const raw = (value as Readable<HtmlBindingValue | HtmlBindingValue[]>).value;
-
-          return Array.isArray(raw) ? (raw as HtmlBindingValue[]) : [raw as HtmlBindingValue];
-        });
+      if (typeof value === 'function' || isReactive(value)) {
+        // Always use the html binding for reactive values — it handles both text
+        // values and HTMLResult values, preventing silent "[object Object]"
+        // corruption when a signal's runtime type changes from null/string to HTMLResult.
+        const sig =
+          typeof value === 'function'
+            ? computed(() => toHtmlValues((value as () => unknown)()))
+            : computed(() => toHtmlValues((value as Readable<unknown>).value));
 
         bindings.push({ anchor, signal: sig, type: 'html' });
         continue;
       }
 
       if (Array.isArray(value)) {
-        const parent = anchor.parentNode;
-
-        invariant(parent, NODE_SLOT_NO_PARENT_MSG);
-
         for (const item of value) {
           if (isHtmlResult(item)) {
-            while (item.fragment.firstChild) parent.insertBefore(item.fragment.firstChild, anchor);
-
-            chainedApplies.push(item.apply.bind(item));
+            embedStaticResult(item, anchor, chainedApplies);
           } else {
+            const parent = anchor.parentNode;
+
+            invariant(parent, NODE_SLOT_NO_PARENT_MSG);
             parent.insertBefore(document.createTextNode(resolveStaticText(item)), anchor);
           }
         }
@@ -170,13 +175,17 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
     }
 
     // Element slot
-    const target = el!;
+    invariant(el, 'compiled template produced an element slot without an element');
 
     if (slot.kind === SlotKind.EVENT) {
-      if (typeof value === 'function') {
-        const { handler, options } = applyModifiers(value as (e: Event) => void, slot.modifiers ?? []);
+      const name = slot.name;
 
-        bindings.push({ el: target, handler, name: slot.name!, options, type: 'event' });
+      invariant(name, 'compiled template produced an event slot without an event name');
+
+      if (typeof value === 'function') {
+        const { handler, options } = applyModifiers(name, value as (e: Event) => void, slot.modifiers ?? []);
+
+        bindings.push({ el, handler, name, options, type: 'event' });
       } else if (isReactive(value)) {
         const signalValue = value as Readable<unknown>;
         const handler = (e: Event) => {
@@ -184,9 +193,9 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
           if (typeof h === 'function') (h as (e: Event) => void)(e);
         };
-        const { handler: wrapped, options } = applyModifiers(handler, slot.modifiers ?? []);
+        const { handler: wrapped, options } = applyModifiers(name, handler, slot.modifiers ?? []);
 
-        bindings.push({ el: target, handler: wrapped, name: slot.name!, options, type: 'event' });
+        bindings.push({ el, handler: wrapped, name, options, type: 'event' });
       }
 
       continue;
@@ -194,7 +203,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
     if (slot.kind === SlotKind.REF) {
       if (value) {
-        bindings.push({ el: target, ref: value as Ref<Element> | RefCallback<Element>, type: 'ref' });
+        bindings.push({ el, ref: value as Ref<Element> | RefCallback<Element>, type: 'ref' });
       }
 
       continue;
@@ -202,14 +211,23 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
     if (slot.kind === SlotKind.SPREAD) {
       if (isSpreadObject(value)) {
-        bindings.push({ el: target, spread: value, type: 'spread' });
+        bindings.push({ el, spread: value, type: 'spread' });
+      } else {
+        // Interpolation landed inside a start tag but isn't a SpreadObject — almost
+        // always a typo (e.g. a missing model() call or a stray expression), and it
+        // would otherwise vanish silently: no binding, no text, no error.
+        warn(
+          'html`...`: interpolation inside a tag is only valid for spread objects (e.g. model(signal)). ' +
+            `Received ${typeof value} — it was ignored.`,
+        );
       }
 
       continue;
     }
 
     // attr / boolAttr
-    bindings.push(createAttrBindingFromValue(target, slot.mode ?? 'attr', slot.name!, value));
+    invariant(slot.name, 'compiled template produced an attr slot without an attribute name');
+    bindings.push(createAttrBindingFromValue(el, slot.mode ?? 'attr', slot.name, value));
   }
 
   return createHtmlResult(fragment, (registerCleanup) => {

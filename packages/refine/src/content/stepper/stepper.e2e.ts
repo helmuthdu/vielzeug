@@ -58,6 +58,14 @@ test.describe('Interaction', () => {
     });
 
     expect(isCurrent).toBe(true);
+
+    // Regression: the selection re-render replaces the clicked step's control —
+    // focus must be restored onto the new button, not dropped to <body>.
+    const paymentHasFocus = await page.evaluate(
+      () => document.activeElement === document.querySelector('ore-step[value="payment"]'),
+    );
+
+    expect(paymentHasFocus).toBe(true);
   });
 
   test('a display-only (non-clickable) stepper ignores clicks', async ({ page, refinePage }) => {

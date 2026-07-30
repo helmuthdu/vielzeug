@@ -1,7 +1,7 @@
 import { type Readable, type Signal, signal } from '@vielzeug/ripple';
 
 import { warn } from './_dev';
-import { invariant, OreApiError, ORE_ERRORS } from './errors';
+import { OreApiError, ORE_ERRORS } from './errors';
 import { watchEffect } from './runtime';
 import { isStructuredValue, setAttr, toKebab } from './utils/dom';
 
@@ -198,7 +198,8 @@ export function validatePropDefs(defs: Record<string, unknown>): string[] {
   return errors;
 }
 
-type PropMeta<T = unknown> = {
+/** @internal Per-attribute prop metadata. Consumed by the template binding layer (template/binding-types.ts). */
+export type PropMeta<T = unknown> = {
   parse: (value: string | null) => T;
   reflect: boolean;
   signal: Signal<T>;
@@ -228,7 +229,12 @@ const coerceIncoming = <T>(value: unknown, parse: PropDef<T>['parse']): T =>
 
 /** @internal Runtime prop registration (called by createProps) */
 const registerProp = <T>(el: HTMLElement, propName: string, attrName: string, propDef: PropDef<T>): Signal<T> => {
-  if (!propRegistry.has(el)) propRegistry.set(el, new Map());
+  let registry = propRegistry.get(el);
+
+  if (!registry) {
+    registry = new Map();
+    propRegistry.set(el, registry);
+  }
 
   const { default: defaultValue, parse, reflect = false } = propDef;
   const s = signal<T>(defaultValue);
@@ -248,9 +254,6 @@ const registerProp = <T>(el: HTMLElement, propName: string, attrName: string, pr
     s.value = parse(el.getAttribute(attrName)) as T;
   }
 
-  const registry = propRegistry.get(el);
-
-  invariant(registry, `propRegistry entry missing for <${el.localName}> — registerProp() must create it above`);
   registry.set(attrName, meta);
 
   Object.defineProperty(el, propName, {

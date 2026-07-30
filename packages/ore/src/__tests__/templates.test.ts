@@ -12,7 +12,11 @@ import { register } from './test-utils';
 describe('Template: HTML System', () => {
   describe('html Tagged Template', () => {
     it('should render static content', async () => {
-      const { query } = await mount(() => html`<div>Hello World</div>`);
+      const { query } = await mount(
+        () => html`
+          <div>Hello World</div>
+        `,
+      );
 
       expect(query('div')?.textContent).toBe('Hello World');
     });
@@ -21,7 +25,9 @@ describe('Template: HTML System', () => {
       const { query } = await mount(() => {
         const name = 'Alice';
 
-        return html`<div>Hello ${name}</div>`;
+        return html`
+          <div>Hello ${name}</div>
+        `;
       });
 
       expect(query('div')?.textContent).toBe('Hello Alice');
@@ -31,7 +37,9 @@ describe('Template: HTML System', () => {
       const { query } = await mount(() => {
         const count = signal(0);
 
-        return html`<div>${count}</div>`;
+        return html`
+          <div>${count}</div>
+        `;
       });
 
       expect(query('div')?.textContent).toBe('0');
@@ -42,7 +50,9 @@ describe('Template: HTML System', () => {
         const count = signal(5);
         const doubled = computed(() => count.value * 2);
 
-        return html`<div>${doubled}</div>`;
+        return html`
+          <div>${doubled}</div>
+        `;
       });
 
       expect(query('div')?.textContent).toBe('10');
@@ -52,7 +62,9 @@ describe('Template: HTML System', () => {
       const { query } = await mount(() => {
         const userInput = '<script>alert("xss")</script>';
 
-        return html`<div>${userInput}</div>`;
+        return html`
+          <div>${userInput}</div>
+        `;
       });
 
       expect(query('div')?.textContent).toBe('<script>alert("xss")</script>');
@@ -61,9 +73,13 @@ describe('Template: HTML System', () => {
 
     it('should preserve HTMLResult objects without escaping', async () => {
       const { query } = await mount(() => {
-        const inner = html`<span>Inner</span>`;
+        const inner = html`
+          <span>Inner</span>
+        `;
 
-        return html`<div>${inner}</div>`;
+        return html`
+          <div>${inner}</div>
+        `;
       });
 
       expect(query('span')?.textContent).toBe('Inner');
@@ -77,7 +93,11 @@ describe('Template: HTML System', () => {
         toString: () => htmlPayload,
       } as unknown;
 
-      const { query } = await mount(() => html`<div>${spoofed}</div>`);
+      const { query } = await mount(
+        () => html`
+          <div>${spoofed}</div>
+        `,
+      );
 
       expect(query('strong')).toBeNull();
       expect(query('div')?.textContent).toContain(htmlPayload);
@@ -85,8 +105,14 @@ describe('Template: HTML System', () => {
 
     it('should escape signal updates when value changes from HTMLResult to plain string', async () => {
       const payload = '<strong>unsafe</strong>';
-      const source = signal<unknown>(html`<em>safe</em>`);
-      const { flush, query } = await mount(() => html`<div>${source}</div>`);
+      const source = signal<unknown>(html`
+        <em>safe</em>
+      `);
+      const { flush, query } = await mount(
+        () => html`
+          <div>${source}</div>
+        `,
+      );
 
       expect(query('em')?.textContent).toBe('safe');
 
@@ -98,8 +124,12 @@ describe('Template: HTML System', () => {
     });
 
     it('should produce identical DOM structure for the same template', () => {
-      const first = html`<div>${signal(1)}</div>`;
-      const second = html`<div>${signal(2)}</div>`;
+      const first = html`
+        <div>${signal(1)}</div>
+      `;
+      const second = html`
+        <div>${signal(2)}</div>
+      `;
 
       // Both fragments come from the same cached template element
       expect(first.fragment.firstElementChild?.tagName).toBe(second.fragment.firstElementChild?.tagName);
@@ -121,10 +151,16 @@ describe('Template: HTML System', () => {
       let right = 0;
 
       const { queryAll } = await mount(() => {
-        const leftButton = html`<button @click=${() => left++}>Left</button>`;
-        const rightButton = html`<button @click=${() => right++}>Right</button>`;
+        const leftButton = html`
+          <button @click=${() => left++}>Left</button>
+        `;
+        const rightButton = html`
+          <button @click=${() => right++}>Right</button>
+        `;
 
-        return html`<div>${leftButton}${rightButton}</div>`;
+        return html`
+          <div>${leftButton}${rightButton}</div>
+        `;
       });
 
       const [leftButton, rightButton] = queryAll<HTMLButtonElement>('button');
@@ -140,11 +176,16 @@ describe('Template: HTML System', () => {
       let alpha = 0;
       let beta = 0;
       const { queryAll } = await mount(
-        () =>
-          html`${() => [
-            html`<button @click=${() => alpha++}>Alpha</button>`,
-            html`<button @click=${() => beta++}>Beta</button>`,
-          ]}`,
+        () => html`
+          ${() => [
+            html`
+              <button @click=${() => alpha++}>Alpha</button>
+            `,
+            html`
+              <button @click=${() => beta++}>Beta</button>
+            `,
+          ]}
+        `,
       );
 
       const [alphaButton, betaButton] = queryAll<HTMLButtonElement>('button');
@@ -162,7 +203,9 @@ describe('Template: HTML System', () => {
       const { query } = await mount(() => {
         const id = 'my-id';
 
-        return html`<div id=${id}>Test</div>`;
+        return html`
+          <div id=${id}>Test</div>
+        `;
       });
 
       expect(query('div')?.getAttribute('id')).toBe('my-id');
@@ -172,7 +215,9 @@ describe('Template: HTML System', () => {
       const { query } = await mount(() => {
         const disabled = signal(true);
 
-        return html`<button disabled=${disabled}>Click</button>`;
+        return html`
+          <button disabled=${disabled}>Click</button>
+        `;
       });
 
       expect(query('button')?.hasAttribute('disabled')).toBe(true);
@@ -182,7 +227,9 @@ describe('Template: HTML System', () => {
       const { query } = await mount(() => {
         const disabled = signal(false);
 
-        return html`<button disabled=${disabled}>Click</button>`;
+        return html`
+          <button disabled=${disabled}>Click</button>
+        `;
       });
 
       expect(query('button')?.hasAttribute('disabled')).toBe(false);
@@ -194,7 +241,9 @@ describe('Template: HTML System', () => {
 
         setTimeout(() => (cls.value = 'updated'), 50);
 
-        return html`<div class=${cls}>Test</div>`;
+        return html`
+          <div class=${cls}>Test</div>
+        `;
       });
 
       expect(query('div')?.className).toBe('initial');
@@ -208,7 +257,11 @@ describe('Template: HTML System', () => {
   describe('URL attribute security', () => {
     it('should block javascript: scheme in href', async () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const { query } = await mount(() => html`<a href=${'javascript:alert(1)'}>link</a>`);
+      const { query } = await mount(
+        () => html`
+          <a href=${'javascript:alert(1)'}>link</a>
+        `,
+      );
 
       expect(query('a')?.hasAttribute('href')).toBe(false);
       warn.mockRestore();
@@ -216,7 +269,11 @@ describe('Template: HTML System', () => {
 
     it('should block vbscript: scheme in href', async () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const { query } = await mount(() => html`<a href=${'vbscript:MsgBox(1)'}>link</a>`);
+      const { query } = await mount(
+        () => html`
+          <a href=${'vbscript:MsgBox(1)'}>link</a>
+        `,
+      );
 
       expect(query('a')?.hasAttribute('href')).toBe(false);
       warn.mockRestore();
@@ -224,14 +281,22 @@ describe('Template: HTML System', () => {
 
     it('should allow data: scheme in src (e.g. inline images)', async () => {
       const dataUri = 'data:image/png;base64,iVBORw0KGgo=';
-      const { query } = await mount(() => html`<img src=${dataUri} />`);
+      const { query } = await mount(
+        () => html`
+          <img src=${dataUri} />
+        `,
+      );
 
       expect(query('img')?.getAttribute('src')).toBe(dataUri);
     });
 
     it('should block javascript: in action attribute', async () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const { query } = await mount(() => html`<form action=${'javascript:submit()'}></form>`);
+      const { query } = await mount(
+        () => html`
+          <form action=${'javascript:submit()'}></form>
+        `,
+      );
 
       expect(query('form')?.hasAttribute('action')).toBe(false);
       warn.mockRestore();
@@ -239,20 +304,32 @@ describe('Template: HTML System', () => {
 
     it('should block javascript: with leading whitespace', async () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const { query } = await mount(() => html`<a href=${'\t javascript:alert(1)'}>link</a>`);
+      const { query } = await mount(
+        () => html`
+          <a href=${'\t javascript:alert(1)'}>link</a>
+        `,
+      );
 
       expect(query('a')?.hasAttribute('href')).toBe(false);
       warn.mockRestore();
     });
 
     it('should allow safe https: URLs in href', async () => {
-      const { query } = await mount(() => html`<a href=${'https://example.com'}>link</a>`);
+      const { query } = await mount(
+        () => html`
+          <a href=${'https://example.com'}>link</a>
+        `,
+      );
 
       expect(query('a')?.getAttribute('href')).toBe('https://example.com');
     });
 
     it('should allow relative URLs in href', async () => {
-      const { query } = await mount(() => html`<a href=${'/page'}>link</a>`);
+      const { query } = await mount(
+        () => html`
+          <a href=${'/page'}>link</a>
+        `,
+      );
 
       expect(query('a')?.getAttribute('href')).toBe('/page');
     });
@@ -260,7 +337,11 @@ describe('Template: HTML System', () => {
     it('should warn in DEV mode when a dangerous URL scheme is blocked', async () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      await mount(() => html`<a href=${'javascript:evil()'}>link</a>`);
+      await mount(
+        () => html`
+          <a href=${'javascript:evil()'}>link</a>
+        `,
+      );
 
       expect(warn).toHaveBeenCalledWith(expect.stringContaining('dangerous URL scheme'));
       warn.mockRestore();
@@ -268,7 +349,11 @@ describe('Template: HTML System', () => {
 
     it('should not block javascript: in non-URL attributes', async () => {
       // "title" is not a URL attribute — the value should be set as-is
-      const { query } = await mount(() => html`<span title=${'javascript:note'}>text</span>`);
+      const { query } = await mount(
+        () => html`
+          <span title=${'javascript:note'}>text</span>
+        `,
+      );
 
       expect(query('span')?.getAttribute('title')).toBe('javascript:note');
     });
@@ -277,7 +362,11 @@ describe('Template: HTML System', () => {
   describe('Event Handlers', () => {
     it('should bind click events', async () => {
       let clicked = false;
-      const { query } = await mount(() => html`<button @click=${() => (clicked = true)}>Click</button>`);
+      const { query } = await mount(
+        () => html`
+          <button @click=${() => (clicked = true)}>Click</button>
+        `,
+      );
 
       fire.click(query('button')!);
       expect(clicked).toBe(true);
@@ -286,8 +375,8 @@ describe('Template: HTML System', () => {
     it('should allow manual stopPropagation in handler', async () => {
       const calls: string[] = [];
       const { query } = await mount(
-        () =>
-          html`<div @click=${() => calls.push('parent')}>
+        () => html`
+          <div @click=${() => calls.push('parent')}>
             <button
               @click=${(e: MouseEvent) => {
                 e.stopPropagation();
@@ -295,7 +384,8 @@ describe('Template: HTML System', () => {
               }}>
               Click
             </button>
-          </div>`,
+          </div>
+        `,
       );
 
       query('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -306,15 +396,16 @@ describe('Template: HTML System', () => {
     it('should allow manual preventDefault in handler', async () => {
       let prevented = false;
       const { query } = await mount(
-        () =>
-          html`<a
+        () => html`
+          <a
             href="#"
             @click=${(event: Event) => {
               event.preventDefault();
               prevented = event.defaultPrevented;
-            }}
-            >Link</a
-          >`,
+            }}>
+            Link
+          </a>
+        `,
       );
 
       query('a')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
@@ -338,9 +429,9 @@ describe('Template: HTML System', () => {
                 e.stopPropagation();
                 e.preventDefault();
                 handler.value(e);
-              }}
-              >Run</a
-            >
+              }}>
+              Run
+            </a>
           </div>
         `,
       );
@@ -371,7 +462,9 @@ describe('Template: HTML System', () => {
       const { query } = await mount(() => {
         const value = null;
 
-        return html`<div>${value}</div>`;
+        return html`
+          <div>${value}</div>
+        `;
       });
 
       expect(query('div')?.textContent).toBe('');
@@ -381,7 +474,9 @@ describe('Template: HTML System', () => {
       const { query } = await mount(() => {
         const value = undefined;
 
-        return html`<div>${value}</div>`;
+        return html`
+          <div>${value}</div>
+        `;
       });
 
       expect(query('div')?.textContent).toBe('');
@@ -389,12 +484,79 @@ describe('Template: HTML System', () => {
 
     it('should handle nested templates', async () => {
       const { query } = await mount(() => {
-        const inner = html`<span>Inner</span>`;
+        const inner = html`
+          <span>Inner</span>
+        `;
 
-        return html`<div>${inner}</div>`;
+        return html`
+          <div>${inner}</div>
+        `;
       });
 
       expect(query('span')?.textContent).toBe('Inner');
+    });
+
+    it('preserves literal quotes around text interpolations', async () => {
+      const { query } = await mount(() => {
+        const name = signal('world');
+
+        return html`
+          <p>"${name}"</p>
+        `;
+      });
+
+      // Quotes adjacent to a *text* interpolation are content, not attribute
+      // syntax — only attribute-context quotes (attr="...") are stripped.
+      expect(query('p')?.textContent).toBe('"world"');
+    });
+
+    it('leaves user-authored `u` attributes and numeric comments untouched', async () => {
+      const { query } = await mount(
+        () => html`
+          <div u="3">
+            <!--4-->
+            <span>ok</span>
+          </div>
+        `,
+      );
+
+      const div = query('div');
+
+      // Binding markers are namespaced (data-ore-b / <!--ore:N-->) — markup that
+      // happens to look like the old un-namespaced markers is plain content now.
+      expect(div?.getAttribute('u')).toBe('3');
+
+      const hasNumericComment = Array.from(div?.childNodes ?? []).some(
+        (n) => n.nodeType === Node.COMMENT_NODE && n.nodeValue === '4',
+      );
+
+      expect(hasNumericComment).toBe(true);
+    });
+
+    it('warns when an in-tag interpolation is not a spread object', async () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await mount(
+        () => html`
+          <div ${'not-a-spread'}></div>
+        `,
+      );
+
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining('spread'));
+      spy.mockRestore();
+    });
+
+    it('warns on unknown event modifiers', async () => {
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await mount(
+        () => html`
+          <button @click.preven=${() => undefined}>x</button>
+        `,
+      );
+
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining('.preven'));
+      spy.mockRestore();
     });
   });
 });
@@ -404,7 +566,9 @@ describe('Native value/checked sync via :value/:checked', () => {
     const { query } = await mount(() => {
       const text = signal('hello');
 
-      return html`<input type="text" :value=${text} />`;
+      return html`
+        <input type="text" :value=${text} />
+      `;
     });
 
     const input = query<HTMLInputElement>('input');
@@ -440,7 +604,12 @@ describe('Reactive Bindings', () => {
     it('should update element properties reactively', async () => {
       const value = signal('initial');
 
-      register('test-prop-bindings', () => html` <input type="text" value=${value} /> `);
+      register(
+        'test-prop-bindings',
+        () => html`
+          <input type="text" value=${value} />
+        `,
+      );
 
       const { flush, query } = await mount('test-prop-bindings');
 
@@ -457,7 +626,12 @@ describe('Reactive Bindings', () => {
       const checked = signal(false);
       const classes = computed(() => (checked.value ? 'checked' : ''));
 
-      register('test-boolean-attrs', () => html` <div class=${classes}>State</div> `);
+      register(
+        'test-boolean-attrs',
+        () => html`
+          <div class=${classes}>State</div>
+        `,
+      );
 
       const { flush, query } = await mount('test-boolean-attrs');
 
@@ -479,7 +653,9 @@ describe('Reactive Bindings', () => {
 
       register(
         'test-multi-props',
-        () => html` <div data-value=${value} title=${placeholder} aria-label=${maxLength}></div> `,
+        () => html`
+          <div data-value=${value} title=${placeholder} aria-label=${maxLength}></div>
+        `,
       );
 
       const { flush, query } = await mount('test-multi-props');
@@ -506,7 +682,12 @@ describe('Reactive Bindings', () => {
       const completed = signal(false);
       const classes = computed(() => (completed.value ? 'completed' : ''));
 
-      register('test-class-toggle', () => html` <div class="${classes}">Task</div> `);
+      register(
+        'test-class-toggle',
+        () => html`
+          <div class="${classes}">Task</div>
+        `,
+      );
 
       const { flush, query } = await mount('test-class-toggle');
 
@@ -534,7 +715,9 @@ describe('Reactive Bindings', () => {
           return cls.join(' ');
         });
 
-        return html`<button class=${classes}>Button</button>`;
+        return html`
+          <button class=${classes}>Button</button>
+        `;
       });
 
       const { flush, query } = await mount('test-multi-classes');
@@ -620,7 +803,12 @@ describe('Computed Values', () => {
       const count = signal(0);
       const doubled = computed(() => count.value * 2);
 
-      register('test-computed-basic', () => html`<div class="result">${doubled}</div>`);
+      register(
+        'test-computed-basic',
+        () => html`
+          <div class="result">${doubled}</div>
+        `,
+      );
 
       const { flush, query } = await mount('test-computed-basic');
 
@@ -636,7 +824,12 @@ describe('Computed Values', () => {
       const b = computed(() => a.value * 2);
       const c = computed(() => b.value + 1);
 
-      register('test-nested-computed', () => html`<div>${c}</div>`);
+      register(
+        'test-nested-computed',
+        () => html`
+          <div>${c}</div>
+        `,
+      );
 
       const { flush, query } = await mount('test-nested-computed');
 
@@ -652,7 +845,12 @@ describe('Computed Values', () => {
       const b = signal(3);
       const sum = computed(() => a.value + b.value);
 
-      register('test-multi-deps', () => html`<div>${sum}</div>`);
+      register(
+        'test-multi-deps',
+        () => html`
+          <div>${sum}</div>
+        `,
+      );
 
       const { flush, query } = await mount('test-multi-deps');
 
@@ -677,13 +875,19 @@ describe('Computed Values', () => {
       register('test-computed-conditional', () => {
         const content = computed(() => {
           if (show.value) {
-            return html`<span class="value">${doubled}</span>`;
+            return html`
+              <span class="value">${doubled}</span>
+            `;
           }
 
-          return html`<span class="hidden">Hidden</span>`;
+          return html`
+            <span class="hidden">Hidden</span>
+          `;
         });
 
-        return html`<div>${content}</div>`;
+        return html`
+          <div>${content}</div>
+        `;
       });
 
       const { flush, query } = await mount('test-computed-conditional');
@@ -783,7 +987,12 @@ describe('Performance', () => {
     const b = signal(0);
     const sum = computed(() => a.value + b.value);
 
-    register('test-batching', () => html`<div>${sum}</div>`);
+    register(
+      'test-batching',
+      () => html`
+        <div>${sum}</div>
+      `,
+    );
 
     const { flush, query } = await mount('test-batching');
 
@@ -808,7 +1017,9 @@ describe('Performance', () => {
         if (count.value >= 10 && intervalId) clearInterval(intervalId);
       }, 5) as unknown as number;
 
-      return html`<div>${count}</div>`;
+      return html`
+        <div>${count}</div>
+      `;
     });
 
     const { flush, query } = await mount('test-rapid');

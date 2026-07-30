@@ -3,7 +3,7 @@ import { afterEach, vi } from 'vitest';
 
 import { install } from './src/testing';
 
-install(afterEach);
+install(afterEach, { formInternals: true });
 
 globalThis.window.URL.createObjectURL = vi.fn();
 

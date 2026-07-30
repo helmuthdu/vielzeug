@@ -151,8 +151,8 @@
       "category": "UI",
       "description": "Functional web-component authoring on top of ripple",
       "domOutput": true,
-      "dependencies": ["assay", "ripple"],
-      "optionalPeers": []
+      "dependencies": ["ripple"],
+      "optionalPeers": ["assay"]
     },
     {
       "slug": "prism",

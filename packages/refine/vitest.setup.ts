@@ -52,7 +52,7 @@ if (typeof ClipboardEvent === 'undefined') {
   };
 }
 
-install(afterEach);
+install(afterEach, { formInternals: true });
 
 const consoleError = globalThis.console.error;
 const consoleWarn = globalThis.console.warn;

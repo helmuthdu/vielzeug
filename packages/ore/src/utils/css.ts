@@ -3,16 +3,16 @@
  */
 
 import { error } from '../_dev';
+import { makeBrand } from './brand';
 
 export type CSSResult = {
   content: string;
   toString(): string;
 };
 
-const cssResultBrand = new WeakSet<CSSResult>();
+const cssResultBrand = makeBrand<CSSResult>('ore:css-result');
 
-export const isCssResult = (value: unknown): value is CSSResult =>
-  typeof value === 'object' && value !== null && cssResultBrand.has(value as CSSResult);
+export const isCssResult = cssResultBrand.is;
 
 const cssResultToString = function (this: CSSResult): string {
   return this.content;
@@ -31,11 +31,7 @@ export const css = (strings: TemplateStringsArray, ...values: Array<CSSResult | 
     }
   }
 
-  const result: CSSResult = { content: content.trim(), toString: cssResultToString };
-
-  cssResultBrand.add(result);
-
-  return result;
+  return cssResultBrand.stamp({ content: content.trim(), toString: cssResultToString });
 };
 
 const stylesheetStringCache = new Map<string, CSSStyleSheet>();
@@ -58,7 +54,11 @@ export const loadStylesheet = (style: string | CSSStyleSheet | CSSResult): CSSSt
   try {
     sheet.replaceSync(cssText);
   } catch (err) {
+    // Deliberately not cached: a broken sheet served from cache would fail silently
+    // for every subsequent caller with no further error.
     error('Style sheet replace failed', err);
+
+    return sheet;
   }
 
   stylesheetStringCache.set(cssText, sheet);

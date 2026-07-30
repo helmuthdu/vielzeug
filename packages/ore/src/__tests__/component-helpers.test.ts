@@ -5,9 +5,10 @@ import { mount } from '../testing';
 describe('component helpers and exports', () => {
   it('supports direct default prop values', async () => {
     const { query } = await mount(
-      (props) =>
-        html`<div class="count">${props.count}</div>
-          <div class="label">${props.label}</div>`,
+      (props) => html`
+        <div class="count">${props.count}</div>
+        <div class="label">${props.label}</div>
+      `,
       {
         attrs: { count: '42', label: 'custom' },
         componentOptions: {
@@ -28,8 +29,9 @@ describe('component helpers and exports', () => {
     const configDefault = { default: 'fallback', mode: 'dark' };
 
     const { query } = await mount(
-      (props) =>
-        html`<div class="mode">${() => (props.config.value as typeof configDefault | undefined)?.mode ?? ''}</div>`,
+      (props) => html`
+        <div class="mode">${() => (props.config.value as typeof configDefault | undefined)?.mode ?? ''}</div>
+      `,
       {
         componentOptions: {
           props: {
@@ -56,7 +58,9 @@ describe('component helpers and exports', () => {
       expect(ref).toBeDefined();
       expect(define).toBeDefined();
 
-      return html`<div id="test"></div>`;
+      return html`
+        <div id="test"></div>
+      `;
     });
 
     expect(elementInstance).toBe(element);

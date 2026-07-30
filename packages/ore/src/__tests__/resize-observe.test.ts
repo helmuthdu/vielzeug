@@ -14,7 +14,9 @@ describe('resizeObserver()', () => {
         capturedSize = resizeObserver(divRef.value!);
       });
 
-      return html`<div ref=${divRef}></div>`;
+      return html`
+        <div ref=${divRef}></div>
+      `;
     });
 
     expect(capturedSize.value).toEqual({ height: 0, width: 0 });
@@ -38,7 +40,9 @@ describe('resizeObserver()', () => {
           resizeObserver(divRef.value!);
         });
 
-        return html`<div ref=${divRef}></div>`;
+        return html`
+          <div ref=${divRef}></div>
+        `;
       });
 
       expect(observeSpy).toHaveBeenCalledWith(expect.any(HTMLDivElement));
@@ -69,7 +73,9 @@ describe('resizeObserver()', () => {
           capturedSize = resizeObserver(divRef.value!);
         });
 
-        return html`<div ref=${divRef}></div>`;
+        return html`
+          <div ref=${divRef}></div>
+        `;
       });
 
       if (!capturedCb) throw new Error('ResizeObserver callback not captured');
@@ -103,7 +109,9 @@ describe('resizeObserver()', () => {
           resizeObserver(divRef.value!);
         });
 
-        return html`<div ref=${divRef}></div>`;
+        return html`
+          <div ref=${divRef}></div>
+        `;
       });
 
       expect(disconnectSpy).not.toHaveBeenCalled();
@@ -132,7 +140,9 @@ describe('resizeObserver()', () => {
           resizeObserver(divRef.value!);
         });
 
-        return html`<div ref=${divRef}></div>`;
+        return html`
+          <div ref=${divRef}></div>
+        `;
       });
 
       dispose();

@@ -5,12 +5,11 @@
 import { isReactive, type Readable } from '@vielzeug/ripple';
 
 import { warn } from '../_dev';
+import { ORE_ERRORS } from '../errors';
 
 /**
- * Resolves a value that may be a plain value, a getter function, or a reactive signal — the
- * same three-way branch `classMap`/`styleMap`/`bind()`'s class-map binding each used to
- * hand-implement separately (with one silently diverging: only the `bind()` copy coerced with
- * `Boolean(...)`). One shared implementation here is the single source of truth.
+ * Resolves a value that may be a plain value, a getter function, or a reactive
+ * signal — the one shared three-way branch used by `classMap`/`styleMap`/`bind()`.
  */
 export const resolveMaybeReactive = <T>(value: T | Readable<T> | (() => T)): T =>
   typeof value === 'function' ? (value as () => T)() : isReactive(value) ? value.value : value;
@@ -156,7 +155,11 @@ export const listen = (
   handler: EventListener,
   options?: AddEventListenerOptions,
 ): (() => void) => {
-  if (!el) return () => {};
+  if (!el) {
+    warn(ORE_ERRORS.listenNullTarget(name));
+
+    return () => {};
+  }
 
   const listener: EventListener = handler;
 

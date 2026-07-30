@@ -1,38 +1,27 @@
 import type { Readable } from '@vielzeug/ripple';
 
-const LIVE_BRAND: unique symbol = Symbol.for('ore:live');
+import { makeBrand } from '../utils/brand';
 
 /**
- * A branded signal that tells the attribute binding engine to skip writing when
- * the DOM value has diverged from the last programmatically-written value.
- * Created via live(signal) — pass a signal directly rather than wrapping a value.
+ * A per-binding marker produced by `live()`. Wraps the source signal — the
+ * "live" flag belongs to this one binding site, never to the signal itself,
+ * so other bindings of the same signal are unaffected.
  *
  * @example
  * html`<input :value="${live(model)}" />`
  */
-export type LiveSignal<T> = Readable<T> & { readonly [LIVE_BRAND]: true };
+export type LiveBinding<T> = { readonly source: Readable<T> };
 
-// WeakSet tracks which signal objects have been marked live — zero allocation on call.
-let liveSignals = new WeakSet<object>();
+const liveBrand = makeBrand<LiveBinding<unknown>>('ore:live');
 
 /**
- * Marks a signal binding as "live" so stale app-state writes never clobber
- * in-progress user input.
+ * Marks one attribute binding as "live" so stale app-state writes never clobber
+ * in-progress user input at that binding site.
  *
  * For form controls: if the current DOM value diverges from the last write made
  * by this binding, subsequent app-state writes are silently dropped until the
  * DOM value matches the incoming value or no prior write has been recorded.
  */
-export const live = <T>(source: Readable<T>): LiveSignal<T> => {
-  liveSignals.add(source as object);
+export const live = <T>(source: Readable<T>): LiveBinding<T> => liveBrand.stamp({ source }) as LiveBinding<T>;
 
-  return source as LiveSignal<T>;
-};
-
-export const isLiveSignal = (value: unknown): value is LiveSignal<unknown> =>
-  typeof value === 'object' && value !== null && liveSignals.has(value as object);
-
-/** @internal Reset live signal registry. Called by cleanup() for test isolation. */
-export const _resetLiveSignals = (): void => {
-  liveSignals = new WeakSet();
-};
+export const isLiveBinding = liveBrand.is;

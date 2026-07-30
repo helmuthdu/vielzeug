@@ -195,7 +195,9 @@ describe('inject(FORM_CONTEXT_KEY)', () => {
       provide(FORM_CONTEXT_KEY, form);
       captured = inject(FORM_CONTEXT_KEY) as FormController | undefined;
 
-      return html`<div></div>`;
+      return html`
+        <div></div>
+      `;
     });
 
     expect(captured).toBeDefined();
@@ -208,7 +210,9 @@ describe('inject(FORM_CONTEXT_KEY)', () => {
     await mount((_props) => {
       captured = inject(FORM_CONTEXT_KEY) as FormController | undefined;
 
-      return html`<div></div>`;
+      return html`
+        <div></div>
+      `;
     });
 
     expect(captured).toBeUndefined();
@@ -224,14 +228,17 @@ describe('component form integration', () => {
         () => {
           handle = useField({ value: signal('initial') });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
 
       expect(typeof handle.checkValidity).toBe('function');
       expect(typeof handle.reportValidity).toBe('function');
-      expect(typeof handle.setValidity).toBe('function');
+      expect(typeof handle.setCustomValidity).toBe('function');
+      expect(handle.internals).toBeDefined();
     });
 
     it('supports custom validity state updates', async () => {
@@ -241,13 +248,20 @@ describe('component form integration', () => {
         () => {
           handle = useField({ value: signal('') });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
 
-      handle.setValidity({ valueMissing: true }, 'Required');
-      expect(typeof handle.reportValidity()).toBe('boolean');
+      handle.setCustomValidity('Required');
+      expect(handle.internals.validity.valueMissing).toBe(false);
+      expect(handle.internals.validity.customError).toBe(true);
+      expect(handle.reportValidity()).toBe(false);
+
+      handle.setCustomValidity('');
+      expect(handle.reportValidity()).toBe(true);
     });
 
     it('invokes toFormValue with current signal value immediately', async () => {
@@ -264,7 +278,9 @@ describe('component form integration', () => {
             value: signal(42),
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -280,7 +296,9 @@ describe('component form integration', () => {
 
             useField({ emptyStringForNull: true, value: val });
 
-            return html`<div></div>`;
+            return html`
+              <div></div>
+            `;
           },
           { componentOptions: { formAssociated: true } },
         ),
@@ -304,7 +322,9 @@ describe('component form integration', () => {
             value: val,
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -320,7 +340,9 @@ describe('component form integration', () => {
 
           expect(typeof handle.internals.setFormValue).toBe('function');
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -331,7 +353,9 @@ describe('component form integration', () => {
         mount(() => {
           useField({ value: signal('test') });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         }),
       ).rejects.toThrow(/formAssociated: true/);
     });
@@ -343,7 +367,9 @@ describe('component form integration', () => {
             useField({ value: signal('first') });
             useField({ value: signal('second') });
 
-            return html`<div></div>`;
+            return html`
+              <div></div>
+            `;
           },
           { componentOptions: { formAssociated: true } },
         ),
@@ -364,7 +390,9 @@ describe('component form integration', () => {
             value,
           });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -391,7 +419,9 @@ describe('component form integration', () => {
         () => {
           handle = useField({ value: signal('') });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true } },
       );
@@ -410,7 +440,9 @@ describe('component form integration', () => {
         () => {
           useField({ onReset, value: signal('initial') });
 
-          return html`<div></div>`;
+          return html`
+            <div></div>
+          `;
         },
         { componentOptions: { formAssociated: true }, container: form },
       );

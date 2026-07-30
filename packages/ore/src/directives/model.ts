@@ -1,11 +1,16 @@
 import { effect as rawEffect, type Signal } from '@vielzeug/ripple';
 
-import { createSpreadObject, type SpreadObject } from '../types/bindings';
+import { syncFormControl } from '../template/bindings';
+import { createSpreadObject, type SpreadObject } from '../template/result';
 import { listen } from '../utils/dom';
 
 /**
  * Two-way binding spread for form inputs.
  * Syncs the signal value to the element's DOM value and back.
+ *
+ * Signal-to-DOM writes go through the same `syncFormControl` path as the attr
+ * binding engine's `value`/`checked` handling — one implementation of input
+ * value semantics for the whole package.
  *
  * Supports `type="text"` (default), `type="number"`, `type="range"`,
  * `type="checkbox"`, `<select>` (single-select), and
@@ -30,11 +35,10 @@ export function model<T extends string | number | boolean | null>(source: Signal
 export function model(source: Signal<string[]>): SpreadObject;
 export function model<T extends string | number | boolean | null | string[]>(source: Signal<T>): SpreadObject {
   return createSpreadObject((el, registerCleanup) => {
-    const input = el as HTMLInputElement;
-    const isCheckbox = input.type === 'checkbox';
-    const isNumeric = input.type === 'number' || input.type === 'range';
     const isSelect = el instanceof HTMLSelectElement;
-    const isMultiSelect = isSelect && (el as HTMLSelectElement).multiple;
+    const isMultiSelect = isSelect && el.multiple;
+    const isCheckbox = el instanceof HTMLInputElement && el.type === 'checkbox';
+    const isNumeric = el instanceof HTMLInputElement && (el.type === 'number' || el.type === 'range');
 
     // Signal → DOM
     const sub = rawEffect(() => {
@@ -42,16 +46,12 @@ export function model<T extends string | number | boolean | null | string[]>(sou
 
       if (isMultiSelect) {
         const selected = Array.isArray(v) ? (v as string[]) : [];
-        const selectEl = el as HTMLSelectElement;
 
-        for (const opt of selectEl.options) {
+        for (const opt of (el as HTMLSelectElement).options) {
           opt.selected = selected.includes(opt.value);
         }
-      } else if (isCheckbox) {
-        input.checked = Boolean(v);
       } else {
-        (el as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).value =
-          v == null ? '' : String(v as string | number | boolean | null);
+        syncFormControl(el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement, v);
       }
     });
 
@@ -66,8 +66,7 @@ export function model<T extends string | number | boolean | null | string[]>(sou
         const target = e.target as HTMLInputElement;
 
         if (isMultiSelect) {
-          const selectEl = e.target as HTMLSelectElement;
-          const values = Array.from(selectEl.selectedOptions).map((opt) => opt.value);
+          const values = Array.from((e.target as HTMLSelectElement).selectedOptions).map((opt) => opt.value);
 
           (source as Signal<string[]>).value = values;
         } else if (isCheckbox) {

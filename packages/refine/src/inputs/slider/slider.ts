@@ -5,7 +5,6 @@ import {
   inject,
   prop,
   ref,
-  aria,
   bind,
   getHost,
   onCleanup,
@@ -380,13 +379,18 @@ define<OreSliderProps>(SLIDER_TAG, {
           ),
         );
         onCleanup(
-          aria(thumbStartEl, {
-            label: 'Range start',
-            valuemax: () => endVal.value,
-            valuemin: () => sliderControl.min(),
-            valuenow: () => startVal.value,
-            valuetext: () => props['from-value-text'].value ?? null,
-          }),
+          bind(
+            {
+              aria: {
+                label: 'Range start',
+                valuemax: () => endVal.value,
+                valuemin: () => sliderControl.min(),
+                valuenow: () => startVal.value,
+                valuetext: () => props['from-value-text'].value ?? null,
+              },
+            },
+            { target: thumbStartEl },
+          ),
         );
       }
 
@@ -402,13 +406,18 @@ define<OreSliderProps>(SLIDER_TAG, {
           ),
         );
         onCleanup(
-          aria(thumbEndEl, {
-            label: 'Range end',
-            valuemax: () => sliderControl.max(),
-            valuemin: () => startVal.value,
-            valuenow: () => endVal.value,
-            valuetext: () => props['to-value-text'].value ?? null,
-          }),
+          bind(
+            {
+              aria: {
+                label: 'Range end',
+                valuemax: () => sliderControl.max(),
+                valuemin: () => startVal.value,
+                valuenow: () => endVal.value,
+                valuetext: () => props['to-value-text'].value ?? null,
+              },
+            },
+            { target: thumbEndEl },
+          ),
         );
       }
     };

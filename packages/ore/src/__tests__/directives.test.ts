@@ -20,7 +20,9 @@ describe('Directive: each()', () => {
           ${each(
             items,
             (item) => item,
-            (item) => html`<li>${item}</li>`,
+            (item) => html`
+              <li>${item}</li>
+            `,
           )}
         </ul>
       `;
@@ -46,8 +48,12 @@ describe('Directive: each()', () => {
           ${each(
             items,
             (_, i) => i,
-            (item) => html`<li>${item}</li>`,
-            () => html`<div class="empty">Empty</div>`,
+            (item) => html`
+              <li>${item}</li>
+            `,
+            () => html`
+              <div class="empty">Empty</div>
+            `,
           )}
         </div>
       `;
@@ -59,15 +65,20 @@ describe('Directive: each()', () => {
   it('should clear fallback when list becomes non-empty', async () => {
     const items = signal<number[]>([]);
     const { act, query, queryAll } = await mount(
-      () =>
-        html`<ul>
+      () => html`
+        <ul>
           ${each(
             items,
             (n) => n,
-            (n) => html`<li class="item">${n}</li>`,
-            () => html`<div class="empty">Empty</div>`,
+            (n) => html`
+              <li class="item">${n}</li>
+            `,
+            () => html`
+              <div class="empty">Empty</div>
+            `,
           )}
-        </ul>`,
+        </ul>
+      `,
     );
 
     expect(query('.empty')).not.toBeNull();
@@ -83,14 +94,17 @@ describe('Directive: each()', () => {
   it('should recreate items after list empties and repopulates', async () => {
     const items = signal([1, 2]);
     const { act, queryAll } = await mount(
-      () =>
-        html`<ul>
+      () => html`
+        <ul>
           ${each(
             items,
             (n) => n,
-            (n) => html`<li class="item">${n}</li>`,
+            (n) => html`
+              <li class="item">${n}</li>
+            `,
           )}
-        </ul>`,
+        </ul>
+      `,
     );
 
     expect(queryAll('.item')).toHaveLength(2);
@@ -116,7 +130,9 @@ describe('Directive: each()', () => {
           ${each(
             items,
             (item) => item,
-            (item) => html`<li>${item}</li>`,
+            (item) => html`
+              <li>${item}</li>
+            `,
           )}
         </ul>
       `;
@@ -128,14 +144,17 @@ describe('Directive: each()', () => {
   it('should accept a getter function as source', async () => {
     const all = signal([1, 2, 3, 4]);
     const { flush, queryAll } = await mount(
-      () =>
-        html`<ul>
+      () => html`
+        <ul>
           ${each(
             () => all.value.filter((n) => n % 2 === 0),
             (n) => n,
-            (n) => html`<li>${n}</li>`,
+            (n) => html`
+              <li>${n}</li>
+            `,
           )}
-        </ul>`,
+        </ul>
+      `,
     );
 
     expect(queryAll('li').map((el) => el.textContent)).toEqual(['2', '4']);
@@ -154,7 +173,9 @@ describe('Directive: each()', () => {
           ${each(
             items,
             (item) => item,
-            (item) => html`<li>${item.value * 2}</li>`,
+            (item) => html`
+              <li>${item.value * 2}</li>
+            `,
           )}
         </ul>
       `;
@@ -173,7 +194,9 @@ describe('Directive: each()', () => {
           ${each(
             visibleItems,
             (n) => n,
-            (item) => html`<li>${item}</li>`,
+            (item) => html`
+              <li>${item}</li>
+            `,
           )}
         </ul>
       `;
@@ -199,7 +222,9 @@ describe('Directive: each()', () => {
           ${each(
             activeItems,
             (item) => item.id,
-            (item) => html`<li class="item">${item.value.name}</li>`,
+            (item) => html`
+              <li class="item">${item.value.name}</li>
+            `,
           )}
         </ul>
       `;
@@ -224,7 +249,9 @@ describe('Directive: each()', () => {
           ${each(
             items,
             (item) => item.id,
-            (item) => html`<span class="item">${item.value.value}</span>`,
+            (item) => html`
+              <span class="item">${item.value.value}</span>
+            `,
           )}
           <button class="after">After</button>
         </div>
@@ -259,7 +286,9 @@ describe('Directive: each()', () => {
           ${each(
             items,
             (item) => item.id,
-            (item) => html`<div class="item" data-id="${() => item.value.id}">${() => item.value.value}</div>`,
+            (item) => html`
+              <div class="item" data-id="${() => item.value.id}">${() => item.value.value}</div>
+            `,
           )}
         </div>
       `,
@@ -292,14 +321,17 @@ describe('Directive: each()', () => {
 
     register(
       'test-keyed-reorder',
-      () =>
-        html`<div>
+      () => html`
+        <div>
           ${each(
             items,
             (item) => item.id,
-            (item) => html`<span class="item">${item.value.value}</span>`,
+            (item) => html`
+              <span class="item">${item.value.value}</span>
+            `,
           )}
-        </div>`,
+        </div>
+      `,
     );
 
     const { flush, queryAll } = await mount('test-keyed-reorder');
@@ -329,8 +361,12 @@ describe('Directive: each()', () => {
             (item) => html`
               ${when(
                 () => item.value.mode === 'button',
-                () => html`<button class="entry" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</button>`,
-                () => html`<a class="entry" href="#" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</a>`,
+                () => html`
+                  <button class="entry" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</button>
+                `,
+                () => html`
+                  <a class="entry" href="#" ref=${(el: Element | null) => !el && cleanupSpy()}>Action</a>
+                `,
               )}
             `,
           )}
@@ -359,8 +395,12 @@ describe('Directive: each()', () => {
           ${each(
             items,
             (item) => item.id,
-            (item) => html`<li class="item">${item.value.value}</li>`,
-            () => html`<li class="empty">Empty</li>`,
+            (item) => html`
+              <li class="item">${item.value.value}</li>
+            `,
+            () => html`
+              <li class="empty">Empty</li>
+            `,
           )}
         </ul>
       `,
@@ -394,14 +434,17 @@ describe('Directive: each()', () => {
 
     await expect(
       mount(
-        () =>
-          html`<ul>
+        () => html`
+          <ul>
             ${each(
               items,
               (item) => item.id,
-              (item) => html`<li>${item.value.value}</li>`,
+              (item) => html`
+                <li>${item.value.value}</li>
+              `,
             )}
-          </ul>`,
+          </ul>
+        `,
       ),
     ).resolves.toBeDefined();
 
@@ -426,14 +469,17 @@ describe('Directive: each()', () => {
     ]);
 
     const { flush, query, queryAll } = await mount(
-      () =>
-        html`<ul>
+      () => html`
+        <ul>
           ${each(
             items,
             (item) => item.id,
-            (item) => html`<li class="item">${() => item.value.value}</li>`,
+            (item) => html`
+              <li class="item">${() => item.value.value}</li>
+            `,
           )}
-        </ul>`,
+        </ul>
+      `,
     );
 
     expect(query('ul')).not.toBeNull();
@@ -455,14 +501,17 @@ describe('Directive: each()', () => {
     ]);
 
     const { flush, queryAll } = await mount(
-      () =>
-        html`<ul>
+      () => html`
+        <ul>
           ${each(
             items,
             (item) => item.id,
-            (item) => html`<li class="item">${() => item.value.value}</li>`,
+            (item) => html`
+              <li class="item">${() => item.value.value}</li>
+            `,
           )}
-        </ul>`,
+        </ul>
+      `,
     );
 
     expect(queryAll('.item').map((node) => node.textContent)).toEqual(['A', 'B']);
@@ -491,14 +540,17 @@ describe('Directive: each()', () => {
   it('renders a plain static array as a one-time snapshot', async () => {
     const staticItems = [1, 2, 3];
     const { queryAll } = await mount(
-      () =>
-        html`<ul>
+      () => html`
+        <ul>
           ${each(
             staticItems,
             (n) => n,
-            (n) => html`<li class="item">${() => n.value}</li>`,
+            (n) => html`
+              <li class="item">${() => n.value}</li>
+            `,
           )}
-        </ul>`,
+        </ul>
+      `,
     );
 
     expect(queryAll('.item')).toHaveLength(3);
@@ -511,7 +563,11 @@ describe('Directive: raw()', () => {
   it('should render HTML without escaping', async () => {
     setRawSanitizer((s) => s);
 
-    const { query } = await mount(() => html`<div>${raw('<strong>bold</strong>')}</div>`);
+    const { query } = await mount(
+      () => html`
+        <div>${raw('<strong>bold</strong>')}</div>
+      `,
+    );
 
     expect(query('strong')?.textContent).toBe('bold');
   });
@@ -521,7 +577,11 @@ describe('Directive: raw()', () => {
 
     const content = signal('<b>one</b>');
 
-    const { flush, query } = await mount(() => html`<div>${raw(content)}</div>`);
+    const { flush, query } = await mount(
+      () => html`
+        <div>${raw(content)}</div>
+      `,
+    );
 
     expect(query('b')?.textContent).toBe('one');
 
@@ -541,7 +601,11 @@ describe('Directive: raw()', () => {
       return html.replace(/<script[^>]*>.*?<\/script>/gi, '');
     });
 
-    const { query } = await mount(() => html`<div>${raw('<b>safe</b><script>alert(1)</script>')}</div>`);
+    const { query } = await mount(
+      () => html`
+        <div>${raw('<b>safe</b><script>alert(1)</script>')}</div>
+      `,
+    );
 
     expect(sanitized).toHaveLength(1);
     expect(query('b')?.textContent).toBe('safe');
@@ -559,7 +623,11 @@ describe('Directive: raw()', () => {
     });
 
     const content = signal('<b>first</b>');
-    const { flush } = await mount(() => html`<div>${raw(content)}</div>`);
+    const { flush } = await mount(
+      () => html`
+        <div>${raw(content)}</div>
+      `,
+    );
 
     expect(calls).toHaveLength(1);
 
@@ -572,7 +640,11 @@ describe('Directive: raw()', () => {
   it('should warn in DEV mode when no sanitizer is registered', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    await mount(() => html`<div>${raw('<b>content</b>')}</div>`);
+    await mount(
+      () => html`
+        <div>${raw('<b>content</b>')}</div>
+      `,
+    );
 
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('setRawSanitizer'));
     warn.mockRestore();
@@ -584,11 +656,19 @@ describe('Directive: raw()', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     // Empty string does NOT warn (no content to inject)
-    await mount(() => html`<div>${raw('')}</div>`);
+    await mount(
+      () => html`
+        <div>${raw('')}</div>
+      `,
+    );
     expect(warn).not.toHaveBeenCalled();
 
     // Non-empty string DOES warn regardless of environment flag
-    await mount(() => html`<div>${raw('<em>text</em>')}</div>`);
+    await mount(
+      () => html`
+        <div>${raw('<em>text</em>')}</div>
+      `,
+    );
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('setRawSanitizer'));
     warn.mockRestore();
   });
@@ -597,7 +677,11 @@ describe('Directive: raw()', () => {
     setRawSanitizer((s) => s);
 
     const content = signal('<b>hello</b>');
-    const { flush, query } = await mount(() => html`<div>${raw(() => content.value)}</div>`);
+    const { flush, query } = await mount(
+      () => html`
+        <div>${raw(() => content.value)}</div>
+      `,
+    );
 
     expect(query('b')?.textContent).toBe('hello');
 
@@ -610,15 +694,27 @@ describe('Directive: raw()', () => {
   it('re-warns after setRawSanitizer(null) clears the sanitizer', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    await mount(() => html`<div>${raw('<b>first</b>')}</div>`);
+    await mount(
+      () => html`
+        <div>${raw('<b>first</b>')}</div>
+      `,
+    );
     expect(warnSpy).toHaveBeenCalledTimes(1);
 
     setRawSanitizer((s) => s);
-    await mount(() => html`<div>${raw('<b>second</b>')}</div>`);
+    await mount(
+      () => html`
+        <div>${raw('<b>second</b>')}</div>
+      `,
+    );
     expect(warnSpy).toHaveBeenCalledTimes(1);
 
     setRawSanitizer(null);
-    await mount(() => html`<div>${raw('<b>third</b>')}</div>`);
+    await mount(
+      () => html`
+        <div>${raw('<b>third</b>')}</div>
+      `,
+    );
     expect(warnSpy).toHaveBeenCalledTimes(2);
 
     warnSpy.mockRestore();
@@ -628,7 +724,11 @@ describe('Directive: raw()', () => {
     setRawSanitizer((s) => s);
 
     const content = signal('<b>initial</b>');
-    const { dispose, flush, query } = await mount(() => html`<div>${raw(() => content.value)}</div>`);
+    const { dispose, flush, query } = await mount(
+      () => html`
+        <div>${raw(() => content.value)}</div>
+      `,
+    );
 
     expect(query('b')?.textContent).toBe('initial');
 
@@ -646,8 +746,9 @@ describe('Directive: styleMap()', () => {
     const width = signal(12);
 
     const { flush, query } = await mount(
-      () =>
-        html`<div class="box" :style=${styleMap({ color, display: 'block', width: () => `${width.value}px` })}></div>`,
+      () => html`
+        <div class="box" :style=${styleMap({ color, display: 'block', width: () => `${width.value}px` })}></div>
+      `,
     );
 
     const box = query<HTMLElement>('.box');
@@ -666,7 +767,9 @@ describe('Directive: styleMap()', () => {
 
   it('should strip semicolons from values to prevent CSS declaration injection', async () => {
     const { query } = await mount(
-      () => html`<div class="box" :style=${styleMap({ color: 'red; display:none' })}></div>`,
+      () => html`
+        <div class="box" :style=${styleMap({ color: 'red; display:none' })}></div>
+      `,
     );
 
     const style = query<HTMLElement>('.box')?.getAttribute('style') ?? '';
@@ -678,7 +781,9 @@ describe('Directive: styleMap()', () => {
 
   it('should strip braces from values', async () => {
     const { query } = await mount(
-      () => html`<div class="box" :style=${styleMap({ color: 'red} body{display:none' })}></div>`,
+      () => html`
+        <div class="box" :style=${styleMap({ color: 'red} body{display:none' })}></div>
+      `,
     );
 
     const style = query<HTMLElement>('.box')?.getAttribute('style') ?? '';
@@ -689,7 +794,9 @@ describe('Directive: styleMap()', () => {
 
   it('should strip semicolons from property name keys to prevent declaration injection', async () => {
     const { query } = await mount(
-      () => html`<div class="box" :style=${styleMap({ 'color; background': 'red' })}></div>`,
+      () => html`
+        <div class="box" :style=${styleMap({ 'color; background': 'red' })}></div>
+      `,
     );
 
     const style = query<HTMLElement>('.box')?.getAttribute('style') ?? '';
@@ -700,7 +807,11 @@ describe('Directive: styleMap()', () => {
   });
 
   it('should drop entries with empty property names after sanitization', async () => {
-    const { query } = await mount(() => html`<div class="box" :style=${styleMap({ ';{}': 'red' })}></div>`);
+    const { query } = await mount(
+      () => html`
+        <div class="box" :style=${styleMap({ ';{}': 'red' })}></div>
+      `,
+    );
 
     const style = query<HTMLElement>('.box')?.getAttribute('style') ?? '';
 
@@ -713,7 +824,11 @@ describe('Directive: classMap()', () => {
   it('should join truthy class names', async () => {
     const active = signal(true);
     const hidden = signal(false);
-    const { flush, query } = await mount(() => html`<div :class=${classMap({ active, hidden, static: true })}></div>`);
+    const { flush, query } = await mount(
+      () => html`
+        <div :class=${classMap({ active, hidden, static: true })}></div>
+      `,
+    );
 
     expect(query('div')?.getAttribute('class')).toContain('active');
     expect(query('div')?.getAttribute('class')).toContain('static');
@@ -727,7 +842,11 @@ describe('Directive: classMap()', () => {
   });
 
   it('should strip whitespace from class name keys to prevent token injection', async () => {
-    const { query } = await mount(() => html`<div :class=${classMap({ 'foo bar': true })}></div>`);
+    const { query } = await mount(
+      () => html`
+        <div :class=${classMap({ 'foo bar': true })}></div>
+      `,
+    );
 
     const cls = query('div')?.getAttribute('class') ?? '';
 
@@ -740,14 +859,19 @@ describe('Directive: when()', () => {
   it('should switch branches reactively', async () => {
     const enabled = signal(true);
     const { flush, query } = await mount(
-      () =>
-        html`<section>
+      () => html`
+        <section>
           ${when(
             enabled,
-            () => html`<p class="on">On</p>`,
-            () => html`<p class="off">Off</p>`,
+            () => html`
+              <p class="on">On</p>
+            `,
+            () => html`
+              <p class="off">Off</p>
+            `,
           )}
-        </section>`,
+        </section>
+      `,
     );
 
     expect(query('.on')?.textContent).toBe('On');
@@ -765,22 +889,27 @@ describe('Directive: when()', () => {
     let offMountCount = 0;
 
     const { flush, queryAll } = await mount(
-      () =>
-        html`<section>
+      () => html`
+        <section>
           ${when(
             enabled,
             () => {
               onMountCount++;
 
-              return html`<p class="on">On</p>`;
+              return html`
+                <p class="on">On</p>
+              `;
             },
             () => {
               offMountCount++;
 
-              return html`<p class="off">Off</p>`;
+              return html`
+                <p class="off">Off</p>
+              `;
             },
           )}
-        </section>`,
+        </section>
+      `,
     );
 
     for (let i = 0; i < 5; i++) {
@@ -798,14 +927,19 @@ describe('Directive: when()', () => {
   it('should render reactive bindings inside branches', async () => {
     const title = signal('Hello');
     const { flush, query } = await mount(
-      () =>
-        html`<div>
+      () => html`
+        <div>
           ${when(
             false,
-            () => html`<span class="on">${() => title.value}</span>`,
-            () => html`<span class="off">${() => title.value}</span>`,
+            () => html`
+              <span class="on">${() => title.value}</span>
+            `,
+            () => html`
+              <span class="off">${() => title.value}</span>
+            `,
           )}
-        </div>`,
+        </div>
+      `,
     );
 
     expect(query('.off')?.textContent?.trim()).toBe('Hello');
@@ -818,14 +952,19 @@ describe('Directive: when()', () => {
 
   it('renders truthy branch immediately for a static true condition', async () => {
     const { query } = await mount(
-      () =>
-        html`<div>
+      () => html`
+        <div>
           ${when(
             true,
-            () => html`<p class="yes">Yes</p>`,
-            () => html`<p class="no">No</p>`,
+            () => html`
+              <p class="yes">Yes</p>
+            `,
+            () => html`
+              <p class="no">No</p>
+            `,
           )}
-        </div>`,
+        </div>
+      `,
     );
 
     expect(query('.yes')?.textContent).toBe('Yes');
@@ -834,14 +973,19 @@ describe('Directive: when()', () => {
 
   it('renders falsy branch immediately for a static false condition', async () => {
     const { query } = await mount(
-      () =>
-        html`<div>
+      () => html`
+        <div>
           ${when(
             false,
-            () => html`<p class="yes">Yes</p>`,
-            () => html`<p class="no">No</p>`,
+            () => html`
+              <p class="yes">Yes</p>
+            `,
+            () => html`
+              <p class="no">No</p>
+            `,
           )}
-        </div>`,
+        </div>
+      `,
     );
 
     expect(query('.no')?.textContent).toBe('No');
@@ -849,7 +993,18 @@ describe('Directive: when()', () => {
   });
 
   it('renders nothing for static false with no falsy branch', async () => {
-    const { query } = await mount(() => html`<div>${when(false, () => html`<p class="yes">Yes</p>`)}</div>`);
+    const { query } = await mount(
+      () => html`
+        <div>
+          ${when(
+            false,
+            () => html`
+              <p class="yes">Yes</p>
+            `,
+          )}
+        </div>
+      `,
+    );
 
     expect(query('.yes')).toBeNull();
   });
@@ -857,14 +1012,19 @@ describe('Directive: when()', () => {
   it('getter-fn: DOM stops reacting after component dispose (computed disposed)', async () => {
     const flag = signal(true);
     const { dispose, element, flush, query } = await mount(
-      () =>
-        html`<div>
+      () => html`
+        <div>
           ${when(
             () => flag.value,
-            () => html`<p class="on">On</p>`,
-            () => html`<p class="off">Off</p>`,
+            () => html`
+              <p class="on">On</p>
+            `,
+            () => html`
+              <p class="off">Off</p>
+            `,
           )}
-        </div>`,
+        </div>
+      `,
     );
 
     expect(query('.on')).not.toBeNull();
@@ -885,14 +1045,22 @@ describe('Directive: when()', () => {
 describe('Directive: model()', () => {
   it('syncs text input value from signal to DOM', async () => {
     const name = signal('Alice');
-    const { query } = await mount(() => html`<input class="f" type="text" ${model(name)} />`);
+    const { query } = await mount(
+      () => html`
+        <input class="f" type="text" ${model(name)} />
+      `,
+    );
 
     expect(query<HTMLInputElement>('.f')?.value).toBe('Alice');
   });
 
   it('syncs text input DOM value back to signal on input event', async () => {
     const name = signal('');
-    const { act, query } = await mount(() => html`<input class="f" type="text" ${model(name)} />`);
+    const { act, query } = await mount(
+      () => html`
+        <input class="f" type="text" ${model(name)} />
+      `,
+    );
     const input = query<HTMLInputElement>('.f')!;
 
     await act(() => {
@@ -905,14 +1073,22 @@ describe('Directive: model()', () => {
 
   it('syncs number input value from signal to DOM', async () => {
     const count = signal(42);
-    const { query } = await mount(() => html`<input class="f" type="number" ${model(count)} />`);
+    const { query } = await mount(
+      () => html`
+        <input class="f" type="number" ${model(count)} />
+      `,
+    );
 
     expect(query<HTMLInputElement>('.f')?.value).toBe('42');
   });
 
   it('syncs number input DOM value back to signal as a number', async () => {
     const count = signal(0);
-    const { act, query } = await mount(() => html`<input class="f" type="number" ${model(count)} />`);
+    const { act, query } = await mount(
+      () => html`
+        <input class="f" type="number" ${model(count)} />
+      `,
+    );
     const input = query<HTMLInputElement>('.f')!;
 
     await act(() => {
@@ -926,7 +1102,11 @@ describe('Directive: model()', () => {
 
   it('sets signal to 0 when number input is cleared', async () => {
     const count = signal(5);
-    const { act, query } = await mount(() => html`<input class="f" type="number" ${model(count)} />`);
+    const { act, query } = await mount(
+      () => html`
+        <input class="f" type="number" ${model(count)} />
+      `,
+    );
     const input = query<HTMLInputElement>('.f')!;
 
     await act(() => {
@@ -939,7 +1119,11 @@ describe('Directive: model()', () => {
 
   it('syncs range input DOM value back to signal as a number', async () => {
     const vol = signal(50);
-    const { act, query } = await mount(() => html`<input class="f" type="range" ${model(vol)} />`);
+    const { act, query } = await mount(
+      () => html`
+        <input class="f" type="range" ${model(vol)} />
+      `,
+    );
     const input = query<HTMLInputElement>('.f')!;
 
     await act(() => {
@@ -953,14 +1137,22 @@ describe('Directive: model()', () => {
 
   it('syncs checkbox checked state from signal to DOM', async () => {
     const checked = signal(true);
-    const { query } = await mount(() => html`<input class="f" type="checkbox" ${model(checked)} />`);
+    const { query } = await mount(
+      () => html`
+        <input class="f" type="checkbox" ${model(checked)} />
+      `,
+    );
 
     expect(query<HTMLInputElement>('.f')?.checked).toBe(true);
   });
 
   it('syncs checkbox DOM state back to signal as boolean', async () => {
     const checked = signal(false);
-    const { act, query } = await mount(() => html`<input class="f" type="checkbox" ${model(checked)} />`);
+    const { act, query } = await mount(
+      () => html`
+        <input class="f" type="checkbox" ${model(checked)} />
+      `,
+    );
     const input = query<HTMLInputElement>('.f')!;
 
     await act(() => {
@@ -1069,14 +1261,22 @@ describe('Directive: model()', () => {
 
   it('syncs textarea value from signal to DOM', async () => {
     const text = signal('hello');
-    const { query } = await mount(() => html`<textarea class="f" ${model(text)}></textarea>`);
+    const { query } = await mount(
+      () => html`
+        <textarea class="f" ${model(text)}></textarea>
+      `,
+    );
 
     expect(query<HTMLTextAreaElement>('.f')?.value).toBe('hello');
   });
 
   it('syncs textarea DOM value back to signal on input event', async () => {
     const text = signal('');
-    const { act, query } = await mount(() => html`<textarea class="f" ${model(text)}></textarea>`);
+    const { act, query } = await mount(
+      () => html`
+        <textarea class="f" ${model(text)}></textarea>
+      `,
+    );
     const ta = query<HTMLTextAreaElement>('.f')!;
 
     await act(() => {
@@ -1089,7 +1289,11 @@ describe('Directive: model()', () => {
 
   it('stops syncing signal → DOM and DOM → signal once the host disconnects', async () => {
     const name = signal('Alice');
-    const { dispose, element, flush, query } = await mount(() => html`<input class="f" type="text" ${model(name)} />`);
+    const { dispose, element, flush, query } = await mount(
+      () => html`
+        <input class="f" type="text" ${model(name)} />
+      `,
+    );
     const input = query<HTMLInputElement>('.f')!;
 
     dispose();
@@ -1110,7 +1314,11 @@ describe('Directive: model()', () => {
 describe('Directive: live()', () => {
   it('should not clobber user-typed input when app state is stale', async () => {
     const model = signal('server');
-    const { query } = await mount(() => html`<input class="field" :value=${live(model)} @input=${() => undefined} />`);
+    const { query } = await mount(
+      () => html`
+        <input class="field" :value=${live(model)} @input=${() => undefined} />
+      `,
+    );
 
     const input = query<HTMLInputElement>('.field');
 
@@ -1126,7 +1334,9 @@ describe('Directive: live()', () => {
   it('should not clobber user-checked input when app state is stale', async () => {
     const model = signal(true);
     const { flush, query } = await mount(
-      () => html`<input class="field" type="checkbox" ?checked=${live(model)} @change=${() => undefined} />`,
+      () => html`
+        <input class="field" type="checkbox" ?checked=${live(model)} @change=${() => undefined} />
+      `,
     );
 
     const input = query<HTMLInputElement>('.field');
@@ -1139,6 +1349,31 @@ describe('Directive: live()', () => {
     await flush();
 
     expect(input.checked).toBe(false);
+  });
+
+  it('is per-binding: other bindings of the same signal are unaffected', async () => {
+    const model = signal('server');
+    const { query } = await mount(
+      () => html`
+        <input class="live-field" :value=${live(model)} />
+        <input class="plain-field" :value=${model} />
+      `,
+    );
+
+    const liveInput = query<HTMLInputElement>('.live-field');
+    const plainInput = query<HTMLInputElement>('.plain-field');
+
+    if (!liveInput || !plainInput) throw new Error('Expected inputs to be rendered');
+
+    // User diverges the live input's DOM value from the binding's last write.
+    liveInput.value = 'user-typed';
+
+    model.value = 'new-server';
+
+    // The live binding skips the stale write; the plain binding of the same
+    // signal still receives it (live() marks the binding site, not the signal).
+    expect(liveInput.value).toBe('user-typed');
+    expect(plainInput.value).toBe('new-server');
   });
 });
 
@@ -1154,7 +1389,11 @@ describe('Directive authoring: createDirectiveResult() / createSpreadObject()', 
         registerCleanup(() => el.remove());
       });
 
-    const { query } = await mount(() => html`<div>${banner()}</div>`);
+    const { query } = await mount(
+      () => html`
+        <div>${banner()}</div>
+      `,
+    );
 
     expect(query('.custom-banner')?.textContent).toBe('from a custom directive');
   });
@@ -1164,7 +1403,11 @@ describe('Directive authoring: createDirectiveResult() / createSpreadObject()', 
     // same { mount } shape as DirectiveResult, without the factory's brand, must not be treated
     // as a directive by the template engine.
     const fakeDirective = { mount: () => {} };
-    const { element } = await mount(() => html`<div>${fakeDirective}</div>`);
+    const { element } = await mount(
+      () => html`
+        <div>${fakeDirective}</div>
+      `,
+    );
 
     expect(element.shadowRoot?.textContent).toContain('[object Object]');
   });
@@ -1179,7 +1422,11 @@ describe('Directive authoring: createDirectiveResult() / createSpreadObject()', 
         registerCleanup(() => el.removeAttribute('data-marked'));
       });
 
-    const { query } = await mount(() => html`<input class="field" ${markApplied()} />`);
+    const { query } = await mount(
+      () => html`
+        <input class="field" ${markApplied()} />
+      `,
+    );
 
     const input = query<HTMLInputElement>('.field');
 

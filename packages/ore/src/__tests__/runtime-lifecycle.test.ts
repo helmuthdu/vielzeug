@@ -25,7 +25,9 @@ describe('runtime lifecycle: onMounted', () => {
     await mount((_props) => {
       onMounted(spy);
 
-      return html`<div>Test</div>`;
+      return html`
+        <div>Test</div>
+      `;
     });
     expect(spy).toHaveBeenCalledTimes(1);
   });
@@ -38,7 +40,9 @@ describe('runtime lifecycle: onMounted', () => {
         hasElement = true;
       });
 
-      return html`<div>Test</div>`;
+      return html`
+        <div>Test</div>
+      `;
     });
     expect(hasElement).toBe(true);
   });
@@ -49,7 +53,9 @@ describe('runtime lifecycle: onMounted', () => {
     const { dispose } = await mount((_props) => {
       onMounted(() => spy);
 
-      return html`<div>Test</div>`;
+      return html`
+        <div>Test</div>
+      `;
     });
 
     expect(spy).not.toHaveBeenCalled();
@@ -69,7 +75,9 @@ describe('runtime lifecycle: execution order', () => {
         return () => order.push('unmount');
       });
 
-      return html`<div>Test</div>`;
+      return html`
+        <div>Test</div>
+      `;
     });
 
     dispose();
@@ -83,7 +91,9 @@ describe('runtime lifecycle: onCleanup', () => {
     const { dispose } = await mount((_props) => {
       onCleanup(spy);
 
-      return html`<div>Test</div>`;
+      return html`
+        <div>Test</div>
+      `;
     });
 
     expect(spy).not.toHaveBeenCalled();
@@ -98,7 +108,9 @@ describe('runtime lifecycle: onCleanup', () => {
         cleaned = true;
       });
 
-      return html`<div>Test</div>`;
+      return html`
+        <div>Test</div>
+      `;
     });
 
     dispose();
@@ -111,7 +123,9 @@ describe('runtime lifecycle: onCleanup', () => {
       onCleanup(() => calls.push(1));
       onCleanup(() => calls.push(2));
 
-      return html`<div>Test</div>`;
+      return html`
+        <div>Test</div>
+      `;
     });
 
     dispose();
@@ -134,7 +148,9 @@ describe('runtime lifecycle: mount + cleanup integration', () => {
         return () => clearInterval(interval);
       });
 
-      return html`<div>${count}</div>`;
+      return html`
+        <div>${count}</div>
+      `;
     });
 
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -154,7 +170,9 @@ describe('onEvent()', () => {
         onEvent(null, 'click', () => {});
         onEvent(undefined, 'click', () => {});
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       }),
     ).resolves.toBeDefined();
   });
@@ -174,7 +192,9 @@ describe('onEvent()', () => {
         return () => btn.remove();
       });
 
-      return html`<div></div>`;
+      return html`
+        <div></div>
+      `;
     });
 
     btn.dispatchEvent(new Event('click'));
@@ -197,7 +217,9 @@ describe('onElement()', () => {
         seen.push(el);
       });
 
-      return html`<button ref=${elRef}>Click</button>`;
+      return html`
+        <button ref=${elRef}>Click</button>
+      `;
     });
 
     expect(seen).toHaveLength(1);
@@ -212,7 +234,16 @@ describe('onElement()', () => {
     const { act } = await mount((_props) => {
       onElement(elRef, () => cleanupSpy);
 
-      return html`<div>${() => (show.value ? html`<button ref=${elRef}>Btn</button>` : html``)}</div>`;
+      return html`
+        <div>
+          ${() =>
+            show.value
+              ? html`
+                  <button ref=${elRef}>Btn</button>
+                `
+              : html``}
+        </div>
+      `;
     });
 
     expect(cleanupSpy).not.toHaveBeenCalled();
@@ -238,7 +269,9 @@ describe('onFormReset()', () => {
         onFormReset(() => calls.push(1));
         onFormReset(() => calls.push(2));
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       },
       { componentOptions: { formAssociated: true }, container: form },
     );
@@ -264,7 +297,9 @@ describe('onFormReset()', () => {
       () => {
         onFormReset(spy);
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       },
       { componentOptions: { formAssociated: true }, container: form },
     );
@@ -306,7 +341,9 @@ describe('async setup: no onError recovery', () => {
       },
       {
         componentOptions: {
-          onError: () => html`<p class="error">Error</p>`,
+          onError: () => html`
+            <p class="error">Error</p>
+          `,
         },
       },
     );
@@ -328,9 +365,17 @@ describe('async setup: stale result discard on disconnect', () => {
       async () => {
         await blocker;
 
-        return html`<p class="content">Loaded</p>`;
+        return html`
+          <p class="content">Loaded</p>
+        `;
       },
-      { componentOptions: { loading: () => html`<p class="loading">Loading...</p>` } },
+      {
+        componentOptions: {
+          loading: () => html`
+            <p class="loading">Loading...</p>
+          `,
+        },
+      },
     );
 
     // Component is in LOADING state — loading template visible
@@ -376,7 +421,9 @@ describe('imperative cleanup pattern', () => {
         });
       });
 
-      return html`<div></div>`;
+      return html`
+        <div></div>
+      `;
     });
 
     // Replacing cleanup disposes the previous one.
@@ -401,7 +448,9 @@ describe('inject() inside onMounted (C3)', () => {
           resolved = inject(KEY);
         });
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       },
       { componentOptions: {} },
     );
@@ -417,7 +466,9 @@ describe('lifecycle hook aliases (R9)', () => {
     await mount((_props) => {
       onMounted(spy);
 
-      return html`<div></div>`;
+      return html`
+        <div></div>
+      `;
     });
 
     expect(spy).toHaveBeenCalledTimes(1);
@@ -429,7 +480,9 @@ describe('lifecycle hook aliases (R9)', () => {
     const { dispose } = await mount((_props) => {
       onCleanup(spy);
 
-      return html`<div></div>`;
+      return html`
+        <div></div>
+      `;
     });
 
     expect(spy).not.toHaveBeenCalled();
@@ -446,7 +499,9 @@ describe('lifecycle hook aliases (R9)', () => {
         provide(KEY, 42);
         resolved = inject(KEY);
 
-        return html`<div></div>`;
+        return html`
+          <div></div>
+        `;
       },
       { componentOptions: {} },
     );
@@ -490,7 +545,9 @@ describe('testing/flush(): deterministic pending-work draining', () => {
 
       registerNested(DEPTH);
 
-      return html`<div></div>`;
+      return html`
+        <div></div>
+      `;
     });
 
     await flush();
@@ -512,9 +569,17 @@ describe('testing/flush(): deterministic pending-work draining', () => {
       async () => {
         await blocker;
 
-        return html`<p class="loaded"></p>`;
+        return html`
+          <p class="loaded"></p>
+        `;
       },
-      { componentOptions: { loading: () => html`<p class="loading"></p>` } },
+      {
+        componentOptions: {
+          loading: () => html`
+            <p class="loading"></p>
+          `,
+        },
+      },
     );
 
     await expect(flush()).resolves.toBeUndefined();

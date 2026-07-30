@@ -28,21 +28,19 @@ All symbols below (except `useField`/`createFormContext`, under `@vielzeug/ore/f
 | `onEvent(target, …)`   | Scoped event listener with auto-cleanup               | Setup only     | No-ops on null target; removed on disconnect                              |
 | `useField(options)`    | Wire signal to form `ElementInternals`                | Setup only     | Requires `formAssociated: true` on the component definition; `@vielzeug/ore/forms` |
 | `onFormReset(fn)`      | Run work when the ancestor `<form>` resets            | Setup only     | Fires every reset (not one-shot); only for `formAssociated: true` components |
-| `aria(target, config)` | Reactively sync ARIA attributes to any element        | Setup only     | Static values applied once; getter functions tracked as effects; auto-cleanup on disconnect |
 | `useEmit<Emits>()`     | Typed `emit()` bound to the current host              | Setup only     | Call once per component; returns `dispatchEvent`'s boolean (`false` if a listener called `preventDefault()`) |
 | `useSlots<SlotNames>()`| Reactive slot presence/element signals                | Setup only     | Safe to call more than once — the underlying registry is created once    |
-| `getHost()`            | The current component's host element                 | Setup only     | Prefer a higher-level helper (`bind`, `aria`, …) when one exists          |
+| `getHost()`            | The current component's host element                 | Setup only     | Prefer a higher-level helper (`bind`, …) when one exists                  |
 
 ## Package Entry Points
 
 | Import                       | Purpose                                                            |
 | ---------------------------- | ------------------------------------------------------------------ |
 | `@vielzeug/ore`            | Core authoring/runtime API, including the everyday template directives (`each`, `when`, `classMap`, `styleMap`, `model`) |
-| `@vielzeug/ore/devtools`   | `debugFlush` — verbose flush for timing diagnostics                |
 | `@vielzeug/ore/directives` | The advanced/niche directives (`raw`, `live`) plus the custom-directive authoring API (`createDirectiveResult`, `createSpreadObject`) |
 | `@vielzeug/ore/forms`      | Form-association helpers (`useField`, `createFormContext`)        |
 | `@vielzeug/ore/observers`  | Resize, intersection, mutation, and media observers                |
-| `@vielzeug/ore/testing`    | DOM-oriented test helpers                                          |
+| `@vielzeug/ore/testing`    | DOM-oriented test helpers, plus `debugFlush` for timing diagnostics |
 
 ## Core Component API
 
@@ -252,20 +250,25 @@ bind(
 
 Event listener options (`once`, `capture`, `passive`) are also accepted in the second argument. Cleanup is auto-registered with the component scope when called during setup.
 
-### aria()
+### Reactive ARIA attributes
 
-For reactive ARIA attribute syncing, use `aria(target, config)`. Shorthand keys are normalised to `aria-*` automatically (`expanded` → `aria-expanded`; `role` is passed verbatim):
+For reactive ARIA attribute syncing, use `bind({ aria: config }, { target })`. Shorthand keys are normalised to `aria-*` automatically (`expanded` → `aria-expanded`; `role` is passed verbatim):
 
 ```ts
 // Inside setup — cleanup auto-registered
-aria(triggerEl, {
-  expanded: () => isOpen.value,
-  controls: panelId,
-  haspopup: 'listbox',
-});
+bind(
+  {
+    aria: {
+      expanded: () => isOpen.value,
+      controls: panelId,
+      haspopup: 'listbox',
+    },
+  },
+  { target: triggerEl },
+);
 
-// Manage cleanup manually — aria() always returns a cleanup fn
-const stopAria = aria(triggerEl, { expanded: () => isOpen.value });
+// Manage cleanup manually — bind() always returns a cleanup fn
+const stopAria = bind({ aria: { expanded: () => isOpen.value } }, { target: triggerEl });
 // Call stopAria() when the trigger is swapped out
 ```
 
@@ -326,8 +329,8 @@ type FormFieldHandle = {
   checkValidity(): boolean;
   readonly internals: ElementInternals;
   reportValidity(): boolean;
+  /** Set (non-empty message) or clear (empty string) a custom validity error. */
   setCustomValidity(message: string): void;
-  setValidity: ElementInternals['setValidity'];
 };
 ```
 
@@ -380,11 +383,10 @@ Import from `@vielzeug/ore/testing`.
 | ------------------------ | ------------------------------------------------------------------------------------------ |
 | `mount(setup, options?)` | Mount a component and return a test fixture                                                |
 | `cleanup()`              | Remove all mounted elements and reset test state                                           |
-| `install(afterEach)`     | Register auto-cleanup and the `ElementInternals`/`FormData`/`<form>.reset()` jsdom polyfill (see below); pass `afterEach` from your test framework |
-| `installFormInternalsPolyfill()` | Called automatically by `install()`. Call directly only if you need the polyfill without auto-cleanup |
+| `install(afterEach, options?)` | Register auto-cleanup; pass `{ formInternals: true }` to also install the `ElementInternals`/`FormData`/`<form>.reset()` jsdom polyfill (see below) |
+| `installFormInternalsPolyfill()` | Installs the form-internals polyfill directly (returns an `uninstall()` that restores every patched global). Usually called via `install(afterEach, { formInternals: true })` |
 | `walkFlatTree(root, visit)` | Walks the flat tree (expanding `<slot>` via `assignedElements()`) — for finding slotted content across a shadow boundary that `querySelectorAll()` can't cross |
 | `flush(options?)`        | Drain reactive updates and animation frames                                                |
-| `FLUSH_DEEP`             | Pre-built options for deep async chains (`maxTurns: 12`)                                   |
 | `mock(tag, template?)`   | Register a no-op stub custom element                                                       |
 | `renderHook(setup)`      | Run lifecycle hooks in isolation; overload accepts `propDefs` as first arg for typed props |
 | `fire.*`                 | Synchronous DOM event dispatchers                                                          |
@@ -393,9 +395,9 @@ Import from `@vielzeug/ore/testing`.
 | `waitForEvent(el, name)` | Resolve when the target element emits the named event                                      |
 | `within(element)`        | Scoped query helpers (`query`, `queryAll`, …)                                              |
 
-> **Test isolation:** `cleanup()` resets mounted elements, `live()` signal tracking, and the raw HTML sanitizer. Call it in `afterEach` to prevent state leaking between tests.
+> **Test isolation:** `cleanup()` removes mounted elements and resets all cross-test ore state (the raw HTML sanitizer, stylesheet cache, ID counters) via `resetOreForTests()`. Call it in `afterEach` (or use `install()`) to prevent state leaking between tests.
 
-> **Form-associated component testing:** jsdom implements none of the `ElementInternals` form-association API — `install()` polyfills `setFormValue`/`setValidity`/`checkValidity`/`reportValidity`/`validationMessage`/`states`, mixes `checkValidity`/`reportValidity`/`validity`/`validationMessage` onto the host element itself (real browsers do this for any `formAssociated: true` element), makes `FormData` collect a form-associated element's set value, and makes `<form>.reset()` invoke `formResetCallback()`. Every patch is a guarded no-op when its target already exists, so it's safe to call `install()` even in a suite with no form-associated components — and safe for a downstream package (e.g. a component library built on `ore`) to rely on instead of hand-rolling its own copy.
+> **Form-associated component testing:** jsdom implements none of the `ElementInternals` form-association API — `install(afterEach, { formInternals: true })` polyfills `setFormValue`/`setValidity`/`checkValidity`/`reportValidity`/`validationMessage`/`validity`/`states`, mixes `checkValidity`/`reportValidity`/`validity`/`validationMessage` onto the host element itself (real browsers do this for any `formAssociated: true` element), makes `FormData` collect a form-associated element's set value, and makes `<form>.reset()` invoke `formResetCallback()`. Every patch is a guarded no-op when its target already exists, and `installFormInternalsPolyfill()` returns an `uninstall()` that restores every patched global. The polyfill is opt-in (`{ formInternals: true }`) because the patches are global — suites without form-associated components shouldn't carry them. A downstream package (e.g. a component library built on `ore`) should rely on this instead of hand-rolling its own copy.
 
 #### `Fixture` interface
 
@@ -487,7 +489,6 @@ declare function onEvent(
 declare function onFormReset(fn: () => void): void; // Runs on every ancestor <form> reset; formAssociated only
 declare function watchEffect(fn: EffectCallback): () => void; // Scoped reactive effect; auto-cleaned on disconnect
 declare function bind(config: HostBindConfig, options?: BindOptions): () => void; // Bindings for host or any target element
-declare function aria(target: Element, config: AriaConfig): () => void; // Reactive ARIA attr sync; auto-cleanup on disconnect
 declare function provide<T>(key: InjectionKey<T>, value: T): void; // Register a context value on the host element
 declare function inject<T>(key: InjectionKey<T>, fallback?: T): T | undefined;
 declare function getHost(): HTMLElement; // The current component's host element

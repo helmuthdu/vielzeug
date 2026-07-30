@@ -118,6 +118,15 @@ const detectSlot = (str: string): DetectedSlot => {
 const templateCache = new WeakMap<TemplateStringsArray, CompiledStaticTemplate>();
 
 /**
+ * Matches a string that ends in an attribute-assignment context, e.g. `...attr=`,
+ * `...:value=`, `...@click=`, `...?disabled=`. Used to decide whether a quote
+ * immediately before an interpolation is an attribute-value quote (strip it) or a
+ * literal text quote (keep it) — previously every adjacent quote was stripped, so
+ * `` html`"${value}"` `` silently lost its surrounding quotes.
+ */
+const ATTR_VALUE_CONTEXT_RE = /[@?:]?[a-zA-Z_][-a-zA-Z0-9_.]*\s*=\s*$/;
+
+/**
  * Pre-process template strings to strip surrounding attribute quotes and the
  * closing `>` that follows a dynamic tag-name slot. This lets the main loop
  * operate on clean strings with no per-iteration state flags.
@@ -130,7 +139,7 @@ const normalizeTemplateStrings = (strings: TemplateStringsArray): string[] => {
     const lastChar = s[s.length - 1];
 
     // Strip wrapping attribute quotes: attr="${value}" → attr=${value}
-    if (lastChar === '"' || lastChar === "'") {
+    if ((lastChar === '"' || lastChar === "'") && ATTR_VALUE_CONTEXT_RE.test(s.slice(0, -1))) {
       out[i] = s.slice(0, -1);
 
       const next = out[i + 1];
@@ -152,6 +161,15 @@ const normalizeTemplateStrings = (strings: TemplateStringsArray): string[] => {
   return out;
 };
 
+/**
+ * Attribute names that mark a binding target element, and the comment prefix for
+ * node-slot anchors. Namespaced (`data-ore-*` / `ore:N`) so user-authored markup in
+ * static template regions can never collide with them — a plain `u` attribute or a
+ * numeric comment was previously hijacked as a binding marker and stripped.
+ */
+const ELEMENT_MARKER_ATTR = 'data-ore-b';
+const COMMENT_MARKER_RE = /^ore:(\d+)$/;
+
 const walkNode = (
   node: Node,
   path: number[],
@@ -160,17 +178,18 @@ const walkNode = (
 ): void => {
   if (node.nodeType === Node.ELEMENT_NODE) {
     const el = node as Element;
-    const marker = el.getAttribute('u');
+    const marker = el.getAttribute(ELEMENT_MARKER_ATTR);
 
     if (marker !== null) {
       elementPaths.set(Number(marker), [...path]);
-      el.removeAttribute('u');
+      el.removeAttribute(ELEMENT_MARKER_ATTR);
     }
   } else if (node.nodeType === Node.COMMENT_NODE) {
     const content = (node as Comment).nodeValue;
+    const m = content !== null ? COMMENT_MARKER_RE.exec(content) : null;
 
-    if (content !== null && /^\d+$/.test(content)) {
-      commentPaths.set(Number(content), [...path]);
+    if (m) {
+      commentPaths.set(Number(m[1]), [...path]);
     }
   }
 
@@ -202,7 +221,7 @@ const buildStaticTemplate = (strings: TemplateStringsArray): CompiledStaticTempl
       // Remove trailing '<' from prefix and open placeholder element
       const prefixWithoutAngle = raw.replace(/<\s*$/, '');
 
-      html += prefixWithoutAngle + `<ore-dyn-${id} u="${id}"`;
+      html += prefixWithoutAngle + `<ore-dyn-${id} ${ELEMENT_MARKER_ATTR}="${id}"`;
       slots.push({ elementId: id, kind: SlotKind.TAG_NAME });
     } else if (slot.kind === SlotKind.CLOSE_TAG) {
       // Dynamic closing tag: close the matching placeholder element. An empty
@@ -220,7 +239,7 @@ const buildStaticTemplate = (strings: TemplateStringsArray): CompiledStaticTempl
       slots.push({ kind: SlotKind.CLOSE_TAG });
       activeElementId = undefined;
     } else if (slot.kind === SlotKind.NODE) {
-      html += slot.prefix + `<!--${commentCounter}-->`;
+      html += slot.prefix + `<!--ore:${commentCounter}-->`;
       slots.push({ commentId: commentCounter, kind: SlotKind.NODE });
       commentCounter++;
       activeElementId = undefined;
@@ -230,7 +249,7 @@ const buildStaticTemplate = (strings: TemplateStringsArray): CompiledStaticTempl
 
       if (needsNewMarker) {
         activeElementId = elementCounter++;
-        html += `${slot.prefix} u="${activeElementId}"`;
+        html += `${slot.prefix} ${ELEMENT_MARKER_ATTR}="${activeElementId}"`;
       } else {
         html += slot.prefix;
       }

@@ -2,31 +2,32 @@
  * template/bindings.ts — Runtime binding appliers.
  *
  * Responsibilities:
- * - Apply each Binding variant to the live DOM (text, attr, event, html, ref,
+ * - Apply each Binding variant to the live DOM (attr, event, html, ref,
  *   directive, spread).
  * - Manage reactive effects and cleanup registration.
  * - Expose `applyBinding()` as the single dispatch entry point.
+ * - Own the one signal-to-form-control write path (`syncFormControl`) shared by
+ *   the attr engine and `model()` — there is no second implementation of
+ *   input value/checked semantics anywhere else in the package.
  */
 
 import { computed, effect as rawEffect, isReactive, type Readable, untrack } from '@vielzeug/ripple';
 
-import { isLiveSignal } from '../directives/live';
+import { isLiveBinding } from '../directives/live';
 import { invariant } from '../errors';
-import { getPropMeta } from '../props';
+import { getPropMeta, type PropMeta } from '../props';
+import { createReplaceableSlot, isStructuredValue, listen, setAttr } from '../utils/dom';
 import {
   type AttrBinding,
-  type AttrPropMeta,
   type Binding,
   type DirectiveBinding,
   type EventBinding,
   type HtmlBinding,
   type HtmlBindingValue,
-  isHtmlResult,
   type RefBinding,
   type SpreadBinding,
-  type TextBinding,
-} from '../types/bindings';
-import { createReplaceableSlot, isStructuredValue, listen, setAttr } from '../utils/dom';
+} from './binding-types';
+import { isHtmlResult } from './result';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,62 +45,47 @@ const signalEffect = (
   registerCleanup(() => sub.dispose());
 };
 
-/**
- * Read a signal safely during scope teardown. Disposed signals and computeds
- * return their last known value (or undefined) without throwing — no try/catch needed.
- */
-const readSignalSafe = <T>(sig: Readable<T>): T | undefined => sig.value;
-
-// ─── Text ─────────────────────────────────────────────────────────────────────
-
-const applyTextBinding = (binding: TextBinding, registerCleanup: RegisterCleanup): void => {
-  signalEffect(
-    binding.signal,
-    (v) => {
-      binding.node.textContent = String(v ?? '');
-    },
-    registerCleanup,
-  );
-};
-
-// ─── Attributes ───────────────────────────────────────────────────────────────
+// ─── Form control value sync ──────────────────────────────────────────────────
 
 const isNativeFormInput = (el: HTMLElement): el is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement =>
   el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement;
 
+const isCheckbox = (el: HTMLElement): el is HTMLInputElement =>
+  el instanceof HTMLInputElement && el.type === 'checkbox';
+
 type LiveWriteState = { last: unknown };
 
-const applyFormValue = (
+/**
+ * The single write path from a reactive value to a form control's `value`/`checked`
+ * property. Used by the attr binding engine (`value`/`checked` special cases) and
+ * by `model()` — both share value-shape coercion and live-write semantics, so both
+ * call this instead of keeping their own copies.
+ *
+ * Live-write: when the binding was created from `live(source)`, a write is skipped
+ * if the DOM value has diverged from this binding's last write (in-progress user
+ * input) — unless the incoming value already matches the DOM (write would be a no-op).
+ */
+export const syncFormControl = (
   el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
   value: unknown,
-  isLive: boolean | undefined,
-  state: LiveWriteState,
+  isLive?: boolean,
+  state: LiveWriteState = { last: undefined },
 ): void => {
-  const next = value == null ? '' : String(value);
+  const checkbox = isCheckbox(el);
+  const next: boolean | string = checkbox ? Boolean(value) : value == null ? '' : String(value);
+  const current: boolean | string = checkbox ? (el as HTMLInputElement).checked : el.value;
 
-  if (isLive && state.last !== undefined && !Object.is(el.value, state.last) && !Object.is(el.value, next)) return;
+  if (isLive && state.last !== undefined && !Object.is(current, state.last) && !Object.is(current, next)) return;
 
-  el.value = next;
+  if (checkbox) (el as HTMLInputElement).checked = next as boolean;
+  else el.value = next as string;
 
   if (isLive) state.last = next;
 };
 
-const applyCheckedValue = (
-  el: HTMLInputElement,
-  value: unknown,
-  isLive: boolean | undefined,
-  state: LiveWriteState,
-): void => {
-  const next = Boolean(value);
+// ─── Attributes ───────────────────────────────────────────────────────────────
 
-  if (isLive && state.last !== undefined && el.checked !== Boolean(state.last) && el.checked !== next) return;
-
-  el.checked = next;
-
-  if (isLive) state.last = next;
-};
-
-const syncRegisteredProp = (el: HTMLElement, meta: AttrPropMeta, binding: AttrBinding, value: unknown): void => {
+const syncRegisteredProp = (el: HTMLElement, meta: PropMeta, binding: AttrBinding, value: unknown): void => {
   const parsed = isStructuredValue(value)
     ? value
     : meta.parse(
@@ -112,7 +98,7 @@ const syncRegisteredProp = (el: HTMLElement, meta: AttrPropMeta, binding: AttrBi
       parsed,
     )
   ) {
-    meta.signal.value = parsed as never;
+    meta.signal.value = parsed;
   }
 
   if (!meta.reflect) {
@@ -142,14 +128,8 @@ export const applyAttrBinding = (binding: AttrBinding, registerCleanup: Register
       return;
     }
 
-    if (name === 'value' && isNativeFormInput(el)) {
-      applyFormValue(el, value, binding.live, liveState);
-
-      return;
-    }
-
-    if (name === 'checked' && el instanceof HTMLInputElement) {
-      applyCheckedValue(el, value, binding.live, liveState);
+    if ((name === 'value' && isNativeFormInput(el)) || (name === 'checked' && el instanceof HTMLInputElement)) {
+      syncFormControl(el as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement, value, binding.live, liveState);
 
       return;
     }
@@ -225,7 +205,7 @@ export const applyHtmlBinding = (binding: HtmlBinding, registerCleanup: Register
   const slot = createReplaceableSlot();
 
   const stop = rawEffect(() => {
-    const raw = readSignalSafe(signal);
+    const raw = signal.value;
 
     slot.clear();
 
@@ -276,9 +256,6 @@ export const applyBinding = (binding: Binding, registerCleanup: RegisterCleanup)
     case 'spread':
       applySpreadBinding(binding, registerCleanup);
       break;
-    case 'text':
-      applyTextBinding(binding, registerCleanup);
-      break;
   }
 };
 
@@ -290,10 +267,10 @@ export const createAttrBindingFromValue = (
   name: string,
   value: unknown,
 ): AttrBinding => {
-  const propMeta = getPropMeta(el, name) as AttrPropMeta | undefined;
+  const propMeta = getPropMeta(el, name);
 
-  if (isLiveSignal(value)) {
-    return { el, live: true, mode, name, propMeta, signal: value as Readable<unknown>, type: 'attr' };
+  if (isLiveBinding(value)) {
+    return { el, live: true, mode, name, propMeta, signal: value.source, type: 'attr' };
   }
 
   if (typeof value === 'function') {

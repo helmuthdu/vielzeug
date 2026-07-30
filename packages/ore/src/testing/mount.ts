@@ -4,24 +4,14 @@
 
 import type { Readable } from '@vielzeug/ripple';
 
-import {
-  query,
-  queryAll,
-  queryAllByTestId,
-  queryAllByText,
-  queryByTestId,
-  queryByText,
-  type QueryScope,
-} from '@vielzeug/assay';
+import { type QueryScope, within } from '@vielzeug/assay';
 
 import { type ComponentDefinition } from '../component-types';
 import { define } from '../define';
-import { _resetLiveSignals } from '../directives/live';
-import { _resetRawSanitizer } from '../directives/raw';
-import { type HTMLResult } from '../types/bindings';
-import { _clearStylesheetCache } from '../utils/css';
-import { _resetIdCounter } from '../utils/id';
+import { type HTMLResult } from '../template/result';
+import { setAttr } from '../utils/dom';
 import { flush, type FlushOptions } from './flush';
+import { resetOreForTests } from './reset';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -78,22 +68,18 @@ export type MountSetup = {
 // ─── Test environment state ───────────────────────────────────────────────────
 
 export const _mountedElements: HTMLElement[] = [];
-export let _componentTagCounter = 0;
 
-/**
- * Resets global test counters used for deterministic IDs/markers.
- * @internal
- */
-export const _resetCounters = (): void => {
-  _resetIdCounter();
-  _componentTagCounter = 0;
-};
+// Monotonic across the whole test run — never reset: custom element registrations
+// are permanent, so a re-used tag name would throw on re-define. Deterministic
+// within a run (trial-1, trial-2, ...) without a random suffix.
+let _componentTagCounter = 0;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function applyAttr(element: Element, name: string, value: string | number | boolean): void {
-  if (value === false) element.removeAttribute(name);
-  else element.setAttribute(name, value === true ? '' : String(value));
+  // Same write path as the runtime's attribute bindings, so tests never set up
+  // states the runtime itself can't produce (e.g. boolean true → "true").
+  setAttr(element, name, value);
 }
 
 const toError = (value: unknown): Error => {
@@ -165,7 +151,7 @@ export async function mount<T extends HTMLElement = HTMLElement>(
   if (typeof tagOrSetup === 'string') {
     tagName = tagOrSetup;
   } else {
-    tagName = `trial-${++_componentTagCounter}-${Math.random().toString(36).slice(2, 7)}`;
+    tagName = `trial-${++_componentTagCounter}`;
     inlineDefinition = {
       ...(componentOptions ?? {}),
       setup: tagOrSetup as ComponentDefinition<any>['setup'],
@@ -213,7 +199,11 @@ export async function mount<T extends HTMLElement = HTMLElement>(
     if (i !== -1) _mountedElements.splice(i, 1);
   }
 
+  const scope = within((element.shadowRoot ?? element) as Element);
+
   return {
+    ...scope,
+
     async act(fn) {
       await fn();
       await flush();
@@ -238,30 +228,6 @@ export async function mount<T extends HTMLElement = HTMLElement>(
     element,
 
     flush,
-
-    query<E extends Element = Element>(selector: string): E | null {
-      return query<E>((element.shadowRoot ?? element) as Element, selector);
-    },
-
-    queryAll<E extends Element = Element>(selector: string): E[] {
-      return queryAll<E>((element.shadowRoot ?? element) as Element, selector);
-    },
-
-    queryAllByTestId<E extends Element = Element>(testId: string): E[] {
-      return queryAllByTestId<E>((element.shadowRoot ?? element) as Element, testId);
-    },
-
-    queryAllByText<E extends Element = Element>(text: string, selector = '*'): E[] {
-      return queryAllByText<E>((element.shadowRoot ?? element) as Element, text, selector);
-    },
-
-    queryByTestId<E extends Element = Element>(testId: string): E | null {
-      return queryByTestId<E>((element.shadowRoot ?? element) as Element, testId);
-    },
-
-    queryByText<E extends Element = Element>(text: string, selector = '*'): E | null {
-      return queryByText<E>((element.shadowRoot ?? element) as Element, text, selector);
-    },
 
     get shadow(): ShadowRoot | null {
       return element.shadowRoot;
@@ -324,10 +290,7 @@ export function mock(tagName: string, template = ''): void {
 export function cleanup(): void {
   for (const el of _mountedElements) el.remove();
   _mountedElements.length = 0;
-  _resetRawSanitizer();
-  _resetLiveSignals();
-  _clearStylesheetCache();
-  _resetIdCounter();
+  resetOreForTests();
 }
 
 /** @internal re-export for within() */
