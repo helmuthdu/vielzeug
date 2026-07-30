@@ -37,12 +37,7 @@ export function createNotifier(deps: NotifierDeps) {
 
     if (!sig) {
       sig = signal<FieldState<unknown>>(deps.buildFieldState(key), {
-        equals: (a, b) =>
-          a.value === b.value &&
-          a.error === b.error &&
-          a.hasError === b.hasError &&
-          a.touched === b.touched &&
-          a.dirty === b.dirty,
+        equals: (a, b) => a.value === b.value && a.error === b.error && a.touched === b.touched && a.dirty === b.dirty,
       });
       fieldSignals.set(key, sig);
     }
@@ -167,7 +162,6 @@ export function createNotifier(deps: NotifierDeps) {
   return {
     dispose,
     getFieldSnapshot,
-    getOrCreateFieldSignal,
     getStateSnapshot,
     requestNotify,
     subscribe,

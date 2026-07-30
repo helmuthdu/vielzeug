@@ -1,11 +1,4 @@
-import {
-  FORM_ERROR,
-  ForgeConfigError,
-  ForgeDisposedError,
-  ForgeError,
-  ForgeSubmitError,
-  ForgeValidationError,
-} from '../../index';
+import { FORM_ERROR, ForgeConfigError, ForgeDisposedError, ForgeError, ForgeSubmitError } from '../../index';
 
 describe('ForgeError hierarchy', () => {
   test('ForgeError.is() returns false for a plain Error instance', () => {
@@ -27,7 +20,6 @@ describe('ForgeError hierarchy', () => {
     ['ForgeConfigError', new ForgeConfigError('config error')],
     ['ForgeDisposedError', new ForgeDisposedError()],
     ['ForgeSubmitError', new ForgeSubmitError('submit error')],
-    ['ForgeValidationError', new ForgeValidationError({ field: 'bad' })],
   ] as const)(
     '%s instances are recognized by ForgeError.is() and set .name to their own class name',
     (className, error) => {
@@ -37,14 +29,6 @@ describe('ForgeError hierarchy', () => {
       expect(error.name).toBe(className);
     },
   );
-
-  test('ForgeValidationError exposes the exact errors map passed to its constructor', () => {
-    const errors = { email: 'Invalid', name: 'Required' };
-    const error = new ForgeValidationError(errors);
-
-    expect(error.errors).toBe(errors);
-    expect(error.message).toBe('Form validation failed');
-  });
 
   test('ForgeDisposedError falls back to a generic message when constructed with no op name', () => {
     expect(new ForgeDisposedError().message).toBe('Cannot modify a disposed form');

@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-import { createForm, ForgeError, ForgeSubmitError, ForgeValidationError } from '../../index';
+import { createForm, ForgeError, ForgeSubmitError } from '../../index';
 
 function deferred<T>(): {
   promise: Promise<T>;
@@ -26,7 +26,7 @@ describe('form validation', () => {
 
     form.set('email', 'not-an-email');
 
-    const result = await form.validate('email');
+    const result = await form.validateFields(['email']);
 
     expect(result.valid).toBe(false);
     expect(result.errors).toEqual({ email: 'Invalid email' });
@@ -56,7 +56,7 @@ describe('form validation', () => {
 
     form.touch('name');
 
-    const result = await form.validate([...form.state.touchedFields]);
+    const result = await form.validateFields([...form.state.touchedFields]);
 
     expect(result.errors).toEqual({ name: 'Name required' });
   });
@@ -70,7 +70,7 @@ describe('form validation', () => {
       },
     });
 
-    const result = await form.validate(['email', 'name']);
+    const result = await form.validateFields(['email', 'name']);
 
     expect(result.errors).toEqual({ email: 'Email required', name: 'Name required' });
   });
@@ -85,7 +85,7 @@ describe('form validation', () => {
       },
     });
 
-    const result = await form.validate(['age']);
+    const result = await form.validateFields(['age']);
 
     expect(result.errors).toEqual({ age: 'Must be 18+' });
     expect(result.errors.consent).toBeUndefined();
@@ -100,7 +100,7 @@ describe('form validation', () => {
 
     form.touch('password');
 
-    const result = await form.validate([...form.state.touchedFields]);
+    const result = await form.validateFields([...form.state.touchedFields]);
 
     expect(result.errors).toEqual({ password: 'Required' });
     expect(result.errors.confirm).toBeUndefined();
@@ -118,7 +118,7 @@ describe('form validation', () => {
       validators: { password: (value: unknown) => (!value ? 'Required' : undefined) },
     });
 
-    await form.validate('password');
+    await form.validateFields(['password']);
 
     expect(form.field('password').error).toBe('Required');
     expect(formValidatorCalls).toBe(0);
@@ -128,13 +128,13 @@ describe('form validation', () => {
     const form = createForm({ defaultValues: { name: '' } });
 
     form.fields.setValidator('name', (v: unknown) => (!v ? 'Required' : undefined));
-    await form.validate('name');
+    await form.validateFields(['name']);
     expect(form.field('name').error).toBe('Required');
 
     form.fields.setValidator('name', undefined);
     expect(form.field('name').error).toBeUndefined();
 
-    await form.validate('name');
+    await form.validateFields(['name']);
     expect(form.field('name').error).toBeUndefined();
   });
 
@@ -172,7 +172,7 @@ describe('form validation', () => {
       },
     });
 
-    const pending = form.validate('name');
+    const pending = form.validateFields(['name']);
 
     await started.promise;
 
@@ -190,7 +190,7 @@ describe('form validation', () => {
 
     form.setError('name', 'Stale');
 
-    const result = await form.validate('name');
+    const result = await form.validateFields(['name']);
 
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual({});
@@ -214,7 +214,7 @@ describe('form validation', () => {
     expect(form.state.errors._form).toBe('Passwords must match');
 
     form.set('password', 'abc');
-    await form.validate('password');
+    await form.validateFields(['password']);
 
     expect(form.field('password').error).toBeUndefined();
     expect(form.state.errors._form).toBe('Passwords must match');
@@ -255,13 +255,13 @@ describe('form validation', () => {
 
     form.set('name', 'bad');
 
-    const first = form.validate('name');
+    const first = form.validateFields(['name']);
 
     await firstStarted.promise;
 
     form.set('name', 'ok');
 
-    const second = form.validate('name');
+    const second = form.validateFields(['name']);
 
     releaseSecond.resolve(undefined);
 
@@ -288,7 +288,7 @@ describe('form validation', () => {
       }
     });
 
-    await form.validate('slow');
+    await form.validateFields(['slow']);
 
     expect(sawValidating).toBe(true);
     expect(sawValidatingField).toBe(true);
@@ -456,80 +456,5 @@ describe('form submit', () => {
     await p;
 
     expect(form.isSubmitting).toBe(false);
-  });
-});
-
-describe('hasError on FieldState', () => {
-  test('hasError is false when there is no error', () => {
-    const form = createForm({ defaultValues: { name: 'Alice' } });
-
-    expect(form.field('name').hasError).toBe(false);
-  });
-
-  test('hasError is true when there is an error', () => {
-    const form = createForm({ defaultValues: { name: '' } });
-
-    form.setError('name', 'Required');
-
-    expect(form.field('name').hasError).toBe(true);
-    expect(form.field('name').error).toBe('Required');
-  });
-
-  test('hasError reverts to false after error is cleared', () => {
-    const form = createForm({ defaultValues: { name: '' } });
-
-    form.setError('name', 'Required');
-    expect(form.field('name').hasError).toBe(true);
-
-    form.clearError('name');
-    expect(form.field('name').hasError).toBe(false);
-  });
-});
-
-describe('submitOrThrow', () => {
-  test('resolves with handler return value on success', async () => {
-    const form = createForm({ defaultValues: { name: 'Alice' } });
-
-    const result = await form.submitOrThrow(() => 'ok');
-
-    expect(result).toBe('ok');
-  });
-
-  test('throws ForgeValidationError when validation fails', async () => {
-    const form = createForm({
-      defaultValues: { name: '' },
-      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
-    });
-
-    await expect(form.submitOrThrow(async () => 'never')).rejects.toThrow(ForgeValidationError);
-  });
-
-  test('thrown ForgeValidationError contains errors map', async () => {
-    const form = createForm({
-      defaultValues: { name: '' },
-      validators: { name: (v: unknown) => (!v ? 'Name required' : undefined) },
-    });
-
-    let caught: unknown;
-
-    try {
-      await form.submitOrThrow(async () => undefined);
-    } catch (e) {
-      caught = e;
-    }
-
-    expect(caught).toBeInstanceOf(ForgeValidationError);
-    expect((caught as ForgeValidationError).errors).toEqual({ name: 'Name required' });
-  });
-
-  test('re-throws handler errors as-is (not wrapped in ForgeValidationError)', async () => {
-    const form = createForm({ defaultValues: { name: 'ok' } });
-    const boom = new Error('handler exploded');
-
-    await expect(
-      form.submitOrThrow(async () => {
-        throw boom;
-      }),
-    ).rejects.toBe(boom);
   });
 });

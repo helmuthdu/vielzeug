@@ -25,13 +25,3 @@ export class ForgeConfigError extends ForgeError {}
 
 /** Thrown when `submit()` is called while a submission is already in progress. */
 export class ForgeSubmitError extends ForgeError {}
-
-/** Thrown by `submitOrThrow()` when validation fails. */
-export class ForgeValidationError extends ForgeError {
-  readonly errors: Record<string, string>;
-
-  constructor(errors: Record<string, string>) {
-    super('Form validation failed');
-    this.errors = errors;
-  }
-}

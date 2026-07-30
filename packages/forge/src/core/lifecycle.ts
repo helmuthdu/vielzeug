@@ -40,7 +40,7 @@ export function createLifecycleOps<TValues extends Record<string, unknown>>(
 
     ctx.runCtrls.clear();
     ctx.fieldCtrls.clear();
-    ctx.validatingRuns.clear();
+    ctx.validatingCount.clear();
     ctx.store.clear();
     ctx.baseline.clear();
     ctx.fieldErrors.clear();

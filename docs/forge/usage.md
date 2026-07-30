@@ -56,9 +56,9 @@ dynamicForm.set('custom.field', 'value');
 ## Validation
 
 ```ts
-await form.validate('password');
+await form.validateFields(['password']);
 await form.validate();
-await form.validate(['email', 'password']);
+await form.validateFields(['email', 'password']);
 
 const controller = new AbortController();
 await form.validate(controller.signal);
@@ -68,7 +68,7 @@ controller.abort();
 Validation result:
 
 ```ts
-const result = await form.validate(['email']);
+const result = await form.validateFields(['email']);
 
 console.log(result.valid); // true only if no errors exist after this run
 console.log(result.errors); // full current error map after the run
@@ -237,13 +237,13 @@ await address.submit((vals) => vals); // validates and submits only address.* fi
 | `errors` in `state`        | absolute keys      | relative keys                         |
 | `touchedFields` in `state` | absolute keys      | relative keys                         |
 | `validatingFields` in `state` | absolute keys   | relative keys                         |
-| `validate(name)` input     | absolute key       | relative key                          |
+| `validateFields()` input | absolute keys      | relative keys                         |
 | `validate()` result keys   | absolute keys      | relative keys                         |
 
 ### Recommended Scoped Patterns
 
 1. Call `const address = form.scope('address')` once per UI/module boundary and pass that around.
-2. Use `address.validate()` / `address.submit()` instead of manually feeding `state.touchedFields` into `validate(fields[])`.
+2. Use `address.validate()` / `address.submit()` instead of manually feeding `state.touchedFields` into `validateFields(fields[])`.
 3. Use `address.subscribe(...)` for section UIs — on a scoped form `subscribe` is already prefix-filtered, so sibling/root mutations do not trigger redraws.
 
 **Key characteristics:**
@@ -526,7 +526,7 @@ const formWithSchema = createForm({
 
 - Call `connect()` once per field and store the result — never call it inside a render or update loop. Call `binding.dispose()` when the field unmounts to cancel any pending debounce timer.
 - `scope()` is memoized — repeated calls with the same prefix return the same object. Store the result for clarity, but it is safe to call multiple times.
-- Prefer `scope.validate()` over `scope.validate([...state.touchedFields])` on scoped forms to avoid double-prefixed paths.
+- Prefer `scope.validate()` over `scope.validateFields([...state.touchedFields])` on scoped forms to avoid double-prefixed paths.
 - Wrap multi-field mutations in `batch()` to emit a single subscriber notification.
 - Pass a `signal` to long-running validators where applicable — Forge passes its own abort signal to validators on `dispose()`.
 - Set a `connect` default in `createForm()` using `ValidationModes` presets rather than repeating per-field options.

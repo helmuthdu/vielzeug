@@ -70,7 +70,6 @@ describe('form state and values', () => {
     expect(form.field('name')).toEqual({
       dirty: false,
       error: undefined,
-      hasError: false,
       touched: false,
       value: 'Alice',
     });
@@ -90,15 +89,15 @@ describe('form state and values', () => {
   // still be touched or hold an error — reset()/replace() must not derive "what to clear"
   // from store.keys() alone, or a field that never had a value silently keeps stale state.
   test.each([
-    ['reset', (form: ReturnType<typeof createForm>) => form.reset()],
-    ['replace', (form: ReturnType<typeof createForm>) => form.replace({ a: 1 })],
+    ['reset', (form: { reset(): void }) => form.reset()],
+    ['replace', (form: { replace(v: { a: number }): void }) => form.replace({ a: 1 })],
   ])('%s() clears touched/error state for a validator-only field with no store entry', async (_, operation) => {
     const form = createForm({
       defaultValues: { a: 1 },
       validators: { ghost: () => 'Ghost error' },
     });
 
-    await form.validate('ghost' as never);
+    await form.validateFields(['ghost' as never]);
     form.touch('ghost' as never);
 
     expect(form.state.errors).toEqual({ ghost: 'Ghost error' });
@@ -142,7 +141,7 @@ describe('form state and values', () => {
 
     form.set('name', 'bad');
 
-    const pendingValidation = form.validate('name');
+    const pendingValidation = form.validateFields(['name']);
 
     await started;
 
@@ -152,7 +151,6 @@ describe('form state and values', () => {
     expect(form.field('name')).toEqual({
       dirty: false,
       error: undefined,
-      hasError: false,
       touched: false,
       value: 'ok',
     });
@@ -190,7 +188,7 @@ describe('form state and values', () => {
 
     form.set('name', 'bad');
 
-    const pendingValidation = form.validate('name');
+    const pendingValidation = form.validateFields(['name']);
 
     await started;
 
@@ -200,7 +198,6 @@ describe('form state and values', () => {
     expect(form.field('name')).toEqual({
       dirty: false,
       error: undefined,
-      hasError: false,
       touched: false,
       value: 'replaced',
     });
@@ -218,7 +215,6 @@ describe('form state and values', () => {
     expect(form.field('name')).toEqual({
       dirty: false,
       error: undefined,
-      hasError: false,
       touched: false,
       value: 'Alice',
     });
@@ -257,7 +253,7 @@ describe('form state and values', () => {
 
     form.set('name', 'bad');
 
-    const pendingValidation = form.validate('name');
+    const pendingValidation = form.validateFields(['name']);
 
     await started;
 
@@ -267,7 +263,6 @@ describe('form state and values', () => {
     expect(form.field('name')).toEqual({
       dirty: false,
       error: undefined,
-      hasError: false,
       touched: false,
       value: 'ok',
     });
@@ -299,7 +294,6 @@ describe('form state and values', () => {
     expect(form.field('name')).toEqual({
       dirty: false,
       error: undefined,
-      hasError: false,
       touched: false,
       value: undefined,
     });
@@ -453,7 +447,7 @@ describe('registerField (F1)', () => {
       validator: (value: unknown) => (!value ? 'Required' : undefined),
     });
 
-    const result = await form.validate('email');
+    const result = await form.validateFields(['email']);
 
     expect(result.valid).toBe(false);
     expect(result.errors).toEqual({ email: 'Required' });
@@ -540,7 +534,7 @@ describe('registerField (F1)', () => {
 
     form.set('name', 'bad');
 
-    const pendingValidation = form.validate('name');
+    const pendingValidation = form.validateFields(['name']);
 
     await started;
 

@@ -20,7 +20,7 @@ console.log('After registering phone:', form.fields.list())
 console.log('Phone field state:', form.field('phone'))
 
 form.set('phone', '555-0100')
-console.log('Validation:', await form.validate('phone'))
+console.log('Validation:', await form.validateFields(['phone']))
 
 // Attach a validator to a field that already exists in defaultValues
 form.fields.setValidator('name', (value) => (!value ? 'Name is required' : undefined));

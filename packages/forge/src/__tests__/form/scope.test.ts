@@ -1,6 +1,6 @@
 import type { Form } from '../../types';
 
-import { createForm, ForgeValidationError } from '../../index';
+import { createForm } from '../../index';
 
 interface Address {
   city: string;
@@ -44,6 +44,29 @@ describe('form.scope()', () => {
     const address = form.scope('address');
 
     expect(address.values()).toEqual({ city: 'New York', street: '123 Main St', zip: '10001' });
+  });
+
+  test('values() includes a whole-object value stored at the bare prefix key', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+
+    // Regression: a value written directly to 'address' (not 'address.*') was silently
+    // dropped from the scoped values/submit payload by the old prefix-scan projection.
+    form.set('address', { city: 'Bulk City', street: 'Bulk Street', zip: '00000' });
+
+    expect(address.values()).toEqual({ city: 'Bulk City', street: 'Bulk Street', zip: '00000' });
+  });
+
+  test('values() is {} (not undefined) for a scope with no keys yet, and reflects later registration', () => {
+    const form = createForm({ defaultValues: defaults });
+    const items = form.scope('items');
+
+    // Empty-scope contract: {} until the section has keys (dynamic-fields flow).
+    expect(items.values()).toEqual({});
+
+    form.fields.register('items.0.name', { defaultValue: 'First' });
+
+    expect(items.values()).toEqual({ '0': { name: 'First' } });
   });
 
   test('values() reflects mutations applied via the scoped form', () => {
@@ -262,7 +285,7 @@ describe('form.scope()', () => {
     });
 
     // Populate the sibling error
-    await form.validate('billing.city');
+    await form.validateFields(['billing.city']);
     expect(form.field('billing.city').error).toBe('Billing city required');
 
     // Scoped submit should not be blocked by the billing error
@@ -276,30 +299,6 @@ describe('form.scope()', () => {
     }
   });
 
-  test('submitOrThrow() on scoped form throws ForgeValidationError with scoped errors on failure', async () => {
-    const form = createForm({
-      defaultValues: defaults,
-      validators: {
-        'address.city': (v: unknown) => (!v ? 'City required' : undefined),
-      },
-    });
-
-    const address = form.scope('address');
-
-    address.set('city', '');
-
-    let caught: unknown;
-
-    try {
-      await address.submitOrThrow(() => undefined);
-    } catch (e) {
-      caught = e;
-    }
-
-    expect(caught).toBeInstanceOf(ForgeValidationError);
-    expect((caught as ForgeValidationError).errors).toEqual({ city: 'City required' });
-  });
-
   test('submit() on scoped form returns only scoped errors on validation failure', async () => {
     const form = createForm({
       defaultValues: { ...defaults, billing: { city: '' } },
@@ -310,7 +309,7 @@ describe('form.scope()', () => {
     });
 
     // Pre-populate billing error
-    await form.validate('billing.city');
+    await form.validateFields(['billing.city']);
 
     // Trigger address.city error too
     const address = form.scope('address');
@@ -339,12 +338,12 @@ describe('form.scope()', () => {
 
     // Pre-populate billing error so a non-scoped error exists
     form.set('billing.city', '');
-    await form.validate('billing.city');
+    await form.validateFields(['billing.city']);
 
     form.set('address.city', '');
 
     const address = form.scope('address');
-    const result = await address.validate(['city']);
+    const result = await address.validateFields(['city']);
 
     // Key should be "city" not "address.city"
     expect(result.errors).toEqual({ city: 'City required' });
@@ -354,7 +353,7 @@ describe('form.scope()', () => {
     // Fix address.city — valid should now be true even though billing.city has an error
     address.set('city', 'New York');
 
-    const result2 = await address.validate(['city']);
+    const result2 = await address.validateFields(['city']);
 
     expect(result2.valid).toBe(true);
     expect(result2.errors).toEqual({});
@@ -373,7 +372,7 @@ describe('form.scope()', () => {
 
     // Trigger a billing error first
     form.set('billing.city', '');
-    await form.validate('billing.city');
+    await form.validateFields(['billing.city']);
     expect(form.field('billing.city').error).toBe('Billing city required');
 
     // Now validate the address scope — billing error must not appear
@@ -398,7 +397,7 @@ describe('form.scope()', () => {
 
     // Put an error on a non-scoped field
     form.set('name', '');
-    await form.validate('name');
+    await form.validateFields(['name']);
     expect(form.field('name').error).toBe('Name required');
 
     // Address fields are all valid — scoped validate() should return valid=true
@@ -447,7 +446,7 @@ describe('form.scope()', () => {
     address.fields.setValidator('city', (v: unknown) => (!v ? 'City required' : undefined));
 
     form.set('address.city', '');
-    await form.validate('address.city');
+    await form.validateFields(['address.city']);
 
     expect(form.field('address.city').error).toBe('City required');
   });
@@ -459,7 +458,7 @@ describe('form.scope()', () => {
     });
 
     form.set('address.city', '');
-    await form.validate('address.city');
+    await form.validateFields(['address.city']);
     expect(form.field('address.city').error).toBe('City required');
 
     const address = form.scope('address');
@@ -750,25 +749,5 @@ describe('scoped bulk operations — patch, resetErrors, untouchAll', () => {
 
     expect(form.field('address.city').touched).toBe(false);
     expect(form.field('billing.city').touched).toBe(true);
-  });
-});
-
-describe('scoped [Symbol.asyncIterator]', () => {
-  test('yields the same unfiltered stream as the root form, not a scope-projected one', async () => {
-    const form = createForm({ defaultValues: defaults });
-    const address = form.scope('address');
-
-    const rootIter = form[Symbol.asyncIterator]();
-    const scopedIter = address[Symbol.asyncIterator]();
-
-    const rootFirst = await rootIter.next();
-    const scopedFirst = await scopedIter.next();
-
-    // Unlike `.state` / `subscribe`, the async iterator on a scoped form delegates
-    // directly to the root form's iterator — it is not scope-filtered.
-    expect(scopedFirst.value).toEqual(rootFirst.value);
-
-    await rootIter.return?.();
-    await scopedIter.return?.();
   });
 });

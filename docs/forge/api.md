@@ -12,7 +12,7 @@ description: Complete API reference for Forge form creation, validation, submiss
 | `createForm()`                                                              | Create a typed form controller                                 | Sync (async when `defaultValues` is a factory) | Infer `TValues` from `defaultValues`; explicit type param needed for dynamic shapes                                   |
 | `form.get()` / `form.set()`                                                 | Read/write field values by dot-path                            | Sync                                           | `set()` after `dispose()` throws                                                                                      |
 | `form.field()` / `form.state`                                               | Read field and form snapshots                                  | Sync                                           | Returns a stable frozen snapshot; re-read on each subscriber call                                                     |
-| `form.validate()`                                                           | Run validation — all fields, a subset, or a single field       | Async                                          | Each call re-runs validators from scratch                                                                             |
+| `form.validate()` / `form.validateFields()`                               | Run validation — all fields, or a specific subset            | Async                                          | Each call re-runs validators from scratch                                                                             |
 | `form.submit()`                                                             | Deterministic submit flow returning a `SubmitResult`           | Async                                          | Rejects if called while already submitting — guard with `form.isSubmitting`                                           |
 | `form.connect()`                                                            | Live field binding with DOM event handlers and live getters    | Sync                                           | Do not destructure — live getters lose context; call `dispose()` on unmount                                           |
 | `form.scope()`                                                              | Memoized scoped sub-form with relative field paths             | Sync                                           | Returns the same object for repeated calls with the same prefix; `state` is scoped — flags reflect only prefix fields |
@@ -27,7 +27,6 @@ description: Complete API reference for Forge form creation, validation, submiss
 | `toFormData()`                                                              | Serialize nested values to `FormData`                          | Sync                                           | Nested objects are dot-path serialized; `File` values are passed through                                              |
 | `ValidationModes`                                                           | Named presets for `connect()` validation triggers              | —                                              | Pass as `connect` option in `createForm()` for a global default                                                       |
 | `FORM_ERROR`                                                                | Reserved key `'_form'` for root-level errors                   | —                                              | Use with `setError(FORM_ERROR, msg)` or `form.validator` return value                                                 |
-| `form[Symbol.asyncIterator]()`                                              | Iterate form state changes with `for await...of`               | Async (iterator)                               | Iterator completes when `dispose()` is called                                                                         |
 
 ## Package Entry Points
 
@@ -123,8 +122,6 @@ field<K extends FlatKeyOf<TValues>>(name: K): FieldState<TypeAtPath<TValues, K>>
 type FieldState<V = unknown> = {
   value: V;
   error: string | undefined;
-  /** Convenience alias — `true` when `error` is not `undefined`. */
-  hasError: boolean;
   touched: boolean;
   dirty: boolean;
 };
@@ -149,7 +146,7 @@ type FormState = {
   /**
    * Full dot-notation paths of all currently touched fields.
    * On a scoped form these are still full paths (e.g. "address.city", not "city").
-   * Prefer scope.validate() rather than scope.validate([...state.touchedFields]).
+   * Prefer scope.validateFields() rather than scope.validateFields([...state.touchedFields]).
    */
   touchedFields: readonly string[];
   /** Paths of fields with an active async validation run. */
@@ -200,11 +197,8 @@ All three variants share a single unified method:
 // All fields + form-level validator
 validate(signal?: AbortSignal): Promise<ValidateResult>
 
-// Single named field (no form-level validator)
-validate(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<ValidateResult>
-
 // Specific subset of fields (no form-level validator)
-validate(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>
+validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>
 
 type ValidateResult = {
   valid: boolean;
@@ -213,21 +207,16 @@ type ValidateResult = {
 ```
 
 - `validate()` — runs all registered field validators plus the form-level validator.
-- `validate(name)` — runs one field's validator; `errors` contains at most one entry.
-- `validate(fields[])` — runs only the specified fields (no form-level validator).
+- `validateFields(fields[])` — runs only the specified fields (no form-level validator); `errors` contains entries only for those fields.
 
 `valid` is `true` only when `errors` is empty after the run.
 
-## submit() / submitOrThrow()
+## submit()
 
 ```ts
 submit<TResult = void>(
   handler: (values: TValues) => MaybePromise<TResult>,
 ): Promise<SubmitResult<TResult>>
-
-submitOrThrow<TResult = void>(
-  handler: (values: TValues) => MaybePromise<TResult>,
-): Promise<TResult>
 
 type SubmitResult<T> =
   | { ok: true; value: T }
@@ -238,14 +227,12 @@ Submit behavior:
 
 1. Marks all known fields touched
 2. Runs full validation
-3. If invalid: returns `{ ok: false, type: 'validation', errors }` / throws `ForgeValidationError`
-4. If valid: calls `handler(values())` and returns `{ ok: true, value }` / resolves with the handler return value
+3. If invalid: returns `{ ok: false, type: 'validation', errors }`
+4. If valid: calls `handler(values())` and returns `{ ok: true, value }`
 
 `submit()` always resolves — it never throws for validation failures. Exceptions thrown inside `handler` propagate normally.
 
-`submitOrThrow()` throws a `ForgeValidationError` when validation fails. Exceptions thrown inside `handler` propagate as-is (not wrapped).
-
-Both methods are `async function`s. Calling either while `state.isSubmitting` is `true` rejects the returned promise with a `ForgeSubmitError` — since they're async, `await` (or `.catch()`) the call to observe the error; it is not thrown synchronously.
+`submit()` is an `async function`. Calling it while `state.isSubmitting` is `true` rejects the returned promise with a `ForgeSubmitError` — since it's async, `await` (or `.catch()`) the call to observe the error; it is not thrown synchronously.
 
 ## connect()
 
@@ -314,7 +301,7 @@ address.submit((vals) => save(vals)); // validates and submits only address.* sc
 
 - `dispose()` on a scoped form is a no-op. Call `parentForm.dispose()` to tear down.
 - `scope.state` returns a **scoped projection**: `errors`, `touchedFields`, `validatingFields`, `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect only fields within the scope's prefix. `isSubmitting`, `isLoading`, and `submitCount` reflect the full form.
-- `validate()`, `validate(name)`, `validate(fields[])`, and `submit()` / `submitOrThrow()` return errors with relative keys (no prefix) and a `valid` / throw that reflects only the scoped fields.
+- `validate()`, `validateFields()`, and `submit()` return errors with relative keys (no prefix) and a `valid` that reflects only the scoped fields.
 - Memoized — `scope(prefix)` always returns the same object; safe to call on every render.
 
 ## Subscriptions
@@ -343,7 +330,7 @@ Subscriptions fire synchronously whenever the form mutates. Because state snapsh
 
 `subscribe` behaves differently depending on which form object it's called on:
 
-- **On a scoped form** — filters `errors`, `touchedFields`, and `validatingFields` to paths within the scope's prefix (remapped to relative paths). The listener is **only called when the scoped projection changes** — mutations outside the scope are suppressed. `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect **only the scoped fields**. `isSubmitting`, `isLoading`, and `submitCount` reflect the full form.
+- **On a scoped form** — filters `errors`, `touchedFields`, and `validatingFields` to paths within the scope's prefix (remapped to relative paths). The listener is **only called when the scoped projection changes** — mutations outside the scope are suppressed. `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect **only the scoped fields**. `isSubmitting`, `isLoading`, and `submitCount` reflect the full form. `{ sync: true }` emits the current scoped projection immediately, with relative keys — never the unfiltered root state.
 - **On a root form** — no filtering is applied; every mutation notifies the listener.
 
 ```ts
@@ -469,24 +456,6 @@ After `dispose()`, all mutating APIs throw. In-flight validation is aborted. Sub
 
 `disposalSignal` is aborted when `dispose()` is called. Pass it to validators or other async work that should be cancelled when the form tears down.
 
-## Async Iteration
-
-```ts
-[Symbol.asyncIterator](): AsyncIterableIterator<FormState>
-```
-
-Makes the form directly iterable with `for await...of`. Each iteration yields the current `FormState` snapshot whenever the form changes. The iterator completes when `dispose()` is called.
-
-```ts
-for await (const state of form) {
-  renderUI(state);
-  if (state.submitCount > 0 && state.isValid) break;
-}
-// Iterator completes automatically when form.dispose() is called
-```
-
-> Each `for await...of` loop creates an independent iterator — multiple concurrent loops are supported.
-
 ## batch()
 
 ```ts
@@ -583,8 +552,7 @@ type MaybePromise<T>
 class ForgeError            // base class — instanceof / ForgeError.is() catches any forge error
 class ForgeConfigError      // unsafe __proto__/constructor/prototype key
 class ForgeDisposedError    // mutating call after dispose()
-class ForgeSubmitError      // submit()/submitOrThrow() called while already submitting
-class ForgeValidationError  // thrown by submitOrThrow() on validation failure
+class ForgeSubmitError      // submit() called while already submitting
 
 // Validation
 type FieldValidator<V>
@@ -622,20 +590,15 @@ class ForgeConfigError extends ForgeError {}
 class ForgeDisposedError extends ForgeError {}
 class ForgeSubmitError extends ForgeError {}
 
-class ForgeValidationError extends ForgeError {
-  readonly errors: Record<string, string>;
-}
 ```
 
 - `ForgeError` — base class. Use `instanceof ForgeError` or the static `ForgeError.is(err)` to catch any forge-originated error.
 - `ForgeConfigError` — thrown when a form key contains a reserved prototype-polluting segment (`__proto__`, `constructor`, or `prototype`), e.g. from `form.set('__proto__', ...)`.
 - `ForgeDisposedError` — thrown when a mutating method (e.g. `set()`, `submit()`, `connect()`) is called after `form.dispose()`.
-- `ForgeSubmitError` — thrown when `submit()` or `submitOrThrow()` is called while a submission is already in progress.
-- `ForgeValidationError` — thrown by `submitOrThrow()` when validation fails; carries a `readonly errors: Record<string, string>` map.
+- `ForgeSubmitError` — thrown when `submit()` is called while a submission is already in progress.
 
 Usage notes:
 
 - `form.submit()` returns `{ ok: false, type: 'validation', errors }` — it **never throws** for validation failures.
-- `form.submitOrThrow()` throws a `ForgeValidationError` when validation fails — use when you prefer exception-based control flow.
-- `form.validate()` (all overloads) returns `{ valid: boolean, errors }` — never throws for validation failures.
-- Other thrown exceptions are programming errors: calling mutating APIs after `dispose()` (`ForgeDisposedError`), using a reserved key (`ForgeConfigError`), or calling `submit()` / `submitOrThrow()` while already submitting (`ForgeSubmitError`).
+- `form.validate()` / `form.validateFields()` return `{ valid: boolean, errors }` — never throws for validation failures.
+- Other thrown exceptions are programming errors: calling mutating APIs after `dispose()` (`ForgeDisposedError`), using a reserved key (`ForgeConfigError`), or calling `submit()` while already submitting (`ForgeSubmitError`).

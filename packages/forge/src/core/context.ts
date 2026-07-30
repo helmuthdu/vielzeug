@@ -56,7 +56,7 @@ function resolveFormValidator<TValues extends Record<string, unknown>>(
 /**
  * Shared mutable state for the field/validator Maps + lifecycle primitives, passed to every
  * `createForm()` sub-module factory (`createFieldOps`, `createObserveOps`, `createLifecycleOps`).
- * Mirrors the `ScopeContext` pattern already established in `scope.ts`.
+ * The single shared bag every ops module and the form view (core/view.ts) reads/writes.
  *
  * Notably absent: signals, subscriptions, and derived-state caching. Those have no dependency
  * on the field/validator Maps below — only on "what does current state look like," computed
@@ -93,7 +93,7 @@ export type FormContext<TValues extends Record<string, unknown> = Record<string,
   subscribe(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe;
   subscribeField(name: string, listener: (state: FieldState<unknown>) => void, options?: SubscribeOptions): Unsubscribe;
   touched: Set<string>;
-  validatingRuns: Map<string, Set<symbol>>;
+  validatingCount: Map<string, number>;
   validators: Map<string, FieldValidator<unknown>>;
 };
 
@@ -129,11 +129,12 @@ export function createFormContext<TValues extends Record<string, unknown> = Reco
   /* ---- Validation tracking ---- */
 
   /**
-   * Symbol-based ref-counting for concurrent validation runs per field.
-   * Each runValidationCore() call mints a unique symbol and adds it to the field's Set.
-   * The field leaves `validatingFields` only when its Set is empty — impossible to miscount.
+   * Per-field count of in-flight validation runs. Incremented before a run starts and
+   * decremented in its `finally` — the field leaves `validatingFields` when the count
+   * returns to zero. (Replaces an earlier symbol-token Set per field: same invariant,
+   * no ceremony.)
    */
-  const validatingRuns = new Map<string, Set<symbol>>();
+  const validatingCount = new Map<string, number>();
   const runCtrls = new Set<AbortController>();
   const fieldCtrls = new Map<string, AbortController>();
   const disposeController = new AbortController();
@@ -175,10 +176,10 @@ export function createFormContext<TValues extends Record<string, unknown> = Reco
       isSubmitting: isSubmittingState,
       isTouched: touched.size > 0,
       isValid: fieldErrors.size === 0,
-      isValidating: validatingRuns.size > 0,
+      isValidating: validatingCount.size > 0,
       submitCount,
       touchedFields: Object.freeze([...touched]) as readonly string[],
-      validatingFields: Object.freeze([...validatingRuns.keys()]) as readonly string[],
+      validatingFields: Object.freeze([...validatingCount.keys()]) as readonly string[],
     });
   }
 
@@ -188,7 +189,6 @@ export function createFormContext<TValues extends Record<string, unknown> = Reco
     return {
       dirty: dirty.has(name),
       error,
-      hasError: error !== undefined,
       touched: touched.has(name),
       value: store.get(name),
     };
@@ -286,7 +286,7 @@ export function createFormContext<TValues extends Record<string, unknown> = Reco
     subscribe: notifier.subscribe,
     subscribeField: notifier.subscribeField,
     touched,
-    validatingRuns,
+    validatingCount,
     validators,
   };
 }

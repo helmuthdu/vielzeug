@@ -4,7 +4,7 @@ import type { FormContext } from './context';
 
 import { warn } from '../_dev';
 import { anySignal, assertSafeKey, flattenValues, isSafeKey, sanitizeForLog, unflattenValues } from '../_utils';
-import { ForgeSubmitError, ForgeValidationError } from '../errors';
+import { ForgeSubmitError } from '../errors';
 import {
   type ArrayField,
   type ErrorKeyOf,
@@ -30,9 +30,10 @@ import { createArrayField } from './array';
  * required threading `deps: Pick<ValueOps, '...'>` between files just to call each other. One
  * closure removes that threading entirely.
  *
- * The six `*Keys(predicate)` functions below are the shared bulk-mutation primitives behind
- * `reset`/`replace`/`patch`/`touchAll`/`untouchAll`/`resetErrors`. `scope.ts` calls them with
- * an `isScopedKey` predicate instead of maintaining its own second copy of each loop.
+ * The six `*Keys(predicate)` functions below are the internal bulk-mutation primitives behind
+ * the public `reset`/`replace`/`patch`/`touchAll`/`untouchAll`/`resetErrors` — each of those
+ * takes an optional `scopePredicate` so the root form and scoped form views (core/view.ts) hit
+ * the same code path with no parallel implementation.
  */
 export function createFieldOps<TValues extends Record<string, unknown>>(ctx: FormContext<TValues>) {
   /* ======== Values ======== */
@@ -127,13 +128,13 @@ export function createFieldOps<TValues extends Record<string, unknown>>(ctx: For
     ctx.invalidateErrors();
   }
 
-  function resetErrors(nextErrors: Partial<Record<ErrorKeyOf<TValues>, string | undefined>> = {}): void {
+  function resetErrors(
+    nextErrors: Partial<Record<ErrorKeyOf<TValues>, string | undefined>> = {},
+    scopePredicate?: (key: string) => boolean,
+    toFullKey?: (key: string) => string,
+  ): void {
     ctx.ensureNotDisposed('resetErrors');
-    resetErrorsKeys(
-      () => true,
-      nextErrors,
-      (k) => k,
-    );
+    resetErrorsKeys(scopePredicate ?? (() => true), nextErrors, toFullKey ?? ((k) => k));
     ctx.requestNotify();
   }
 
@@ -233,26 +234,26 @@ export function createFieldOps<TValues extends Record<string, unknown>>(ctx: For
     if (ctx.touched.delete(key)) ctx.requestNotify(key);
   }
 
-  /** Shared by `touchAll()` and scope.ts's scoped `touchAll()`. */
+  /** Shared by `touchAll()` at the root and scoped views (via `touchAll(scopePredicate)`). */
   function touchAllKeys(predicate: (key: string) => boolean): void {
     for (const name of ctx.store.keys()) if (predicate(name)) ctx.touched.add(name);
     for (const name of ctx.validators.keys()) if (predicate(name)) ctx.touched.add(name);
   }
 
-  function touchAll(): void {
+  function touchAll(scopePredicate?: (key: string) => boolean): void {
     ctx.ensureNotDisposed('touchAll');
-    touchAllKeys(() => true);
+    touchAllKeys(scopePredicate ?? (() => true));
     ctx.requestNotify();
   }
 
-  /** Shared by `untouchAll()` and scope.ts's scoped `untouchAll()`. */
+  /** Shared by `untouchAll()` at the root and scoped views (via `untouchAll(scopePredicate)`). */
   function untouchAllKeys(predicate: (key: string) => boolean): void {
     for (const name of [...ctx.touched]) if (predicate(name)) ctx.touched.delete(name);
   }
 
-  function untouchAll(): void {
+  function untouchAll(scopePredicate?: (key: string) => boolean): void {
     ctx.ensureNotDisposed('untouchAll');
-    untouchAllKeys(() => true);
+    untouchAllKeys(scopePredicate ?? (() => true));
     ctx.requestNotify();
   }
 
@@ -308,7 +309,7 @@ export function createFieldOps<TValues extends Record<string, unknown>>(ctx: For
   }
 
   /**
-   * Shared primitive behind `reset()` (predicate `() => true`) and scope.ts's scoped
+   * Shared primitive behind `reset()` (no scope predicate) and scoped views'
    * `reset()` (predicate `isScopedKey`). For each known key matching `predicate`: aborts its
    * in-flight field validation, restores its baseline value (or removes it entirely if it has
    * no baseline entry — e.g. a key written via `set()` alone, never through `patch()`), and
@@ -334,21 +335,33 @@ export function createFieldOps<TValues extends Record<string, unknown>>(ctx: For
     }
   }
 
-  function reset(): void {
+  /**
+   * Restore values from the baseline and clear errors/touched/dirty.
+   * No argument = full form: additionally aborts every in-flight validation run and
+   * resets submitCount. Passing `scopePredicate` means scoped-view semantics — reset
+   * only matching keys, and do NOT reset submitCount or abort cross-field run
+   * controllers (per-key field validations are still aborted by `resetKeys` itself).
+   */
+  function reset(scopePredicate?: (key: string) => boolean): void {
     ctx.ensureNotDisposed('reset');
 
-    for (const ctrl of ctx.runCtrls) ctrl.abort();
+    if (scopePredicate) {
+      resetKeys(scopePredicate);
+    } else {
+      for (const ctrl of ctx.runCtrls) ctrl.abort();
 
-    ctx.runCtrls.clear();
-    ctx.validatingRuns.clear();
-    resetKeys(() => true);
-    ctx.submitCount = 0;
+      ctx.runCtrls.clear();
+      ctx.validatingCount.clear();
+      resetKeys(() => true);
+      ctx.submitCount = 0;
+    }
+
     ctx.requestNotify();
   }
 
   /**
    * Shared primitive behind `replace()` (predicate `() => true`, mapper `(k) => k`) and
-   * scope.ts's scoped `replace()` (predicate `isScopedKey`, mapper `pre`). Removes every
+   * scoped views' `replace()` (predicate `isScopedKey`, mapper `pre`). Removes every
    * store/baseline/touched/error entry matching `predicate` (see `allKnownKeys()` above for
    * why this isn't just `store.keys()`), then writes `flat` back in as both store and baseline
    * (a replace always establishes a new, clean baseline).
@@ -379,24 +392,42 @@ export function createFieldOps<TValues extends Record<string, unknown>>(ctx: For
     }
   }
 
-  function replace(newValues: TValues): void {
+  /**
+   * Replace values and baseline in one operation.
+   * No `predicate` = full form: additionally aborts every in-flight validation run and
+   * resets submitCount. A `predicate` (with `toFullKey` mapper) scopes the replacement
+   * to a view's prefix — submitCount and run controllers are full-form state and stay
+   * untouched.
+   */
+  function replace(
+    newValues: TValues,
+    predicate?: (key: string) => boolean,
+    toFullKey?: (key: string) => string,
+  ): void {
     ctx.ensureNotDisposed('replace');
 
-    for (const ctrl of ctx.runCtrls) ctrl.abort();
+    const flat = flattenValues(newValues as Record<string, unknown>);
 
-    ctx.runCtrls.clear();
-    ctx.validatingRuns.clear();
-    replaceKeys(
-      () => true,
-      flattenValues(newValues as Record<string, unknown>),
-      (k) => k,
-    );
-    ctx.submitCount = 0;
+    if (predicate) {
+      replaceKeys(predicate, flat, toFullKey ?? ((k) => k));
+    } else {
+      for (const ctrl of ctx.runCtrls) ctrl.abort();
+
+      ctx.runCtrls.clear();
+      ctx.validatingCount.clear();
+      replaceKeys(
+        () => true,
+        flat,
+        (k) => k,
+      );
+      ctx.submitCount = 0;
+    }
+
     ctx.requestNotify();
   }
 
   /**
-   * Shared primitive behind `patch()` and scope.ts's scoped `patch()` (mapper `pre`). Unlike
+   * Shared primitive behind `patch()` at the root and scoped views (mapper `pre`). Unlike
    * `resetKeys`/`replaceKeys`, `patch()` never needs a predicate — the partial object itself
    * already names exactly the keys to touch. Returns the full (prefixed) keys written, for
    * the caller to pass to `requestNotify()`.
@@ -417,9 +448,10 @@ export function createFieldOps<TValues extends Record<string, unknown>>(ctx: For
     return changedKeys;
   }
 
-  function patch(partial: Record<string, unknown>): void {
+  /** `toFullKey` maps the partial's relative keys to store keys (identity at the root). */
+  function patch(partial: Record<string, unknown>, toFullKey?: (key: string) => string): void {
     ctx.ensureNotDisposed('patch');
-    ctx.requestNotify(patchKeys(partial, (k) => k));
+    ctx.requestNotify(patchKeys(partial, toFullKey ?? ((k) => k)));
   }
 
   /* ======== Array helpers ======== */
@@ -536,19 +568,8 @@ export function createFieldOps<TValues extends Record<string, unknown>>(ctx: For
 
     ctx.runCtrls.add(runCtrl);
 
-    // Symbol-based ref-counting: each run gets a unique token per field.
-    // The field leaves validatingFields only when its Set empties — impossible to miscount.
-    const runId = Symbol();
-
     for (const name of fieldSet) {
-      let runs = ctx.validatingRuns.get(name);
-
-      if (!runs) {
-        runs = new Set<symbol>();
-        ctx.validatingRuns.set(name, runs);
-      }
-
-      runs.add(runId);
+      ctx.validatingCount.set(name, (ctx.validatingCount.get(name) ?? 0) + 1);
     }
 
     ctx.requestNotify();
@@ -587,13 +608,10 @@ export function createFieldOps<TValues extends Record<string, unknown>>(ctx: For
       ctx.runCtrls.delete(runCtrl);
 
       for (const name of fieldSet) {
-        const runs = ctx.validatingRuns.get(name);
+        const count = (ctx.validatingCount.get(name) ?? 1) - 1;
 
-        if (runs) {
-          runs.delete(runId);
-
-          if (runs.size === 0) ctx.validatingRuns.delete(name);
-        }
+        if (count <= 0) ctx.validatingCount.delete(name);
+        else ctx.validatingCount.set(name, count);
       }
 
       ctx.requestNotify();
@@ -615,43 +633,15 @@ export function createFieldOps<TValues extends Record<string, unknown>>(ctx: For
     return { errors: result.errors, valid: result.valid };
   }
 
-  async function validate(
-    nameOrFieldsOrSignal?: FlatKeyOf<TValues> | FlatKeyOf<TValues>[] | AbortSignal,
-    signal?: AbortSignal,
-  ): Promise<ValidateResult> {
+  async function validate(signal?: AbortSignal): Promise<ValidateResult> {
     ctx.ensureNotDisposed('validate');
 
-    if (nameOrFieldsOrSignal === undefined || nameOrFieldsOrSignal instanceof AbortSignal) {
-      const result = await runValidationCore(
-        [...ctx.validators.keys()],
-        'full',
-        nameOrFieldsOrSignal as AbortSignal | undefined,
-      );
+    const result = await runValidationCore([...ctx.validators.keys()], 'full', signal);
 
-      return { errors: result.errors, valid: result.valid };
-    }
-
-    if (Array.isArray(nameOrFieldsOrSignal)) {
-      return validateFields(nameOrFieldsOrSignal, signal);
-    }
-
-    await validateFields([nameOrFieldsOrSignal], signal);
-
-    const name = nameOrFieldsOrSignal as string;
-    const error = ctx.fieldErrors.get(name);
-
-    return { errors: error !== undefined ? { [name]: error } : {}, valid: error === undefined };
+    return { errors: result.errors, valid: result.valid };
   }
 
   /* ======== Submit ======== */
-
-  async function submitOrThrow<TResult = void>(handler: (values: TValues) => MaybePromise<TResult>): Promise<TResult> {
-    const result = await submit(handler);
-
-    if (!result.ok) throw new ForgeValidationError(result.errors as Record<string, string>);
-
-    return result.value;
-  }
 
   async function submit<TResult = void>(
     handler: (values: TValues) => MaybePromise<TResult>,
@@ -690,28 +680,21 @@ export function createFieldOps<TValues extends Record<string, unknown>>(ctx: For
     get,
     listFields,
     patch,
-    patchKeys,
     registerField,
     removeField,
     replace,
-    replaceKeys,
     reset,
     resetErrors,
-    resetErrorsKeys,
     resetField,
-    resetKeys,
     runValidationCore,
     set,
     setError,
     setValidator,
     submit,
-    submitOrThrow,
     touch,
     touchAll,
-    touchAllKeys,
     untouch,
     untouchAll,
-    untouchAllKeys,
     validate,
     validateFields,
     values,

@@ -107,7 +107,7 @@ if (!submission.ok && submission.type === 'validation') {
 <div class="features-grid">
 
 - Typed field paths with compile-time value inference
-- Explicit validation API: `validate()`, `validate(name)`, and `validate(fields[])`
+- Explicit validation API: `validate()` and `validateFields(fields[])`
 - Per-connection validation triggers via `connect()` with `ValidationModes` presets
 - `connect()` bindings own independent debounce timers; call `binding.dispose()` on unmount
 - `submit(handler)` — returns `{ ok: true, value }` or `{ ok: false, errors }`

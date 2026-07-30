@@ -129,6 +129,13 @@ export type ScopedValues<TValues, P extends string> =
     : Record<string, unknown>;
 
 /**
+ * The value shape a form view exposes at prefix `P`: the full `TValues` at the root
+ * (`''`), the scoped projection otherwise. Lets one `createFormView()` implementation
+ * type both the root form and every scoped form without a cast.
+ */
+export type PrefixValues<TValues, P extends string> = P extends '' ? TValues : ScopedValues<TValues, P>;
+
+/**
  * The live connection object returned by `form.connect()`.
  * Getters re-evaluate on every property access — store the object once per field, do not destructure.
  * Call `dispose()` to cancel any pending debounce timers when the field unmounts.
@@ -181,8 +188,6 @@ export type ArrayField<T = unknown> = {
 export type FieldState<V = unknown> = {
   dirty: boolean;
   error: string | undefined;
-  /** `true` when `error` is not `undefined`. Convenience alias for `error !== undefined`. */
-  hasError: boolean;
   touched: boolean;
   value: V;
 };
@@ -370,20 +375,12 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
    * `isValid`, `isDirty`, and `isTouched` reflect only fields within this prefix.
    * `isSubmitting`, `isLoading`, `isValidating`, and `submitCount` reflect the full form.
    */
-  scope<P extends FlatKeyOf<TValues>>(prefix: P): Form<ScopedValues<TValues, P>>;
+  scope<P extends FlatKeyOf<TValues>>(prefix: P): Form<PrefixValues<TValues, P>>;
   set<K extends FlatKeyOf<TValues>>(name: K, value: TypeAtPath<TValues, K>, options?: SetOptions): void;
   /** Set a field error. */
   setError(name: ErrorKeyOf<TValues>, message: string): void;
   readonly state: FormState;
   submit<TResult = void>(handler: (values: TValues) => MaybePromise<TResult>): Promise<SubmitResult<TResult>>;
-  /**
-   * Like `submit()` but throws a `ForgeValidationError` when validation fails instead of returning
-   * `{ ok: false, ... }`. Use when you prefer a throw-based control flow.
-   *
-   * @throws {ForgeValidationError} when validation fails.
-   * @throws {ForgeSubmitError} when `submit()` is already in progress.
-   */
-  submitOrThrow<TResult = void>(handler: (values: TValues) => MaybePromise<TResult>): Promise<TResult>;
   /**
    * Subscribe to form state changes.
    * On a scoped form (`form.scope(prefix)`), `errors`, `touchedFields`, and `validatingFields`
@@ -397,17 +394,6 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
     listener: (state: FieldState<TypeAtPath<TValues, K>>) => void,
     options?: SubscribeOptions,
   ): Unsubscribe;
-  /**
-   * Iterate over form state changes via `for await`.
-   * Yields the current state immediately, then once per mutation until the iterator
-   * is returned or the form is disposed.
-   *
-   * @example
-   * for await (const state of form) {
-   *   if (state.isSubmitting) showSpinner();
-   * }
-   */
-  [Symbol.asyncIterator](): AsyncIterableIterator<FormState>;
   /** Delegates to `dispose()`. Enables `using` declarations. */
   [Symbol.dispose](): void;
   /** Mark a field as touched. */
@@ -419,21 +405,17 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   /** Mark all fields as untouched. */
   untouchAll(): void;
   /**
-   * Validate all registered field validators and the optional form validator.
+   * Validate all registered field validators and (on the root form) the optional form validator.
    *
    * On a scoped form: validates only the fields within the scope and does not run the
    * form-level validator. Errors and `valid` reflect only scoped fields.
    */
   validate(signal?: AbortSignal): Promise<ValidateResult>;
   /**
-   * Validate a single named field. Preserves other fields' errors. Does not run the form-level validator.
-   * Returns a `ValidateResult` scoped to that field — `errors` contains at most one entry.
+   * Validate a specific set of fields. Preserves other fields' errors. Does not run the
+   * form-level validator. Returns a `ValidateResult` scoped to the requested fields.
+   * On a scoped form, pass paths relative to the scope's prefix.
    */
-  validate(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<ValidateResult>;
-  /**
-   * Validate a specific set of fields. Preserves other fields' errors. Does not run the form-level validator.
-   * Returns a `ValidateResult` scoped to the requested fields.
-   */
-  validate(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>;
+  validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>;
   values(): TValues;
 }

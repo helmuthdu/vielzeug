@@ -27,11 +27,11 @@ emailConn.onChange('john')
 console.log('After typing:', form.values())
 
 emailConn.onBlur()
-await form.validate('email')
+await form.validateFields(['email'])
 console.log('After blur validation:', form.field('email'))
 
 emailConn.onChange('john@example.com')
-await form.validate('email')
+await form.validateFields(['email'])
 console.log('After fixing email:', form.field('email'))
 
 // Simulate unmount — cancel any pending debounce timer

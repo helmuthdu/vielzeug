@@ -14,7 +14,7 @@ function testDeps(): NotifierDeps & { fieldStateOf: Map<string, FieldState<unkno
 
   return {
     buildFieldState: (name) =>
-      fieldStateOf.get(name) ?? { dirty: false, error: undefined, hasError: false, touched: false, value: undefined },
+      fieldStateOf.get(name) ?? { dirty: false, error: undefined, touched: false, value: undefined },
     computeState: (): FormState => ({
       errors: {},
       isDirty: false,
@@ -53,11 +53,11 @@ describe('createNotifier()', () => {
     const deps = testDeps();
     const notifier = createNotifier(deps);
 
-    deps.fieldStateOf.set('a', { dirty: false, error: undefined, hasError: false, touched: false, value: 1 });
+    deps.fieldStateOf.set('a', { dirty: false, error: undefined, touched: false, value: 1 });
 
     const first = notifier.getFieldSnapshot('a');
 
-    deps.fieldStateOf.set('a', { dirty: false, error: undefined, hasError: false, touched: false, value: 2 });
+    deps.fieldStateOf.set('a', { dirty: false, error: undefined, touched: false, value: 2 });
     // Cached — same object back until something invalidates it.
     expect(notifier.getFieldSnapshot('a')).toBe(first);
 
@@ -73,14 +73,14 @@ describe('createNotifier()', () => {
     const deps = testDeps();
     const notifier = createNotifier(deps);
 
-    deps.fieldStateOf.set('a', { dirty: false, error: undefined, hasError: false, touched: false, value: 1 });
-    deps.fieldStateOf.set('b', { dirty: false, error: undefined, hasError: false, touched: false, value: 1 });
+    deps.fieldStateOf.set('a', { dirty: false, error: undefined, touched: false, value: 1 });
+    deps.fieldStateOf.set('b', { dirty: false, error: undefined, touched: false, value: 1 });
 
     const aBefore = notifier.getFieldSnapshot('a');
     const bBefore = notifier.getFieldSnapshot('b');
 
-    deps.fieldStateOf.set('a', { dirty: false, error: undefined, hasError: false, touched: false, value: 2 });
-    deps.fieldStateOf.set('b', { dirty: false, error: undefined, hasError: false, touched: false, value: 2 });
+    deps.fieldStateOf.set('a', { dirty: false, error: undefined, touched: false, value: 2 });
+    deps.fieldStateOf.set('b', { dirty: false, error: undefined, touched: false, value: 2 });
 
     notifier.requestNotify('a');
 
@@ -93,7 +93,7 @@ describe('createNotifier()', () => {
     const notifier = createNotifier(deps);
 
     for (const name of ['a', 'b', 'c']) {
-      deps.fieldStateOf.set(name, { dirty: false, error: undefined, hasError: false, touched: false, value: 1 });
+      deps.fieldStateOf.set(name, { dirty: false, error: undefined, touched: false, value: 1 });
       notifier.getFieldSnapshot(name);
     }
 
@@ -104,7 +104,7 @@ describe('createNotifier()', () => {
     };
 
     for (const name of ['a', 'b', 'c']) {
-      deps.fieldStateOf.set(name, { dirty: false, error: undefined, hasError: false, touched: false, value: 2 });
+      deps.fieldStateOf.set(name, { dirty: false, error: undefined, touched: false, value: 2 });
     }
 
     notifier.requestNotify(['a', 'c']);
@@ -141,12 +141,5 @@ describe('createNotifier()', () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0]).toBe(notifier.getStateSnapshot());
-  });
-
-  test('getOrCreateFieldSignal() returns the same signal instance for repeated calls with the same key', () => {
-    const deps = testDeps();
-    const notifier = createNotifier(deps);
-
-    expect(notifier.getOrCreateFieldSignal('a')).toBe(notifier.getOrCreateFieldSignal('a'));
   });
 });
