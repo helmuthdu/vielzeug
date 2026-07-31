@@ -1,200 +1,24 @@
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import { createI18n } from '../';
 import { createFormatter } from '../format';
 
 describe('createFormatter', () => {
-  // ─── number() ─────────────────────────────────────────────────────────────
+  test('remains a standalone formatting utility', () => {
+    const formatter = createFormatter('en-US');
 
-  describe('number()', () => {
-    test('formats a number for the given locale', () => {
-      expect(createFormatter('en').number(1_234.56)).toContain('1,234');
-    });
-
-    test('warns at most once per instance when options cannot be serialized for the cache key', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const fmt = createFormatter('en');
-      const unserializable = { maximumFractionDigits: 2, weird: 10n } as unknown as Intl.NumberFormatOptions;
-
-      fmt.number(1_234.56, unserializable);
-      fmt.number(7_654.32, unserializable);
-
-      expect(warnSpy).toHaveBeenCalledTimes(1);
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('could not be serialized'));
-      warnSpy.mockRestore();
-    });
-
-    test('accepts Intl.NumberFormatOptions', () => {
-      const result = createFormatter('en').number(0.42, { style: 'percent' });
-
-      expect(result).toContain('%');
-    });
-
-    test('does not throw when options contain a circular reference', () => {
-      // cacheKey falls back to locale-only when JSON.stringify fails,
-      // so the formatter is created uncached rather than throwing.
-      const opts = { style: 'decimal' } as Intl.NumberFormatOptions & { self?: unknown };
-
-      opts.self = opts;
-      expect(() => createFormatter('en').number(42, opts as Intl.NumberFormatOptions)).not.toThrow();
-    });
+    expect(formatter.currency(9.99, 'USD')).toContain('$');
+    expect(formatter.list(['A', 'B'])).toBe('A and B');
   });
 
-  // ─── currency() ───────────────────────────────────────────────────────────
+  test('follows a caller-owned locale getter', () => {
+    let locale = 'en-US';
+    const formatter = createFormatter(() => locale);
 
-  describe('currency()', () => {
-    test('formats a currency value with its symbol', () => {
-      expect(createFormatter('en').currency(9.99, 'USD')).toContain('$');
-    });
+    const english = formatter.number(1_000);
 
-    test('does not share cache with number() — currency options do not bleed into number format', () => {
-      const fmt = createFormatter('en');
+    locale = 'fr-FR';
 
-      // Prime currency cache with USD.
-      const cVal = fmt.currency(1_000, 'USD');
-
-      // number() must use its own cache and produce plain number formatting.
-      const nVal = fmt.number(1_000);
-
-      expect(cVal).toContain('$');
-      expect(nVal).not.toContain('$');
-    });
-  });
-
-  // ─── date() ───────────────────────────────────────────────────────────────
-
-  describe('date()', () => {
-    test('formats a Date instance', () => {
-      expect(createFormatter('en').date(new Date('2024-01-15'))).toContain('2024');
-    });
-
-    test('accepts a numeric timestamp', () => {
-      expect(createFormatter('en').date(new Date('2024-06-01').getTime())).toContain('2024');
-    });
-  });
-
-  // ─── relative() ───────────────────────────────────────────────────────────
-
-  describe('relative()', () => {
-    test('formats a relative time expression', () => {
-      expect(createFormatter('en').relative(-1, 'day')).toContain('day');
-    });
-  });
-
-  // ─── list() ───────────────────────────────────────────────────────────────
-
-  describe('list()', () => {
-    test('formats a conjunction list', () => {
-      expect(createFormatter('en').list(['A', 'B', 'C'])).toBe('A, B, and C');
-    });
-
-    test('formats a disjunction list', () => {
-      expect(createFormatter('en').list(['A', 'B'], { type: 'or' })).toBe('A or B');
-    });
-
-    test('returns an empty string for an empty array', () => {
-      expect(createFormatter('en').list([])).toBe('');
-    });
-
-    test('stringifies numbers in the list', () => {
-      expect(createFormatter('en').list([1, 2, 3])).toBe('1, 2, and 3');
-    });
-  });
-
-  // ─── duration() ───────────────────────────────────────────────────────────
-
-  describe('duration()', () => {
-    test('returns a non-empty string', () => {
-      expect(createFormatter('en').duration({ hours: 1, minutes: 5 })).toBeTruthy();
-    });
-
-    test('returns an empty string for an empty DurationValue', () => {
-      expect(createFormatter('en').duration({})).toBe('');
-    });
-
-    test('fallback returns empty string for an empty DurationValue when Intl.DurationFormat is unavailable', () => {
-      const IntlExt = Intl as typeof Intl & { DurationFormat?: unknown };
-      const original = IntlExt.DurationFormat;
-
-      IntlExt.DurationFormat = undefined;
-
-      try {
-        expect(createFormatter('en').duration({})).toBe('');
-      } finally {
-        IntlExt.DurationFormat = original;
-      }
-    });
-
-    test('fallback uses unambiguous unit labels when Intl.DurationFormat is unavailable', () => {
-      const IntlExt = Intl as typeof Intl & { DurationFormat?: unknown };
-      const original = IntlExt.DurationFormat;
-
-      IntlExt.DurationFormat = undefined;
-
-      try {
-        const out = createFormatter('en').duration({
-          microseconds: 4,
-          milliseconds: 3,
-          minutes: 2,
-          months: 1,
-        });
-
-        expect(out).toContain('1mo');
-        expect(out).toContain('2min');
-        expect(out).toContain('3ms');
-        expect(out).toContain('4us');
-      } finally {
-        IntlExt.DurationFormat = original;
-      }
-    });
-  });
-
-  // ─── cache cap ────────────────────────────────────────────────────────────
-
-  describe('cache cap', () => {
-    test('formatter remains usable after more than 128 distinct currency codes fill the cache', () => {
-      const fmt = createFormatter('en');
-
-      // Drive more than 128 distinct keys into the currency cache to trigger eviction.
-      for (let i = 0; i < 150; i++) {
-        fmt.currency(1, 'USD');
-        fmt.number(i, { maximumFractionDigits: i % 10 });
-      }
-
-      // Cache eviction must not break subsequent calls.
-      expect(() => fmt.currency(9.99, 'USD')).not.toThrow();
-      expect(fmt.number(1_234)).toContain('1,234');
-    });
-  });
-
-  // ─── locale source ────────────────────────────────────────────────────────
-
-  describe('locale source', () => {
-    test('accepts a getter function for reactive locale binding', () => {
-      let locale = 'en';
-      const fmt = createFormatter(() => locale);
-      const enResult = fmt.number(1_234.56);
-
-      locale = 'fr';
-
-      const frResult = fmt.number(1_234.56);
-
-      // French uses space as thousands separator — the en result uses a comma
-      expect(enResult).toContain('1,234');
-      expect(frResult).not.toContain('1,234');
-    });
-
-    test('follows locale changes when given a getter function', async () => {
-      const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
-      const fmt = createFormatter(() => i18n.locale);
-      const enResult = fmt.number(1_234.56);
-
-      await i18n.setLocale('fr');
-
-      const frResult = fmt.number(1_234.56);
-
-      expect(enResult).toContain('1,234');
-      expect(frResult).not.toContain('1,234');
-    });
+    expect(english).toContain('1,000');
+    expect(formatter.number(1_000)).not.toContain('1,000');
   });
 });

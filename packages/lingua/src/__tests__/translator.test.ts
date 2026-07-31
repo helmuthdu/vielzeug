@@ -1,285 +1,81 @@
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, test } from 'vitest';
 
-import {
-  LinguaCountInVarsError,
-  LinguaInvalidCountError,
-  LinguaInvalidLocaleError,
-  createI18n,
-  createTranslator,
-} from '../';
+import { LinguaInvalidCatalogError, LinguaInvalidPluralCountError, createTranslator } from '../';
 
-describe('createTranslator()', () => {
-  describe('t()', () => {
-    test('resolves a leaf key and interpolates vars', () => {
-      const { t } = createTranslator({ greeting: 'Hello, {name}!' });
+const catalogs = {
+  en: {
+    error: 'Try {retry}.',
+    inbox: { plural: { one: 'One message', other: '{count} messages', zero: 'No messages' } },
+    nav: { home: 'Home' },
+  },
+  ru: {
+    inbox: { plural: { few: '{count} few', many: '{count} many', one: '{count} one', other: '{count} other' } },
+  },
+} as const;
 
-      expect(t('greeting', { name: 'Ada' })).toBe('Hello, Ada!');
-    });
+describe('createTranslator', () => {
+  test('resolves explicit text nodes and nested keys', () => {
+    const translator = createTranslator(catalogs, { locale: 'en' });
 
-    test('resolves nested dot-notation keys', () => {
-      const { t } = createTranslator({ nav: { home: 'Home', settings: { title: 'Settings' } } });
-
-      expect(t('nav.home')).toBe('Home');
-      expect(t('nav.settings.title')).toBe('Settings');
-    });
-
-    test('missing key returns the key string', () => {
-      const { t } = createTranslator({ hello: 'Hello' });
-
-      expect(t('missing' as never)).toBe('missing');
-    });
-
-    test('missing var keeps the {placeholder}', () => {
-      const { t } = createTranslator({ greeting: 'Hello, {name}!' });
-
-      expect(t('greeting')).toBe('Hello, {name}!');
-    });
+    expect(translator.translate('nav.home')).toBe('Home');
+    expect(translator.translate('error', { values: { retry: 'again' } })).toBe('Try again.');
   });
 
-  describe('tp()', () => {
-    const catalog = { inbox: { one: 'One message', other: '{count} messages', zero: 'No messages' } };
+  test('uses explicit plural nodes with zero override and CLDR categories', () => {
+    const translator = createTranslator(catalogs, { locale: 'en' });
 
-    test('selects CLDR forms and auto-injects count', () => {
-      const { tp } = createTranslator(catalog);
-
-      expect(tp('inbox', 0)).toBe('No messages');
-      expect(tp('inbox', 1)).toBe('One message');
-      expect(tp('inbox', 5)).toBe('5 messages');
-    });
-
-    test('supports ordinal plurals and extra vars', () => {
-      const { tp } = createTranslator({ place: { one: '{count}st', other: '{count}th', two: '{count}nd' } });
-
-      expect(tp('place', 1, { ordinal: true })).toBe('1st');
-      expect(tp('place', 2, { ordinal: true })).toBe('2nd');
-      expect(tp('place', 5, { ordinal: true })).toBe('5th');
-    });
-
-    test('locale option changes CLDR form selection', () => {
-      // Arabic distinguishes zero/two/few/many — English does not.
-      const { tp } = createTranslator(
-        {
-          items: {
-            few: '{count} قليل',
-            many: '{count} كثير',
-            one: 'واحد',
-            other: '{count} أخرى',
-            two: 'اثنان',
-            zero: 'صفر',
-          },
-        },
-        { locale: 'ar' },
-      );
-
-      expect(tp('items', 0)).toBe('صفر');
-      expect(tp('items', 2)).toBe('اثنان');
-      expect(tp('items', 3)).toBe('3 قليل');
-    });
-
-    test('throws LinguaInvalidCountError for non-finite count and LinguaCountInVarsError for vars.count', () => {
-      const { tp } = createTranslator(catalog);
-
-      expect(() => tp('inbox', Number.NaN)).toThrow(LinguaInvalidCountError);
-      expect(() => tp('inbox', 1, { vars: { count: 9 } })).toThrow(LinguaCountInVarsError);
-    });
+    expect(translator.translate('inbox', { count: 0 })).toBe('No messages');
+    expect(translator.translate('inbox', { count: 1 })).toBe('One message');
+    expect(translator.translate('inbox', { count: 3 })).toBe('3 messages');
   });
 
-  describe('locale option', () => {
-    test('invalid locale tag throws LinguaInvalidLocaleError', () => {
-      expect(() => createTranslator({ hello: 'Hello' }, { locale: 'not_valid!' })).toThrow(LinguaInvalidLocaleError);
-    });
+  test('selects plural category using locale that supplied fallback message', () => {
+    const translator = createTranslator(catalogs, { fallback: 'ru', locale: 'en' });
+
+    expect(translator.translate('inbox', { count: 5 })).toBe('5 messages');
+    expect(
+      createTranslator({ en: {}, ru: catalogs.ru }, { fallback: 'ru', locale: 'en' }).translate('inbox', { count: 5 }),
+    ).toBe('5 many');
   });
 
-  describe('missing handlers', () => {
-    test('onMissingKey override applies to t() and ti()', () => {
-      const { t, ti } = createTranslator({ hello: 'Hello' }, { onMissingKey: (key) => `??${key}??` });
+  test('returns typed segments without a second interpolation API family', () => {
+    const retry = { href: '/retry' };
+    const translator = createTranslator(catalogs, { locale: 'en' });
 
-      expect(t('nope' as never)).toBe('??nope??');
-      expect(ti('nope' as never, {})).toEqual(['??nope??']);
-    });
-
-    test('onMissingVar override applies to t() and ti()', () => {
-      const { t, ti } = createTranslator({ greeting: 'Hello, {name}!' }, { onMissingVar: (varName) => `<${varName}>` });
-
-      expect(t('greeting')).toBe('Hello, <name>!');
-      expect(ti('greeting', {})).toEqual(['Hello, ', '<name>', '!']);
-    });
+    expect(translator.segments('error', { values: { retry } })).toEqual(['Try ', retry, '.']);
+    expect(translator.segments('inbox', { count: 3 })).toEqual([3, ' messages']);
   });
 
-  describe('ti()', () => {
-    test('returns string segments and typed replacement values', () => {
-      const { ti } = createTranslator({ error: 'Try to {reload} or {support} for help.' });
-      const reload = { href: '/reload' };
-      const support = { href: '/support' };
-
-      expect(ti('error', { reload, support })).toEqual(['Try to ', reload, ' or ', support, ' for help.']);
+  test('uses configured handlers for missing keys and values', () => {
+    const translator = createTranslator(catalogs, {
+      locale: 'en',
+      onMissingKey: (key) => `[${key}]`,
+      onMissingValue: (name) => `<${name}>`,
     });
 
-    test('missing var keeps the {placeholder} segment', () => {
-      const { ti } = createTranslator({ error: 'Try to {reload} now.' });
-
-      expect(ti('error', {})).toEqual(['Try to ', '{reload}', ' now.']);
-    });
-
-    test('omits empty string segments', () => {
-      const { ti } = createTranslator({ compact: '{a}{b}' });
-
-      expect(ti('compact', { a: 'X', b: 'Y' })).toEqual(['X', 'Y']);
-    });
-
-    test('missing key returns [key]', () => {
-      const { ti } = createTranslator({ hello: 'Hello' });
-
-      expect(ti('missing' as never, {})).toEqual(['missing']);
-    });
-
-    test('null var is embedded as-is (unlike t(), where null counts as missing)', () => {
-      const { ti } = createTranslator({ row: 'Value: {v}' });
-
-      expect(ti('row', { v: null })).toEqual(['Value: ', null]);
-    });
-
-    test('plural-branch key via ti returns the fallback and warns in dev', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const { ti } = createTranslator({ inbox: { one: 'One', other: '{count} messages' } });
-
-      expect(ti('inbox' as never, {})).toEqual(['inbox']);
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('plural branch'));
-
-      warnSpy.mockRestore();
-    });
+    expect(translator.translate('unknown')).toBe('[unknown]');
+    expect(translator.translate('error')).toBe('Try <retry>.');
   });
 
-  describe('tpi()', () => {
-    const catalog = {
-      inbox: {
-        one: 'One message from {sender}',
-        other: '{count} messages from {sender}',
-        zero: 'No messages from {sender}',
-      },
-    };
+  test('rejects non-finite plural counts', () => {
+    const translator = createTranslator(catalogs, { locale: 'en' });
 
-    test('segments a plural branch with count as a raw-number segment', () => {
-      const { tpi } = createTranslator(catalog);
-      const sender = { name: 'Ada' };
-
-      expect(tpi('inbox', 1, { vars: { sender } })).toEqual(['One message from ', sender]);
-      expect(tpi('inbox', 5, { vars: { sender } })).toEqual([5, ' messages from ', sender]);
-      expect(tpi('inbox', 0, { vars: { sender } })).toEqual(['No messages from ', sender]);
-    });
-
-    test('missing branch falls back through onMissingKey', () => {
-      const { tpi } = createTranslator(catalog, { onMissingKey: (key) => `??${key}??` });
-
-      expect(tpi('missing' as never, 2)).toEqual(['??missing??']);
-    });
-
-    test('shares tp() validation: invalid count and vars.count throw', () => {
-      const { tpi } = createTranslator(catalog);
-
-      expect(() => tpi('inbox', Number.NaN)).toThrow(LinguaInvalidCountError);
-      expect(() => tpi('inbox', 1, { vars: { count: 9 } })).toThrow(LinguaCountInVarsError);
-    });
+    expect(() => translator.translate('inbox', { count: Number.NaN })).toThrow(LinguaInvalidPluralCountError);
   });
 
-  describe('is static — no subscriptions, loaders, or disposal', () => {
-    test('catalog edits after creation are not visible (compiled at registration)', () => {
-      const catalog = { greeting: 'Hello' };
-      const { t } = createTranslator(catalog);
+  test('compiles immutable catalog data at creation', () => {
+    const catalog = { en: { greeting: 'Hello' } };
+    const translator = createTranslator(catalog, { locale: 'en' });
 
-      catalog.greeting = 'Changed';
+    catalog.en.greeting = 'Changed';
 
-      expect(t('greeting')).toBe('Hello');
-    });
-  });
-});
-
-describe('ti() on I18n instances', () => {
-  test('resolves and segments like t()', async () => {
-    const i18n = createI18n({ catalogs: { en: { error: 'Try to {reload} now.' } } });
-    const reload = { href: '/reload' };
-
-    expect(i18n.ti('error', { reload })).toEqual(['Try to ', reload, ' now.']);
+    expect(translator.translate('greeting')).toBe('Hello');
   });
 
-  test('resolves through the fallback chain', () => {
-    const i18n = createI18n({
-      catalogs: { en: { error: 'Try to {reload} now.' }, fr: {} },
-      fallback: 'en',
-      locale: 'fr',
-    });
-
-    expect(i18n.ti('error', { reload: 'R' })).toEqual(['Try to ', 'R', ' now.']);
-  });
-
-  test('missing key falls back through onMissingKey', () => {
-    const i18n = createI18n({ catalogs: { en: {} }, onMissingKey: (key) => `[${key}]` });
-
-    expect(i18n.ti('missing' as never, {})).toEqual(['[missing]']);
-  });
-
-  test('missing var keeps the {placeholder} segment', () => {
-    const i18n = createI18n({ catalogs: { en: { error: 'Try to {reload} now.' } } });
-
-    expect(i18n.ti('error', {})).toEqual(['Try to ', '{reload}', ' now.']);
-  });
-});
-
-describe('tpi() on I18n and ScopedI18n', () => {
-  test('instance tpi resolves through the fallback chain with count injection', () => {
-    const i18n = createI18n({
-      catalogs: {
-        en: { inbox: { one: 'One from {sender}', other: '{count} from {sender}' } },
-        fr: {},
-      },
-      fallback: 'en',
-      locale: 'fr',
-    });
-    const sender = { name: 'Ada' };
-
-    expect(i18n.tpi('inbox', 5, { vars: { sender } })).toEqual([5, ' from ', sender]);
-  });
-
-  test('scoped tpi applies the prefix', () => {
-    const i18n = createI18n({
-      catalogs: { en: { mail: { inbox: { one: 'One', other: '{count}' } } } },
-    });
-    const mail = i18n.scope('mail');
-
-    expect(mail.tpi('inbox', 3)).toEqual([3]);
-  });
-
-  test('snapshot exposes tpi', () => {
-    const i18n = createI18n({ catalogs: { en: { inbox: { one: 'One', other: '{count} messages' } } } });
-
-    expect(i18n.getSnapshot().tpi('inbox', 7)).toEqual([7, ' messages']);
-  });
-});
-
-describe('ti() on ScopedI18n', () => {
-  test('applies the scope prefix', () => {
-    const i18n = createI18n({ catalogs: { en: { errors: { retry: 'Try to {reload} now.' } } } });
-    const errors = i18n.scope('errors');
-
-    expect(errors.ti('retry', { reload: 'R' })).toEqual(['Try to ', 'R', ' now.']);
-  });
-
-  test('missing scoped key falls back through onMissingKey', () => {
-    const i18n = createI18n({ catalogs: { en: {} }, onMissingKey: (key) => `[${key}]` });
-    const errors = i18n.scope('errors');
-
-    expect(errors.ti('missing', {})).toEqual(['[errors.missing]']);
-  });
-});
-
-describe('dev-mode catalog validation', () => {
-  test('warns for a catalog missing CLDR forms for its locale', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    createTranslator({ items: { one: '1', other: '{count}' } }, { locale: 'ar' });
-
-    await vi.waitFor(() => expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('missing plural form')));
-
-    warnSpy.mockRestore();
+  test('rejects malformed and unsafe catalog nodes at the resource boundary', () => {
+    expect(() => createTranslator({ en: { item: { plural: null } } as never })).toThrow(LinguaInvalidCatalogError);
+    expect(() => createTranslator({ en: JSON.parse('{"__proto__":"unsafe"}') as never })).toThrow(
+      LinguaInvalidCatalogError,
+    );
   });
 });

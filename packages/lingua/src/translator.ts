@@ -1,99 +1,118 @@
-/**
- * Minimal static-catalog translator — resolution + interpolation + plurals on a
- * plain object, designed to be called once at module level alongside a component's
- * `translations` object. No subscriptions, no async loaders, no namespace registry,
- * no disposal: the catalog is static forever.
- *
- * Multi-locale consumers: this factory is deliberately single-locale. The upgrade
- * path is `createI18n()` (full runtime with locale chains and switching) — an
- * earlier shape-detection design (infer locale-ness from catalog shape) was
- * rejected: a nested `Messages` object like `{ en: { SAVE: ... } }` is ambiguous
- * between "locale map" and "namespace key", and mixed string|object tops break
- * any `all-strings vs all-objects` rule.
- */
+import type {
+  Catalog,
+  Catalogs,
+  Locale,
+  PluralKey,
+  PluralOptions,
+  TextKey,
+  TranslateOptions,
+  TranslatorOptions,
+} from './types';
 
-import type { MessageBranchKeys, MessageLeafKeys, TpOptions, TpiOptions, TranslateVars } from './i18n-types';
+import { type CompiledCatalog, type CompiledMessage, compileCatalog } from './_catalog';
+import { canonicalLocale, localeChain, pluralCategory } from './_locale';
+import { renderSegments, renderText, type Template } from './_template';
+import { LinguaInvalidPluralCountError } from './errors';
 
-import { CatalogEntry, type Messages, flattenStrings } from './_catalog';
-import { validateCatalogInDev } from './_catalog-store';
-import { canon, createLocaleCaches } from './_chain';
-import {
-  type TranslateContext,
-  findPluralEntry,
-  translate as translateIn,
-  translatePlural as translatePluralIn,
-  warnIfPluralBranch,
-} from './_translate';
-import { renderTemplateSegments } from './template';
-
-export type CreateTranslatorOptions = {
-  /** Locale driving CLDR plural selection for `tp()`. Must be a valid BCP 47 tag. Defaults to `'en'`. */
-  locale?: string;
-  /** Called when a translation key is missing. Defaults to returning the key itself. */
-  onMissingKey?: (key: string, locale: string) => string;
-  /** Called when an interpolation variable is absent. Defaults to keeping the `{var}` placeholder. */
-  onMissingVar?: (varName: string, key: string, locale: string) => string;
+export type Translator<C extends Catalog = Catalog> = {
+  readonly locale: Locale;
+  segments<V>(
+    key: TextKey<C> | (string & {}),
+    options: TranslateOptions & { values: Record<string, V> },
+  ): Array<string | V>;
+  segments<V>(
+    key: PluralKey<C> | (string & {}),
+    options: PluralOptions & { values?: Record<string, V> },
+  ): Array<string | number | V>;
+  translate(key: TextKey<C> | (string & {}), options?: TranslateOptions): string;
+  translate(key: PluralKey<C> | (string & {}), options: PluralOptions): string;
 };
 
-export type Translator<T extends Messages> = {
-  /** Resolve a leaf key and interpolate `{var}` tokens. Missing key returns the key string. */
-  t(key: MessageLeafKeys<T>, vars?: TranslateVars): string;
-  /**
-   * Segmented interpolation: resolve a leaf key and return the template as a mixed
-   * array of string segments and typed replacement values (components, elements).
-   * Missing key returns `[key]`; a missing var keeps its `{placeholder}` segment.
-   */
-  ti<V>(key: MessageLeafKeys<T>, vars: Record<string, V>): Array<string | V>;
-  /** Resolve a plural branch via CLDR rules for the configured locale. `count` is auto-injected. */
-  tp(key: MessageBranchKeys<T>, count: number, options?: TpOptions): string;
-  /**
-   * Segmented plural interpolation: CLDR selection like `tp()`, segmented output like
-   * `ti()`. `count` appears as a raw number segment. Missing branch returns
-   * `[onMissingKey(key)]`.
-   */
-  tpi<V>(key: MessageBranchKeys<T>, count: number, options?: TpiOptions<V>): Array<string | number | V>;
-};
+type ResolvedMessage = { readonly locale: Locale; readonly message: CompiledMessage };
 
-export function createTranslator<T extends Messages>(catalog: T, options?: CreateTranslatorOptions): Translator<T> {
-  const caches = createLocaleCaches();
-  const locale = canon(options?.locale ?? 'en', caches);
+function createTranslatorFromCompiled<C extends Catalog>(
+  catalogs: ReadonlyMap<Locale, CompiledCatalog>,
+  options: TranslatorOptions = {},
+): Translator<C> {
+  const locale = canonicalLocale(options.locale ?? 'en');
+  const fallback = (
+    Array.isArray(options.fallback) ? options.fallback : options.fallback ? [options.fallback] : []
+  ).map(canonicalLocale);
+  const chain = localeChain(locale, fallback);
+  const missingKey = options.onMissingKey ?? ((key: string) => key);
+  const missingValue = options.onMissingValue ?? ((name: string) => `{${name}}`);
 
-  const entry = new CatalogEntry();
+  const resolve = (key: string): ResolvedMessage | undefined => {
+    for (const candidate of chain) {
+      const message = catalogs.get(candidate)?.get(key);
 
-  entry.setAll(flattenStrings(catalog));
-  validateCatalogInDev(locale, catalog);
+      if (message) return { locale: candidate, message };
+    }
 
-  const ctx: TranslateContext = {
-    caches,
-    catalogStore: { resolve: () => entry },
-    chain: [locale],
-    locale,
-    onMissingKey: options?.onMissingKey ?? ((key) => key),
-    onMissingVar: options?.onMissingVar ?? ((varName) => `{${varName}}`),
+    return undefined;
   };
 
+  const templateFor = (
+    key: string,
+    options: TranslateOptions | PluralOptions,
+  ): { key: string; template: Template } | undefined => {
+    const found = resolve(key);
+
+    if (!found) return undefined;
+
+    if (found.message.kind === 'text') {
+      if ('count' in options) return undefined;
+
+      return { key, template: found.message.template };
+    }
+
+    if (!('count' in options) || !Number.isFinite(options.count)) {
+      if ('count' in options) throw new LinguaInvalidPluralCountError('`count` must be a finite number.');
+
+      return undefined;
+    }
+
+    const category =
+      options.count === 0 && !options.ordinal
+        ? 'zero'
+        : pluralCategory(found.locale, options.count, options.ordinal ?? false);
+    const template = found.message.forms.get(category) ?? found.message.forms.get('other');
+
+    return template ? { key, template } : undefined;
+  };
+
+  const valuesFor = (options: TranslateOptions | PluralOptions): Record<string, unknown> =>
+    'count' in options ? { count: options.count, ...options.values } : (options.values ?? {});
+
   return {
-    t: (key, vars) => translateIn(ctx, String(key), vars),
-    ti: (key, vars) => {
-      const found = entry.get(String(key));
+    locale,
+    segments<V>(key: string, options: (TranslateOptions | PluralOptions) & { values?: Record<string, V> }) {
+      const found = templateFor(key, options);
 
-      if (!found) {
-        warnIfPluralBranch(ctx, String(key));
+      if (!found) return [missingKey(key, locale)];
 
-        return [ctx.onMissingKey(String(key), locale)];
-      }
-
-      return renderTemplateSegments(found.compiled, vars, String(key), locale, ctx.onMissingVar);
+      return renderSegments(found.template, valuesFor(options) as Record<string, V | number>, (name) =>
+        missingValue(name, found.key, locale),
+      );
     },
-    tp: (key, count, options) => translatePluralIn(ctx, String(key), count, options),
-    tpi: <V>(key: MessageBranchKeys<T>, count: number, options?: TpiOptions<V>) => {
-      const found = findPluralEntry(ctx, String(key), count, options);
+    translate(key: string, options: TranslateOptions | PluralOptions = {}) {
+      const found = templateFor(key, options);
 
-      if (!found) return [ctx.onMissingKey(String(key), locale)];
+      if (!found) return missingKey(key, locale);
 
-      const mergedVars: Record<string, V | number> = options?.vars ? { count, ...options.vars } : { count };
-
-      return renderTemplateSegments(found.entry.compiled, mergedVars, found.key, locale, ctx.onMissingVar);
+      return renderText(found.template, valuesFor(options), (name) => missingValue(name, found.key, locale));
     },
   };
 }
+
+export function createTranslator<C extends Catalog>(catalogs: Catalogs<C>, options?: TranslatorOptions): Translator<C> {
+  const compiled = new Map<Locale, CompiledCatalog>();
+
+  for (const [locale, catalog] of Object.entries(catalogs)) {
+    compiled.set(canonicalLocale(locale), compileCatalog(catalog));
+  }
+
+  return createTranslatorFromCompiled<C>(compiled, options);
+}
+
+export { createTranslatorFromCompiled };

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat!: redesign localization around explicit catalogs and declarative resources",
+      "packageName": "@vielzeug/lingua",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/lingua"
+}

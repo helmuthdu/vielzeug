@@ -1,87 +1,78 @@
-// Internal — not part of the public API.
-// Encapsulates the CatalogEntry class, flattenStrings, and related utilities.
-//
-// This module is the package's single declaration site for `Locale` and `Messages` —
-// every other module (internal or public-types) imports them from here instead of
-// redeclaring its own copy.
+import type { Catalog, CatalogNode, PluralMessage } from './types';
 
-import { UNSAFE_KEYS } from './_constants';
-import { warn } from './_dev';
-import { compileTemplate, type CompiledTemplate } from './template';
+import { compileTemplate, type Template } from './_template';
+import { LinguaInvalidCatalogError } from './errors';
 
-export type Locale = string;
+const unsafeKeys = new Set(['__proto__', 'constructor', 'prototype']);
 
-export interface Messages {
-  [key: string]: string | Messages;
+export type CompiledText = { readonly kind: 'text'; readonly template: Template };
+export type CompiledPlural = { readonly forms: ReadonlyMap<string, Template>; readonly kind: 'plural' };
+export type CompiledMessage = CompiledPlural | CompiledText;
+export type CompiledCatalog = ReadonlyMap<string, CompiledMessage>;
+
+function isPluralMessage(node: CatalogNode): node is PluralMessage {
+  return typeof node === 'object' && node !== null && Object.hasOwn(node, 'plural');
 }
 
-export type CatalogEntryData = {
-  compiled: CompiledTemplate;
-  message: string;
-};
+/** Compile explicit catalog nodes once. Nested objects only group keys; plural intent is never inferred. */
+export function compileCatalog(catalog: Catalog): CompiledCatalog {
+  const messages = new Map<string, CompiledMessage>();
 
-export class CatalogEntry {
-  readonly entries = new Map<string, CatalogEntryData>();
-  readonly prefixes = new Set<string>();
+  const visit = (node: CatalogNode, prefix: string): void => {
+    if (typeof node === 'string') {
+      messages.set(prefix, { kind: 'text', template: compileTemplate(node) });
 
-  get(key: string): CatalogEntryData | undefined {
-    return this.entries.get(key);
-  }
-
-  set(key: string, value: string): void {
-    this.entries.set(key, { compiled: compileTemplate(value), message: value });
-
-    // Populate prefix set for O(1) branch detection in hasPlural().
-    let dot = key.indexOf('.');
-
-    while (dot !== -1) {
-      this.prefixes.add(key.slice(0, dot));
-      dot = key.indexOf('.', dot + 1);
+      return;
     }
+
+    if (typeof node !== 'object' || node === null || Array.isArray(node)) {
+      throw new LinguaInvalidCatalogError(`Catalog node "${prefix}" must be a string, plural message, or object.`);
+    }
+
+    if (isPluralMessage(node)) {
+      if (typeof node.plural !== 'object' || node.plural === null || Array.isArray(node.plural)) {
+        throw new LinguaInvalidCatalogError(`Plural message "${prefix}" must provide an object of string forms.`);
+      }
+
+      const forms = new Map<string, Template>();
+
+      for (const [form, template] of Object.entries(node.plural)) {
+        if (typeof template !== 'string') {
+          throw new LinguaInvalidCatalogError(`Plural form "${prefix}.${form}" must be a string.`);
+        }
+
+        forms.set(form, compileTemplate(template));
+      }
+
+      messages.set(prefix, { forms, kind: 'plural' });
+
+      return;
+    }
+
+    for (const [key, value] of Object.entries(node)) {
+      if (unsafeKeys.has(key)) {
+        throw new LinguaInvalidCatalogError(`Catalog key "${key}" is reserved.`);
+      }
+
+      visit(value, prefix ? `${prefix}.${key}` : key);
+    }
+  };
+
+  for (const [key, value] of Object.entries(catalog)) {
+    if (unsafeKeys.has(key)) throw new LinguaInvalidCatalogError(`Catalog key "${key}" is reserved.`);
+
+    visit(value, key);
   }
 
-  setAll(flat: Iterable<[string, string]>): void {
-    for (const [k, v] of flat) this.set(k, v);
-  }
-
-  /**
-   * Shallow-copy this entry for `fork()` seeding. The clone owns its key map (so a
-   * `patch()` on the fork never mutates the parent's catalog) while the per-message
-   * `CatalogEntryData` values — including their compiled templates — are shared by
-   * reference: forking never re-compiles a message.
-   */
-  clone(): CatalogEntry {
-    const copy = new CatalogEntry();
-
-    for (const [k, v] of this.entries) copy.entries.set(k, v);
-    for (const p of this.prefixes) copy.prefixes.add(p);
-
-    return copy;
-  }
+  return messages;
 }
 
-export function flattenStrings(
-  messages: Messages,
-  result = new Map<string, string>(),
-  prefix?: string,
-): Map<string, string> {
-  for (const [key, value] of Object.entries(messages)) {
-    if (UNSAFE_KEYS.has(key)) {
-      // Prototype-pollution guard — never silent: a dropped catalog entry is a bug
-      // the author needs to see, not a quirk to discover at runtime.
-      warn(`catalog key '${key}' is reserved and was skipped.`);
+export function mergeCatalogs(catalogs: Iterable<CompiledCatalog>): CompiledCatalog {
+  const merged = new Map<string, CompiledMessage>();
 
-      continue;
-    }
-
-    const fullKey = prefix ? `${prefix}.${key}` : key;
-
-    if (typeof value === 'string') {
-      result.set(fullKey, value);
-    } else {
-      flattenStrings(value as Messages, result, fullKey);
-    }
+  for (const catalog of catalogs) {
+    for (const [key, message] of catalog) merged.set(key, message);
   }
 
-  return result;
+  return merged;
 }

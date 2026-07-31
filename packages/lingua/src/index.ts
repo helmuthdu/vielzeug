@@ -1,45 +1,33 @@
-/**
- * /lingua — Lightweight, type-safe i18n runtime.
- *
- * @security `t()` and `tp()` return raw strings with no HTML sanitization.
- * If catalog content can originate from untrusted sources (user-generated content,
- * external CMS, writable APIs), sanitize translated strings before inserting them
- * into the DOM via `innerHTML`. Rendering via `.textContent` is always safe.
- */
-
-export type {
-  HasOptions,
-  I18n,
-  I18nOptions,
-  I18nSnapshot,
-  I18nState,
-  Loader,
-  Locale,
-  LocaleSource,
-  MessageBranchKeys,
-  MessageLeafKeys,
-  Messages,
-  NamespaceFactory,
-  ScopedI18n,
-  SubscribeOptions,
-  TpOptions,
-  TpiOptions,
-  TranslateVars,
-  Unsubscribe,
-} from './i18n';
-
-export type { DurationFormatOptions, DurationValue, Formatter, ListFormatOptions } from './format';
-
-export { createFormatter } from './format';
-export { createTranslator, type CreateTranslatorOptions, type Translator } from './translator';
 export {
-  LinguaCountInVarsError,
   LinguaDisposedError,
   LinguaError,
-  LinguaInvalidCountError,
+  LinguaInvalidCatalogError,
   LinguaInvalidLocaleError,
-  LinguaMissingLocaleError,
-  LinguaNamespaceMissingError,
-  LinguaRestoreError,
-  createI18n,
-} from './i18n';
+  LinguaInvalidPluralCountError,
+  LinguaInvalidStateError,
+  LinguaMissingResourceError,
+} from './errors';
+export { createI18n, hydrateI18n, type I18n, type I18nSnapshot } from './i18n';
+export { createTranslator, type Translator } from './translator';
+export type {
+  Catalog,
+  CatalogNode,
+  Catalogs,
+  I18nOptions,
+  I18nState,
+  LoadedResources,
+  Locale,
+  MessageKey,
+  PluralKey,
+  PluralMessage,
+  PluralOptions,
+  ResourceDefinition,
+  ResourceLoader,
+  ResourceSource,
+  Resources,
+  SubscribeOptions,
+  TextKey,
+  TranslateOptions,
+  TranslatorOptions,
+  Values,
+} from './types';

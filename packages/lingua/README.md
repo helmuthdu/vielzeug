@@ -1,81 +1,49 @@
 # @vielzeug/lingua
 
-> Minimal i18n runtime with typed keys, deterministic locale fallback, and framework-agnostic reactive subscriptions.
+> Explicit, framework-neutral localization for TypeScript.
 
-[![npm version](https://img.shields.io/npm/v/@vielzeug/lingua)](https://www.npmjs.com/package/@vielzeug/lingua) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<details>
-<summary>Quick Reference</summary>
-
-**Package:** `@vielzeug/lingua` &nbsp;·&nbsp; **Category:** i18n
-
-**Key exports:** `createI18n` · `createTranslator` (static single-locale catalogs) · `createFormatter` (from `@vielzeug/lingua/format`) · `validateCatalog` (from `@vielzeug/lingua/validate`)
-
-**When to use:** Minimal i18n runtime with typed keys, deterministic locale fallback, and framework-agnostic reactive subscriptions.
-
-**Related:** [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/wayfinder](https://vielzeug.dev/wayfinder/) · [@vielzeug/courier](https://vielzeug.dev/courier/)
-
-</details>
-
-`@vielzeug/lingua` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+`@vielzeug/lingua` separates immutable translation from mutable locale resources. Text and plural messages have distinct catalog shapes; resource loading has one lifecycle.
 
 ## Installation
 
 ```sh
 pnpm add @vielzeug/lingua
-npm install @vielzeug/lingua
-yarn add @vielzeug/lingua
 ```
 
 ## Quick Start
 
 ```ts
 import { createI18n } from '@vielzeug/lingua';
-import { createFormatter } from '@vielzeug/lingua/format';
 
 const i18n = createI18n({
   locale: 'en',
-  fallback: 'en',
-  catalogs: {
-    en: {
-      greeting: 'Hello, {name}!',
-      inbox: {
-        zero: 'No messages',
-        one: 'One message',
-        other: '{count} messages',
+  resources: {
+    core: {
+      en: {
+        greeting: 'Hello, {name}!',
+        inbox: { plural: { one: 'One message', other: '{count} messages' } },
       },
     },
-    de: () => import('./locales/de.json').then((m) => m.default),
   },
 });
 
-await i18n.setLocale('de');
-
-i18n.t('greeting', { name: 'Alice' });
-i18n.tp('inbox', 3);
-
-// Scope reduces key repetition inside a namespace
-const nav = i18n.scope('nav');
-nav.t('home'); // resolves 'nav.home'
-
-// Load route-specific keys as a namespace on top of the base catalog
-await i18n.loadNamespace('settings', (locale) => import(`./routes/${locale}/settings.i18n.json`).then((m) => m.default));
-
-// Fork the shared instance for SSR per-request isolation
-const reqI18n = i18n.fork({ locale: req.locale });
-
-// Formatter bound to the current locale — follows locale changes automatically
-const fmt = createFormatter(() => i18n.locale);
-fmt.currency(19.99, 'EUR');
+i18n.translate('greeting', { values: { name: 'Ada' } });
+i18n.translate('inbox', { count: 3 });
 ```
+
+## Exports
+
+- `createTranslator` — immutable translation engine.
+- `createI18n` / `hydrateI18n` — reactive locale resources and SSR state.
+- `createFormatter` from `@vielzeug/lingua/format`.
+- `validateCatalog` from `@vielzeug/lingua/validate`.
 
 ## Documentation
 
 - [Overview](https://vielzeug.dev/lingua/)
 - [Usage Guide](https://vielzeug.dev/lingua/usage)
 - [API Reference](https://vielzeug.dev/lingua/api)
-- [Examples](https://vielzeug.dev/lingua/examples)
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © Helmuth Saatkamp

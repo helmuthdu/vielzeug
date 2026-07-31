@@ -1,419 +1,264 @@
 ---
 title: Lingua — Usage Guide
-description: Practical usage patterns for @vielzeug/lingua.
+description: Translate explicit catalogs, load feature resources, and connect locale snapshots to UI state.
 ---
 
 [[toc]]
 
-## Setup
+## Basic Usage
+
+Create an i18n store from explicit core resources. Strings are text messages; plural messages use `{ plural: ... }`.
 
 ```ts
 import { createI18n } from '@vielzeug/lingua';
 
 const i18n = createI18n({
   locale: 'en',
-  fallback: 'en',
-  catalogs: {
-    en: {
-      greeting: 'Hello, {name}!',
-      inbox: {
-        zero: 'No messages',
-        one: 'One message',
-        other: '{count} messages',
+  resources: {
+    core: {
+      en: {
+        greeting: 'Hello, {name}!',
+        inbox: { plural: { one: 'One message', other: '{count} messages' } },
       },
     },
-    de: () => import('./locales/de.json').then((m) => m.default),
   },
 });
+
+console.log(i18n.translate('greeting', { values: { name: 'Ada' } }));
+console.log(i18n.translate('inbox', { count: 3 }));
 ```
 
-All locale strings must be valid BCP 47 tags. `createI18n`, `setLocale`, and `register` throw `LinguaInvalidLocaleError` for unrecognised tags.
+Call `dispose()` when a store belongs to a temporary request, test, or route owner.
 
-## Locale Lifecycle
+## Define Explicit Catalogs
 
-```ts
-await i18n.preload('de');
-await i18n.setLocale('de');
-
-await i18n.register('fr', () => import('./locales/fr.json').then((m) => m.default));
-
-const locales = i18n.getSupportedLocales();
-```
-
-- `preload(locale)` loads the catalog without switching the active locale. Use it to warm up a locale before the user requests it.
-- `setLocale(locale)` loads if needed, then atomically switches and bumps the version.
-- `register(locale, source)` returns `Promise<void>`. For async loaders it resolves when the catalog is loaded. For static objects it resolves immediately. Subscribers are notified after the catalog is available.
-
-Locale lookup expands subtags automatically — `en-US` checks `en-US` then `en` before moving to explicit fallbacks.
-
-## Translation
+Use nested objects only to group keys. A plural message always has a `plural` property, so regular objects containing `one` or `other` remain groups.
 
 ```ts
-i18n.t('greeting', { name: 'Alice' });
-i18n.tp('inbox', 3);
-i18n.tp('position', 2, { ordinal: true });
-i18n.tp('position', 1, { vars: { name: 'Alice' }, ordinal: true });
-```
-
-`t()` resolves leaf keys. `tp()` resolves plural branch keys (`.zero`, then CLDR category, then `.other`).
-`count` is injected automatically — do not include it in `vars`.
-
-## Static Catalogs (createTranslator)
-
-For per-component static strings — no locale switching, no async loading — use `createTranslator()` instead of a full `createI18n()` instance. Call it once at module level next to your `translations` object; it exposes the same `t`/`tp` plus `ti`:
-
-```ts
-const { t, ti, tp } = createTranslator({
-  cancel: 'Cancel',
-  error: 'Try to {reloadLink} or {supportLink} for help.',
-  inbox: { one: 'One message', other: '{count} messages' },
-  save: 'Save',
-});
-
-t('save');  // 'Save'
-tp('inbox', 3); // '3 messages'
-```
-
-`createTranslator(catalog, { locale })` is single-locale by design — `{ locale }` (default `'en'`) only drives CLDR plural selection. When you later need locale switching, move the same catalog into `createI18n()`.
-
-## Segmented Interpolation (ti)
-
-`ti()` works like `t()` but returns the template as a mixed array of string segments and typed values — for embedding components inside translated text (React nodes, Vue vnodes, or anything else):
-
-```ts
-// JSX example
-<p>{ti('error', { reloadLink: <a href="/reload">reload</a>, supportLink: <a href="/support">contact support</a> })}</p>
-// renders: Try to <a>reload</a> or <a>contact support</a> for help.
-```
-
-Missing vars keep their `{placeholder}` segment; a missing key falls back through `onMissingKey`. Available on `Translator`, `I18n`, and `ScopedI18n`.
-
-For plural branches, `tpi(key, count, { vars })` combines both: CLDR selection and count injection like `tp()`, segmented output like `ti()` — `count` appears as a raw number segment.
-
-```ts
-i18n.tpi('inbox', 5, { vars: { sender: <UserChip user={sender} /> } });
-// [5, ' messages from ', <UserChip />]
-```
-
-## Key Inspection
-
-Use `has(key)` to check whether a key exists in the active fallback chain. By default it checks **leaf** keys (resolvable by `t()`); pass `{ kind: 'branch' }` to check **branch** keys (plural branches, resolvable by `tp()`).
-
-```ts
-// catalog: { inbox: { one: 'One message', other: '{count} messages' } }
-i18n.has('inbox');                      // false — branch, not a leaf
-i18n.has('inbox', { kind: 'branch' });  // true  — plural branch exists
-i18n.has('inbox.one');                  // true  — explicit sub-key
-i18n.has('missing');                    // false
-```
-
-`has()` walks the full fallback chain, so it returns `true` if any fallback locale provides the key.
-
-## Scoped Helpers
-
-`scope(prefix)` returns a `{ fmt, t, ti, tp, tpi, has }` helper bound to a key prefix. Use it inside a component or module to avoid repeating the same key segment.
-
-```ts
-const nav = i18n.scope('nav');
-nav.t('home'); // resolves 'nav.home'
-nav.t('menu.settings'); // resolves 'nav.menu.settings'
-nav.has('logout'); // checks 'nav.logout'
-nav.fmt.number(1234); // same as i18n.fmt.number(1234)
-```
-
-`scope()` is memoized per prefix — repeated calls with the same prefix string return the same object reference.
-
-## Formatting
-
-Import `createFormatter` from the main entry:
-
-```ts
-import { createFormatter } from '@vielzeug/lingua';
-
-// Pass a getter so the formatter follows locale changes
-const fmt = createFormatter(() => i18n.locale);
-
-fmt.number(1234567.89);
-fmt.currency(19.99, 'EUR');
-fmt.date(new Date(), { dateStyle: 'medium' });
-fmt.relative(-3, 'day');
-fmt.list(['a', 'b', 'c']);
-```
-
-Alternatively, access `i18n.fmt` which is a formatter pre-wired to the instance locale:
-
-```ts
-const price = i18n.fmt.currency(49.95, 'USD');
-```
-
-## Namespace-based Lazy Loading
-
-There are two ways to load namespaces. Pass a factory to `loadNamespace()` for a one-call convenience, or split the steps with `registerNamespace()` + `loadNamespace()` when you want to defer loading.
-
-**`loadNamespace(ns, factory, locale?)`** — register and load in one call:
-
-```ts
-// Load when entering the settings route
-async function onEnterSettings() {
-  await i18n.loadNamespace('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default));
-  // Keys from settings.json are now merged into the active locale catalog
-}
-
-// Pre-load for a specific locale
-await i18n.loadNamespace('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default), 'de');
-```
-
-**`registerNamespace()` + `loadNamespace()`** — register eagerly, load on demand:
-
-```ts
-const settingsFactory = (locale: string) =>
-  import(`./locales/${locale}/settings.json`).then((m) => m.default);
-
-// Register at startup — no network request yet
-i18n.registerNamespace('settings', settingsFactory);
-
-// Load lazily when the route is activated
-async function onEnterSettings() {
-  await i18n.loadNamespace('settings'); // deduplicates concurrent calls
-}
-```
-
-Key characteristics:
-
-- Both methods deduplicate per `ns + locale` — the factory runs at most once.
-- `isNamespaceLoaded(ns, locale?)` returns `true` only after a successful load for that locale.
-
-## Missing Handling
-
-Pass `onMissingKey` and/or `onMissingVar` to `createI18n` to handle missing keys and unresolved interpolation variables.
-
-```ts
-const strictI18n = createI18n({
-  onMissingKey(key, locale) {
-    return `[missing:${key}]`;
+const catalog = {
+  account: {
+    greeting: 'Hello, {name}!',
+    unread: {
+      plural: {
+        one: 'One unread message',
+        other: '{count} unread messages',
+      },
+    },
   },
-  onMissingVar(varName, key, locale) {
-    return `<missing:${varName}>`;
+};
+```
+
+Use `{ values }` for text replacements. Pass `count` at top level for plural selection; Lingua injects it into the selected template.
+
+## Render Framework Content
+
+Use `segments()` when replacements are framework nodes, links, or other values that must not be stringified.
+
+```ts
+import { createTranslator } from '@vielzeug/lingua';
+
+const translator = createTranslator(
+  {
+    en: {
+      error: 'Try {retry} or {support}.',
+      inbox: { plural: { one: 'One message from {sender}', other: '{count} messages from {sender}' } },
+    },
   },
-});
+  { locale: 'en' },
+);
+
+const retry = { href: '/retry', label: 'retry' };
+const support = { href: '/support', label: 'support' };
+const sender = { id: 'ada', name: 'Ada' };
+
+console.log(translator.segments('error', { values: { retry, support } }));
+console.log(translator.segments('inbox', { count: 2, values: { sender } }));
 ```
 
-Without `onMissingKey`, missing keys return the key string. Without `onMissingVar`, missing variables keep their `{placeholder}` text.
+Render the returned array with your framework's fragment or list primitive.
 
-## Validating Catalogs
+## Use Static Catalogs
 
-`createI18n()` already runs this check automatically in dev builds — every time a catalog becomes available (construction, `register()`, or an async loader resolving), it's checked against CLDR plural rules and any issue is logged via `console.warn`. This costs nothing in production: the check runs behind the same dev-only gate as the rest of `@vielzeug/lingua`'s dev warnings, and the validation logic itself only loads as a separate on-demand chunk, never bundled into your app.
-
-For CI enforcement (failing a build rather than just warning), call `validateCatalog()` directly. Import it from the dedicated `@vielzeug/lingua/validate` entry — never from the main entry or it will end up in your production bundle.
+Use `createTranslator()` when catalog data and locale selection are fixed for the translator lifetime.
 
 ```ts
-import { validateCatalog } from '@vielzeug/lingua/validate';
-import ar from './locales/ar.json';
+import { createTranslator } from '@vielzeug/lingua';
 
-const warnings = validateCatalog(ar, 'ar');
-// Arabic requires: zero, one, two, few, many, other
-// warnings = [{ key: 'inbox', locale: 'ar', form: 'zero' }, ...]
+const translator = createTranslator(
+  {
+    en: { save: 'Save' },
+    fr: { save: 'Enregistrer' },
+  },
+  { locale: 'fr' },
+);
 
-if (warnings.length > 0) {
-  throw new Error(`Missing plural forms:\n${JSON.stringify(warnings, null, 2)}`);
-}
+console.log(translator.translate('save'));
 ```
 
-The function compares present plural forms against the full CLDR set for the given locale using `Intl.PluralRules`. It also warns when a `other`, `two`, `few`, or `many` form template does not contain `{count}` — these warnings carry `form: '<form>:missing-count'`. The `zero` and `one` forms are exempt.
+## Load Resources and Switch Locales
 
-## Forking
-
-`fork(overrides?)` creates a child instance that inherits the parent's current catalog snapshot and namespace registry, but has its own locale, fallback chain, and subscribers. Use it to isolate per-request locale state in SSR, or to create a test instance without polluting the shared one.
-
-```ts
-// SSR: share catalog setup; one fork per request
-const reqI18n = i18n.fork({ locale: req.locale });
-await reqI18n.setLocale(req.locale);
-const html = `<h1>${reqI18n.t('title')}</h1>`;
-
-// Tests: custom missing-key handler without polluting the shared instance
-const testI18n = i18n.fork({ onMissingKey: (k) => `MISSING:${k}` });
-```
-
-Key characteristics:
-
-- Catalog mutations on the fork do not affect the parent, and vice versa.
-- Namespace dedup markers are copied at fork time. Calling `loadNamespace()` on a fork for an already-loaded `ns + locale` pair is a no-op.
-- Forks do not inherit subscribers.
-
-## SSR Hydration
-
-Use the instance methods `getState()` on the server and `restoreState()` on the client:
+Declare every resource at construction. Load optional features explicitly, or request them while changing locale.
 
 ```ts
 import { createI18n } from '@vielzeug/lingua';
 
-// Server (Node.js / Deno)
-const i18n = createI18n({ catalogs: { de: deMessages, en: enMessages }, locale: 'de' });
-const state = i18n.getState();
-// Embed state in the HTML response:
-// <script>window.__I18N__ = ${JSON.stringify(state)}</script>
+const i18n = createI18n({
+  locale: 'en',
+  resources: {
+    core: {
+      en: { navigation: { settings: 'Settings' } },
+      fr: { navigation: { settings: 'Réglages' } },
+    },
+    settings: {
+      en: async () => ({ title: 'Settings' }),
+      fr: async () => ({ title: 'Réglages' }),
+    },
+  },
+});
 
-// Client
-const i18n = createI18n();
-i18n.restoreState(window.__I18N__);
-// Catalogs from state are immediately available; no network request needed.
+await i18n.load('settings');
+console.log(i18n.translate('title'));
+
+await i18n.setLocale('fr', { load: ['settings'] });
+console.log(i18n.translate('title'));
 ```
 
-`restoreState()` replaces all catalogs, switches the active locale, clears namespace loaded-markers, and notifies subscribers once.
+Concurrent loads for one resource and locale share work. If resources define the same key, later resource declarations override earlier declarations regardless of async completion order.
 
-**Warning:** `getState()` silently omits locales registered as async loaders but not yet preloaded. Use `isLoaded()` to guard:
+## Subscribe to Immutable Snapshots
 
-```ts
-const locales = i18n.getSupportedLocales();
-await Promise.all(locales.filter((l) => !i18n.isLoaded(l)).map((l) => i18n.preload(l)));
-const state = i18n.getState(); // all locales guaranteed to be present
-```
-
-## Subscriptions
-
-`subscribe(callback, options?)` fires on every locale or catalog change. It returns an `Unsubscribe` function.
+Subscribe when UI state must change with locale or loaded active-locale resources. Every callback receives a snapshot containing translator for that revision.
 
 ```ts
 const unsubscribe = i18n.subscribe(
-  ({ locale }) => {
-    document.documentElement.lang = locale;
+  ({ locale, translator }) => {
+    console.log(locale, translator.translate('navigation.settings'));
   },
   { immediate: true },
 );
 
-// Later
 unsubscribe();
 ```
 
-Pass `{ signal }` to tie the subscription lifetime to an `AbortController` — useful in component lifecycle hooks:
+Pass `{ signal }` when an `AbortController` owns subscription lifetime.
+
+## SSR State
+
+Serialize only resolved resource catalogs on server, then hydrate a client store from that payload.
 
 ```ts
-// React useEffect
-useEffect(() => {
-  const controller = new AbortController();
-  i18n.subscribe(
-    ({ locale }) => {
-      document.documentElement.lang = locale;
-    },
-    { immediate: true, signal: controller.signal },
-  );
-  return () => controller.abort();
-}, []);
+import { createI18n, hydrateI18n } from '@vielzeug/lingua';
 
-// Svelte onDestroy
-const controller = new AbortController();
-i18n.subscribe(
-  ({ locale }) => {
-    snapshot = locale;
-  },
-  { signal: controller.signal },
-);
-onDestroy(() => controller.abort());
+const serverI18n = createI18n({
+  locale: 'en',
+  resources: { core: { en: { title: 'Server title' } } },
+});
+
+const state = serverI18n.serialize();
+const clientI18n = hydrateI18n(state, { fallback: 'en' });
+
+console.log(clientI18n.translate('title'));
+serverI18n.dispose();
+clientI18n.dispose();
 ```
 
-If the signal is already aborted when `subscribe()` is called, no subscription is created and the callback is never invoked.
+State contains raw loaded catalogs. It never contains loader functions.
+
+## Formatting and Validation
+
+Import formatting and catalog validation from their dedicated subpaths to keep translation state focused.
+
+```ts
+import { createFormatter } from '@vielzeug/lingua/format';
+import { validateCatalog } from '@vielzeug/lingua/validate';
+
+const formatter = createFormatter('en-US');
+const catalog = { inbox: { plural: { one: 'One message', other: '{count} messages' } } };
+const issues = validateCatalog(catalog, 'en');
+
+console.log(formatter.currency(19.99, 'USD'));
+console.log(issues);
+```
 
 ## Framework Integration
 
-`i18n` exposes `subscribe` / `getSnapshot` semantics and wires directly into any framework reactive system.
+Adapt `getSnapshot()` and `subscribe()` to your framework state primitive.
 
 ::: code-group
 
-```tsx [React]
+```ts [React]
 import { useSyncExternalStore } from 'react';
-import { createI18n } from '@vielzeug/lingua';
 
-const i18n = createI18n({
-  locale: 'en',
-  catalogs: { en: { greeting: 'Hello, {name}!' }, de: () => import('./de.json').then((m) => m.default) },
-});
+import type { I18n } from '@vielzeug/lingua';
 
-function useI18nSnapshot() {
-  return useSyncExternalStore(i18n.subscribe, i18n.getSnapshot, i18n.getSnapshot);
-}
-
-function Greeting({ name }: { name: string }) {
-  useI18nSnapshot(); // re-renders when locale changes
-  return <p>{i18n.t('greeting', { name })}</p>;
+export function useTranslator(i18n: I18n) {
+  return useSyncExternalStore(
+    (notify) => i18n.subscribe(() => notify()),
+    () => i18n.getSnapshot().translator,
+  );
 }
 ```
 
 ```ts [Vue 3]
-import { shallowRef, onScopeDispose } from 'vue';
-import { createI18n } from '@vielzeug/lingua';
+import { onUnmounted, shallowRef } from 'vue';
 
-const i18n = createI18n({
-  locale: 'en',
-  catalogs: { en: { greeting: 'Hello, {name}!' } },
-});
+import type { I18n } from '@vielzeug/lingua';
 
-function useI18n() {
+export function useTranslator(i18n: I18n) {
   const snapshot = shallowRef(i18n.getSnapshot());
-  const stop = i18n.subscribe(
-    (s) => {
-      snapshot.value = s;
-    },
-    { immediate: true },
-  );
-  onScopeDispose(stop);
+  const unsubscribe = i18n.subscribe((next) => {
+    snapshot.value = next;
+  });
+
+  onUnmounted(unsubscribe);
+
   return snapshot;
 }
 ```
 
-```svelte [Svelte]
-<script lang="ts">
-  import { onDestroy } from 'svelte';
-  import { createI18n } from '@vielzeug/lingua';
+```ts [Svelte]
+import { readable } from 'svelte/store';
 
-  const i18n = createI18n({
-    locale: 'en',
-    catalogs: { en: { greeting: 'Hello, {name}!' } },
+import type { I18n } from '@vielzeug/lingua';
+
+export function translatorStore(i18n: I18n) {
+  return readable(i18n.getSnapshot().translator, (set) => {
+    return i18n.subscribe(({ translator }) => set(translator));
   });
-
-  let snapshot = i18n.getSnapshot();
-  const stop = i18n.subscribe(
-    (s) => { snapshot = s; },
-    { immediate: true },
-  );
-  onDestroy(() => stop());
-</script>
-
-<p>{i18n.t('greeting', { name: 'Alice' })}</p>
+}
 ```
 
 :::
 
 ## Working with Other Vielzeug Libraries
 
-### With Wayfinder
-
-Use Wayfinder path params or query params as the source of truth for locale selection.
+Bridge Lingua subscriptions into Ripple through Flux when templates need reactive locale reads.
 
 ```ts
-import { createI18n } from '@vielzeug/lingua';
-import { createBrowserHistory, createRouter } from '@vielzeug/wayfinder';
+import { flux, toSignal } from '@vielzeug/flux';
+import { computed } from '@vielzeug/ripple';
 
-const i18n = createI18n({ locale: 'en', catalogs: { en: { title: 'Home' }, de: { title: 'Startseite' } } });
-const router = createRouter({ history: createBrowserHistory(), routes: [{ path: '/:locale/home', id: 'home' }] });
+const localeBinding = toSignal(
+  flux<string>((observer) => {
+    observer.next(i18n.locale);
 
-router.subscribe(() => {
-  const locale = router.current.params.locale;
-  if (locale) i18n.setLocale(locale);
-});
+    return i18n.subscribe(({ locale }) => observer.next(locale));
+  }),
+  { initial: i18n.locale },
+);
+
+export const locale = computed(() => localeBinding.value);
 ```
+
+Use Courier loaders when locale catalogs come from HTTP rather than bundled modules; pass each loader's resolved `Catalog` to a declared Lingua resource.
 
 ## Best Practices
 
-- Call `preload(locale)` before `setLocale(locale)` to avoid a render with missing translations.
-- Use lazy catalog functions (`() => import('./locales/de.json')`) for locales not needed at startup.
-- Keep translation keys flat or one level deep — deeply nested keys are harder to refactor.
-- Set `fallback` to a locale with 100% coverage so missing keys degrade gracefully.
-- Use `loadNamespace(ns, factory, locale?)` or `registerNamespace()` + `loadNamespace()` for per-route or per-feature key sets.
-- Use `isLoaded(locale)` before `getState()` in SSR to avoid silently omitting async-loader locales.
-- Use `isLoaded(locale)` to check whether a locale's catalog is fully resolved.
-- Call `dispose()` on route-level or request-scoped `fork()` instances when they are no longer needed.
-- Use `{ signal }` in `subscribe()` for lifecycle-safe subscriptions; use the returned `Unsubscribe` otherwise.
-- Use `onMissingKey` and `onMissingVar` in development to surface authoring errors early; omit them in production.
-- `createI18n()` already validates plural forms automatically in dev builds — only import `validateCatalog` from `@vielzeug/lingua/validate` directly if you want CI to fail the build on a warning.
-- Share one `i18n` instance per app entry point; avoid creating separate instances per component.
+- Define plural messages with `{ plural: ... }`; never infer them from object keys.
+- Declare resource precedence intentionally; later resource definitions override earlier keys.
+- Call `load()` before rendering a feature that depends on its optional resource.
+- Render `segments()` values with framework-native fragment support instead of coercing them to strings.
+- Keep loader functions out of SSR payloads; use `serialize()` and `hydrateI18n()`.
+- Pass an `AbortSignal` to subscriptions owned by a component or request.
+- Import formatting and validation only from `/format` and `/validate`.
+- Dispose temporary stores after requests, tests, and route lifetimes.
