@@ -1,53 +1,48 @@
 ---
 title: 'Courier Examples — Optimistic Updates'
-description: 'Optimistic Updates example for @vielzeug/courier.'
+description: 'Update a Courier query cache before a write completes.'
 ---
 
 ## Optimistic Updates
 
 ### Problem
 
-To feel instant, the UI should reflect a mutation's expected result immediately — before the server confirms it. If the server rejects the change, the UI must roll back to the previous state.
+A profile name should update immediately, then reconcile with the server whether the write succeeds or fails.
 
 ### Solution
 
-Use `qc.set()` to write the optimistic value before calling `mutate()`, then call `qc.invalidate()` in the catch block to restore server state on failure.
+Save the previous cached value, seed the optimistic value, and restore it on failure.
 
 ```ts
-const userId = 1;
-const key = ['users', userId];
-const patch = { name: 'Updated Name' };
+import { createCourier } from '@vielzeug/courier';
 
-const updateUser = createMutation((input: Partial<User>, signal: AbortSignal) =>
-  api.put<User>('/users/{id}', { params: { id: userId }, body: input, signal }),
-);
+type User = { id: number; name: string };
 
-// Apply optimistic update immediately
-qc.set<User>(key, (old) => ({ ...old!, ...patch }));
+const courier = createCourier({ baseUrl: 'https://api.example.com' });
+const key = ['users', 1] as const;
+const previous = courier.queries.get<User>(key);
+const optimistic: User = { id: 1, name: 'Updated name' };
 
+courier.queries.set(key, optimistic);
 try {
-  await updateUser.mutate(patch);
-  // Server confirmed — force sync
-  qc.invalidate(key);
-} catch {
-  // Server rejected — roll back
-  qc.invalidate(key);
+  await courier.mutate({
+    request: ({ signal }) => courier.patch('/users/{id}', { body: optimistic, params: { id: 1 }, signal }),
+  });
+} catch (error) {
+  if (previous) courier.queries.set(key, previous);
+  throw error;
+} finally {
+  courier.queries.invalidate(key);
 }
-
-// Optional: cancel an in-flight mutation directly
-// updateUser.cancel();
 ```
 
 ### Pitfalls
 
-- After applying an optimistic update, the UI shows stale data until the server confirms. Always set a pending/loading indicator so the user knows a mutation is in flight.
-- If the rollback function closes over stale state captured before the optimistic write, nested updates can produce an incorrect rollback target. Capture the previous value immediately before mutating.
-- Concurrent mutations on the same resource each apply and roll back independently. The rollback order may not match the mutation order. Use a sequential mutation queue for the same resource key.
+- Define a conflict policy when concurrent writes update the same resource.
+- Only roll back a value that was actually present in the cache.
+- Invalidate after settlement so later reads reconcile server state.
 
 ### Related
 
-- [Batch Mutations (Ripple)](@vielzeug/ripple/examples/pattern-batch-for-complex-mutations)
-
-- [Authentication](./authentication.md)
+- [Direct Mutations](../usage.md#direct-mutations)
 - [CRUD Operations](./crud-operations.md)
-- [Disposal](./disposal.md)

@@ -1,171 +1,87 @@
-import type { QueryKey } from './types';
+import { retry } from '@vielzeug/arsenal';
 
-import { warn } from './_dev';
+import type { MutationOptions, QueryCache } from './types';
+
 import { createApi } from './api';
-import { createMutation, type Mutation, type MutationFn, type MutationOptions } from './mutation';
-import { createQuery, type QueryClientOptions } from './query';
-import { createStream } from './stream';
-import { createTransportCore, type TransportOptions } from './transport';
-
-/**
- * Extended mutation options for `client.mutation()` on a `Courier` instance.
- * Includes all `MutationOptions` plus `invalidates` and `sets` cache shorthands.
- */
-export type CourierMutationOptions<TData = unknown, TVariables = void> = MutationOptions<TData, TVariables> & {
-  /** Query keys to invalidate in the shared cache on success. Runs before `onSuccess`. */
-  invalidates?: QueryKey[];
-  /**
-   * Imperatively seed the cache on success. Return an array of `[key, data]` pairs.
-   * Runs before `onSuccess`.
-   *
-   * @example
-   * ```ts
-   * sets: (user) => [[ ['users', user.id], user ], [ ['users'], allUsers ]]
-   * ```
-   */
-  sets?: (data: TData, variables: TVariables) => Array<[QueryKey, unknown]>;
-};
+import { CourierDisposedError } from './errors';
+import { createQueryCache } from './query';
+import { resolveRetryDelay } from './retry';
+import { createStreams } from './stream';
+import { anySignal, createTransportCore, type TransportOptions } from './transport';
 
 export type CourierOptions = TransportOptions & {
-  /**
-   * Default options merged into every `mutation()` call.
-   * Only retry/callback-error options are meaningful here — lifecycle callbacks
-   * (`onSuccess`, `onError`, `onSettled`) should be provided per-mutation since
-   * they receive typed variables that differ per mutation.
-   */
-  mutationDefaults?: Pick<MutationOptions, 'delay' | 'onCallbackError' | 'shouldRetry' | 'times'>;
-  /** Options specific to the query cache (staleTime, gcTime, refetch policies, etc.). */
-  query?: QueryClientOptions;
+  query?: { staleTime?: number; times?: number };
 };
 
-/**
- * Create a unified Courier instance backed by a single shared transport.
- *
- * `baseUrl`, `headers`, `timeout`, and `fetch` are shared between the `api` and
- * `stream` sub-clients. Interceptors registered via `courier.use()` apply to all
- * HTTP requests — REST calls and SSE connections alike.
- *
- * @example
- * ```ts
- * const client = createCourier({
- *   baseUrl: 'https://api.example.com',
- *   headers: { authorization: `Bearer ${token}` },
- * });
- *
- * // Interceptors apply to both api and stream
- * client.use(async (ctx, next) => {
- *   return next(ctx.withHeaders({ 'x-request-id': crypto.randomUUID() }));
- * });
- *
- * const user = await client.api.get<User>('/users/{id}', { params: { id: '1' } });
- * const src = client.stream.sse('/events', { reconnect: true });
- * ```
- */
-export function createCourier(opts?: CourierOptions) {
-  const { mutationDefaults, query: queryOpts, ...transportOpts } = opts ?? {};
+export type Courier = ReturnType<typeof createCourier>;
 
-  // Single shared transport — interceptors, headers, and cancellation are
-  // unified across the api and stream sub-clients.
-  // REST requests use DEFAULT_TIMEOUT (30s); SSE/readable streams default to
-  // Infinity individually inside createStream, so the two concerns stay separate.
-  const transport = createTransportCore(transportOpts);
-
+/** One application client owns transport, queries, mutations, and streams. */
+export function createCourier(options: CourierOptions = {}) {
+  const { query: queryOptions, ...transportOptions } = options;
+  const transport = createTransportCore(transportOptions);
   const api = createApi({ transport });
-  const stream = createStream({ transport });
+  const queryCache = createQueryCache({ ...queryOptions, signal: transport.disposalSignal });
+  const queries: QueryCache = queryCache;
+  const streams = createStreams(transport);
+  const mutations = new Set<AbortController>();
 
-  // The query client shares this courier's api client: `url`-sourced queries flow
-  // through the same interceptor pipeline, headers, and baseUrl as api requests.
-  // `fn`-sourced queries stay fully caller-authored by design (escape hatch).
-  if (queryOpts?.api) {
-    warn("createCourier: `query.api` is ignored — queries always use the courier's own transport.");
-  }
+  const mutate = async <T>(options: MutationOptions<T>): Promise<T> => {
+    if (transport.disposed) throw new CourierDisposedError('Courier');
 
-  const queryClient = createQuery({ ...queryOpts, api });
+    const controller = new AbortController();
+
+    mutations.add(controller);
+
+    const signal = anySignal(options.signal, controller.signal, transport.disposalSignal) ?? controller.signal;
+
+    try {
+      const data = await retry(() => options.request({ signal }), {
+        delay: (attempt) => resolveRetryDelay(attempt),
+        signal,
+        times: options.times ?? 1,
+      });
+
+      await options.onSuccess?.(data, queries as QueryCache);
+
+      return data;
+    } finally {
+      mutations.delete(controller);
+    }
+  };
 
   return {
-    api,
-
-    /** Abort all in-flight requests, SSE connections, and query cache fetches. Does not dispose the client. */
-    cancelAll(): void {
+    cancelAll() {
       transport.cancelAll();
-      queryClient.cancelAll();
+      queryCache.cancelAll();
+      for (const controller of mutations) controller.abort();
     },
-
-    /** `AbortSignal` aborted when the client is disposed. Use to tie other lifecycles to this client. */
+    delete: api.delete,
     get disposalSignal() {
       return transport.disposalSignal;
     },
-
-    /**
-     * Permanently dispose the client. All in-flight requests, SSE connections,
-     * and query cache fetches are aborted. Idempotent.
-     */
-    dispose(): void {
+    dispose() {
+      for (const controller of mutations) controller.abort();
+      mutations.clear();
+      queries.clear();
       transport.dispose();
-      queryClient.dispose();
     },
-
-    /** `true` after `dispose()` is called. */
-    get disposed(): boolean {
+    get disposed() {
       return transport.disposed;
     },
-
-    /** Update or delete global headers. Applies to both API requests and SSE streams. */
+    events: streams.events,
+    get: api.get,
+    getHeaders: api.getHeaders,
     headers: transport.headers,
-
-    /**
-     * Create a mutation instance with optional lifecycle callbacks.
-     *
-     * The `invalidates` and `sets` shorthands automatically update the shared query
-     * cache on success, eliminating boilerplate in the `onSuccess` callback.
-     *
-     * @example
-     * ```ts
-     * const createUser = client.mutation(
-     *   (input: NewUser, signal) => client.api.post<User>('/users', { body: input, signal }),
-     *   {
-     *     invalidates: [['users']],
-     *     sets: (user) => [[ ['users', user.id], user ]],
-     *   },
-     * );
-     * ```
-     */
-    mutation<TData, TVariables = void>(
-      fn: MutationFn<TData, TVariables>,
-      mutOpts?: CourierMutationOptions<TData, TVariables>,
-    ): Mutation<TData, TVariables> {
-      const { invalidates, sets, ...rest } = mutOpts ?? {};
-
-      const wrappedOnSuccess = async (data: TData, variables: TVariables): Promise<void> => {
-        if (sets) {
-          const pairs = sets(data, variables);
-
-          for (const [key, val] of pairs) queryClient.set(key, val);
-        }
-
-        if (invalidates) {
-          for (const key of invalidates) queryClient.invalidate(key);
-        }
-
-        await rest.onSuccess?.(data, variables);
-      };
-
-      return createMutation(fn, { ...mutationDefaults, ...rest, onSuccess: wrappedOnSuccess });
-    },
-
-    /** Query / cache client. */
-    query: queryClient,
-
-    /** SSE and ReadableStream client. */
-    stream,
-
-    [Symbol.dispose](): void {
+    mutate,
+    patch: api.patch,
+    post: api.post,
+    put: api.put,
+    queries,
+    read: streams.read,
+    request: api.request,
+    [Symbol.dispose]() {
       this.dispose();
     },
-
-    /** Register a shared interceptor that applies to both API requests and SSE connections. */
     use: transport.use,
   };
 }
-
-export type Courier = ReturnType<typeof createCourier>;

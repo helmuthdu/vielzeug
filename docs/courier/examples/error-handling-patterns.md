@@ -1,79 +1,49 @@
 ---
 title: 'Courier Examples — Error Handling Patterns'
-description: 'Error Handling Patterns example for @vielzeug/courier.'
+description: 'Handle HTTP, network, timeout, and cancellation failures precisely.'
 ---
 
 ## Error Handling Patterns
 
 ### Problem
 
-HTTP errors (4xx, 5xx), network failures, and timeouts need different recovery strategies. You want consistent handling across all call sites without repeating the same try/catch branches.
+A failed request needs user-facing treatment without treating cancellation as a server failure.
 
 ### Solution
 
-Use the specific error classes (`CourierAbortError`, `CourierTimeoutError`, `CourierNetworkError`, `CourierHttpError`) to narrow by failure mode, and `shouldRetry` on `createQuery()` or `createMutation()` to customize retry behavior.
-
-#### Status-code branching
+Narrow Courier's typed error classes before escalating unknown failures.
 
 ```ts
-import { CourierAbortError, CourierHttpError, CourierTimeoutError } from '@vielzeug/courier';
+import {
+  CourierAbortError,
+  CourierHttpError,
+  CourierNetworkError,
+  CourierTimeoutError,
+  createCourier,
+} from '@vielzeug/courier';
 
-try {
-  await api.get('/users/1');
-} catch (err) {
-  if (err instanceof CourierAbortError) return; // user canceled
-  if (err instanceof CourierTimeoutError) return toast.error('Request timed out');
-  if (CourierHttpError.is(err, 404)) return null;
-  if (CourierHttpError.is(err, 401)) return redirectToLogin();
-  if (CourierHttpError.is(err, 403)) return showForbidden();
-  if (CourierHttpError.is(err)) throw new Error(`Unexpected ${err.status}: ${err.url}`);
-  throw err; // re-throw non-Courier errors
-}
-```
+const courier = createCourier({ baseUrl: 'https://api.example.com' });
 
-### Global error logger
-
-```ts
-const api = createApi({ baseUrl: 'https://api.example.com' });
-
-api.use(async (ctx, next) => {
+async function loadUser(): Promise<string> {
   try {
-    return await next(ctx);
+    return (await courier.get<{ name: string }>('/users/1', { timeout: 2_000 })).name;
   } catch (error) {
-    Sentry.captureException(error, {
-      extra: { method: ctx.init.method, url: ctx.url },
-    });
+    if (error instanceof CourierAbortError) return 'Cancelled';
+    if (error instanceof CourierTimeoutError) return 'Timed out; retry.';
+    if (CourierHttpError.is(error, 404)) return 'User not found.';
+    if (error instanceof CourierNetworkError) return 'Check your connection.';
     throw error;
   }
-});
-```
-
-### Mutation error state
-
-```ts
-const mutation = createMutation((input: number, signal: AbortSignal) => api.delete(`/users/${input}`, { signal }));
-
-mutation.subscribe((state) => {
-  if (state.status === 'error') {
-    // State is observable — no need for try/catch in UI
-    toast.error(state.error!.message);
-    mutation.reset();
-  }
-});
-
-mutation.mutate(1).catch(() => {}); // error is surfaced via state, not thrown
+}
 ```
 
 ### Pitfalls
 
-- Courier throws distinct classes for each failure mode — `CourierHttpError` (has a response), `CourierNetworkError` (no response), `CourierTimeoutError`, and `CourierAbortError`. Catching only `CourierHttpError` misses connection failures.
-- A `500` response with a JSON error body throws `CourierHttpError`, not a generic `Error`. Do not use `instanceof Error` alone to detect HTTP failures.
-- Retrying on all errors wastes resources on 401 (wrong credentials) or 422 (validation failure). Limit retries to `CourierNetworkError` and `CourierHttpError` with status ≥ 500.
+- A `CourierHttpError` has a response; a `CourierNetworkError` does not.
+- Do not display cancellation as an application error during navigation.
+- A stream can throw the same request error classes as an HTTP call.
 
 ### Related
 
-- [Production Logging (Rune)](@vielzeug/rune/examples/production-setup)
-
-- [Authentication](./authentication.md)
-- [CRUD Operations](./crud-operations.md)
+- [Errors](../api.md#errors)
 - [Disposal](./disposal.md)

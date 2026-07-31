@@ -44,5 +44,5 @@ export const courier = createCourier({ fetch: mockFetch });
 // ---------------------------------------------------------------------------
 
 export function getUsers(): Promise<User[]> {
-  return courier.api.get<User[]>('/api/users');
+  return courier.get<User[]>('/api/users');
 }

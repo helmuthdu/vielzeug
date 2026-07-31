@@ -1,42 +1,40 @@
 ---
 title: 'Courier Examples — File Uploads'
-description: 'File Uploads example for @vielzeug/courier.'
+description: 'Upload multipart forms through Courier.'
 ---
 
 ## File Uploads
 
 ### Problem
 
-You need to send one or more files to the server as `multipart/form-data` and report upload progress to the user in real time.
+A browser form must upload a selected file with metadata as `multipart/form-data`.
 
 ### Solution
 
-Pass a `FormData` body to `api.post()` — Courier detects non-JSON body types and skips `Content-Type: application/json` serialization automatically.
+Pass `FormData` directly as the request body so the browser supplies the multipart boundary.
 
 ```ts
-const api = createApi({ baseUrl: 'https://api.example.com' });
+import { createCourier } from '@vielzeug/courier';
 
-// Single file — FormData passes through without JSON serialization
+type UploadResult = { url: string };
+
+const courier = createCourier({ baseUrl: 'https://api.example.com' });
+const file = new File(['profile'], 'profile.txt', { type: 'text/plain' });
 const form = new FormData();
-form.append('file', fileInput.files[0]);
-form.append('alt', 'Profile photo');
+form.append('file', file);
+form.append('alt', 'Profile document');
 
-const result = await api.post<UploadResult>('/upload', { body: form });
-
-// Multiple files
-const batch = new FormData();
-for (const file of files) batch.append('files', file);
-await api.post('/upload/batch', { body: batch });
+const result = await courier.post<UploadResult>('/upload', { body: form });
+console.log(result.url);
 ```
 
 ### Pitfalls
 
-- Do not set `Content-Type` manually on a `FormData` request. The browser must include the multipart boundary in the header — setting it manually removes the boundary and breaks server parsing.
-- `e.dataTransfer.files` / `input.files` is a `FileList`, not an array. Always convert with `Array.from()` before iterating.
-- Upload progress events only fire if the server supports chunked reading. Proxies that buffer the full request body report 100% progress immediately, regardless of actual transfer speed.
+- Do not manually set `Content-Type` for `FormData`; the required boundary would be missing.
+- Upload progress is not exposed by fetch; use a platform-specific transport when progress is required.
+- Keep files outside query-cache values.
 
 ### Related
 
-- [Authentication](./authentication.md)
-- [CRUD Operations](./crud-operations.md)
-- [Disposal](./disposal.md)
+- [HTTP Requests](../usage.md#http-requests)
+- [Error Handling Patterns](./error-handling-patterns.md)

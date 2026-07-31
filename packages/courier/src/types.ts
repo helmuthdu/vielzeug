@@ -1,107 +1,67 @@
-/**
- * A single segment in a query key — JSON-safe primitives or a plain object of primitives.
- * No `Date`, `bigint`, `Map`, `Set`, or nested arrays — these are not reliably serialisable.
- */
 export type QueryKeyAtom =
-  string | number | boolean | null | { readonly [k: string]: string | number | boolean | null };
-
-/**
- * Identifies a cached query. Must be a non-empty flat array of `QueryKeyAtom` values.
- *
- * @example
- * ```ts
- * ['users', userId]
- * ['users', userId, 'posts', { page: 1, limit: 10 }]
- * ```
- */
+  string | number | boolean | null | { readonly [key: string]: string | number | boolean | null };
 export type QueryKey = readonly [QueryKeyAtom, ...QueryKeyAtom[]];
-
 export type Unsubscribe = () => void;
 
-/**
- * Minimal external-store contract for framework integrations.
- *
- * - React: useSyncExternalStore(store.subscribe, store.peek)
- * - Vue: assign `store.peek()` into a shallowRef inside `store.subscribe`
- * - Svelte: adapt to `readable` by forwarding `subscribe`
- */
-export interface SyncStore<T> {
-  peek(): T;
-  subscribe(onStoreChange: () => void): Unsubscribe;
-}
-
-/**
- * Lifecycle status for an async operation.
- *
- * - `'loading'` — no data yet; a fetch may or may not be in-flight.
- * - `'success'` — data is available; `isFetching` may be `true` during background revalidation.
- * - `'error'` — the last operation failed; stale `data` from a prior success may still be present.
- */
-export type AsyncStatus = 'loading' | 'success' | 'error';
-
-export type AsyncState<T = unknown> = {
-  /**
-   * `true` while a fetch is in-flight (including background revalidation).
-   * Orthogonal to `status` — a `'success'` entry can have `isFetching: true`.
-   */
-  readonly isFetching: boolean;
-  /** Shorthand for `status === 'loading'`. Useful as a loading-spinner predicate. */
-  readonly isLoading: boolean;
-} & (
+export type AsyncState<T> =
   | {
       readonly data: undefined;
       readonly error: null;
+      readonly isFetching: boolean;
       readonly status: 'loading';
       readonly updatedAt: undefined;
     }
   | {
       readonly data: T;
       readonly error: null;
+      readonly isFetching: boolean;
       readonly status: 'success';
       readonly updatedAt: number;
     }
   | {
       readonly data: T | undefined;
       readonly error: Error;
-      readonly status: 'error';
-      /** Timestamp (ms since epoch) of when the error was committed. May coexist with stale `data` from a prior successful fetch. */
-      readonly updatedAt: number;
-    }
-);
-
-export type QueryState<T = unknown> = AsyncState<T>;
-
-/**
- * Lifecycle status for a mutation. Unlike a query entry (which is always loading
- * something), a mutation starts at `'idle'` — it has never run, so reporting
- * `'loading'` would be a lie consumers render as a phantom spinner.
- */
-export type MutationStatus = 'error' | 'idle' | 'loading' | 'success';
-
-export type MutationState<TData = unknown> = {
-  /**
-   * `true` while a `mutate()` call is in-flight.
-   */
-  readonly isFetching: boolean;
-  /** Shorthand for `status === 'loading'`. Useful as a loading-spinner predicate. */
-  readonly isLoading: boolean;
-} & (
-  | {
-      readonly data: undefined;
-      readonly error: null;
-      readonly status: 'idle' | 'loading';
-      readonly updatedAt: undefined;
-    }
-  | {
-      readonly data: TData;
-      readonly error: null;
-      readonly status: 'success';
-      readonly updatedAt: number;
-    }
-  | {
-      readonly data: TData | undefined;
-      readonly error: Error;
+      readonly isFetching: false;
       readonly status: 'error';
       readonly updatedAt: number;
-    }
-);
+    };
+
+export type QueryContext = {
+  readonly key: QueryKey;
+  readonly signal: AbortSignal;
+};
+
+export type QueryDefinition<T> = {
+  fetch: (context: QueryContext) => Promise<T>;
+  key: QueryKey;
+  staleTime?: number;
+};
+
+export type Query<T> = {
+  dispose(): void;
+  fetch(): Promise<T>;
+  getSnapshot(): AsyncState<T>;
+  invalidate(): void;
+  refetch(): Promise<T>;
+  subscribe(listener: () => void): Unsubscribe;
+};
+
+export type QueryCache = {
+  clear(): void;
+  create<T>(definition: QueryDefinition<T>): Query<T>;
+  get<T>(key: QueryKey): T | undefined;
+  getSnapshot<T>(key: QueryKey): AsyncState<T> | null;
+  invalidate(key: QueryKey): void;
+  keys(): QueryKey[];
+  refetchStale(): void;
+  set<T>(key: QueryKey, data: T, options?: { updatedAt?: number }): void;
+  subscribe(key: QueryKey, listener: () => void): Unsubscribe;
+};
+
+export type MutationContext = { readonly signal: AbortSignal };
+export type MutationOptions<T> = {
+  onSuccess?: (data: T, queries: QueryCache) => void | Promise<void>;
+  request: (context: MutationContext) => Promise<T>;
+  signal?: AbortSignal;
+  times?: number;
+};

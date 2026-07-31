@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/courier` &nbsp;·&nbsp; **Category:** Http
 
-**Key exports:** `createApi`, `createCourier`, `createQuery`, `createMutation`, `createStream`, `CourierError`, `CourierHttpError`, `CourierNetworkError`, `CourierTimeoutError`, `CourierAbortError`
+**Key exports:** `createCourier`, `CourierError`, `CourierHttpError`, `CourierNetworkError`, `CourierTimeoutError`, `CourierAbortError`
 
 **When to use:** Typed HTTP, caching, mutations, SSE, and readable streaming with a shared interceptor pipeline.
 
@@ -40,21 +40,17 @@ const client = createCourier({
   query: { staleTime: 5_000 },
 });
 
-// observe() returns a SyncStore and triggers a background fetch if stale
-const store = client.query.observe({
+const user = client.queries.create<User>({
+  fetch: ({ signal }) => client.get('/users/{id}', { params: { id: 1 }, signal }),
   key: ['users', 1],
-  url: '/users/{id}', // routed through client.api — interceptors/headers apply
-  params: { id: 1 },
   staleTime: 5_000,
 });
 
-const createUser = client.mutation((input: NewUser, signal) =>
-  client.api.post<User>('/users', { body: input, signal }),
-);
-
-const nextUser = await createUser.mutate({ name: 'Alice' });
-client.query.set(['users', nextUser.id], nextUser);
-client.query.invalidate(['users']);
+const nextUser = await client.mutate({
+  request: ({ signal }) => client.post<User>('/users', { body: { name: 'Alice' }, signal }),
+});
+client.queries.set(['users', nextUser.id], nextUser);
+client.queries.invalidate(['users']);
 ```
 
 ## Documentation

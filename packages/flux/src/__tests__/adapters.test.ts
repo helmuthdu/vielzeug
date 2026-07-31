@@ -284,30 +284,39 @@ describe('fromPresence()', () => {
 // ── Courier adapter ─────────────────────────────────────────────────────────
 
 describe('fromSse()', () => {
-  it('emits typed SSE events', () => {
-    type Events = { message: string };
-
-    const listeners = new Map<string, Set<(data: string) => void>>();
-
-    const source = {
-      on(event: string, handler: (data: string) => void) {
-        if (!listeners.has(event)) listeners.set(event, new Set());
-
-        listeners.get(event)!.add(handler);
-
-        return () => listeners.get(event)?.delete(handler);
-      },
-    } as unknown as import('@vielzeug/courier').SseSource<Events>;
+  it('emits selected events from an AsyncIterable', async () => {
+    async function* source() {
+      yield { data: 'ignored', event: 'ping' };
+      yield { data: 'event-1', event: 'message' };
+      yield { data: 'event-2', event: 'message' };
+    }
 
     const received: string[] = [];
-    const unsub = fromSse(source, 'message').subscribe((v) => received.push(v));
+    const completed = new Promise<void>((resolve) => {
+      fromSse(source(), 'message').subscribe({ complete: resolve, next: (value) => received.push(value) });
+    });
 
-    listeners.get('message')?.forEach((fn) => fn('event-1'));
-    listeners.get('message')?.forEach((fn) => fn('event-2'));
-    unsub();
-    listeners.get('message')?.forEach((fn) => fn('event-3'));
+    await completed;
 
     expect(received).toEqual(['event-1', 'event-2']);
+  });
+
+  it('returns the source iterator immediately on unsubscribe', () => {
+    const returned = vi.fn(async () => ({ done: true, value: undefined }));
+    const source: AsyncIterable<{ data: string; event: string }> = {
+      [Symbol.asyncIterator]() {
+        return {
+          next: () => new Promise<IteratorResult<{ data: string; event: string }>>(() => {}),
+          return: returned,
+        };
+      },
+    };
+
+    const unsubscribe = fromSse(source, 'message').subscribe(() => {});
+
+    unsubscribe();
+
+    expect(returned).toHaveBeenCalledOnce();
   });
 });
 
@@ -316,8 +325,8 @@ describe('fromQuery()', () => {
     let storeValue = 1;
     const changeListeners = new Set<() => void>();
 
-    const store = {
-      peek() {
+    const query = {
+      getSnapshot() {
         return storeValue;
       },
       subscribe(fn: () => void) {
@@ -328,7 +337,7 @@ describe('fromQuery()', () => {
     };
 
     const received: number[] = [];
-    const unsub = fromQuery(store).subscribe((v) => received.push(v));
+    const unsub = fromQuery(query).subscribe((v) => received.push(v));
 
     storeValue = 2;
     changeListeners.forEach((fn) => fn());

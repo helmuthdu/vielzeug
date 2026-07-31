@@ -15,8 +15,8 @@ importers:
         specifier: ^1.0.4
         version: 1.0.4
       '@vielzeug/courier':
-        specifier: ^1.1.4
-        version: 1.1.4
+        specifier: link:../../packages/courier
+        version: link:../../packages/courier
       '@vielzeug/dnd':
         specifier: ^1.2.2
         version: 1.2.2
@@ -25,7 +25,7 @@ importers:
         version: 1.0.5
       '@vielzeug/flux':
         specifier: ^1.0.7
-        version: 1.0.7(@vielzeug/courier@1.1.4)(@vielzeug/herald@1.0.4)(@vielzeug/pulse@1.0.7)
+        version: 1.0.7(@vielzeug/courier@..+packages+courier)(@vielzeug/herald@1.0.4)(@vielzeug/pulse@1.0.7)
       '@vielzeug/herald':
         specifier: ^1.0.4
         version: 1.0.4
@@ -343,10 +343,6 @@ packages:
 
   '@vielzeug/coins@1.0.4':
     resolution: {integrity: sha512-ITjfS62y1ZfkWs+DSY1Z86c6eezOEccvPmbexN4/hV2aKlfCgKPdBjVWZimGdxxphTAE+eUUSk9UE00z5eLWFQ==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/courier@1.1.4':
-    resolution: {integrity: sha512-eCLx2FrBp5iqMJwk6aDMlRVOQytBVslmjy+toXm4ktR0W9zfzKKx2hzBJWrMLRMLEKMCdP3zshtbgRP1aiB3kA==}
     engines: {node: '>=22'}
 
   '@vielzeug/dnd@1.2.2':
@@ -781,21 +777,17 @@ snapshots:
 
   '@vielzeug/coins@1.0.4': {}
 
-  '@vielzeug/courier@1.1.4':
-    dependencies:
-      '@vielzeug/arsenal': 1.1.2
-
   '@vielzeug/dnd@1.2.2': {}
 
   '@vielzeug/familiar@1.0.5':
     dependencies:
       '@vielzeug/arsenal': 1.1.2
 
-  '@vielzeug/flux@1.0.7(@vielzeug/courier@1.1.4)(@vielzeug/herald@1.0.4)(@vielzeug/pulse@1.0.7)':
+  '@vielzeug/flux@1.0.7(@vielzeug/courier@..+packages+courier)(@vielzeug/herald@1.0.4)(@vielzeug/pulse@1.0.7)':
     dependencies:
       '@vielzeug/ripple': 1.2.3
     optionalDependencies:
-      '@vielzeug/courier': 1.1.4
+      '@vielzeug/courier': link:../../packages/courier
       '@vielzeug/herald': 1.0.4
       '@vielzeug/pulse': 1.0.7
 

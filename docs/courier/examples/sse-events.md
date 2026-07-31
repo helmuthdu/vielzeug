@@ -1,62 +1,44 @@
 ---
 title: 'Courier Examples — Real-time Events'
-description: 'Real-time Events example for @vielzeug/courier.'
+description: 'Consume and cancel server-sent events with Courier.'
 ---
 
 ## Real-time Events
 
 ### Problem
 
-You need a lightweight way to consume server-sent events for notifications, presence, or dashboards.
+You need to consume notifications from an SSE endpoint and stop the connection when the view no longer
+needs updates.
 
 ### Solution
 
-Use `stream.sse()` with typed event generics and `reconnect: true` to handle connection drops with full-jitter exponential backoff.
+Iterate `events()` and use `break` when the current consumer is finished; Courier aborts the connection
+immediately.
 
 ```ts
-import { createStream } from '@vielzeug/courier';
+import { createCourier } from '@vielzeug/courier';
 
-type Events = {
-  message: { roomId: string; text: string; userId: string };
-  ping: null;
-};
+type Notification = { roomId: string; text: string; userId: string };
 
-const stream = createStream({
-  baseUrl: 'https://api.example.com',
-  headers: { authorization: `Bearer ${token}` },
-});
+const courier = createCourier({ baseUrl: 'https://api.example.com' });
 
-const source = stream.sse<Events>('/events', {
+for await (const event of courier.events<Notification>('/events', {
   query: { roomId: 'general' },
-  reconnect: { times: 5 },
-  onError: (error) => {
-    console.error('SSE closed permanently:', error.message);
-  },
-});
-
-const stopMessage = source.on('message', (event) => {
-  console.log(`[${event.roomId}] ${event.userId}: ${event.text}`);
-});
-
-const stopPing = source.on('ping', () => {
-  console.log('heartbeat');
-});
-
-// later
-stopMessage();
-stopPing();
-source.close();
-stream.dispose();
+})) {
+  if (event.event !== 'message') continue;
+  console.log(`[${event.data.roomId}] ${event.data.userId}: ${event.data.text}`);
+  break; // Closes the active SSE request immediately.
+}
 ```
 
 ### Pitfalls
 
-- `reconnect: true` uses exponential backoff with a default budget of 5 reconnects after the first failure.
-- SSE connections default to `Infinity` timeout per connection. Set `timeout` explicitly only when you really want streams to expire.
-- When sharing auth headers with REST requests, use `createCourier` instead so a single interceptor covers both.
+- Courier does not reconnect automatically. Recreate the iterator only when reconnecting is safe.
+- A stream started after `courier.dispose()` rejects with `CourierDisposedError`.
+- Handle `CourierAbortError` separately when cancellation is normal application control flow.
 
 ### Related
 
+- [HTTP Streaming](./ai-token-stream.md)
+- [Disposal](./disposal.md)
 - [Usage Guide](../usage.md#server-sent-events)
-- [API Reference](../api.md#createstream)
-- [AI Token Stream](./ai-token-stream.md)

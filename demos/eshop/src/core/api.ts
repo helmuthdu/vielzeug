@@ -26,7 +26,7 @@ async function mockFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
   // `baseUrl` (see packages/courier/src/url.ts) — with no `baseUrl` configured here, that
   // leaves the final request URL as e.g. `api/orders`, not `/api/orders`. Normalizing back to
   // a leading slash keeps the route table below readable and conventional, and matches
-  // reliably regardless of whether a caller passed a leading slash to `courier.api.*`.
+  // reliably regardless of whether a caller passed a leading slash to a Courier HTTP method.
   const path = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
 
   function json(data: unknown, status = 200): Response {
@@ -81,17 +81,17 @@ export const courier = createCourier({ fetch: mockFetch });
 // ---------------------------------------------------------------------------
 
 export function fetchModelsRequest(): Promise<typeof catalogModels> {
-  return courier.api.get('/api/models');
+  return courier.get('/api/models');
 }
 
 export function fetchOrdersRequest(userId?: string): Promise<Order[]> {
-  return courier.api.get<Order[]>('/api/orders', userId ? { query: { userId } } : undefined);
+  return courier.get<Order[]>('/api/orders', userId ? { query: { userId } } : undefined);
 }
 
 export function placeOrderRequest(order: Order): Promise<Order> {
-  return courier.api.post<Order>('/api/orders', { body: order });
+  return courier.post<Order>('/api/orders', { body: order });
 }
 
 export function updateOrderStatusRequest(orderId: string, status: OrderStatus): Promise<Order> {
-  return courier.api.patch<Order>(`/api/orders/${orderId}/status`, { body: { status } });
+  return courier.patch<Order>(`/api/orders/${orderId}/status`, { body: { status } });
 }

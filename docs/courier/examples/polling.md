@@ -1,53 +1,47 @@
 ---
 title: 'Courier Examples — Polling'
-description: 'Polling example for @vielzeug/courier.'
+description: 'Periodically refetch an explicit Courier query handle.'
 ---
 
 ## Polling
 
 ### Problem
 
-You need to refresh data on a fixed interval — showing the latest server state without WebSockets or server-sent events. The interval must pause when the component is destroyed.
+You need to keep a job view current and stop polling when the view is disposed.
 
 ### Solution
 
-Use `setInterval` to call `qc.fetch()` repeatedly and clear the interval in your cleanup function to stop polling when the component is destroyed.
+Call `refetch()` from a timer and release both the timer and subscriptions with the surrounding view.
 
 ```ts
-const qc = createQuery({ staleTime: 0 }); // always stale so each call hits the server
+import { createCourier } from '@vielzeug/courier';
 
-function startPolling<T>(key: QueryKey, fn: QueryOptions<T>['fn'], intervalMs: number) {
-  const tick = async () => {
-    qc.invalidate(key);
-    await qc.fetch({ key, fn }).catch(() => {});
-  };
-  tick();
-  const id = setInterval(tick, intervalMs);
-  return () => clearInterval(id);
-}
+type Job = { id: string; status: 'complete' | 'running' };
 
-const stopPolling = startPolling(
-  ['job', jobId],
-  ({ signal }) => api.get<Job>('/jobs/{id}', { params: { id: jobId }, signal }),
-  3_000,
-);
-
-// Stop when job completes
-qc.subscribe<Job>(['job', jobId], (state) => {
-  if (state.data?.status === 'done') stopPolling();
+const courier = createCourier({ baseUrl: 'https://api.example.com' });
+const jobId = 'job-42';
+const job = courier.queries.create<Job>({
+  key: ['job', jobId],
+  fetch: ({ signal }) => courier.get('/jobs/{id}', { params: { id: jobId }, signal }),
 });
+
+const timer = setInterval(() => void job.refetch(), 3_000);
+await job.fetch();
+
+function dispose() {
+  clearInterval(timer);
+  job.dispose();
+}
 ```
 
 ### Pitfalls
 
-- Polling continues even when the browser tab is hidden, wasting bandwidth. Pause on `document.visibilitychange` and resume when the tab becomes visible again.
-- The interval is measured from the start of each request, not from completion. If a request takes longer than the interval, the next fetch starts immediately with no idle gap.
-- Failing to stop polling on component teardown causes fetch callbacks to fire on unmounted state. Always call the disposer returned by `startPolling()` in your cleanup function.
+- Use `refetch()` for polling; `invalidate()` only marks a query stale.
+- Pause polling while the UI is hidden when that matches your product requirements.
+- Avoid overlapping writes and refetches for the same resource without an application-level policy.
 
 ### Related
 
-- [Signals (Ripple)](@vielzeug/ripple/examples/signals)
-
-- [Authentication](./authentication.md)
 - [CRUD Operations](./crud-operations.md)
 - [Disposal](./disposal.md)
+- [Usage Guide](../usage.md#query-handles)

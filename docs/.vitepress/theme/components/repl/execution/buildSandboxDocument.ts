@@ -5,8 +5,9 @@
  * Everything the run needs — the selected library's dependency chain and the user's
  * (already transpiled + import-rewritten) code — is embedded as plain inline `<script>`
  * text. Nothing is fetched over the network: the sandbox's CSP defaults to
- * `connect-src 'none'` and `script-src 'unsafe-inline'` with no external origins allowed,
- * and inlining sidesteps that entirely instead of punching holes in it. Because
+ * `connect-src 'none'` and `script-src 'unsafe-inline'` with no external origins allowed.
+ * Courier examples that target `https://api.example.com` are handled by an in-sandbox
+ * fetch mock, so they still run without punching holes in CSP. Because
  * `sandbox.render()` replaces the whole iframe document on every run, each run gets a
  * fresh `window` — library globals and any timers/intervals the user's code started are
  * gone the moment the next run replaces the document. No manual cleanup bookkeeping needed
@@ -69,6 +70,125 @@ function __replMemoryStorage() {
 });
 `;
 
+// Courier examples intentionally use https://api.example.com as a placeholder backend.
+// In the REPL that endpoint should stay offline: we mock those calls in-place and keep
+// CSP's connect-src 'none'. Requests to other origins fall through to native fetch.
+const FETCH_MOCK_SCRIPT = `
+var __replNativeFetch = typeof window.fetch === 'function' ? window.fetch.bind(window) : null;
+var __replMockUserId = 2;
+var __replMockPollCount = 0;
+
+function __replJson(data, status) {
+  return new Response(JSON.stringify(data), {
+    headers: { 'content-type': 'application/json' },
+    status: status || 200,
+  });
+}
+
+function __replSse(roomId) {
+  return new Response(
+    'event: message\\n' +
+      'data: ' +
+      JSON.stringify({ roomId: roomId || 'general', text: 'Welcome to courier events.', userId: 'system' }) +
+      '\\n\\n',
+    { headers: { 'content-type': 'text/event-stream' } },
+  );
+}
+
+function __replNdjson() {
+  return new Response(
+    '{"done":false,"delta":"Query handles cache by key. "}\\n' +
+      '{"done":false,"delta":"Mutations invalidate stale entries. "}\\n' +
+      '{"done":true,"delta":""}\\n',
+    { headers: { 'content-type': 'application/x-ndjson' } },
+  );
+}
+
+window.fetch = async function (input, init) {
+  var method = ((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+  var rawUrl = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input && input.url;
+
+  if (!rawUrl) {
+    if (__replNativeFetch) return __replNativeFetch(input, init);
+    throw new TypeError('Failed to fetch');
+  }
+
+  try {
+    var url = new URL(rawUrl, 'https://api.example.com');
+
+    if (url.origin !== 'https://api.example.com') {
+      if (__replNativeFetch) return __replNativeFetch(input, init);
+      throw new TypeError('Failed to fetch');
+    }
+
+    if (method === 'GET' && url.pathname === '/users') {
+      return __replJson([
+        { id: 1, name: 'Ada' },
+        { id: 2, name: 'Linus' },
+      ]);
+    }
+
+    if (method === 'GET' && /^\\/users\\/\\d+$/.test(url.pathname)) {
+      return __replJson({ id: 1, name: 'Ada' });
+    }
+
+    if (method === 'POST' && url.pathname === '/users') {
+      __replMockUserId += 1;
+      var body = null;
+
+      try {
+        body = init && typeof init.body === 'string' ? JSON.parse(init.body) : null;
+      } catch {
+        body = null;
+      }
+
+      return __replJson({ id: __replMockUserId, name: (body && body.name) || 'New user' }, 201);
+    }
+
+    if (method === 'PATCH' && /^\\/users\\/\\d+$/.test(url.pathname)) {
+      var patchBody = null;
+
+      try {
+        patchBody = init && typeof init.body === 'string' ? JSON.parse(init.body) : null;
+      } catch {
+        patchBody = null;
+      }
+
+      return __replJson({ id: 1, name: (patchBody && patchBody.name) || 'Updated name' });
+    }
+
+    if (method === 'GET' && /^\\/jobs\\//.test(url.pathname)) {
+      __replMockPollCount += 1;
+      return __replJson({
+        id: url.pathname.split('/').pop() || 'job-42',
+        status: __replMockPollCount > 1 ? 'complete' : 'running',
+      });
+    }
+
+    if (method === 'POST' && url.pathname === '/upload') {
+      return __replJson({ url: 'https://cdn.example.com/uploads/profile.txt' });
+    }
+
+    if (method === 'GET' && url.pathname === '/profile') {
+      return __replJson({ id: 1, name: 'Ada', role: 'admin' });
+    }
+
+    if (method === 'GET' && url.pathname === '/events') {
+      return __replSse(url.searchParams.get('roomId') || 'general');
+    }
+
+    if (method === 'POST' && url.pathname === '/chat') {
+      return __replNdjson();
+    }
+
+    return __replJson({ message: 'Not found' }, 404);
+  } catch {
+    if (__replNativeFetch) return __replNativeFetch(input, init);
+    throw new TypeError('Failed to fetch');
+  }
+};
+`;
+
 // @vielzeug/sandbox's own bridge script — the thing that defines `window.__sandbox__` — is
 // appended by buildDocument() *after* the body content passed to render() (i.e. after
 // everything below). So `window.__sandbox__` does not exist yet while our library scripts,
@@ -129,6 +249,7 @@ export function buildSandboxRunHtml(params: { code: string; libraries: SandboxLi
   return [
     inlineScript(EMIT_HELPER_SCRIPT),
     inlineScript(STORAGE_POLYFILL_SCRIPT),
+    inlineScript(FETCH_MOCK_SCRIPT),
     libraryScripts,
     inlineScript(CONSOLE_BRIDGE_SCRIPT),
     inlineScript(buildRunScript(params.code)),

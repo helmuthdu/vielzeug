@@ -24,13 +24,13 @@ Result:
   "name": "@vielzeug/courier",
   "slug": "courier",
   "version": "3.0.1",
-  "description": "Typed HTTP client with caching and mutations",
+  "description": "Unified HTTP client with query handles, direct mutations, and streams",
   "category": "http",
   "keywords": ["http", "fetch", "cache", "mutation"],
-  "exports": ["createApi", "createQuery", "createMutation"],
-  "related": ["spell", "ripple", "vault"],
+  "exports": ["createCourier", "CourierError", "withBearerAuth"],
+  "related": ["flux", "ripple", "spell"],
   "availableDocPages": ["index", "api", "usage", "examples"],
-  "exampleIds": ["query-basics"],
+  "exampleIds": ["create-courier"],
   "hasSource": true
 }
 ```

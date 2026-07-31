@@ -153,18 +153,17 @@ if (!result.success) console.log(result.error.issues);
 HTTP client with caching, request deduplication, typed mutations, SSE streaming, and interceptors.
 
 ```typescript
-import { createApi, createQuery } from '@vielzeug/courier';
+import { createCourier } from '@vielzeug/courier';
 
-const api = createApi({ baseUrl: '/api' });
-const queryClient = createQuery({ staleTime: 5_000 });
-
-const user = await queryClient.query({
+const courier = createCourier({ baseUrl: '/api', query: { staleTime: 5_000 } });
+const user = courier.queries.create({
   key: ['user', id],
-  fn: () => api.get<User>(`/users/${id}`).then((r) => r.json()),
+  fetch: ({ signal }) => courier.get<User>(`/users/${id}`, { signal }),
 });
 
-await api.patch(`/users/${id}`, { body: { name: 'Alice' } });
-queryClient.invalidate(['user', id]);
+await user.fetch();
+await courier.patch(`/users/${id}`, { body: { name: 'Alice' } });
+courier.queries.invalidate(['user', id]);
 ```
 
 [Courier docs →](/courier/)
@@ -338,7 +337,7 @@ const api = await container.resolve(ApiToken);
 | **Clockwork + Herald**      | Publish state-change events to decouple multiple machines from each other                                    |
 | **Flux + Ripple**           | `fromSignal()` / `toSignal()` bridge signals and streams — Ripple for state, Flux for pipelines             |
 | **Flux + Herald**           | `fromBus()` / `toBus()` turn a Herald bus into a Flux stream and back                                       |
-| **Flux + Courier**          | `fromSse()` / `fromQuery()` wrap Courier SSE and query responses as cancellable stream pipelines            |
+| **Flux + Courier** | `fromSse()` / `fromQuery()` adapt Courier event iterators and query handles into stream pipelines |
 | **Flux + Pulse**            | `fromPulse()` / `fromPresence()` convert Pulse WebSocket channels into composable Flux streams              |
 | **Scout + Ripple**          | `createReactiveSearch()` wraps the index in Ripple signals — query and results are reactive computed values  |
 | **Scout + Sourcerer**       | `toSearchFn()` wires a Scout index directly into `createLocalSource` as the search function                 |

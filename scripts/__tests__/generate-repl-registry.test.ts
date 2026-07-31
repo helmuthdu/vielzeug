@@ -11,6 +11,7 @@ import {
   findGetBundleConfigCall,
   normalizeAmbientText,
   parseBundleMeta,
+  readBundleMeta,
   readDistFile,
   readExternalDeps,
   resolveLoadOrder,
@@ -72,6 +73,35 @@ describe('parseBundleMeta()', () => {
     expect(() => parseBundleMeta('vite.bundle.config.ts', `getBundleConfig(__dirname, {});`)).toThrow(
       /missing a string "fileName" or "name"/,
     );
+  });
+});
+
+describe('readBundleMeta()', () => {
+  let root: string;
+
+  afterEach(() => {
+    if (root) rmSync(root, { recursive: true, force: true });
+  });
+
+  it('falls back to package.json deps when external is readWorkspaceDeps(__dirname)', () => {
+    root = mkdtempSync(path.join(tmpdir(), 'repl-registry-test-'));
+    const dir = path.join(root, 'clockwork');
+
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      path.join(dir, 'package.json'),
+      JSON.stringify({ dependencies: { '@vielzeug/ripple': 'workspace:*' }, name: '@vielzeug/clockwork' }),
+    );
+    writeFileSync(
+      path.join(dir, 'vite.bundle.config.ts'),
+      "export default defineConfig(getBundleConfig(__dirname, { name: 'Clockwork', fileName: 'clockwork', external: readWorkspaceDeps(__dirname) }));",
+    );
+
+    expect(readBundleMeta('clockwork', root)).toEqual({
+      externalDeps: ['ripple'],
+      fileName: 'clockwork',
+      globalName: 'Clockwork',
+    });
   });
 });
 

@@ -68,6 +68,18 @@ export interface BundleMeta {
   globalName: string;
 }
 
+function readWorkspaceDepsFromPackageJson(pkg: string, packagesDir = PACKAGES_DIR): string[] {
+  const packageJsonPath = join(packagesDir, pkg, 'package.json');
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as {
+    dependencies?: Record<string, string>;
+    peerDependencies?: Record<string, string>;
+  };
+
+  return Object.keys({ ...packageJson.dependencies, ...packageJson.peerDependencies })
+    .filter((specifier) => specifier.startsWith('@vielzeug/'))
+    .map((specifier) => specifier.slice('@vielzeug/'.length));
+}
+
 // Reads the object literal passed as the second argument to getBundleConfig(__dirname, {...})
 // via the real AST rather than regexing the file text — every package's vite.bundle.config.ts
 // already goes through the same call shape (see root vite.config.ts's getBundleConfig), so
@@ -131,7 +143,15 @@ export function parseBundleMeta(configPath: string, source: string): BundleMeta 
 
 export function readBundleMeta(pkg: string, packagesDir = PACKAGES_DIR): BundleMeta {
   const configPath = join(packagesDir, pkg, 'vite.bundle.config.ts');
-  return parseBundleMeta(configPath, readFileSync(configPath, 'utf8'));
+  const parsed = parseBundleMeta(configPath, readFileSync(configPath, 'utf8'));
+  const packageJsonDeps = readWorkspaceDepsFromPackageJson(pkg, packagesDir);
+
+  return {
+    ...parsed,
+    // Many packages pass `external: readWorkspaceDeps(__dirname)`, which is a call expression,
+    // not a literal array this AST parser can read directly. Fall back to package.json deps.
+    externalDeps: [...new Set([...parsed.externalDeps, ...packageJsonDeps])],
+  };
 }
 
 /** Depth-first, dependencies-before-dependents. `visiting` catches accidental cycles. */

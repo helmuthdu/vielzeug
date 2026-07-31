@@ -540,14 +540,14 @@ onUnmounted(stop);
 ### With Courier
 
 ```ts
-import { createApi } from '@vielzeug/courier';
+import { createCourier } from '@vielzeug/courier';
 import { createRemoteSource } from '@vielzeug/sourcerer';
 
-const api = createApi({ baseUrl: '/api' });
+const courier = createCourier({ baseUrl: '/api' });
 
 const source = createRemoteSource<Issue, Filter, Sort>({
   fetch: async ({ filter, limit, page, search, sort }, signal) =>
-    api.get('/issues', { query: { filter, limit, page, search, sort }, signal }),
+    courier.get('/issues', { query: { filter, limit, page, search, sort }, signal }),
   limit: 25,
 });
 ```

@@ -106,4 +106,20 @@ describe('buildSandboxRunHtml', () => {
       'Object.defineProperty(window, name, { configurable: true, value: __replMemoryStorage(), writable: true })',
     );
   });
+
+  it('installs the api.example.com fetch mock before user code runs', () => {
+    const html = buildSandboxRunHtml({ code: "await fetch('https://api.example.com/users')", libraries: [] });
+
+    const mockIndex = html.indexOf("url.origin !== 'https://api.example.com'");
+    const userCodeIndex = html.indexOf("await fetch('https://api.example.com/users')");
+
+    expect(mockIndex).toBeGreaterThan(-1);
+    expect(userCodeIndex).toBeGreaterThan(mockIndex);
+  });
+
+  it('keeps unknown api.example.com routes deterministic with a JSON 404 mock response', () => {
+    const html = buildSandboxRunHtml({ code: '', libraries: [] });
+
+    expect(html).toContain("return __replJson({ message: 'Not found' }, 404)");
+  });
 });

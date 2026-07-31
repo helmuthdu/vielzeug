@@ -709,11 +709,12 @@ Wrap Pulse channel events as streams. Requires `@vielzeug/pulse`.
 ### `fromSse()` / `fromQuery()` (Courier)
 
 ```ts
-fromSse<E, K extends keyof E>(source: SseSource<E>, event: K): Flux<E[K]>;
-fromQuery<T>(store: { peek(): T; subscribe(fn: () => void): () => void }): Flux<T>;
+fromSse<T>(source: AsyncIterable<{ data: T; event: string }>, event: string): Flux<T>;
+fromQuery<T>(query: { getSnapshot(): T; subscribe(fn: () => void): () => void }): Flux<T>;
 ```
 
-Wrap Courier sources as streams. Requires `@vielzeug/courier`. To consume an `AsyncIterable` or `ReadableStream`, use the generic `from()` operator.
+Wrap Courier's `events()` iterator and query handles as streams. Requires `@vielzeug/courier`. Use
+the generic `from()` operator for other `AsyncIterable` or `ReadableStream` sources.
 
 ---
 

@@ -477,14 +477,12 @@ function useLogger(): Logger {
 ### With Courier
 
 ```ts
-import { createApi } from '@vielzeug/courier';
+import { createCourier, withLogging } from '@vielzeug/courier';
 import { createLogger } from '@vielzeug/rune';
 
 const log = createLogger({ namespace: 'courier' });
-const api = createApi({
-  baseUrl: 'https://api.example.com',
-  onError: (err) => log.error(err, 'request failed'),
-});
+const courier = createCourier({ baseUrl: 'https://api.example.com' });
+courier.use(withLogging({ logger: (message, meta) => log.debug(meta, message) }));
 ```
 
 ### With Herald

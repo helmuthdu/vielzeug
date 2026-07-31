@@ -13,7 +13,7 @@
   "dependencies": {
     "@vielzeug/clockwork": "^1.1.1",
     "@vielzeug/coins": "^1.0.4",
-    "@vielzeug/courier": "^1.1.4",
+    "@vielzeug/courier": "link:../../packages/courier",
     "@vielzeug/dnd": "^1.2.2",
     "@vielzeug/familiar": "^1.0.5",
     "@vielzeug/flux": "^1.0.7",

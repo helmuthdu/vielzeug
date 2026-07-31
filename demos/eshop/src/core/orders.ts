@@ -8,9 +8,8 @@ import { currentUser } from './auth';
 /**
  * Reactive "my orders" list. Unlike `core/catalog.ts`'s static model directory, the query key
  * here is per-user (`['orders', userId]`) and must be re-observed whenever Settings' user
- * switcher changes `currentUser` — so this reads the query cache's `SyncStore` directly
- * (`store.peek()` / `store.subscribe()`) inside an `effect()` that tears down the previous
- * subscription before creating the next one, rather than a single fixed `fromQuery` binding.
+ * switcher changes `currentUser` — so this creates a new query handle inside an `effect()` and
+ * tears down its subscription before creating the next one, rather than a single fixed binding.
  */
 export const ordersSignal = signal<Order[]>([]);
 
@@ -19,29 +18,31 @@ export const ordersLoading = signal<boolean>(true);
 effect(() => {
   const userId = currentUser.value.id;
 
-  const store = courier.query.observe<Order[]>({
-    fn: () => fetchOrdersRequest(userId),
+  const query = courier.queries.create<Order[]>({
+    fetch: () => fetchOrdersRequest(userId),
     key: ['orders', userId],
     staleTime: 15_000,
   });
 
   const sync = (): void => {
-    const state = store.peek();
+    const state = query.getSnapshot();
 
     ordersSignal.value = state.data ?? [];
-    ordersLoading.value = state.isLoading;
+    ordersLoading.value = state.isFetching;
   };
 
   sync();
 
-  const unsubscribe = store.subscribe(sync);
+  query.subscribe(sync);
+  void query.fetch();
 
-  return unsubscribe;
+  return () => query.dispose();
 });
 
-/** Invalidates the current user's order query so the next read refetches from the mock API. */
-export function invalidateMyOrders(): void {
-  courier.query.invalidate(['orders', currentUser.value.id]);
+/** Revalidates every cached order list after the mock API changes. */
+export function refreshOrders(): void {
+  courier.queries.invalidate(['orders']);
+  courier.queries.refetchStale();
 }
 
 // ---------------------------------------------------------------------------
@@ -50,14 +51,15 @@ export function invalidateMyOrders(): void {
 // `@vielzeug/sourcerer` + `@vielzeug/prism` reporting.
 // ---------------------------------------------------------------------------
 
-const allOrdersStore = courier.query.observe<Order[]>({
-  fn: () => fetchOrdersRequest(),
+const allOrdersQuery = courier.queries.create<Order[]>({
+  fetch: () => fetchOrdersRequest(),
   key: ['orders', 'all'],
   staleTime: 15_000,
 });
 
-export const allOrdersSignal = signal<Order[]>(allOrdersStore.peek().data ?? []);
+export const allOrdersSignal = signal<Order[]>(allOrdersQuery.getSnapshot().data ?? []);
 
-allOrdersStore.subscribe(() => {
-  allOrdersSignal.value = allOrdersStore.peek().data ?? [];
+allOrdersQuery.subscribe(() => {
+  allOrdersSignal.value = allOrdersQuery.getSnapshot().data ?? [];
 });
+void allOrdersQuery.fetch();

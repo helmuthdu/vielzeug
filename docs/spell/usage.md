@@ -413,7 +413,7 @@ Use Spell as the validation layer and let other packages focus on transport, for
 
 ```ts
 import { createForm } from '@vielzeug/forge';
-import { createApi } from '@vielzeug/courier';
+import { createCourier } from '@vielzeug/courier';
 import { s } from '@vielzeug/spell';
 
 const Profile = s.object({
@@ -429,8 +429,8 @@ const form = createForm({
   validator: Profile,
 });
 
-const api = createApi({ baseUrl: '/api' });
-const profile = Profile.parse(await api.get('/profile'));
+const courier = createCourier({ baseUrl: '/api' });
+const profile = Profile.parse(await courier.get('/profile'));
 ```
 
 Use Spell descriptors with `@vielzeug/codex` or other tooling when you need generated docs or external schema consumers.

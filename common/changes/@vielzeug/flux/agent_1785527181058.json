@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: adapt Courier adapters to AsyncIterable streams and query handles",
+      "packageName": "@vielzeug/flux",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/flux"
+}

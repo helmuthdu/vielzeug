@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat!: redesign Courier around one client, query handles, direct mutations, and AsyncIterable streams",
+      "packageName": "@vielzeug/courier",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/courier"
+}

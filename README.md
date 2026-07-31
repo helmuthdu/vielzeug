@@ -165,7 +165,7 @@ pnpm add @vielzeug/spell
 
 ### [@vielzeug/courier](packages/courier) – HTTP Client
 
-Modern, type-safe HTTP client with query caching, subscriptions, and standalone mutations.
+Modern, type-safe HTTP client with explicit query handles, direct mutations, and AsyncIterable streams.
 
 ```bash
 pnpm add @vielzeug/courier
@@ -173,9 +173,9 @@ pnpm add @vielzeug/courier
 
 **Key Features:**
 
-- Separate HTTP and Query clients for flexibility
-- Smart caching with stale-while-revalidate and request deduplication
-- Standalone mutations with cancellation, retry, and lifecycle callbacks
+- One client for HTTP, queries, mutations, and streams
+- Smart caching with explicit query handles and request deduplication
+- Direct mutations with retry and explicit cache updates
 - Automatic retry with exponential backoff (10 KB min / 3.4 KB gz)
 
 [📖 Documentation](https://vielzeug.dev/courier/) • [Examples](https://vielzeug.dev/courier/examples)
@@ -656,7 +656,7 @@ yarn add @vielzeug/forge @vielzeug/courier
 ```typescript
 import { createForm } from '@vielzeug/forge';
 import { s, type Infer } from '@vielzeug/spell';
-import { createApi, createMutation } from '@vielzeug/courier';
+import { createCourier } from '@vielzeug/courier';
 import { createLogger } from '@vielzeug/rune';
 
 const log = createLogger('auth');
@@ -669,12 +669,7 @@ const LoginSchema = s.object({
 type LoginInput = Infer<typeof LoginSchema>;
 
 // HTTP client
-const api = createApi({ baseUrl: 'https://api.example.com' });
-
-const loginMutation = createMutation(
-  ({ input, signal }: { input: LoginInput; signal: AbortSignal }) =>
-    api.post('/auth/login', { body: input, signal }).then((r) => r.json()),
-);
+const courier = createCourier({ baseUrl: 'https://api.example.com' });
 
 // Form wired to the schema
 const form = createForm<LoginInput>({
@@ -684,7 +679,9 @@ const form = createForm<LoginInput>({
 
 form.submit(async (values) => {
   try {
-    const user = await loginMutation.mutate(values);
+    const user = await courier.mutate({
+      request: ({ signal }) => courier.post('/auth/login', { body: values, signal }),
+    });
     log.info('Login successful', { user });
   } catch (error) {
     log.error('Login failed', error);

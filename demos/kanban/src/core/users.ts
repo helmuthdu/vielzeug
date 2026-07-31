@@ -1,10 +1,10 @@
-import type { QueryState } from '@vielzeug/courier';
+import type { AsyncState } from '@vielzeug/courier';
 
 /**
  * Reactive user directory — the one place this app fetches "the user list", chained through
  * three packages so each does the job it's built for: `@vielzeug/courier`'s query cache fetches
- * and caches the mock `/api/users` response, `@vielzeug/flux`'s `fromQuery` adapts its
- * `SyncStore` into a stream, and `@vielzeug/ripple`'s `toSignal` lands that stream as a reactive
+ * and caches the mock `/api/users` response, `@vielzeug/flux`'s `fromQuery` adapts its query
+ * handle into a stream, and `@vielzeug/ripple`'s `toSignal` lands that stream as a reactive
  * signal every view below can read. `userInitials()`/`userMap` are exported from here too so the
  * lookup logic exists in exactly one place instead of being copy-pasted per view.
  */
@@ -16,14 +16,15 @@ import type { User } from './types';
 import { courier, getUsers } from './api';
 import { seedUsers } from './seed-data';
 
-const usersStore = courier.query.observe<User[]>({
-  fn: () => getUsers(),
-  initialData: () => seedUsers,
+const usersQuery = courier.queries.create<User[]>({
+  fetch: () => getUsers(),
   key: ['users'],
   staleTime: 60_000,
 });
 
-const usersBinding = toSignal(fromQuery<QueryState<User[]>>(usersStore), { initial: usersStore.peek() });
+courier.queries.set(['users'], seedUsers);
+
+const usersBinding = toSignal(fromQuery<AsyncState<User[]>>(usersQuery), { initial: usersQuery.getSnapshot() });
 
 export const usersSignal = computed<User[]>(() => usersBinding.value.data ?? seedUsers);
 

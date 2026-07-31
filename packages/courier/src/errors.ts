@@ -113,9 +113,6 @@ export class CourierSchemaValidationError extends CourierError {
   }
 }
 
-/** Thrown when the batcher's resolve function returns an unexpected number of results. */
-export class CourierBatcherError extends CourierError {}
-
 /** Thrown when a method is called on a disposed client instance. */
 export class CourierDisposedError extends CourierError {
   constructor(clientName: string) {

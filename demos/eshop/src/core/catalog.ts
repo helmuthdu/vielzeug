@@ -1,4 +1,4 @@
-import type { QueryState } from '@vielzeug/courier';
+import type { AsyncState } from '@vielzeug/courier';
 
 import { fromQuery, toSignal } from '@vielzeug/flux';
 import { computed } from '@vielzeug/ripple';
@@ -12,17 +12,18 @@ import { models as seedModels } from './seed-data';
  * Reactive model catalog — chained through three packages exactly like
  * demos/kanban/src/core/users.ts's user directory: `@vielzeug/courier`'s query cache
  * fetches/caches the mock `/api/models` response, `@vielzeug/flux`'s `fromQuery` adapts its
- * `SyncStore` into a stream, and `@vielzeug/ripple`'s `toSignal` lands that stream as a
+ * query handle into a stream, and `@vielzeug/ripple`'s `toSignal` lands that stream as a
  * reactive signal every view below can read.
  */
-const modelsStore = courier.query.observe<Model[]>({
-  fn: () => fetchModelsRequest(),
-  initialData: () => seedModels,
+const modelsQuery = courier.queries.create<Model[]>({
+  fetch: () => fetchModelsRequest(),
   key: ['models'],
   staleTime: 60_000,
 });
 
-const modelsBinding = toSignal(fromQuery<QueryState<Model[]>>(modelsStore), { initial: modelsStore.peek() });
+courier.queries.set(['models'], seedModels);
+
+const modelsBinding = toSignal(fromQuery<AsyncState<Model[]>>(modelsQuery), { initial: modelsQuery.getSnapshot() });
 
 export const modelsSignal = computed<Model[]>(() => modelsBinding.value.data ?? seedModels);
 

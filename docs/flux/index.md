@@ -179,7 +179,7 @@ const unsub = integers$.pipe(take(3)).subscribe({
 - **Ripple adapters** — `fromSignal()` / `toSignal()` bridge signals and streams
 - **Herald adapters** — `fromBus()` / `toBus()` bridge typed event buses
 - **Pulse adapters** — `fromPulse()` / `fromPresence()` for real-time channels
-- **Courier adapters** — `fromSse()` / `fromQuery()` for HTTP sources; use `from()` for `AsyncIterable`
+- **Courier adapters** — `fromSse()` filters `events()` iterators and `fromQuery()` observes query handles
 - `toPromise()` / `toArray()` — Collect stream output into standard async primitives
 
 </div>
@@ -201,7 +201,7 @@ const unsub = integers$.pipe(take(3)).subscribe({
 - [Ripple](/ripple/) — Reactive signals and effects; `fromSignal()`/`toSignal()` connect Flux streams to Ripple's signal graph
 - [Herald](/herald/) — Typed event bus; `fromBus()`/`toBus()` wrap bus events as Flux streams
 - [Pulse](/pulse/) — Real-time WebSocket channels; `fromPulse()`/`fromPresence()` expose channel data as streams
-- [Courier](/courier/) — HTTP client; `fromSse()`/`fromQuery()` wrap Courier sources as streams
+- [Courier](/courier/) — HTTP client; `fromSse()`/`fromQuery()` adapt Courier iterators and query handles
 
 </div>
 

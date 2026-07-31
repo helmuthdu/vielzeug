@@ -6,7 +6,7 @@ import { bus } from './events';
 import { formatOrderStatus } from './format';
 import { t } from './i18n';
 import { logger } from './logger';
-import { invalidateMyOrders } from './orders';
+import { refreshOrders } from './orders';
 
 type OrderAction = 'cancel' | 'create' | 'read' | 'updateStatus';
 
@@ -34,18 +34,11 @@ export function canUpdateOrderStatus(order: Order): boolean {
 }
 
 /**
- * Places an order via a `@vielzeug/courier` mutation (loading/error state tracking + retries for
- * free) after a `@vielzeug/ward` permission check. The order's user id is read fresh at mutate
- * time (not captured once at module scope) so `invalidateMyOrders()` always targets whoever is
- * `currentUser` right now, even if Settings' user-switcher changed it mid-session.
+ * Places an order via a direct `@vielzeug/courier` mutation after a `@vielzeug/ward` permission
+ * check. The order's user id is read fresh at mutation
+ * time (not captured once at module scope) so refreshes include the currently selected user's
+ * order list even if Settings' user-switcher changed it mid-session.
  */
-const placeOrderMutation = courier.mutation((order: Order) => placeOrderRequest(order), {
-  onSuccess: (order) => {
-    invalidateMyOrders();
-    bus.emit('order:placed', { orderId: order.id });
-  },
-});
-
 export async function attemptPlaceOrder(order: Order): Promise<Order | null> {
   if (!explainOrderAction('create').allowed) {
     notify(t('orders.notify.noPermissionPlace'));
@@ -54,7 +47,13 @@ export async function attemptPlaceOrder(order: Order): Promise<Order | null> {
   }
 
   try {
-    const placed = await placeOrderMutation.mutate(order);
+    const placed = await courier.mutate({
+      onSuccess: (placedOrder) => {
+        refreshOrders();
+        bus.emit('order:placed', { orderId: placedOrder.id });
+      },
+      request: () => placeOrderRequest(order),
+    });
 
     notify(t('orders.notify.placeSuccess'), 'success');
 
@@ -75,8 +74,7 @@ export async function attemptCancelOrder(order: Order): Promise<boolean> {
 
   try {
     await updateOrderStatusRequest(order.id, 'cancelled');
-    invalidateMyOrders();
-    courier.query.invalidate(['orders']);
+    refreshOrders();
     bus.emit('order:status-changed', { orderId: order.id, status: 'cancelled' });
     notify(t('orders.notify.cancelSuccess'), 'success');
 
@@ -97,7 +95,7 @@ export async function attemptUpdateOrderStatus(order: Order, status: OrderStatus
 
   try {
     await updateOrderStatusRequest(order.id, status);
-    courier.query.invalidate(['orders']);
+    refreshOrders();
     bus.emit('order:status-changed', { orderId: order.id, status });
     notify(t('orders.notify.updateSuccess', { status: formatOrderStatus(status) }), 'success');
 
@@ -123,7 +121,7 @@ export async function attemptBulkUpdateOrderStatus(orders: Order[], status: Orde
   try {
     await Promise.all(updatable.map((order) => updateOrderStatusRequest(order.id, status)));
 
-    courier.query.invalidate(['orders']);
+    refreshOrders();
 
     for (const order of updatable) bus.emit('order:status-changed', { orderId: order.id, status });
 

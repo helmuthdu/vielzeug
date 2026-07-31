@@ -65,7 +65,7 @@ Available MCP tools: `list-packages`, `search-packages`, `list-docs-pages`, `get
 import { computed, effect, signal } from '@vielzeug/ripple'; // reactive state
 import { createForm } from '@vielzeug/forge'; // forms
 import { s } from '@vielzeug/spell'; // validation
-import { createApi, createQuery } from '@vielzeug/courier'; // HTTP + caching
+import { createCourier } from '@vielzeug/courier'; // HTTP + caching
 import { createLocalStorage, table } from '@vielzeug/vault'; // storage
 import { createContainer, createToken } from '@vielzeug/conduit'; // DI container
 ```

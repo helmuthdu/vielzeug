@@ -1,37 +1,39 @@
 ---
 title: 'Courier Examples — Disposal'
-description: 'Disposal example for @vielzeug/courier.'
+description: 'Cancel Courier work deterministically.'
 ---
 
 ## Disposal
 
 ### Problem
 
-A component starts an HTTP request and is unmounted before the response arrives. Continuing to update state on a destroyed component produces warnings or errors — you need to cancel in-flight requests on teardown.
+A route can end while requests and streams are active, but the application client must remain usable elsewhere.
 
 ### Solution
 
-Use the `signal` from `QueryFnContext` or pass a controller signal to `mutate()`, and call `cancelAll()` or `dispose()` on teardown to abort in-flight requests.
+Use `cancelAll()` for a reusable scope and `dispose()` only at the final application or request boundary.
 
 ```ts
-const api = createApi({ baseUrl: 'https://api.example.com' });
-const qc = createQuery();
+import { createCourier } from '@vielzeug/courier';
 
-// Manual disposal — good for singleton cleanup on logout
-function cleanup() {
-  api.dispose();
-  qc.dispose();
+const courier = createCourier({ baseUrl: 'https://api.example.com' });
+
+function leaveRoute(): void {
+  courier.cancelAll();
+}
+
+function shutdownApplication(): void {
+  courier.dispose();
 }
 ```
 
 ### Pitfalls
 
-- Aborting via `AbortController` cancels the network request but does not prevent state updates that were queued before the abort. Guard setters with a mounted/active flag.
-- Calling `client.dispose()` cancels all in-flight requests and rejects new ones. Dispose only a component-scoped client — never a shared singleton.
-- Courier always converts a cancelled request into a `CourierAbortError` instance before it reaches your `catch` block — use `err instanceof CourierAbortError` (or `CourierError.is(err)` to catch any courier error in one branch), not `err.name === 'AbortError'`, which checks the native platform error name instead.
+- A disposed client cannot start requests or streams.
+- Create clients per application or SSR request scope, not per component render.
+- `query.dispose()` removes that handle's subscriptions; it does not dispose the client.
 
 ### Related
 
-- [Authentication](./authentication.md)
-- [CRUD Operations](./crud-operations.md)
-- [Error Handling Patterns](./error-handling-patterns.md)
+- [Best Practices](../usage.md#best-practices)
+- [Real-time Events](./sse-events.md)
