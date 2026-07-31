@@ -29,6 +29,12 @@ export type EntryStatus = 'loading' | 'success' | 'error';
 export type CacheEntry<T = unknown> = {
   data: T | undefined;
   error: Error | null;
+  /**
+   * Epoch ms after which this entry may be garbage-collected. Eviction is driven by
+   * the cache's single retargeted timer (see `retargetGcTimer`), not a per-entry
+   * timeout — caches with many short-lived entries pay one timer, not thousands.
+   */
+  gcDeadline?: number;
   hash: string;
   inflight: { controller: AbortController; promise: Promise<T> } | null;
   isFetching: boolean;
@@ -52,7 +58,8 @@ export type CacheContext = {
   disposed: boolean;
   entries: Map<string, CacheEntry>;
   gcTimeDefault: number;
-  gcTimers: Map<string, ReturnType<typeof setTimeout>>;
+  /** The cache's ONE gc timer — always targeted at the earliest pending deadline. */
+  gcTimer: ReturnType<typeof setTimeout> | null;
   notify: (entry: CacheEntry) => void;
   shouldRetryDefault: RetryOptions['shouldRetry'];
   staleTimeDefault: number;
@@ -113,44 +120,76 @@ export function ensureEntry<T>(ctx: CacheContext, key: QueryKey): CacheEntry<T> 
   return entry;
 }
 
-export function cancelGc(ctx: CacheContext, entryHash: string): void {
-  const timer = ctx.gcTimers.get(entryHash);
+/** Retarget the single gc timer at the earliest pending deadline (or clear it). */
+function retargetGcTimer(ctx: CacheContext): void {
+  if (ctx.gcTimer) {
+    clearTimeout(ctx.gcTimer);
+    ctx.gcTimer = null;
+  }
 
-  if (!timer) return;
+  let earliest: number | undefined;
 
-  clearTimeout(timer);
-  ctx.gcTimers.delete(entryHash);
+  for (const entry of ctx.entries.values()) {
+    if (entry.gcDeadline !== undefined && (earliest === undefined || entry.gcDeadline < earliest)) {
+      earliest = entry.gcDeadline;
+    }
+  }
+
+  if (earliest === undefined || ctx.disposed) return;
+
+  const timer = setTimeout(
+    () => {
+      ctx.gcTimer = null;
+
+      const now = Date.now();
+
+      for (const entry of [...ctx.entries.values()]) {
+        if (
+          entry.gcDeadline !== undefined &&
+          now >= entry.gcDeadline &&
+          entry.observers.size === 0 &&
+          !entry.isFetching
+        ) {
+          entry.gcDeadline = undefined;
+          ctx.entries.delete(entry.hash);
+        }
+      }
+
+      retargetGcTimer(ctx);
+    },
+    Math.max(0, earliest - Date.now()),
+  );
+
+  (timer as { unref?: () => void }).unref?.();
+  ctx.gcTimer = timer;
+}
+
+/** Cancel an entry's pending eviction (e.g. when a new observer subscribes). */
+export function cancelGc<T>(ctx: CacheContext, entry: CacheEntry<T>): void {
+  entry.gcDeadline = undefined;
+  retargetGcTimer(ctx);
 }
 
 export function scheduleGc<T>(ctx: CacheContext, entry: CacheEntry<T>, gcTime: number): void {
   if (ctx.disposed) return;
 
-  cancelGc(ctx, entry.hash);
-
-  if (entry.observers.size > 0) return;
-
-  if (gcTime === 0) {
+  if (entry.observers.size > 0) {
+    entry.gcDeadline = undefined;
+  } else if (gcTime === 0) {
+    entry.gcDeadline = undefined;
     ctx.entries.delete(entry.hash);
-
-    return;
+  } else {
+    entry.gcDeadline = Date.now() + gcTime;
   }
 
-  const timer = setTimeout(() => {
-    const current = ctx.entries.get(entry.hash);
-
-    if (!current || current.observers.size > 0 || current.isFetching) return;
-
-    ctx.entries.delete(entry.hash);
-    ctx.gcTimers.delete(entry.hash);
-  }, gcTime);
-
-  ctx.gcTimers.set(entry.hash, timer);
+  retargetGcTimer(ctx);
 }
 
 export function deleteEntry<T>(ctx: CacheContext, entry: CacheEntry<T>): void {
   entry.inflight?.controller.abort();
-  cancelGc(ctx, entry.hash);
+  entry.gcDeadline = undefined;
   ctx.entries.delete(entry.hash);
+  retargetGcTimer(ctx);
 }
 
 export function isKeyOrPrefix(entry: CacheEntry, prefixHash: readonly string[]): boolean {
@@ -297,7 +336,6 @@ export function buildCacheContext(
     times?: number;
   },
   entries: Map<string, CacheEntry>,
-  gcTimers: Map<string, ReturnType<typeof setTimeout>>,
   notify: (entry: CacheEntry) => void,
 ): CacheContext {
   return {
@@ -305,7 +343,7 @@ export function buildCacheContext(
     disposed: false,
     entries,
     gcTimeDefault: opts.gcTime ?? DEFAULT_GC,
-    gcTimers,
+    gcTimer: null,
     notify,
     shouldRetryDefault: opts.shouldRetry,
     staleTimeDefault: opts.staleTime ?? 0,

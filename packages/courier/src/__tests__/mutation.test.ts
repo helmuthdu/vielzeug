@@ -88,7 +88,7 @@ describe('Mutation', () => {
 
       ac.abort();
       await expect(promise).rejects.toThrow('Aborted');
-      expect(slow.peek().status).toBe('loading');
+      expect(slow.peek().status).toBe('idle');
     });
 
     it('supports cancellation via mutation.cancel()', async () => {
@@ -108,7 +108,7 @@ describe('Mutation', () => {
 
       await slow.cancel();
       await expect(promise).rejects.toThrow('Aborted');
-      expect(slow.peek().status).toBe('loading');
+      expect(slow.peek().status).toBe('idle');
     });
 
     it('allows concurrent calls and keeps state from the latest run', async () => {
@@ -144,7 +144,7 @@ describe('Mutation', () => {
       await mutation.mutate(undefined);
 
       mutation.reset();
-      expect(mutation.peek()).toMatchObject({ data: undefined, error: null, isFetching: false, status: 'loading' });
+      expect(mutation.peek()).toMatchObject({ data: undefined, error: null, isFetching: false, status: 'idle' });
     });
   });
 
@@ -292,15 +292,15 @@ describe('Mutation', () => {
   });
 
   describe('External Store (peek / subscribe)', () => {
-    it('peek() returns loading state before any mutate()', () => {
+    it('peek() returns idle state before any mutate()', () => {
       const mutation = createMutation(async () => ({ id: 1 }));
 
       expect(mutation.peek()).toEqual({
         data: undefined,
         error: null,
         isFetching: false,
-        isLoading: true,
-        status: 'loading',
+        isLoading: false,
+        status: 'idle',
         updatedAt: undefined,
       });
     });
@@ -410,7 +410,7 @@ describe('Mutation', () => {
       expect(mutation.peek().status).toBe('success');
     });
 
-    it('peek() is loading after cancel() clears an in-flight mutation', async () => {
+    it('peek() is idle after cancel() clears an in-flight mutation', async () => {
       const mutation = createMutation(
         (_: void, signal: AbortSignal) =>
           new Promise<string>((_resolve, reject) => {
@@ -424,7 +424,7 @@ describe('Mutation', () => {
 
       await running.catch(() => {});
 
-      expect(mutation.peek().status).toBe('loading');
+      expect(mutation.peek().status).toBe('idle');
     });
   });
 

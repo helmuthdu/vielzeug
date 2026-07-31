@@ -18,7 +18,6 @@ description: Complete API reference for the Courier HTTP client, query client, u
 | `withBearerAuth()`      | Interceptor preset for Bearer token injection          | Sync           | Accepts static string or async token factory                         |
 | `withRequestId()`       | Interceptor preset adding a unique request ID header   | Sync           | Defaults to `x-request-id` with `crypto.randomUUID()`                |
 | `withLogging()`         | Interceptor preset logging method/URL/status/ms        | Sync           | Defaults to `console.debug`; override with `logger` option           |
-| `toSyncStore()`         | Convert any `peek()`/`subscribe()` source to `SyncStore` | Sync          | Useful for framework adapters that accept a `SyncStore` directly     |
 | `createBatcher()`      | DataLoader-style batcher coalescing `load()` calls      | Sync           | Exactly one of `resolve`/`resolveSettled` must be provided            |
 | `persistQueryCache()`   | Subscribe to cache and write successful entries        | Sync           | Eagerly persists existing successful entries on setup                |
 | `hydrateQueryCache()`   | Read persisted entries and seed the cache              | Async          | Runs all keys in parallel; restores original `updatedAt`             |
@@ -117,8 +116,8 @@ Creates a query client with caching, deduplication, prefix invalidation, and rea
 
 | Method             | Signature                                                               | Description                                                                          |
 | ------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `fetch`            | `<T>(options: QueryOptions<T>) => Promise<T>`                           | Fetch with caching, deduplication, and retry; always throws on error                 |
-| `fetchMany`        | `<T>(queries: QueryOptions<T>[]) => Promise<T[]>`                       | Parallel fetch for multiple keys; throws if any query fails                          |
+| `fetch`            | `<T>(options: QueryOptions<T>) => Promise<T \| undefined>`             | Fetch with caching, deduplication, and retry; always throws on error; `undefined` when `enabled: false` |
+| `fetchMany`        | `<T>(queries, options?) => Promise<(T \| undefined)[]>`               | Parallel fetch; `{ settled: true }` returns per-query outcomes instead of rejecting  |
 | `observe`          | `<T, S = T>(options: ObserveOptions<T, S>) => SyncStore<QueryState<S>>` | Return a store and trigger a background fetch; pass `fetch: false` to skip the fetch |
 | `get`              | `<T>(key) => T \| undefined`                                            | Read cached data                                                                     |
 | `set`              | `<T>(key, data \| updater, opts?) => void`                              | Set or update cached data; `opts.updatedAt` restores a historical timestamp          |
@@ -173,7 +172,6 @@ Creates a standalone, observable mutation handle.
 | `shouldRetry`     | `(error, attempt) => boolean`                                         | —           | Return `false` to skip retrying; `attempt` is **zero-based**                                                    |
 | `onSuccess`       | `(data: TData, variables: TVariables) => void \| Promise<void>`       | —           | Called after a successful run                                                                                   |
 | `onError`         | `(error: Error, variables: TVariables) => void \| Promise<void>`      | —           | Called after a failed run; **not** called on abort                                                              |
-| `onFinally`       | `(variables: TVariables) => void \| Promise<void>`                    | —           | Called after every run (success, error, abort) before `onSettled`; use for cleanup that does not need the result |
 | `onSettled`       | `(result: SettledResult<TData, TVariables>) => void \| Promise<void>` | —           | Called after every run; switch on `result.status` (`'success'`, `'error'`, `'aborted'`) for exhaustive handling |
 | `onCallbackError` | `(error: Error) => void`                                              | —           | Called when any lifecycle callback throws; does not affect `mutate()` result                                     |
 
@@ -516,7 +514,7 @@ type ReadableConfig<P extends string = string> = StreamRequestConfig<P> & {
 ```
 
 - `parse: 'ndjson'` — splits by newline and JSON-parses each complete line, including any partial line at EOF.
-- `reconnect` — auto-reconnect on connection loss using the same full-jitter backoff as `sse()`. `true` uses defaults (5 attempts). When the budget is exhausted: throws if `onError` is omitted, calls `onError` if provided.
+- `reconnect` — auto-reconnect on connection loss using the same full-jitter backoff as `sse()`. `true` uses defaults (5 attempts). When the budget is exhausted: `onError` (if provided) is notified, then the error is **always thrown** — `onError` is a notification channel, not a suppression. Callers who want partial-data-then-silence catch around the loop.
 - `onError` — called when the reconnect budget is exhausted or a non-retriable error occurs. Not called when aborted via signal or `cancelAll()`.
 
 Extends `StreamRequestConfig` with a `parse` option for `stream.readable()`. `'text'` (default) yields raw decoded string chunks; `'ndjson'` splits by newline and JSON-parses each complete line — use the type parameter `T` to type the parsed values.
@@ -553,24 +551,47 @@ type ReconnectOptions = {
 ### `QueryOptions<T>`
 
 ```ts
-type QueryOptions<T> = {
-  enabled?: boolean;
-  fn: (ctx: QueryFnContext) => Promise<T>;
-  gcTime?: number;
-  initialData?: T | (() => T | undefined);
-  key: QueryKey;
-  staleTime?: number;
-} & RetryOptions;
+type QueryOptions<T> =
+  | {
+      enabled?: boolean;
+      fn: (ctx: QueryFnContext) => Promise<T>;
+      gcTime?: number;
+      initialData?: T | (() => T | undefined);
+      key: QueryKey;
+      staleTime?: number;
+    }
+  | {
+      enabled?: boolean;
+      gcTime?: number;
+      initialData?: T | (() => T | undefined);
+      key: QueryKey;
+      params?: Params;
+      responseType?: ResponseType;
+      staleTime?: number;
+      url: string;
+    };
 ```
 
-`fetch()` always throws on error. Errors surface as rejected promises — no swallow option. For reactive subscriptions that surface errors as state, use `observe()`.
+Two data sources, one per query:
+
+- **`fn`** — a fully caller-authored fetcher. Does NOT flow through the api client's interceptor pipeline (escape hatch).
+- **`url`** — a request descriptor routed through the api client passed to `createQuery({ api })`: baseUrl, headers, interceptors, timeout, and error classification all apply. `createCourier()` wires its own api automatically, so `courier.query.fetch({ key, url, params })` shares the courier's transport. Throws a `CourierError` if no api client is configured.
+
+`fetch()` always throws on error and resolves `T | undefined` (`undefined` when `enabled: false` and no cached data exists). For reactive subscriptions that surface errors as state, use `observe()`.
 
 ### `ObserveOptions<T, S = T>`
 
 ```ts
 type ObserveOptions<T, S = T> =
   | ({ fetch?: true } & QueryOptions<T> & ObserveExtras<T, S>)
-  | ({ fetch: false; key: QueryKey } & Partial<QueryOptions<T>> & ObserveExtras<T, S>);
+  | ({
+      fetch: false;
+      fn?: QueryFn<T>;
+      key: QueryKey;
+      params?: Params;
+      responseType?: ResponseType;
+      url?: string;
+    } & ObserveExtras<T, S>);
 
 type ObserveExtras<T, S> = {
   placeholderData?: S | (() => S | undefined);
@@ -578,7 +599,7 @@ type ObserveExtras<T, S> = {
 };
 ```
 
-Two forms: `fetch?: true` (default) triggers a background fetch and requires `fn`; `fetch: false` is a read-only store — `fn` is not required or called. `placeholderData` and `select` do not affect the underlying cache or `fetch()` behaviour. `S` defaults to `T`; provide a second generic when using `select` (e.g. `ObserveOptions<User, string>` with `select: (u) => u?.name`).
+Two forms: `fetch?: true` (default) triggers a background fetch (via `fn` or `url`); `fetch: false` is a read-only store — a passed `fn` or `url` is accepted but ignored, never called. `placeholderData` and `select` do not affect the underlying cache or `fetch()` behaviour. `S` defaults to `T`; provide a second generic when using `select` (e.g. `ObserveOptions<User, string>` with `select: (u) => u?.name`).
 
 ### `QueryClientOptions`
 
@@ -601,13 +622,12 @@ type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSig
 type MutationOptions<TData = unknown, TVariables = void> = RetryOptions & {
   onCallbackError?: (error: Error) => void;
   onError?: (error: Error, variables: TVariables) => void | Promise<void>;
-  onFinally?: (variables: TVariables) => void | Promise<void>;
   onSettled?: (result: SettledResult<TData, TVariables>) => void | Promise<void>;
   onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
 };
 ```
 
-`onError` is not called when the mutation is aborted. `onFinally` runs after `onSuccess`/`onError` and before `onSettled`. `onSettled` is always called — switch on `result.status` for exhaustive handling of `'success'`, `'error'`, and `'aborted'`.
+`onError` is not called when the mutation is aborted. `onSettled` is always called — switch on `result.status` for exhaustive handling of `'success'`, `'error'`, and `'aborted'`.
 
 ### `CourierMutationOptions<TData, TVariables>`
 
@@ -745,8 +765,19 @@ type QueryState<T = unknown> = AsyncState<T>;
 ### `MutationState<TData>`
 
 ```ts
-type MutationState<TData = unknown> = AsyncState<TData>;
+type MutationStatus = 'idle' | 'loading' | 'success' | 'error';
+
+type MutationState<TData = unknown> = {
+  readonly isFetching: boolean;
+  readonly isLoading: boolean; // shorthand for status === 'loading'
+} & (
+  | { readonly data: undefined; readonly error: null; readonly status: 'idle' | 'loading'; readonly updatedAt: undefined }
+  | { readonly data: TData; readonly error: null; readonly status: 'success'; readonly updatedAt: number }
+  | { readonly data: TData | undefined; readonly error: Error; readonly status: 'error'; readonly updatedAt: number }
+);
 ```
+
+Unlike a query entry, a mutation starts at `'idle'` — it has never run, so `isLoading` is `false` (no phantom spinner). `reset()` and aborts return the state to `'idle'`.
 
 ### `SseSource<TEvents>`
 
@@ -843,30 +874,6 @@ unbind();
 
 ---
 
-### `toSyncStore()`
-
-```ts
-toSyncStore<T>(source: { peek(): T; subscribe(cb: () => void): Unsubscribe }): SyncStore<T>;
-```
-
-Converts any object with `peek()` and `subscribe()` to a plain `SyncStore<T>`. Use when a framework adapter accepts a `SyncStore` directly rather than consuming `peek`/`subscribe` separately.
-
-**Example:**
-
-```ts
-import { createMutation, toSyncStore } from '@vielzeug/courier';
-
-const mutation = createMutation(async (input: NewUser) => api.post<User>('/users', { body: input }));
-
-// React
-const state = useSyncExternalStore(mutation.store.subscribe, mutation.store.peek);
-
-// Or use toSyncStore to wrap a custom peek/subscribe object
-const store = toSyncStore(mutation);
-const state2 = useSyncExternalStore(store.subscribe, store.peek);
-```
-
----
 
 ### `createBatcher()`
 
@@ -959,7 +966,7 @@ interface PersistStorage {
 - `persistQueryCache` returns a stop function. It eagerly persists any already-successful entries on setup.
 - `hydrateQueryCache` restores the original `updatedAt` timestamp so staleTime checks are accurate after hydration.
 - `maxAge` (ms) — entries older than `Date.now() - maxAge` are skipped during hydration.
-- `onError` is called for each failing storage operation; errors are silently swallowed when omitted.
+- `onError` is called for each failing storage operation; errors are silently swallowed when omitted. The `keys` predicate form is evaluated exactly once at call time — entries created later are not tracked, even if they would match.
 
 **Returns:** `persistQueryCache` returns `() => void` (stop function); `hydrateQueryCache` returns `Promise<void>`
 

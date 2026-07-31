@@ -43,7 +43,8 @@ const client = createCourier({
 // observe() returns a SyncStore and triggers a background fetch if stale
 const store = client.query.observe({
   key: ['users', 1],
-  fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+  url: '/users/{id}', // routed through client.api — interceptors/headers apply
+  params: { id: 1 },
   staleTime: 5_000,
 });
 

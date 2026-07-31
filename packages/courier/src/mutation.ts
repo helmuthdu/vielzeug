@@ -11,8 +11,8 @@ const IDLE_STATE: MutationState<unknown> = Object.freeze({
   data: undefined,
   error: null,
   isFetching: false,
-  isLoading: true,
-  status: 'loading',
+  isLoading: false,
+  status: 'idle',
   updatedAt: undefined,
 });
 
@@ -27,7 +27,7 @@ export type SettledResult<TData, TVariables> =
 
 export type MutationOptions<TData = unknown, TVariables = void> = RetryOptions & {
   /**
-   * Called when a lifecycle callback (`onSuccess`, `onError`, `onSettled`, or `onFinally`) throws.
+   * Called when a lifecycle callback (`onSuccess`, `onError`, or `onSettled`) throws.
    * Does not affect the `mutate()` result or re-throw. Optional — for development/debugging.
    */
   onCallbackError?: (error: Error) => void;
@@ -36,12 +36,6 @@ export type MutationOptions<TData = unknown, TVariables = void> = RetryOptions &
    * Not called when the mutation was aborted (use `onSettled` if you need abort awareness).
    */
   onError?: (error: Error, variables: TVariables) => void | Promise<void>;
-  /**
-   * Called after every run regardless of outcome, including aborts.
-   * Use for cleanup patterns that do not need to inspect the result.
-   * Runs after `onSuccess` / `onError` and before `onSettled`.
-   */
-  onFinally?: (variables: TVariables) => void | Promise<void>;
   /**
    * Called after every run regardless of outcome, including aborts.
    * Switch on `result.status` to handle `'success'`, `'error'`, or `'aborted'` exhaustively.
@@ -170,7 +164,6 @@ export function createMutation<TData, TVariables = void>(
           }
 
           await safeCall(() => mutOpts?.onSuccess?.(data, variables));
-          await safeCall(() => mutOpts?.onFinally?.(variables));
           await safeCall(() => mutOpts?.onSettled?.({ data, status: 'success', variables }));
 
           return data;
@@ -189,7 +182,6 @@ export function createMutation<TData, TVariables = void>(
             await safeCall(() => mutOpts?.onError?.(error, variables));
           }
 
-          await safeCall(() => mutOpts?.onFinally?.(variables));
           await safeCall(() =>
             mutOpts?.onSettled?.(isAborted ? { status: 'aborted', variables } : { error, status: 'error', variables }),
           );

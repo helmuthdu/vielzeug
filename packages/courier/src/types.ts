@@ -70,4 +70,38 @@ export type AsyncState<T = unknown> = {
 );
 
 export type QueryState<T = unknown> = AsyncState<T>;
-export type MutationState<TData = unknown> = AsyncState<TData>;
+
+/**
+ * Lifecycle status for a mutation. Unlike a query entry (which is always loading
+ * something), a mutation starts at `'idle'` — it has never run, so reporting
+ * `'loading'` would be a lie consumers render as a phantom spinner.
+ */
+export type MutationStatus = 'error' | 'idle' | 'loading' | 'success';
+
+export type MutationState<TData = unknown> = {
+  /**
+   * `true` while a `mutate()` call is in-flight.
+   */
+  readonly isFetching: boolean;
+  /** Shorthand for `status === 'loading'`. Useful as a loading-spinner predicate. */
+  readonly isLoading: boolean;
+} & (
+  | {
+      readonly data: undefined;
+      readonly error: null;
+      readonly status: 'idle' | 'loading';
+      readonly updatedAt: undefined;
+    }
+  | {
+      readonly data: TData;
+      readonly error: null;
+      readonly status: 'success';
+      readonly updatedAt: number;
+    }
+  | {
+      readonly data: TData | undefined;
+      readonly error: Error;
+      readonly status: 'error';
+      readonly updatedAt: number;
+    }
+);

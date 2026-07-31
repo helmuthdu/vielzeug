@@ -1,6 +1,7 @@
 import type { Params } from './url';
 
 import { classifyRequestError, CourierHttpError, CourierParseError } from './errors';
+import { fullJitterDelay } from './retry';
 import { buildRequestInit } from './serialize';
 import { anySignal, buildTimeoutSignal, type TransportCore } from './transport';
 import { buildUrl } from './url';
@@ -29,6 +30,27 @@ export type ReconnectOptions = {
   /** Total reconnect attempts after the first failure. Defaults to `5`. */
   times?: number;
 };
+
+/** Normalized reconnect policy shared by sse() and readable(). */
+export type ResolvedReconnect = {
+  delay: number | ((attempt: number) => number);
+  maxReconnects: number;
+};
+
+/**
+ * The one definition of the reconnect contract (`true` → 5 attempts with default
+ * backoff; `false`/omitted → no reconnects; options object → explicit). Both
+ * streaming modes normalize through here — the loops themselves stay separate
+ * because their clean-close semantics genuinely differ (SSE reconnects on clean
+ * closes, readable() does not).
+ */
+export function resolveReconnect(reconnect: boolean | ReconnectOptions | undefined): ResolvedReconnect {
+  if (!reconnect) return { delay: fullJitterDelay, maxReconnects: 0 };
+
+  const opts = reconnect === true ? {} : reconnect;
+
+  return { delay: opts.delay ?? fullJitterDelay, maxReconnects: opts.times ?? 5 };
+}
 
 /**
  * Shared stream setup: build URL, combine signals, merge headers, dispatch through

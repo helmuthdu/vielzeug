@@ -13,9 +13,9 @@ import { queryClientInvalidateExample } from './query-client-invalidate';
 import { queryClientMutationsExample } from './query-client-mutations';
 import { queryClientObserveExample } from './query-client-observe';
 import { queryClientSubscriptionsExample } from './query-client-subscriptions';
+import { queryClientUrlExample } from './query-client-url';
 import { streamReadableExample } from './stream-readable';
 import { streamSseExample } from './stream-sse';
-import { syncStoreExample } from './sync-store';
 
 export const courierExamples = {
   batcher: batcherExample,
@@ -32,8 +32,8 @@ export const courierExamples = {
   'query-client-invalidate': queryClientInvalidateExample,
   'query-client-mutations': queryClientMutationsExample,
   'query-client-observe': queryClientObserveExample,
+  'query-client-url': queryClientUrlExample,
   'query-client-watchkey': queryClientSubscriptionsExample,
   'stream-readable': streamReadableExample,
   'stream-sse': streamSseExample,
-  'sync-store': syncStoreExample,
 };

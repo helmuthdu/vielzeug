@@ -3,8 +3,7 @@ import { sleep } from '@vielzeug/arsenal';
 import type { Params } from './url';
 
 import { CourierDisposedError } from './errors';
-import { fullJitterDelay } from './retry';
-import { openStreamWith, type ReconnectOptions, type StreamRequestConfig } from './stream-shared';
+import { openStreamWith, resolveReconnect, type ReconnectOptions, type StreamRequestConfig } from './stream-shared';
 import { type TransportCore, validateTimeout } from './transport';
 
 export type SseOptions<P extends string = string> = StreamRequestConfig<P> & {
@@ -105,11 +104,10 @@ export function sse<TEvents extends Record<string, unknown> = Record<string, str
   let sseStatus: SseStatus = 'connecting';
   let lastEventId = '';
 
-  const reconnectOpts: ReconnectOptions = reconnect === true ? {} : reconnect === false ? { times: 0 } : reconnect;
-  const maxReconnects = reconnectOpts.times ?? (reconnect ? 5 : 0);
+  const { delay: resolvedDelay, maxReconnects } = resolveReconnect(reconnect);
   // `activeReconnectDelay` is mutable so the server's `retry:` field can update
   // the reconnection interval without the caller needing to handle it manually.
-  let activeReconnectDelay: number | ((attempt: number) => number) = reconnectOpts.delay ?? fullJitterDelay;
+  let activeReconnectDelay = resolvedDelay;
 
   function dispatchEvent(event: string, rawData: string): void {
     const handlers = listeners.get(event);

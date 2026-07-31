@@ -38,7 +38,6 @@ exports:
     withLogging,
     persistQueryCache,
     hydrateQueryCache,
-    toSyncStore,
     debugCourier,
   ]
 environments: [browser, node, ssr, deno]
@@ -138,7 +137,7 @@ client.query.invalidate(['users']);
 - **SSE** — `createStream().sse()` with typed events, `Last-Event-ID` reconnects, and shared interceptors
 - **Readable HTTP streams** — `stream.readable()` for raw text or NDJSON chunk parsing
 - **Query cache** — `createQuery()` with `fetch()`, prefix invalidation, background revalidation, and stable query keys
-- **SyncStore integration** — `query.observe()` (watch + fetch in one call), `query.observeMany()`, and `mutation.store` work with React, Vue, and Svelte adapters; `observe()` accepts `placeholderData`, `select`, and `fetch: false` via `ObserveOptions`; `toSyncStore()` adapts any `peek()`/`subscribe()` source for framework bindings
+- **SyncStore integration** — `query.observe()` (watch + fetch in one call), `query.observeMany()`, and `mutation.store` work with React, Vue, and Svelte adapters; `observe()` accepts `placeholderData`, `select`, and `fetch: false` via `ObserveOptions`
 - **Standalone mutations** — `createMutation()` with retry, lifecycle callbacks, cancellation, and observable state
 - **Request deduplication** — idempotent requests dedupe by method + URL + response type, with `dedupe: false` to opt out
 - **DataLoader-style batcher** — coalesce N individual `load()` calls into one batch via the internal batcher API

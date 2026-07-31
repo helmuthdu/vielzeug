@@ -86,14 +86,29 @@ export function createApi(opts?: TransportOptions & { transport?: TransportCore 
     }
 
     if (!res.ok) {
-      // For error responses: parse body using normal content-type detection,
-      // fall back to text for unknown content-types (better than blob for debugging).
+      // Error bodies are read once as text, then JSON-parsed if the content-type
+      // says so — a binary success config (`responseType: 'blob'`) must not trap
+      // the server's error message in an unreadable wrapper, and a failed
+      // parseResponse-then-fallback double-read loses the body entirely.
+      // `res.text` is missing on minimal custom-fetch fakes — fall back to
+      // parseResponse there.
+      const isJson = res.headers.get('content-type')?.includes('json') ?? false;
       let body: unknown;
 
-      try {
-        body = await parseResponse(res, responseType ?? 'auto');
-      } catch {
-        body = await res.text().catch(() => '');
+      if (typeof res.text === 'function') {
+        const text = await res.text().catch(() => '');
+
+        body = text;
+
+        if (text && isJson) {
+          try {
+            body = JSON.parse(text);
+          } catch {
+            // Malformed JSON error body — keep the raw text, not ''.
+          }
+        }
+      } else {
+        body = await parseResponse(res, isJson ? 'json' : 'auto').catch(() => '');
       }
 
       throw CourierHttpError.fromResponse(res, body, m, full);

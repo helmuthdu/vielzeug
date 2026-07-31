@@ -28,7 +28,8 @@
     "worktree:list": "node scripts/worktree.mjs list",
     "worktree:remove": "node scripts/worktree.mjs remove",
     "ci:local": "act -W .github/workflows/ci.yml",
-    "release:publish-local": "node scripts/release/local-publish.mjs"
+    "release:publish-local": "node scripts/release/local-publish.mjs",
+    "verify:prod-gate": "node scripts/verify-prod-gate.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

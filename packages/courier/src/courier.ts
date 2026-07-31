@@ -1,5 +1,6 @@
 import type { QueryKey } from './types';
 
+import { warn } from './_dev';
 import { createApi } from './api';
 import { createMutation, type Mutation, type MutationFn, type MutationOptions } from './mutation';
 import { createQuery, type QueryClientOptions } from './query';
@@ -72,11 +73,14 @@ export function createCourier(opts?: CourierOptions) {
   const api = createApi({ transport });
   const stream = createStream({ transport });
 
-  // Note: query fetches do NOT automatically flow through the shared interceptor
-  // pipeline — `client.query.fetch()`/`observe()`'s `fn` is fully caller-authored.
-  // Route it through the pipeline explicitly by calling `client.api.get()` (etc.)
-  // inside `fn`, as shown in the README/docs examples.
-  const queryClient = createQuery(queryOpts);
+  // The query client shares this courier's api client: `url`-sourced queries flow
+  // through the same interceptor pipeline, headers, and baseUrl as api requests.
+  // `fn`-sourced queries stay fully caller-authored by design (escape hatch).
+  if (queryOpts?.api) {
+    warn("createCourier: `query.api` is ignored — queries always use the courier's own transport.");
+  }
+
+  const queryClient = createQuery({ ...queryOpts, api });
 
   return {
     api,

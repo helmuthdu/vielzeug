@@ -100,7 +100,7 @@ describe('createTransportCore', () => {
 
     const transport = createTransportCore({ baseUrl: 'https://example.com' });
 
-    await transport.dispatch({ init: { method: 'GET' }, url: 'https://example.com/test' });
+    await transport.dispatch({ headers: {}, init: { method: 'GET' }, url: 'https://example.com/test' });
 
     expect(fakeFetch).toHaveBeenCalledTimes(1);
   });
@@ -155,12 +155,12 @@ describe('createTransportCore', () => {
       return res;
     });
 
-    await transport.dispatch({ init: { method: 'GET' }, url: 'https://example.com' });
+    await transport.dispatch({ headers: {}, init: { method: 'GET' }, url: 'https://example.com' });
     expect(log).toEqual(['before', 'after']);
 
     remove();
     log.length = 0;
-    await transport.dispatch({ init: { method: 'GET' }, url: 'https://example.com' });
+    await transport.dispatch({ headers: {}, init: { method: 'GET' }, url: 'https://example.com' });
     expect(log).toHaveLength(0);
   });
 

@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "BREAKING: chore(ore): remove aria() (use bind({ aria }, { target })); live() now returns a per-binding wrapper (no global signal registry); HTMLResult public surface is mount-only; EmitFn is strictly typed (no string escape hatch); FormFieldHandle.setValidity removed (use setCustomValidity/internals); testing install() is now install(afterEach, { formInternals: true }) opt-in; assay moved to optional peer dependency. Also: single Symbol.for branding, namespaced template markers (data-ore-b / <!--ore:N-->), production dev-gate baked into dist build, unified form-control sync path, dev warnings for unknown event modifiers / non-spread in-tag interpolations / null listen targets",
+      "comment": "chore(ore): remove aria() (use bind({ aria }, { target })); live() now returns a per-binding wrapper (no global signal registry); HTMLResult public surface is mount-only; EmitFn is strictly typed (no string escape hatch); FormFieldHandle.setValidity removed (use setCustomValidity/internals); testing install() is now install(afterEach, { formInternals: true }) opt-in; assay moved to optional peer dependency. Also: single Symbol.for branding, namespaced template markers (data-ore-b / <!--ore:N-->), production dev-gate baked into dist build, unified form-control sync path, dev warnings for unknown event modifiers / non-spread in-tag interpolations / null listen targets",
       "packageName": "@vielzeug/ore",
       "type": "minor"
     }

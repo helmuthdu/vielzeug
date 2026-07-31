@@ -23,10 +23,6 @@ export default defineConfig(
           external: [...readWorkspaceDeps(__dirname), '@vielzeug/herald', '@vielzeug/pulse', '@vielzeug/courier'],
         },
       },
-      define: {
-        // Set to true in production builds so _dev.ts dev-only warnings are stripped.
-        __FLUX_PROD__: 'import.meta.env.PROD',
-      },
     },
   ),
 );

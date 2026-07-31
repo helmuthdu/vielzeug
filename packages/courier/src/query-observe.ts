@@ -108,7 +108,7 @@ export function watchInternal<T = unknown, S = T>(
 
       const entry = ensureEntry<T>(ctx, key);
 
-      cancelGc(ctx, entry.hash);
+      cancelGc(ctx, entry);
 
       const observer: QueryObserver<T, S> = {
         ...opts,

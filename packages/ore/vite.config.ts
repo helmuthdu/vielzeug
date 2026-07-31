@@ -27,13 +27,6 @@ export default defineConfig(
           },
         },
       },
-      // The dist build IS the production artifact — bake the prod gate in here so
-      // published ESM/CJS ships with dev warnings compiled out (the IIFE bundle's
-      // vite.bundle.config.ts already did this; the mainline build was missing it,
-      // leaving every dev warn/error live in production).
-      define: {
-        'globalThis.__ORE_PROD__': 'true',
-      },
     },
   ),
 );

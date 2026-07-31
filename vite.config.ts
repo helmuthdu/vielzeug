@@ -49,6 +49,17 @@ export type BundleOptions = {
 };
 
 /**
+ * Every package's `src/_dev.ts` gates dev warnings behind `globalThis.__<NAME>_PROD__`.
+ * The dist build IS the production artifact, so bake the gate in centrally — per-package
+ * `define` entries for this were repeatedly forgotten (ore, lingua, courier all shipped
+ * with dev warns live in prod before this existed). `verify:prod-gate` asserts no raw
+ * gate reference survives into any published artifact.
+ */
+const prodGateDefine = (name: string): Record<string, string> => ({
+  [`globalThis.__${name.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_PROD__`]: 'true',
+});
+
+/**
  * Primary build config: tree-shakeable per-module ESM + CJS output with preserveModules.
  * Used by each package's vite.config.ts.
  */
@@ -98,6 +109,7 @@ export const getConfig = (
       },
       sourcemap: true,
     },
+    define: prodGateDefine(name),
   };
 };
 
@@ -144,5 +156,6 @@ export const getBundleConfig = (__dirname: string, options: BundleOptions) => {
       },
       sourcemap: true,
     },
+    define: prodGateDefine(name),
   };
 };

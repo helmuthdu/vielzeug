@@ -193,6 +193,23 @@ describe('HTTP Client', () => {
 
       expect(data).toMatchObject({ size: 9, type: 'application/octet-stream' });
     });
+
+    it('error bodies are parsed as text/JSON even when responseType is binary', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockResolvedValue(
+        new Response('quota exceeded', {
+          headers: { 'content-type': 'text/plain' },
+          status: 500,
+          statusText: 'Internal Server Error',
+        }),
+      );
+
+      const err = await getCourierHttpError(http.get('/download', { responseType: 'blob' }), 500);
+
+      // Not a Blob — the server's actual error message must stay readable.
+      expect(err.data).toBe('quota exceeded');
+    });
   });
 
   describe('Headers & Interceptors', () => {

@@ -32,7 +32,8 @@ client.use(async (ctx, next) => {
 
 const user = await client.query.fetch({
   key: ['users', 1],
-  fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+  url: '/users/{id}', // routed through client.api — interceptors/headers/baseUrl apply
+  params: { id: 1 },
 });
 
 const createUser = client.mutation((input: NewUser, signal) =>
@@ -44,6 +45,13 @@ client.stream.sse('/events', { reconnect: true });
 ```
 
 `timeout` applies to REST requests. SSE and readable streams default to `Infinity` per connection unless you override `timeout` explicitly.
+
+### Query data sources: `url` vs `fn`
+
+Every `query.fetch()`/`query.observe()` takes exactly one source:
+
+- **`url` (preferred)** — a request descriptor (`url`, `params`, `responseType`) routed through the api client: interceptors, global headers, baseUrl, timeout, and typed errors all apply. Inside `createCourier()`, the courier's own api is used automatically; standalone `createQuery()` needs `createQuery({ api })`.
+- **`fn` (escape hatch)** — a fully caller-authored fetcher. It does **not** flow through the interceptor pipeline — use it for non-HTTP sources (IndexedDB, compute, another SDK) or fully custom fetch behavior.
 
 ## HTTP Client
 
@@ -433,7 +441,8 @@ function useUser(id: number) {
     () =>
       client.query.observe({
         key: ['users', id],
-        fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
+        url: '/users/{id}',
+        params: { id },
         staleTime: 30_000,
       }),
     [id],
@@ -882,7 +891,8 @@ function useUserName(id: number) {
     () =>
       client.query.observe<User, string>({
         key: ['users', id],
-        fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
+        url: '/users/{id}',
+        params: { id },
         staleTime: 30_000,
         select: (user) => user?.name ?? '',
       }),
@@ -906,7 +916,8 @@ function useUserName(id: number) {
   // observe() triggers a background fetch and returns a store with select support
   const store = client.query.observe<User, string>({
     key: ['users', id],
-    fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
+    url: '/users/{id}',
+    params: { id },
     staleTime: 30_000,
     select: (user) => user?.name,
     placeholderData: 'Loading…',
@@ -934,7 +945,8 @@ export function userNameStore(id: number) {
   // observe() triggers a background fetch and exposes select + placeholderData
   const store = client.query.observe<User, string>({
     key: ['users', id],
-    fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
+    url: '/users/{id}',
+    params: { id },
     staleTime: 30_000,
     select: (user) => user?.name,
     placeholderData: 'Loading…',

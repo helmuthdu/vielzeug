@@ -1,6 +1,95 @@
-import { bindRefetch, createQuery, type QueryFnContext, type QueryState } from '../index';
+import {
+  bindRefetch,
+  createApi,
+  createCourier,
+  createQuery,
+  CourierError,
+  type QueryFnContext,
+  type QueryState,
+} from '../index';
 
 describe('Query Client', () => {
+  describe('url-sourced queries (routed through the api client)', () => {
+    let fetchMock: ReturnType<typeof vi.fn>;
+
+    const jsonResponse = (data: unknown, status = 200) => ({
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => data,
+      ok: status >= 200 && status < 300,
+      status,
+      text: async () => JSON.stringify(data),
+    });
+
+    beforeEach(() => {
+      fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: 1, name: 'Ada' }));
+      globalThis.fetch = fetchMock as typeof fetch;
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('fetch({ url }) routes through the api client: baseUrl, headers, interceptors apply', async () => {
+      const seen: string[] = [];
+      const api = createApi({ baseUrl: 'https://api.example.com', headers: { authorization: 'Bearer tok' } });
+
+      api.use(async (ctx, next) => {
+        seen.push(ctx.url);
+
+        return next(ctx);
+      });
+
+      const qc = createQuery({ api });
+      const data = await qc.fetch({ key: ['users', 1], params: { id: '1' }, url: '/users/{id}' });
+
+      expect(data).toEqual({ id: 1, name: 'Ada' });
+      expect(seen).toEqual(['https://api.example.com/users/1']);
+
+      const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+
+      expect((init.headers as Record<string, string>).authorization).toBe('Bearer tok');
+    });
+
+    it('observe({ url }) triggers a background fetch through the api client', async () => {
+      const qc = createQuery({ api: createApi({ baseUrl: 'https://api.example.com' }) });
+      const store = qc.observe({ key: ['users', 1], url: '/users/1' });
+
+      await vi.waitFor(() => expect(store.peek().status).toBe('success'));
+      expect(store.peek().data).toEqual({ id: 1, name: 'Ada' });
+    });
+
+    it('fetch({ url }) without an api client throws a clear error', async () => {
+      const qc = createQuery();
+
+      await expect(qc.fetch({ key: ['users', 1], url: '/users/1' })).rejects.toThrow(CourierError);
+      await expect(qc.fetch({ key: ['users', 1], url: '/users/1' })).rejects.toThrow(/requires an api client/);
+    });
+
+    it('observe({ fetch: false, url }) is a read-only store — url is accepted but never fetched', async () => {
+      const qc = createQuery({ api: createApi({ baseUrl: 'https://api.example.com' }) });
+      const store = qc.observe({ fetch: false, key: ['users', 1], url: '/users/1' });
+
+      expect(store.peek().status).toBe('loading');
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('createCourier wires its api into query — url queries flow through courier interceptors', async () => {
+      const seen: string[] = [];
+      const client = createCourier({ baseUrl: 'https://api.example.com' });
+
+      client.use(async (ctx, next) => {
+        seen.push(ctx.url);
+
+        return next(ctx);
+      });
+
+      await client.query.fetch({ key: ['users', 1], url: '/users/1' });
+
+      expect(seen).toEqual(['https://api.example.com/users/1']);
+      client.dispose();
+    });
+  });
+
   afterEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
@@ -273,6 +362,29 @@ describe('Query Client', () => {
 
       expect(qc.getState(['x'])).toBeNull();
       vi.useRealTimers();
+    });
+
+    it('gc uses a single retargeted timer regardless of entry count', async () => {
+      vi.useFakeTimers();
+
+      try {
+        const qc = createQuery({ gcTime: 1_000 });
+
+        await qc.fetch({ fn: async () => 'a', key: ['g1'] });
+        await qc.fetch({ fn: async () => 'b', key: ['g2'] });
+
+        // Two entries, but at most ONE pending timer: each schedule retargets the
+        // shared timer (clear + re-arm) instead of creating a per-entry one.
+        // (vi.spyOn on fake-timer globals throws — getTimerCount() is the tool.)
+        expect(vi.getTimerCount()).toBeLessThanOrEqual(1);
+
+        vi.advanceTimersByTime(1_001);
+
+        expect(qc.get(['g1'])).toBeUndefined();
+        expect(qc.get(['g2'])).toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('bindRefetch() triggers refetchStale() on visibilitychange', () => {
@@ -1187,7 +1299,7 @@ describe('Query Client', () => {
       });
 
       it('select transforms the data delivered to the store', async () => {
-        const qc = createQuery<string, number>();
+        const qc = createQuery();
         const store = qc.observe<string, number>({
           fn: async () => 'hello world',
           key: ['obs-sel'],
@@ -1382,7 +1494,7 @@ describe('Query Client', () => {
         const qc = createQuery();
         let calls = 0;
 
-        const opts = { fn: async () => ++calls, key: ['fmcache'], staleTime: 60_000 };
+        const opts = { fn: async () => ++calls, key: ['fmcache'] as const, staleTime: 60_000 };
 
         await qc.fetchMany([opts]);
         await qc.fetchMany([opts]);
@@ -1390,7 +1502,7 @@ describe('Query Client', () => {
         expect(calls).toBe(1);
       });
 
-      it('return type is T[] — never contains undefined on success', async () => {
+      it('resolves all fetches on success', async () => {
         const qc = createQuery();
 
         const results = await qc.fetchMany<string>([
@@ -1399,6 +1511,51 @@ describe('Query Client', () => {
         ]);
 
         results.forEach((r) => expect(typeof r).toBe('string'));
+      });
+
+      it('yields undefined slots for disabled queries (enabled: false with no cached data)', async () => {
+        const qc = createQuery();
+
+        const results = await qc.fetchMany<string>([
+          { enabled: false, fn: async () => 'a', key: ['disabled-no-cache'] },
+          { fn: async () => 'b', key: ['t2'] },
+        ]);
+
+        expect(results).toEqual([undefined, 'b']);
+      });
+
+      it('settled: true returns per-query outcomes instead of rejecting wholesale', async () => {
+        const qc = createQuery();
+
+        const results = await qc.fetchMany<string>(
+          [
+            { fn: async () => 'ok', key: ['settled-ok'] },
+            {
+              fn: async () => {
+                throw new Error('boom');
+              },
+              key: ['settled-bad'],
+            },
+          ],
+          { settled: true },
+        );
+
+        expect(results[0]).toEqual({ status: 'fulfilled', value: 'ok' });
+        expect(results[1].status).toBe('rejected');
+      });
+
+      it('initialData seeds the cache even when enabled: false (seed, not a fetch)', async () => {
+        const qc = createQuery();
+
+        const result = await qc.fetch({
+          enabled: false,
+          fn: async () => 'never',
+          initialData: 'seeded',
+          key: ['seed-disabled'],
+        });
+
+        expect(result).toBe('seeded');
+        expect(qc.get(['seed-disabled'])).toBe('seeded');
       });
 
       it('resolves to an empty array for an empty queries array', async () => {
@@ -1504,5 +1661,34 @@ describe('Query Client', () => {
         Object.defineProperty(globalThis, 'window', { configurable: true, value: origWindow });
       }
     });
+  });
+
+  it('observeMany forwards select to every key', async () => {
+    const qc = createQuery();
+
+    qc.set(['m1'], { name: 'Ada' });
+    qc.set(['m2'], { name: 'Bob' });
+
+    const store = qc.observeMany<{ name: string }, string>([['m1'], ['m2']], { select: (u) => u?.name });
+
+    expect(store.peek().map((s) => s.data)).toEqual(['Ada', 'Bob']);
+  });
+
+  it('initialData-seeded entries age out via GC (no immortal seeds)', async () => {
+    vi.useFakeTimers();
+
+    try {
+      const qc = createQuery({ gcTime: 1_000 });
+
+      await qc.fetch({ enabled: false, fn: async () => 'never', initialData: 'seeded', key: ['seed-gc'] });
+
+      expect(qc.get(['seed-gc'])).toBe('seeded');
+
+      vi.advanceTimersByTime(1_001);
+
+      expect(qc.get(['seed-gc'])).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

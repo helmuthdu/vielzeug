@@ -863,18 +863,20 @@ describe('createStream — readable()', () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
-    it('calls onError when budget exhausted instead of throwing', async () => {
+    it('calls onError when budget exhausted, then still throws (onError is notification, not suppression)', async () => {
       const stream = createStream({ baseUrl: 'https://api.example.com' });
       const errors: Error[] = [];
 
       fetchMock.mockRejectedValue(new TypeError('net fail'));
 
-      for await (const _chunk of stream.readable('/stream', {
-        onError: (e) => errors.push(e),
-        reconnect: { delay: 0, times: 1 },
-      })) {
-        /* noop */
-      }
+      await expect(async () => {
+        for await (const _chunk of stream.readable('/stream', {
+          onError: (e) => errors.push(e),
+          reconnect: { delay: 0, times: 1 },
+        })) {
+          /* noop */
+        }
+      }).rejects.toThrow('net fail');
 
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('net fail');

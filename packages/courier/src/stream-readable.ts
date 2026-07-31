@@ -3,8 +3,7 @@ import { sleep } from '@vielzeug/arsenal';
 import type { Params } from './url';
 
 import { CourierDisposedError, CourierParseError } from './errors';
-import { fullJitterDelay } from './retry';
-import { openStreamWith, type ReconnectOptions, type StreamRequestConfig } from './stream-shared';
+import { openStreamWith, resolveReconnect, type ReconnectOptions, type StreamRequestConfig } from './stream-shared';
 import { type TransportCore, validateTimeout } from './transport';
 
 export type ReadableConfig<P extends string = string> = StreamRequestConfig<P> & {
@@ -73,9 +72,7 @@ export async function* readable<T = string, P extends string = string>(
 
   if (cfgTimeout !== undefined) validateTimeout(cfgTimeout);
 
-  const reconnectOpts: ReconnectOptions = reconnect === true ? {} : reconnect === false ? { times: 0 } : reconnect;
-  const maxReconnects = reconnectOpts.times ?? (reconnect ? 5 : 0);
-  const reconnectDelay: number | ((attempt: number) => number) = reconnectOpts.delay ?? fullJitterDelay;
+  const { delay: reconnectDelay, maxReconnects } = resolveReconnect(reconnect);
 
   const ac = new AbortController();
   const untrack = transport.track(ac);
@@ -165,38 +162,36 @@ export async function* readable<T = string, P extends string = string>(
 
       if (transport.disposed || ac.signal.aborted) break;
 
-      // No reconnect budget — throw or call onError on errors, stop either way
+      // No reconnect budget — stop. onError is a *notification*, not a suppression:
+      // terminal failures always throw so a `for await` consumer can never mistake
+      // a failed stream for a naturally-ended one. Callers who genuinely want
+      // partial-data-then-silence catch around the loop — an explicit, visible choice.
       if (maxReconnects === 0) {
         if (connectError) {
-          if (onError) {
-            onError(connectError);
-          } else {
-            throw connectError;
-          }
-        } else {
-          overallNaturalEnd = connectionNaturalEnd;
-        }
+          onError?.(connectError);
 
-        break;
-      }
-
-      // Budget exhausted
-      if (attempt >= maxReconnects) {
-        const budgetError = connectError ?? new Error('[courier] readable() reconnect budget exhausted');
-
-        if (onError) {
-          onError(budgetError);
-        } else if (connectError) {
           throw connectError;
         }
 
+        overallNaturalEnd = connectionNaturalEnd;
         break;
       }
 
-      // Clean server close with no reconnect error — done
+      // Clean server close with no connection error — done. This MUST be checked
+      // before the budget: `attempt` counts failed reconnects, and a successful
+      // reconnect leaves it at the limit — the budget only applies to failures.
       if (connectionNaturalEnd && !connectError) {
         overallNaturalEnd = true;
         break;
+      }
+
+      // Budget exhausted — same rule: notify, then always surface.
+      if (attempt >= maxReconnects) {
+        const budgetError = connectError ?? new Error('[courier] readable() reconnect budget exhausted');
+
+        onError?.(budgetError);
+
+        throw budgetError;
       }
 
       // Sleep before reconnecting

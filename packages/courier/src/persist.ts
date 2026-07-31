@@ -15,9 +15,12 @@ export interface PersistOptions {
   /**
    * The query keys to persist or hydrate. Accepts either:
    * - `QueryKey[]` — an explicit list of keys to observe/restore.
-   * - `(key: QueryKey) => boolean` — a predicate applied to all currently cached keys.
+   * - `(key: QueryKey) => boolean` — a predicate applied to the keys cached AT CALL TIME.
    *
-   * Both `persistQueryCache` and `hydrateQueryCache` evaluate this consistently.
+   * Both `persistQueryCache` and `hydrateQueryCache` evaluate this exactly once, at
+   * invocation — entries created later are NOT tracked, even if they would match the
+   * predicate. Re-call `persistQueryCache` (or use an explicit list) when the key set
+   * changes.
    */
   keys: QueryKey[] | ((key: QueryKey) => boolean);
   /**

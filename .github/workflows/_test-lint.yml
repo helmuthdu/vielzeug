@@ -21,6 +21,13 @@ jobs:
       - name: Rush build
         run: node common/scripts/install-run-rush.js build --verbose
 
+      # Incremental builds skip unchanged packages, leaving stale dists behind —
+      # the gate needs every artifact fresh, so it runs after a full rebuild.
+      - name: Prod gate — dev-warn gate compiled out of all dist artifacts
+        run: |
+          node common/scripts/install-run-rush.js rebuild --verbose
+          pnpm verify:prod-gate
+
       - name: Generate codex bundled data
         run: pnpm --dir packages/codex run prepare:data
 
