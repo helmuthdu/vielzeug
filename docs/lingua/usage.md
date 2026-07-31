@@ -58,6 +58,43 @@ i18n.tp('position', 1, { vars: { name: 'Alice' }, ordinal: true });
 `t()` resolves leaf keys. `tp()` resolves plural branch keys (`.zero`, then CLDR category, then `.other`).
 `count` is injected automatically — do not include it in `vars`.
 
+## Static Catalogs (createTranslator)
+
+For per-component static strings — no locale switching, no async loading — use `createTranslator()` instead of a full `createI18n()` instance. Call it once at module level next to your `translations` object; it exposes the same `t`/`tp` plus `ti`:
+
+```ts
+const { t, ti, tp } = createTranslator({
+  cancel: 'Cancel',
+  error: 'Try to {reloadLink} or {supportLink} for help.',
+  inbox: { one: 'One message', other: '{count} messages' },
+  save: 'Save',
+});
+
+t('save');  // 'Save'
+tp('inbox', 3); // '3 messages'
+```
+
+`createTranslator(catalog, { locale })` is single-locale by design — `{ locale }` (default `'en'`) only drives CLDR plural selection. When you later need locale switching, move the same catalog into `createI18n()`.
+
+## Segmented Interpolation (ti)
+
+`ti()` works like `t()` but returns the template as a mixed array of string segments and typed values — for embedding components inside translated text (React nodes, Vue vnodes, or anything else):
+
+```ts
+// JSX example
+<p>{ti('error', { reloadLink: <a href="/reload">reload</a>, supportLink: <a href="/support">contact support</a> })}</p>
+// renders: Try to <a>reload</a> or <a>contact support</a> for help.
+```
+
+Missing vars keep their `{placeholder}` segment; a missing key falls back through `onMissingKey`. Available on `Translator`, `I18n`, and `ScopedI18n`.
+
+For plural branches, `tpi(key, count, { vars })` combines both: CLDR selection and count injection like `tp()`, segmented output like `ti()` — `count` appears as a raw number segment.
+
+```ts
+i18n.tpi('inbox', 5, { vars: { sender: <UserChip user={sender} /> } });
+// [5, ' messages from ', <UserChip />]
+```
+
 ## Key Inspection
 
 Use `has(key)` to check whether a key exists in the active fallback chain. By default it checks **leaf** keys (resolvable by `t()`); pass `{ kind: 'branch' }` to check **branch** keys (plural branches, resolvable by `tp()`).
@@ -74,7 +111,7 @@ i18n.has('missing');                    // false
 
 ## Scoped Helpers
 
-`scope(prefix)` returns a `{ fmt, t, tp, has }` helper bound to a key prefix. Use it inside a component or module to avoid repeating the same key segment.
+`scope(prefix)` returns a `{ fmt, t, ti, tp, tpi, has }` helper bound to a key prefix. Use it inside a component or module to avoid repeating the same key segment.
 
 ```ts
 const nav = i18n.scope('nav');

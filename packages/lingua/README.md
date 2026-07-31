@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/lingua` &nbsp;·&nbsp; **Category:** i18n
 
-**Key exports:** `createI18n` · `createFormatter` (from `@vielzeug/lingua/format`) · `validateCatalog` (from `@vielzeug/lingua/validate`)
+**Key exports:** `createI18n` · `createTranslator` (static single-locale catalogs) · `createFormatter` (from `@vielzeug/lingua/format`) · `validateCatalog` (from `@vielzeug/lingua/validate`)
 
 **When to use:** Minimal i18n runtime with typed keys, deterministic locale fallback, and framework-agnostic reactive subscriptions.
 

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(lingua): createTranslator() — minimal static single-locale factory (t/ti/tp/tpi) for per-component catalogs, and ti()/tpi() segmented interpolation (mixed Array<string|V>, plus a raw-number count segment for tpi()) on Translator, I18n, and ScopedI18n",
+      "packageName": "@vielzeug/lingua",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/lingua"
+}

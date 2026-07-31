@@ -12,8 +12,11 @@ import { partialMergeExample } from './partial-merge';
 import { pluralizationExample } from './pluralization';
 import { preloadPatternExample } from './preload-pattern';
 import { scopeBindExample } from './scope-bind';
+import { segmentedInterpolationExample } from './segmented-interpolation';
+import { segmentedPluralsExample } from './segmented-plurals';
 import { ssrHydrationExample } from './ssr-hydration';
 import { standaloneFormatterExample } from './standalone-formatter';
+import { translatorExample } from './translator';
 import { variableInterpolationExample } from './variable-interpolation';
 
 export const linguaExamples = {
@@ -31,7 +34,10 @@ export const linguaExamples = {
   pluralization: pluralizationExample,
   'preload-pattern': preloadPatternExample,
   'scope-bind': scopeBindExample,
+  'segmented-interpolation': segmentedInterpolationExample,
+  'segmented-plurals': segmentedPluralsExample,
   'ssr-hydration': ssrHydrationExample,
   'standalone-formatter': standaloneFormatterExample,
+  translator: translatorExample,
   'variable-interpolation': variableInterpolationExample,
 };

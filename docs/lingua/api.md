@@ -10,13 +10,16 @@ description: Complete API reference for @vielzeug/lingua.
 | Symbol                   | Purpose                                                                            | Execution mode | Common gotcha                                                                                                      |
 | ------------------------ | ---------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `createI18n()`           | Create an i18n instance with locale catalogs                                       | Sync           | Catalogs are lazy; call `preload()` before SSR render                                                              |
+| `createTranslator()`       | Minimal static single-locale translator (`t`/`ti`/`tp`/`tpi`)                      | Sync           | Catalog compiled at creation; later edits are invisible — see `createI18n` for multi-locale                          |
 | `i18n.t()`               | Translate a leaf key with optional vars                                            | Sync           | Missing keys use `onMissingKey` or return the key itself                                                           |
 | `i18n.tp()`              | Translate a plural branch key                                                      | Sync           | `count` is injected automatically — do not pass it in `vars`                                                       |
+| `i18n.ti()`              | Segmented interpolation — mixed `Array<string \| V>` for embedding components      | Sync           | Missing key falls back through `onMissingKey`; missing var keeps its `{placeholder}` segment                        |
+| `i18n.tpi()`             | Segmented plural interpolation — `ti()` semantics on a plural branch                | Sync           | `count` injected as a raw-number segment; missing branch falls back through `onMissingKey`                          |
 | `i18n.loadNamespace()`   | Register (optional) and load a namespace                                            | Async          | Deduplicates per `ns + locale`; new factory updates registry but does not reload; throws synchronously if disposed |
 | `i18n.setLocale()`       | Switch the active locale                                                           | Async          | Await before rendering; throws if locale is not registered                                                         |
 | `i18n.preload()`         | Pre-load a locale catalog without switching                                        | Async          | Locale must be registered first                                                                                    |
 | `i18n.register()`              | Register or replace a locale source; loads it immediately                          | Async          | Returns `Promise<void>`; awaiting ensures the catalog is ready before rendering                                    |
-| `i18n.scope()`           | Return a prefix-bound `{ fmt, t, tp, has }` helper                                 | Sync           | Memoized per prefix — same object returned for same prefix string                                                  |
+| `i18n.scope()`           | Return a prefix-bound `{ fmt, t, ti, tp, tpi, has }` helper                        | Sync           | Memoized per prefix — same object returned for same prefix string                                                  |
 | `i18n.fork()`            | Create an isolated child instance from current state                               | Sync           | Catalog snapshot is copied; post-fork loadNamespace() calls are independent                                        |
 | `i18n.has()`             | Check if a key exists in the active chain                                          | Sync           | Leaf-only by default; pass `{ kind: 'branch' }` for branch keys                                                    |
 | `i18n.isLoaded()`        | Check if a locale catalog is fully resolved                                        | Sync           | Returns `false` for async loaders not yet preloaded; throws on invalid BCP 47 tag                                  |
@@ -39,6 +42,52 @@ description: Complete API reference for @vielzeug/lingua.
 | `@vielzeug/lingua`          | Main exports and types, includes `createFormatter`         |
 | `@vielzeug/lingua/format`   | Standalone `createFormatter` — no `createI18n` dependency  |
 | `@vielzeug/lingua/validate` | `validateCatalog` — dev/CI only, exclude from prod         |
+
+## createTranslator
+
+```ts
+createTranslator<T extends Messages>(catalog: T, options?: CreateTranslatorOptions): Translator<T>
+```
+
+Creates a minimal static, single-locale translator — resolution, interpolation, and plurals on a plain catalog object. Designed to be called once at module level alongside a component's `translations` object: no subscriptions, no async loaders, no namespace registry, no disposal. The catalog is compiled at creation; later edits to the source object are invisible.
+
+Multi-locale consumers should use `createI18n()` instead — `createTranslator` is deliberately single-locale.
+
+**Parameters — `CreateTranslatorOptions`:**
+
+| Option         | Type                                                       | Default         | Description                                                  |
+| -------------- | ---------------------------------------------------------- | --------------- | ------------------------------------------------------------ |
+| `locale`       | `Locale`                                                   | `'en'`          | Drives CLDR plural selection for `tp()`. Valid BCP 47 tag.   |
+| `onMissingKey` | `(key: string, locale: string) => string`                  | returns `key`   | Called when a translation key is missing.                    |
+| `onMissingVar` | `(varName: string, key: string, locale: string) => string` | returns `{var}` | Called when an interpolation variable is absent.             |
+
+```ts
+const { t, ti, tp } = createTranslator(
+  {
+    cancel: 'Cancel',
+    error: 'Try to {reloadLink} or {supportLink} for help.',
+    inbox: { one: 'One message', other: '{count} messages' },
+    save: 'Save',
+  },
+  { locale: 'en' },
+);
+
+t('save');                                 // 'Save'
+tp('inbox', 5);                            // '5 messages'
+ti('error', { reloadLink: <a href="/r">reload</a>, supportLink: <a href="/s">support</a> });
+// ['Try to ', <a>reload</a>, ' or ', <a>support</a>, ' for help.']
+```
+
+### `Translator<T>`
+
+```ts
+type Translator<T extends Messages> = {
+  t(key: MessageLeafKeys<T>, vars?: TranslateVars): string;
+  ti<V>(key: MessageLeafKeys<T>, vars: Record<string, V>): Array<string | V>;
+  tp(key: MessageBranchKeys<T>, count: number, options?: TpOptions): string;
+  tpi<V>(key: MessageBranchKeys<T>, count: number, options?: TpiOptions<V>): Array<string | number | V>;
+};
+```
 
 ## createI18n
 
@@ -94,7 +143,7 @@ Every `createI18n` call returns an `I18n<M>` instance.
 | `setLocale(locale)`             | `(locale: Locale) => Promise<void>`                                                       | Load if needed, then switch and notify subscribers. On load failure, locale is unchanged.                                      |
 | `register(locale, source)`      | `(locale: Locale, source: LocaleSource<M>) => Promise<void>`                              | Register or replace a locale source. Returns a Promise that resolves when loading is complete. Async loaders start immediately. |
 | `registerNamespace(ns, factory)` | `(ns: string, factory: NamespaceFactory) => void`                                    | Register a namespace factory without loading. Use `loadNamespace()` to trigger loading.                                      |
-| `scope(prefix)`                 | `(prefix: MessageBranchKeys<M> \| string) => ScopedI18n`                                  | Return a prefix-bound `{ fmt, t, tp, has }` helper. Memoized per prefix — same object reference for the same prefix string.    |
+| `scope(prefix)`                 | `(prefix: MessageBranchKeys<M> \| string) => ScopedI18n`                                  | Return a prefix-bound `{ fmt, t, ti, tp, tpi, has }` helper. Memoized per prefix — same object reference for the same prefix string. |
 | `fork(overrides?)`              | `(overrides?: Omit<I18nOptions<M>, 'catalogs'>) => I18n<M>`                               | Create an isolated child instance from the current catalog snapshot.                                                           |
 | `getState()`                    | `() => I18nState`                                                                         | Extract a serializable snapshot of loaded catalogs and the active locale.                                                      |
 | `restoreState(state)`           | `(state: I18nState) => void`                                                              | Hydrate this instance from serialized state. Clears namespace markers. Notifies subscribers.                                   |
@@ -106,7 +155,7 @@ Every `createI18n` call returns an `I18n<M>` instance.
 | `disposed`                      | `boolean`                                                                                 | `true` after `dispose()` has been called.                                                                                      |
 | `[Symbol.dispose]()`            | `() => void`                                                                              | Delegates to `dispose()`. Enables `using` declarations.                                                                        |
 | `getSupportedLocales(options?)` | `(options?: { sorted?: boolean }) => Locale[]`                                            | Return all registered locales.                                                                                                 |
-| `getSnapshot()`                 | `() => I18nSnapshot`                                                                      | Return the current `{ locale, t, tp }` snapshot. Object identity changes on each observable change.                           |
+| `getSnapshot()`                 | `() => I18nSnapshot`                                                                      | Return the current `{ locale, t, ti, tp, tpi }` snapshot. Object identity changes on each observable change.                           |
 | `subscribe(callback, options?)` | `(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions) => Unsubscribe` | Subscribe to changes. Supports `{ immediate, signal }`. Already-aborted signal skips registration.                             |
 
 **Properties:**
@@ -140,6 +189,33 @@ i18n.tp('pos', 1, { ordinal: true, vars: { name: 'Alice' } }); // ordinal + extr
 ```
 
 `count` is injected automatically. Do not include `count` in `vars`.
+
+### `ti()`
+
+Segmented interpolation — like `t()`, but returns the template as a mixed array of string segments and typed replacement values, for embedding components or other non-string content inside translated text. Generic over the value type, so it works with React nodes, Vue vnodes, Svelte snippets, or anything else.
+
+```ts
+i18n.ti('error', {
+  reloadLink: <a href="/reload">reload</a>,
+  supportLink: <a href="/support">contact support</a>,
+});
+// ['Try to ', <a>reload</a>, ' or ', <a>contact support</a>, ' for help.']
+```
+
+Resolution follows the same fallback chain as `t()`. A missing key falls back through `onMissingKey` (one string segment). A missing var keeps its `{placeholder}` string segment. Empty string segments are omitted. Note: `ti` is also available on `createTranslator()` instances and `ScopedI18n`.
+
+### `tpi()`
+
+Segmented plural interpolation — CLDR plural selection and count injection exactly like `tp()`, but the chosen template renders to a mixed `Array<string | number | V>` like `ti()`. `count` appears as a raw number segment (typed values pass through unstringified — apply `fmt.number()` yourself if you need grouping). Available on `I18n`, `ScopedI18n`, `Translator`, and `I18nSnapshot`.
+
+```ts
+i18n.tpi('inbox', 5, { vars: { sender: <UserChip user={sender} /> } });
+// [5, ' messages from ', <UserChip />]
+```
+
+```ts
+type TpiOptions<V> = { ordinal?: boolean; vars?: Record<string, V> };
+```
 
 ### `registerNamespace()`
 
@@ -537,7 +613,9 @@ type I18nOptions<M extends Messages = Messages> = {
 type I18nSnapshot = {
   readonly locale: Locale;
   readonly t: (key: string, vars?: TranslateVars) => string;
+  readonly ti: <V>(key: string, vars: Record<string, V>) => Array<string | V>;
   readonly tp: (key: string, count: number, options?: TpOptions) => string;
+  readonly tpi: <V>(key: string, count: number, options?: TpiOptions<V>) => Array<string | number | V>;
 };
 ```
 
@@ -623,9 +701,11 @@ type Loader<M extends Messages = Messages> = () => Promise<M>;
 ```ts
 type ScopedI18n = {
   readonly fmt: Formatter;
-  has(key: string): boolean;
+  has(key: string, options?: HasOptions): boolean;
   t(key: string, vars?: TranslateVars): string;
+  ti<V>(key: string, vars: Record<string, V>): Array<string | V>;
   tp(key: string, count: number, options?: TpOptions): string;
+  tpi<V>(key: string, count: number, options?: TpiOptions<V>): Array<string | number | V>;
 };
 ```
 

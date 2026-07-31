@@ -23,6 +23,7 @@ export type {
   ScopedI18n,
   SubscribeOptions,
   TpOptions,
+  TpiOptions,
   TranslateVars,
   Unsubscribe,
 } from './i18n';
@@ -30,6 +31,7 @@ export type {
 export type { DurationFormatOptions, DurationValue, Formatter, ListFormatOptions } from './format';
 
 export { createFormatter } from './format';
+export { createTranslator, type CreateTranslatorOptions, type Translator } from './translator';
 export {
   LinguaCountInVarsError,
   LinguaDisposedError,

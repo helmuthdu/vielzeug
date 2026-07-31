@@ -1,6 +1,7 @@
 // Internal — not part of the public API.
 // Locale chain building, canonicalization, and plural-rules selection.
-// All caches are per-instance — no shared module-level state.
+// canon/chain caches are per-instance. The Intl.PluralRules cache is module-level
+// (rules objects are immutable) — see getPluralRules().
 
 import type { Locale } from './_catalog';
 
@@ -13,11 +14,10 @@ export type { Locale } from './_catalog';
 export type LocaleCaches = {
   canon: Map<string, string>;
   chain: Map<string, { chain: Locale[]; set: Set<Locale> }>;
-  plural: Map<string, Intl.PluralRules>;
 };
 
 export function createLocaleCaches(): LocaleCaches {
-  return { canon: new Map(), chain: new Map(), plural: new Map() };
+  return { canon: new Map(), chain: new Map() };
 }
 
 // ─── Canon ────────────────────────────────────────────────────────────────────
@@ -44,16 +44,26 @@ export function canon(locale: string, cache: LocaleCaches): string {
 
 // ─── Plural form selection ────────────────────────────────────────────────────
 
-export function selectPluralForm(locale: Locale, count: number, ordinal: boolean, cache: LocaleCaches): string {
+// Module-level cache for Intl.PluralRules: the rules objects are immutable (no state
+// to leak across instances), and per-instance copies cost one PluralRules allocation
+// per createI18n()/createTranslator() per locale — noticeable only at module-level
+// adoption (many translators sharing a locale). canon/chain caches stay per-instance.
+const pluralRulesCache = new Map<string, Intl.PluralRules>();
+
+function getPluralRules(locale: Locale, ordinal: boolean): Intl.PluralRules {
   const key = `${locale}:${ordinal ? 'ordinal' : 'cardinal'}`;
-  let rules = cache.plural.get(key);
+  let rules = pluralRulesCache.get(key);
 
   if (!rules) {
     rules = new Intl.PluralRules(locale, { type: ordinal ? 'ordinal' : 'cardinal' });
-    cache.plural.set(key, rules);
+    pluralRulesCache.set(key, rules);
   }
 
-  return rules.select(count);
+  return rules;
+}
+
+export function selectPluralForm(locale: Locale, count: number, ordinal: boolean): string {
+  return getPluralRules(locale, ordinal).select(count);
 }
 
 // ─── Locale chain ─────────────────────────────────────────────────────────────

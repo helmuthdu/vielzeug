@@ -26,8 +26,12 @@ export type TranslateContext = {
   readonly onMissingVar: (varName: string, key: string, locale: Locale) => string;
 };
 
-// Single-pass entry lookup across the active fallback chain.
-function findEntry(ctx: TranslateContext, key: string): CatalogEntryData | undefined {
+/**
+ * Single-pass entry lookup across the active fallback chain. Also used by `ti()`
+ * (segmented interpolation), which needs the compiled template parts, not a
+ * rendered string.
+ */
+export function findEntry(ctx: TranslateContext, key: string): CatalogEntryData | undefined {
   for (const candidate of ctx.chain) {
     const found = ctx.catalogStore.resolve(candidate)?.get(key);
 
@@ -62,6 +66,19 @@ export function hasPluralBranch(ctx: TranslateContext, base: string): boolean {
   return isPluralBranch(ctx, base);
 }
 
+/**
+ * Dev-mode diagnostic shared by `t()` and every `ti()` path: a plural-branch-only key
+ * hit through a leaf-resolving API returns the missing-key fallback, indistinguishable
+ * from a genuinely missing key without this warning.
+ */
+export function warnIfPluralBranch(ctx: TranslateContext, key: string): void {
+  devOnly(() => {
+    if (isPluralBranch(ctx, key)) {
+      warn(`'${key}' exists as a plural branch — use tp('${key}', count) instead.`);
+    }
+  });
+}
+
 function interpolate(
   ctx: TranslateContext,
   key: string,
@@ -75,17 +92,7 @@ export function translate(ctx: TranslateContext, key: string, vars?: TranslateVa
   const found = findEntry(ctx, key);
 
   if (!found) {
-    // hasPlural(key) returns true for a plural-branch-only key (no leaf entry), but t()
-    // can't resolve one — the common `if (i18n.hasPlural(key)) i18n.t(key)` pattern silently
-    // returns the raw key in that case, indistinguishable from a genuinely missing key
-    // without this warning.
-    devOnly(() => {
-      if (isPluralBranch(ctx, key)) {
-        warn(
-          `t('${key}') resolved to the missing-key fallback, but '${key}' exists as a plural branch — use tp('${key}', count) instead.`,
-        );
-      }
-    });
+    warnIfPluralBranch(ctx, key);
 
     return ctx.onMissingKey(key, ctx.locale);
   }
@@ -108,6 +115,27 @@ function pluralKeyPriority(base: string, form: string, count: number, ordinal: b
 }
 
 export function translatePlural(ctx: TranslateContext, key: string, count: number, options?: TpOptions): string {
+  const found = findPluralEntry(ctx, key, count, options);
+
+  if (!found) return ctx.onMissingKey(key, ctx.locale);
+
+  const mergedVars = options?.vars ? { count, ...options.vars } : { count };
+
+  return interpolate(ctx, found.key, found.entry, mergedVars);
+}
+
+/**
+ * Plural-branch entry resolution for `tpi()` (segmented plurals): validates `count`
+ * and `vars.count` exactly like `translatePlural`, then walks the fallback chain
+ * selecting CLDR forms per locale. Returns the resolved entry and its concrete
+ * plural key (e.g. `inbox.one`) so segmented rendering can attribute warnings.
+ */
+export function findPluralEntry(
+  ctx: TranslateContext,
+  key: string,
+  count: number,
+  options?: TpOptions,
+): { entry: CatalogEntryData; key: string } | undefined {
   if (!Number.isFinite(count)) {
     throw new LinguaInvalidCountError('`count` must be a finite number.');
   }
@@ -119,8 +147,6 @@ export function translatePlural(ctx: TranslateContext, key: string, count: numbe
     throw new LinguaCountInVarsError('`tp` does not allow `vars.count`; `count` is injected automatically.');
   }
 
-  const mergedVars = vars ? { count, ...vars } : { count };
-
   // Walk the fallback chain locale-by-locale, selecting CLDR plural form using each locale's
   // own rules. This ensures cross-locale fallbacks produce grammatically correct forms.
   for (const candidate of ctx.chain) {
@@ -128,15 +154,15 @@ export function translatePlural(ctx: TranslateContext, key: string, count: numbe
 
     if (!catalog) continue;
 
-    const form = selectPluralForm(candidate, count, ordinal, ctx.caches);
+    const form = selectPluralForm(candidate, count, ordinal);
     const keys = pluralKeyPriority(key, form, count, ordinal);
 
     for (const k of keys) {
       const found = catalog.get(k);
 
-      if (found !== undefined) return interpolate(ctx, k, found, mergedVars);
+      if (found !== undefined) return { entry: found, key: k };
     }
   }
 
-  return ctx.onMissingKey(key, ctx.locale);
+  return undefined;
 }

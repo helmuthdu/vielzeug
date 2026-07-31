@@ -54,3 +54,36 @@ export function renderTemplate(
 
   return result;
 }
+
+/**
+ * Segmented interpolation (`ti()`): render a compiled template to a mixed array of
+ * string segments and typed replacement values, for embedding non-string content
+ * (components, elements) inside translated text. Same missing-var contract as
+ * `renderTemplate` — a missing var yields the `onMissingVar` string segment.
+ * Empty string segments are omitted.
+ *
+ * Deliberate divergence from `renderTemplate`: `t()` treats `null` vars as missing,
+ * while `ti()` embeds `null` as a provided value — `null` is a meaningful renderable
+ * in component frameworks (React renders it as nothing), so it is not an absence.
+ */
+export function renderTemplateSegments<V>(
+  parts: CompiledTemplate,
+  vars: Record<string, V> | undefined,
+  key: string,
+  locale: Locale,
+  onMissingVar: (varName: string, key: string, locale: Locale) => string,
+): Array<string | V> {
+  const segments: Array<string | V> = [];
+
+  for (const part of parts) {
+    if (typeof part === 'string') {
+      if (part !== '') segments.push(part);
+    } else {
+      const value = vars?.[part.var];
+
+      segments.push(value === undefined ? onMissingVar(part.var, key, locale) : value);
+    }
+  }
+
+  return segments;
+}

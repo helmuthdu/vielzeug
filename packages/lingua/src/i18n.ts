@@ -10,6 +10,7 @@ import type {
   ScopedI18n,
   SubscribeOptions,
   TpOptions,
+  TpiOptions,
   TranslateVars,
   Unsubscribe,
 } from './i18n-types';
@@ -28,13 +29,17 @@ import { error as logError, warn } from './_dev';
 import { type NamespaceFactory, type NamespaceStore, createNamespaceStore } from './_namespace-store';
 import {
   type TranslateContext,
+  findEntry,
+  findPluralEntry,
   hasLeaf as hasLeafIn,
+  warnIfPluralBranch,
   hasPluralBranch as hasPluralBranchIn,
   translate as translateIn,
   translatePlural as translatePluralIn,
 } from './_translate';
 import { LinguaDisposedError, LinguaError, LinguaRestoreError, checkDisposed } from './errors';
 import { type Formatter, createFormatter } from './format';
+import { renderTemplateSegments } from './template';
 
 export {
   LinguaCountInVarsError,
@@ -59,6 +64,7 @@ export type {
   ScopedI18n,
   SubscribeOptions,
   TpOptions,
+  TpiOptions,
   TranslateVars,
   Unsubscribe,
 } from './i18n-types';
@@ -180,17 +186,60 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
   const translatePlural = (key: MessageBranchKeys<M> | (string & {}), count: number, options?: TpOptions): string =>
     translatePluralIn(translateContext(), String(key), count, options);
 
+  // Segmented interpolation (ti): same fallback-chain resolution as t(), but renders
+  // the compiled template parts to a mixed string|V array for embedding non-string
+  // content. Missing key falls back through onMissingKey, exactly like t().
+  const translateSegments = <V>(key: string, vars: Record<string, V>): Array<string | V> => {
+    const context = translateContext();
+    const found = findEntry(context, key);
+
+    if (!found) {
+      warnIfPluralBranch(context, key);
+
+      return [context.onMissingKey(key, context.locale)];
+    }
+
+    return renderTemplateSegments(found.compiled, vars, key, context.locale, context.onMissingVar);
+  };
+
+  // Segmented plurals (tpi): CLDR selection + count validation via findPluralEntry,
+  // segmented rendering like ti(). count is injected as a raw-number segment — typed
+  // values pass through unstringified (that's the point of ti/tpi).
+  const translatePluralSegments = <V>(
+    key: string,
+    count: number,
+    options?: TpiOptions<V>,
+  ): Array<string | number | V> => {
+    const context = translateContext();
+    const found = findPluralEntry(context, key, count, options);
+
+    if (!found) return [context.onMissingKey(key, context.locale)];
+
+    // count is injected as a raw number segment — renderable in every target framework.
+    const mergedVars: Record<string, V | number> = options?.vars ? { count, ...options.vars } : { count };
+
+    return renderTemplateSegments(found.entry.compiled, mergedVars, found.key, context.locale, context.onMissingVar);
+  };
+
   // ─── bump() ───────────────────────────────────────────────────────────────
   // Rebuilds the snapshot and notifies all current subscribers.
 
   let snapshot: I18nSnapshot = {
     locale: state.locale,
     t: translate,
+    ti: translateSegments,
     tp: translatePlural,
+    tpi: translatePluralSegments,
   };
 
   const bump = (): void => {
-    snapshot = { locale: state.locale, t: translate, tp: translatePlural };
+    snapshot = {
+      locale: state.locale,
+      t: translate,
+      ti: translateSegments,
+      tp: translatePlural,
+      tpi: translatePluralSegments,
+    };
 
     const listeners = [...subscribers];
 
@@ -476,7 +525,9 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
         },
         has: (key, options?) => hasKey(`${pre}.${key}`, options),
         t: (key, vars?) => translate(`${pre}.${key}`, vars),
+        ti: (key, vars) => translateSegments(`${pre}.${key}`, vars),
         tp: (key, count, options?) => translatePlural(`${pre}.${key}`, count, options),
+        tpi: (key, count, options?) => translatePluralSegments(`${pre}.${key}`, count, options),
       }));
     },
 
@@ -506,7 +557,16 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
 
     t: translate,
 
+    ti: <V>(key: MessageLeafKeys<M> | (string & {}), vars: Record<string, V>): Array<string | V> =>
+      translateSegments(String(key), vars),
+
     tp: translatePlural,
+
+    tpi: <V>(
+      key: MessageBranchKeys<M> | (string & {}),
+      count: number,
+      options?: TpiOptions<V>,
+    ): Array<string | number | V> => translatePluralSegments(String(key), count, options),
   };
 
   return source;

@@ -191,6 +191,88 @@ describe('createI18n — translation (t/tp/has)', () => {
     });
   });
 
+  describe('ti()/tpi() — segmented interpolation', () => {
+    test('ti() returns string segments and typed replacement values', () => {
+      const i18n = createI18n({ catalogs: { en: { error: 'Try to {reload} now.' } } });
+      const reload = { href: '/reload' };
+
+      expect(i18n.ti('error', { reload })).toEqual(['Try to ', reload, ' now.']);
+    });
+
+    test('ti() resolves through the fallback chain', () => {
+      const i18n = createI18n({
+        catalogs: { en: { title: 'Dear {name}' }, fr: {} },
+        fallback: 'en',
+        locale: 'fr',
+      });
+
+      expect(i18n.ti('title', { name: 'Ada' })).toEqual(['Dear ', 'Ada']);
+    });
+
+    test('ti() on a plural-branch key returns the fallback and warns in dev', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const i18n = createI18n({ catalogs: { en: { inbox: { one: 'One', other: '{count} messages' } } } });
+
+      expect(i18n.ti('inbox' as never, {})).toEqual(['inbox']);
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('plural branch'));
+
+      warnSpy.mockRestore();
+    });
+
+    test('tpi() selects the CLDR form and injects count as a raw-number segment', () => {
+      const i18n = createI18n({
+        catalogs: { en: { inbox: { one: 'One message from {sender}', other: '{count} messages from {sender}' } } },
+      });
+      const sender = { name: 'Ada' };
+
+      expect(i18n.tpi('inbox', 1, { vars: { sender } })).toEqual(['One message from ', sender]);
+      expect(i18n.tpi('inbox', 3, { vars: { sender } })).toEqual([3, ' messages from ', sender]);
+    });
+
+    test('tpi() resolves plural forms using each fallback locale own CLDR rules', () => {
+      const i18n = createI18n({
+        catalogs: {
+          en: {},
+          ru: { items: { few: '{count} few', many: '{count} many', one: '{count} one', other: '{count} other' } },
+        },
+        fallback: 'ru',
+        locale: 'en',
+      });
+
+      expect(i18n.tpi('items', 5)).toEqual([5, ' many']); // Russian 'many' — not English 'other'
+    });
+
+    test('tpi() on a missing branch falls back through onMissingKey as one string segment', () => {
+      const i18n = createI18n({ onMissingKey: (key) => `[key:${key}]` });
+
+      expect(i18n.tpi('nope' as never, 1)).toEqual(['[key:nope]']);
+    });
+
+    test('tpi() throws for non-finite count and vars.count', () => {
+      const i18n = createI18n({ catalogs: { en: { items: { other: '{count}' } } } });
+
+      expect(() => i18n.tpi('items', Number.NaN)).toThrow(LinguaInvalidCountError);
+      expect(() => i18n.tpi('items', 2, { vars: { count: 9 } })).toThrow(LinguaCountInVarsError);
+    });
+
+    test('scoped ti()/tpi() resolve under the scope prefix', () => {
+      const i18n = createI18n({
+        catalogs: {
+          en: {
+            nav: {
+              greeting: 'Hello, {name}!',
+              inbox: { one: 'One message', other: '{count} messages' },
+            },
+          },
+        },
+      });
+      const scoped = i18n.scope('nav');
+
+      expect(scoped.ti('greeting', { name: 'Ada' })).toEqual(['Hello, ', 'Ada', '!']);
+      expect(scoped.tpi('inbox', 2)).toEqual([2, ' messages']);
+    });
+  });
+
   describe('t() — fallback chain', () => {
     test('resolves a key from the fallback locale when absent in the active locale', () => {
       const i18n = createI18n({
@@ -408,6 +490,13 @@ describe('createI18n — translation (t/tp/has)', () => {
   });
 
   describe('I18nSnapshot — t/tp accessors', () => {
+    test('snapshot exposes ti() bound to the live translator', () => {
+      const i18n = createI18n({ catalogs: { en: { error: 'Try to {reload} now.' } } });
+      const snap = i18n.getSnapshot();
+
+      expect(snap.ti('error', { reload: 'R' })).toEqual(['Try to ', 'R', ' now.']);
+    });
+
     test('snapshot.t() translates using the locale at snapshot time', async () => {
       const i18n = createI18n({
         catalogs: { en: { greeting: 'Hello' }, fr: { greeting: 'Bonjour' } },

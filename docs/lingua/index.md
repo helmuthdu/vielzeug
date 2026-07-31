@@ -28,7 +28,7 @@ const i18n = createI18n({ locale: 'de', fallback: 'en', catalogs: messages });
 const greeting = i18n.t('greeting', { name: 'Alice' });
 ```
 
-- Minimal API: `t`, `tp`, `loadNamespace`, `registerNamespace`, `preload`, `setLocale`, `register`, `scope`, `fork`, `getSnapshot`, `getState`, `restoreState`, `subscribe`, `has`, `isLoaded`, `isNamespaceLoaded`, `dispose`, `getSupportedLocales`
+- Minimal API: `t`, `ti`, `tp`, `loadNamespace`, `registerNamespace`, `preload`, `setLocale`, `register`, `scope`, `fork`, `getSnapshot`, `getState`, `restoreState`, `subscribe`, `has`, `isLoaded`, `isNamespaceLoaded`, `dispose`, `getSupportedLocales`
 - Deterministic locale fallback chain resolution
 - Typed leaf and plural branch keys with explicit APIs (`t` and `tp`)
 - Explicit locale source model (static messages or async loaders)
@@ -127,8 +127,8 @@ i18n.getSupportedLocales();
 
 <div class="features-grid">
 
-- One runtime primitive: `createI18n(options)`
-- Explicit translation methods: `t(leafKey, vars?)` and `tp(branchKey, count, options?)`
+- One runtime primitive: `createI18n(options)`, plus `createTranslator(catalog)` for static single-locale component strings
+- Explicit translation methods: `t(leafKey, vars?)`, `ti(leafKey, vars)` for segmented component interpolation, and `tp(branchKey, count, options?)`
 - Explicit locale lifecycle: `register`, `preload`, `setLocale`
 - Namespace lazy loading: `loadNamespace(ns, factory?, locale?)` — pass a factory for register + load in one call, or split with `registerNamespace(ns, factory)` first; deduplicates per `ns + locale`; use for per-route or per-feature keys
 - Scoped translation helpers: `scope(prefix)` returns a `{ fmt, t, tp, has }` helper bound to a key prefix

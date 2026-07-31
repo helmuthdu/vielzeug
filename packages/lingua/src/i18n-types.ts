@@ -20,7 +20,11 @@ export type I18nSnapshot = {
   readonly locale: Locale;
   /** @security Returns raw, unsanitized strings. Sanitize before `innerHTML` insertion. */
   readonly t: (key: string, vars?: TranslateVars) => string;
+  /** Segmented interpolation via the same translator closure as `t` — resolves with the live locale, not the snapshot-time one (matches `t`/`tp`). */
+  readonly ti: <V>(key: string, vars: Record<string, V>) => Array<string | V>;
   readonly tp: (key: string, count: number, options?: TpOptions) => string;
+  /** Segmented plural interpolation — `ti()` semantics applied to a plural branch. See `I18n.tpi`. */
+  readonly tpi: <V>(key: string, count: number, options?: TpiOptions<V>) => Array<string | number | V>;
 };
 
 /** Shape of the serialised state produced by `getState()`. Pass to `restoreState()` on the client. */
@@ -39,6 +43,11 @@ export type SubscribeOptions = {
   immediate?: boolean;
   /** AbortSignal — automatically unsubscribes when the signal is aborted. */
   signal?: AbortSignal;
+};
+
+export type TpiOptions<V = unknown> = Omit<TpOptions, 'vars'> & {
+  /** Extra interpolation variables, typed like `ti()`'s vars. `count` is injected automatically. */
+  vars?: Record<string, V>;
 };
 
 export type TpOptions = {
@@ -64,7 +73,16 @@ export type ScopedI18n = {
   /** True if `key` exists under this scope's prefix — as a leaf (default) or a branch (`{ kind: 'branch' }`). */
   has(key: string, options?: HasOptions): boolean;
   t(key: string, vars?: TranslateVars): string;
+  /**
+   * Segmented interpolation: like `t()` but returns the template as a mixed array of
+   * string segments and typed replacement values (components, elements). Missing key
+   * falls back through `onMissingKey`; a missing var keeps its `{placeholder}` segment.
+   * Unlike `t()`, a `null` var counts as provided and is embedded as-is.
+   */
+  ti<V>(key: string, vars: Record<string, V>): Array<string | V>;
   tp(key: string, count: number, options?: TpOptions): string;
+  /** Segmented plural interpolation — see `I18n.tpi`. */
+  tpi<V>(key: string, count: number, options?: TpiOptions<V>): Array<string | number | V>;
 };
 
 // ─── Key inference ────────────────────────────────────────────────────────────
@@ -289,6 +307,13 @@ export type I18n<M extends Messages = Messages> = {
   /** @security Returns raw, unsanitized strings. Sanitize before `innerHTML` insertion. */
   t(key: MessageLeafKeys<M> | (string & {}), vars?: TranslateVars): string;
   /**
+   * Segmented interpolation: like `t()` but returns the template as a mixed array of
+   * string segments and typed replacement values (components, elements). Missing key
+   * falls back through `onMissingKey`; a missing var keeps its `{placeholder}` segment.
+   * Unlike `t()`, a `null` var counts as provided and is embedded as-is.
+   */
+  ti<V>(key: MessageLeafKeys<M> | (string & {}), vars: Record<string, V>): Array<string | V>;
+  /**
    * Translates a plural branch key. `count` is injected automatically.
    *
    * @throws `LinguaInvalidCountError` if `count` is not finite.
@@ -296,4 +321,16 @@ export type I18n<M extends Messages = Messages> = {
    * @security Returns raw, unsanitized strings.
    */
   tp(key: MessageBranchKeys<M> | (string & {}), count: number, options?: TpOptions): string;
+  /**
+   * Segmented plural interpolation: CLDR plural selection like `tp()`, but renders the
+   * chosen template to a mixed array of string segments and typed values (components,
+   * elements) like `ti()`. `count` is injected automatically and appears as a raw
+   * number segment (typed values pass through unstringified — format it yourself if
+   * you need grouping). Missing branch falls back through `onMissingKey` (one string
+   * segment).
+   *
+   * @throws `LinguaInvalidCountError` if `count` is not finite.
+   * @throws `LinguaCountInVarsError` if `options.vars.count` is present.
+   */
+  tpi<V>(key: MessageBranchKeys<M> | (string & {}), count: number, options?: TpiOptions<V>): Array<string | number | V>;
 };
