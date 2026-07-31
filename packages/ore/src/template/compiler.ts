@@ -119,10 +119,11 @@ const templateCache = new WeakMap<TemplateStringsArray, CompiledStaticTemplate>(
 
 /**
  * Matches a string that ends in an attribute-assignment context, e.g. `...attr=`,
- * `...:value=`, `...@click=`, `...?disabled=`. Used to decide whether a quote
- * immediately before an interpolation is an attribute-value quote (strip it) or a
- * literal text quote (keep it) — previously every adjacent quote was stripped, so
- * `` html`"${value}"` `` silently lost its surrounding quotes.
+ * `...:value=`, `...@click=`, `...?disabled=`. Used together with tag-context
+ * tracking (see below) to decide whether a quote immediately before an
+ * interpolation is an attribute-value quote (strip it) or a literal text quote
+ * (keep it) — previously every adjacent quote was stripped, so both
+ * `` html`"${value}"` `` and prose like `area = "${area}"` lost their quotes.
  */
 const ATTR_VALUE_CONTEXT_RE = /[@?:]?[a-zA-Z_][-a-zA-Z0-9_.]*\s*=\s*$/;
 
@@ -130,16 +131,30 @@ const ATTR_VALUE_CONTEXT_RE = /[@?:]?[a-zA-Z_][-a-zA-Z0-9_.]*\s*=\s*$/;
  * Pre-process template strings to strip surrounding attribute quotes and the
  * closing `>` that follows a dynamic tag-name slot. This lets the main loop
  * operate on clean strings with no per-iteration state flags.
+ *
+ * Quote stripping requires BOTH an attr-assignment tail AND start-tag context
+ * (tracked by replaying the raw strings): `class = "${c}"` inside a tag is
+ * stripped; `area = "${a}"` in prose is not.
  */
 const normalizeTemplateStrings = (strings: TemplateStringsArray): string[] => {
   const out = Array.from(strings);
+  let insideTag = false;
 
   for (let i = 0; i < out.length - 1; i++) {
     const s = out[i];
     const lastChar = s[s.length - 1];
 
+    // Tag context at the interpolation boundary is determined by all raw string
+    // content up to it — including this string's own text before its final quote
+    // (same naive heuristic as isInsideStartTag: last angle bracket wins; attribute
+    // values containing '<'/'>' are outside the supported syntax either way).
+    for (const ch of s) {
+      if (ch === '<') insideTag = true;
+      else if (ch === '>') insideTag = false;
+    }
+
     // Strip wrapping attribute quotes: attr="${value}" → attr=${value}
-    if ((lastChar === '"' || lastChar === "'") && ATTR_VALUE_CONTEXT_RE.test(s.slice(0, -1))) {
+    if ((lastChar === '"' || lastChar === "'") && insideTag && ATTR_VALUE_CONTEXT_RE.test(s.slice(0, -1))) {
       out[i] = s.slice(0, -1);
 
       const next = out[i + 1];

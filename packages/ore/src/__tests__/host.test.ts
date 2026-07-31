@@ -539,8 +539,17 @@ describe('core/host.ts', () => {
         expect(createContext('shared-desc')).toBe(createContext('shared-desc'));
       });
 
+      it('warns when called without a description (anonymous keys are per-graph)', () => {
+        const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        createContext();
+
+        expect(spy).toHaveBeenCalledWith(expect.stringContaining('without a description'));
+        spy.mockRestore();
+      });
+
       it('enables type-safe context sharing between parent and child components', async () => {
-        const UserCtx = createContext<{ name: string; role: string }>();
+        const UserCtx = createContext<{ name: string; role: string }>('test-user');
         const childTag = `test-ctx-child-${Math.random().toString(36).slice(2)}`;
 
         register(childTag, () => {

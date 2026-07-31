@@ -62,7 +62,7 @@
     "@vielzeug/ripple": "workspace:*"
   },
   "peerDependencies": {
-    "@vielzeug/assay": "workspace:*"
+    "@vielzeug/assay": "workspace:^"
   },
   "peerDependenciesMeta": {
     "@vielzeug/assay": {

@@ -33,7 +33,7 @@ Functional web-component authoring primitives built on `ripple`. The foundation 
 
 ## Work Guidance
 
-- Depends on `@vielzeug/ripple` (`workspace:*`). `@vielzeug/assay` is an **optional peer dependency** used only by the `./testing` sub-path — production consumers never install it.
+- Depends on `@vielzeug/ripple` (`workspace:*`). `@vielzeug/assay` is an **optional peer dependency** (`workspace:^`) used only by the `./testing` sub-path — production consumers never install it. The `^` keeps the published peer range from going stale on every assay version bump.
 - Breaking changes here cascade to `refine` — verify `refine` after public-API changes.
 
 ## Verification

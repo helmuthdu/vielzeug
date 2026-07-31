@@ -510,6 +510,33 @@ describe('Template: HTML System', () => {
       expect(query('p')?.textContent).toBe('"world"');
     });
 
+    it('preserves quotes around text interpolations shaped like assignments (area = "...")', async () => {
+      const { query } = await mount(() => {
+        const area = signal(12);
+
+        return html`
+          <p>area = "${area}"</p>
+        `;
+      });
+
+      // `word = "` in prose is not attribute syntax (no start-tag context) — the
+      // quote must survive. Previously stripped by the attr-quote heuristic.
+      expect(query('p')?.textContent).toBe('area = "12"');
+    });
+
+    it('strips quotes around spaced attribute interpolations (class = "...")', async () => {
+      const { query } = await mount(() => {
+        const cls = signal('active');
+
+        return html`
+          <div class="${cls}">x</div>
+        `;
+      });
+
+      expect(query('div')?.getAttribute('class')).toBe('active');
+      expect(query('div')?.textContent).toBe('x');
+    });
+
     it('leaves user-authored `u` attributes and numeric comments untouched', async () => {
       const { query } = await mount(
         () => html`

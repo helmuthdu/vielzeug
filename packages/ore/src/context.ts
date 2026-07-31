@@ -131,7 +131,16 @@ let anonymousKeyCounter = 0;
  * a provider and an injector loaded from two bundled copies of ore still match
  * (see module header). Two `createContext('theme')` calls intentionally produce
  * the same key — use distinct descriptions for distinct contexts.
+ *
+ * Always pass a description: anonymous keys are minted from a per-graph counter,
+ * so they do NOT survive duplicated module graphs (each copy numbers its own).
  */
 export function createContext<T>(description?: string): InjectionKey<T> {
+  if (description === undefined) {
+    warn(
+      'createContext() called without a description — anonymous context keys do not survive duplicated module graphs.',
+    );
+  }
+
   return Symbol.for(`ore:context:${description ?? `anonymous-${++anonymousKeyCounter}`}`) as InjectionKey<T>;
 }
