@@ -1,6 +1,6 @@
 import { define, html, prop, ref, getHost, onCleanup, onEvent, onMounted, useEmit, useSlots } from '@vielzeug/ore';
 
-import type { OverlayCloseDetail, OverlayOpenDetail } from '../../headless';
+import type { OverlayOpenChangeDetail } from '../../core';
 import type { PaddingSize, RoundedSize } from '../../types';
 
 import { coarsePointerMixin, roundedVariantMixin } from '../../styles';
@@ -12,16 +12,20 @@ type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 type DialogBackdrop = 'opaque' | 'blur' | 'transparent';
 type DialogElevation = 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
+const parseOptionalBool = (value: string | null): boolean | undefined =>
+  value == null ? undefined : value === '' || value === 'true';
+
 /** Dialog component properties */
 
 export type OreDialogEvents = {
-  close: OverlayCloseDetail;
-  open: OverlayOpenDetail;
+  'open-change': OverlayOpenChangeDetail;
 };
 
 export type OreDialogProps = {
   /** Backdrop style — 'blur' (default): dark overlay + blur; 'opaque': dark overlay only; 'transparent': no overlay */
   backdrop?: DialogBackdrop;
+  /** Initial uncontrolled open state. Ignored when `open` is set. */
+  'default-open'?: boolean;
   /** Show a close (×) button in the header */
   dismissible?: boolean;
   /** Panel shadow elevation — defaults to 'xl' */
@@ -58,7 +62,8 @@ export type OreDialogProps = {
  *
  * @element ore-dialog
  *
- * @attr {boolean} open - Open/close the dialog
+ * @attr {boolean} open - Controlled open state
+ * @attr {boolean} default-open - Initial uncontrolled open state
  * @attr {string} label - Dialog title (also used as aria-label)
  * @attr {string} size - Size: 'sm' | 'md' | 'lg' | 'xl' | 'full'
  * @attr {boolean} dismissible - Show a close (×) button in the header
@@ -68,8 +73,7 @@ export type OreDialogProps = {
  * @attr {string} elevation - Panel shadow: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
  * @attr {string} padding - Padding: 'none' | 'sm' | 'md' | 'lg' | 'xl'
  *
- * @fires open - Fired when the dialog opens with detail: { reason }
- * @fires close - Fired when the dialog closes with detail: { reason }
+ * @fires open-change - Fired when the dialog state changes. detail: { open, reason }
  *
  * @slot - Dialog body content
  * @slot header - Custom header content (replaces the default title + close layout)
@@ -119,11 +123,12 @@ export const DIALOG_TAG = 'ore-dialog' as const;
 define<OreDialogProps>(DIALOG_TAG, {
   props: {
     backdrop: prop.string<DialogBackdrop>(),
+    'default-open': prop.bool(false),
     dismissible: prop.bool(false),
     elevation: prop.string<DialogElevation>(),
     'initial-focus': prop.string(),
     label: prop.string(),
-    open: prop.bool(false),
+    open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
     padding: prop.string<PaddingSize>(),
     persistent: prop.bool(false),
     'return-focus': prop.bool(true),
@@ -140,6 +145,7 @@ define<OreDialogProps>(DIALOG_TAG, {
     const hasFooter = () => slots.has('footer').value;
 
     const { closeWithAnimation, overlay, requestClose, setupNativeListeners } = useDialogControl({
+      defaultOpen: props['default-open'],
       dialogRef,
       getPanelEl: () => dialogRef.value?.querySelector<HTMLElement>('.panel'),
       host: el,
@@ -147,8 +153,8 @@ define<OreDialogProps>(DIALOG_TAG, {
       isPersistent: () => Boolean(props.persistent.value),
       onCleanup,
       onEvent,
-      onNativeClose: (reason) => emit('close', { reason }),
-      onOpen: (reason) => emit('open', { reason }),
+      onNativeClose: (reason) => emit('open-change', { open: false, reason }),
+      onOpen: (reason) => emit('open-change', { open: true, reason }),
       openProp: props.open,
       performClose: () => {
         closeWithAnimation();

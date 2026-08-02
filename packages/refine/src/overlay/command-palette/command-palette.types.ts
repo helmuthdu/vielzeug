@@ -1,4 +1,4 @@
-import type { DialogCloseReason, OverlayOpenDetail } from '../../headless';
+import type { OverlayOpenChangeDetail } from '../../core';
 
 export type CommandPaletteItemInput = {
   disabled?: boolean;
@@ -35,13 +35,14 @@ export type CommandPaletteSelectDetail = {
 };
 
 export type OreCommandPaletteEvents = {
-  close: { reason: DialogCloseReason };
-  open: OverlayOpenDetail;
+  'open-change': OverlayOpenChangeDetail;
   search: { query: string };
   select: CommandPaletteSelectDetail;
 };
 
 export type OreCommandPaletteProps = {
+  /** Initial uncontrolled open state. Ignored when `open` is set. */
+  'default-open'?: boolean;
   /** Text shown when no item matches the current query. */
   'empty-text'?: string;
   /** JS items array — alternative or supplement to slotted `<ore-command-palette-item>` elements. */

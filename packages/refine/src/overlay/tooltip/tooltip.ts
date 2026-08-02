@@ -1,11 +1,22 @@
 import type { Placement } from '@vielzeug/orbit';
 
-import { createStableId, define, html, prop, bind, getHost, onCleanup, onMounted, useSlots } from '@vielzeug/ore';
+import {
+  createStableId,
+  define,
+  html,
+  prop,
+  bind,
+  getHost,
+  onCleanup,
+  onMounted,
+  useEmit,
+  useSlots,
+} from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize } from '../../types';
 
-import { parseStringTriggers } from '../../headless';
+import { type OverlayOpenChangeDetail, type OverlayOpenReason, parseStringTriggers } from '../../core';
 import { disablableBundle, sizableBundle } from '../../shared';
 import { forcedColorsMixin } from '../../styles';
 import { useFloatingTrigger } from '../shared/use-floating-trigger';
@@ -33,11 +44,17 @@ const normalizeTriggers = (value: string | null | undefined): TooltipTrigger[] =
   parseStringTriggers(value, VALID_TOOLTIP_TRIGGERS, DEFAULT_TOOLTIP_TRIGGERS);
 
 /** Tooltip component properties */
+export type OreTooltipEvents = {
+  'open-change': OverlayOpenChangeDetail;
+};
+
 export type OreTooltipProps = {
   /** Hide delay in ms */
   'close-delay'?: number;
   /** Tooltip text content */
   content?: string;
+  /** Initial uncontrolled open state. Ignored when `open` is set. */
+  'default-open'?: boolean;
   /** Show delay in ms */
   delay?: number;
   /** Disable the tooltip */
@@ -63,12 +80,15 @@ export type OreTooltipProps = {
  * @attr {string} placement - 'top' | 'bottom' | 'left' | 'right' (default: 'top')
  * @attr {string} trigger - 'hover' | 'focus' | 'click' or comma-separated combination
  * @attr {number} delay - Show delay in milliseconds (default: 0)
+ * @attr {boolean} open - Controlled open state
+ * @attr {boolean} default-open - Initial uncontrolled open state
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
  * @attr {string} variant - 'dark' (default) | 'light'
  * @attr {boolean} disabled - Disable the tooltip
  *
  * @slot - Trigger element that the tooltip is anchored to
  * @slot content - Complex tooltip content (overrides the `content` attribute)
+ * @fires open-change - Fired when the tooltip state changes. detail: { open, reason }
  *
  * @cssprop --tooltip-max-width - Max width of the tooltip bubble
  *
@@ -107,6 +127,7 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
     ...disablableBundle,
     'close-delay': { default: 0, parse: parseDelayMs },
     content: prop.string(),
+    'default-open': prop.bool(false),
     delay: { default: 0, parse: parseDelayMs },
     open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
     placement: prop.oneOf(['top', 'bottom', 'left', 'right'] as const, 'top'),
@@ -115,6 +136,7 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
   },
   setup(props) {
     const el = getHost();
+    const emit = useEmit<OreTooltipEvents>();
     const slots = useSlots();
 
     const shadowRoot = el.shadowRoot;
@@ -142,10 +164,13 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
 
     const floating = useFloatingTrigger({
       bindTriggerAria: (triggerEl) => bind({ aria: { describedby: () => tooltipId } }, { target: triggerEl }),
+      defaultOpen: props['default-open'],
       disabled: isDisabled,
       getPanel: () => tooltipEl,
       offset: 8,
       onCleanup,
+      onClose: (reason) => emit('open-change', { open: false, reason }),
+      onOpen: (reason) => emit('open-change', { open: true, reason }),
       onPlacementChange: (p) => {
         const side = p.split('-')[0] as TooltipPlacement;
 
@@ -162,7 +187,7 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
       triggers: computed(() => [] as TooltipTrigger[]),
     });
 
-    function show(): void {
+    function show(reason: OverlayOpenReason = 'hover'): void {
       if (isControlled.value) return;
 
       if (isDisabled.value || (!props.content.value && !slots.has('content').value)) return;
@@ -175,11 +200,11 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
       if (delay > 0) {
         showTimer = setTimeout(() => {
           showTimer = null;
-          floating.open('hover');
+          floating.open(reason);
           floating.updatePosition();
         }, delay);
       } else {
-        floating.open('hover');
+        floating.open(reason);
         floating.updatePosition();
       }
     }
@@ -224,17 +249,17 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
         const t = triggers.value;
 
         if (t.includes('hover')) {
-          addEvent(triggerEl, 'pointerenter', show);
+          addEvent(triggerEl, 'pointerenter', () => show('hover'));
           addEvent(triggerEl, 'pointerleave', hide);
         }
 
         if (t.includes('focus')) {
-          addEvent(triggerEl, 'focusin', show);
+          addEvent(triggerEl, 'focusin', () => show('focus'));
           addEvent(triggerEl, 'focusout', hide);
         }
 
         if (t.includes('click')) {
-          addEvent(triggerEl, 'click', () => (floating.visible.value ? hide() : show()));
+          addEvent(triggerEl, 'click', () => (floating.visible.value ? hide() : show('click')));
         }
       };
 

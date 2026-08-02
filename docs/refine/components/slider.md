@@ -89,7 +89,7 @@ document.getElementById('price').addEventListener('change', (e) => {
     console.log(`Range: ${e.detail.from} – ${e.detail.to}`);
   } else {
     // Single mode
-    console.log('Value:', e.detail.value);
+    console.log('Value:', e.currentTarget.value);
   }
 });
 ```
@@ -187,6 +187,7 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 | ------------------- | -------------------------- | --------------------------- |
 | `--slider-height`   | Height of the slider track | Size-dependent              |
 | `--slider-size`     | Thumb diameter             | Size-dependent              |
+| `--slider-thumb-inset` | Space reserved at each endpoint for a custom thumb size | Size-dependent |
 | `--slider-track-bg` | Track background color     | `var(--color-contrast-300)` |
 | `--slider-fill`     | Active fill color          | Theme color                 |
 | `--slider-thumb-bg` | Thumb background color     | `var(--color-contrast-100)` |
@@ -197,4 +198,5 @@ The slider follows WAI-ARIA best practices. Each thumb carries `role="slider"` w
 
 Keyboard navigation is fully supported: `Arrow Right` / `Arrow Up` increases the value by one step, `Arrow Left` / `Arrow Down` decreases it, `Home` jumps to the minimum, and `End` jumps to the maximum. `Tab` focuses the slider; `Shift+Tab` blurs it.
 
-The thumb has a touch-friendly minimum 44 × 44 px hit area for pointer-event dragging on mobile.
+The visual rail and thumb stay compact on touch devices; a separate 44 × 44 px interaction surface makes dragging
+reliable without turning the control into a large pill.

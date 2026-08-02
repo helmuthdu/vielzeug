@@ -1,24 +1,33 @@
-import { define, html, inject, prop, ref, bind, onCleanup, onElement, useEmit, useSlots } from '@vielzeug/ore';
+import { define, html, prop, ref, bind, getHost, onCleanup, onElement, useSlots } from '@vielzeug/ore';
 import { live, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';
 import type { InputType, VisualVariant } from '../../types';
 
-import { bindRefCallback, lifecycleSignal, createTextField } from '../../headless';
+import { bindRefCallback, lifecycleSignal, createTextField } from '../../core';
 import { disablableBundle, FIELD_SIZE_PRESET, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import '../../content/icon/icon';
-import { fieldMixins, fieldVariantMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
+import {
+  coarsePointerMixin,
+  colorThemeMixin,
+  disabledLoadingMixin,
+  fieldVariantMixin,
+  forcedColorsFocusMixin,
+  reducedMotionMixin,
+  roundedVariantMixin,
+  sizeVariantMixin,
+} from '../../styles';
 import { errorAttr } from '../shared/field-binding';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderStatusIcon } from '../shared/templates';
 import componentStyles from './input.css?inline';
 
 /** Input component properties */
 
 export type OreInputEvents = {
-  change: { originalEvent: Event; value: string };
-  input: { originalEvent: Event; value: string };
+  change: Event;
+  input: InputEvent;
 };
 
 export type OreInputProps = TextFieldProps<Exclude<VisualVariant, 'frost'>> & {
@@ -89,8 +98,8 @@ const VALID_INPUT_TYPES = [
  * @attr {string} size - Input size: 'sm' | 'md' | 'lg'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  *
- * @fires input - Emitted when input value changes (on every keystroke). detail: { value: string; originalEvent: Event }
- * @fires change - Emitted when input loses focus with changed value. detail: { value: string; originalEvent: Event }
+ * @fires input - Emitted when input value changes (on every keystroke).
+ * @fires change - Emitted when input loses focus with changed value.
  *
  * @slot prefix - Content before the input (e.g., icons)
  * @slot suffix - Content after the input (e.g., clear button, validation icon)
@@ -161,19 +170,17 @@ define<OreInputProps>(INPUT_TAG, {
     variant: prop.string<'flat' | 'text' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
   setup(props) {
-    const emit = useEmit<OreInputEvents>();
+    const el = getHost();
     const slots = useSlots();
 
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
     const showPassword = signal(false);
     const inputRef = ref<HTMLInputElement>();
 
     const hasLabel = computed(() => !!props.label.value || slots.has('label').value);
     // `loading` behaves like a temporary `disabled` — forces the inner <input> out of
     // constraint validation and interaction for the duration, layered on top of any real
-    // `disabled` prop or form-context disabling already folded into `fCtxProps.disabled`.
-    const isDisabled = computed(() => fCtxProps.disabled.value || props.loading.value);
+    // `loading` is layered on top of the consumer's explicit `disabled` prop.
+    const isDisabled = computed(() => props.disabled.value || props.loading.value);
 
     const abortSignal = lifecycleSignal(onCleanup);
     const tf = createTextField({
@@ -184,19 +191,28 @@ define<OreInputProps>(INPUT_TAG, {
       label: props.label,
       labelPlacement: props['label-placement'],
       maxLength: props.maxlength,
-      onChange: (event: Event, value: string) => {
-        emit('change', { originalEvent: event, value });
+      onChange: (_event: Event, value: string) => {
+        setFieldValue(el, value);
+        dispatchNativeFieldEvent(el, 'change');
       },
-      onInput: (event: Event, value: string) => {
-        emit('input', { originalEvent: event, value });
+      onInput: (_event: Event, value: string) => {
+        setFieldValue(el, value);
+        dispatchNativeFieldEvent(el, 'input');
       },
       prefix: 'input',
       readonly: props.readonly,
       required: props.required,
       signal: abortSignal,
-      validateOn: formCtx?.validateOn,
       value: props.value,
     });
+
+    defineFieldValue(
+      el,
+      () => tf.value.value,
+      (value) => {
+        tf.value.value = value;
+      },
+    );
 
     tf.attachFormField(
       useField<string>({
@@ -249,11 +265,11 @@ define<OreInputProps>(INPUT_TAG, {
       attr: {
         error: errorAttr(errorText),
         'has-value': () => (fieldValue.value ? true : undefined),
-        size: fCtxProps.size,
+        size: props.size,
         // Reflects `success` only once `error` is confirmed empty — keeps the two host
         // attributes mutually exclusive even if a consumer sets both props at once.
         success: () => (props.success.value && !errorText.value ? true : undefined),
-        variant: fCtxProps.variant,
+        variant: props.variant,
       },
     });
 
@@ -355,7 +371,11 @@ define<OreInputProps>(INPUT_TAG, {
   },
   shadow: { delegatesFocus: true },
   styles: [
-    ...fieldMixins,
+    colorThemeMixin,
+    coarsePointerMixin,
+    reducedMotionMixin,
+    roundedVariantMixin,
+    disabledLoadingMixin,
     sizeVariantMixin(FIELD_SIZE_PRESET),
     forcedColorsFocusMixin('input'),
     componentStyles,

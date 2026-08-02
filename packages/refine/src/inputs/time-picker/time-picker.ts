@@ -1,21 +1,22 @@
-import { define, html, inject, prop, ref, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
+import { define, html, prop, ref, bind, getHost, onMounted } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { VisualVariant } from '../../shared';
 
-import { createDropdownPositioner } from '../../headless';
+import { createDropdownPositioner } from '../../core';
 import '../../content/icon/icon';
 import '../input/input';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './time-picker.css?inline';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type OreTimePickerEvents = {
-  change: { value: string | null };
+  change: Event;
+  input: Event;
 };
 
 export type OreTimePickerProps = {
@@ -139,7 +140,8 @@ function clampTime(
  * @attr {string} time-format - '12' or '24' (default: '24')
  * @attr {number} minute-step - Minute increment (default: 5)
  *
- * @fires change - Fired when a time is selected. detail: { value: string | null }
+ * @fires input - Fired when a time is selected.
+ * @fires change - Fired when a time is selected.
  *
  * @slot label - Custom label for the trigger field
  * @slot prefix - Content before the trigger text (e.g. icon)
@@ -198,12 +200,23 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
 
   setup(props) {
     const el = getHost();
-    const emit = useEmit<OreTimePickerEvents>();
 
     // ── Signals ──────────────────────────────────────────────────────────────
 
     const isOpen = signal(false);
     const selectedTime = signal<{ hours: number; minutes: number } | null>(parseTime(props.value.value));
+
+    defineFieldValue(
+      el,
+      () => {
+        const value = selectedTime.value;
+
+        return value ? formatTime(value.hours, value.minutes) : '';
+      },
+      (value) => {
+        selectedTime.value = parseTime(value);
+      },
+    );
 
     // ── Floating position ────────────────────────────────────────────────────
     // Same Orbit-powered positioner ore-date-picker's `.calendar` popup uses (see its own
@@ -222,11 +235,7 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
 
     let stopAutoUpdate: (() => void) | null = null;
 
-    // ── Form context ─────────────────────────────────────────────────────────
-
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
-    const isDisabled = fCtxProps.disabled;
+    const isDisabled = computed(() => Boolean(props.disabled.value));
 
     // ── Form value ────────────────────────────────────────────────────────────
 
@@ -346,7 +355,9 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
       const snappedMin = Math.min(snapped, 59);
 
       selectedTime.value = { hours: clamped.hours, minutes: snappedMin };
-      emit('change', { value: formatTime(clamped.hours, snappedMin) });
+      setFieldValue(el, formatTime(clamped.hours, snappedMin));
+      dispatchNativeFieldEvent(el, 'input');
+      dispatchNativeFieldEvent(el, 'change');
     }
 
     function commitFromMinute(m: number): void {
@@ -480,8 +491,8 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
     const inputPlaceholder = () => props.placeholder.value ?? '';
     const inputLabelPlacement = () => props['label-placement'].value ?? 'inset';
     const inputColor = () => props.color?.value ?? undefined;
-    const inputSize = () => fCtxProps.size?.value ?? undefined;
-    const inputVariant = () => fCtxProps.variant?.value ?? undefined;
+    const inputSize = () => props.size?.value ?? undefined;
+    const inputVariant = () => props.variant?.value ?? undefined;
     const inputRounded = () => props.rounded?.value ?? undefined;
     const inputHelper = () => props.helper.value ?? '';
     const inputError = () => props.error.value ?? '';

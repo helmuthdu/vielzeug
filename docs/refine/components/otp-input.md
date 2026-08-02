@@ -14,7 +14,7 @@ Listen for completion — use the `complete` event (not `change`) to trigger aut
 <ore-otp-input id="otp" label="Enter OTP" color="primary"></ore-otp-input>
 
 <script type="module">
-  import '@vielzeug/refine';
+  import '@vielzeug/refine/otp-input';
 
   document.getElementById('otp').addEventListener('complete', (e) => {
     console.log('OTP complete:', e.detail.value);

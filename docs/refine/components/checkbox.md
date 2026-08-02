@@ -79,7 +79,7 @@ Provide contextual feedback directly below the checkbox.
 
 ### Required
 
-Set `required` to fail constraint validation while unchecked — the classic "I agree to the terms" consent checkbox. `<ore-form>` blocks submit and `checkValidity()`/`reportValidity()` return `false` until it's checked; resetting the ancestor form restores whichever `checked` state it started with.
+Set `required` to fail constraint validation while unchecked — the classic "I agree to the terms" consent checkbox. A native `<form>` blocks submission and `checkValidity()`/`reportValidity()` return `false` until it is checked; resetting the ancestor form restores its initial state.
 
 <ComponentPreview center>
 
@@ -94,8 +94,8 @@ Set `required` to fail constraint validation while unchecked — the classic "I 
 ```js
 const checkbox = document.querySelector('ore-checkbox');
 checkbox.addEventListener('change', (e) => {
-  console.log('checked:', e.detail.checked);
-  console.log('value:', e.detail.value);
+  console.log('checked:', e.currentTarget.checked);
+  console.log('value:', e.currentTarget.value);
 });
 ```
 
@@ -189,28 +189,28 @@ Disabling the group propagates to all child checkboxes.
 
 ### Form Integration
 
-The group's checked values are stored in the `values` attribute and submitted under the group's `name` as a comma-separated string with any `<form>` or `ore-form`. Prefer `name` on the group (not individual checkboxes) when submitting with a form.
+The group's checked values are stored in the `values` attribute and submitted under the group's `name` as a comma-separated string with a native `<form>`. Prefer `name` on the group (not individual checkboxes) when submitting with a form.
 
 <ComponentPreview vertical>
 
 ```html
-<ore-form id="prefs-form" novalidate>
+<form id="prefs-form" novalidate>
   <ore-checkbox-group name="contact" label="Preferred contact" required>
     <ore-checkbox value="email">Email</ore-checkbox>
     <ore-checkbox value="phone">Phone</ore-checkbox>
     <ore-checkbox value="sms">SMS</ore-checkbox>
   </ore-checkbox-group>
   <ore-button type="submit">Save Preferences</ore-button>
-</ore-form>
+</form>
 
 <script type="module">
-  import '@vielzeug/refine/form';
   import '@vielzeug/refine/checkbox-group';
   import '@vielzeug/refine/checkbox';
   import '@vielzeug/refine/button';
 
-  document.getElementById('prefs-form').addEventListener('submit', (e) => {
-    console.log('contact:', e.detail.formData.get('contact'));
+  document.getElementById('prefs-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    console.log('contact:', new FormData(event.currentTarget).get('contact'));
   });
 
   document.querySelector('ore-checkbox-group').addEventListener('change', (e) => {
@@ -258,7 +258,7 @@ Combine indeterminate state on a parent checkbox with a `ore-checkbox-group` to 
   }
 
   all.addEventListener('change', (e) => {
-    if (e.detail.checked) {
+    if (e.currentTarget.checked) {
       group.setAttribute('values', options.join(','));
     } else {
       group.setAttribute('values', '');
@@ -282,7 +282,7 @@ Combine indeterminate state on a parent checkbox with a `ore-checkbox-group` to 
 | `checked`       | `boolean`                                                                 | `false` | Checked state                           |
 | `indeterminate` | `boolean`                                                                 | `false` | Indeterminate (partially checked) state |
 | `disabled`      | `boolean`                                                                 | `false` | Disable interaction                     |
-| `required`      | `boolean`                                                                 | `false` | Require this checkbox to be checked for `<ore-form>` validation (e.g. a consent checkbox) |
+| `required`      | `boolean`                                                                 | `false` | Require this checkbox to be checked for native-form validation (e.g. a consent checkbox) |
 | `value`         | `string`                                                                  | `'on'`  | Value submitted with the form           |
 | `name`          | `string`                                                                  | `''`    | Form field name                         |
 | `color`         | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Semantic color for the checked state    |

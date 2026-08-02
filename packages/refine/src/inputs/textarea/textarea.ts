@@ -1,24 +1,33 @@
-import { define, html, inject, prop, ref, bind, onCleanup, onElement, useEmit, watchEffect } from '@vielzeug/ore';
+import { define, html, prop, ref, bind, getHost, onCleanup, onElement, watchEffect } from '@vielzeug/ore';
 import { live, useField } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
 
-import { bindRefCallback, createAutoResize, lifecycleSignal, createTextField } from '../../headless';
+import { bindRefCallback, createAutoResize, lifecycleSignal, createTextField } from '../../core';
 import '../../content/icon/icon';
 import { disablableBundle, roundableBundle, sizableBundle, TEXTAREA_SIZE_PRESET, themableBundle } from '../../shared';
-import { fieldMixins, fieldVariantMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
+import {
+  coarsePointerMixin,
+  colorThemeMixin,
+  disabledLoadingMixin,
+  fieldVariantMixin,
+  forcedColorsFocusMixin,
+  reducedMotionMixin,
+  roundedVariantMixin,
+  sizeVariantMixin,
+} from '../../styles';
 import { errorAttr } from '../shared/field-binding';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderFieldStatusRegion, renderStatusIcon } from '../shared/templates';
 import componentStyles from './textarea.css?inline';
 
 /** Textarea component properties */
 
 export type OreTextareaEvents = {
-  change: { originalEvent: Event; value: string };
-  input: { originalEvent: Event; value: string };
+  change: Event;
+  input: InputEvent;
 };
 
 export type OreTextareaProps = TextFieldProps<Exclude<VisualVariant, 'frost' | 'text'>> & {
@@ -74,8 +83,8 @@ export type OreTextareaProps = TextFieldProps<Exclude<VisualVariant, 'frost' | '
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  *
- * @fires input - Fired on every keystroke with current value. detail: { value: string; originalEvent: Event }
- * @fires change - Fired on blur with changed value. detail: { value: string; originalEvent: Event }
+ * @fires input - Fired on every keystroke with current value.
+ * @fires change - Fired on blur with changed value.
  *
  * @slot helper - Complex helper content
  *
@@ -140,16 +149,13 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
   setup(props) {
-    const emit = useEmit<OreTextareaEvents>();
+    const el = getHost();
     const watch = watchEffect;
-
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
 
     const textareaRef = ref<HTMLTextAreaElement>();
     const autoResize = createAutoResize({ enabled: props['auto-resize'] });
     // `loading` behaves like a temporary `disabled` — see ore-input's identical computation.
-    const isDisabled = computed(() => fCtxProps.disabled.value || props.loading.value);
+    const isDisabled = computed(() => props.disabled.value || props.loading.value);
 
     const abortSignal = lifecycleSignal(onCleanup);
     const tf = createTextField({
@@ -159,19 +165,28 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
       label: props.label,
       labelPlacement: props['label-placement'],
       maxLength: props.maxlength,
-      onChange: (event: Event, value: string) => {
-        emit('change', { originalEvent: event, value });
+      onChange: (_event: Event, value: string) => {
+        setFieldValue(el, value);
+        dispatchNativeFieldEvent(el, 'change');
       },
-      onInput: (event: Event, value: string) => {
-        emit('input', { originalEvent: event, value });
+      onInput: (_event: Event, value: string) => {
+        setFieldValue(el, value);
+        dispatchNativeFieldEvent(el, 'input');
       },
       prefix: 'textarea',
       readonly: props.readonly,
       required: props.required,
       signal: abortSignal,
-      validateOn: formCtx?.validateOn,
       value: props.value,
     });
+
+    defineFieldValue(
+      el,
+      () => tf.value.value,
+      (value) => {
+        tf.value.value = value;
+      },
+    );
 
     tf.attachFormField(
       useField<string>({
@@ -228,11 +243,11 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
     bind({
       attr: {
         error: errorAttr(errorText),
-        size: fCtxProps.size,
+        size: props.size,
         // Reflects `success` only once `error` is confirmed empty — keeps the two host
         // attributes mutually exclusive even if a consumer sets both props at once.
         success: () => (props.success.value && !errorText.value ? true : undefined),
-        variant: fCtxProps.variant,
+        variant: props.variant,
       },
     });
 
@@ -268,7 +283,11 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
   },
   shadow: { delegatesFocus: true },
   styles: [
-    ...fieldMixins,
+    colorThemeMixin,
+    coarsePointerMixin,
+    reducedMotionMixin,
+    roundedVariantMixin,
+    disabledLoadingMixin,
     sizeVariantMixin(TEXTAREA_SIZE_PRESET),
     forcedColorsFocusMixin('textarea'),
     componentStyles,

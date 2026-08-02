@@ -14,9 +14,8 @@ import { walkFlatTree } from './dom';
  *
  * Deliberately lives here rather than in each consuming package's own `vitest.setup.ts`: the
  * gap is in `ore`'s own form-association feature, not in any one consumer, so the fix belongs
- * with the feature. `@vielzeug/refine`'s `<ore-form>` adds one more wrinkle on top — its fields
- * are slotted into a shadow `<form>` — which `walkFlatTree` already handles here, so refine
- * doesn't need a second, package-local copy of this polyfill at all.
+ * with the feature. `walkFlatTree` handles form-associated custom elements across shadow
+ * boundaries, so consumer packages do not need package-local copies of this polyfill.
  */
 export const installFormInternalsPolyfill = (): (() => void) => {
   // Checked *before* consuming the flag below — an environment without `ElementInternals`

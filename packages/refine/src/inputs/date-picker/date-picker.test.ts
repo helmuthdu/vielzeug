@@ -105,9 +105,11 @@ describe('ore-date-picker', () => {
     it('emits change event when a day cell is clicked', async () => {
       fixture = await mount('ore-date-picker', { props: { value: '2025-06-15' } });
 
-      const events: CustomEvent[] = [];
+      const events: Array<HTMLElement & { value: string }> = [];
 
-      fixture.element.addEventListener('change', (e) => events.push(e as CustomEvent));
+      fixture.element.addEventListener('change', (e) =>
+        events.push(e.currentTarget as HTMLElement & { value: string }),
+      );
       await open(fixture);
 
       // Find an enabled, in-month cell that is not the currently selected one
@@ -118,15 +120,17 @@ describe('ore-date-picker', () => {
       await fixture.flush();
 
       expect(events.length).toBe(1);
-      expect(events[0].detail).toHaveProperty('isoValue');
+      expect(events[0].value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
 
     it('emits change event when the selected day is re-clicked', async () => {
       fixture = await mount('ore-date-picker', { props: { value: '2025-06-15' } });
 
-      const events: CustomEvent[] = [];
+      const events: Array<HTMLElement & { value: string }> = [];
 
-      fixture.element.addEventListener('change', (e) => events.push(e as CustomEvent));
+      fixture.element.addEventListener('change', (e) =>
+        events.push(e.currentTarget as HTMLElement & { value: string }),
+      );
       await open(fixture);
 
       const selected = getSelectedDay(fixture);
@@ -136,7 +140,7 @@ describe('ore-date-picker', () => {
 
       // Re-clicking the selected day still fires change (implementation toggles or re-selects)
       expect(events.length).toBe(1);
-      expect(events[0].detail).toHaveProperty('isoValue');
+      expect(events[0].value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
   });
 
@@ -170,9 +174,11 @@ describe('ore-date-picker', () => {
         props: { min: '2025-06-10', value: '2025-06-15' },
       });
 
-      const events: CustomEvent[] = [];
+      const events: Array<HTMLElement & { value: string }> = [];
 
-      fixture.element.addEventListener('change', (e) => events.push(e as CustomEvent));
+      fixture.element.addEventListener('change', (e) =>
+        events.push(e.currentTarget as HTMLElement & { value: string }),
+      );
       await open(fixture);
 
       const disabled = fixture.query('.cal-cell-day[aria-disabled="true"]');

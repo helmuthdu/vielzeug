@@ -3,7 +3,7 @@ import { define, html, inject, prop, ref, getHost, onMounted, useEmit, watchEffe
 import type { ComponentSize, SurfaceVariant } from '../../types';
 
 import '../../content/icon/icon';
-import { elementDirection } from '../../headless/direction';
+import { elementDirection } from '../../core/direction';
 import { disablableBundle } from '../../shared';
 import { coarsePointerMixin } from '../../styles';
 import { ACCORDION_CTX } from '../accordion/accordion';

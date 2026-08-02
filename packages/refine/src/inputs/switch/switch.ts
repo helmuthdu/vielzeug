@@ -1,9 +1,9 @@
-import { define, html, inject, prop, onCleanup, useEmit } from '@vielzeug/ore';
+import { define, html, prop, getHost, onCleanup } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
-import { type CheckableChangePayload, lifecycleSignal, createCheckable } from '../../headless';
+import { lifecycleSignal, createCheckable } from '../../core';
 import { disablableBundle, sizableBundle, SWITCH_SIZE_PRESET, themableBundle } from '../../shared';
 import {
   coarsePointerMixin,
@@ -13,12 +13,13 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import { applyCheckableBinding } from '../shared/field-binding';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { defineFieldChecked, dispatchNativeFieldEvent, setFieldChecked } from '../shared/native-field-event';
 import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './switch.css?inline';
 
 export type OreSwitchEvents = {
-  change: CheckableChangePayload;
+  change: Event;
+  input: Event;
 };
 
 export type OreSwitchProps = CheckableProps & {
@@ -48,7 +49,8 @@ export type OreSwitchProps = CheckableProps & {
  * @attr {string} error - Error message (marks field as invalid)
  * @attr {string} helper - Helper text displayed below the switch
  *
- * @fires change - Emitted when switch is toggled. detail: { checked: boolean, value: string, originalEvent?: Event }
+ * @fires input - Emitted when switch is toggled.
+ * @fires change - Emitted when switch is toggled.
  *
  * @slot - Switch label text
  *
@@ -85,24 +87,22 @@ define<OreSwitchProps>(SWITCH_TAG, {
     value: prop.string('on'),
   },
   setup(props) {
-    const emit = useEmit<OreSwitchEvents>();
-
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
+    const el = getHost();
 
     const checkable = createCheckable({
       checked: props.checked,
       clearIndeterminateFirst: false,
-      disabled: fCtxProps.disabled,
+      disabled: props.disabled,
       error: props.error,
       helper: props.helper,
       onToggle: (payload) => {
         checkable.triggerValidation('change');
-        emit('change', payload);
+        setFieldChecked(el, payload.checked);
+        dispatchNativeFieldEvent(el, 'input');
+        dispatchNativeFieldEvent(el, 'change');
       },
       prefix: 'switch',
       signal: lifecycleSignal(onCleanup),
-      validateOn: formCtx?.validateOn,
       value: props.value,
     });
 
@@ -116,8 +116,16 @@ define<OreSwitchProps>(SWITCH_TAG, {
 
     const { assistiveId, checked, disabled, errorText, handleClick, handleKeydown, helperText, labelId } = checkable;
 
+    defineFieldChecked(
+      el,
+      () => checked.value,
+      (value) => {
+        checked.value = value;
+      },
+    );
+
     applyCheckableBinding(
-      fCtxProps.size,
+      props.size,
       { assistiveId, checked, disabled, errorText, handleClick, handleKeydown, helperText, labelId },
       'switch',
     );

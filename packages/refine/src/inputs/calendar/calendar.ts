@@ -7,7 +7,7 @@ import type { ComponentSize, RoundedSize, ThemeColor } from '../../shared';
 
 import '../../content/icon/icon';
 import '../../feedback/badge/badge';
-import { createDatePickerControl, parseIso, toIsoString, type DatePickerView } from '../../headless';
+import { createDatePickerControl, parseIso, toIsoString, type DatePickerView } from '../../core';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './calendar.css?inline';

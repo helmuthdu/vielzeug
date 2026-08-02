@@ -3,7 +3,6 @@ import {
   createStableId,
   define,
   html,
-  inject,
   prop,
   bind,
   getHost,
@@ -25,10 +24,9 @@ import {
   createChoiceField,
   getChoiceLabel,
   getLightChildrenByTag,
-} from '../../headless';
+} from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { disabledStateMixin } from '../../styles';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './checkbox-group.css?inline';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -134,18 +132,14 @@ define<OreCheckboxGroupProps>(CHECKBOX_GROUP_TAG, {
     const slots = useSlots();
     const watch = watchEffect;
 
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
-
     const choice = createChoiceField({
-      disabled: fCtxProps.disabled,
+      disabled: props.disabled,
       error: props.error,
       helper: props.helper,
       multiple: signal(true),
       prefix: 'checkbox-group',
       required: props.required,
       signal: lifecycleSignal(onCleanup),
-      validateOn: formCtx?.validateOn,
       value: props.values,
     });
 
@@ -249,7 +243,7 @@ define<OreCheckboxGroupProps>(CHECKBOX_GROUP_TAG, {
     // Reactive, not a one-off `el.setAttribute()` inside the click handler: the host's `values`
     // attribute must stay in sync with the selection regardless of *why* it changed (a click,
     // or `reset()` on ancestor form reset — neither of which should need its own copy of this).
-    bind({ attr: { size: fCtxProps.size, values: choice.formValue } });
+    bind({ attr: { size: props.size, values: choice.formValue } });
 
     return html`
       <fieldset

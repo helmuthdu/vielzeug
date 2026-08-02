@@ -81,16 +81,19 @@ export const SWITCH_SIZE_PRESET = {
 /** Shared size preset for the slider track/thumb. */
 export const SLIDER_SIZE_PRESET = {
   lg: {
+    '--_thumb-inset': 'var(--slider-thumb-inset, var(--size-3))',
     fontSize: 'var(--text-base)',
     height: 'calc(var(--size-5) - var(--size-1))',
-    size: 'var(--size-5)',
+    size: 'var(--size-6)',
   },
   md: {
+    '--_thumb-inset': 'var(--slider-thumb-inset, var(--size-2-5))',
     fontSize: 'var(--text-base)',
     height: 'var(--size-3)',
     size: 'var(--size-5)',
   },
   sm: {
+    '--_thumb-inset': 'var(--slider-thumb-inset, var(--size-2))',
     fontSize: 'var(--text-xs)',
     height: 'var(--size-2)',
     size: 'var(--size-4)',

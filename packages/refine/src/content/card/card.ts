@@ -3,9 +3,16 @@ import { computed } from '@vielzeug/ripple';
 
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
-import { createInteraction } from '../../headless';
+import { createInteraction } from '../../core';
 import { disablableBundle, loadableBundle, themableBundle } from '../../shared';
-import { frostVariantMixin, reducedMotionMixin, surfaceMixins } from '../../styles';
+import {
+  colorThemeMixin,
+  elevationMixin,
+  frostVariantMixin,
+  paddingMixin,
+  reducedMotionMixin,
+  roundedVariantMixin,
+} from '../../styles';
 import componentStyles from './card.css?inline';
 
 const INTERACTIVE_DESCENDANT_SELECTOR =
@@ -189,5 +196,13 @@ define<OreCardProps>(CARD_TAG, {
     `;
   },
 
-  styles: [...surfaceMixins, frostVariantMixin('.card'), reducedMotionMixin, componentStyles],
+  styles: [
+    colorThemeMixin,
+    elevationMixin,
+    paddingMixin,
+    roundedVariantMixin,
+    frostVariantMixin('.card'),
+    reducedMotionMixin,
+    componentStyles,
+  ],
 });

@@ -205,29 +205,33 @@ describe('ore-time-picker', () => {
       fixture = await mount('ore-time-picker', { props: { 'minute-step': 15 } });
       await open(fixture);
 
-      const events: CustomEvent[] = [];
+      const events: Array<HTMLElement & { value: string }> = [];
 
-      fixture.element.addEventListener('change', (e) => events.push(e as CustomEvent));
+      fixture.element.addEventListener('change', (e) =>
+        events.push(e.currentTarget as HTMLElement & { value: string }),
+      );
       clickOption(fixture, 'Minutes', '30');
       await fixture.flush();
 
-      expect(events[0].detail.value).toMatch(/:30$/);
+      expect(events[0].value).toMatch(/:30$/);
     });
 
     it('clicking a minute option emits change event immediately', async () => {
       fixture = await mount('ore-time-picker');
       await open(fixture);
 
-      const events: CustomEvent[] = [];
+      const events: Array<HTMLElement & { value: string }> = [];
 
-      fixture.element.addEventListener('change', (e) => events.push(e as CustomEvent));
+      fixture.element.addEventListener('change', (e) =>
+        events.push(e.currentTarget as HTMLElement & { value: string }),
+      );
 
       clickOption(fixture, 'Hours', '08');
       clickOption(fixture, 'Minutes', '00');
       await fixture.flush();
 
       expect(events.length).toBe(1);
-      expect(events[0].detail.value).toBe('08:00');
+      expect(events[0].value).toBe('08:00');
     });
 
     it('closes dropdown after clicking a minute option', async () => {
@@ -267,32 +271,36 @@ describe('ore-time-picker', () => {
       fixture = await mount('ore-time-picker', { props: { 'time-format': '12' } });
       await open(fixture);
 
-      const events: CustomEvent[] = [];
+      const events: Array<HTMLElement & { value: string }> = [];
 
-      fixture.element.addEventListener('change', (e) => events.push(e as CustomEvent));
+      fixture.element.addEventListener('change', (e) =>
+        events.push(e.currentTarget as HTMLElement & { value: string }),
+      );
 
       clickOption(fixture, 'Hours', '02');
       clickOption(fixture, 'Period', 'PM');
       clickOption(fixture, 'Minutes', '00');
       await fixture.flush();
 
-      expect(events[0].detail.value).toBe('14:00');
+      expect(events[0].value).toBe('14:00');
     });
 
     it('selecting AM and 12 emits 00:00 (midnight)', async () => {
       fixture = await mount('ore-time-picker', { props: { 'time-format': '12' } });
       await open(fixture);
 
-      const events: CustomEvent[] = [];
+      const events: Array<HTMLElement & { value: string }> = [];
 
-      fixture.element.addEventListener('change', (e) => events.push(e as CustomEvent));
+      fixture.element.addEventListener('change', (e) =>
+        events.push(e.currentTarget as HTMLElement & { value: string }),
+      );
 
       clickOption(fixture, 'Hours', '12');
       clickOption(fixture, 'Period', 'AM');
       clickOption(fixture, 'Minutes', '00');
       await fixture.flush();
 
-      expect(events[0].detail.value).toBe('00:00');
+      expect(events[0].value).toBe('00:00');
     });
   });
 

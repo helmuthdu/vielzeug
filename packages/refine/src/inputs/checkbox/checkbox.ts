@@ -1,10 +1,10 @@
-import { define, html, inject, prop, onCleanup, useEmit } from '@vielzeug/ore';
+import { define, html, inject, prop, getHost, onCleanup } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
-import { type CheckableChangePayload, lifecycleSignal, createCheckable } from '../../headless';
+import { lifecycleSignal, createCheckable } from '../../core';
 import '../../content/icon/icon';
 import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
@@ -16,12 +16,13 @@ import {
 } from '../../styles';
 import { CHECKBOX_GROUP_CTX } from '../checkbox-group/checkbox-group';
 import { applyCheckableBinding } from '../shared/field-binding';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { defineFieldChecked, dispatchNativeFieldEvent, setFieldChecked } from '../shared/native-field-event';
 import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './checkbox.css?inline';
 
 export type OreCheckboxEvents = {
-  change: CheckableChangePayload;
+  change: Event;
+  input: Event;
 };
 
 export type OreCheckboxProps = CheckableProps & {
@@ -35,7 +36,7 @@ export type OreCheckboxProps = CheckableProps & {
   helper?: string;
   /** Indeterminate state (partially checked) */
   indeterminate?: boolean;
-  /** Require this checkbox to be checked for `<ore-form>` validation (e.g. a consent checkbox) */
+  /** Require this checkbox to be checked for native form validation (e.g. a consent checkbox) */
   required?: boolean;
   /** Component size */
   size?: ComponentSize;
@@ -49,7 +50,7 @@ export type OreCheckboxProps = CheckableProps & {
  * @attr {boolean} checked - Checked state
  * @attr {boolean} disabled - Disable checkbox interaction
  * @attr {boolean} indeterminate - Indeterminate (partially checked) state
- * @attr {boolean} required - Require this checkbox to be checked for `<ore-form>` validation
+ * @attr {boolean} required - Require this checkbox to be checked for native form validation
  * @attr {string} value - Field value submitted with forms
  * @attr {string} name - Form field name
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
@@ -57,7 +58,8 @@ export type OreCheckboxProps = CheckableProps & {
  * @attr {string} error - Error message (marks field as invalid)
  * @attr {string} helper - Helper text displayed below the checkbox
  *
- * @fires change - Emitted when checkbox is toggled. detail: { checked: boolean, value: string, originalEvent?: Event }
+ * @fires input - Emitted when checkbox is toggled.
+ * @fires change - Emitted when checkbox is toggled.
  *
  * @slot - Checkbox label text
  *
@@ -96,33 +98,32 @@ define<OreCheckboxProps>(CHECKBOX_TAG, {
     value: prop.string('on'),
   },
   setup(props) {
-    const emit = useEmit<OreCheckboxEvents>();
+    const el = getHost();
 
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
     const groupCtx = inject(CHECKBOX_GROUP_CTX);
 
     const checkable = createCheckable({
       checked: props.checked,
       clearIndeterminateFirst: true,
-      disabled: computed(() => fCtxProps.disabled.value || Boolean(groupCtx?.disabled.value)),
+      disabled: computed(() => props.disabled.value || Boolean(groupCtx?.disabled.value)),
       error: props.error,
       group: groupCtx,
       helper: props.helper,
       indeterminate: props.indeterminate,
       onToggle: (payload) => {
         checkable.triggerValidation('change');
+        setFieldChecked(el, payload.checked);
 
         // In a checkbox-group, the group owns change emission/state updates.
         // Emitting here would bubble to the group and toggle a second time.
         if (groupCtx) return;
 
-        emit('change', payload);
+        dispatchNativeFieldEvent(el, 'input');
+        dispatchNativeFieldEvent(el, 'change');
       },
       prefix: 'checkbox',
       required: props.required,
       signal: lifecycleSignal(onCleanup),
-      validateOn: formCtx?.validateOn,
       value: props.value,
     });
 
@@ -149,8 +150,16 @@ define<OreCheckboxProps>(CHECKBOX_TAG, {
       labelId,
     } = checkable;
 
+    defineFieldChecked(
+      el,
+      () => checked.value,
+      (value) => {
+        checked.value = value;
+      },
+    );
+
     applyCheckableBinding(
-      fCtxProps.size,
+      props.size,
       {
         assistiveId,
         checked,

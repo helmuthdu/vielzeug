@@ -16,7 +16,7 @@ Listen for the `change` event to react to selections:
 
 ```js
 document.querySelector('ore-time-picker').addEventListener('change', (e) => {
-  console.log(e.detail.value); // '09:30'
+  console.log(e.currentTarget.value); // '09:30'
 });
 ```
 

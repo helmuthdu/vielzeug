@@ -4,7 +4,7 @@ A modal dialog that blocks page interaction, traps focus, and dismisses on `Esca
 
 ## Opening and Closing
 
-Use the `open` attribute to show the dialog and remove it (or set it to `false`) to close it. Always include a clearly labelled cancel or close action in the `footer` slot so keyboard and pointer users can dismiss without relying solely on `Escape`.
+Use `open` as the controlled state and update it in response to `open-change`. Use `default-open` only to initialize an uncontrolled dialog. Always include a clearly labelled cancel or close action in the `footer` slot so keyboard and pointer users can dismiss without relying solely on `Escape`.
 
 ```html
 <ore-button id="open-btn">Open dialog</ore-button>
@@ -285,13 +285,8 @@ Do not open dialogs without user intent (e.g. on page load) — this is disorien
 ```javascript
 const dialog = document.querySelector('ore-dialog');
 
-dialog.addEventListener('open', (e) => {
-  console.log('Dialog opened because:', e.detail.reason);
-});
-
-dialog.addEventListener('close', (e) => {
-  console.log('Dialog closed because:', e.detail.reason);
-  // Re-enable the trigger button, reset form state, etc.
+dialog.addEventListener('open-change', (e) => {
+  console.log(e.detail.open ? 'Dialog opened because:' : 'Dialog closed because:', e.detail.reason);
 });
 
 dialog.addEventListener('close-request', (e) => {
@@ -308,7 +303,8 @@ dialog.addEventListener('close-request', (e) => {
 
 | Attribute     | Type                                              | Default    | Description                                                      |
 | ------------- | ------------------------------------------------- | ---------- | ---------------------------------------------------------------- |
-| `open`        | `boolean`                                         | `false`    | Controls whether the dialog is visible                           |
+| `open`        | `boolean`                                         | —          | Controlled visibility                                            |
+| `default-open`| `boolean`                                         | `false`    | Initial visibility when `open` is not provided                  |
 | `label`       | `string`                                          | `''`       | Dialog title shown in the header; used as `aria-label`           |
 | `size`        | `'sm' \| 'md' \| 'lg' \| 'xl' \| 'full'`          | `'md'`     | Panel width preset                                               |
 | `dismissible` | `boolean`                                         | `false`    | Show a close (×) button in the header                            |
@@ -322,8 +318,7 @@ dialog.addEventListener('close-request', (e) => {
 
 | Event           | Detail                                                                   | Description                                    |
 | --------------- | ------------------------------------------------------------------------ | ---------------------------------------------- |
-| `open`          | `{ reason: 'programmatic' }`                                             | Fired once when the dialog transitions to open |
-| `close`         | `{ reason: 'programmatic' \| 'trigger' \| 'escape' \| 'outside-click' }` | Fired when the dialog closes                   |
+| `open-change`  | `{ open: boolean, reason: string }`                                      | Fired whenever the dialog opens or closes       |
 | `close-request` | `{ reason: 'trigger' \| 'escape' \| 'outside-click' }`                   | Fired before close and can be prevented        |
 
 ### Slots

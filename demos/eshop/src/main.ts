@@ -1,4 +1,4 @@
-import '@vielzeug/refine/styles/styles.css';
+import '@vielzeug/refine/tokens.css';
 import '@vielzeug/prism/theme';
 import { createTouchDragShim } from '@vielzeug/dnd';
 

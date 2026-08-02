@@ -2,17 +2,11 @@
  * Ambient TypeScript declarations for @vielzeug/refine CSS subpath imports.
  *
  * Without these declarations, TypeScript in strict mode raises
- * "Cannot find module '@vielzeug/refine/styles'" errors when CSS subpaths
+ * "Cannot find module '@vielzeug/refine/tokens.css'" errors when CSS subpaths
  * are imported directly (e.g. in Vite, Astro, or Next.js projects).
  */
 
-declare module '@vielzeug/refine/styles' {
-  const styles: string;
-
-  export default styles;
-}
-
-declare module '@vielzeug/refine/styles/styles.css' {
+declare module '@vielzeug/refine/tokens.css' {
   const styles: string;
 
   export default styles;

@@ -25,6 +25,8 @@ export { LIST_ITEM_TAG } from './list/list-item';
 export type { ListItemRevealSide, OreListItemEvents, OreListItemProps } from './list/list-item';
 export { LIST_CTX, LIST_TAG } from './list/list';
 export type { ListContext, ListVariant, OreListEvents, OreListProps } from './list/list';
+export { MARQUEE_TAG } from './marquee/marquee';
+export type { MarqueeDirection, OreMarqueeProps } from './marquee/marquee';
 export { PAGINATION_TAG } from './pagination/pagination';
 export type { OrePaginationEvents, OrePaginationProps } from './pagination/pagination';
 export { SEPARATOR_TAG } from './separator/separator';

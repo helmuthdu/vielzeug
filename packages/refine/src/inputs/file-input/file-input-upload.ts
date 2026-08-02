@@ -1,7 +1,7 @@
 import { matchesAccept } from '@vielzeug/dnd';
 import { type Readable, signal, watch } from '@vielzeug/ripple';
 
-import { announce } from '../../headless';
+import { announce } from '../../core';
 
 // ── Byte/speed formatting ────────────────────────────────────────────────────
 

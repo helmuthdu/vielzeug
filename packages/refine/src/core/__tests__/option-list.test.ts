@@ -3,7 +3,7 @@ import { mount } from '@vielzeug/ore/testing';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RefineConfigError } from '../../errors';
-import { createOptionList, type OptionListOptions } from '../option-list';
+import { createListboxDropdown, type ListboxDropdownOptions } from '../option-list';
 
 type Item = { label: string; value: string };
 
@@ -13,11 +13,11 @@ const ITEMS: Item[] = [
   { label: 'Cherry', value: 'cherry' },
 ];
 
-function makeHandle(overrides: Partial<OptionListOptions<Item>> = {}) {
+function makeHandle(overrides: Partial<ListboxDropdownOptions<Item>> = {}) {
   let boundary!: HTMLElement;
   let panel!: HTMLElement;
   let reference!: HTMLElement;
-  let handle!: ReturnType<typeof createOptionList<Item>>;
+  let handle!: ReturnType<typeof createListboxDropdown<Item>>;
 
   const setup = () => {
     boundary = document.createElement('div');
@@ -27,7 +27,7 @@ function makeHandle(overrides: Partial<OptionListOptions<Item>> = {}) {
     document.body.appendChild(panel);
     document.body.appendChild(reference);
 
-    handle = createOptionList<Item>({
+    handle = createListboxDropdown<Item>({
       getBoundary: () => boundary,
       getItems: () => ITEMS,
       getPanel: () => panel,
@@ -40,7 +40,7 @@ function makeHandle(overrides: Partial<OptionListOptions<Item>> = {}) {
   return { get: () => handle, setup };
 }
 
-describe('createOptionList()', () => {
+describe('createListboxDropdown()', () => {
   describe('initial state', () => {
     it('starts closed with no focused item', async () => {
       const { get, setup } = makeHandle();
@@ -544,7 +544,7 @@ describe('createOptionList()', () => {
   describe('signal lifecycle teardown', () => {
     it('AbortSignal abort() closes the list and disposes effects', async () => {
       const controller = new AbortController();
-      let handle!: ReturnType<typeof createOptionList<Item>>;
+      let handle!: ReturnType<typeof createListboxDropdown<Item>>;
 
       await mount(() => {
         const boundary = document.createElement('div');
@@ -555,7 +555,7 @@ describe('createOptionList()', () => {
         document.body.appendChild(panel);
         document.body.appendChild(reference);
 
-        handle = createOptionList<Item>({
+        handle = createListboxDropdown<Item>({
           getBoundary: () => boundary,
           getItems: () => ITEMS,
           getPanel: () => panel,
@@ -579,7 +579,7 @@ describe('createOptionList()', () => {
   });
 
   describe('required option validation', () => {
-    const base: OptionListOptions<Item> = {
+    const base: ListboxDropdownOptions<Item> = {
       getBoundary: () => document.createElement('div'),
       getItems: () => ITEMS,
       getPanel: () => document.createElement('ul'),
@@ -589,37 +589,40 @@ describe('createOptionList()', () => {
 
     it('throws RefineConfigError when getBoundary is missing', () => {
       expect(() =>
-        createOptionList<Item>({
+        createListboxDropdown<Item>({
           ...base,
-          getBoundary: undefined as unknown as OptionListOptions<Item>['getBoundary'],
+          getBoundary: undefined as unknown as ListboxDropdownOptions<Item>['getBoundary'],
         }),
       ).toThrow(RefineConfigError);
     });
 
     it('throws RefineConfigError when getPanel is missing', () => {
       expect(() =>
-        createOptionList<Item>({ ...base, getPanel: undefined as unknown as OptionListOptions<Item>['getPanel'] }),
+        createListboxDropdown<Item>({
+          ...base,
+          getPanel: undefined as unknown as ListboxDropdownOptions<Item>['getPanel'],
+        }),
       ).toThrow(RefineConfigError);
     });
 
     it('throws RefineConfigError when getReference is missing', () => {
       expect(() =>
-        createOptionList<Item>({
+        createListboxDropdown<Item>({
           ...base,
-          getReference: undefined as unknown as OptionListOptions<Item>['getReference'],
+          getReference: undefined as unknown as ListboxDropdownOptions<Item>['getReference'],
         }),
       ).toThrow(RefineConfigError);
     });
 
     it('error message carries no [@vielzeug/refine] prefix', () => {
       try {
-        createOptionList<Item>({
+        createListboxDropdown<Item>({
           ...base,
-          getBoundary: undefined as unknown as OptionListOptions<Item>['getBoundary'],
+          getBoundary: undefined as unknown as ListboxDropdownOptions<Item>['getBoundary'],
         });
         expect.unreachable();
       } catch (error) {
-        expect((error as Error).message).toBe('createOptionList: getBoundary is required');
+        expect((error as Error).message).toBe('createListboxDropdown: getBoundary is required');
       }
     });
   });

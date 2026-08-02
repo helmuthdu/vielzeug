@@ -15,7 +15,7 @@ import { computed, signal, watch, type Readable } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { createInteraction, createListControl, elementDirection, lifecycleSignal } from '../../headless';
+import { createInteraction, createListControl, elementDirection, lifecycleSignal } from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { isStepNavigable } from './_is-step-navigable';
 import componentStyles from './stepper.css?inline';

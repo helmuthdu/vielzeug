@@ -13,9 +13,9 @@ import {
 } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
 
-import type { OverlayCloseDetail, OverlayOpenDetail, SwipeAxis } from '../../headless';
+import type { OverlayOpenChangeDetail, SwipeAxis } from '../../core';
 
-import { createSwipeControl } from '../../headless';
+import { createSwipeControl } from '../../core';
 import '../../content/icon/icon';
 import { coarsePointerMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
@@ -30,6 +30,9 @@ type DrawerSwipeConfig = {
   closingDistance: (distance: number) => number;
   translate: (distance: number) => string;
 };
+
+const parseOptionalBool = (value: string | null): boolean | undefined =>
+  value == null ? undefined : value === '' || value === 'true';
 
 const drawerSwipeConfig: Record<DrawerPlacement, DrawerSwipeConfig> = {
   bottom: {
@@ -65,13 +68,14 @@ export interface DrawerElement extends HTMLElement, Omit<OreDrawerProps, 'title'
 /** Drawer component properties */
 
 export type OreDrawerEvents = {
-  close: OverlayCloseDetail & { placement: DrawerPlacement };
-  open: OverlayOpenDetail & { placement: DrawerPlacement };
+  'open-change': OverlayOpenChangeDetail;
 };
 
 export type OreDrawerProps = {
   /** Backdrop style — 'opaque' (default), 'blur', or 'transparent' */
   backdrop?: DrawerBackdrop;
+  /** Initial uncontrolled open state. Ignored when `open` is set. */
+  'default-open'?: boolean;
   /** Show the close (×) button in the header (default: true) */
   dismissible?: boolean;
   /** Drag handle position used for swipe-to-close gestures */
@@ -113,7 +117,8 @@ export type OreDrawerProps = {
  *
  * @element ore-drawer
  *
- * @attr {boolean} open - Controlled open/close state
+ * @attr {boolean} open - Controlled open state
+ * @attr {boolean} default-open - Initial uncontrolled open state
  * @attr {string} placement - 'left' | 'right' (default) | 'top' | 'bottom'
  * @attr {string} size - 'sm' | 'lg' | 'full'
  * @attr {string} title - Visible header title text
@@ -123,8 +128,7 @@ export type OreDrawerProps = {
  * @attr {string} backdrop - Backdrop style: 'opaque' (default) | 'blur' | 'transparent'
  * @attr {boolean} persistent - Prevent backdrop-click from closing (default: false)
  *
- * @fires open - When the drawer opens with detail: { placement, reason }
- * @fires close - When the drawer closes with detail: { placement, reason }
+ * @fires open-change - When the drawer state changes. detail: { open, reason }
  *
  * @slot header - Drawer header content
  * @slot - Main body content
@@ -161,11 +165,12 @@ export const DRAWER_TAG = 'ore-drawer' as const;
 define<OreDrawerProps>(DRAWER_TAG, {
   props: {
     backdrop: prop.string<DrawerBackdrop>(),
+    'default-open': prop.bool(false),
     dismissible: prop.bool(true),
     'drag-handle-placement': prop.oneOf(['outside', 'inset'] as const, 'outside'),
     'initial-focus': prop.string(),
     label: prop.string(),
-    open: prop.bool(false),
+    open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
     persistent: prop.bool(false),
     placement: prop.oneOf(['left', 'right', 'top', 'bottom'] as const, 'right'),
     'return-focus': prop.bool(true),
@@ -350,6 +355,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
         void dialog;
       },
       closeRequestDetail: (_reason) => ({ placement: props.placement.value ?? 'right' }),
+      defaultOpen: props['default-open'],
       dialogRef,
       getPanelEl: () => panelRef.value,
       host: el,
@@ -369,9 +375,9 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
         if (dialog) dialog.style.transition = '';
 
-        emit('close', { placement: props.placement.value ?? 'right', reason });
+        emit('open-change', { open: false, reason });
       },
-      onOpen: (reason) => emit('open', { placement: props.placement.value ?? 'right', reason }),
+      onOpen: (reason) => emit('open-change', { open: true, reason }),
       openProp: props.open,
       performClose: (dialog, reason) => {
         if (reason === 'swipe') {
@@ -404,7 +410,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
       };
 
       drawerEl.hide = () => {
-        overlay.close('programmatic', false);
+        overlay.close('programmatic');
       };
 
       // ────────────────────────────────────────────────────────────

@@ -107,6 +107,12 @@ describe('ore-drawer', () => {
       expect(fixture.query('dialog[open]')).toBeTruthy();
     });
 
+    it('initializes an uncontrolled drawer with default-open', async () => {
+      fixture = await mount('ore-drawer', { attrs: { 'default-open': '' } });
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+    });
+
     it('reflects placement attribute on host', async () => {
       fixture = await mount('ore-drawer', { attrs: { placement: 'left' } });
 
@@ -213,39 +219,38 @@ describe('ore-drawer', () => {
   // ─── Events ──────────────────────────────────────────────────────────────────
 
   describe('Events', () => {
-    it('fires open when the drawer opens', async () => {
+    it('fires open-change when the drawer opens', async () => {
       fixture = await mount('ore-drawer');
 
       const handler = vi.fn();
 
-      fixture.element.addEventListener('open', handler);
+      fixture.element.addEventListener('open-change', handler);
 
       await fixture.attr('open', '');
 
       expect(handler).toHaveBeenCalled();
     });
 
-    it('open event detail contains placement and reason', async () => {
+    it('open-change detail contains open state and reason', async () => {
       fixture = await mount('ore-drawer', { attrs: { placement: 'left' } });
 
       let detail: unknown;
 
-      fixture.element.addEventListener('open', (e) => {
+      fixture.element.addEventListener('open-change', (e) => {
         detail = (e as CustomEvent).detail;
       });
 
       await fixture.attr('open', '');
 
-      expect((detail as { placement: string })?.placement).toBe('left');
-      expect((detail as { reason: string })?.reason).toBe('programmatic');
+      expect(detail).toEqual({ open: true, reason: 'programmatic' });
     });
 
-    it('fires close after the drawer closes', async () => {
+    it('fires open-change after the drawer closes', async () => {
       fixture = await mount('ore-drawer', { attrs: { open: '' } });
 
       const handler = vi.fn();
 
-      fixture.element.addEventListener('close', handler);
+      fixture.element.addEventListener('open-change', handler);
 
       const closeBtn = fixture.query<HTMLButtonElement>('[aria-label="Close"]');
 
@@ -257,7 +262,7 @@ describe('ore-drawer', () => {
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
-      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('trigger');
+      expect((handler.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'trigger' });
     });
 
     it('fires close-request when close button is clicked', async () => {
@@ -353,14 +358,14 @@ describe('ore-drawer', () => {
 
       let detail: unknown;
 
-      fixture.element.addEventListener('close', (e) => {
+      fixture.element.addEventListener('open-change', (e) => {
         detail = (e as CustomEvent).detail;
       });
 
       fixture.element.removeAttribute('open');
       await fixture.flush();
 
-      expect((detail as { reason: string })?.reason).toBe('programmatic');
+      expect(detail).toEqual({ open: false, reason: 'programmatic' });
     });
 
     it('preventing close-request keeps the drawer open', async () => {

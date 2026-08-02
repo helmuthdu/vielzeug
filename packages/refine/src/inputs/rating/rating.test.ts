@@ -249,13 +249,13 @@ describe('ore-rating', () => {
       expect(handler).toHaveBeenCalled();
     });
 
-    it('change event detail carries the selected star value', async () => {
+    it('change event exposes the selected star value on the host', async () => {
       fixture = await mount('ore-rating');
 
-      let detail: { originalEvent?: Event; value: number } | undefined;
+      let target: (HTMLElement & { value: string }) | undefined;
 
       fixture.element.addEventListener('change', (e: Event) => {
-        detail = (e as CustomEvent).detail;
+        target = e.currentTarget as HTMLElement & { value: string };
       });
 
       const star = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="2"]');
@@ -264,8 +264,7 @@ describe('ore-rating', () => {
 
       await fixture.flush();
 
-      expect(detail?.value).toBe(2);
-      expect(detail?.originalEvent).toBeDefined();
+      expect(target?.value).toBe('2');
     });
 
     it('does not fire change when readonly', async () => {

@@ -110,10 +110,10 @@ Add the `fullwidth` attribute to stretch the control to its container width.
 <ore-number-input id="qty" label="Quantity" value="1" min="1" max="99"></ore-number-input>
 
 <script type="module">
-  import '@vielzeug/refine';
+  import '@vielzeug/refine/number-input';
 
   document.getElementById('qty').addEventListener('change', (e) => {
-    console.log('Value changed to:', e.detail.value);
+    console.log('Value changed to:', e.currentTarget.value);
   });
 </script>
 ```

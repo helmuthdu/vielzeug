@@ -135,14 +135,8 @@ Set `disabled` on the `ore-menu` element to prevent the panel from opening at al
     }
   });
 
-  // Fired when the panel opens
-  menu.addEventListener('open', (e) => {
-    console.log('menu opened via:', e.detail.reason); // 'programmatic' or 'trigger'
-  });
-
-  // Fired when the panel closes
-  menu.addEventListener('close', (e) => {
-    console.log('menu closed via:', e.detail.reason); // 'escape', 'outside-click', 'programmatic', or 'trigger'
+  menu.addEventListener('open-change', (e) => {
+    console.log('menu open:', e.detail.open, e.detail.reason);
   });
 </script>
 ```
@@ -241,6 +235,8 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`         | —                | Color theme                                                |
 | `size`      | `'sm' \| 'md' \| 'lg'`                                                            | `'md'`           | Size theme                                                 |
 | `disabled`  | `boolean`                                                                         | `false`          | Prevent the menu from opening                              |
+| `open`      | `boolean`                                                                         | —                | Controlled panel visibility                                |
+| `default-open` | `boolean`                                                                      | `false`          | Initial visibility when `open` is not provided             |
 
 **`ore-menu`** Slots
 
@@ -270,8 +266,7 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | Event    | Detail                                                                   | Description                                                                                               |
 | -------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
 | `select` | `{ value: string, checked?: boolean }`                                   | Emitted when a menu item is selected. `checked` is present for `type="checkbox"` and `type="radio"` items |
-| `open`   | `{ reason: 'programmatic' \| 'trigger' }`                                | Emitted when the panel opens.                                                                             |
-| `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' \| 'trigger' }` | Emitted when the panel closes.                                                                            |
+| `open-change` | `{ open: boolean, reason: string }`                                      | Emitted whenever the panel opens or closes.                                                               |
 
 **CSS Custom Properties (`ore-menu`)**
 

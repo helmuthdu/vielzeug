@@ -135,7 +135,7 @@ function SettingsPanel() {
   const [notifications, setNotifications] = useState(true);
 
   return (
-    <ore-switch checked={notifications} onChange={(e) => setNotifications(e.detail.checked)}>
+    <ore-switch checked={notifications} onChange={(e) => setNotifications(e.currentTarget.checked)}>
       Enable notifications
     </ore-switch>
   );
@@ -146,7 +146,7 @@ function SettingsPanel() {
 
 ```vue
 <template>
-  <ore-switch :checked="notifications" @change="notifications = $event.detail.checked"> Enable notifications </ore-switch>
+  <ore-switch :checked="notifications" @change="notifications = $event.currentTarget.checked"> Enable notifications </ore-switch>
 </template>
 
 <script setup>
@@ -167,7 +167,7 @@ const notifications = ref(true);
 
 <ore-switch
   checked={notifications}
-  on:change={(e) => notifications = e.detail.checked}
+  on:change={(e) => notifications = e.currentTarget.checked}
 >
   Enable notifications
 </ore-switch>

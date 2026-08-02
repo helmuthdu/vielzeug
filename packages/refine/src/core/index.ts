@@ -1,3 +1,10 @@
+/**
+ * Private implementation barrel for Refine components.
+ *
+ * This module is deliberately omitted from the package export map: its helpers
+ * encode component-specific Ore and Ripple behavior, not a stable public API.
+ */
+
 // ── Ore adapter ───────────────────────────────────────────────────────────────
 export { lifecycleSignal } from './ore';
 
@@ -56,29 +63,20 @@ export {
   type SendShortcut,
 } from './composer';
 
-// ── Overlay types (public — consumed by component authors) ───────────────────
+// ── Overlay types ────────────────────────────────────────────────────────────
 export {
   type DialogCloseReason,
   type DropdownCloseReason,
   type OverlayCloseDetail,
-  type OverlayControl,
+  type OverlayOpenChangeDetail,
   type OverlayOpenDetail,
   type OverlayOpenReason,
 } from './overlay';
 
-// ── Option list ───────────────────────────────────────────────────────────────
-export {
-  createOptionList,
-  type BaseOptionItem,
-  type OptionListHandle,
-  type OptionListOptions,
-  type PlacementOptions,
-} from './option-list';
-
 // ── Paginated list ────────────────────────────────────────────────────────────
 export { createPaginatedList, type PaginatedListHandle, type PaginatedListOptions } from './paginated-list';
 
-// ── Navigation types (public — consumed by component authors) ────────────────
+// ── Navigation types ─────────────────────────────────────────────────────────
 export { type ListKeyAction, type ListNavigationAction } from './nav';
 
 // ── Spinner ───────────────────────────────────────────────────────────────────
@@ -119,18 +117,7 @@ export { getChoiceLabel, getLightChildrenByTag } from './light-dom';
 // ── Number utilities ──────────────────────────────────────────────────────────
 export { toFiniteNumber, toFiniteNumberOr, toPositiveStep } from './numbers';
 
-// ── Data grid ─────────────────────────────────────────────────────────────────
-export {
-  createDataGridControl,
-  type DataGridColumn,
-  type DataGridControl,
-  type DataGridControlOptions,
-  type SelectionMode,
-  type SortDirection,
-  type SortState,
-} from './datagrid';
-
-// ── Internal primitives (used by refine components; not part of the public API contract) ──
+// ── Shared component primitives ──────────────────────────────────────────────
 
 export { createDropdownPositioner, type DropdownPositionerOptions, type OverlayPositioner } from './positioner';
 export {
@@ -142,9 +129,6 @@ export {
   type PressTrigger,
 } from './keyboard';
 export { createListControl, type ListControl, type ListNavigationOptions } from './nav';
-export { createOverlayControl, type OverlayControlOptions } from './overlay';
-export { createSelectionControl, type SelectionControl, type SelectionControlOptions } from './selection-control';
-export { createSortControl, type SortControl, type SortControlOptions } from './sort-control';
 export { createTypeahead, type Typeahead, type TypeaheadOptions } from './typeahead';
 export { elementDirection } from './direction';
 export { parseStringTriggers } from './parse';

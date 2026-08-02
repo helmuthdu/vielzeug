@@ -108,13 +108,13 @@ describe('ore-otp-input', () => {
   // ─── Events ──────────────────────────────────────────────────────────────────
 
   describe('Events', () => {
-    it('fires change after paste with complete=true', async () => {
+    it('fires change after paste with the host value', async () => {
       fixture = await mount('ore-otp-input', { attrs: { length: '4' } });
 
-      let detail: { complete: boolean; originalEvent?: Event; value: string } | undefined;
+      let target: (HTMLElement & { value: string }) | undefined;
 
       fixture.element.addEventListener('change', (e: Event) => {
-        detail = (e as CustomEvent).detail;
+        target = e.currentTarget as HTMLElement & { value: string };
       });
 
       const firstCell = fixture.shadow?.querySelector<HTMLInputElement>('input.cell');
@@ -127,8 +127,7 @@ describe('ore-otp-input', () => {
         await fixture.flush();
       }
 
-      expect(detail?.complete).toBe(true);
-      expect(detail?.originalEvent).toBeDefined();
+      expect(target?.value).toBe('1234');
     });
 
     it('fires complete when all cells are filled via paste', async () => {

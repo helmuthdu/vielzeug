@@ -15,7 +15,7 @@ import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
 
-import { createInteraction, createListControl, elementDirection, lifecycleSignal } from '../../headless';
+import { createInteraction, createListControl, elementDirection, lifecycleSignal } from '../../core';
 import { sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin } from '../../styles';
 import styles from './tabs.css?inline';

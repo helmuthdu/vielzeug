@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Accessible, themeable web components built on `ore`. Largest package; one custom element per component, organised by category folder (`content/`, `disclosure/`, `feedback/`, `inputs/`, `layout/`, `overlay/`), with headless logic under `headless/`.
+Accessible, themeable web components built on `ore`. Largest package; one custom element per component, organised by category folder (`content/`, `core/`, `disclosure/`, `feedback/`, `inputs/`, `layout/`, `overlay/`).
 
 ## Ownership
 
@@ -29,7 +29,7 @@ Two test layers cover different concerns.
 ### Layer 1 — jsdom (vitest, `pnpm test`)
 
 - Each component test calls the global `axeCheck(element)` helper (`vitest.setup.ts`) and asserts **zero violations**. It runs `wcag2a/2aa/best-practice` but **disables layout/style-dependent rules** (`color-contrast`, `target-size`, `scrollable-region-focusable`, …) that jsdom cannot compute — do **not** re-enable them in jsdom tests.
-- Assert roles, names, and ARIA state with `@vielzeug/refine/testing` helpers (`getAriaLabel`, `isAriaExpanded`, `getRole`, `queryPart`, …), and keyboard/focus behaviour via the `headless/` primitives (focus-trap, roving tabindex, announcer).
+- Assert roles, names, and ARIA state with `@vielzeug/assay` and keyboard/focus behaviour through the component's visible DOM contract.
 - Why jsdom can't do more: no CSS box model, `getComputedStyle` is stubbed, `@layer` blocks are silently dropped.
 
 ### Layer 2 — real browser (Playwright, `pnpm test:e2e`)
@@ -49,7 +49,7 @@ Each `*.e2e.ts` file groups its tests into `describe('Accessibility', ...)` / `d
 - **Layout** — CSS layout regression checks (flexbox geometry, overflow, padding ratios). `chat-message.e2e.ts` supersedes `scripts/verify-layout.mjs`'s chat-message scenarios.
 - **Interaction** — open/close, focus-trap, keyboard navigation, gesture-driven state for overlay and composite components (dialog, accordion, tabs, tooltip, popover, list swipe actions).
 
-**Adding a new e2e test:** add a `describe` block (or a new one) to the component's own `<component>.e2e.ts` (create it if this is the component's first e2e test), importing `test`/`expect`/`axeCheck` from `../../testing/fixtures` (path depth is always `category/component/` → two `../`). Call `refinePage.mountComponent(html)` to inject HTML and wait for upgrade. `src/testing/fixtures.ts` is Playwright-only shared harness/helper infrastructure (the real-browser counterpart to `src/testing/index.ts`'s jsdom helpers) — not a spec file, and not part of the public `@vielzeug/refine/testing` export (`index.ts` never imports it).
+**Adding a new e2e test:** add a `describe` block (or a new one) to the component's own `<component>.e2e.ts` (create it if this is the component's first e2e test), importing `test`/`expect`/`axeCheck` from `../../testing/fixtures` (path depth is always `category/component/` → two `../`). Call `refinePage.mountComponent(html)` to inject HTML and wait for upgrade. `src/testing/fixtures.ts` is private Playwright-only shared harness/helper infrastructure, not a spec file.
 
 **Known shadow DOM limitation with axe:** axe-core's flat-tree traversal cannot pierce shadow boundaries for role-child relationships (e.g. `listbox > option`). Components where the ARIA role tree crosses the shadow/light boundary may produce false-positive violations. Mark these `test.fail()` with an explanation — they document known gaps, not real failures.
 
@@ -113,7 +113,7 @@ Named improvement lenses to guide AI-driven design work on components. Each list
 
 ## Verification
 
-- **Unit/component tests** (jsdom): `pnpm vitest run packages/refine/src/` or `pnpm --filter @vielzeug/refine test`. Tests are **co-located** next to components (`src/<category>/<component>/<component>.test.ts`) plus shared suites under `src/headless/__tests__/` and `src/inputs/__tests__/`. The `.../src/__tests__/` path used by other packages misses most refine tests.
+- **Unit/component tests** (jsdom): `pnpm vitest run packages/refine/src/` or `pnpm --filter @vielzeug/refine test`. Tests are **co-located** next to components (`src/<category>/<component>/<component>.test.ts`) plus shared suites under `src/core/__tests__/` and `src/inputs/__tests__/`. The `.../src/__tests__/` path used by other packages misses most refine tests.
 - **E2E tests** (Playwright/Chromium): `pnpm --filter @vielzeug/refine test:e2e`. Requires a built dist (`pnpm --filter @vielzeug/refine build` first). Co-located next to components as `src/<category>/<component>/<component>.e2e.ts`; shared harness lives in `src/testing/fixtures.ts`.
 - Lint (JS/TS): `pnpm --filter @vielzeug/refine lint` (`eslint src`). This does **not** lint CSS — refine ships many `.css` files; lint those from the repo root with `pnpm lint:css` (or `pnpm lint` for the whole repo).
 - Build (includes `sync:exports` + `check:manifest` + manifest analyze): `pnpm --filter @vielzeug/refine build`

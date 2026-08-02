@@ -2,7 +2,7 @@ import type { Readable } from '@vielzeug/ripple';
 
 import type { ListItemRevealSide } from './list-item';
 
-import { createSwipeControl, type SwipeControl, type SwipeControlDetail } from '../../headless';
+import { createSwipeControl, type SwipeControl, type SwipeControlDetail } from '../../core';
 
 /** Drag distance (px) past which the action panel snaps fully open on release. */
 const REVEAL_THRESHOLD = 64;
@@ -22,7 +22,7 @@ export type RevealStateOptions = {
  * The swipe-reveal-confirm gesture behind `ore-list-item`'s `actions-left`/`actions-right` slots
  * — isolated here since it's the one genuinely tricky part of the component (three distance
  * thresholds, inline style/attribute choreography during an active drag). Deliberately *not* a
- * `headless/` primitive: `createSwipeControl` itself already is one (shared with `ore-toast`),
+ * `core/` primitive: `createSwipeControl` itself already is one (shared with `ore-toast`),
  * but this two-stage reveal/confirm layer on top of it has exactly one consumer today —
  * generalizing it further would be speculative, not reusable.
  *

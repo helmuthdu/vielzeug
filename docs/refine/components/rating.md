@@ -15,7 +15,7 @@ Listen for changes:
 
 <script type="module">
   document.getElementById('rating').addEventListener('change', (e) => {
-    console.log('Rating:', e.detail.value);
+    console.log('Rating:', e.currentTarget.value);
   });
 </script>
 ```

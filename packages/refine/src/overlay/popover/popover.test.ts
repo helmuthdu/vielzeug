@@ -115,6 +115,15 @@ describe('ore-popover', () => {
       expect(panel?.getAttribute('aria-hidden')).toBe('true');
     });
 
+    it('initializes an uncontrolled popover with default-open', async () => {
+      fixture = await mount('ore-popover', {
+        attrs: { 'default-open': '' },
+        html: '<button>Open</button>',
+      });
+
+      expect(fixture.query('[role="dialog"]')?.getAttribute('aria-hidden')).toBe('false');
+    });
+
     it('trigger slot has aria-expanded="false" by default', async () => {
       fixture = await mount('ore-popover', {
         html: '<button>Open</button>',
@@ -237,14 +246,14 @@ describe('ore-popover', () => {
   // ─── Events ──────────────────────────────────────────────────────────────────
 
   describe('Events', () => {
-    it('fires open when the popover opens', async () => {
+    it('fires open-change when the popover opens', async () => {
       fixture = await mount('ore-popover', {
         html: '<button>Open</button>',
       });
 
       const handler = vi.fn();
 
-      fixture.element.addEventListener('open', handler);
+      fixture.element.addEventListener('open-change', handler);
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
@@ -253,17 +262,17 @@ describe('ore-popover', () => {
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
-      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('click');
+      expect((handler.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ open: true, reason: 'click' });
     });
 
-    it('fires close when the popover closes', async () => {
+    it('fires open-change when the popover closes', async () => {
       fixture = await mount('ore-popover', {
         html: '<button>Open</button>',
       });
 
       const handler = vi.fn();
 
-      fixture.element.addEventListener('close', handler);
+      fixture.element.addEventListener('open-change', handler);
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
@@ -276,7 +285,7 @@ describe('ore-popover', () => {
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
-      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('trigger');
+      expect((handler.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'trigger' });
     });
 
     it('fires outsideClick close reason when clicking outside', async () => {
@@ -286,7 +295,7 @@ describe('ore-popover', () => {
 
       const handler = vi.fn();
 
-      fixture.element.addEventListener('close', handler);
+      fixture.element.addEventListener('open-change', handler);
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
@@ -299,7 +308,7 @@ describe('ore-popover', () => {
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
-      expect((handler.mock.calls.at(-1)?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('outsideClick');
+      expect((handler.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'outsideClick' });
     });
 
     it('fires escape close reason when dismissed via Escape key', async () => {
@@ -309,7 +318,7 @@ describe('ore-popover', () => {
 
       const handler = vi.fn();
 
-      fixture.element.addEventListener('close', handler);
+      fixture.element.addEventListener('open-change', handler);
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
@@ -322,7 +331,7 @@ describe('ore-popover', () => {
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
-      expect((handler.mock.calls.at(-1)?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('escape');
+      expect((handler.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'escape' });
     });
 
     it('does not fire open when disabled', async () => {
@@ -333,7 +342,7 @@ describe('ore-popover', () => {
 
       const handler = vi.fn();
 
-      fixture.element.addEventListener('open', handler);
+      fixture.element.addEventListener('open-change', handler);
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
@@ -444,7 +453,7 @@ describe('ore-popover accessibility', () => {
   });
 
   describe('Controlled mode — B2 regression', () => {
-    it('does not fire close event when open prop starts as false', async () => {
+    it('does not fire open-change when open prop starts as false', async () => {
       const handler = vi.fn();
 
       fixture = await mount('ore-popover', {
@@ -452,7 +461,7 @@ describe('ore-popover accessibility', () => {
         html: '<button>Open</button>',
       });
 
-      fixture.element.addEventListener('close', handler);
+      fixture.element.addEventListener('open-change', handler);
 
       await fixture.flush();
 

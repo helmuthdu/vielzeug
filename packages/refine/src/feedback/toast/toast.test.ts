@@ -1,22 +1,8 @@
 import { delay, fireClick, retry } from '@vielzeug/assay';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
-import type { ToastElement } from './toast';
-
 import { createToastService } from './toast';
 
-// ── Test helpers ──────────────────────────────────────────────────────────────
-
-// Trigger the transitionend on ALL exiting inner elements (jsdom does not run CSS).
-const completeAllExits = async (fixture: Fixture<HTMLElement>, flush: () => Promise<void>) => {
-  for (const el of fixture.queryAll<HTMLElement>('.toast-inner.exiting')) {
-    el.dispatchEvent(new TransitionEvent('transitionend', { bubbles: true }));
-  }
-
-  await flush();
-};
-
-// Trigger transitionend on the first exiting inner element.
 const completeExit = async (fixture: Fixture<HTMLElement>, flush: () => Promise<void>) => {
   fixture
     .query<HTMLElement>('.toast-inner.exiting')
@@ -24,844 +10,146 @@ const completeExit = async (fixture: Fixture<HTMLElement>, flush: () => Promise<
   await flush();
 };
 
-// Find the close button inside the first ore-alert's shadow DOM.
-const getCloseButton = (fixture: Fixture<HTMLElement>): HTMLElement | null => {
-  const alert = fixture.query<HTMLElement>('ore-alert');
-
-  return alert?.shadowRoot?.querySelector<HTMLElement>('[part="close"]') ?? null;
-};
-
-// ── Component tests ───────────────────────────────────────────────────────────
+const getCloseButton = (fixture: Fixture<HTMLElement>): HTMLElement | null =>
+  fixture.query<HTMLElement>('ore-alert')?.shadowRoot?.querySelector<HTMLElement>('[part="close"]') ?? null;
 
 describe('ore-toast', () => {
-  let fixture: Fixture<HTMLElement & ToastElement>;
+  let fixture: Fixture<HTMLElement>;
+  let service: ReturnType<typeof createToastService>;
 
   beforeAll(async () => {
     await import('../alert/alert');
     await import('./toast');
   });
 
-  afterEach(() => {
-    fixture?.dispose();
-  });
-
-  describe('Rendering', () => {
-    it('renders toast container with live region', async () => {
-      fixture = await mount('ore-toast');
-
-      expect(fixture.query('[role="region"]')).toBeTruthy();
-    });
-
-    it('live region has aria-live polite', async () => {
-      fixture = await mount('ore-toast');
-
-      expect(fixture.query('[aria-live="polite"]')).toBeTruthy();
-    });
-
-    it('live region has accessible label', async () => {
-      fixture = await mount('ore-toast');
-
-      expect(fixture.query('[aria-label="Notifications"]')).toBeTruthy();
-    });
-
-    it('toast-wrapper has part="toast-wrapper"', async () => {
-      fixture = await mount('ore-toast');
-
-      fixture.element.add({ duration: 0, message: 'Part test' });
-      await fixture.flush();
-
-      expect(fixture.query('[part="toast-wrapper"]')).toBeTruthy();
-    });
-
-    it('toast-inner has part="toast-inner"', async () => {
-      fixture = await mount('ore-toast');
-
-      fixture.element.add({ duration: 0, message: 'Inner part test' });
-      await fixture.flush();
-
-      expect(fixture.query('[part="toast-inner"]')).toBeTruthy();
-    });
-  });
-
-  describe('Props', () => {
-    it('applies position attribute', async () => {
-      fixture = await mount('ore-toast', { attrs: { position: 'top-left' } });
-
-      expect(fixture.element.getAttribute('position')).toBe('top-left');
-    });
-
-    it('applies max attribute', async () => {
-      fixture = await mount('ore-toast', { attrs: { max: '3' } });
-
-      expect(fixture.element.getAttribute('max')).toBe('3');
-    });
-  });
-
-  describe('add()', () => {
-    it('shows toast message after add', async () => {
-      fixture = await mount('ore-toast');
-
-      fixture.element.add({ message: 'Test notification' });
-      await fixture.flush();
-
-      await retry(() => {
-        expect(fixture.query('ore-alert')?.textContent?.trim()).toContain('Test notification');
-      });
-    });
-
-    it('returns a stable id', async () => {
-      fixture = await mount('ore-toast');
-
-      const id = fixture.element.add({ message: 'Hello' });
-
-      await fixture.flush();
-
-      expect(fixture.query(`[data-toast-id="${id}"]`)).toBeTruthy();
-    });
-
-    it('renders the close button when dismissible (default)', async () => {
-      fixture = await mount('ore-toast');
-
-      fixture.element.add({ duration: 0, message: 'Closable' });
-      await fixture.flush();
-
-      expect(getCloseButton(fixture)).toBeTruthy();
-    });
-
-    it('does not render close button when dismissible is false', async () => {
-      fixture = await mount('ore-toast');
-
-      fixture.element.add({ dismissible: false, duration: 0, message: 'Not closable' });
-      await fixture.flush();
-
-      const btn = getCloseButton(fixture);
-
-      expect(btn === null || btn.hidden).toBe(true);
-    });
-
-    it('toast starts in entering phase then transitions to active', async () => {
-      fixture = await mount('ore-toast');
-
-      fixture.element.add({ duration: 0, message: 'Entering' });
-
-      // Before flush: element may have entering class
-      await fixture.flush();
-
-      // After rAF resolves: entering class should be gone
-      await retry(() => {
-        const inner = fixture.query('.toast-inner');
-
-        expect(inner?.classList.contains('entering')).toBe(false);
-        expect(inner?.classList.contains('exiting')).toBe(false);
-      });
-    });
-  });
-
-  describe('max eviction', () => {
-    it('evicts oldest toast with animation when max is exceeded', async () => {
-      fixture = await mount('ore-toast', { attrs: { max: '2' } });
-
-      const onDismiss = vi.fn();
-
-      fixture.element.add({ duration: 0, message: 'First', onDismiss });
-      fixture.element.add({ duration: 0, message: 'Second' });
-      fixture.element.add({ duration: 0, message: 'Third' });
-
-      // flush() now waits deterministically for all pending component work (reactive
-      // update + queueMicrotask in removeToast), however many turns that actually takes.
-      await fixture.flush();
-
-      // First toast should be in exiting state (animated eviction).
-      expect(fixture.queryAll('.toast-inner.exiting').length).toBeGreaterThanOrEqual(1);
-
-      // After exit animation completes, onDismiss should fire.
-      await completeAllExits(fixture, () => fixture.flush());
-
-      expect(onDismiss).toHaveBeenCalled();
-    });
-
-    it('fires dismiss event for evicted toasts', async () => {
-      fixture = await mount('ore-toast', { attrs: { max: '1' } });
-
-      const handler = vi.fn();
-
-      fixture.element.addEventListener('dismiss', handler);
-
-      const id1 = fixture.element.add({ duration: 0, message: 'First' });
-
-      await fixture.flush();
-
-      fixture.element.add({ duration: 0, message: 'Second' });
-
-      // flush() waits deterministically for the reactive render + queueMicrotask listener setup.
-      await fixture.flush();
-
-      await completeAllExits(fixture, () => fixture.flush());
-
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ detail: { id: id1 } }));
-    });
-  });
-
-  describe('dismiss()', () => {
-    it('clicking close button removes toast after animation', async () => {
-      fixture = await mount('ore-toast');
-
-      fixture.element.add({ dismissible: true, duration: 0, message: 'Closable' });
-      await fixture.flush();
-
-      const closeBtn = getCloseButton(fixture);
-
-      expect(closeBtn).toBeTruthy();
-
-      fireClick(closeBtn!);
-      await fixture.flush();
-
-      await completeExit(fixture, () => fixture.flush());
-
-      expect(fixture.query('ore-alert')).toBeNull();
-    });
-
-    it('programmatic dismiss removes toast after animation', async () => {
-      fixture = await mount('ore-toast');
-
-      const id = fixture.element.add({ duration: 0, message: 'Gone' });
-
-      await fixture.flush();
-
-      fixture.element.dismiss(id);
-      await fixture.flush();
-
-      await completeExit(fixture, () => fixture.flush());
-
-      expect(fixture.query(`[data-toast-id="${id}"]`)).toBeNull();
-    });
-
-    it('duplicate dismiss calls on the same id are no-ops', async () => {
-      fixture = await mount('ore-toast');
-
-      const id = fixture.element.add({ duration: 0, message: 'Once' });
-
-      await fixture.flush();
-
-      fixture.element.dismiss(id);
-      fixture.element.dismiss(id);
-      await fixture.flush();
-
-      // Only one .toast-inner.exiting should exist.
-      const exiting = fixture.queryAll('.toast-inner.exiting');
-
-      expect(exiting.length).toBe(1);
-    });
-
-    it('two toasts can exit in parallel', async () => {
-      fixture = await mount('ore-toast');
-
-      const id1 = fixture.element.add({ duration: 0, message: 'First' });
-      const id2 = fixture.element.add({ duration: 0, message: 'Second' });
-
-      await fixture.flush();
-
-      fixture.element.dismiss(id1);
-      fixture.element.dismiss(id2);
-      await fixture.flush();
-
-      const exiting = fixture.queryAll('.toast-inner.exiting');
-
-      expect(exiting.length).toBe(2);
-    });
-
-    it('active toasts are not stuck in exiting state after a dismiss + add sequence', async () => {
-      fixture = await mount('ore-toast');
-
-      const id1 = fixture.element.add({ duration: 0, message: 'First' });
-      const id2 = fixture.element.add({ duration: 0, message: 'Second' });
-
-      await fixture.flush();
-
-      fixture.element.dismiss(id1);
-
-      const id3 = fixture.element.add({ duration: 0, message: 'Third' });
-
-      await fixture.flush();
-      await completeExit(fixture, () => fixture.flush());
-
-      const second = fixture.query(`[data-toast-id="${id2}"] .toast-inner`);
-      const third = fixture.query(`[data-toast-id="${id3}"] .toast-inner`);
-
-      expect(second?.classList.contains('exiting')).toBe(false);
-      expect(third?.classList.contains('exiting')).toBe(false);
-    });
-  });
-
-  describe('update()', () => {
-    it('updates message in place', async () => {
-      fixture = await mount('ore-toast');
-
-      const id = fixture.element.add({ duration: 0, message: 'Old' });
-
-      await fixture.flush();
-
-      fixture.element.update(id, { message: 'New' });
-      await fixture.flush();
-
-      expect(fixture.query('ore-alert')?.textContent?.trim()).toContain('New');
-    });
-
-    it('update on unknown id is a no-op', async () => {
-      fixture = await mount('ore-toast');
-
-      // Should not throw.
-      expect(() => fixture.element.update('nonexistent-id', { message: 'Noop' })).not.toThrow();
-    });
-  });
-
-  describe('clear()', () => {
-    it('starts exit animation on all toasts', async () => {
-      fixture = await mount('ore-toast');
-
-      fixture.element.add({ duration: 0, message: 'A' });
-      fixture.element.add({ duration: 0, message: 'B' });
-      await fixture.flush();
-
-      fixture.element.clear();
-      await fixture.flush();
-
-      const exiting = fixture.queryAll('.toast-inner.exiting');
-
-      expect(exiting.length).toBe(2);
-    });
-  });
-
-  describe('Positions', () => {
-    for (const position of ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right']) {
-      it(`accepts ${position} position`, async () => {
-        fixture = await mount('ore-toast', { attrs: { position } });
-
-        expect(fixture.element.getAttribute('position')).toBe(position);
-        fixture.dispose();
-      });
-    }
-  });
-
-  describe('Events', () => {
-    it('fires add event with id when toast is added', async () => {
-      fixture = await mount('ore-toast');
-
-      const handler = vi.fn();
-
-      fixture.element.addEventListener('add', handler);
-
-      const id = fixture.element.add({ duration: 0, message: 'Event test' });
-
-      await fixture.flush();
-
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ detail: { id } }));
-    });
-
-    it('fires dismiss event after exit animation completes', async () => {
-      fixture = await mount('ore-toast');
-
-      const handler = vi.fn();
-
-      fixture.element.addEventListener('dismiss', handler);
-
-      const id = fixture.element.add({ duration: 0, message: 'Bye' });
-
-      await fixture.flush();
-
-      fixture.element.dismiss(id);
-      await fixture.flush();
-      await completeExit(fixture, () => fixture.flush());
-
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ detail: { id } }));
-    });
-
-    it('calls onDismiss callback after exit animation completes', async () => {
-      fixture = await mount('ore-toast');
-
-      const onDismiss = vi.fn();
-      const id = fixture.element.add({ duration: 0, message: 'Callback', onDismiss });
-
-      await fixture.flush();
-
-      fixture.element.dismiss(id);
-      await fixture.flush();
-      await completeExit(fixture, () => fixture.flush());
-
-      expect(onDismiss).toHaveBeenCalled();
-    });
-
-    it('dismiss event is NOT fired before exit animation completes', async () => {
-      fixture = await mount('ore-toast');
-
-      const handler = vi.fn();
-
-      fixture.element.addEventListener('dismiss', handler);
-
-      const id = fixture.element.add({ duration: 0, message: 'Not yet' });
-
-      await fixture.flush();
-
-      fixture.element.dismiss(id);
-      await fixture.flush();
-
-      // transitionend not dispatched yet — handler must not have been called.
-      expect(handler).not.toHaveBeenCalled();
-    });
-  });
-});
-
-// ── Accessibility tests ───────────────────────────────────────────────────────
-
-describe('ore-toast accessibility', () => {
-  let fixture: Awaited<ReturnType<typeof mount>>;
-
-  beforeAll(async () => {
-    await import('../alert/alert');
-    await import('./toast');
-  });
-
-  afterEach(() => {
-    fixture?.dispose();
-  });
-
-  describe('Live Region', () => {
-    it('has role region', async () => {
-      fixture = await mount('ore-toast');
-
-      expect(fixture.query('[role="region"]')).toBeTruthy();
-    });
-
-    it('has aria-live polite', async () => {
-      fixture = await mount('ore-toast');
-
-      expect(fixture.query('[aria-live="polite"]')).toBeTruthy();
-    });
-
-    it('has aria-relevant additions removals', async () => {
-      fixture = await mount('ore-toast');
-
-      const region = fixture.query('[aria-live="polite"]');
-
-      expect(region?.getAttribute('aria-relevant')).toBe('additions removals');
-    });
-
-    it('has aria-atomic false for individual updates', async () => {
-      fixture = await mount('ore-toast');
-
-      const region = fixture.query('[aria-live="polite"]');
-
-      expect(region?.getAttribute('aria-atomic')).toBe('false');
-    });
-
-    it('polite region label is Notifications', async () => {
-      fixture = await mount('ore-toast');
-
-      expect(fixture.query('[aria-live="polite"]')?.getAttribute('aria-label')).toBe('Notifications');
-    });
-
-    it('assertive region exists for critical toasts', async () => {
-      fixture = await mount('ore-toast');
-
-      expect(fixture.query('[aria-live="assertive"]')).toBeTruthy();
-    });
-
-    it('assertive region label is Critical notifications', async () => {
-      fixture = await mount('ore-toast');
-
-      expect(fixture.query('[aria-live="assertive"]')?.getAttribute('aria-label')).toBe('Critical notifications');
-    });
-  });
-
-  describe('Close button', () => {
-    it('close button has aria-label', async () => {
-      fixture = await mount('ore-toast');
-
-      (fixture.element as HTMLElement & ToastElement).add({ duration: 0, message: 'A11y test' });
-      await fixture.flush();
-
-      const btn = getCloseButton(fixture);
-
-      expect(btn?.getAttribute('aria-label')).toBe('Dismiss alert');
-    });
-
-    it('close button is keyboard accessible via click', async () => {
-      fixture = await mount('ore-toast');
-
-      const el = fixture.element as HTMLElement & ToastElement;
-      const handler = vi.fn();
-
-      el.addEventListener('dismiss', handler);
-
-      const id = el.add({ dismissible: true, duration: 0, message: 'Keyboard close' });
-
-      await fixture.flush();
-
-      const btn = getCloseButton(fixture);
-
-      expect(btn).toBeTruthy();
-
-      fireClick(btn!);
-      await fixture.flush();
-
-      await completeExit(fixture, () => fixture.flush());
-
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ detail: { id } }));
-    });
-
-    it('toasts with urgency assertive route to assertive live region', async () => {
-      fixture = await mount('ore-toast');
-
-      (fixture.element as HTMLElement & ToastElement).add({
-        duration: 0,
-        message: 'Critical!',
-        urgency: 'assertive',
-      });
-      await fixture.flush();
-
-      const assertiveRegion = fixture.query('[aria-live="assertive"]');
-
-      expect(assertiveRegion?.querySelector('ore-alert')).toBeTruthy();
-    });
-  });
-});
-
-// ── createToastService tests ──────────────────────────────────────────────────
-
-describe('createToastService', () => {
-  let fixture: Fixture<HTMLElement & ToastElement>;
-
-  beforeAll(async () => {
-    await import('../alert/alert');
-    await import('./toast');
-  });
-
-  afterEach(() => {
-    fixture?.dispose();
-  });
-
-  it('re-uses an existing mounted ore-toast inside the root', async () => {
-    // mount() produces a fully-initialized ore-toast (onMounted has fired).
+  beforeEach(async () => {
     fixture = await mount('ore-toast');
-
-    const container = fixture.element.parentElement!;
-    const countBefore = container.querySelectorAll('ore-toast').length;
-
-    // Service points at the same container — should find the existing element.
-    const service = createToastService(container);
-
-    service.add({ duration: 0, message: 'Reuse' });
-    await fixture.flush();
-
-    // No new ore-toast was created.
-    expect(container.querySelectorAll('ore-toast').length).toBe(countBefore);
-  });
-
-  it('applies pendingConfig attributes on the auto-created element', () => {
-    // Don't call add() — just verify that configure() stores config which is
-    // applied when the element is eventually created.
-    const container = document.createElement('div');
-
-    document.body.appendChild(container);
-
-    const service = createToastService(container);
-
-    service.configure({ max: 3, position: 'top-left' });
-
-    // Stub add so we can verify configure was stored without triggering onMounted.
-    const addSpy = vi.fn().mockReturnValue('id');
-
-    service.add = addSpy;
-    service.add({ message: 'noop' });
-
-    // pendingConfig must be set — verify indirectly by checking that configure()
-    // does NOT warn (it was called before any host creation).
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    // configure() should be a no-op warning since host isn't created yet.
-    // But wait — host is not created yet (add is stubbed). So this configure call
-    // should also be silently merged.
-    service.configure({ max: 5 });
-    expect(warnSpy).not.toHaveBeenCalled();
-
-    warnSpy.mockRestore();
-    container.remove();
-  });
-
-  it('configure() warns in dev when called after container was already created', async () => {
-    fixture = await mount('ore-toast');
-
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    // Service targeting the fixture's parent finds the existing mounted element.
-    const service = createToastService(fixture.element.parentElement!);
-
-    // add() uses the already-mounted element — no new creation needed.
-    service.add({ duration: 0, message: 'Trigger' });
-    await fixture.flush();
-
-    service.configure({ position: 'top-left' });
-
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('toast.configure() called after'));
-
-    warnSpy.mockRestore();
-  });
-
-  it('two independent services pointing at different containers are isolated', async () => {
-    const containerA = document.createElement('div');
-    const containerB = document.createElement('div');
-
-    document.body.appendChild(containerA);
-    document.body.appendChild(containerB);
-
-    const fixtureA = await mount('ore-toast', { container: containerA });
-    const fixtureB = await mount('ore-toast', { container: containerB });
-
-    const serviceA = createToastService(containerA);
-    const serviceB = createToastService(containerB);
-
-    const idA = serviceA.add({ duration: 0, message: 'A' });
-    const idB = serviceB.add({ duration: 0, message: 'B' });
-
-    await fixtureA.flush();
-    await fixtureB.flush();
-
-    // Each service's toast only appears in its own ore-toast's shadow root.
-    const shadowA = containerA.querySelector('ore-toast')?.shadowRoot;
-    const shadowB = containerB.querySelector('ore-toast')?.shadowRoot;
-
-    expect(shadowA?.querySelector(`[data-toast-id="${idA}"]`)).toBeTruthy();
-    expect(shadowA?.querySelector(`[data-toast-id="${idB}"]`)).toBeNull();
-
-    expect(shadowB?.querySelector(`[data-toast-id="${idB}"]`)).toBeTruthy();
-    expect(shadowB?.querySelector(`[data-toast-id="${idA}"]`)).toBeNull();
-
-    fixtureA.dispose();
-    fixtureB.dispose();
-    containerA.remove();
-    containerB.remove();
-  });
-});
-
-// ── ToastService shortcut methods ─────────────────────────────────────────────
-
-describe('toast service shortcuts', () => {
-  let container: HTMLElement;
-
-  beforeAll(async () => {
-    await import('../alert/alert');
-    await import('./toast');
-  });
-
-  beforeEach(() => {
-    container = document.createElement('div');
-    document.body.appendChild(container);
+    service = createToastService(fixture.element.parentElement!);
   });
 
   afterEach(() => {
-    container.remove();
-  });
-
-  const makeStubService = () => {
-    const service = createToastService(container);
-    // Stub add() so shortcuts can be tested without a live DOM element.
-    const addSpy = vi.fn().mockReturnValue('stub-id');
-
-    service.add = addSpy;
-
-    return { addSpy, service };
-  };
-
-  it('success() calls add with color: success', () => {
-    const { addSpy, service } = makeStubService();
-
-    service.success('Saved!');
-
-    expect(addSpy).toHaveBeenCalledWith(expect.objectContaining({ color: 'success', message: 'Saved!' }));
-  });
-
-  it('error() calls add with color: error', () => {
-    const { addSpy, service } = makeStubService();
-
-    service.error('Failed');
-
-    expect(addSpy).toHaveBeenCalledWith(expect.objectContaining({ color: 'error', message: 'Failed' }));
-  });
-
-  it('info() calls add with color: info', () => {
-    const { addSpy, service } = makeStubService();
-
-    service.info('FYI');
-
-    expect(addSpy).toHaveBeenCalledWith(expect.objectContaining({ color: 'info', message: 'FYI' }));
-  });
-
-  it('warning() calls add with color: warning', () => {
-    const { addSpy, service } = makeStubService();
-
-    service.warning('Heads up');
-
-    expect(addSpy).toHaveBeenCalledWith(expect.objectContaining({ color: 'warning', message: 'Heads up' }));
-  });
-
-  it('shortcut opts are merged with lower priority than color', () => {
-    const { addSpy, service } = makeStubService();
-
-    service.success('Done', { duration: 0, heading: 'Result' });
-
-    expect(addSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ color: 'success', duration: 0, heading: 'Result', message: 'Done' }),
-    );
-  });
-});
-
-// ── ToastService.promise() ─────────────────────────────────────────────────────
-
-describe('toast service promise()', () => {
-  let fixture: Fixture<HTMLElement & ToastElement>;
-  let container: HTMLElement;
-
-  beforeAll(async () => {
-    await import('../alert/alert');
-    await import('./toast');
-  });
-
-  beforeEach(() => {
-    container = document.createElement('div');
-    document.body.appendChild(container);
-  });
-
-  afterEach(() => {
-    fixture?.dispose();
-    container.remove();
-  });
-
-  it('shows the loading message, then the success message on resolution', async () => {
-    fixture = await mount('ore-toast', { container });
-
-    const service = createToastService(container);
-    let resolvePromise!: (value: string) => void;
-    const pending = new Promise<string>((resolve) => {
-      resolvePromise = resolve;
-    });
-
-    const result = service.promise(pending, {
-      error: 'Upload failed',
-      loading: 'Uploading…',
-      success: (url) => `Uploaded to ${url}`,
-    });
-
-    await fixture.flush();
-
-    expect(fixture.query('ore-alert')?.textContent?.trim()).toContain('Uploading…');
-
-    resolvePromise('https://example.com/file');
-    await result;
-    await fixture.flush();
-
-    expect(fixture.query('ore-alert')?.getAttribute('color')).toBe('success');
-    expect(fixture.query('ore-alert')?.textContent?.trim()).toContain('Uploaded to https://example.com/file');
-  });
-
-  it('shows the error message and rethrows on rejection', async () => {
-    fixture = await mount('ore-toast', { container });
-
-    const service = createToastService(container);
-    const pending = Promise.reject(new Error('boom'));
-
-    await expect(
-      service.promise(pending, { error: 'Upload failed', loading: 'Uploading…', success: 'Done' }),
-    ).rejects.toThrow('boom');
-
-    await fixture.flush();
-
-    expect(fixture.query('ore-alert')?.getAttribute('color')).toBe('error');
-    expect(fixture.query('ore-alert')?.textContent?.trim()).toContain('Upload failed');
-  });
-
-  it('supports a function form for the error message', async () => {
-    fixture = await mount('ore-toast', { container });
-
-    const service = createToastService(container);
-    const pending = Promise.reject(new Error('network down'));
-
-    await expect(
-      service.promise(pending, {
-        error: (err) => `Failed: ${(err as Error).message}`,
-        loading: 'Uploading…',
-        success: 'Done',
-      }),
-    ).rejects.toThrow();
-
-    await fixture.flush();
-
-    expect(fixture.query('ore-alert')?.textContent?.trim()).toContain('Failed: network down');
-  });
-});
-
-// ── Hover/focus pause-on-interaction ────────────────────────────────────────────
-
-describe('ore-toast hover/focus pause', () => {
-  let fixture: Fixture<HTMLElement & ToastElement>;
-
-  beforeAll(async () => {
-    await import('../alert/alert');
-    await import('./toast');
-  });
-
-  afterEach(() => {
+    service?.dispose();
     fixture?.dispose();
   });
 
-  it('pauses the auto-dismiss timer on pointerenter and resumes on pointerleave', async () => {
-    fixture = await mount('ore-toast');
+  it('is a declarative host without public mutation methods', () => {
+    expect('add' in fixture.element).toBe(false);
+    expect('clear' in fixture.element).toBe(false);
+    expect('dismiss' in fixture.element).toBe(false);
+    expect('update' in fixture.element).toBe(false);
+  });
 
-    fixture.element.add({ duration: 40, message: 'Auto-dismiss me' });
+  it('renders the service store in polite and assertive live regions', async () => {
+    service.add({ duration: 0, message: 'Saved' });
+    service.add({ color: 'error', duration: 0, message: 'Failed' });
+    await fixture.flush();
+
+    expect(fixture.query('[aria-live="polite"] ore-alert')?.textContent).toContain('Saved');
+    expect(fixture.query('[aria-live="assertive"] ore-alert')?.textContent).toContain('Failed');
+  });
+
+  it('renders configured host attributes declaratively', () => {
+    expect(fixture.element.getAttribute('position')).toBe('bottom-right');
+    expect(fixture.element.getAttribute('max')).toBe('5');
+  });
+
+  it('dismisses from the service after the exit transition', async () => {
+    const dismissed = vi.fn();
+    const id = service.add({ duration: 0, message: 'Dismiss me', onDismiss: dismissed });
+
+    await fixture.flush();
+
+    service.dismiss(id);
+    await fixture.flush();
+    expect(fixture.query('.toast-inner.exiting')).toBeTruthy();
+
+    await completeExit(fixture, fixture.flush);
+
+    expect(fixture.query(`[data-toast-id="${id}"]`)).toBeNull();
+    expect(dismissed).toHaveBeenCalledOnce();
+  });
+
+  it('allows the alert close button to dismiss through its bound store', async () => {
+    service.add({ duration: 0, message: 'Closable' });
+    await fixture.flush();
+
+    fireClick(getCloseButton(fixture)!);
+    await fixture.flush();
+    await completeExit(fixture, fixture.flush);
+
+    expect(fixture.query('ore-alert')).toBeNull();
+  });
+
+  it('evicts the oldest notification when the scoped service max is reached', async () => {
+    service.dispose();
+
+    fixture.dispose();
+
+    fixture = await mount('ore-toast', { attrs: { max: '1' } });
+
+    service = createToastService(fixture.element.parentElement!);
+
+    const first = service.add({ duration: 0, message: 'First' });
+
+    service.add({ duration: 0, message: 'Second' });
+    await fixture.flush();
+
+    expect(fixture.query(`[data-toast-id="${first}"] .toast-inner.exiting`)).toBeTruthy();
+  });
+
+  it('pauses service-owned timers on hover and resumes them afterward', async () => {
+    service.add({ duration: 40, message: 'Read me' });
+
     await fixture.flush();
 
     const container = fixture.element.shadowRoot!.querySelector('.toast-container')!;
 
     container.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
-    await delay(80);
-    await fixture.flush();
 
-    // Timer was paused before it could fire — the toast is still present.
-    expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeTruthy();
+    await delay(80);
+
+    expect(fixture.query('ore-alert')).toBeTruthy();
 
     container.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
-    await delay(80);
-    await completeExit(fixture, fixture.flush);
 
-    expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeNull();
+    await delay(80);
+
+    await completeExit(fixture, fixture.flush);
+    expect(fixture.query('ore-alert')).toBeNull();
   });
 
-  it('pauses the auto-dismiss timer on focusin and resumes on focusout', async () => {
-    fixture = await mount('ore-toast');
+  it('dismisses a toast after a committed swipe', async () => {
+    const originalMatchMedia = window.matchMedia;
 
-    fixture.element.add({ duration: 40, message: 'Auto-dismiss me' });
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false });
+
+    const id = service.add({ duration: 0, message: 'Swipe me' });
+
     await fixture.flush();
 
-    const container = fixture.element.shadowRoot!.querySelector('.toast-container')!;
+    const wrapper = fixture.query<HTMLElement>(`[data-toast-id="${id}"]`)!;
 
-    container.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-    await delay(80);
+    const inner = wrapper.querySelector<HTMLElement>('.toast-inner')!;
+
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 1 }));
+    wrapper.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 300, pointerId: 1 }));
+    inner.dispatchEvent(new TransitionEvent('transitionend', { bubbles: true, propertyName: 'transform' }));
     await fixture.flush();
 
-    expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeTruthy();
+    expect(fixture.query(`[data-toast-id="${id}"]`)).toBeNull();
 
-    container.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
-    await delay(80);
-    await completeExit(fixture, fixture.flush);
+    window.matchMedia = originalMatchMedia;
+  });
 
-    expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeNull();
+  it('passes axe checks', async () => {
+    const results = await axeCheck(fixture.element);
+
+    expect(results.violations).toHaveLength(0);
   });
 });
 
-// ── Swipe-to-dismiss ─────────────────────────────────────────────────────────────
-
-describe('ore-toast swipe-to-dismiss', () => {
-  let fixture: Fixture<HTMLElement & ToastElement>;
-  let originalMatchMedia: typeof window.matchMedia;
+describe('createToastService', () => {
+  let container: HTMLElement;
 
   beforeAll(async () => {
     await import('../alert/alert');
@@ -869,77 +157,132 @@ describe('ore-toast swipe-to-dismiss', () => {
   });
 
   beforeEach(() => {
-    // onCommit checks prefers-reduced-motion — jsdom has no matchMedia by default.
-    originalMatchMedia = window.matchMedia;
-    window.matchMedia = vi.fn().mockImplementation(() => ({
-      addEventListener: vi.fn(),
-      matches: false,
-      removeEventListener: vi.fn(),
-    }));
+    container = document.createElement('div');
+    document.body.appendChild(container);
   });
 
   afterEach(() => {
-    fixture?.dispose();
-    window.matchMedia = originalMatchMedia;
+    container.remove();
   });
 
-  it('dismisses the toast when a pointer swipe crosses the commit threshold', async () => {
-    fixture = await mount('ore-toast');
+  it('reuses one scoped store and declarative host per root', async () => {
+    const fixture = await mount('ore-toast', { container });
 
-    fixture.element.add({ duration: 0, message: 'Swipe me' });
+    const first = createToastService(container);
+
+    const second = createToastService(container);
+
+    const id = first.add({ duration: 0, message: 'Scoped' });
+
     await fixture.flush();
 
-    const wrapper = fixture.element.shadowRoot!.querySelector<HTMLElement>('.toast-wrapper')!;
-    const inner = wrapper.querySelector<HTMLElement>('.toast-inner')!;
-
-    wrapper.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, clientY: 0, pointerId: 1 }));
-    wrapper.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 300, clientY: 0, pointerId: 1 }));
-    wrapper.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 300, clientY: 0, pointerId: 1 }));
-    await fixture.flush();
-
-    // jsdom doesn't run real CSS transitions — simulate the transitionend that
-    // onCommit's animated-removal path waits for.
-    inner.dispatchEvent(new TransitionEvent('transitionend', { bubbles: true, propertyName: 'transform' }));
-    await fixture.flush();
-
-    expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeNull();
+    expect(second).toBe(first);
+    expect(container.querySelectorAll('ore-toast')).toHaveLength(1);
+    expect(fixture.query(`[data-toast-id="${id}"]`)).toBeTruthy();
+    fixture.dispose();
   });
 
-  it('snaps back without dismissing when the swipe does not cross the commit threshold', async () => {
-    fixture = await mount('ore-toast');
+  it('isolates services and notifications by scope', async () => {
+    const other = document.createElement('div');
 
-    fixture.element.add({ duration: 0, message: 'Small nudge' });
+    document.body.appendChild(other);
+
+    const fixtureA = await mount('ore-toast', { container });
+
+    const fixtureB = await mount('ore-toast', { container: other });
+
+    const idA = createToastService(container).add({ duration: 0, message: 'A' });
+
+    const idB = createToastService(other).add({ duration: 0, message: 'B' });
+
+    await fixtureA.flush();
+    await fixtureB.flush();
+
+    expect(fixtureA.query(`[data-toast-id="${idA}"]`)).toBeTruthy();
+    expect(fixtureA.query(`[data-toast-id="${idB}"]`)).toBeNull();
+    expect(fixtureB.query(`[data-toast-id="${idB}"]`)).toBeTruthy();
+    other.remove();
+    fixtureA.dispose();
+    fixtureB.dispose();
+  });
+
+  it('applies configuration before lazily creating its host', () => {
+    const service = createToastService(container);
+
+    service.configure({ max: 3, position: 'top-left' });
+
+    service.add({ duration: 0, message: 'Configured' });
+
+    const host = container.querySelector('ore-toast')!;
+
+    expect(host.getAttribute('max')).toBe('3');
+    expect(host.getAttribute('position')).toBe('top-left');
+  });
+
+  it('cleans up timers and subscriptions when disposed', async () => {
+    const fixture = await mount('ore-toast', { container });
+
+    const service = createToastService(container);
+
+    service.add({ duration: 1000, message: 'Pending' });
+
     await fixture.flush();
 
-    const wrapper = fixture.element.shadowRoot!.querySelector<HTMLElement>('.toast-wrapper')!;
-
-    wrapper.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, clientY: 0, pointerId: 1 }));
-    wrapper.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 5, clientY: 0, pointerId: 1 }));
-    wrapper.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 5, clientY: 0, pointerId: 1 }));
+    service.dispose();
     await fixture.flush();
 
-    expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeTruthy();
+    expect(service.disposed).toBe(true);
+    expect(service.disposalSignal.aborted).toBe(true);
+    expect(fixture.query('ore-alert')).toBeNull();
+    fixture.dispose();
   });
 });
 
-describe('ore-toast accessibility', () => {
+describe('toast service shortcuts and promises', () => {
   let fixture: Fixture<HTMLElement>;
+  let service: ReturnType<typeof createToastService>;
 
   beforeAll(async () => {
+    await import('../alert/alert');
     await import('./toast');
   });
 
+  beforeEach(async () => {
+    fixture = await mount('ore-toast');
+
+    service = createToastService(fixture.element.parentElement!);
+  });
+
   afterEach(() => {
+    service?.dispose();
     fixture?.dispose();
   });
 
-  describe('Accessibility', () => {
-    it('passes axe checks', async () => {
-      fixture = await mount('ore-toast-provider');
+  it.each([
+    ['success', 'success'],
+    ['error', 'error'],
+    ['info', 'info'],
+    ['warning', 'warning'],
+  ] as const)('%s shortcut uses the %s colour', async (shortcut, color) => {
+    service[shortcut]('Message', { duration: 0 });
+    await fixture.flush();
 
-      const results = await axeCheck(fixture.element);
+    expect(fixture.query('ore-alert')?.getAttribute('color')).toBe(color);
+  });
 
-      expect(results.violations).toHaveLength(0);
+  it('updates its loading toast when a promise resolves', async () => {
+    const result = service.promise(Promise.resolve('file'), {
+      error: 'Failed',
+      loading: 'Uploading',
+      success: (file) => `Uploaded ${file}`,
     });
+
+    await result;
+    await fixture.flush();
+
+    await retry(() => {
+      expect(fixture.query('ore-alert')?.textContent).toContain('Uploaded file');
+    });
+    expect(fixture.query('ore-alert')?.getAttribute('color')).toBe('success');
   });
 });

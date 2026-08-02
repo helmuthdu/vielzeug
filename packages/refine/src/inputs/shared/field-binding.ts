@@ -32,7 +32,7 @@ export type CheckableBindingHandle = {
  *
  * @example
  * ```ts
- * bind({ attr: { error: errorAttr(errorText), size: fCtxProps.size, variant: fCtxProps.variant } });
+ * bind({ attr: { error: errorAttr(errorText), size: props.size, variant: props.variant } });
  * ```
  */
 export const errorAttr = (errorText: Readable<string>): (() => string | undefined) => {

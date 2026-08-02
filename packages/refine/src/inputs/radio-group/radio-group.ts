@@ -3,7 +3,6 @@ import {
   createStableId,
   define,
   html,
-  inject,
   prop,
   bind,
   getHost,
@@ -26,10 +25,9 @@ import {
   createListControl,
   getChoiceLabel,
   getLightChildrenByTag,
-} from '../../headless';
+} from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { disabledStateMixin } from '../../styles';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
 import componentStyles from './radio-group.css?inline';
 
 /** Radio group component properties */
@@ -130,18 +128,14 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
     const slots = useSlots();
     const watch = watchEffect;
 
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
-
     const choice = createChoiceField({
-      disabled: fCtxProps.disabled,
+      disabled: props.disabled,
       error: props.error,
       helper: props.helper,
       label: props.label,
       prefix: 'radio-group',
       required: props.required,
       signal: lifecycleSignal(onCleanup),
-      validateOn: formCtx?.validateOn,
       value: props.value,
     });
 
@@ -157,11 +151,11 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
     );
 
     const selectedValue = choice.selectedValue;
-    const isDisabled = fCtxProps.disabled;
+    const isDisabled = props.disabled;
 
     bind({
       attr: {
-        size: fCtxProps.size,
+        size: props.size,
         value: () => selectedValue.value || null,
       },
     });

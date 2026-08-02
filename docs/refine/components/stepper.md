@@ -27,7 +27,8 @@ By default the stepper is display-only — steps before the current `value` are 
 </ore-stepper>
 
 <script type="module">
-  import '@vielzeug/refine';
+  import '@vielzeug/refine/stepper';
+  import '@vielzeug/refine/step';
 
   document.getElementById('wizard').addEventListener('change', (e) => {
     console.log('Now on step:', e.detail.value);
@@ -195,7 +196,9 @@ applyOrientation();
 <ore-alert id="saved-alert" hidden color="success" role="status" aria-live="polite">Shipping details saved</ore-alert>
 
 <script type="module">
-  import '@vielzeug/refine';
+  import '@vielzeug/refine/alert';
+  import '@vielzeug/refine/stepper';
+  import '@vielzeug/refine/step';
 
   async function saveShipping() {
     await api.saveShippingDetails();

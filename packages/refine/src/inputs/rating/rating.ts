@@ -1,19 +1,20 @@
-import { createStableId, define, html, inject, prop, bind, getHost, useEmit } from '@vielzeug/ore';
+import { createStableId, define, html, prop, bind, getHost } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { createErrorHelperState, createSliderControl } from '../../headless';
+import { createErrorHelperState, createSliderControl } from '../../core';
 import '../../content/icon/icon';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './rating.css?inline';
 
 export type OreRatingEvents = {
-  change: { originalEvent?: Event; value: number };
+  change: Event;
+  input: Event;
 };
 
 /** Rating props */
@@ -59,7 +60,8 @@ export type OreRatingProps = {
  * @attr {string} helper - Helper text below the stars
  * @attr {string} error - Error message below the stars
  *
- * @fires change - Emitted when value changes. detail: { value: number, originalEvent?: Event }
+ * @fires input - Emitted when the rating changes.
+ * @fires change - Emitted when the rating changes.
  *
  * @cssprop --rating-star-size - Star diameter
  * @cssprop --rating-color-empty - Empty star color
@@ -93,11 +95,6 @@ define<OreRatingProps>(RATING_TAG, {
   },
   setup(props) {
     const el = getHost();
-    const emit = useEmit<OreRatingEvents>();
-
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
-
     const normalizedValue = computed(() => {
       const max = Math.max(1, Number(props.max!.value) || 5);
       const raw = Number(props.value!.value);
@@ -106,16 +103,20 @@ define<OreRatingProps>(RATING_TAG, {
       return Math.min(max, Math.max(0, safe));
     });
 
-    const fd = useField({
-      disabled: fCtxProps.disabled,
+    const isDisabled = computed(() => Boolean(props.disabled.value));
+
+    defineFieldValue(
+      el,
+      () => String(normalizedValue.value),
+      (value) => {
+        el.setAttribute('value', value);
+      },
+    );
+
+    useField({
+      disabled: isDisabled,
       value: computed(() => String(normalizedValue.value || 0)),
     });
-
-    const triggerValidation = (on: 'blur' | 'change') => {
-      if (formCtx?.validateOn?.value === on) {
-        fd.reportValidity();
-      }
-    };
 
     const assistiveId = createStableId('helper');
     const assistive = createErrorHelperState({ error: props.error, helper: props.helper });
@@ -123,7 +124,7 @@ define<OreRatingProps>(RATING_TAG, {
     const helperText = computed(() => assistive.value.helperText);
     const ariaDescribedBy = computed(() => (errorText.value || helperText.value ? assistiveId : null));
 
-    const isInteractive = computed(() => !props.readonly!.value && !fCtxProps.disabled.value);
+    const isInteractive = computed(() => !props.readonly!.value && !isDisabled.value);
     const hovered = signal<number | null>(null);
     const displayValue = computed(() => hovered.value ?? normalizedValue.value);
     const getStarButtons = () => {
@@ -167,7 +168,7 @@ define<OreRatingProps>(RATING_TAG, {
         p.addEventListener('animationend', () => p.remove(), { once: true });
       }
     }
-    function select(star: number, originalEvent?: Event) {
+    function select(star: number, _originalEvent?: Event) {
       if (!isInteractive.value) return;
 
       const max = Math.max(1, Number(props.max!.value) || 5);
@@ -175,10 +176,9 @@ define<OreRatingProps>(RATING_TAG, {
 
       if (nextValue === normalizedValue.value) return;
 
-      // Write through the host attribute; ore handles host reflection.
-      el.setAttribute('value', String(nextValue));
-      emit('change', { originalEvent, value: nextValue });
-      triggerValidation('change');
+      setFieldValue(el, String(nextValue));
+      dispatchNativeFieldEvent(el, 'input');
+      dispatchNativeFieldEvent(el, 'change');
       spawnSparkles(nextValue);
     }
     function handleKeydown(e: KeyboardEvent, star: number) {
@@ -200,7 +200,7 @@ define<OreRatingProps>(RATING_TAG, {
       return Array.from({ length: max }, (_, i) => i + 1);
     });
 
-    bind({ attr: { size: fCtxProps.size } });
+    bind({ attr: { size: props.size } });
 
     return html`
       <div

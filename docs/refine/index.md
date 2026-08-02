@@ -34,7 +34,6 @@ exports:
     ore-dialog,
     ore-drawer,
     ore-file-input,
-    ore-form,
     ore-grid,
     ore-grid-item,
     ore-icon,
@@ -136,7 +135,7 @@ yarn add @vielzeug/refine
 
 ```ts
 // 1. Import global styles once
-import '@vielzeug/refine/styles';
+import '@vielzeug/refine/tokens.css';
 
 // 2. Register only the elements you need
 import '@vielzeug/refine/button';
@@ -154,9 +153,6 @@ import '@vielzeug/refine/card';
 ```
 
 ```ts
-// Or register everything at once
-import '@vielzeug/refine/styles';
-import '@vielzeug/refine';
 ```
 
 ### CDN / Vanilla HTML
@@ -165,7 +161,7 @@ Use the self-contained IIFE bundle to load Refine directly from a CDN in any HTM
 
 ```html
 <!-- 1. Styles -->
-<link rel="stylesheet" href="https://unpkg.com/@vielzeug/refine/dist/styles/styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/@vielzeug/refine/dist/styles/tokens.css" />
 
 <!-- 2. All components (IIFE — registers global Refine namespace) -->
 <script src="https://unpkg.com/@vielzeug/refine/dist/refine.iife.js"></script>
@@ -194,23 +190,20 @@ For bundler-based projects that still want a CDN URL, use the ESM bundle via an 
 
 | Import                   | Purpose                                   |
 | ------------------------ | ----------------------------------------- |
-| `@vielzeug/refine`        | Register all published components         |
-| `@vielzeug/refine/styles` | Global tokens and shared component styles |
-| `@vielzeug/refine/types`  | Shared TypeScript types                   |
+| `@vielzeug/refine/tokens.css` | Global design tokens and cascade layers |
+| `@vielzeug/refine/styles/preflight.css` | Optional browser-default reset |
 
 Component registration happens through side-effect imports such as `@vielzeug/refine/button` and `@vielzeug/refine/dialog`.
 
-Headless widget controllers (`createTextField`, `createListControl`, `createOverlayControl`, and others) are exported directly from `@vielzeug/refine` alongside component types.
-
 ### Components
 
-**Content:** `ore-avatar`, `ore-avatar-group`, `ore-breadcrumb`, `ore-card`, `ore-carousel`, `ore-carousel-slide`, `ore-chat-message`, `ore-icon`, `ore-list`, `ore-list-item`, `ore-pagination`, `ore-separator`, `ore-step`, `ore-stepper`, `ore-table`, `ore-text`
+**Content:** `ore-avatar`, `ore-avatar-group`, `ore-breadcrumb`, `ore-card`, `ore-carousel`, `ore-carousel-slide`, `ore-chat-message`, `ore-icon`, `ore-list`, `ore-list-item`, `ore-marquee`, `ore-pagination`, `ore-separator`, `ore-step`, `ore-stepper`, `ore-table`, `ore-text`
 
 **Disclosure:** `ore-accordion`, `ore-accordion-item`, `ore-tabs`, `ore-tab-item`, `ore-tab-panel`
 
 **Feedback:** `ore-alert`, `ore-async`, `ore-badge`, `ore-chip`, `ore-password-strength`, `ore-progress`, `ore-skeleton`, `ore-toast`, `ore-typing-indicator`
 
-**Inputs:** `ore-button`, `ore-button-group`, `ore-calendar`, `ore-checkbox`, `ore-checkbox-group`, `ore-column`, `ore-combobox`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-form`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-radio`, `ore-radio-group`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
+**Inputs:** `ore-button`, `ore-button-group`, `ore-calendar`, `ore-checkbox`, `ore-checkbox-group`, `ore-column`, `ore-combobox`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-input`, `ore-message-composer`, `ore-number-input`, `ore-otp-input`, `ore-radio`, `ore-radio-group`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
 
 **Layout:** `ore-box`, `ore-grid`, `ore-grid-item`, `ore-navbar`, `ore-sidebar`
 
@@ -232,7 +225,7 @@ Headless widget controllers (`createTextField`, `createListControl`, `createOver
 ### Prerequisites
 
 - Browser runtime with Custom Elements support.
-- Import `@vielzeug/refine/styles` before rendering components.
+- Import `@vielzeug/refine/tokens.css` before rendering components.
 - For SSR, render placeholders server-side and hydrate components only on the client.
 
 ## Documentation
@@ -241,7 +234,6 @@ Headless widget controllers (`createTextField`, `createListControl`, `createOver
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
-- [Examples](./examples.md)
 
 </div>
 

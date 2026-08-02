@@ -1,6 +1,6 @@
 # Carousel
 
-An accessible, keyboard-navigable carousel and slideshow. Place `<ore-carousel-slide>` children directly inside — no JS array or data binding required. Supports autoplay, swipe gestures, indicator dots, and five layout variants including continuous marquee scrolling.
+An accessible, keyboard-navigable carousel and slideshow. Place `<ore-carousel-slide>` children directly inside — no JS array or data binding required. Supports autoplay, swipe gestures, indicator dots, and four layout variants.
 
 ## Basic Usage
 
@@ -329,77 +329,6 @@ The active slide dominates (~4× the size of thumbnails); the immediately adjace
 
 </ComponentPreview>
 
-### Marquee
-
-A continuously scrolling ticker. Slides are cloned internally to create a seamless loop. Scrolling pauses on `pointerenter` and resumes on `pointerleave`. Use `marquee-duration` (seconds, default `10`) to control speed — lower values scroll faster.
-
-Set `loop="false"` to run the animation once then stop. Controls and indicators are shown by default and work the same as other variants.
-
-Set an explicit `width` on each slide in `marquee` mode so the seamless loop transition point is predictable. Do not use the `marquee` variant for content that users need to read carefully; the continuous motion is unsuitable for anything requiring sustained attention.
-
-::: warning Marquee and motion sensitivity
-Even with `prefers-reduced-motion` support, the marquee variant still presents rapidly-changing content that can be distracting. Consider hiding the `marquee` variant entirely for users with motion sensitivity who may not have the OS preference set.
-:::
-
-<ComponentPreview>
-
-```html
-<ore-carousel label="Marquee ticker" variant="marquee" marquee-duration="20" style="height:120px">
-  <ore-carousel-slide
-    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);width:200px"
-    ><ore-text color="heading">Item A</ore-text></ore-carousel-slide
-  >
-  <ore-carousel-slide
-    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);width:200px"
-    ><ore-text color="heading">Item B</ore-text></ore-carousel-slide
-  >
-  <ore-carousel-slide
-    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);width:200px"
-    ><ore-text color="heading">Item C</ore-text></ore-carousel-slide
-  >
-  <ore-carousel-slide
-    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);width:200px"
-    ><ore-text color="heading">Item D</ore-text></ore-carousel-slide
-  >
-</ore-carousel>
-```
-
-</ComponentPreview>
-
-#### Vertical Marquee
-
-Add `orientation="vertical"` for a top-to-bottom ticker. Set an explicit `height` on each slide to control row size.
-
-<ComponentPreview>
-
-```html
-<ore-carousel
-  label="Vertical marquee"
-  variant="marquee"
-  orientation="vertical"
-  marquee-duration="12"
-  style="height:300px;width:240px">
-  <ore-carousel-slide
-    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:180px"
-    ><ore-text color="heading">Item A</ore-text></ore-carousel-slide
-  >
-  <ore-carousel-slide
-    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);height:180px"
-    ><ore-text color="heading">Item B</ore-text></ore-carousel-slide
-  >
-  <ore-carousel-slide
-    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);height:180px"
-    ><ore-text color="heading">Item C</ore-text></ore-carousel-slide
-  >
-  <ore-carousel-slide
-    style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);height:180px"
-    ><ore-text color="heading">Item D</ore-text></ore-carousel-slide
-  >
-</ore-carousel>
-```
-
-</ComponentPreview>
-
 ## Keyboard Navigation
 
 | Key                        | Action         |
@@ -418,13 +347,12 @@ Arrow key direction adjusts automatically for `orientation="vertical"`. When `lo
 | Name                | Type                                                                      | Default        | Description                                                                                                                                                                                                     |
 | ------------------- | ------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `label`             | `string`                                                                  | `'Carousel'`   | `aria-label` for the `role="region"` landmark                                                                                                                                                                   |
-| `variant`           | `'default' \| 'fade' \| 'filmstrip' \| 'gallery' \| 'marquee'`            | `'default'`    | Layout and transition style                                                                                                                                                                                     |
+| `variant`           | `'default' \| 'fade' \| 'filmstrip' \| 'gallery'`                           | `'default'`    | Layout and transition style                                                                                                                                                                                     |
 | `orientation`       | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Slide direction and keyboard axis                                                                                                                                                                               |
 | `slide-index`       | `number`                                                                  | `0`            | Active slide (zero-based). Writable at any time; reflected as an attribute after navigation                                                                                                                     |
-| `loop`              | `boolean`                                                                 | `true`         | Wrap last→first and first→last. In `marquee` mode controls animation repeat (loop indefinitely vs. play once) — navigation always loops in marquee. Setting `loop="false"` on marquee emits a dev-mode warning. |
+| `loop`              | `boolean`                                                                 | `true`         | Wrap last→first and first→last.                                                                                                                                                                                 |
 | `autoplay`          | `boolean`                                                                 | `false`        | Advance slides on a timer; pauses on hover and focus                                                                                                                                                            |
 | `autoplay-interval` | `number`                                                                  | `5000`         | Milliseconds between automatic advances; reactive — changing it restarts the timer                                                                                                                              |
-| `marquee-duration`  | `number`                                                                  | `10`           | Duration in seconds for one full marquee cycle; lower = faster                                                                                                                                                  |
 | `color`             | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —              | Theme color for prev/next navigation buttons                                                                                                                                                                    |
 | `show-controls`     | `boolean`                                                                 | `true`         | Show prev/next navigation buttons                                                                                                                                                                               |
 | `show-indicators`   | `boolean`                                                                 | `true`         | Show indicator dot navigation                                                                                                                                                                                   |
@@ -442,14 +370,13 @@ Arrow key direction adjusts automatically for `orientation="vertical"`. When `lo
 | `--carousel-bg`                  | `var(--color-canvas)`       | Slide area background                                                                                                                            |
 | `--carousel-radius`              | `var(--rounded-xl)`         | Host border radius                                                                                                                               |
 | `--carousel-min-height`          | `240px`                     | Fallback minimum height — set an explicit height for `filmstrip` and `gallery`                                                                   |
-| `--carousel-transition-duration` | `0.35s`                     | Slide transition duration (`default` and `fade`); also controls marquee seek animation duration. Auto-set to `0s` under `prefers-reduced-motion` |
+| `--carousel-transition-duration` | `0.35s`                     | Slide transition duration (`default` and `fade`). Auto-set to `0s` under `prefers-reduced-motion` |
 | `--carousel-dot-bg`              | `var(--color-contrast-300)` | Inactive indicator dot color                                                                                                                     |
 | `--carousel-dot-active-bg`       | `var(--color-contrast-700)` | Active indicator fill color                                                                                                                      |
 | `--carousel-filmstrip-inactive`  | `var(--size-16)`            | Collapsed width (horizontal) or height (vertical) of inactive filmstrip slides                                                                   |
 | `--carousel-filmstrip-gap`       | `var(--size-2)`             | Gap between slides in `filmstrip` mode                                                                                                           |
 | `--carousel-gallery-thumbnail`   | `var(--size-24)`            | Thumbnail width (horizontal) or height (vertical) in `gallery` mode                                                                              |
 | `--carousel-gallery-gap`         | `var(--size-2)`             | Gap between slides in `gallery` mode                                                                                                             |
-| `--carousel-marquee-gap`         | `var(--size-4)`             | Gap between slides in `marquee` mode                                                                                                             |
 
 **`ore-carousel` CSS Parts**
 
@@ -482,7 +409,7 @@ The host carries `role="region"` and `aria-roledescription="carousel"`. Each `<o
 
 When `autoplay` is on, the timer stops on `focusin` or `pointerenter` so keyboard and pointer users can read slide content uninterrupted, and restarts on `focusout` or `pointerleave`.
 
-The carousel responds to `prefers-reduced-motion: reduce` automatically: `--carousel-transition-duration` is set to `0s`, eliminating slide translation and fade transitions, and the marquee CSS animation is disabled entirely.
+The carousel responds to `prefers-reduced-motion: reduce` automatically: `--carousel-transition-duration` is set to `0s`, eliminating slide translation and fade transitions.
 
 ::: tip Always set `label`
 The `label` attribute becomes the `aria-label` of the `role="region"` landmark. Without it, the region is announced as `"Carousel"` — too generic when a page has multiple carousels.

@@ -1,11 +1,11 @@
-import type { ChoiceChangeDetail, DropdownCloseReason, OverlayOpenDetail } from '../../headless';
+import type { OverlayOpenChangeDetail } from '../../core';
 import type { SelectableFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
 
 export type OreComboboxEvents = {
-  change: ChoiceChangeDetail;
-  close: { reason: DropdownCloseReason };
-  open: OverlayOpenDetail;
+  change: Event;
+  input: Event;
+  'open-change': OverlayOpenChangeDetail;
   search: { query: string };
 };
 
@@ -37,7 +37,7 @@ export type OreComboboxProps = Omit<
   multiple?: boolean;
   'no-filter'?: boolean;
   options?: ComboboxOptionInput[];
-  /** Require a non-blank selection for `<ore-form>` validation */
+  /** Require a non-blank selection for native form validation */
   required?: boolean;
   value?: string | string[];
 };

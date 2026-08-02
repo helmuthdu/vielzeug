@@ -10,7 +10,6 @@ describe('ore-message-composer', () => {
 
   beforeAll(async () => {
     await (() => import('./message-composer'))();
-    await (() => import('../form/form'))();
   });
 
   afterEach(() => {
@@ -600,33 +599,27 @@ describe('ore-message-composer', () => {
     it('emits input on every keystroke with the current value', async () => {
       fixture = await mount('ore-message-composer');
 
-      const inputHandler = vi.fn();
+      let observedValue: string | undefined;
 
-      fixture.element.addEventListener('input', inputHandler);
+      fixture.element.addEventListener('input', (event) => {
+        observedValue = (event.currentTarget as HTMLElement & { value: string }).value;
+      });
 
       getTextarea(fixture).value += 'h';
       fireInput(getTextarea(fixture));
 
-      expect(inputHandler).toHaveBeenCalled();
-      expect((inputHandler.mock.calls[0][0] as CustomEvent).detail.value).toBe('h');
+      expect(observedValue).toBe('h');
     });
 
-    it('participates directly in ore-form FormData collection (no nested field to borrow registration from)', async () => {
-      fixture = await mount('ore-form', {
-        html: '<ore-message-composer name="message" value="hello"></ore-message-composer>',
-      });
+    it('participates directly in native form FormData collection', async () => {
+      const form = document.createElement('form');
 
+      document.body.appendChild(form);
+      fixture = await mount('ore-message-composer', { attrs: { name: 'message', value: 'hello' }, container: form });
       await fixture.flush();
 
-      let capturedData: FormData | undefined;
-
-      fixture.element.addEventListener('submit', (e) => {
-        capturedData = (e as unknown as CustomEvent).detail?.formData as FormData | undefined;
-      });
-
-      fixture.query('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-
-      expect(capturedData?.get('message')).toBe('hello');
+      expect(new FormData(form).get('message')).toBe('hello');
+      form.remove();
     });
   });
 });

@@ -34,12 +34,9 @@ declare global {
   var axeCheck: (node: Element, options?: axe.RunOptions) => Promise<axe.AxeResults>;
 }
 
-// ElementInternals/FormData/`<form>.reset()` jsdom gaps — including the light/shadow boundary
-// `<ore-form>`'s slotted fields cross, which needs the flat-tree walk instead of a plain
-// `querySelectorAll` — are polyfilled by `install()` below, via `@vielzeug/ore/testing`'s
-// `installFormInternalsPolyfill()`. This used to be a second, package-local copy of that same
-// polyfill; the gap it works around is in `ore`'s own form-association feature, not anything
-// refine-specific, so it now lives with the feature instead of being duplicated here.
+// ElementInternals/FormData/`<form>.reset()` jsdom gaps are polyfilled by `install()` below,
+// via `@vielzeug/ore/testing`'s `installFormInternalsPolyfill()`. The gap belongs to Ore's
+// form-association feature, so the polyfill lives with that feature rather than in Refine.
 
 // Polyfill ClipboardEvent for jsdom
 if (typeof ClipboardEvent === 'undefined') {
@@ -56,25 +53,18 @@ install(afterEach, { formInternals: true });
 
 const consoleError = globalThis.console.error;
 const consoleWarn = globalThis.console.warn;
-const isKnownFormContextInjectWarning = (args: unknown[]) =>
-  args.some((arg) => typeof arg === 'string' && arg.includes('[ore:E7] inject key missing: Symbol(FormContext)'));
-
 // ore-async intentionally renders no named slots when status="idle" — the E10
 // warning is expected and harmless in that state.
 const isKnownAsyncSlotWarning = (args: unknown[]) =>
   args.some((arg) => typeof arg === 'string' && arg.includes('[ore:E10]') && arg.includes('<ore-async>'));
 
 globalThis.console.error = (...args: unknown[]) => {
-  if (isKnownFormContextInjectWarning(args)) return;
-
   if (isKnownAsyncSlotWarning(args)) return;
 
   consoleError(...args);
 };
 
 globalThis.console.warn = (...args: unknown[]) => {
-  if (isKnownFormContextInjectWarning(args)) return;
-
   if (isKnownAsyncSlotWarning(args)) return;
 
   consoleWarn(...args);

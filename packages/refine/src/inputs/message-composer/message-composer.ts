@@ -1,4 +1,4 @@
-import { define, html, inject, prop, ref, bind, onCleanup, onElement, useEmit, useSlots } from '@vielzeug/ore';
+import { define, html, prop, ref, bind, getHost, onCleanup, onElement, useEmit, useSlots } from '@vielzeug/ore';
 import { live, useField } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
@@ -11,7 +11,7 @@ import {
   createTextField,
   lifecycleSignal,
   type SendShortcut,
-} from '../../headless';
+} from '../../core';
 import {
   disablableBundle,
   loadableBundle,
@@ -30,21 +30,20 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import { errorAttr } from '../shared/field-binding';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderFieldStatusRegion, renderStatusIcon } from '../shared/templates';
 import '../../content/icon/icon';
 import '../button/button';
 import componentStyles from './message-composer.css?inline';
 
-export type { SendShortcut } from '../../headless';
+export type { SendShortcut } from '../../core';
 
 const DEFAULT_SEND_LABEL = 'Send message';
 const SEND_ICON = 'arrow-up';
 
 /** Events emitted by the message composer */
 export type OreMessageComposerEvents = {
-  /** Fired on every keystroke with the current value. */
-  input: { originalEvent: Event; value: string };
+  input: InputEvent;
   /**
    * Fired for a send attempt (the resolved `send-shortcut` or the send button) while the
    * composer isn't blank/disabled/loading. Cancelable — call `preventDefault()` to keep the
@@ -84,7 +83,7 @@ export type OreMessageComposerProps = {
    * `null` when it unmounts. Set as a JS property: `composer.ref = (el) => { ... }`.
    */
   ref?: ((el: HTMLTextAreaElement | null) => void) | null;
-  /** Require a non-blank value for `<ore-form>` validation */
+  /** Require a non-blank value for native form validation */
   required?: boolean;
   /** Number of visible rows before auto-resize grows the field */
   rows?: number;
@@ -109,7 +108,7 @@ export type OreMessageComposerProps = {
 
 /**
  * A message/comment composer — a card with an auto-resizing field on top and a toolbar row
- * below it, built directly on the same headless primitives as `ore-textarea` (`createTextField`,
+ * below it, built directly on the same core primitives as `ore-textarea` (`createTextField`,
  * `createAutoResize`) rather than composing `ore-textarea` itself. Nesting a fully-styled sibling
  * component and suppressing most of its chrome (as an earlier version of this component did) is
  * a leaky composition — this owns its single `<textarea>` outright, so there's exactly one
@@ -129,7 +128,7 @@ export type OreMessageComposerProps = {
  * @attr {boolean} success - Show an inline success check icon (suppressed while `error` is set)
  * @attr {boolean} disabled - Disable the whole composer
  * @attr {boolean} readonly - Read-only mode
- * @attr {boolean} required - Require a non-blank value for `<ore-form>` validation
+ * @attr {boolean} required - Require a non-blank value for native form validation
  * @attr {boolean} loading - Blocks further sends without disabling editing
  * @attr {number} maxlength - Max character count; shows a counter
  * @attr {number} rows - Visible rows before auto-resize grows the field (default 1)
@@ -204,12 +203,11 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
     variant: prop.string<Exclude<VisualVariant, 'frost' | 'text'>>(),
   },
   setup(props) {
+    const el = getHost();
     const emit = useEmit<OreMessageComposerEvents>();
     const slots = useSlots<'prefix' | 'send' | 'suffix'>();
 
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
-    const isDisabled = fCtxProps.disabled;
+    const isDisabled = props.disabled;
 
     const abortSignal = lifecycleSignal(onCleanup);
     const textareaRef = ref<HTMLTextAreaElement>();
@@ -220,14 +218,24 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
       error: props.error,
       helper: props.helper,
       maxLength: props.maxlength,
-      onInput: (event, value) => emit('input', { originalEvent: event, value }),
+      onInput: (_event, value) => {
+        setFieldValue(el, value);
+        dispatchNativeFieldEvent(el, 'input');
+      },
       prefix: 'composer',
       readonly: props.readonly,
       required: props.required,
       signal: abortSignal,
-      validateOn: formCtx?.validateOn,
       value: props.value,
     });
+
+    defineFieldValue(
+      el,
+      () => tf.value.value,
+      (value) => {
+        tf.value.value = value;
+      },
+    );
 
     // Directly form-associated now that the field is owned here rather than borrowed from a
     // nested `ore-textarea` (which previously registered with the ancestor `<form>` on this
@@ -286,11 +294,11 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
     bind({
       attr: {
         error: errorAttr(tf.errorText),
-        size: fCtxProps.size,
+        size: props.size,
         // Reflects `success` only once `error` is confirmed empty — keeps the two host
         // attributes mutually exclusive even if a consumer sets both props at once.
         success: () => (props.success.value && !tf.errorText.value ? true : undefined),
-        variant: fCtxProps.variant,
+        variant: props.variant,
       },
     });
 
@@ -332,7 +340,7 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
                       icon-only
                       variant="solid"
                       color="${() => props.color.value || 'primary'}"
-                      size="${fCtxProps.size}"
+                      size="${props.size}"
                       label="${() => props['send-label'].value || DEFAULT_SEND_LABEL}"
                       ?loading="${() => Boolean(props.loading.value)}"
                       ?disabled="${() => !composer.canSend.value}"

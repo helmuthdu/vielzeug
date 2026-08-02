@@ -32,7 +32,7 @@ function ContactForm() {
         label="Email"
         type="email"
         value={email}
-        onChange={(e: CustomEvent<{ value: string }>) => setEmail(e.detail.value)}
+        onChange={(e) => setEmail(e.currentTarget.value)}
       />
       <ore-button variant="solid" color="primary" type="submit">
         Send
@@ -198,7 +198,7 @@ Svelte handles web components natively — no configuration needed.
 <ore-input
   label="Email"
   value={email}
-  onchange={(e) => (email = e.detail.value)}
+  onchange={(e) => (email = e.currentTarget.value)}
 />
 <ore-button variant="solid" color="primary" onclick={() => console.log(email)}>
   Submit
@@ -208,7 +208,7 @@ Svelte handles web components natively — no configuration needed.
 ::: tip Svelte 4
 In Svelte 4, use `on:eventname` syntax instead of `oneventname`:
 ```svelte
-<ore-input on:change={(e) => (email = e.detail.value)} label="Email" />
+<ore-input on:change={(e) => (email = e.currentTarget.value)} label="Email" />
 ```
 :::
 
@@ -231,7 +231,7 @@ import '@vielzeug/refine/input';
     <ore-input
       label="Email"
       [attr.value]="email"
-      (change)="email = $event.detail.value">
+      (change)="email = $event.currentTarget.value">
     </ore-input>
     <ore-button
       variant="solid"

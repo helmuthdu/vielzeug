@@ -113,11 +113,9 @@ describe('ore-switch', () => {
       fireClick(fixture.element);
       expect(onChange).toHaveBeenCalledTimes(1);
 
-      const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
+      const target = (onChange.mock.calls[0][0] as Event).target as HTMLElement & { checked: boolean };
 
-      expect(detail.checked).toBe(true);
-      expect(detail.value).toBe('on');
-      expect(detail.originalEvent).toBeDefined();
+      expect(target.checked).toBe(true);
     });
 
     it('emits change with checked=false on switch-off', async () => {
@@ -128,10 +126,9 @@ describe('ore-switch', () => {
       fixture.element.addEventListener('change', onChange);
       fireClick(fixture.element);
 
-      const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
+      const target = (onChange.mock.calls[0][0] as Event).target as HTMLElement & { checked: boolean };
 
-      expect(detail.checked).toBe(false);
-      expect(detail.value).toBe('on');
+      expect(target.checked).toBe(false);
     });
 
     it('emits change on Space keypress', async () => {

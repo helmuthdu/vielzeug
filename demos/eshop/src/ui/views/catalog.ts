@@ -67,11 +67,11 @@ define('catalog-view', {
     const featuredModel = computed(() => modelMap.value.get(FEATURED_MODEL_ID));
 
     const onSearchInput = (e: Event): void => {
-      query.value = (e as CustomEvent<{ value: string }>).detail.value;
+      query.value = (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '';
     };
 
     const onSortChange = (e: Event): void => {
-      const next = (e as CustomEvent<{ values: string[] }>).detail.values[0];
+      const next = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value;
 
       if (next) sortOrder.value = next as SortOrder;
     };

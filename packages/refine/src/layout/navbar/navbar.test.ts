@@ -114,6 +114,89 @@ describe('ore-navbar', () => {
     }
   });
 
+  it('shows the mobile toggle when mobile-menu content arrives after connection', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-navbar');
+
+      const menuItem = document.createElement('ore-navbar-item');
+
+      menuItem.slot = 'mobile-menu';
+      menuItem.textContent = 'Menu';
+      fixture.element.append(menuItem);
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('data-mobile')).toBe(true);
+      expect(fixture.query('[part="mobile-toggle"]')?.hasAttribute('hidden')).toBe(false);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('shows the mobile toggle when an assigned menu wrapper receives content after connection', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-navbar', {
+        html: '<div slot="mobile-menu"></div>',
+      });
+
+      const menu = fixture.element.querySelector<HTMLElement>('[slot="mobile-menu"]');
+      const menuItem = document.createElement('ore-navbar-item');
+
+      menuItem.textContent = 'Menu';
+      expect(menu).not.toBeNull();
+      menu!.append(menuItem);
+      await fixture.flush();
+
+      expect(fixture.element.hasAttribute('data-mobile')).toBe(true);
+      expect(fixture.query('[part="mobile-toggle"]')?.hasAttribute('hidden')).toBe(false);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('discovers a mobile sidebar that arrives after connection', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-navbar', {
+        attrs: { 'mobile-sidebar': '#late-sidebar' },
+      });
+
+      const sidebar = document.createElement('ore-sidebar');
+
+      sidebar.id = 'late-sidebar';
+      document.body.append(sidebar);
+      await fixture.flush();
+
+      expect(fixture.query('[part="mobile-toggle"]')?.hasAttribute('hidden')).toBe(false);
+
+      sidebar.remove();
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   it('shows mobile toggle and controls external sidebar when mobile-sidebar is set', async () => {
     const originalMatchMedia = window.matchMedia;
     const sidebar = document.createElement('ore-sidebar') as HTMLElement & {

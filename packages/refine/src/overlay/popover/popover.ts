@@ -13,7 +13,7 @@ import {
 } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
-import { type DialogCloseReason, type OverlayOpenReason, parseStringTriggers } from '../../headless';
+import { type OverlayOpenChangeDetail, parseStringTriggers } from '../../core';
 import { disablableBundle } from '../../shared';
 import { reducedMotionMixin } from '../../styles';
 import { useFloatingTrigger } from '../shared/use-floating-trigger';
@@ -25,18 +25,20 @@ const PANEL_OFFSET = 8;
 const VALID_TRIGGERS = new Set<PopoverTrigger>(['click', 'focus', 'hover']);
 const DEFAULT_POPOVER_TRIGGERS: PopoverTrigger[] = ['click'];
 
+const parseOptionalBool = (value: string | null): boolean | undefined =>
+  value == null ? undefined : value === '' || value === 'true';
+
 const normalizeTriggers = (value: unknown): PopoverTrigger[] =>
   parseStringTriggers(String(value ?? ''), VALID_TRIGGERS, DEFAULT_POPOVER_TRIGGERS);
 
 export type OrePopoverEvents = {
-  /** Emitted when the popover closes */
-  close: { reason: DialogCloseReason };
-  /** Emitted when the popover opens */
-  open: { reason: OverlayOpenReason };
+  'open-change': OverlayOpenChangeDetail;
 };
 
 /** Popover component properties */
 export type OrePopoverProps = {
+  /** Initial uncontrolled open state. Ignored when `open` is set. */
+  'default-open'?: boolean;
   /** Disable the popover */
   disabled?: boolean;
   /** Accessible label for the panel */
@@ -58,11 +60,11 @@ export type OrePopoverProps = {
  * @attr {string} placement - Preferred placement (default: 'bottom')
  * @attr {string} trigger - 'click' | 'hover' | 'focus' (default: 'click')
  * @attr {boolean} open - Controlled open state
+ * @attr {boolean} default-open - Initial uncontrolled open state
  * @attr {number} offset - Gap in px (default: 8)
  * @attr {boolean} disabled - Disables the popover
  * @attr {string} label - aria-label on the panel
- * @fires open - When the panel opens. detail: { reason: string }
- * @fires close - When the panel closes. detail: { reason: string }
+ * @fires open-change - When the panel state changes. detail: { open, reason }
  * @slot - The trigger element
  * @slot content - Panel content
  * @part panel - Panel container.
@@ -81,9 +83,10 @@ export const POPOVER_TAG = 'ore-popover' as const;
 define<OrePopoverProps>(POPOVER_TAG, {
   props: {
     ...disablableBundle,
+    'default-open': prop.bool(false),
     label: prop.string(),
     offset: prop.number(PANEL_OFFSET),
-    open: prop.json(undefined as boolean | undefined),
+    open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
     placement: prop.oneOf(
       [
         'bottom',
@@ -127,13 +130,14 @@ define<OrePopoverProps>(POPOVER_TAG, {
           },
           { target: triggerEl },
         ),
+      defaultOpen: props['default-open'],
       disabled: isDisabled,
       getHost: () => el,
       getPanel: () => panelEl,
       offset: props.offset,
       onCleanup,
-      onClose: (reason) => emit('close', { reason }),
-      onOpen: (reason) => emit('open', { reason }),
+      onClose: (reason) => emit('open-change', { open: false, reason }),
+      onOpen: (reason) => emit('open-change', { open: true, reason }),
       openProp: props.open as typeof props.open & { value: boolean | undefined },
       placement: computed(() => props.placement.value as Placement),
       slot: () => shadowRoot?.querySelector<HTMLSlotElement>('slot:not([name])') ?? null,

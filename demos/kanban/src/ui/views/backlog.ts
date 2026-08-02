@@ -208,25 +208,19 @@ define('backlog-view', {
     });
 
     const onSearchInput = (e: Event): void => {
-      // `ore-input` is a controlled component: its `.value` property never reflects live
-      // keystrokes (see task-dialog.ts's TaskDraft comment) — the typed text only ever reaches
-      // us via the event's own `detail.value`. Reading `e.target.value` here always returned "",
-      // so typing in this box silently did nothing.
-      const query = (e as CustomEvent<{ value: string }>).detail.value;
+      const query = (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '';
 
       void source.search(query);
     };
 
     const onSearchChange = (e: Event): void => {
-      const query = (e as CustomEvent<{ value: string }>).detail?.value ?? '';
+      const query = (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '';
 
       void source.search(query, { immediate: true });
     };
 
     const onFilterChange = (e: Event): void => {
-      // `ore-select`'s `change` detail carries `values: string[]` (plural — it also supports
-      // `multiple`), not a singular `value`.
-      statusFilter = ((e as CustomEvent<{ values: string[] }>).detail.values[0] ?? '') as TaskStatus | '';
+      statusFilter = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value as TaskStatus | '';
 
       const tasks = boardSignal.value.tasks;
       const filtered = statusFilter ? tasks.filter((t) => t.status === statusFilter) : tasks;

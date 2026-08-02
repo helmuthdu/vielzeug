@@ -23,6 +23,7 @@ export const componentManifest = [
   { name: 'calendar', source: './src/inputs/calendar/calendar' },
   { name: 'card', source: './src/content/card/card' },
   { name: 'carousel', source: './src/content/carousel/carousel' },
+  { name: 'marquee', source: './src/content/marquee/marquee' },
   { name: 'chat-message', source: './src/content/chat-message/chat-message' },
   { name: 'checkbox', source: './src/inputs/checkbox/checkbox' },
   { name: 'checkbox-group', source: './src/inputs/checkbox-group/checkbox-group' },
@@ -36,7 +37,6 @@ export const componentManifest = [
   { name: 'dialog', source: './src/overlay/dialog/dialog' },
   { name: 'drawer', source: './src/overlay/drawer/drawer' },
   { name: 'file-input', source: './src/inputs/file-input/file-input' },
-  { name: 'form', source: './src/inputs/form/form' },
   { name: 'grid', source: './src/layout/grid/grid' },
   { name: 'grid-item', source: './src/layout/grid-item/grid-item' },
   { name: 'icon', source: './src/content/icon/icon' },
@@ -81,22 +81,14 @@ const processRef = globalThis.process;
 
 const staticExportKeys = new Set([
   '.',
-  './headless',
-  './testing',
-  './types',
-  './styles',
   './styles/animation.css',
   './styles/layers.css',
   './styles/preflight.css',
-  './styles/styles.css',
   './styles/theme.css',
+  './tokens.css',
 ]);
 
 const staticCssExports = {
-  './styles': {
-    import: './dist/styles/styles.css',
-    default: './dist/styles/styles.css',
-  },
   './styles/animation.css': {
     import: './dist/styles/animation.css',
     default: './dist/styles/animation.css',
@@ -109,13 +101,13 @@ const staticCssExports = {
     import: './dist/styles/preflight.css',
     default: './dist/styles/preflight.css',
   },
-  './styles/styles.css': {
-    import: './dist/styles/styles.css',
-    default: './dist/styles/styles.css',
-  },
   './styles/theme.css': {
     import: './dist/styles/theme.css',
     default: './dist/styles/theme.css',
+  },
+  './tokens.css': {
+    import: './dist/styles/tokens.css',
+    default: './dist/styles/tokens.css',
   },
 };
 
@@ -145,7 +137,6 @@ export const customElementsManifestConfig = {
 
 export function getComponentExportTargets({ name, source }) {
   return {
-    source: `${source}.ts`,
     import: `./dist/${name}.js`,
     require: `./dist/${name}.cjs`,
     types: `./dist/${source.replace('./src/', '')}.d.ts`,
@@ -161,8 +152,6 @@ export function getComponentExports() {
 export function getRefineLibraryEntries(rootDir) {
   return Object.fromEntries([
     ['index', resolve(rootDir, './src/index')],
-    ['headless', resolve(rootDir, './src/headless/index')],
-    ['testing', resolve(rootDir, './src/testing/index')],
     ...componentManifest.map(({ name, source }) => [name, resolve(rootDir, source)]),
   ]);
 }
@@ -181,7 +170,12 @@ export function createRefineExports(exportsField = {}) {
   const staticNonCss = Object.fromEntries(
     Object.entries(getStaticExports(exportsField)).filter(
       ([key]) => !Object.prototype.hasOwnProperty.call(staticCssExports, key),
-    ),
+    ).map(([key, value]) => [
+      key,
+      typeof value === 'object' && value !== null
+        ? Object.fromEntries(Object.entries(value).filter(([condition]) => condition !== 'source'))
+        : value,
+    ]),
   );
 
   return {

@@ -117,32 +117,6 @@
   flex: 4 1 0;
 }
 
-/* ── Marquee variant ─────────────────────────────────────────────────────── */
-:host([data-variant='marquee']) {
-  position: relative;
-  inset: auto;
-  flex: 0 0 auto;
-  pointer-events: auto;
-  opacity: 1;
-  transform: none;
-  transition: none;
-}
-
-:host([data-variant='marquee'][data-orientation='horizontal']) {
-  width: auto;
-  height: 100%;
-}
-
-:host([data-variant='marquee'][data-orientation='vertical']) {
-  width: 100%;
-  height: auto;
-}
-
-:host([data-variant='marquee'][data-marquee-clone]) {
-  pointer-events: none;
-  user-select: none;
-}
-
 ::slotted(*) {
   max-width: 100%;
 }

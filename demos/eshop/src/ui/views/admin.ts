@@ -93,11 +93,11 @@ define('admin-view', {
     });
 
     const onSearch = (e: Event): void => {
-      void source.search((e as CustomEvent<{ value: string }>).detail.value);
+      void source.search((e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '');
     };
 
     const onStatusChange = (order: Order, e: Event): void => {
-      const status = (e as CustomEvent<{ values: OrderStatus[] }>).detail.values[0];
+      const status = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value as OrderStatus;
 
       if (status) void attemptUpdateOrderStatus(order, status);
     };
@@ -161,7 +161,7 @@ define('admin-view', {
               options=${statusOptions}
               value=${() => bulkStatus.value}
               @change=${(e: Event) => {
-                const status = (e as CustomEvent<{ values: OrderStatus[] }>).detail.values[0];
+                const status = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value as OrderStatus;
 
                 if (status) bulkStatus.value = status;
               }}></ore-select>

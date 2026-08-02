@@ -133,7 +133,7 @@ define('settings-view', {
             options=${USER_OPTIONS}
             value=${() => currentUser.value.id}
             @change=${(e: Event) => {
-              const selected = (e as CustomEvent<{ values: string[] }>).detail.values[0];
+              const selected = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value;
               const user = seedUsers.find((u) => u.id === selected);
 
               if (user) currentUser.value = user;

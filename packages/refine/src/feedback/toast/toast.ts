@@ -1,54 +1,18 @@
 import '../alert/alert';
 import { uuid } from '@vielzeug/arsenal';
-import { define, html, prop, ref, getHost, onCleanup, onMounted, useEmit } from '@vielzeug/ore';
+import { define, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
-import type { SwipeControl } from '../../headless';
+import type { SwipeControl } from '../../core';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
 import { warn } from '../../_dev';
-import { createSwipeControl } from '../../headless';
+import { createSwipeControl } from '../../core';
 import { reducedMotionMixin } from '../../styles';
 import componentStyles from './toast.css?inline';
 
-// ---------------------------------------------------------------------------
-// NOTE: Architecture
-//
-// Each toast has two DOM layers:
-//   .toast-wrapper  — layout / stacking / grid positioning (no animation)
-//   .toast-inner    — animation target (opacity fade in/out)
-//
-// This separation means stacking rules (nth-last-child, hover) and animation
-// rules never fight over the same element. No !important needed anywhere.
-//
-// State: a single signal<ToastEntry[]> owns all per-toast state (data, phase,
-// timer). There are no parallel Sets or Maps tracking lifecycle separately.
-//
-// Exit animation: .toast-inner.exiting fades opacity → 0.
-// The wrapper stays in-flow during the fade so the grid doesn't snap shut.
-// After transitionend (or TOAST_EXIT_MS fallback), finalize() removes the
-// toast from the entries array which removes the wrapper from the DOM.
-//
-// Swipe gesture animates .toast-inner (not .toast-wrapper) to avoid
-// polluting the wrapper's transition state used by the exit animation.
-// Swipe commit calls finalizeRemoval() directly — it owns the animation,
-// so the normal removeToast() path is not involved.
-//
-// Close button: owned by the toast template, not ore-alert. ore-alert renders
-// content only. This keeps ore-alert a pure presentational component with no
-// animation lifecycle coupling.
-//
-// Max eviction: when adding would exceed max, oldest non-exiting toasts are
-// dismissed via removeToast() — animated, with onDismiss callback + event.
-//
-// Dismiss queue: removed. Each toast exits independently in parallel.
-// ---------------------------------------------------------------------------
-
-/** Duration (ms) of the CSS opacity exit transition on .toast-inner.
- * Must match the value in toast.css: `transition: opacity 300ms`.  */
+/** Must match toast.css's default opacity transition duration. */
 const TOAST_EXIT_MS = 300;
-
-// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type OreToastEvents = {
   add: { id: string };
@@ -60,7 +24,7 @@ export type OreToastProps = {
   position?: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
 };
 
-/** Individual toast notification */
+/** Individual toast notification. */
 export type ToastItem = {
   actions?: Array<{
     color?: ThemeColor;
@@ -70,24 +34,23 @@ export type ToastItem = {
   }>;
   color?: ThemeColor;
   dismissible?: boolean;
-  /** Auto-dismiss delay in ms. Set to 0 for persistent toasts (default: 5000) */
+  /** Auto-dismiss delay in ms. Set to 0 for persistent toasts (default: 5000). */
   duration?: number;
   heading?: string;
-  /** Show message and actions side-by-side (horizontal layout) */
+  /** Show message and actions side-by-side (horizontal layout). */
   horizontal?: boolean;
-  /** Auto-generated via crypto.randomUUID() if omitted */
+  /** Auto-generated when omitted. */
   id?: string;
   message: string;
-  /** Metadata text (e.g. timestamp) shown in the alert meta slot */
+  /** Metadata text (for example, a timestamp) shown in the alert meta slot. */
   meta?: string;
-  /** Called after the toast is fully dismissed and removed */
+  /** Called after the toast is fully dismissed and removed. */
   onDismiss?: () => void;
   rounded?: RoundedSize | '';
   size?: ComponentSize;
   /**
-   * Urgency level for screen readers.
-   * - `'polite'` (default): announced after the user finishes their current action.
-   * - `'assertive'`: interrupts the user immediately. Use only for critical errors.
+   * Screen-reader announcement urgency. Error-coloured toasts are assertive by
+   * default; all other toasts are polite.
    */
   urgency?: 'polite' | 'assertive';
   variant?: 'solid' | 'flat' | 'bordered';
@@ -101,63 +64,226 @@ type ToastTimer = {
   timeoutId: ReturnType<typeof setTimeout>;
 };
 
-/** Internal: a ToastItem that has been normalized and given a lifecycle phase. */
 type ToastEntry = Required<Pick<ToastItem, 'dismissible' | 'duration' | 'id'>> &
   Omit<ToastItem, 'dismissible' | 'duration' | 'id'> & {
+    exitTimeoutId: ReturnType<typeof setTimeout> | null;
     id: string;
     phase: ToastPhase;
     timer: ToastTimer | null;
   };
 
-/** Public API of the ore-toast element */
-export interface ToastElement extends HTMLElement {
-  add: (toast: ToastItem) => string;
-  clear: () => void;
-  dismiss: (id: string) => void;
-  update: (id: string, updates: Partial<ToastItem>) => void;
-}
-
-// ─── Component ───────────────────────────────────────────────────────────────
+type ToastStoreEvent = {
+  id: string;
+  type: 'add' | 'dismiss';
+};
 
 /**
- * An accessible toast stack with polite/assertive live regions and hover expansion.
- * Stacks up to 3 notifications with a 3D effect.
- *
- * @element ore-toast
- *
- * @attr {string} position - 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right'
- * @attr {number} max - Max toasts in DOM at once (default: 5)
- *
- * @fires add - When a toast is added `{ id }`
- * @fires dismiss - When a toast is dismissed `{ id }`
- *
- * @slot - Manually placed `ore-alert` elements
- *
- * @cssprop --toast-position - Position type (default: fixed)
- * @cssprop --toast-inset-top - Top inset
- * @cssprop --toast-inset-bottom - Bottom inset
- * @cssprop --toast-inset-left - Left inset
- * @cssprop --toast-inset-right - Right inset
- * @cssprop --toast-z-index - Z-index (default: 9999)
- * @cssprop --toast-max-width - Max width (default: 400px)
- * @cssprop --toast-gap - Gap between expanded toasts (default: 0.5rem)
- * @cssprop --toast-exit-duration - Exit animation duration (default: 300ms)
- *
- * @example
- * ```html
- * <!-- Declarative: place once in HTML -->
- * <ore-toast position="bottom-right"></ore-toast>
- *
- * <!-- Programmatic: use the singleton service -->
- * <script type="module">
- *   import { toast } from '@vielzeug/refine';
- *   toast.success('Changes saved!');
- * </script>
- * ```
+ * Owns notification data and every timer. Renderers only subscribe to this
+ * store; they never expose imperative mutation methods themselves.
  */
+class ToastStore {
+  readonly #entries = signal<ToastEntry[]>([]);
+  readonly #listeners = new Set<(entries: ToastEntry[]) => void>();
+  readonly #eventListeners = new Set<(event: ToastStoreEvent) => void>();
+  #disposed = false;
+  #max = 5;
+
+  add(item: ToastItem): string {
+    if (this.#disposed) return item.id ?? uuid();
+
+    const id = item.id ?? uuid();
+    const active = this.#entries.value.filter((entry) => entry.phase !== 'exiting');
+    const overflow = active.length - (this.#max - 1);
+
+    if (overflow > 0) {
+      for (const entry of active.slice(0, overflow)) this.dismiss(entry.id);
+    }
+
+    const entry: ToastEntry = {
+      dismissible: true,
+      duration: 5000,
+      ...item,
+      exitTimeoutId: null,
+      id,
+      phase: 'entering',
+      timer: null,
+    };
+
+    this.#setEntries([...this.#entries.value, entry]);
+    this.#emit({ id, type: 'add' });
+
+    requestAnimationFrame(() => {
+      if (this.#entry(id)?.phase === 'entering') this.#update(id, { phase: 'active' });
+    });
+
+    if (entry.duration > 0) this.#scheduleTimer(id, entry.duration);
+
+    return id;
+  }
+
+  clear(): void {
+    for (const entry of this.#entries.value) {
+      if (entry.phase !== 'exiting') this.dismiss(entry.id);
+    }
+  }
+
+  dispose(): void {
+    if (this.#disposed) return;
+
+    this.#disposed = true;
+
+    for (const entry of this.#entries.value) {
+      if (entry.timer) clearTimeout(entry.timer.timeoutId);
+
+      if (entry.exitTimeoutId) clearTimeout(entry.exitTimeoutId);
+    }
+
+    this.#setEntries([]);
+    this.#listeners.clear();
+    this.#eventListeners.clear();
+  }
+
+  dismiss(id: string): void {
+    const entry = this.#entry(id);
+
+    if (!entry || entry.phase === 'exiting' || this.#disposed) return;
+
+    this.#update(id, { ...this.#clearTimer(entry), phase: 'exiting' });
+    this.scheduleFinalization(id, TOAST_EXIT_MS + 50);
+  }
+
+  finalize(id: string): void {
+    const entry = this.#entry(id);
+
+    if (!entry || this.#disposed) return;
+
+    if (entry.timer) clearTimeout(entry.timer.timeoutId);
+
+    if (entry.exitTimeoutId) clearTimeout(entry.exitTimeoutId);
+
+    this.#setEntries(this.#entries.value.filter((candidate) => candidate.id !== id));
+    entry.onDismiss?.();
+    this.#emit({ id, type: 'dismiss' });
+  }
+
+  pauseTimers(): void {
+    if (this.#disposed) return;
+
+    this.#setEntries(
+      this.#entries.value.map((entry) => {
+        if (!entry.timer) return entry;
+
+        clearTimeout(entry.timer.timeoutId);
+
+        return {
+          ...entry,
+          timer: {
+            ...entry.timer,
+            remaining: Math.max(0, entry.timer.remaining - (Date.now() - entry.timer.startedAt)),
+          },
+        };
+      }),
+    );
+  }
+
+  resumeTimers(): void {
+    if (this.#disposed) return;
+
+    for (const entry of this.#entries.value) {
+      if (entry.phase === 'active' && entry.timer && entry.timer.remaining > 0) {
+        this.#scheduleTimer(entry.id, entry.timer.remaining);
+      }
+    }
+  }
+
+  scheduleFinalization(id: string, delay: number): void {
+    const entry = this.#entry(id);
+
+    if (!entry || entry.phase !== 'exiting' || this.#disposed) return;
+
+    if (entry.exitTimeoutId) clearTimeout(entry.exitTimeoutId);
+
+    const exitTimeoutId = setTimeout(() => this.finalize(id), delay);
+
+    this.#update(id, { exitTimeoutId });
+  }
+
+  setMax(max: number | undefined): void {
+    if (max != null) this.#max = Math.max(1, max);
+  }
+
+  subscribe(listener: (entries: ToastEntry[]) => void): () => void {
+    listener(this.#entries.value);
+    this.#listeners.add(listener);
+
+    return () => this.#listeners.delete(listener);
+  }
+
+  subscribeEvents(listener: (event: ToastStoreEvent) => void): () => void {
+    this.#eventListeners.add(listener);
+
+    return () => this.#eventListeners.delete(listener);
+  }
+
+  update(id: string, updates: Partial<ToastItem>): void {
+    const entry = this.#entry(id);
+
+    if (!entry || this.#disposed) return;
+
+    const cleared = updates.duration !== undefined ? this.#clearTimer(entry) : entry;
+
+    this.#update(id, { ...cleared, ...updates, id });
+
+    if (updates.duration !== undefined && updates.duration > 0) this.#scheduleTimer(id, updates.duration);
+  }
+
+  #clearTimer(entry: ToastEntry): ToastEntry {
+    if (entry.timer) clearTimeout(entry.timer.timeoutId);
+
+    return { ...entry, timer: null };
+  }
+
+  #emit(event: ToastStoreEvent): void {
+    for (const listener of this.#eventListeners) listener(event);
+  }
+
+  #entry(id: string): ToastEntry | undefined {
+    return this.#entries.value.find((entry) => entry.id === id);
+  }
+
+  #scheduleTimer(id: string, remaining: number): void {
+    if (remaining <= 0 || this.#disposed) return;
+
+    const timeoutId = setTimeout(() => this.dismiss(id), remaining);
+
+    this.#update(id, { timer: { remaining, startedAt: Date.now(), timeoutId } });
+  }
+
+  #setEntries(entries: ToastEntry[]): void {
+    this.#entries.value = entries;
+    for (const listener of this.#listeners) listener(entries);
+  }
+
+  #update(id: string, patch: Partial<ToastEntry>): void {
+    this.#setEntries(this.#entries.value.map((entry) => (entry.id === id ? { ...entry, ...patch } : entry)));
+  }
+}
+
+type ToastHostBinding = {
+  bind: (store: ToastStore) => void;
+  unbind: () => void;
+};
+
+const hostBindings = new WeakMap<HTMLElement, ToastHostBinding>();
+const hostStores = new WeakMap<HTMLElement, ToastStore>();
+
+const bindToastHost = (host: HTMLElement, store: ToastStore): void => {
+  hostStores.set(host, store);
+  hostBindings.get(host)?.bind(store);
+};
 
 /** Renders the action buttons for a toast entry. */
-function renderToastActions(entry: ToastEntry, onDismiss: () => void) {
+function renderToastActions(entry: ToastEntry, dismiss: () => void) {
   if (!entry.actions?.length) return '';
 
   return html`
@@ -170,7 +296,7 @@ function renderToastActions(entry: ToastEntry, onDismiss: () => void) {
             variant=${action.variant || 'solid'}
             @click=${() => {
               action.onClick?.();
-              onDismiss();
+              dismiss();
             }}>
             ${action.label}
           </ore-button>
@@ -181,6 +307,16 @@ function renderToastActions(entry: ToastEntry, onDismiss: () => void) {
 }
 
 export const TOAST_TAG = 'ore-toast' as const;
+
+/**
+ * Declarative toast host. It subscribes to the service for its scope and
+ * renders notifications, but has no imperative mutation API of its own.
+ *
+ * @element ore-toast
+ *
+ * @attr {string} position - Stack placement.
+ * @attr {number} max - Maximum live notifications for the scoped service.
+ */
 define<OreToastProps>(TOAST_TAG, {
   props: {
     max: prop.number(5),
@@ -189,29 +325,20 @@ define<OreToastProps>(TOAST_TAG, {
       'bottom-right',
     ),
   },
-  setup(props) {
-    const el = getHost();
+  setup() {
+    const el = getHost() as HTMLElement;
     const emit = useEmit<OreToastEvents>();
-
-    // Single source of truth for all toast state.
-    const entries = signal<ToastEntry[]>([]);
     const containerRef = ref<HTMLDivElement>();
-
-    // Per-toast swipe-to-dismiss controls (keyed by id, cleaned up in finalizeRemoval).
-    const swipeControls = new Map<string, SwipeControl>();
-
-    // Pause state is reactive so computed derivations and watches can observe it.
+    const entries = signal<ToastEntry[]>([]);
     const hoverPaused = signal(false);
     const focusPaused = signal(false);
     const paused = computed(() => hoverPaused.value || focusPaused.value);
-
-    // ── Helpers ────────────────────────────────────────────────────────────
-
-    const updateEntry = (id: string, patch: Partial<ToastEntry>) => {
-      entries.value = entries.value.map((e) => (e.id === id ? { ...e, ...patch } : e));
-    };
-
-    const getEntry = (id: string) => entries.value.find((e) => e.id === id);
+    const swipeControls = new Map<string, SwipeControl>();
+    const exiting = new Map<string, () => void>();
+    const swiping = new Set<string>();
+    let store: ToastStore | null = null;
+    let unsubscribeEntries = () => {};
+    let unsubscribeEvents = () => {};
 
     const getInner = (wrapperOrEvent: HTMLElement | Event): HTMLElement | null => {
       const wrapper = wrapperOrEvent instanceof Event ? (wrapperOrEvent.currentTarget as HTMLElement) : wrapperOrEvent;
@@ -219,111 +346,64 @@ define<OreToastProps>(TOAST_TAG, {
       return wrapper.querySelector<HTMLElement>('.toast-inner');
     };
 
-    // ── Timer management ───────────────────────────────────────────────────
-
-    const clearEntryTimer = (entry: ToastEntry): ToastEntry => {
-      if (entry.timer) clearTimeout(entry.timer.timeoutId);
-
-      return { ...entry, timer: null };
+    const clearExitListener = (id: string): void => {
+      exiting.get(id)?.();
+      exiting.delete(id);
     };
 
-    const scheduleTimer = (id: string, remaining: number) => {
-      if (remaining <= 0) return;
-
-      const timeoutId = setTimeout(() => removeToast(id), remaining);
-
-      updateEntry(id, { timer: { remaining, startedAt: Date.now(), timeoutId } });
+    const finalizeSwipe = (id: string): void => {
+      swiping.delete(id);
+      store?.finalize(id);
     };
 
-    const pauseTimers = () => {
-      entries.value = entries.value.map((e) => {
-        if (!e.timer) return e;
-
-        clearTimeout(e.timer.timeoutId);
-
-        return {
-          ...e,
-          timer: { ...e.timer, remaining: Math.max(0, e.timer.remaining - (Date.now() - e.timer.startedAt)) },
-        };
-      });
-    };
-
-    const resumeTimers = () => {
-      for (const e of entries.value) {
-        if (!e.timer || e.timer.remaining <= 0) continue;
-
-        const timeoutId = setTimeout(() => removeToast(e.id), e.timer.remaining);
-
-        updateEntry(e.id, { timer: { ...e.timer, startedAt: Date.now(), timeoutId } });
-      }
-    };
-
-    // Watch reactive pause state — automatically pauses/resumes all timers.
-    watch(paused, (isPaused) => {
-      if (isPaused) pauseTimers();
-      else resumeTimers();
-    });
-
-    // ── Swipe gesture ──────────────────────────────────────────────────────
-    // Animates .toast-inner to avoid polluting the wrapper transition state.
-    // On commit, calls finalizeRemoval() directly (swipe owns the animation).
-
-    const createToastSwipe = (id: string): SwipeControl => {
-      // Same reset behavior whether the swipe was interrupted by the platform
-      // (onCancel) or simply released without crossing the commit threshold
-      // (onRelease) — the toast snaps back to rest either way.
-      const resetSwipeStyles = ({ event }: { event: PointerEvent }): void => {
-        const inner = getInner(event);
-
-        if (!inner) return;
-
-        inner.style.transition = '';
-        inner.style.transform = '';
-        inner.style.opacity = '';
-      };
-
-      return createSwipeControl({
+    const createToastSwipe = (id: string): SwipeControl =>
+      createSwipeControl({
         axis: () => 'x',
-        // Do not capture pointers for toast swipe gestures; capture can steal
-        // close-button clicks when the gesture does not move.
         captureTarget: () => null,
-        disabled: computed(() => !(getEntry(id)?.dismissible ?? true)),
-        onCancel: resetSwipeStyles,
-        onCommit: ({ distance, event }) => {
+        disabled: computed(() => !(entries.value.find((entry) => entry.id === id)?.dismissible ?? true)),
+        onCancel: ({ event }) => {
           const inner = getInner(event);
 
           if (!inner) return;
 
-          const dir = distance >= 0 ? 1 : -1;
-          const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-          const finish = () => finalizeRemoval(id);
+          inner.style.transition = '';
+          inner.style.transform = '';
+          inner.style.opacity = '';
+        },
+        onCommit: ({ distance, event }) => {
+          const inner = getInner(event);
 
-          if (reducedMotion) {
+          if (!inner || !store) return;
+
+          swiping.add(id);
+
+          store.dismiss(id);
+
+          const finish = () => finalizeSwipe(id);
+
+          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             inner.style.opacity = '0';
             finish();
 
             return;
           }
 
+          const direction = distance >= 0 ? 1 : -1;
+
           inner.style.transition = 'transform 0.22s ease-out, opacity 0.22s ease-out';
           void inner.offsetWidth;
-          inner.style.transform = `translateX(${dir * 120}%)`;
+          inner.style.transform = `translateX(${direction * 120}%)`;
           inner.style.opacity = '0';
 
-          const onTransitionEnd = (e: TransitionEvent) => {
-            if (e.target !== inner || e.propertyName !== 'transform') return;
+          const onTransitionEnd = (transition: TransitionEvent) => {
+            if (transition.target !== inner || transition.propertyName !== 'transform') return;
 
             inner.removeEventListener('transitionend', onTransitionEnd);
-            clearTimeout(fallback);
             finish();
           };
 
-          const fallback = setTimeout(() => {
-            inner.removeEventListener('transitionend', onTransitionEnd);
-            finish();
-          }, 300);
-
           inner.addEventListener('transitionend', onTransitionEnd);
+          store.scheduleFinalization(id, 300);
         },
         onMove: ({ distance, event }) => {
           const inner = getInner(event);
@@ -334,159 +414,104 @@ define<OreToastProps>(TOAST_TAG, {
           inner.style.transform = `translateX(${distance}px)`;
           inner.style.opacity = String(Math.max(0, 1 - Math.abs(distance) / 200));
         },
-        onRelease: resetSwipeStyles,
+        onRelease: ({ event }) => {
+          const inner = getInner(event);
+
+          if (!inner) return;
+
+          inner.style.transition = '';
+          inner.style.transform = '';
+          inner.style.opacity = '';
+        },
       });
-    };
 
-    // ── Toast lifecycle ────────────────────────────────────────────────────
-
-    /** Remove all per-entry resources and fire callbacks. Does not animate. */
-    const finalizeRemoval = (id: string) => {
-      const entry = getEntry(id);
-
-      // Clean up timer and swipe control before removing from signal.
-      if (entry?.timer) clearTimeout(entry.timer.timeoutId);
-
-      swipeControls.delete(id);
-      entries.value = entries.value.filter((e) => e.id !== id);
-      entry?.onDismiss?.();
-      emit('dismiss', { id });
-    };
-
-    const addToast = (item: ToastItem): string => {
-      const id = item.id || uuid();
-      const maxToasts = props.max?.value ?? 5;
-
-      // Evict oldest non-exiting toasts to stay within max — animated, with callbacks.
-      const active = entries.value.filter((e) => e.phase !== 'exiting');
-      const overflow = active.length - (maxToasts - 1);
-
-      if (overflow > 0) {
-        for (const evicted of active.slice(0, overflow)) removeToast(evicted.id);
-      }
-
-      const entry: ToastEntry = {
-        dismissible: true,
-        duration: 5000,
-        ...item,
-        id,
-        phase: 'entering',
-        timer: null,
-      };
-
-      swipeControls.set(id, createToastSwipe(id));
-      entries.value = [...entries.value, entry];
-      emit('add', { id });
+    const beginExit = (id: string): void => {
+      if (!store || exiting.has(id) || swiping.has(id)) return;
 
       requestAnimationFrame(() => {
-        // Guard: if the toast was dismissed before this rAF fired (e.g. evicted
-        // by max), do not overwrite its exiting phase back to active.
-        if (getEntry(id)?.phase === 'entering') updateEntry(id, { phase: 'active' });
+        if (!store || exiting.has(id) || swiping.has(id)) return;
+
+        const inner = containerRef.value?.querySelector<HTMLElement>(`[data-toast-id="${id}"] .toast-inner`);
+
+        if (!inner) {
+          store.scheduleFinalization(id, TOAST_EXIT_MS);
+
+          return;
+        }
+
+        void inner.offsetHeight;
+
+        const duration = parseFloat(getComputedStyle(inner).transitionDuration) * 1000;
+        const exitMs = Number.isFinite(duration) && duration > 0 ? duration : TOAST_EXIT_MS;
+        const onTransitionEnd = (event: TransitionEvent) => {
+          const wrapper = (event.target as HTMLElement | null)?.closest?.(`[data-toast-id="${id}"]`);
+
+          if (!wrapper) return;
+
+          clearExitListener(id);
+          store?.finalize(id);
+        };
+        const remove = () => containerRef.value?.removeEventListener('transitionend', onTransitionEnd);
+
+        exiting.set(id, remove);
+        containerRef.value?.addEventListener('transitionend', onTransitionEnd);
+        store.scheduleFinalization(id, exitMs + 50);
       });
-
-      if (entry.duration > 0) scheduleTimer(id, entry.duration);
-
-      return id;
     };
 
-    const removeToast = (id: string) => {
-      const entry = getEntry(id);
+    const syncControls = (): void => {
+      const currentIds = new Set(entries.value.map((entry) => entry.id));
 
-      // Already animating out or not found — ignore.
-      if (!entry || entry.phase === 'exiting') return;
+      for (const [id, control] of swipeControls) {
+        if (!currentIds.has(id)) {
+          control.dispose();
 
-      // Clear the auto-dismiss timer: the user (or max-eviction) is dismissing now.
-      updateEntry(id, { ...clearEntryTimer(entry), phase: 'exiting' });
+          swipeControls.delete(id);
+          clearExitListener(id);
+          swiping.delete(id);
+        }
+      }
 
-      // Force a layout flush on the current inner element (if in DOM now) so the
-      // browser snapshots the current opacity as the animation start value.
-      const innerEl = containerRef.value?.querySelector<HTMLElement>(`[data-toast-id="${id}"] .toast-inner`);
+      for (const entry of entries.value) {
+        if (!swipeControls.has(entry.id)) swipeControls.set(entry.id, createToastSwipe(entry.id));
 
-      void innerEl?.offsetHeight;
-
-      let done = false;
-      const onDone = () => {
-        if (done) return;
-
-        done = true;
-        finalizeRemoval(id);
-      };
-
-      // TOAST_EXIT_MS is the built-in default, matching the CSS opacity transition's own
-      // default. Read the *actual* computed duration so a consumer-customized
-      // `--toast-exit-duration` doesn't get cut off by a shorter hardcoded fallback.
-      // Fallback fires if transitionend never arrives (jsdom, reduced-motion, etc.).
-      const computedExitMs = innerEl ? parseFloat(getComputedStyle(innerEl).transitionDuration) * 1000 : NaN;
-      const exitMs = Number.isFinite(computedExitMs) && computedExitMs > 0 ? computedExitMs : TOAST_EXIT_MS;
-      const fallback = setTimeout(onDone, exitMs + 50);
-
-      // Listen on the container with event delegation so we are immune to
-      // ore re-rendering the entries list (e.g. rAF phase transitions that
-      // rebuild DOM after our listener would have been set up).
-      // transitionend bubbles, so it reaches the container regardless of which
-      // generation of .toast-inner element fires it.
-      const onTransitionEnd = (e: TransitionEvent) => {
-        const wrapper = (e.target as HTMLElement | null)?.closest?.(`[data-toast-id="${id}"]`);
-
-        if (!wrapper) return;
-
-        containerRef.value?.removeEventListener('transitionend', onTransitionEnd);
-        clearTimeout(fallback);
-        onDone();
-      };
-
-      containerRef.value?.addEventListener('transitionend', onTransitionEnd);
-    };
-
-    const updateToast = (id: string, updates: Partial<ToastItem>) => {
-      const entry = getEntry(id);
-
-      if (!entry) return;
-
-      const cleared = updates.duration !== undefined ? clearEntryTimer(entry) : entry;
-
-      updateEntry(id, { ...cleared, ...updates, id });
-
-      if (updates.duration !== undefined && updates.duration > 0) scheduleTimer(id, updates.duration);
-    };
-
-    const clearAll = () => {
-      // Fire all removals concurrently — parallel fades are visually correct.
-      for (const e of entries.value) {
-        if (e.phase !== 'exiting') removeToast(e.id);
+        if (entry.phase === 'exiting') beginExit(entry.id);
       }
     };
 
-    // ── Derived lists for live regions ─────────────────────────────────────
-
-    const urgencyOf = (e: ToastEntry) => e.urgency ?? (e.color === 'error' ? 'assertive' : 'polite');
-    const politeEntries = computed(() => entries.value.filter((e) => urgencyOf(e) === 'polite'));
-    const assertiveEntries = computed(() => entries.value.filter((e) => urgencyOf(e) === 'assertive'));
-
-    // ── Cleanup on disconnect ──────────────────────────────────────────────
-
-    onCleanup(() => {
-      for (const e of entries.value) {
-        if (e.timer) clearTimeout(e.timer.timeoutId);
-      }
-
-      swipeControls.clear();
+    watch(entries, syncControls);
+    watch(paused, (isPaused) => {
+      if (isPaused) store?.pauseTimers();
+      else store?.resumeTimers();
     });
 
-    // ── Template ───────────────────────────────────────────────────────────
+    const bind = (nextStore: ToastStore): void => {
+      if (store === nextStore) return;
+
+      unsubscribeEntries();
+
+      unsubscribeEvents();
+      store = nextStore;
+      unsubscribeEntries = store.subscribe((nextEntries) => {
+        entries.value = nextEntries;
+      });
+      unsubscribeEvents = store.subscribeEvents((event) => emit(event.type, { id: event.id }));
+
+      if (paused.value) store.pauseTimers();
+    };
 
     const renderEntry = (entry: ToastEntry) => {
-      const dismiss = () => removeToast(entry.id);
+      const dismiss = () => store?.dismiss(entry.id);
 
       return html`
         <div
           class="toast-wrapper"
           data-toast-id=${entry.id}
           part="toast-wrapper"
-          @pointerdown=${(e: PointerEvent) => swipeControls.get(entry.id)?.handlePointerDown(e)}
-          @pointermove=${(e: PointerEvent) => swipeControls.get(entry.id)?.handlePointerMove(e)}
-          @pointerup=${(e: PointerEvent) => swipeControls.get(entry.id)?.handlePointerUp(e)}
-          @pointercancel=${(e: PointerEvent) => swipeControls.get(entry.id)?.handlePointerCancel(e)}>
+          @pointerdown=${(event: PointerEvent) => swipeControls.get(entry.id)?.handlePointerDown(event)}
+          @pointermove=${(event: PointerEvent) => swipeControls.get(entry.id)?.handlePointerMove(event)}
+          @pointerup=${(event: PointerEvent) => swipeControls.get(entry.id)?.handlePointerUp(event)}
+          @pointercancel=${(event: PointerEvent) => swipeControls.get(entry.id)?.handlePointerCancel(event)}>
           <div class="${() => `toast-inner${entry.phase !== 'active' ? ` ${entry.phase}` : ''}`}" part="toast-inner">
             <ore-alert
               color=${entry.color || (entry.urgency === 'assertive' ? 'error' : 'primary')}
@@ -495,7 +520,7 @@ define<OreToastProps>(TOAST_TAG, {
               rounded=${entry.rounded || 'md'}
               ?horizontal=${entry.horizontal}
               heading=${entry.heading || ''}
-              ?dismissible=${entry.dismissible !== false}
+              ?dismissible=${entry.dismissible}
               @dismiss=${dismiss}>
               ${
                 entry.meta
@@ -511,16 +536,34 @@ define<OreToastProps>(TOAST_TAG, {
       `;
     };
 
-    // Expose imperative API directly on mount — calls made before mount are
-    // safe because ore mounts synchronously on connectedCallback.
     onMounted(() => {
-      const toastEl = el as ToastElement;
+      hostBindings.set(el, {
+        bind,
+        unbind() {
+          unsubscribeEntries();
+          unsubscribeEvents();
+          store = null;
+          entries.value = [];
+        },
+      });
 
-      toastEl.add = addToast;
-      toastEl.clear = clearAll;
-      toastEl.dismiss = removeToast;
-      toastEl.update = updateToast;
+      const boundStore = hostStores.get(el);
+
+      if (boundStore) bind(boundStore);
     });
+
+    onCleanup(() => {
+      hostBindings.get(el)?.unbind();
+
+      hostBindings.delete(el);
+
+      for (const control of swipeControls.values()) control.dispose();
+      for (const id of exiting.keys()) clearExitListener(id);
+    });
+
+    const urgencyOf = (entry: ToastEntry) => entry.urgency ?? (entry.color === 'error' ? 'assertive' : 'polite');
+    const politeEntries = computed(() => entries.value.filter((entry) => urgencyOf(entry) === 'polite'));
+    const assertiveEntries = computed(() => entries.value.filter((entry) => urgencyOf(entry) === 'assertive'));
 
     return html`
       <div
@@ -541,7 +584,6 @@ define<OreToastProps>(TOAST_TAG, {
           focusPaused.value = false;
         }}
         part="container">
-        <!-- Polite live region: normal informational toasts -->
         <div
           role="region"
           aria-live="polite"
@@ -551,7 +593,6 @@ define<OreToastProps>(TOAST_TAG, {
           class="toast-live-region">
           ${() => politeEntries.value.map(renderEntry)}
         </div>
-        <!-- Assertive live region: critical errors that interrupt immediately -->
         <div
           role="region"
           aria-live="assertive"
@@ -568,30 +609,18 @@ define<OreToastProps>(TOAST_TAG, {
   styles: [reducedMotionMixin, componentStyles],
 });
 
-// ─── Toast service ────────────────────────────────────────────────────────────
-
 export type ToastServiceConfig = OreToastProps;
 
 export interface ToastService {
-  /** Add a toast and return its id */
   add(item: ToastItem): string;
-  /** Dismiss all toasts (animated, in parallel) */
   clear(): void;
-  /**
-   * Configure the auto-created container.
-   * Has no effect if called after the first `add()` — logs a dev warning in that case.
-   */
   configure(config: ToastServiceConfig): void;
-  /** Dismiss a toast by id (animated) */
+  readonly disposed: boolean;
   dismiss(id: string): void;
-  /** Shortcut: error toast with red color (assertive live region) */
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
   error(message: string, opts?: Partial<ToastItem>): string;
-  /** Shortcut: info toast */
   info(message: string, opts?: Partial<ToastItem>): string;
-  /**
-   * Shows a loading toast tied to a promise.
-   * Updates to success/error when the promise settles.
-   */
   promise<T>(
     promise: Promise<T>,
     messages: {
@@ -600,69 +629,74 @@ export interface ToastService {
       success: string | ((data: T) => string);
     },
   ): Promise<T>;
-  /** Shortcut: success toast with green color */
   success(message: string, opts?: Partial<ToastItem>): string;
-  /** Update an existing toast in-place */
   update(id: string, updates: Partial<ToastItem>): void;
-  /** Shortcut: warning toast */
   warning(message: string, opts?: Partial<ToastItem>): string;
+  [Symbol.dispose](): void;
 }
 
+const services = new WeakMap<ParentNode, ToastService>();
+
 /**
- * Creates a scoped toast service backed by an `ore-toast` element.
- *
- * The service lazily creates an `<ore-toast>` element inside `root` on first
- * use. Pass a custom root to scope notifications to a sub-tree (e.g. a drawer),
- * or use the pre-built `toast` singleton which targets `document.body`.
- *
- * @example
- * ```ts
- * // Scoped instance
- * const drawerToast = createToastService(drawerEl);
- * drawerToast.success('Saved inside drawer');
- *
- * // The default singleton
- * import { toast } from '@vielzeug/refine';
- * toast.success('Saved!');
- * ```
+ * Creates a scoped toast service. The service owns its notification store and
+ * binds it to the declarative `<ore-toast>` host inside `root`, creating that
+ * host lazily when notifications are first requested.
  */
 export function createToastService(root: ParentNode = document.body): ToastService {
-  let host: ToastElement | null = null;
+  const existing = services.get(root);
+
+  if (existing) return existing;
+
+  const store = new ToastStore();
+  const disposalController = new AbortController();
+  let disposed = false;
   let configured = false;
   let pendingConfig: ToastServiceConfig | null = null;
+  let host: HTMLElement | null = null;
 
-  const getHost = (): ToastElement => {
+  const assertActive = (): boolean => !disposed;
+  const rootNode = root as Element | Document | ShadowRoot;
+  const getHost = (): HTMLElement | null => {
+    if (!assertActive()) return null;
+
     if (host?.isConnected) return host;
 
-    // Re-use an existing element in the root (supports declarative placement).
-    host = (root instanceof Element ? root : (root as Document | ShadowRoot)).querySelector<ToastElement>('ore-toast');
+    host = rootNode.querySelector<HTMLElement>(TOAST_TAG);
 
     if (!host) {
-      host = document.createElement('ore-toast') as ToastElement;
+      host = document.createElement(TOAST_TAG);
 
-      if (pendingConfig) {
-        if (pendingConfig.position) host.setAttribute('position', pendingConfig.position);
+      if (pendingConfig?.position) host.setAttribute('position', pendingConfig.position);
 
-        if (pendingConfig.max != null) host.setAttribute('max', String(pendingConfig.max));
+      if (pendingConfig?.max != null) host.setAttribute('max', String(pendingConfig.max));
 
-        pendingConfig = null;
-      }
-
-      (root as Element | Document).appendChild(host);
+      rootNode.appendChild(host);
     }
 
+    if (pendingConfig?.max != null) store.setMax(pendingConfig.max);
+    else {
+      const max = Number(host.getAttribute('max'));
+
+      if (Number.isFinite(max) && max > 0) store.setMax(max);
+    }
+
+    pendingConfig = null;
     configured = true;
+    bindToastHost(host, store);
 
     return host;
   };
+  const ensureHost = (): boolean => Boolean(getHost());
 
   const service: ToastService = {
     add(item) {
-      return getHost().add(item);
+      if (!ensureHost()) return item.id ?? uuid();
+
+      return store.add(item);
     },
 
     clear() {
-      getHost().clear();
+      if (ensureHost()) store.clear();
     },
 
     configure(config) {
@@ -676,7 +710,27 @@ export function createToastService(root: ParentNode = document.body): ToastServi
     },
 
     dismiss(id) {
-      getHost().dismiss(id);
+      if (ensureHost()) store.dismiss(id);
+    },
+
+    get disposalSignal() {
+      return disposalController.signal;
+    },
+
+    dispose() {
+      if (disposed) return;
+
+      disposed = true;
+
+      disposalController.abort();
+
+      store.dispose();
+
+      if (services.get(root) === service) services.delete(root);
+    },
+
+    get disposed() {
+      return disposed;
     },
 
     error(message, opts) {
@@ -716,8 +770,12 @@ export function createToastService(root: ParentNode = document.body): ToastServi
       return service.add({ color: 'success', ...opts, message });
     },
 
+    [Symbol.dispose]() {
+      service.dispose();
+    },
+
     update(id, updates) {
-      getHost().update(id, updates);
+      if (ensureHost()) store.update(id, updates);
     },
 
     warning(message, opts) {
@@ -725,27 +783,10 @@ export function createToastService(root: ParentNode = document.body): ToastServi
     },
   };
 
+  services.set(root, service);
+
   return service;
 }
 
-/**
- * Singleton toast service — finds or creates a single `<ore-toast>` on `document.body`.
- *
- * @example
- * ```ts
- * import { toast } from '@vielzeug/refine';
- *
- * toast.success('Changes saved!');
- * toast.error('Upload failed', { duration: 0 });
- *
- * const id = toast.add({ message: 'Uploading…', duration: 0, dismissible: false });
- * toast.update(id, { message: 'Done!', color: 'success', duration: 3000, dismissible: true });
- *
- * await toast.promise(uploadFile(), {
- *   loading: 'Uploading…',
- *   success: (url) => `Uploaded to ${url}`,
- *   error: 'Upload failed',
- * });
- * ```
- */
+/** Singleton service backed by a lazily created host in `document.body`. */
 export const toast: ToastService = createToastService();

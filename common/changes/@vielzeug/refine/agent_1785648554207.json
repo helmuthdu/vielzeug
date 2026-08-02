@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: simplify public component boundaries and native form behavior",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

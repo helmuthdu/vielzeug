@@ -168,12 +168,12 @@ define('checkout-shipping', {
     const dealerError = signal('');
 
     function onDeliveryMethodChange(e: Event): void {
-      deliveryMethod.value = (e as CustomEvent<{ values: string[] }>).detail.values[0] as DeliveryMethod;
+      deliveryMethod.value = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value as DeliveryMethod;
       dealerError.value = '';
     }
 
     function onDealerChange(e: Event): void {
-      dealerId.value = (e as CustomEvent<{ values: string[] }>).detail.values[0] ?? null;
+      dealerId.value = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value || null;
       dealerError.value = '';
     }
 
@@ -213,7 +213,10 @@ define('checkout-shipping', {
         required
         value=${() => shippingForm.get(name)}
         error=${() => errors.value[name] ?? ''}
-        @input=${(e: Event) => shippingForm.set(name, (e as CustomEvent<{ value: string }>).detail.value, { touched: true })}></ore-input>
+        @input=${(e: Event) =>
+          shippingForm.set(name, (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '', {
+            touched: true,
+          })}></ore-input>
     `;
 
     return html`
@@ -340,18 +343,26 @@ define('checkout-payment', {
               step="500"
               max=${() => Number(displayTotal())}
               value=${() => downPayment.value}
-              @input=${(e: Event) => (downPayment.value = (e as CustomEvent<{ value: number | null }>).detail.value ?? 0)}></ore-number-input>
+              @input=${(e: Event) =>
+                (downPayment.value =
+                  Number((e.currentTarget as HTMLElementTagNameMap['ore-number-input']).value) ||
+                  0)}></ore-number-input>
             <ore-select
               label=${() => t('checkout.payment.termLabel')}
               options=${TERM_MONTH_OPTIONS.map((months) => ({ label: t('checkout.payment.termOption', { months }), value: String(months) }))}
               value=${() => String(termMonths.value)}
-              @change=${(e: Event) => (termMonths.value = Number((e as CustomEvent<{ values: string[] }>).detail.values[0]))}></ore-select>
+              @change=${(e: Event) =>
+                (termMonths.value = Number(
+                  (e.currentTarget as HTMLElementTagNameMap['ore-select']).value,
+                ))}></ore-select>
           </div>
           <ore-otp-input
             label=${() => t('checkout.payment.verificationCode')}
             length="6"
             value=${() => verificationCode.value}
-            @change=${(e: Event) => (verificationCode.value = (e as CustomEvent<{ value: string }>).detail.value)}></ore-otp-input>
+            @change=${(e: Event) =>
+              (verificationCode.value =
+                (e.currentTarget as HTMLElementTagNameMap['ore-otp-input']).value ?? '')}></ore-otp-input>
           <p class="checkout-form__hint">${() => t('checkout.payment.verificationHint')}</p>
         `,
       )}
@@ -375,13 +386,18 @@ define('checkout-payment', {
               <ore-input
                 label=${() => t('checkout.tradeIn.descriptionLabel')}
                 value=${() => tradeInDescription.value}
-                @input=${(e: Event) => (tradeInDescription.value = (e as CustomEvent<{ value: string }>).detail.value)}></ore-input>
+                @input=${(e: Event) =>
+                  (tradeInDescription.value =
+                    (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '')}></ore-input>
               <ore-number-input
                 label=${() => t('checkout.tradeIn.valueLabel')}
                 min="0"
                 step="500"
                 value=${() => tradeInValue.value}
-                @input=${(e: Event) => (tradeInValue.value = (e as CustomEvent<{ value: number | null }>).detail.value ?? 0)}></ore-number-input>
+                @input=${(e: Event) =>
+                  (tradeInValue.value =
+                    Number((e.currentTarget as HTMLElementTagNameMap['ore-number-input']).value) ||
+                    0)}></ore-number-input>
             </div>
             <div class="checkout-tradein__photos">
               <ore-icon name="camera" size="18" aria-hidden="true"></ore-icon>

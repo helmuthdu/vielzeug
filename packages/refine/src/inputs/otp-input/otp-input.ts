@@ -1,18 +1,19 @@
-import { define, html, inject, prop, bind, getHost, onCleanup, onMounted, useEmit } from '@vielzeug/ore';
+import { define, html, prop, bind, getHost, onCleanup, onMounted, useEmit } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
-import { createListControl, lifecycleSignal } from '../../headless';
+import { createListControl, lifecycleSignal } from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, fieldVariantMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './otp-input.css?inline';
 
 export type OreOtpInputEvents = {
-  change: { complete: boolean; originalEvent?: Event; value: string };
+  change: Event;
   complete: { originalEvent?: Event; value: string };
+  input: Event;
 };
 
 /** OTP Input props */
@@ -58,7 +59,8 @@ export type OreOtpInputProps = {
  * @attr {string} label - Group aria-label
  * @attr {string} separator - Optional separator character shown in the middle
  *
- * @fires change - Emitted whenever a cell changes. detail: { value: string, complete: boolean, originalEvent?: Event }
+ * @fires input - Emitted whenever a cell changes.
+ * @fires change - Emitted whenever a cell changes.
  * @fires complete - Emitted when all cells are filled. detail: { value: string, originalEvent?: Event }
  *
  * @slot label - Custom label above the OTP input
@@ -104,10 +106,8 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
     const el = getHost();
     const emit = useEmit<OreOtpInputEvents>();
 
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
     const lengthValue = computed(() => Number(props.length.value) || 6);
-    const isDisabled = fCtxProps.disabled;
+    const isDisabled = computed(() => Boolean(props.disabled.value));
     const cells = computed(() => Array.from({ length: lengthValue.value }, (_, i) => i));
     const otpValue = signal(String(props.value.value || ''));
     const normalizedPropValue = () => String(props.value.value || '');
@@ -119,9 +119,9 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
 
     bind({
       attr: {
-        size: fCtxProps.size,
+        size: props.size,
         value: () => otpValue.value || null,
-        variant: fCtxProps.variant,
+        variant: props.variant,
       },
     });
 
@@ -158,13 +158,22 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
 
       otpValue.value = getValue();
     }
+    defineFieldValue(
+      el,
+      () => otpValue.value,
+      (value) => {
+        syncInputsFromValue(value);
+      },
+    );
     function emitOtpState(originalEvent?: Event, forceComplete?: boolean): void {
       const allInputs = getInputs();
       const full = getValue();
       const complete = forceComplete ?? (full.length === allInputs.length && full.split('').every(Boolean));
 
       otpValue.value = full;
-      emit('change', { complete, originalEvent, value: full });
+      setFieldValue(el, full);
+      dispatchNativeFieldEvent(el, 'input');
+      dispatchNativeFieldEvent(el, 'change');
 
       if (complete) emit('complete', { originalEvent, value: full });
     }

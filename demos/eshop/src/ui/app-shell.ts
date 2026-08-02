@@ -3,9 +3,8 @@ import '@vielzeug/refine/navbar';
 import '@vielzeug/refine/badge';
 import '@vielzeug/refine/command-palette';
 import '@vielzeug/refine/toast';
-import type { ToastElement } from '@vielzeug/refine/toast';
-
 import { define, each, html, onCleanup, ref, when } from '@vielzeug/ore';
+import { toast } from '@vielzeug/refine/toast';
 import { computed, effect, signal } from '@vielzeug/ripple';
 
 import type { RouteNames } from '../core/router';
@@ -218,10 +217,10 @@ function renderFooterColumn(headingKey: string, links: FooterLink[] | (() => Foo
 
 define('app-shell', {
   setup() {
-    const toastRef = ref<ToastElement>();
+    toast.configure({ position: 'bottom-right' });
 
     const unsubscribeToast = bus.on('toast:show', ({ message, variant }) => {
-      toastRef.value?.add({ color: variant, message });
+      toast.add({ color: variant, message });
     });
 
     onCleanup(unsubscribeToast);
@@ -409,7 +408,6 @@ define('app-shell', {
         @select=${onPaletteSelect}></ore-command-palette>
       <share-build-dialog></share-build-dialog>
       <compare-drawer></compare-drawer>
-      <ore-toast ref=${toastRef} position="bottom-right"></ore-toast>
     `;
   },
   shadow: false,

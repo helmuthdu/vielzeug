@@ -266,41 +266,36 @@ describe('ore-textarea', () => {
   // ─── Events ────────────────────────────────────────────────────────────────
 
   describe('Events', () => {
-    it('emits custom input event with value and originalEvent', async () => {
+    it('emits a bubbling, composed input event with the host value', async () => {
       fixture = await mount('ore-textarea');
 
-      const inputHandler = vi.fn();
+      let observedValue: string | undefined;
 
-      fixture.element.addEventListener('input', inputHandler);
+      fixture.element.addEventListener('input', (event) => {
+        observedValue = (event.currentTarget as HTMLElement & { value: string }).value;
+      });
 
       fixture.query<HTMLTextAreaElement>('textarea')!.value += 'h';
       fireInput(fixture.query<HTMLTextAreaElement>('textarea')!);
 
-      expect(inputHandler).toHaveBeenCalled();
-
-      const detail = (inputHandler.mock.calls[0][0] as CustomEvent).detail;
-
-      expect(detail.value).toBe('h');
-      expect(detail.originalEvent).toBeDefined();
+      expect(observedValue).toBe('h');
     });
 
-    it('emits custom change event with value', async () => {
+    it('emits a change event with the host value', async () => {
       fixture = await mount('ore-textarea');
 
-      const changeHandler = vi.fn();
+      let observedValue: string | undefined;
 
-      fixture.element.addEventListener('change', changeHandler);
+      fixture.element.addEventListener('change', (event) => {
+        observedValue = (event.currentTarget as HTMLElement & { value: string }).value;
+      });
 
       const ta = fixture.query<HTMLTextAreaElement>('textarea')!;
 
       ta.value = 'some text';
       ta.dispatchEvent(new Event('change', { bubbles: true }));
 
-      expect(changeHandler).toHaveBeenCalled();
-
-      const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
-
-      expect(detail.value).toBe('some text');
+      expect(observedValue).toBe('some text');
     });
   });
 

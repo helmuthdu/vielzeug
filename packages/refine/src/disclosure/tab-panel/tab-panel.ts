@@ -1,7 +1,7 @@
 import { define, html, inject, prop, ref, bind, getHost, onMounted, watchEffect, styleMap, when } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
-import { setAriaReflection } from '../../headless';
+import { setAriaReflection } from '../../core';
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
 import styles from './tab-panel.css?inline';

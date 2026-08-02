@@ -14,19 +14,16 @@ Refine components are native Web Components. Once imported, they behave like reg
 Import the global styles first, then register only the components you need:
 
 ```ts
-import '@vielzeug/refine/styles';
+import '@vielzeug/refine/tokens.css';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/input';
 import '@vielzeug/refine/dialog';
 ```
 
-The styles import loads design tokens and base styles. Components still render without it, but they will miss tokens and visual polish. Always import it first.
-
-To register every component at once (larger bundle):
+The token stylesheet supplies Refine's design tokens and cascade layers without changing browser defaults. Add the reset only when your application explicitly wants it:
 
 ```ts
-import '@vielzeug/refine/styles';
-import '@vielzeug/refine';
+import '@vielzeug/refine/styles/preflight.css';
 ```
 
 ## Attributes and Events
@@ -39,13 +36,13 @@ Set attributes directly on the element. Attributes map to component props:
 </ore-button>
 ```
 
-Components emit standard DOM events. Common event names: `click`, `input`, `change`, `open`, `close`, `select`. Custom events carry a `detail` object:
+Components emit standard DOM events. Common event names: `click`, `input`, `change`, and `open-change`. Custom events carry a `detail` object:
 
 ```javascript
 const input = document.querySelector('ore-input');
 
-input.addEventListener('change', (event) => {
-  console.log(event.detail.value);
+input.addEventListener('input', () => {
+  console.log(input.value);
 });
 ```
 
@@ -107,7 +104,7 @@ define('my-search-bar', () => {
   return html`
     <ore-input
       .value=${query}
-      @input=${(e) => (query.value = e.detail.value)}
+      @input=${(e) => (query.value = e.currentTarget.value)}
       label="Search"
     />
     <ore-button @click=${() => search(query.value)} variant="solid" color="primary">

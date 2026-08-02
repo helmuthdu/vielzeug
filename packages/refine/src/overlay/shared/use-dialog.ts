@@ -1,13 +1,7 @@
 import { type Readable, type Signal, signal, watch } from '@vielzeug/ripple';
 
-import {
-  lifecycleSignal,
-  createOverlayControl,
-  type DialogCloseReason,
-  type OverlayControl,
-  type OverlayOpenReason,
-} from '../../headless';
-import { createFocusManager } from '../../headless/focus';
+import { lifecycleSignal, type DialogCloseReason, type OverlayOpenReason } from '../../core';
+import { createFocusManager } from '../../core/focus';
 import { awaitExit } from './await-exit';
 import { createBackgroundLock } from './background-lock';
 
@@ -23,6 +17,8 @@ export type UseDialogOptions = {
   beforeOpen?: (dialog: HTMLDialogElement) => void;
   /** Extra properties merged into the `close-request` custom event detail. */
   closeRequestDetail?: (reason: Exclude<DialogCloseReason, 'programmatic'>) => Record<string, unknown>;
+  /** Initial uncontrolled open state. Ignored when `openProp` is defined. */
+  defaultOpen: Readable<boolean | undefined>;
   dialogRef: { value: HTMLDialogElement | null | undefined };
   getPanelEl: () => HTMLElement | null | undefined;
   host: HTMLElement;
@@ -67,8 +63,8 @@ export type UseDialogHandle = {
   handleBackdropClick: (e: MouseEvent) => void;
   handleCancel: (e: Event) => void;
   isOpen: Signal<boolean>;
-  /** The overlay control — open/close/toggle/dispose. */
-  overlay: OverlayControl;
+  /** The modal dialog controller — open/close/toggle/dispose. */
+  overlay: ModalDialogController;
   /**
    * Dispatch `close-request`; if allowed, call `overlay.close()`.
    */
@@ -86,6 +82,14 @@ export type UseDialogHandle = {
    * Call inside `onMounted()`.
    */
   watchOpenProp: () => void;
+};
+
+type ModalDialogController = {
+  [Symbol.dispose](): void;
+  close(reason?: DialogCloseReason): void;
+  dispose(): void;
+  open(reason?: OverlayOpenReason): void;
+  toggle(openReason?: OverlayOpenReason, closeReason?: DialogCloseReason): void;
 };
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -151,58 +155,57 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     );
   };
 
-  const overlay = createOverlayControl({
-    getBoundary: () => options.host,
-    getPanel: () => {
-      const panel = options.getPanelEl();
+  const overlay: ModalDialogController = {
+    close(reason: DialogCloseReason = 'programmatic'): void {
+      if (!isOpen.value) return;
 
-      return panel instanceof HTMLElement ? panel : null;
-    },
-    isOpen: () => isOpen.value,
-    onOpen: options.onOpen,
-    setOpen: (next, reason) => {
       const dialog = options.dialogRef.value;
 
-      if (!dialog) return;
-
-      if (next) {
-        if (dialog.open) return;
-
-        // Clean up any leftover 'closing' class from the previous close animation
-        // before opening so the entry @starting-style and transition work correctly.
-        dialog.classList.remove('closing');
-        focus.captureReturnFocus();
-        options.beforeOpen?.(dialog);
-        dialog.showModal();
-        bgLock.lock(options.host);
-        focus.applyInitialFocus();
-        isOpen.value = true;
-
-        return;
+      if (dialog?.open) {
+        pendingCloseReason = reason;
+        (options.performClose ?? ((element, _reason) => element.close()))(dialog, reason);
+      } else {
+        isOpen.value = false;
       }
-
-      if (dialog.open) {
-        // Capture reason before calling performClose so handleNativeClose can read it.
-        pendingCloseReason = reason as DialogCloseReason;
-
-        const performClose = options.performClose ?? ((d) => d.close());
-
-        performClose(dialog, reason as DialogCloseReason);
-
-        return;
-      }
-
-      isOpen.value = false;
     },
-    signal: abortSignal,
-  });
+    dispose(): void {
+      overlay.close('programmatic');
+    },
+    open(reason: OverlayOpenReason = 'programmatic'): void {
+      if (isOpen.value) return;
+
+      const dialog = options.dialogRef.value;
+
+      if (!dialog || dialog.open) return;
+
+      // Clean up any leftover 'closing' class from the previous close animation
+      // before opening so the entry @starting-style and transition work correctly.
+      dialog.classList.remove('closing');
+      focus.captureReturnFocus();
+      options.beforeOpen?.(dialog);
+      dialog.showModal();
+      bgLock.lock(options.host);
+      focus.applyInitialFocus();
+      isOpen.value = true;
+      options.onOpen?.(reason);
+    },
+    [Symbol.dispose](): void {
+      overlay.dispose();
+    },
+    toggle(openReason: OverlayOpenReason = 'click', closeReason: DialogCloseReason = 'trigger'): void {
+      if (isOpen.value) overlay.close(closeReason);
+      else overlay.open(openReason);
+    },
+  };
+
+  abortSignal.addEventListener('abort', overlay.dispose, { once: true });
 
   const requestClose = (reason: Exclude<DialogCloseReason, 'programmatic'>): void => {
     const allowed = dispatchCloseRequest(reason);
 
     if (!allowed) return;
 
-    overlay.close(reason, false);
+    overlay.close(reason);
   };
 
   // Invoker Commands API — allows declarative open/close from outside the component:
@@ -269,13 +272,31 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
 
     if (dialog) options.onEvent(dialog, 'close', handleNativeClose);
 
+    let initialized = false;
+
     watch(
       options.openProp,
       (open) => {
+        if (open === undefined) {
+          if (!initialized) {
+            if (options.defaultOpen.value) overlay.open('programmatic');
+
+            initialized = true;
+
+            return;
+          }
+
+          overlay.close('programmatic');
+
+          return;
+        }
+
+        initialized = true;
+
         if (open) {
           overlay.open('programmatic');
         } else {
-          overlay.close('programmatic', false);
+          overlay.close('programmatic');
         }
       },
       { immediate: true },

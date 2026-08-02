@@ -122,6 +122,24 @@ Set `disabled` to suppress the tooltip entirely.
 </ore-tooltip>
 ```
 
+## Controlled Open State
+
+Use `open` as the controlled state and update it from `open-change`. Use `default-open` only to initialize an uncontrolled tooltip.
+
+```html
+<ore-tooltip id="save-tip" content="Save changes" trigger="click">
+  <ore-button>Save</ore-button>
+</ore-tooltip>
+
+<script type="module">
+  const tooltip = document.getElementById('save-tip');
+
+  tooltip.addEventListener('open-change', (e) => {
+    console.log('tooltip open:', e.detail.open, e.detail.reason);
+  });
+</script>
+```
+
 ## API Reference
 
 ### Attributes
@@ -134,6 +152,7 @@ Set `disabled` to suppress the tooltip entirely.
 | `delay`       | `number`                                 | `0`             | Show delay in milliseconds                                                                          |
 | `close-delay` | `number`                                 | `0`             | Hide delay in milliseconds — useful to keep the tooltip open when moving between trigger and bubble |
 | `open`        | `boolean`                                | —               | Controlled open state; when set, trigger events are ignored                                         |
+| `default-open`| `boolean`                                | `false`         | Initial visibility when `open` is not provided                                                       |
 | `variant`     | `'dark' \| 'light'`                      | —               | Visual style (`dark` appearance is the unset default)                                               |
 | `size`        | `'sm' \| 'md' \| 'lg'`                   | —               | Tooltip bubble size (medium appearance is the unset default)                                        |
 | `disabled`    | `boolean`                                | `false`         | Disable the tooltip entirely                                                                        |
@@ -144,6 +163,12 @@ Set `disabled` to suppress the tooltip entirely.
 | --------- | -------------------------------------------------------- |
 | (default) | The trigger element the tooltip is anchored to           |
 | `content` | Rich tooltip content (overrides the `content` attribute) |
+
+### Events
+
+| Event         | Detail                              | Description                                  |
+| ------------- | ----------------------------------- | -------------------------------------------- |
+| `open-change` | `{ open: boolean, reason: string }` | Emitted whenever the tooltip opens or closes |
 
 ### CSS Custom Properties
 

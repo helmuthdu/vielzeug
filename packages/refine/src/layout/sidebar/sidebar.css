@@ -393,7 +393,7 @@
   }
 
   :host([variant='floating'][data-preview-mode][data-bottom-nav]) {
-    inset: var(--size-2);
+    inset: calc(var(--size-1) * -1);
   }
 
   :host([variant='floating'][data-bottom-nav]) .bottom-bar {

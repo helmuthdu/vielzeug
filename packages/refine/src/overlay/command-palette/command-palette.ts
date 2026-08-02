@@ -5,7 +5,7 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 import type { CommandPaletteItem, OreCommandPaletteEvents, OreCommandPaletteProps } from './command-palette.types';
 
 import { warn } from '../../_dev';
-import { announce, lifecycleSignal, createListControl } from '../../headless';
+import { announce, lifecycleSignal, createListControl } from '../../core';
 import { reducedMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
 import { buildRows, filterItems, normalizeItem, parseSlottedItems, splitShortcutKeys } from './command-palette-items';
@@ -13,6 +13,9 @@ import '../../content/icon/icon';
 import componentStyles from './command-palette.css?inline';
 
 export type { OreCommandPaletteEvents, OreCommandPaletteProps } from './command-palette.types';
+
+const parseOptionalBool = (value: string | null): boolean | undefined =>
+  value == null ? undefined : value === '' || value === 'true';
 
 /**
  * A pure data node describing one command. Never rendered directly — `ore-command-palette`
@@ -50,6 +53,7 @@ define(COMMAND_PALETTE_ITEM_TAG, {
  * @element ore-command-palette-item - Slotted command definition (place in default slot)
  *
  * @attr {boolean} open - Controls the open state of the palette
+ * @attr {boolean} default-open - Initial uncontrolled open state
  * @attr {string} label - Accessible label for the dialog (screen-reader-only heading)
  * @attr {string} placeholder - Placeholder text for the search input
  * @attr {string} shortcut - Global keyboard shortcut (keymap syntax) that toggles the palette. Default `"mod+k"`; set to `""` to disable
@@ -58,8 +62,7 @@ define(COMMAND_PALETTE_ITEM_TAG, {
  * @attr {string} empty-text - Message shown when no item matches the query
  * @attr {boolean} keep-open-on-select - Keep the palette open after an item is selected
  *
- * @fires open - Fired when the palette opens. detail: `{ reason }`
- * @fires close - Fired when the palette closes. detail: `{ reason }`
+ * @fires open-change - Fired when the palette state changes. detail: `{ open, reason }`
  * @fires search - Fired on every keystroke in the search input. detail: `{ query }`
  * @fires select - Fired when a command is chosen (click or `Enter`). detail: `{ value, label, item }`
  *
@@ -91,13 +94,14 @@ define(COMMAND_PALETTE_ITEM_TAG, {
 export const COMMAND_PALETTE_TAG = 'ore-command-palette' as const;
 define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
   props: {
+    'default-open': prop.bool(false),
     'empty-text': prop.string('No results found.'),
     items: prop.data<OreCommandPaletteProps['items']>(),
     'keep-open-on-select': prop.bool(false),
     label: prop.string('Command palette'),
     loading: prop.bool(false),
     'no-filter': prop.bool(false),
-    open: prop.bool(false),
+    open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
     placeholder: prop.string('Type a command or search…'),
     shortcut: prop.string('mod+k'),
   },
@@ -165,6 +169,7 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
     };
 
     const { closeWithAnimation, overlay, requestClose, setupNativeListeners } = useDialogControl({
+      defaultOpen: props['default-open'],
       dialogRef,
       getPanelEl: () => dialogRef.value?.querySelector<HTMLElement>('.panel'),
       host: el,
@@ -173,11 +178,11 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
       onCleanup,
       onEvent,
       onNativeClose: (reason) => {
-        emit('close', { reason });
+        emit('open-change', { open: false, reason });
         resetSearch();
       },
       onOpen: (reason) => {
-        emit('open', { reason });
+        emit('open-change', { open: true, reason });
         list.navigate('first');
       },
       openProp: props.open,

@@ -3,7 +3,7 @@ import { computed, type Readable } from '@vielzeug/ripple';
 
 import type { ComponentSize, SurfaceVariant } from '../../types';
 
-import { createListControl, lifecycleSignal } from '../../headless';
+import { createListControl, lifecycleSignal } from '../../core';
 import styles from './accordion.css?inline';
 
 /** Context provided by ore-accordion to its ore-accordion-item children. */

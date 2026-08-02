@@ -3,7 +3,7 @@ import { computed } from '@vielzeug/ripple';
 
 import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
 
-import { setAriaReflection } from '../../headless';
+import { setAriaReflection } from '../../core';
 import { disablableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';

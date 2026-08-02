@@ -67,4 +67,63 @@ test.describe('Layout', () => {
     // reported bug: a lopsided item noticeably wider than it is tall from the phantom label gap.
     expect(box.width).toBeLessThan(box.height * 1.5);
   });
+
+  test('mobile sidebar drawer stays within its positioned preview shell', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(`
+      <div id="shell" style="position:relative;width:360px;height:460px;overflow:hidden;">
+        <ore-sidebar
+          id="sidebar"
+          container-breakpoints
+          bottom-nav-at="(max-width: 640px)"
+          variant="floating">
+          <ore-sidebar-item href="#">Dashboard</ore-sidebar-item>
+        </ore-sidebar>
+        <ore-navbar
+          id="navbar"
+          container-breakpoints
+          breakpoint="(max-width: 640px)"
+          mobile-sidebar="#sidebar">
+          <span slot="logo">Workspace</span>
+        </ore-navbar>
+      </div>
+    `);
+
+    await page.waitForFunction(() => {
+      const navbar = document.getElementById('navbar');
+      const sidebar = document.getElementById('sidebar');
+
+      return navbar?.hasAttribute('data-mobile') && sidebar?.hasAttribute('data-bottom-nav');
+    });
+
+    await page.locator('#navbar').evaluate((navbar) => {
+      (navbar as HTMLElement & { toggleMobileMenu(): void }).toggleMobileMenu();
+    });
+
+    await page.waitForFunction(() => {
+      const sidebar = document.getElementById('sidebar');
+      const drawer = sidebar?.shadowRoot?.querySelector('nav');
+      const shell = document.getElementById('shell');
+
+      if (!sidebar?.hasAttribute('data-mobile-open') || !drawer || !shell) return false;
+
+      return drawer.getBoundingClientRect().left >= shell.getBoundingClientRect().left;
+    });
+
+    const bounds = await page.locator('#sidebar').evaluate((sidebar) => {
+      const drawer = sidebar.shadowRoot?.querySelector('nav');
+      const shell = document.getElementById('shell');
+
+      if (!drawer || !shell) throw new Error('Sidebar drawer geometry is unavailable');
+
+      return {
+        drawer: drawer.getBoundingClientRect().toJSON(),
+        shell: shell.getBoundingClientRect().toJSON(),
+      };
+    });
+
+    expect(bounds.drawer.left).toBeGreaterThanOrEqual(bounds.shell.left);
+    expect(bounds.drawer.right).toBeLessThanOrEqual(bounds.shell.right);
+    expect(bounds.drawer.top).toBeGreaterThanOrEqual(bounds.shell.top);
+    expect(bounds.drawer.bottom).toBeLessThanOrEqual(bounds.shell.bottom);
+  });
 });

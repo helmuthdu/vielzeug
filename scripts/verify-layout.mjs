@@ -98,7 +98,7 @@ export function buildScenarioHtml(bodyHtml, checkScript, depScripts) {
 
   return `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><link rel="stylesheet" href="file://${join(ROOT, 'packages/refine/dist/styles/styles.css')}">
+<head><meta charset="utf-8"><link rel="stylesheet" href="file://${join(ROOT, 'packages/refine/dist/styles/tokens.css')}">
 <style>body{background:#111;margin:0;padding:40px;font-family:sans-serif;}.frame{max-width:500px;}</style>
 </head>
 <body>

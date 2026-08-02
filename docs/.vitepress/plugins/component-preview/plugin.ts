@@ -110,8 +110,8 @@ export function componentPreviewPlugin(): Plugin {
 
           if (mod) server.moduleGraph.invalidateModule(mod);
 
-          const distCssPath = resolve(refineDir, 'styles/styles.css');
-          const srcCssPath = resolve(refineSrcStylesDir, 'styles.css');
+          const distCssPath = resolve(refineDir, 'styles/tokens.css');
+          const srcCssPath = resolve(refineSrcStylesDir, 'tokens.css');
           const css = inlineCss(existsSync(srcCssPath) ? srcCssPath : distCssPath);
 
           server.ws.send({ data: { css }, event: REFINE_CSS_HMR_EVENT, type: 'custom' });
@@ -141,8 +141,8 @@ export function componentPreviewPlugin(): Plugin {
 
       if (id === '\0' + CSS_ID) {
         // Prefer src CSS (no build needed); fall back to dist when src unavailable.
-        const distCssPath = resolve(refineDir, 'styles/styles.css');
-        const srcCssPath = resolve(refineSrcStylesDir, 'styles.css');
+        const distCssPath = resolve(refineDir, 'styles/tokens.css');
+        const srcCssPath = resolve(refineSrcStylesDir, 'tokens.css');
         const refineCssPath = existsSync(srcCssPath) ? srcCssPath : distCssPath;
         const refine = inlineCss(refineCssPath);
         const prism = readFileSync(resolve(pkgDir, 'prism/dist/theme/prism.css'), 'utf-8');

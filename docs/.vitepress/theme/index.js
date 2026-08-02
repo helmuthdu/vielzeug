@@ -11,17 +11,19 @@ import PackageInfo from './components/PackageInfo.vue';
 import Repl from './components/REPL.vue';
 
 // Import Refine styles - using direct paths for monorepo
-import '@vielzeug/refine/styles/styles.css';
+import '@vielzeug/refine/tokens.css';
 // Import Prism chart styles
 import '@vielzeug/prism/theme/prism.css';
 
 import './theme.css';
 
-// Register refine custom elements as early as possible.
+// Register Refine's all-components entry as early as possible. The public root
+// is deliberately side-effect free, so it cannot register the custom elements
+// rendered by the docs theme.
 // Dynamic import is required for SSR safety (no `window` on server).
 // Moving it to module-level means it starts loading before enhanceApp runs.
 if (typeof window !== 'undefined') {
-  import('@vielzeug/refine');
+  import('@vielzeug/refine/register');
 }
 
 export default {

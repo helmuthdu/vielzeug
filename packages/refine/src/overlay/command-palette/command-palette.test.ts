@@ -60,6 +60,12 @@ describe('ore-command-palette', () => {
       expect(fixture.query('dialog[open]')).toBeNull();
     });
 
+    it('initializes an uncontrolled palette with default-open', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { 'default-open': '' }, html: itemsHtml });
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+    });
+
     it('renders items from the `items` prop', async () => {
       fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
 
@@ -187,10 +193,10 @@ describe('ore-command-palette', () => {
       fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
 
       const onSelect = vi.fn();
-      const onClose = vi.fn();
+      const onOpenChange = vi.fn();
 
       fixture.element.addEventListener('select', onSelect);
-      fixture.element.addEventListener('close', onClose);
+      fixture.element.addEventListener('open-change', onOpenChange);
 
       fireClick(getRows()[0]!);
       await fixture.flush();
@@ -200,7 +206,7 @@ describe('ore-command-palette', () => {
         label: 'New File',
         value: 'new-file',
       });
-      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onOpenChange.mock.calls.at(-1)?.[0].detail).toEqual({ open: false, reason: 'trigger' });
       expect(fixture.query('dialog[open]')).toBeNull();
     });
 
@@ -287,13 +293,13 @@ describe('ore-command-palette', () => {
         props: { items },
       });
 
-      const onClose = vi.fn();
+      const onOpenChange = vi.fn();
 
-      fixture.element.addEventListener('close', onClose);
+      fixture.element.addEventListener('open-change', onOpenChange);
 
       fireClick(getRows()[0]!);
 
-      expect(onClose).not.toHaveBeenCalled();
+      expect(onOpenChange).not.toHaveBeenCalled();
       expect(fixture.query('dialog[open]')).toBeTruthy();
     });
 
@@ -311,18 +317,18 @@ describe('ore-command-palette', () => {
       expect(getRows()).toHaveLength(4);
     });
 
-    it('emits open/close events with reason details', async () => {
+    it('emits open-change with a close reason', async () => {
       fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
 
-      const onClose = vi.fn();
+      const onOpenChange = vi.fn();
 
-      fixture.element.addEventListener('close', onClose);
+      fixture.element.addEventListener('open-change', onOpenChange);
 
       fireKeyDown(fixture.query('dialog')!, { key: 'Escape' });
       fixture.query('dialog')?.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
       await fixture.flush();
 
-      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('escape');
+      expect((onOpenChange.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'escape' });
     });
 
     it('updates rendered items when the `items` prop changes dynamically', async () => {

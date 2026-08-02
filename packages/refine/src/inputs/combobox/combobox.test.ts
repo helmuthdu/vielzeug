@@ -57,17 +57,15 @@ describe('ore-combobox', () => {
       expect((onInput.mock.calls.at(-1)?.[0] as CustomEvent).detail.query).toContain('uni');
     });
 
-    it('emits open/close events with reason details', async () => {
+    it('emits open-change events with state and reason details', async () => {
       fixture = await mount('ore-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
 
-      const onOpen = vi.fn();
-      const onClose = vi.fn();
+      const onOpenChange = vi.fn();
 
-      fixture.element.addEventListener('open', onOpen);
-      fixture.element.addEventListener('close', onClose);
+      fixture.element.addEventListener('open-change', onOpenChange);
 
       const input = getInput()!;
 
@@ -76,39 +74,37 @@ describe('ore-combobox', () => {
       fireKeyDown(input, { key: 'Escape' });
       await fixture.flush();
 
-      expect(onOpen).toHaveBeenCalled();
-      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('click');
-      expect(onClose).toHaveBeenCalled();
-      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('escape');
+      expect((onOpenChange.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ open: true, reason: 'click' });
+      expect((onOpenChange.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'escape' });
     });
 
-    it('emits trigger open reason when Enter opens a closed combobox', async () => {
+    it('emits a keyboard open-change when Enter opens a closed combobox', async () => {
       fixture = await mount('ore-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
 
-      const onOpen = vi.fn();
+      const onOpenChange = vi.fn();
 
-      fixture.element.addEventListener('open', onOpen);
+      fixture.element.addEventListener('open-change', onOpenChange);
 
       const input = getInput()!;
 
       fireKeyDown(input, { key: 'Enter' });
       await fixture.flush();
 
-      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('keyboard');
+      expect((onOpenChange.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({ open: true, reason: 'keyboard' });
     });
 
-    it('emits outsideClick close reason when clicking away from the popup', async () => {
+    it('emits an outsideClick open-change when clicking away from the popup', async () => {
       fixture = await mount('ore-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
 
-      const onClose = vi.fn();
+      const onOpenChange = vi.fn();
 
-      fixture.element.addEventListener('close', onClose);
+      fixture.element.addEventListener('open-change', onOpenChange);
 
       const input = getInput()!;
 
@@ -118,18 +114,21 @@ describe('ore-combobox', () => {
       document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
       await fixture.flush();
 
-      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('outsideClick');
+      expect((onOpenChange.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({
+        open: false,
+        reason: 'outsideClick',
+      });
     });
 
-    it('emits programmatic close reason after selecting an option in single mode', async () => {
+    it('emits a programmatic open-change after selecting an option in single mode', async () => {
       fixture = await mount('ore-combobox', {
         attrs: { label: 'Country' },
         html: optionsHtml,
       });
 
-      const onClose = vi.fn();
+      const onOpenChange = vi.fn();
 
-      fixture.element.addEventListener('close', onClose);
+      fixture.element.addEventListener('open-change', onOpenChange);
 
       const input = getInput()!;
 
@@ -139,7 +138,10 @@ describe('ore-combobox', () => {
       fireClick(fixture.query<HTMLElement>('.option')!);
       await fixture.flush();
 
-      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('programmatic');
+      expect((onOpenChange.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({
+        open: false,
+        reason: 'programmatic',
+      });
     });
 
     it('emits change when an option is selected', async () => {
@@ -167,11 +169,9 @@ describe('ore-combobox', () => {
 
       expect(onChange).toHaveBeenCalled();
 
-      const detail = (onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail;
+      const target = (onChange.mock.calls.at(-1)?.[0] as Event).target as HTMLElement & { value: string };
 
-      expect(Array.isArray(detail.values)).toBe(true);
-      expect(detail.labels).toEqual(['United States']);
-      expect(detail.values?.[0]).toBe('us');
+      expect(target.value).toBe('us');
     });
 
     it('shows all options when reopened after a selection', async () => {
@@ -634,10 +634,9 @@ describe('ore-combobox', () => {
       fireKeyDown(input, { key: 'Enter' });
       await fixture.flush();
 
-      const detail = (onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail;
+      const target = (onChange.mock.calls.at(-1)?.[0] as Event).target as HTMLElement & { value: string };
 
-      expect(detail.values).toContain('us');
-      expect(detail.values).toContain('de');
+      expect(target.value).toBe('us,de');
     });
 
     it('applies color to rendered chips in multiple mode', async () => {
@@ -685,8 +684,10 @@ describe('ore-combobox', () => {
 
       expect(fixture.queryAll('ore-chip').length).toBe(1);
       expect(onChange).toHaveBeenCalled();
-      expect((onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail.values).toEqual(['gb']);
-      expect((onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail.originalEvent).toBeDefined();
+
+      const target = (onChange.mock.calls.at(-1)?.[0] as Event).target as HTMLElement & { value: string };
+
+      expect(target.value).toBe('gb');
     });
 
     it('emits change with originalEvent when cleared via clear button', async () => {
@@ -702,10 +703,9 @@ describe('ore-combobox', () => {
       fireClick(fixture.query<HTMLElement>('.clear-btn')!);
       await fixture.flush();
 
-      const detail = (onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail;
+      const target = (onChange.mock.calls.at(-1)?.[0] as Event).target as HTMLElement & { value: string };
 
-      expect(detail.values).toEqual([]);
-      expect(detail.originalEvent).toBeDefined();
+      expect(target.value).toBe('');
     });
 
     it('filters already-selected options from multiselect results without reopening', async () => {

@@ -3,7 +3,6 @@ import {
   createStableId,
   define,
   html,
-  inject,
   prop,
   ref,
   bind,
@@ -19,10 +18,17 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 
 import '../../content/icon/icon';
 import '../../feedback/progress/progress';
-import { bindRefCallback, createInteraction } from '../../headless';
+import { bindRefCallback, createInteraction } from '../../core';
 import { FILE_INPUT_SIZE_PRESET } from '../../shared';
-import { fieldMixins, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import {
+  coarsePointerMixin,
+  colorThemeMixin,
+  disabledLoadingMixin,
+  forcedColorsFocusMixin,
+  reducedMotionMixin,
+  roundedVariantMixin,
+  sizeVariantMixin,
+} from '../../styles';
 import { createFileQueue, formatBytes, type FileUploadFn } from './file-input-upload';
 import componentStyles from './file-input.css?inline';
 
@@ -192,9 +198,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     // `change` — routes that selection into `queue.replaceFile()` instead of `queue.addFiles()`.
     const replaceTarget = signal<File | null>(null);
 
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
-    const isDisabled = fCtxProps.disabled;
+    const isDisabled = computed(() => Boolean(props.disabled.value));
     const maxFilesLimit = computed(() => props['max-files'].value ?? 0);
     const maxSizeLimit = computed(() => props['max-size'].value ?? 0);
 
@@ -244,7 +248,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
       attr: {
         'drag-over': () => (isDragging.value ? true : undefined),
         invalid: () => (isInvalid.value ? true : undefined),
-        size: fCtxProps.size,
+        size: props.size,
       },
     });
 
@@ -663,7 +667,11 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
   },
   shadow: { delegatesFocus: true },
   styles: [
-    ...fieldMixins,
+    colorThemeMixin,
+    coarsePointerMixin,
+    reducedMotionMixin,
+    roundedVariantMixin,
+    disabledLoadingMixin,
     sizeVariantMixin(FILE_INPUT_SIZE_PRESET),
     forcedColorsFocusMixin('.dropzone'),
     componentStyles,

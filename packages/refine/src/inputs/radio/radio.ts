@@ -1,16 +1,10 @@
-import { define, html, inject, prop, bind, getHost, onCleanup, useEmit } from '@vielzeug/ore';
+import { define, html, inject, prop, bind, getHost, onCleanup } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
-import {
-  type CheckableChangePayload,
-  elementDirection,
-  lifecycleSignal,
-  createCheckable,
-  createListControl,
-} from '../../headless';
+import { elementDirection, lifecycleSignal, createCheckable, createListControl } from '../../core';
 import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
   coarsePointerMixin,
@@ -20,14 +14,15 @@ import {
   sizeVariantMixin,
 } from '../../styles';
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { defineFieldChecked, dispatchNativeFieldEvent, setFieldChecked } from '../shared/native-field-event';
 import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './radio.css?inline';
 
 /** Radio component properties */
 
 export type OreRadioEvents = {
-  change: CheckableChangePayload;
+  change: Event;
+  input: Event;
 };
 
 export type OreRadioProps = CheckableProps & {
@@ -57,7 +52,8 @@ export type OreRadioProps = CheckableProps & {
  * @attr {string} error - Error message (marks field as invalid)
  * @attr {string} helper - Helper text displayed below the radio
  *
- * @fires change - Emitted when radio is selected. detail: { checked: boolean, value: string, originalEvent?: Event }
+ * @fires input - Emitted when radio is selected.
+ * @fires change - Emitted when radio is selected.
  *
  * @slot - Radio button label text
  *
@@ -94,14 +90,10 @@ define<OreRadioProps>(RADIO_TAG, {
   },
   setup(props) {
     const el = getHost();
-    const emit = useEmit<OreRadioEvents>();
 
     const groupCtx = inject(RADIO_GROUP_CTX);
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
-
     const effectiveName = computed(() => groupCtx?.name.value || props.name.value || '');
-    const effectiveSize = computed(() => groupCtx?.size.value ?? fCtxProps.size.value);
+    const effectiveSize = computed(() => groupCtx?.size.value ?? props.size.value);
     const effectiveColor = computed(() => groupCtx?.color.value ?? props.color.value);
     const checkedFromState = computed(() => {
       if (groupCtx) return groupCtx.value.value === props.value.value;
@@ -162,15 +154,16 @@ define<OreRadioProps>(RADIO_TAG, {
 
     const checkable = createCheckable({
       checked: checkedFromState,
-      disabled: computed(() => fCtxProps.disabled.value || Boolean(groupCtx?.disabled.value)),
+      disabled: computed(() => props.disabled.value || Boolean(groupCtx?.disabled.value)),
       error: props.error,
       helper: props.helper,
       onToggle: (payload) => {
-        emit('change', payload);
+        setFieldChecked(el, payload.checked);
+        dispatchNativeFieldEvent(el, 'input');
+        dispatchNativeFieldEvent(el, 'change');
       },
       prefix: 'radio',
       signal: lifecycleSignal(onCleanup),
-      validateOn: formCtx?.validateOn,
       value: props.value,
     });
 
@@ -183,6 +176,14 @@ define<OreRadioProps>(RADIO_TAG, {
     );
 
     const { assistiveId, checked, disabled, errorText, helperText, labelId, toggle } = checkable;
+
+    defineFieldChecked(
+      el,
+      () => checked.value,
+      (value) => {
+        checked.value = value;
+      },
+    );
 
     bind({
       attr: {

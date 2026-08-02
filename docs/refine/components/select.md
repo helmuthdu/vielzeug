@@ -146,8 +146,7 @@ The `change` event detail includes both `value` (comma-separated string) and `va
 
 ```js
 document.querySelector('ore-select').addEventListener('change', (e) => {
-  console.log('csv:', e.detail.value); // "ts,rust"
-  console.log('array:', e.detail.values); // ["ts", "rust"]
+  console.log('value:', e.currentTarget.value); // ["ts", "rust"] in multiple mode
 });
 ```
 
@@ -231,7 +230,7 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
 `ore-select` is form-associated. Read the value via `FormData` or a `change` event. Supply a placeholder `<option value="">…</option>` when the field is not pre-selected.
 
 ```html
-<ore-form id="myForm">
+<form id="myForm">
   <ore-select name="category" label="Category" required>
     <option value="">Select a category…</option>
     <option value="tech">Technology</option>
@@ -239,10 +238,9 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
     <option value="art">Art</option>
   </ore-select>
   <ore-button type="submit">Submit</ore-button>
-</ore-form>
+</form>
 
 <script type="module">
-  import '@vielzeug/refine/form';
   import '@vielzeug/refine/select';
   import '@vielzeug/refine/button';
 
@@ -253,17 +251,12 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
   });
 
   document.querySelector('ore-select').addEventListener('change', (e) => {
-    console.log('Selected value:', e.detail.value);
-    console.log('Selected labels:', e.detail.labels);
-    // For multiple: e.detail.values (string[])
+    console.log('Selected value:', e.currentTarget.value);
+    // Multiple select exposes a string array.
   });
 
-  document.querySelector('ore-select').addEventListener('open', (e) => {
-    console.log('Opened because:', e.detail.reason); // 'trigger' | 'programmatic'
-  });
-
-  document.querySelector('ore-select').addEventListener('close', (e) => {
-    console.log('Closed because:', e.detail.reason); // 'escape' | 'outside-click' | 'programmatic' | 'trigger'
+  document.querySelector('ore-select').addEventListener('open-change', (e) => {
+    console.log('Dropdown open:', e.detail.open, e.detail.reason);
   });
 </script>
 ```
@@ -302,8 +295,7 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
 | Event    | Detail                                                                         | Description                               |
 | -------- | ------------------------------------------------------------------------------ | ----------------------------------------- |
 | `change` | `{ value: string, values: string[], labels: string[], originalEvent?: Event }` | Emitted when the selected value(s) change |
-| `open`   | `{ reason: 'trigger' \| 'programmatic' }`                                      | Emitted when the dropdown opens           |
-| `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' \| 'trigger' }`       | Emitted when the dropdown closes          |
+| `open-change` | `{ open: boolean, reason: string }`                                        | Emitted whenever the dropdown opens or closes |
 
 ### CSS Custom Properties
 

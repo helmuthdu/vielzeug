@@ -1,6 +1,25 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
+type ExportConditions = {
+  default?: string;
+  import?: string;
+  source?: string;
+  types?: string;
+};
+
+const getSourcePath = (entry: ExportConditions | string): string | undefined => {
+  if (typeof entry === 'string') return undefined;
+
+  if (entry.source) return entry.source;
+
+  const publishedPath = entry.types ?? entry.import ?? entry.default;
+
+  if (!publishedPath?.startsWith('./dist/')) return undefined;
+
+  return publishedPath.replace('./dist/', './src/').replace(/\.d\.ts$/, '.ts');
+};
+
 /**
  * Maps every `@vielzeug/*` dependency and any published sub-path export (e.g. `@vielzeug/ore/testing`)
  * to its real TS source file inside a sibling `../../packages/` checkout — the shared logic
@@ -32,18 +51,19 @@ export function collectLocalPackageMap(demoRoot: string): Record<string, string>
     if (!existsSync(depPkgPath)) continue;
 
     const depPkg = JSON.parse(readFileSync(depPkgPath, 'utf8')) as {
-      exports?: Record<string, { source?: string } | string>;
+      exports?: Record<string, ExportConditions | string>;
     };
     const exportsMap = depPkg.exports ?? { '.': { source: './src/index.ts' } };
 
     for (const [subpath, condition] of Object.entries(exportsMap)) {
-      const source = typeof condition === 'string' ? undefined : condition.source;
+      const source = getSourcePath(condition);
 
-      if (!source) continue; // skip asset-only exports (e.g. `./styles`) with no TS source
+      if (!source) continue;
 
       const specifier = subpath === '.' ? name : `${name}/${subpath.slice(2)}`;
+      const sourcePath = path.join(packagesDir, shortName, source.slice(2));
 
-      map[specifier] = path.join(packagesDir, shortName, source.slice(2));
+      if (existsSync(sourcePath)) map[specifier] = sourcePath;
     }
   }
 

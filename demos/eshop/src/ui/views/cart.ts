@@ -79,7 +79,7 @@ define('cart-view', {
                         @input=${(e: Event) =>
                           setCartItemQuantity(
                             l.value.item.id,
-                            (e as CustomEvent<{ value: number | null }>).detail.value ?? 1,
+                            Number((e.currentTarget as HTMLElementTagNameMap['ore-number-input']).value) || 1,
                           )}></ore-number-input>
                     </div>
                     <div class="cart-line__price">
@@ -100,7 +100,8 @@ define('cart-view', {
               placeholder=${() => t('cart.promoPlaceholder')}
               value=${() => promoInput.value}
               error=${() => promoError.value}
-              @input=${(e: Event) => (promoInput.value = (e as CustomEvent<{ value: string }>).detail.value)}></ore-input>
+              @input=${(e: Event) =>
+                (promoInput.value = (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '')}></ore-input>
             <ore-button rounded variant="bordered" @click=${applyPromo}>${() => t('cart.promoApply')}</ore-button>
             ${when(
               () => promoApplied.value,

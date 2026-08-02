@@ -630,7 +630,7 @@ pnpm add -D @vielzeug/assay
 - `within()` — scoped `query`/`queryAll`/`queryByText`/`queryByTestId` and shadow-DOM-aware `queryInShadow`/`queryPart`
 - Named exact event dispatchers such as `fireClick()`, `fireInput()`, and `fireKeyDown()`
 - `waitUntil()`/`retry()`/`waitForEvent()` — cancellable async waiting with typed timeout errors
-- Zero dependencies, no coupling to any UI framework — used by `@vielzeug/ore/testing` and `@vielzeug/refine/testing`
+- Zero dependencies, no coupling to any UI framework — used by `@vielzeug/ore/testing` and Refine's internal test suite
 
 [📖 Documentation](https://vielzeug.dev/assay/) • [Examples](https://vielzeug.dev/assay/examples)
 

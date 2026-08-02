@@ -154,14 +154,12 @@ describe('ore-select', () => {
       expect(fixture.element.hasAttribute('open')).toBe(false);
     });
 
-    it('emits open/close events with reason details', async () => {
+    it('emits open-change events with state and reason details', async () => {
       fixture = await mount('ore-select', { html: SELECT_OPTIONS });
 
-      const onOpen = vi.fn();
-      const onClose = vi.fn();
+      const onOpenChange = vi.fn();
 
-      fixture.element.addEventListener('open', onOpen);
-      fixture.element.addEventListener('close', onClose);
+      fixture.element.addEventListener('open-change', onOpenChange);
 
       const trigger = fixture.query<HTMLElement>('ore-input.trigger')!;
 
@@ -170,18 +168,16 @@ describe('ore-select', () => {
       fireKeyDown(trigger, { key: 'Escape' });
       await fixture.flush();
 
-      expect(onOpen).toHaveBeenCalled();
-      expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('click');
-      expect(onClose).toHaveBeenCalled();
-      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('escape');
+      expect((onOpenChange.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ open: true, reason: 'click' });
+      expect((onOpenChange.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'escape' });
     });
 
-    it('emits trigger close reason when the trigger toggles the open panel shut', async () => {
+    it('emits a trigger open-change when the trigger toggles the open panel shut', async () => {
       fixture = await mount('ore-select', { html: SELECT_OPTIONS });
 
-      const onClose = vi.fn();
+      const onOpenChange = vi.fn();
 
-      fixture.element.addEventListener('close', onClose);
+      fixture.element.addEventListener('open-change', onOpenChange);
 
       const trigger = fixture.query<HTMLElement>('ore-input.trigger')!;
 
@@ -190,15 +186,15 @@ describe('ore-select', () => {
       fireClick(trigger);
       await fixture.flush();
 
-      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('trigger');
+      expect((onOpenChange.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'trigger' });
     });
 
-    it('emits outsideClick close reason when clicking away from the dropdown', async () => {
+    it('emits an outsideClick open-change when clicking away from the dropdown', async () => {
       fixture = await mount('ore-select', { html: SELECT_OPTIONS });
 
-      const onClose = vi.fn();
+      const onOpenChange = vi.fn();
 
-      fixture.element.addEventListener('close', onClose);
+      fixture.element.addEventListener('open-change', onOpenChange);
 
       fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
@@ -206,25 +202,31 @@ describe('ore-select', () => {
       document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
       await fixture.flush();
 
-      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('outsideClick');
+      expect((onOpenChange.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({
+        open: false,
+        reason: 'outsideClick',
+      });
     });
 
-    it('emits programmatic close reason after selecting an option in single mode', async () => {
+    it('emits a programmatic open-change after selecting an option in single mode', async () => {
       fixture = await mount('ore-select', { html: SELECT_OPTIONS });
 
-      const onClose = vi.fn();
+      const onOpenChange = vi.fn();
 
-      fixture.element.addEventListener('close', onClose);
+      fixture.element.addEventListener('open-change', onOpenChange);
 
       fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
       fireClick(fixture.query<HTMLElement>('[role="option"]')!);
       await fixture.flush();
 
-      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('programmatic');
+      expect((onOpenChange.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({
+        open: false,
+        reason: 'programmatic',
+      });
     });
 
-    it('emits change event with value and originalEvent on selection', async () => {
+    it('emits change with the selected host value', async () => {
       fixture = await mount('ore-select', { html: SELECT_OPTIONS });
 
       const changeHandler = vi.fn();
@@ -240,11 +242,9 @@ describe('ore-select', () => {
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
 
-      const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
+      const target = (changeHandler.mock.calls[0][0] as Event).target as HTMLElement & { value: string };
 
-      expect(detail.values).toBeDefined();
-      expect(detail.labels).toEqual(['Apple']);
-      expect(detail.originalEvent).toBeDefined();
+      expect(target.value).toBe('apple');
     });
 
     it('skips disabled options when clicked', async () => {
@@ -278,7 +278,7 @@ describe('ore-select', () => {
       expect(fixture.element.hasAttribute('multiple')).toBe(true);
     });
 
-    it('emits change event with values array for multiple select', async () => {
+    it('emits change with a comma-separated host value for multiple select', async () => {
       fixture = await mount('ore-select', {
         attrs: { multiple: true },
         html: SELECT_OPTIONS,
@@ -295,9 +295,9 @@ describe('ore-select', () => {
 
       fireClick(firstOption);
 
-      const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
+      const target = (changeHandler.mock.calls[0][0] as Event).target as HTMLElement & { value: string };
 
-      expect(Array.isArray(detail.values)).toBe(true);
+      expect(target.value).toBe('apple');
     });
 
     it('updates selected state immediately for grouped options while dropdown stays open', async () => {
@@ -486,8 +486,10 @@ describe('ore-select', () => {
 
       expect(fixture.queryAll('ore-chip').length).toBe(1);
       expect(changeHandler).toHaveBeenCalled();
-      expect((changeHandler.mock.calls.at(-1)?.[0] as CustomEvent).detail.values).toEqual(['banana']);
-      expect((changeHandler.mock.calls.at(-1)?.[0] as CustomEvent).detail.originalEvent).toBeDefined();
+
+      const target = (changeHandler.mock.calls.at(-1)?.[0] as Event).target as HTMLElement & { value: string };
+
+      expect(target.value).toBe('banana');
     });
   });
 
@@ -812,7 +814,10 @@ describe('ore-select accessibility', () => {
 
       expect(fixture.element.hasAttribute('open')).toBe(false);
       expect(changeHandler).toHaveBeenCalledTimes(1);
-      expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.values?.[0]).toBe('banana');
+
+      const target = (changeHandler.mock.calls[0][0] as Event).target as HTMLElement & { value: string };
+
+      expect(target.value).toBe('banana');
     });
 
     it('selects focused option with Space when open', async () => {
@@ -836,7 +841,10 @@ describe('ore-select accessibility', () => {
 
       expect(fixture.element.hasAttribute('open')).toBe(false);
       expect(changeHandler).toHaveBeenCalledTimes(1);
-      expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.values?.[0]).toBe('banana');
+
+      const target = (changeHandler.mock.calls[0][0] as Event).target as HTMLElement & { value: string };
+
+      expect(target.value).toBe('banana');
     });
   });
 

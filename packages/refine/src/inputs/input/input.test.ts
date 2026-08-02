@@ -348,42 +348,36 @@ describe('ore-input', () => {
   // ─── Events ────────────────────────────────────────────────────────────────
 
   describe('Events', () => {
-    it('emits custom input event with value and originalEvent', async () => {
+    it('emits a bubbling, composed input event with the host value', async () => {
       fixture = await mount('ore-input');
 
-      const inputHandler = vi.fn();
+      let observedValue: string | undefined;
 
-      fixture.element.addEventListener('input', inputHandler);
+      fixture.element.addEventListener('input', (event) => {
+        observedValue = (event.currentTarget as HTMLElement & { value: string }).value;
+      });
 
       fixture.query<HTMLInputElement>('input')!.value += 'a';
       fireInput(fixture.query<HTMLInputElement>('input')!);
 
-      expect(inputHandler).toHaveBeenCalledTimes(1);
-
-      const detail = (inputHandler.mock.calls[0][0] as CustomEvent).detail;
-
-      expect(detail.value).toBe('a');
-      expect(detail.originalEvent).toBeDefined();
+      expect(observedValue).toBe('a');
     });
 
-    it('emits custom change event with value and originalEvent', async () => {
+    it('emits a bubbling, composed change event with the host value', async () => {
       fixture = await mount('ore-input');
 
-      const changeHandler = vi.fn();
+      let observedValue: string | undefined;
 
-      fixture.element.addEventListener('change', changeHandler);
+      fixture.element.addEventListener('change', (event) => {
+        observedValue = (event.currentTarget as HTMLElement & { value: string }).value;
+      });
 
       const input = fixture.query<HTMLInputElement>('input')!;
 
       input.value = 'changed';
       input.dispatchEvent(new Event('change', { bubbles: true }));
 
-      expect(changeHandler).toHaveBeenCalledTimes(1);
-
-      const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
-
-      expect(detail.value).toBe('changed');
-      expect(detail.originalEvent).toBeDefined();
+      expect(observedValue).toBe('changed');
     });
   });
 
@@ -549,12 +543,9 @@ describe('ore-input', () => {
 
       fireClick(fixture.query<HTMLButtonElement>('.clear-btn')!);
 
-      expect(inputHandler).toHaveBeenCalledWith(
-        expect.objectContaining({ detail: expect.objectContaining({ value: '' }) }),
-      );
-      expect(changeHandler).toHaveBeenCalledWith(
-        expect.objectContaining({ detail: expect.objectContaining({ value: '' }) }),
-      );
+      expect((inputHandler.mock.calls[0][0] as Event).target).toBe(fixture.element);
+      expect((changeHandler.mock.calls[0][0] as Event).target).toBe(fixture.element);
+      expect((fixture.element as HTMLElement & { value: string }).value).toBe('');
     });
   });
 

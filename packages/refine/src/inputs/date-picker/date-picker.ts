@@ -1,4 +1,4 @@
-import { define, html, inject, prop, ref, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
+import { define, html, prop, ref, bind, getHost, onMounted } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { Temporal, format } from '@vielzeug/tempo';
@@ -12,18 +12,19 @@ import {
   parseIso,
   toIsoString,
   type DatePickerView,
-} from '../../headless';
+} from '../../core';
 import '../../content/icon/icon';
 import '../input/input';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './date-picker.css?inline';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type OreDatePickerEvents = {
-  change: { isoValue: string | null };
+  change: Event;
+  input: Event;
 };
 
 export type OreDatePickerProps = {
@@ -105,7 +106,8 @@ export type OreDatePickerProps = {
  * @attr {string} locale - BCP 47 locale string
  * @attr {string} weekend-days - Comma-separated day indices to disable
  *
- * @fires change - Fired when a date is selected. detail: { isoValue: string | null }
+ * @fires input - Fired when a date is selected.
+ * @fires change - Fired when a date is selected.
  *
  * @slot label - Custom label for the trigger field
  * @slot prefix - Content before the trigger text (e.g. icon)
@@ -163,7 +165,6 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
 
   setup(props) {
     const el = getHost();
-    const emit = useEmit<OreDatePickerEvents>();
 
     // ── Signals ─────────────────────────────────────────────────────────────
 
@@ -179,12 +180,15 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
       localSelection.value !== undefined ? localSelection.value : parseIso(props.value.value),
     );
 
-    // ── Form context ────────────────────────────────────────────────────────
+    defineFieldValue(
+      el,
+      () => toIsoString(selectedDate.value) ?? '',
+      (value) => {
+        localSelection.value = parseIso(value);
+      },
+    );
 
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
-
-    const isDisabled = fCtxProps.disabled;
+    const isDisabled = computed(() => Boolean(props.disabled.value));
     const locale = computed(() => props.locale.value || (typeof navigator !== 'undefined' ? navigator.language : 'en'));
 
     // ── Date-picker control ─────────────────────────────────────────────────
@@ -206,7 +210,9 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
         currentView.value = 'day';
         displayYear.value = ctrl.displayYear();
         displayMonth.value = ctrl.displayMonth();
-        emit('change', { isoValue: toIsoString(date) });
+        setFieldValue(el, toIsoString(date) ?? '');
+        dispatchNativeFieldEvent(el, 'input');
+        dispatchNativeFieldEvent(el, 'change');
       },
       get value() {
         return selectedDate.value;
@@ -512,8 +518,8 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
     const inputPlaceholder = () => props.placeholder.value ?? '';
     const inputLabelPlacement = () => props['label-placement'].value ?? 'inset';
     const inputColor = () => props.color?.value ?? undefined;
-    const inputSize = () => fCtxProps.size?.value ?? undefined;
-    const inputVariant = () => fCtxProps.variant?.value ?? undefined;
+    const inputSize = () => props.size?.value ?? undefined;
+    const inputVariant = () => props.variant?.value ?? undefined;
     const inputRounded = () => props.rounded?.value ?? undefined;
     const inputHelper = () => props.helper.value ?? '';
     const inputError = () => props.error.value ?? '';

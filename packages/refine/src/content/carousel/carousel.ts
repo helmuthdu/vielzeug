@@ -3,10 +3,9 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ThemeColor } from '../../types';
 
-import { warn } from '../../_dev';
 import '../../content/icon/icon';
 import '../../feedback/progress/progress';
-import { announce, createSwipeControl } from '../../headless';
+import { announce, createSwipeControl } from '../../core';
 import componentStyles from './carousel.css?inline';
 import './carousel-slide';
 
@@ -15,7 +14,7 @@ export { CAROUSEL_SLIDE_TAG } from './carousel-slide';
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export type CarouselOrientation = 'horizontal' | 'vertical';
-export type CarouselVariant = 'default' | 'fade' | 'filmstrip' | 'gallery' | 'marquee';
+export type CarouselVariant = 'default' | 'fade' | 'filmstrip' | 'gallery';
 
 export type OreCarouselEvents = {
   /** Fired when the active slide changes. */
@@ -34,19 +33,8 @@ export type OreCarouselProps = {
   color?: ThemeColor;
   /** Accessible label for the carousel region. */
   label?: string;
-  /**
-   * Whether the carousel loops from the last slide back to the first. Defaults to `true`.
-   *
-   * > **Note for `marquee` variant:** `loop="false"` runs the scroll animation once then stops,
-   * > rather than controlling navigation wrap-around (marquee navigation always loops).
-   * > If you intend to stop wrapping navigation in another variant, use `loop` there as expected.
-   */
+  /** Whether the carousel loops from the last slide back to the first. Defaults to `true`. */
   loop?: boolean;
-  /**
-   * Duration in seconds for one full marquee loop cycle. Defaults to `10`.
-   * Shorter values = faster scroll; longer values = slower scroll.
-   */
-  'marquee-duration'?: number;
   /** Carousel orientation. Defaults to `'horizontal'`. */
   orientation?: CarouselOrientation;
   /** Show next/prev navigation buttons. Defaults to `true`. */
@@ -61,16 +49,8 @@ export type OreCarouselProps = {
    * - `'fade'`      — slides crossfade; no movement
    * - `'filmstrip'` — all slides visible side-by-side; active expands
    * - `'gallery'`   — active slide fills the majority; adjacent slides show as thumbnails
-   * - `'marquee'`   — continuous auto-scroll ticker; `loop` controls whether it repeats
    */
   variant?: CarouselVariant;
-};
-
-// ── Internal marquee instance type ────────────────────────────────────────────
-
-type MarqueeInstance = {
-  cleanup: () => void;
-  seekTo: (index: number, slideSnapshot: HTMLElement[]) => void;
 };
 
 /**
@@ -86,13 +66,12 @@ type MarqueeInstance = {
  * @attr {boolean} autoplay          - Advance slides automatically (default false)
  * @attr {number}  autoplay-interval - Milliseconds between automatic advances (default 5000)
  * @attr {string}  label             - Accessible label for the carousel region
- * @attr {boolean} loop              - Loop from last slide to first (default true); in marquee mode: repeat vs run-once
+ * @attr {boolean} loop              - Loop from last slide to first (default true)
  * @attr {string}  orientation       - 'horizontal' (default) | 'vertical'
- * @attr {string}  variant           - 'default' | 'fade' | 'filmstrip' | 'gallery' | 'marquee'
+ * @attr {string}  variant           - 'default' | 'fade' | 'filmstrip' | 'gallery'
  * @attr {boolean} show-controls     - Show prev/next buttons (default true)
  * @attr {boolean} show-indicators   - Show indicator dots (default true)
  * @attr {number}  slide-index       - Active slide index (zero-based, default 0)
- * @attr {number}  marquee-duration  - Loop cycle duration in seconds for marquee variant (default 10)
  *
  * @fires change - Fires when the active slide changes. detail: { index: number }
  *
@@ -102,13 +81,12 @@ type MarqueeInstance = {
  * @cssprop --carousel-radius              - Border radius of the carousel
  * @cssprop --carousel-dot-bg              - Inactive indicator color (default: var(--color-contrast-300))
  * @cssprop --carousel-dot-active-bg       - Active indicator / fill color (default: var(--color-contrast-700))
- * @cssprop --carousel-transition-duration - Slide transition duration (default 0.35s; 0s under prefers-reduced-motion). Also controls marquee seek animation duration.
+ * @cssprop --carousel-transition-duration - Slide transition duration (default 0.35s; 0s under prefers-reduced-motion).
  * @cssprop --carousel-min-height          - Minimum height when no explicit height is set (default 240px)
  * @cssprop --carousel-filmstrip-inactive  - Width (horizontal) or height (vertical) of inactive slides in filmstrip mode
  * @cssprop --carousel-filmstrip-gap       - Gap between slides in filmstrip mode
  * @cssprop --carousel-gallery-thumbnail   - Width (horizontal) or height (vertical) of thumbnail slides in gallery mode (default var(--size-24))
  * @cssprop --carousel-gallery-gap         - Gap between slides in gallery mode (default var(--size-2))
- * @cssprop --carousel-marquee-gap         - Gap between slides in marquee mode (default var(--size-4))
  *
  * @part track      - The scrolling slide track element
  * @part controls   - The prev/next button container
@@ -178,16 +156,6 @@ const syncGallerySlides = (slides: HTMLElement[], current: number): void => {
   });
 };
 
-const syncMarqueeSlides = (slides: HTMLElement[], current: number): void => {
-  slides.forEach((slide, i) => {
-    slide.toggleAttribute('data-active', i === current);
-    slide.setAttribute('aria-hidden', 'false');
-    slide.removeAttribute('data-before');
-    slide.removeAttribute('data-after');
-    slide.removeAttribute('data-gallery-visible');
-  });
-};
-
 // ── ore-carousel ──────────────────────────────────────────────────────────────
 
 define<OreCarouselProps>(CAROUSEL_TAG, {
@@ -197,7 +165,6 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     color: prop.string<ThemeColor>(),
     label: prop.string('Carousel'),
     loop: prop.bool(true),
-    'marquee-duration': prop.number(10),
     orientation: prop.string<CarouselOrientation>('horizontal'),
     'show-controls': prop.bool(true),
     'show-indicators': prop.bool(true),
@@ -212,7 +179,6 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     // ── State ────────────────────────────────────────────────────────────────
 
     const activeIndex = signal<number>(props['slide-index'].value ?? 0);
-    const isMarquee = computed(() => props.variant.value === 'marquee');
     let autoplayTimer: ReturnType<typeof setInterval> | null = null;
 
     // Slide cache — populated immediately, refreshed on slotchange.
@@ -234,10 +200,6 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
 
     // ── Navigation ───────────────────────────────────────────────────────────
 
-    // marqueeInstance is set in onMounted; accessed here via module-level ref
-    // stored on the setup closure. No separate side-channel variable needed.
-    let marqueeInstance: MarqueeInstance | null = null;
-
     const goTo = (index: number, announce_: boolean = true): void => {
       const count = slideCount.value;
 
@@ -250,8 +212,6 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       activeIndex.value = next;
       el.setAttribute('slide-index', String(next));
       emit('change', { index: next });
-      // Pass current slides snapshot so seekTo never reads a stale closure.
-      marqueeInstance?.seekTo(next, slides);
 
       if (announce_) {
         announce(slides[next]?.getAttribute('aria-label') ?? `Slide ${next + 1} of ${count}`);
@@ -292,7 +252,6 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       fade: syncDefaultSlides,
       filmstrip: syncFilmstripSlides,
       gallery: syncGallerySlides,
-      marquee: syncMarqueeSlides,
     };
 
     const syncActiveState = (): void => {
@@ -401,165 +360,10 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       },
     });
 
-    // ── Marquee ───────────────────────────────────────────────────────────────
-    // Clones slides for a seamless loop. Seek uses WAAPI when available
-    // (all modern browsers) so it can be cancelled cleanly. Falls back to
-    // instant negative-delay repositioning in environments without WAAPI
-    // (e.g. jsdom in tests).
-
-    const setupMarquee = (track: HTMLElement): MarqueeInstance => {
-      const orientation = props.orientation.value ?? 'horizontal';
-      const horizontal = orientation !== 'vertical';
-
-      if (isMarquee.value && props.loop.value === false) {
-        warn(
-          'ore-carousel: loop="false" on the marquee variant stops the scroll animation rather than ' +
-            'disabling navigation wrap-around. Navigation in marquee always loops. ' +
-            'This is different from loop="false" on other variants.',
-        );
-      }
-
-      const clones = slides.map((s) => {
-        const clone = s.cloneNode(true) as HTMLElement;
-
-        clone.setAttribute('aria-hidden', 'true');
-        clone.setAttribute('data-variant', 'marquee');
-        clone.setAttribute('data-orientation', orientation);
-        clone.setAttribute('data-marquee-clone', '');
-        track.appendChild(clone);
-
-        return clone;
-      });
-
-      track.style.setProperty('--_marquee-duration', `${props['marquee-duration'].value ?? 10}s`);
-
-      if (!looping.value) {
-        track.style.setProperty('animation-iteration-count', '1');
-      }
-
-      let isHovered = false;
-
-      const pause = (): void => {
-        isHovered = true;
-        track.style.setProperty('animation-play-state', 'paused');
-      };
-
-      const resume = (): void => {
-        isHovered = false;
-        track.style.removeProperty('animation-play-state');
-      };
-
-      // mouseenter/mouseleave fire only when the pointer crosses the host
-      // boundary — never when moving between children (e.g. onto controls).
-      // This means clicking buttons never accidentally resumes the animation.
-      el.addEventListener('mouseenter', pause);
-      el.addEventListener('mouseleave', resume);
-
-      // ── Seek ──────────────────────────────────────────────────────────────
-      // Smoothly slides to the target position using a CSS transition on the
-      // inline transform (the CSS keyframe animation is paused throughout so
-      // there is no compositing conflict). On transitionend, switches back to
-      // the keyframe animation via a negative animation-delay.
-
-      let seekTimer: ReturnType<typeof setTimeout> | null = null;
-
-      const seekTo = (index: number, slideSnapshot: HTMLElement[]): void => {
-        const slide = slideSnapshot[index];
-
-        if (!slide) return;
-
-        const targetOffset = horizontal ? slide.offsetLeft : slide.offsetTop;
-        const halfSize = horizontal ? track.scrollWidth / 2 : track.scrollHeight / 2;
-        const cycleDuration = props['marquee-duration'].value ?? 10;
-        const delay = halfSize > 0 ? -((targetOffset / halfSize) * cycleDuration) : 0;
-
-        // Cancel any in-flight seek timer.
-        if (seekTimer !== null) {
-          clearTimeout(seekTimer);
-          seekTimer = null;
-          // Snap the previous transition to its end state immediately.
-          track.style.removeProperty('transition');
-        }
-
-        // No layout (jsdom): instant seek with no visual transition.
-        if (halfSize === 0) {
-          track.style.setProperty('animation-delay', `${delay}s`);
-
-          if (!isHovered) {
-            track.style.removeProperty('animation-play-state');
-          }
-
-          return;
-        }
-
-        const seekMs =
-          parseFloat(getComputedStyle(el).getPropertyValue('--carousel-transition-duration') || '0.35') * 1000 || 350;
-
-        const targetTransform = horizontal ? `translateX(-${targetOffset}px)` : `translateY(-${targetOffset}px)`;
-
-        // 1. Read the current visual position from the live animation, then
-        //    kill the animation entirely so nothing else drives transform.
-        //    getBoundingClientRect() flushes layout so the matrix is current.
-        void track.getBoundingClientRect();
-
-        const computedTransform = getComputedStyle(track).transform;
-        const matrixValues = computedTransform
-          .match(/matrix\(([^)]+)\)/)?.[1]
-          .split(',')
-          .map(Number);
-        const frozenOffset = horizontal ? (matrixValues?.[4] ?? 0) : (matrixValues?.[5] ?? 0);
-        const frozenTransform = horizontal ? `translateX(${frozenOffset}px)` : `translateY(${frozenOffset}px)`;
-
-        // Stop the CSS animation — inline transform is now the sole driver.
-        track.style.setProperty('animation', 'none');
-        track.style.setProperty('transform', frozenTransform);
-
-        // 2. Next frame: apply transition and slide to target.
-        requestAnimationFrame(() => {
-          track.style.setProperty('transition', `transform ${seekMs}ms ease-in-out`);
-          track.style.setProperty('transform', targetTransform);
-
-          // 3. After the transition completes, restore the keyframe animation
-          //    at the correct position via negative animation-delay.
-          seekTimer = setTimeout(() => {
-            seekTimer = null;
-            track.style.removeProperty('transition');
-            track.style.removeProperty('transform');
-            track.style.removeProperty('animation');
-            track.style.setProperty('animation-delay', `${delay}s`);
-
-            if (isHovered) {
-              track.style.setProperty('animation-play-state', 'paused');
-            }
-          }, seekMs);
-        });
-      };
-
-      return {
-        cleanup: () => {
-          if (seekTimer !== null) clearTimeout(seekTimer);
-
-          seekTimer = null;
-          clones.forEach((c) => c.remove());
-          track.style.removeProperty('transition');
-          track.style.removeProperty('transform');
-          track.style.removeProperty('animation');
-          track.style.removeProperty('--_marquee-duration');
-          track.style.removeProperty('animation-iteration-count');
-          track.style.removeProperty('animation-delay');
-          track.style.removeProperty('animation-play-state');
-          el.removeEventListener('mouseenter', pause);
-          el.removeEventListener('mouseleave', resume);
-        },
-        seekTo,
-      };
-    };
-
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     onMounted(() => {
       const shadowRoot = el.shadowRoot!;
-      const track = shadowRoot.querySelector<HTMLElement>('.track')!;
       const slot = shadowRoot.querySelector<HTMLSlotElement>('slot')!;
 
       // slotchange replaces MutationObserver — fires exactly when assigned
@@ -568,28 +372,9 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
         refreshSlides();
         syncSlideVariants();
         syncActiveState();
-
-        if (isMarquee.value) {
-          marqueeInstance?.cleanup();
-          marqueeInstance = setupMarquee(track);
-        }
       };
 
       slot.addEventListener('slotchange', onSlotChange);
-
-      watch(
-        computed(() => ({
-          duration: props['marquee-duration'].value,
-          isMarquee: isMarquee.value,
-          loop: props.loop.value,
-          orientation: props.orientation.value,
-        })),
-        ({ isMarquee: active }) => {
-          marqueeInstance?.cleanup();
-          marqueeInstance = active ? setupMarquee(track) : null;
-        },
-        { immediate: true },
-      );
 
       if (props.autoplay.value) {
         startAutoplay();
@@ -599,7 +384,6 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
         stopAutoplay();
         swipe.dispose();
         slot.removeEventListener('slotchange', onSlotChange);
-        marqueeInstance?.cleanup();
       };
     });
 
@@ -691,7 +475,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       </div>
 
       ${() =>
-        showIndicators.value && slideCount.value > 1 && !isMarquee.value
+        showIndicators.value && slideCount.value > 1
           ? html`
               <div class="indicators" part="indicators" role="tablist" aria-label="Slide indicators">
                 ${() =>
@@ -702,10 +486,9 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
                         type="button"
                         role="tab"
                         data-index="${i}"
-                        class=${() =>
-                          `indicator${!isMarquee.value && i === activeIndex.value ? ' indicator-active' : ''}`}
-                        aria-selected=${() => String(!isMarquee.value && i === activeIndex.value)}
-                        tabindex=${() => (!isMarquee.value && i === activeIndex.value ? '0' : '-1')}
+                        class=${() => `indicator${i === activeIndex.value ? ' indicator-active' : ''}`}
+                        aria-selected=${() => String(i === activeIndex.value)}
+                        tabindex=${() => (i === activeIndex.value ? '0' : '-1')}
                         aria-label="${`Go to slide ${i + 1}`}"
                         @click=${() => goTo(i)}
                         @keydown=${(e: KeyboardEvent) => handleIndicatorKeydown(e, i)}>
@@ -714,11 +497,11 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
                           tabindex="-1"
                           color=${() => props.color.value}
                           type=${() => (isHorizontal.value ? 'linear' : 'vertical')}
-                          value=${() => (!isMarquee.value && i === activeIndex.value ? 100 : 0)}
+                          value=${() => (i === activeIndex.value ? 100 : 0)}
                           style=${() => {
                             const fillAnim = isHorizontal.value ? 'carousel-fill' : 'carousel-fill-v';
 
-                            return `--carousel-timeout:${props['autoplay-interval'].value ?? 5000};--carousel-animation-name:${!isMarquee.value && i === activeIndex.value && props.autoplay.value ? fillAnim : 'none'}`;
+                            return `--carousel-timeout:${props['autoplay-interval'].value ?? 5000};--carousel-animation-name:${i === activeIndex.value && props.autoplay.value ? fillAnim : 'none'}`;
                           }}></ore-progress>
                       </button>
                     `,

@@ -109,10 +109,9 @@ describe('ore-slider', () => {
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
 
-      const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
+      const target = (changeHandler.mock.calls[0][0] as Event).target as HTMLElement & { value: string };
 
-      expect(detail.value).toBeDefined();
-      expect(detail.originalEvent).toBeDefined();
+      expect(target.value).toBeDefined();
     });
 
     it('increases value on ArrowRight', async () => {
@@ -124,7 +123,9 @@ describe('ore-slider', () => {
 
       fireKeyDown(fixture.element, { key: 'ArrowRight' });
 
-      expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.value).toBeGreaterThan(50);
+      expect(
+        Number(((changeHandler.mock.calls[0][0] as Event).target as HTMLElement & { value: string }).value),
+      ).toBeGreaterThan(50);
     });
 
     it('decreases value on ArrowLeft', async () => {
@@ -136,7 +137,9 @@ describe('ore-slider', () => {
 
       fireKeyDown(fixture.element, { key: 'ArrowLeft' });
 
-      expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.value).toBeLessThan(50);
+      expect(
+        Number(((changeHandler.mock.calls[0][0] as Event).target as HTMLElement & { value: string }).value),
+      ).toBeLessThan(50);
     });
   });
 
@@ -282,10 +285,10 @@ describe('ore-slider', () => {
       fixture = await mount('ore-slider', { attrs: { from: '20', range: '', to: '80' } });
       await new Promise((r) => setTimeout(r, 10));
 
-      let detail: { from?: number; to?: number; value?: { from: number; to: number } } | undefined;
+      let target: (HTMLElement & { value: string }) | undefined;
 
       fixture.element.addEventListener('change', (e) => {
-        detail = (e as CustomEvent).detail;
+        target = e.currentTarget as HTMLElement & { value: string };
       });
 
       fixture
@@ -293,9 +296,7 @@ describe('ore-slider', () => {
         .dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
       await new Promise((r) => setTimeout(r, 10));
 
-      expect(detail?.from).toBe(21);
-      expect(detail?.to).toBe(80);
-      expect(detail?.value).toEqual({ from: 21, to: 80 });
+      expect(target?.value).toBe('21,80');
     });
 
     it('disabled range slider does not respond to thumb keydown', async () => {

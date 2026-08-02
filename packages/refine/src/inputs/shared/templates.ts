@@ -2,7 +2,7 @@ import type { Readable } from '@vielzeug/ripple';
 
 import { html } from '@vielzeug/ore';
 
-import { counterClassName, type CounterState } from '../../headless';
+import { counterClassName, type CounterState } from '../../core';
 
 /**
  * Renders the standard assistive text region (helper/error) used across all

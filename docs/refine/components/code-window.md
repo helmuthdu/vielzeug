@@ -3,7 +3,7 @@
 A presentational window chrome for code blocks and AI/MCP conversation flows.
 
 ```ts
-import '@vielzeug/refine/styles';
+import '@vielzeug/refine/tokens.css';
 import '@vielzeug/refine/code-window';
 ```
 

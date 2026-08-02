@@ -1,16 +1,4 @@
-import {
-  define,
-  html,
-  inject,
-  prop,
-  ref,
-  bind,
-  getHost,
-  onCleanup,
-  onElement,
-  useEmit,
-  watchEffect,
-} from '@vielzeug/ore';
+import { define, html, prop, ref, bind, getHost, onCleanup, onElement, useEmit, watchEffect } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
@@ -21,12 +9,12 @@ import {
   lifecycleSignal,
   createChoiceField,
   createInteraction,
-  createOptionList,
   type DropdownCloseReason,
   type OverlayOpenReason,
-} from '../../headless';
+} from '../../core';
+import { createListboxDropdown } from '../../core/_internal';
 import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { dispatchNativeFieldEvent } from '../shared/native-field-event';
 import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptions } from './combobox-options';
 import '../../feedback/chip/chip';
 import '../input/input';
@@ -44,10 +32,12 @@ export type { OreComboboxEvents, OreComboboxProps } from './combobox.types';
  * @attr {boolean} creatable - Allow users to create custom options from search query
  * @attr {boolean} no-filter - Disable client-side filtering (useful for server-side search)
  * @attr {string} placeholder - Placeholder text
- * @attr {boolean} required - Require a non-blank selection for `<ore-form>` validation
+ * @attr {boolean} required - Require a non-blank selection for native form validation
  * @attr {boolean} success - Show an inline success check icon (suppressed while `error` is set)
  *
- * @fires {CustomEvent} change - Emitted when selection changes. detail: { value: string | string[], values: string[], labels: string[] }
+ * @fires input - Emitted when the selection changes.
+ * @fires change - Emitted when the selection changes.
+ * @fires open-change - Emitted when the dropdown state changes. detail: { open, reason }
  * @fires {CustomEvent} search - Emitted when user types. detail: { query: string }
  *
  * @slot - Slotted combobox options and option groups
@@ -107,11 +97,9 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     const emit = useEmit<OreComboboxEvents>();
     const watch = watchEffect;
 
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
     const query = signal('');
 
-    // Element refs needed by the composite option-list factory.
+    // Element refs needed by the listbox dropdown.
     let inputEl: HTMLInputElement | null = null;
     let fieldEl: HTMLElement | null = null; // set to the ore-input host once it mounts
     let dropdownEl: HTMLElement | null = null;
@@ -122,7 +110,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
 
     const abortSignal = lifecycleSignal(onCleanup);
     const choice = createChoiceField({
-      disabled: fCtxProps.disabled,
+      disabled: props.disabled,
       error: props.error,
       helper: props.helper,
       label: props.label,
@@ -131,7 +119,6 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
       prefix: 'combobox',
       required: props.required,
       signal: abortSignal,
-      validateOn: formCtx?.validateOn,
       value: props.value,
     });
 
@@ -139,7 +126,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     // captures the live signal reference rather than needing a factory indirection.
     const filteredOptions = signal<ComboboxOptionItem[]>([]);
 
-    const optionList = createOptionList<ComboboxOptionItem>({
+    const optionList = createListboxDropdown<ComboboxOptionItem>({
       getBoundary: () => el,
       getFocusedOptionElement: () => dropdownEl?.querySelector<HTMLElement>('[data-focused]') ?? null,
       getItems: () => filteredOptions.value,
@@ -149,13 +136,13 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
       getTrigger: () => inputEl,
       isDisabled: () => choice.disabled.value,
       onClose: (reason) => {
-        emit('close', { reason });
+        emit('open-change', { open: false, reason });
 
         if (!abortSignal.aborted) restoreQueryFromSelection();
 
         choice.triggerValidation('blur');
       },
-      onOpen: (reason) => emit('open', { reason }),
+      onOpen: (reason) => emit('open-change', { open: true, reason }),
       restoreFocus: false,
       signal: abortSignal,
     });
@@ -182,21 +169,20 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     bind({
       attr: {
         open: () => (isOpen.value ? true : undefined),
-        size: fCtxProps.size,
-        variant: fCtxProps.variant,
+        size: props.size,
+        variant: props.variant,
       },
     });
 
     let lastQueryBeforeClear: string | null = null;
     let isRestoringQuery = false;
 
-    // Convenience getter for single-select
     const selectedValue = computed(() => selectedValues.value[0] ?? '');
 
-    // Expose .value as a JS property accessor on the host element
+    // Expose a native-like, string-valued `.value` property on the host.
     Object.defineProperty(el, 'value', {
       configurable: true,
-      get: () => (isMultiple() ? selectedValues.value : selectedValue.value),
+      get: () => choice.formValue.value,
       set: (val: unknown) => {
         const v = val as string | string[] | null | undefined;
 
@@ -212,7 +198,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
           return;
         }
 
-        choice.setValues([String(v)]);
+        choice.setValues(isMultiple() ? String(v).split(',') : [String(v)]);
       },
     });
 
@@ -289,13 +275,9 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     const inputPlaceholder = () =>
       isMultiple() && selectedValues.value.length > 0 ? '' : props.placeholder.value || '';
 
-    const selectedValueItems = computed(() => selectedValues.value);
-    const selectedLabelItems = computed(() =>
-      selectedValues.value.map((value) => allOptions.value.find((option) => option.value === value)?.label ?? value),
-    );
-
-    function emitChange(originalEvent?: Event) {
-      emit('change', { labels: selectedLabelItems.value, originalEvent, values: selectedValueItems.value });
+    function emitChange() {
+      dispatchNativeFieldEvent(el, 'input');
+      dispatchNativeFieldEvent(el, 'change');
     }
 
     function removeChip(event: Event): void {
@@ -306,7 +288,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
       if (value === undefined) return;
 
       selectionController.remove(value);
-      emitChange(event);
+      emitChange();
       triggerValidation('change');
     }
 
@@ -394,13 +376,13 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     });
 
     // ── Selection ────────────────────────────────────────────────────────────
-    function selectOption(opt: ComboboxOptionItem, originalEvent?: Event) {
+    function selectOption(opt: ComboboxOptionItem, _originalEvent?: Event) {
       if (opt.disabled) return;
 
       if (isMultiple()) {
         selectionController.toggle(opt.value);
         query.value = '';
-        emitChange(originalEvent);
+        emitChange();
         triggerValidation('change');
 
         if (props.autoclose.value) {
@@ -413,7 +395,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
       } else {
         selectionController.select(opt.value);
         query.value = opt.label;
-        emitChange(originalEvent);
+        emitChange();
         triggerValidation('change');
         closePopup();
         focusLiveInput();
@@ -445,7 +427,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
       e.stopPropagation();
       selectionController.clear();
       query.value = '';
-      emitChange(e);
+      emitChange();
       triggerValidation('change');
       focusLiveInput();
     }
@@ -521,7 +503,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
           // In multiple mode, remove the last chip when the input is empty
           if (isMultiple() && !query.value && selectedValues.value.length > 0) {
             choice.removeValue(selectedValues.value[selectedValues.value.length - 1] ?? '');
-            emitChange(e);
+            emitChange();
             triggerValidation('change');
           }
 
@@ -781,8 +763,8 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     });
 
     const inputColor = () => props.color?.value ?? undefined;
-    const inputSize = () => fCtxProps.size?.value ?? undefined;
-    const inputVariant = () => fCtxProps.variant?.value ?? undefined;
+    const inputSize = () => props.size?.value ?? undefined;
+    const inputVariant = () => props.variant?.value ?? undefined;
     const inputRounded = () => props.rounded?.value ?? undefined;
     const inputFullwidth = () => (props.fullwidth.value ? true : undefined);
 

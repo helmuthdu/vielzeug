@@ -2,7 +2,14 @@ import { define, html, prop } from '@vielzeug/ore';
 
 import type { ElevationLevel, PaddingSize, RoundedSize, ThemeColor } from '../../types';
 
-import { frostVariantMixin, rainbowEffectMixin, surfaceMixins } from '../../styles';
+import {
+  colorThemeMixin,
+  elevationMixin,
+  frostVariantMixin,
+  paddingMixin,
+  rainbowEffectMixin,
+  roundedVariantMixin,
+} from '../../styles';
 import componentStyles from './box.css?inline';
 
 /** Box component properties */
@@ -72,5 +79,13 @@ define<OreBoxProps>(BOX_TAG, {
     `;
   },
 
-  styles: [...surfaceMixins, frostVariantMixin('.box'), rainbowEffectMixin('.box'), componentStyles],
+  styles: [
+    colorThemeMixin,
+    elevationMixin,
+    paddingMixin,
+    roundedVariantMixin,
+    frostVariantMixin('.box'),
+    rainbowEffectMixin('.box'),
+    componentStyles,
+  ],
 });

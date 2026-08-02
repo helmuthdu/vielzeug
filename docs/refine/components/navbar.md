@@ -133,16 +133,13 @@ Recommended app-shell pattern:
       min-width: 0;
       height: 460px;
       overflow: hidden;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
       border: 1px solid var(--color-contrast-200);
       border-radius: var(--rounded-lg);
     }
 
-    .navbar-sidebar-shell .shell-grid {
-      height: 100%;
-      --grid-cols: auto minmax(0, 1fr);
-    }
-
-    .navbar-sidebar-shell .shell-grid > ore-grid-item {
+    .navbar-sidebar-shell > * {
       min-width: 0;
       min-height: 0;
     }
@@ -189,7 +186,7 @@ Recommended app-shell pattern:
       overflow: auto;
     }
 
-    .navbar-sidebar-shell .shell-grid:has(.shell-sidebar[data-bottom-nav][data-mobile-open]) .shell-panel {
+    .navbar-sidebar-shell:has(.shell-sidebar[data-bottom-nav][data-mobile-open]) .shell-panel {
       transform: translateX(calc(var(--shell-drawer-width) + var(--shell-push-gap)));
     }
 
@@ -197,61 +194,55 @@ Recommended app-shell pattern:
       margin: var(--size-3) 0 var(--size-3) var(--size-3);
     }
 
-    .navbar-sidebar-shell
-      .shell-grid:has(.shell-sidebar[variant='floating'][data-bottom-nav][data-mobile-open])
-      .shell-panel {
+    .navbar-sidebar-shell:has(.shell-sidebar[variant='floating'][data-bottom-nav][data-mobile-open]) .shell-panel {
       transform: translateX(calc(var(--shell-drawer-width) + var(--size-2) + var(--shell-push-gap)));
     }
   </style>
 
-  <ore-grid class="shell-grid" areas="'sidebar panel'" fullwidth gap="none">
-    <ore-grid-item area="sidebar">
-      <ore-sidebar
-        id="app-shell-sidebar"
-        class="shell-sidebar"
-        label="Workspace navigation"
-        variant="floating"
-        container-breakpoints
-        responsive="(max-width: 1200px)"
-        bottom-nav-at="(max-width: 640px)">
-        <ore-sidebar-item href="#" active>
-          <ore-icon slot="icon" name="layout-dashboard" size="18"></ore-icon>
-          Dashboard
-        </ore-sidebar-item>
-        <ore-sidebar-item href="#">
-          <ore-icon slot="icon" name="folder" size="18"></ore-icon>
-          Projects
-        </ore-sidebar-item>
-        <ore-sidebar-item href="#">
-          <ore-icon slot="icon" name="bar-chart-3" size="18"></ore-icon>
-          Reports
-        </ore-sidebar-item>
-      </ore-sidebar>
-    </ore-grid-item>
+  <ore-sidebar
+    id="app-shell-sidebar"
+    class="shell-sidebar"
+    label="Workspace navigation"
+    variant="floating"
+    container-breakpoints
+    responsive="(max-width: 1200px)"
+    bottom-nav-at="(max-width: 640px)">
+    <ore-sidebar-item href="#" active>
+      <ore-icon slot="icon" name="layout-dashboard" size="18"></ore-icon>
+      Dashboard
+    </ore-sidebar-item>
+    <ore-sidebar-item href="#">
+      <ore-icon slot="icon" name="folder" size="18"></ore-icon>
+      Projects
+    </ore-sidebar-item>
+    <ore-sidebar-item href="#">
+      <ore-icon slot="icon" name="bar-chart-3" size="18"></ore-icon>
+      Reports
+    </ore-sidebar-item>
+  </ore-sidebar>
 
-    <ore-grid-item area="panel" class="shell-panel">
-      <ore-navbar
-        floating
-        variant="glass"
-        breakpoint="(max-width: 640px)"
-        container-breakpoints
-        mobile-sidebar="#app-shell-sidebar"
-        label="Workspace navigation">
-        <span slot="logo" style="font-weight: var(--font-semibold);">Workspace</span>
-        <ore-navbar-item slot="start" href="#" active>Dashboard</ore-navbar-item>
-        <ore-navbar-item href="#">Projects</ore-navbar-item>
-        <ore-navbar-item href="#">Reports</ore-navbar-item>
-        <ore-navbar-item slot="end" href="#">Account</ore-navbar-item>
-      </ore-navbar>
+  <section class="shell-panel">
+    <ore-navbar
+      floating
+      variant="glass"
+      breakpoint="(max-width: 640px)"
+      container-breakpoints
+      mobile-sidebar="#app-shell-sidebar"
+      label="Workspace navigation">
+      <span slot="logo" style="font-weight: var(--font-semibold);">Workspace</span>
+      <ore-navbar-item slot="start" href="#" active>Dashboard</ore-navbar-item>
+      <ore-navbar-item href="#">Projects</ore-navbar-item>
+      <ore-navbar-item href="#">Reports</ore-navbar-item>
+      <ore-navbar-item slot="end" href="#">Account</ore-navbar-item>
+    </ore-navbar>
 
-      <main class="shell-content">
-        <ore-text
-          >Desktop keeps the sidebar as a dedicated left rail while the right shell contains a floating navbar and
-          content. On mobile, opening the sidebar drawer pushes the entire right shell sideways.</ore-text
-        >
-      </main>
-    </ore-grid-item>
-  </ore-grid>
+    <main class="shell-content">
+      <ore-text
+        >Desktop keeps the sidebar as a dedicated left rail while the right shell contains a floating navbar and
+        content. On mobile, opening the sidebar drawer pushes the entire right shell sideways.</ore-text
+      >
+    </main>
+  </section>
 </div>
 ```
 
@@ -268,6 +259,12 @@ Recommended app-shell pattern:
   <ore-navbar-item href="#" active>Dashboard</ore-navbar-item>
   <ore-navbar-item href="#">Settings</ore-navbar-item>
   <ore-navbar-item disabled>Billing (Unavailable)</ore-navbar-item>
+
+  <div slot="mobile-menu">
+    <ore-navbar-item href="#" active>Dashboard</ore-navbar-item>
+    <ore-navbar-item href="#">Settings</ore-navbar-item>
+    <ore-navbar-item disabled>Billing (Unavailable)</ore-navbar-item>
+  </div>
 </ore-navbar>
 ```
 

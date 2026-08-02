@@ -1,13 +1,13 @@
 // ── Ore adapter ─────────────────────────────────────────────────────────────
-// Utilities that bridge Ore's component lifecycle with the headless
+// Utilities that bridge Ore's component lifecycle with Refine's core
 // primitives' `AbortSignal`-based lifecycle contract.
 
 /**
  * Creates an `AbortSignal` tied to the component's Ore lifecycle.
  *
  * Call once at the top of a `setup()` function and pass the resulting signal
- * as the required `signal` option to any stateful headless primitive
- * (`createTextField`, `createCheckable`, `createOptionList`, etc.).
+ * as the required `signal` option to any stateful core primitive
+ * (`createTextField`, `createCheckable`, `createListboxDropdown`, etc.).
  *
  * When Ore disconnects the component, `onCleanup` fires, aborting the
  * signal and triggering cleanup in every primitive that received it.

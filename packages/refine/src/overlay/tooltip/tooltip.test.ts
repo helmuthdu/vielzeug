@@ -1,3 +1,4 @@
+import { fireClick } from '@vielzeug/assay';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-tooltip', () => {
@@ -64,6 +65,30 @@ describe('ore-tooltip', () => {
       fixture = await mount('ore-tooltip', { attrs: { content: 'tip', variant: 'light' } });
 
       expect(fixture.element.getAttribute('variant')).toBe('light');
+    });
+
+    it('initializes an uncontrolled tooltip with default-open', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'tip', 'default-open': '' },
+        html: '<button>Trigger</button>',
+      });
+
+      expect(fixture.query('.tooltip')?.getAttribute('aria-hidden')).toBe('false');
+    });
+
+    it('emits open-change when a click trigger opens the tooltip', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'tip', trigger: 'click' },
+        html: '<button>Trigger</button>',
+      });
+
+      const onOpenChange = vi.fn();
+
+      fixture.element.addEventListener('open-change', onOpenChange);
+      fireClick(fixture.element.querySelector<HTMLButtonElement>('button')!);
+      await fixture.flush();
+
+      expect((onOpenChange.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ open: true, reason: 'click' });
     });
   });
 

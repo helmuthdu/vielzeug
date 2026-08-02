@@ -19,6 +19,7 @@ import type { OreCarouselEvents, OreCarouselProps } from '../content/carousel/ca
 import type { OreCodeWindowProps } from '../content/code-window/code-window';
 import type { OreCopyCommandEvents, OreCopyCommandProps } from '../content/copy-command/copy-command';
 import type { OreIconProps } from '../content/icon/icon';
+import type { OreMarqueeProps } from '../content/marquee/marquee';
 import type { OrePaginationEvents, OrePaginationProps } from '../content/pagination/pagination';
 import type { OreSeparatorProps } from '../content/separator/separator';
 import type { OreTableProps } from '../content/table/table';
@@ -35,7 +36,6 @@ import type { OreChipEvents, OreChipProps } from '../feedback/chip/chip';
 import type { OrePasswordStrengthProps } from '../feedback/password-strength/password-strength';
 import type { OreProgressProps } from '../feedback/progress/progress';
 import type { OreSkeletonProps } from '../feedback/skeleton/skeleton';
-import type { ToastElement } from '../feedback/toast/toast';
 import type { OreButtonGroupProps } from '../inputs/button-group/button-group';
 import type { OreButtonProps } from '../inputs/button/button';
 import type { OreCalendarEvents, OreCalendarProps } from '../inputs/calendar/calendar';
@@ -45,7 +45,6 @@ import type { OreComboboxEvents, OreComboboxOptionProps, OreComboboxProps } from
 import type { OreDataGridEvents, OreDataGridProps } from '../inputs/datagrid/datagrid';
 import type { OreDatePickerEvents, OreDatePickerProps } from '../inputs/date-picker/date-picker';
 import type { OreFileInputEvents, OreFileInputProps } from '../inputs/file-input/file-input';
-import type { OreFormEvents, OreFormProps } from '../inputs/form/form';
 import type { OreInputEvents, OreInputProps } from '../inputs/input/input';
 import type { OreMessageComposerEvents, OreMessageComposerProps } from '../inputs/message-composer/message-composer';
 import type { OreNumberInputEvents, OreNumberInputProps } from '../inputs/number-input/number-input';
@@ -91,6 +90,7 @@ declare global {
     'ore-code-window': HTMLElement & OreCodeWindowProps;
     'ore-copy-command': HTMLElement & OreCopyCommandProps & AddEventListeners<OreCopyCommandEvents>;
     'ore-icon': HTMLElement & OreIconProps;
+    'ore-marquee': HTMLElement & OreMarqueeProps;
     'ore-pagination': HTMLElement & OrePaginationProps & AddEventListeners<OrePaginationEvents>;
     'ore-separator': HTMLElement & OreSeparatorProps;
     'ore-table': HTMLElement & OreTableProps;
@@ -124,7 +124,7 @@ declare global {
     'ore-password-strength': HTMLElement & OrePasswordStrengthProps;
     'ore-progress': HTMLElement & OreProgressProps;
     'ore-skeleton': HTMLElement & OreSkeletonProps;
-    'ore-toast': ToastElement;
+    'ore-toast': HTMLElement;
     // inputs
     'ore-button': HTMLElement & OreButtonProps;
     'ore-button-group': HTMLElement & OreButtonGroupProps;
@@ -140,7 +140,6 @@ declare global {
     'ore-datagrid': HTMLElement & OreDataGridProps & AddEventListeners<OreDataGridEvents>;
     'ore-date-picker': HTMLElement & OreDatePickerProps & AddEventListeners<OreDatePickerEvents>;
     'ore-file-input': HTMLElement & OreFileInputProps & FormValidityMethods & AddEventListeners<OreFileInputEvents>;
-    'ore-form': HTMLElement & OreFormProps & AddEventListeners<OreFormEvents>;
     'ore-input': HTMLElement & OreInputProps & FormValidityMethods & AddEventListeners<OreInputEvents>;
     'ore-message-composer': HTMLElement &
       OreMessageComposerProps &

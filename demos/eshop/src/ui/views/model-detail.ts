@@ -114,7 +114,7 @@ define<ModelConfiguratorProps>('model-configurator', {
     );
 
     function onTrimChange(e: Event): void {
-      const nextTrimId = (e as CustomEvent<{ values: string[] }>).detail.values[0];
+      const nextTrimId = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value;
 
       if (!nextTrimId) return;
 
@@ -128,7 +128,7 @@ define<ModelConfiguratorProps>('model-configurator', {
     }
 
     function onWheelChange(e: Event): void {
-      const next = (e as CustomEvent<{ values: string[] }>).detail.values[0];
+      const next = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value;
 
       if (next) wheelId.value = next;
     }
@@ -358,14 +358,15 @@ define<ModelConfiguratorProps>('model-configurator', {
               value=${() => financeDownPayment.value}
               @input=${(e: Event) =>
                 (financeDownPayment.value =
-                  (e as CustomEvent<{ value: number | null }>).detail.value ?? 0)}></ore-number-input>
+                  Number((e.currentTarget as HTMLElementTagNameMap['ore-number-input']).value) ||
+                  0)}></ore-number-input>
             <ore-select
               label=${() => t('model.finance.term')}
               options=${FINANCE_TERM_OPTIONS.map((months) => ({ label: t('checkout.payment.termOption', { months }), value: String(months) }))}
               value=${() => String(financeTermMonths.value)}
               @change=${(e: Event) =>
                 (financeTermMonths.value = Number(
-                  (e as CustomEvent<{ values: string[] }>).detail.values[0],
+                  (e.currentTarget as HTMLElementTagNameMap['ore-select']).value,
                 ))}></ore-select>
             <div class="finance-calculator__result">
               <span>${() => t('model.finance.monthlyEstimate')}</span>

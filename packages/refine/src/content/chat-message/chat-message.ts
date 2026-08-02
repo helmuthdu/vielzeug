@@ -1,7 +1,7 @@
 import { define, html, onEvent, onMounted, prop, ref, useEmit, useSlots } from '@vielzeug/ore';
 import { computed, watch } from '@vielzeug/ripple';
 
-import { announce } from '../../headless';
+import { announce } from '../../core';
 import { reducedMotionMixin } from '../../styles';
 import '../icon/icon';
 import componentStyles from './chat-message.css?inline';

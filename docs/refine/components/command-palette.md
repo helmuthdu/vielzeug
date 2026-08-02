@@ -41,7 +41,7 @@ Declare commands with `ore-command-palette-item` elements in the default slot. E
 
 </ComponentPreview>
 
-The global shortcut (`mod+k` by default — `⌘K` on macOS, `Ctrl+K` elsewhere) works as soon as the element is connected, independent of the `open` attribute; pressing it again while open closes the palette.
+The global shortcut (`mod+k` by default — `⌘K` on macOS, `Ctrl+K` elsewhere) works as soon as the element is connected. Use `open` as the controlled state and update it from `open-change`; use `default-open` only to initialize an uncontrolled palette.
 
 ## Data-Driven Items
 
@@ -155,12 +155,8 @@ Set `no-filter` on this pattern once results come back already scoped to the que
     console.log('query:', e.detail.query);
   });
 
-  palette.addEventListener('open', (e) => {
-    console.log('opened via:', e.detail.reason); // 'keyboard', 'programmatic', or 'trigger'
-  });
-
-  palette.addEventListener('close', (e) => {
-    console.log('closed via:', e.detail.reason); // 'escape', 'outsideClick', 'programmatic', or 'trigger'
+  palette.addEventListener('open-change', (e) => {
+    console.log('palette open:', e.detail.open, e.detail.reason);
   });
 </script>
 ```
@@ -173,7 +169,8 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 
 | Attribute              | Type      | Default                        | Description                                                                                        |
 | ---------------------- | --------- | ------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `open`                 | `boolean` | `false`                          | Controls whether the palette is visible                                                             |
+| `open`                 | `boolean` | —                                | Controlled visibility                                                                               |
+| `default-open`         | `boolean` | `false`                          | Initial visibility when `open` is not provided                                                      |
 | `label`                | `string`  | `'Command palette'`              | Accessible label for the dialog                                                                     |
 | `placeholder`          | `string`  | `'Type a command or search…'`   | Placeholder text for the search input                                                               |
 | `shortcut`             | `string`  | `'mod+k'`                        | Global keyboard shortcut ([keymap syntax](/keymap/usage.md)) that toggles the palette; `''` disables it |
@@ -212,8 +209,7 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 | -------- | -------------------------------------------------------------------------------- | --------------------------------------------------- |
 | `select` | `{ value: string, label: string, item: CommandPaletteItem }`                    | Emitted when a command is chosen (click or `Enter`) |
 | `search` | `{ query: string }`                                                              | Emitted on every keystroke in the search input      |
-| `open`   | `{ reason: 'keyboard' \| 'programmatic' \| 'trigger' }`                          | Emitted when the palette opens                      |
-| `close`  | `{ reason: 'escape' \| 'outsideClick' \| 'programmatic' \| 'trigger' }`          | Emitted when the palette closes                     |
+| `open-change` | `{ open: boolean, reason: string }`                                         | Emitted whenever the palette opens or closes        |
 
 **CSS Custom Properties**
 

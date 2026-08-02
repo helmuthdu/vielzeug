@@ -14,7 +14,7 @@ Listen for page changes:
 <ore-pagination id="pager" page="1" total-pages="20" show-prev-next></ore-pagination>
 
 <script type="module">
-  import '@vielzeug/refine';
+  import '@vielzeug/refine/pagination';
 
   document.getElementById('pager').addEventListener('change', (e) => {
     console.log('New page:', e.detail.page);

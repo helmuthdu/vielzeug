@@ -221,7 +221,7 @@ describe('ore-chat-message', () => {
 
     it('does not announce for non-error statuses', async () => {
       // The assertive region is a shared singleton across the whole document (by design —
-      // see `headless/announcer.ts`), so this asserts "unchanged by this mount" rather than
+      // see `core/announcer.ts`), so this asserts "unchanged by this mount" rather than
       // "empty", since an earlier test in this file may have already written to it.
       const before = assertiveRegion()?.textContent;
 

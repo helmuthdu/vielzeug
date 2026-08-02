@@ -3,7 +3,7 @@ import { computed, signal, watch, type Readable } from '@vielzeug/ripple';
 
 import type { ComponentSize } from '../../types';
 
-import { createListControl, lifecycleSignal } from '../../headless';
+import { createListControl, lifecycleSignal } from '../../core';
 import { disablableBundle, LIST_SIZE_PRESET, sizableBundle } from '../../shared';
 import { sizeVariantMixin } from '../../styles';
 import componentStyles from './list.css?inline';

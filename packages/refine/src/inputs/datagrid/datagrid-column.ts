@@ -1,4 +1,4 @@
-import type { DataGridColumn } from '../../headless';
+import type { DataGridColumn } from './datagrid-model';
 
 import { warn } from '../../_dev';
 

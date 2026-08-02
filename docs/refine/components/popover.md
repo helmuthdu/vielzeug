@@ -81,7 +81,7 @@ The `content` slot accepts any HTML — forms, cards, images, custom layouts.
 
 ## Controlled Open State
 
-Use the `open` attribute to programmatically show or hide the popover.
+Use `open` as the controlled state and update it from `open-change`. Use `default-open` only to initialize an uncontrolled popover.
 
 ```html
 <ore-popover id="my-popover" placement="bottom">
@@ -93,7 +93,8 @@ Use the `open` attribute to programmatically show or hide the popover.
 </ore-popover>
 
 <script type="module">
-  import '@vielzeug/refine';
+  import '@vielzeug/refine/button';
+  import '@vielzeug/refine/popover';
 
   const popover = document.getElementById('my-popover');
   document.getElementById('trigger-btn').addEventListener('click', () => {
@@ -127,11 +128,11 @@ Use the `open` attribute to programmatically show or hide the popover.
 </ore-popover>
 
 <script type="module">
-  import '@vielzeug/refine';
+  import '@vielzeug/refine/button';
+  import '@vielzeug/refine/popover';
 
   const pop = document.getElementById('pop');
-  pop.addEventListener('open', (e) => console.log('popover opened because:', e.detail.reason));
-  pop.addEventListener('close', (e) => console.log('popover closed because:', e.detail.reason));
+  pop.addEventListener('open-change', (e) => console.log('popover open:', e.detail.open, e.detail.reason));
 </script>
 ```
 
@@ -143,7 +144,8 @@ Use the `open` attribute to programmatically show or hide the popover.
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------ |
 | `placement` | `'top' \| 'top-start' \| 'top-end' \| 'bottom' \| 'bottom-start' \| 'bottom-end' \| 'left' \| 'left-start' \| 'left-end' \| 'right' \| 'right-start' \| 'right-end'` | `'bottom'` | Preferred placement                                          |
 | `trigger`   | `string`                                                                                                                                                             | `'click'`  | Trigger mode(s) — `click`, `hover`, `focus`, comma-separated |
-| `open`      | `boolean`                                                                                                                                                            | `false`    | Controlled open state                                        |
+| `open`      | `boolean`                                                                                                                                                            | —          | Controlled open state                                        |
+| `default-open` | `boolean`                                                                                                                                                         | `false`    | Initial state when `open` is not provided                    |
 | `offset`    | `number`                                                                                                                                                             | `8`        | Gap in pixels between trigger and panel                      |
 | `disabled`  | `boolean`                                                                                                                                                            | `false`    | Prevent the popover from opening                             |
 | `label`     | `string`                                                                                                                                                             | —          | `aria-label` for the panel                                   |
@@ -159,8 +161,7 @@ Use the `open` attribute to programmatically show or hide the popover.
 
 | Event   | Detail                                                                   | Description                 |
 | ------- | ------------------------------------------------------------------------ | --------------------------- |
-| `open`  | `{ reason: 'programmatic' \| 'trigger' }`                                | Fired when the panel opens  |
-| `close` | `{ reason: 'programmatic' \| 'trigger' \| 'escape' \| 'outside-click' }` | Fired when the panel closes |
+| `open-change` | `{ open: boolean, reason: string }` | Fired whenever the panel opens or closes |
 
 ### CSS Custom Properties
 

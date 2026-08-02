@@ -237,13 +237,13 @@ describe('ore-number-input', () => {
       expect(handler).toHaveBeenCalled();
     });
 
-    it('change event detail carries the new value', async () => {
+    it('change event exposes the new host value', async () => {
       fixture = await mount('ore-number-input', { attrs: { value: '3' } });
 
-      let detail: { originalEvent?: Event; value: number | null } | undefined;
+      let target: (HTMLElement & { value: string }) | undefined;
 
       fixture.element.addEventListener('change', (e: Event) => {
-        detail = (e as CustomEvent).detail;
+        target = e.currentTarget as HTMLElement & { value: string };
       });
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Increase"]');
@@ -252,8 +252,7 @@ describe('ore-number-input', () => {
 
       await fixture.flush();
 
-      expect(detail?.value).toBe(4);
-      expect(detail?.originalEvent).toBeDefined();
+      expect(target?.value).toBe('4');
     });
   });
 

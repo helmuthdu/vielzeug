@@ -1,18 +1,19 @@
-import { define, html, inject, prop, bind, getHost, onCleanup, onMounted, useEmit, useSlots } from '@vielzeug/ore';
+import { define, html, prop, bind, getHost, onCleanup, onMounted, useEmit, useSlots } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore';
 import { computed, effect, signal, watch } from '@vielzeug/ripple';
 
-import type { ChoiceChangeDetail, DropdownCloseReason, OverlayOpenDetail, OverlayOpenReason } from '../../headless';
+import type { OverlayOpenChangeDetail, OverlayOpenReason } from '../../core';
 import type { SelectableFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
 
-import { lifecycleSignal, createChoiceField, createOptionList } from '../../headless';
+import { lifecycleSignal, createChoiceField } from '../../core';
+import { createListboxDropdown } from '../../core/_internal';
 import '../../feedback/chip/chip';
 import '../../content/icon/icon';
 import '../input/input';
 import { disablableBundle, loadableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin } from '../../styles';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './select.css?inline';
 
 // ── Types ─────────────────────────────────────────────────────────────
@@ -49,9 +50,9 @@ type FlatRow =
 /** Select component properties */
 
 export type OreSelectEvents = {
-  change: ChoiceChangeDetail;
-  close: { reason: DropdownCloseReason };
-  open: OverlayOpenDetail;
+  change: Event;
+  input: Event;
+  'open-change': OverlayOpenChangeDetail;
 };
 
 export type OreSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'text' | 'frost'>> & {
@@ -88,9 +89,9 @@ export type OreSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'text' 
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {boolean} fullwidth - Expand to full width
  *
- * @fires change - Fired when selection changes. detail: { value: string, values: string[], labels: string[], originalEvent?: Event }
- * @fires open - Fired when the dropdown opens. detail: { reason: 'trigger' | 'programmatic' }
- * @fires close - Fired when the dropdown closes. detail: { reason: 'escape' | 'outsideClick' | 'programmatic' | 'trigger' }
+ * @fires input - Fired when selection changes.
+ * @fires change - Fired when selection changes.
+ * @fires open-change - Fired when the dropdown state changes. detail: { open, reason }
  *
  * @slot - `<option>` and `<optgroup>` elements
  *
@@ -174,15 +175,12 @@ define<OreSelectProps>(SELECT_TAG, {
 
       return Array.isArray(explicitOptions) ? explicitOptions.map(normalizeOption) : slottedOptions.value;
     });
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
-
     let triggerEl: HTMLElement | null = null;
     let dropdownEl: HTMLElement | null = null;
 
     const abortSignal = lifecycleSignal(onCleanup);
     const choice = createChoiceField({
-      disabled: fCtxProps.disabled,
+      disabled: props.disabled,
       error: props.error,
       helper: props.helper,
       label: props.label,
@@ -191,7 +189,6 @@ define<OreSelectProps>(SELECT_TAG, {
       prefix: 'select',
       required: props.required,
       signal: abortSignal,
-      validateOn: formCtx?.validateOn,
       value: props.value,
     });
 
@@ -206,7 +203,7 @@ define<OreSelectProps>(SELECT_TAG, {
       }),
     );
 
-    const optionList = createOptionList<OptionItem>({
+    const optionList = createListboxDropdown<OptionItem>({
       getBoundary: () => el,
       getFocusedOptionElement: () => dropdownEl?.querySelector<HTMLElement>('[data-focused]') ?? null,
       getItems: () => options.value,
@@ -215,16 +212,24 @@ define<OreSelectProps>(SELECT_TAG, {
       getTrigger: () => triggerEl,
       isDisabled: () => choice.disabled.value,
       onClose: (reason) => {
-        emit('close', { reason });
+        emit('open-change', { open: false, reason });
         choice.triggerValidation('blur');
       },
-      onOpen: (reason) => emit('open', { reason }),
+      onOpen: (reason) => emit('open-change', { open: true, reason }),
       signal: abortSignal,
     });
 
     const { triggerValidation } = choice;
     const selectedValues = choice.selectedValues;
     const isDisabled = choice.disabled;
+
+    defineFieldValue(
+      el,
+      () => choice.formValue.value,
+      (value) => {
+        choice.setValues(value ? value.split(',') : []);
+      },
+    );
 
     const { fieldId: selectId } = choice;
     const listboxId = `listbox-${selectId}`;
@@ -235,8 +240,8 @@ define<OreSelectProps>(SELECT_TAG, {
       attr: {
         'has-error': () => (props.error.value ? true : undefined),
         open: () => (isOpen.value ? true : undefined),
-        size: fCtxProps.size,
-        variant: fCtxProps.variant,
+        size: props.size,
+        variant: props.variant,
       },
     });
 
@@ -324,15 +329,10 @@ define<OreSelectProps>(SELECT_TAG, {
 
     const flatRows = computed(() => buildFlatList(options.value));
 
-    function getLabelForValue(value: string): string {
-      return options.value.find((option) => option.value === value)?.label ?? value;
-    }
-
-    function emitChange(originalEvent?: Event): void {
-      const values = selectedValues.value;
-      const labels = values.map((value) => getLabelForValue(value));
-
-      emit('change', { labels, originalEvent, values });
+    function emitChange(): void {
+      setFieldValue(el, choice.formValue.value);
+      dispatchNativeFieldEvent(el, 'input');
+      dispatchNativeFieldEvent(el, 'change');
     }
 
     function removeChip(event: Event): void {
@@ -343,7 +343,7 @@ define<OreSelectProps>(SELECT_TAG, {
       if (value === undefined) return;
 
       choice.removeValue(value);
-      emitChange(event);
+      emitChange();
       triggerValidation('change');
     }
 
@@ -368,7 +368,7 @@ define<OreSelectProps>(SELECT_TAG, {
 
     // Selection
 
-    function selectOption(opt: OptionItem, e?: Event) {
+    function selectOption(opt: OptionItem, _e?: Event) {
       if (opt.disabled) return;
 
       if (props.multiple.value) {
@@ -378,7 +378,7 @@ define<OreSelectProps>(SELECT_TAG, {
         optionList.close();
       }
 
-      emitChange(e);
+      emitChange();
       triggerValidation('change');
     }
 
@@ -417,8 +417,8 @@ define<OreSelectProps>(SELECT_TAG, {
     const inputPlaceholder = () => props.placeholder.value ?? '';
     const inputLabelPlacement = () => props['label-placement'].value ?? 'inset';
     const inputColor = () => props.color?.value ?? undefined;
-    const inputSize = () => fCtxProps.size?.value ?? undefined;
-    const inputVariant = () => fCtxProps.variant?.value ?? undefined;
+    const inputSize = () => props.size?.value ?? undefined;
+    const inputVariant = () => props.variant?.value ?? undefined;
     const inputRounded = () => props.rounded?.value ?? undefined;
     const inputHelper = () => props.helper.value ?? '';
     const inputError = () => props.error.value ?? '';

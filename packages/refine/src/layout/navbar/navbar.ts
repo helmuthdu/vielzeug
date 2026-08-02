@@ -260,8 +260,9 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     const emit = useEmit<OreNavbarEvents>();
     const slots = useSlots();
 
-    const hasLogo = () => slots.has('logo').value;
-    const hasMobileMenu = () => slots.elements('mobile-menu').value.some(hasElementContent);
+    const hasLogo = slots.has('logo');
+    const mobileMenuElements = slots.elements('mobile-menu');
+    const hasMobileMenu = signal(false);
     const mobileSidebarTarget = signal<MobileSidebarElement | null>(null);
     const isExternalMobileMode = signal(false);
     const isExternalMobileOpen = signal(false);
@@ -312,7 +313,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     const setMobileMenu = (next: boolean) => {
       const open = Boolean(next);
 
-      if (!hasMobileMenu()) {
+      if (!hasMobileMenu.value) {
         const target = mobileSidebarTarget.value ?? getExternalSidebar();
 
         if (target) {
@@ -326,7 +327,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
         }
       }
 
-      if (open && !hasMobileMenu()) return;
+      if (open && !hasMobileMenu.value) return;
 
       if (isMobileMenuOpen.value === open) return;
 
@@ -337,7 +338,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     const closeMobileMenu = () => setMobileMenu(false);
     const openMobileMenu = () => setMobileMenu(true);
     const toggleMobileMenu = () => {
-      if (!hasMobileMenu()) {
+      if (!hasMobileMenu.value) {
         const target = mobileSidebarTarget.value ?? getExternalSidebar();
 
         if (target) {
@@ -359,7 +360,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
 
     const syncMobileMode = () => {
       const next =
-        (mobileSidebarTarget.value && !hasMobileMenu() ? isExternalMobileMode.value : false) ||
+        (mobileSidebarTarget.value && !hasMobileMenu.value ? isExternalMobileMode.value : false) ||
         mediaMatches.value ||
         sizeMatches.value;
 
@@ -449,9 +450,22 @@ define<OreNavbarProps>(NAVBAR_TAG, {
         isExternalMobileMode.value = false;
         isExternalMobileOpen.value = false;
 
+        if (!String(props['mobile-sidebar'].value ?? '').trim()) return;
+
         const target = getExternalSidebar();
 
-        if (!target) return;
+        if (!target) {
+          const root = el.getRootNode();
+          const discoveryRoot = root instanceof Document || root instanceof ShadowRoot ? root : document;
+          const discoveryObserver = new MutationObserver(() => {
+            if (getExternalSidebar()) resolveMobileSidebarTarget();
+          });
+
+          discoveryObserver.observe(discoveryRoot, { childList: true, subtree: true });
+          mobileSidebarCleanup = () => discoveryObserver.disconnect();
+
+          return;
+        }
 
         const syncTargetState = (event?: CustomEvent<{ open: boolean }>) => {
           const hasBottomNav = target.hasAttribute('data-bottom-nav');
@@ -557,7 +571,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
       );
 
       const stopMobileMenuSlotWatch = watch(
-        computed(() => hasMobileMenu()),
+        hasMobileMenu,
         (hasContent) => {
           if (!hasContent && isMobileMenuOpen.value) {
             closeMobileMenu();
@@ -565,6 +579,17 @@ define<OreNavbarProps>(NAVBAR_TAG, {
         },
         { immediate: true },
       );
+      const syncMobileMenuContent = () => {
+        hasMobileMenu.value = mobileMenuElements.value.some(hasElementContent);
+      };
+      const stopMobileMenuElementsWatch = watch(mobileMenuElements, syncMobileMenuContent, { immediate: true });
+      const mobileMenuContentObserver = new MutationObserver(() => {
+        syncMobileMenuContent();
+      });
+
+      // Parser-created demo content can populate an already-assigned slot wrapper after this
+      // custom element connects; `slotchange` alone does not observe that nested content.
+      mobileMenuContentObserver.observe(el, { childList: true, subtree: true });
 
       watch(
         props.breakpoint,
@@ -650,7 +675,9 @@ define<OreNavbarProps>(NAVBAR_TAG, {
         stopModeWatch?.dispose();
         stopModeTransitionWatch?.dispose();
         stopMobileMenuSlotWatch?.dispose();
+        stopMobileMenuElementsWatch?.dispose();
         stopMobileSidebarWatch?.dispose();
+        mobileMenuContentObserver.disconnect();
         mediaCleanup?.();
         mobileSidebarCleanup?.();
         stopResizeEffect?.dispose();
@@ -665,7 +692,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     return html`
       <nav part="nav" aria-label="${props.label}">
         <div class="navbar" part="bar">
-          <div class="navbar-logo" part="logo" ?hidden=${() => !hasLogo()}>
+          <div class="navbar-logo" part="logo" ?hidden=${() => !hasLogo.value}>
             <slot name="logo"></slot>
           </div>
 
@@ -686,7 +713,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
             part="mobile-toggle"
             type="button"
             aria-label="${() =>
-              hasMobileMenu()
+              hasMobileMenu.value
                 ? isMobileMenuOpen.value
                   ? 'Close navigation menu'
                   : 'Open navigation menu'
@@ -694,11 +721,11 @@ define<OreNavbarProps>(NAVBAR_TAG, {
                   ? 'Close navigation menu'
                   : 'Open navigation menu'}"
             aria-controls="mobile-menu-panel"
-            aria-expanded="${() => String(hasMobileMenu() ? isMobileMenuOpen.value : isExternalMobileOpen.value)}"
-            ?hidden=${() => !isMobile.value || (!hasMobileMenu() && !mobileSidebarTarget.value)}
+            aria-expanded="${() => String(hasMobileMenu.value ? isMobileMenuOpen.value : isExternalMobileOpen.value)}"
+            ?hidden=${() => !isMobile.value || (!hasMobileMenu.value && !mobileSidebarTarget.value)}
             @click="${toggleMobileMenu}">
             <ore-icon
-              name="${() => ((hasMobileMenu() ? isMobileMenuOpen.value : isExternalMobileOpen.value) ? 'x' : 'menu')}"
+              name="${() => ((hasMobileMenu.value ? isMobileMenuOpen.value : isExternalMobileOpen.value) ? 'x' : 'menu')}"
               size="18"
               stroke-width="2.5"
               aria-hidden="true"></ore-icon>
@@ -711,7 +738,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
           part="mobile-menu"
           role="navigation"
           aria-label="${() => `${props.label.value} mobile menu`}"
-          ?hidden=${() => !isMobile.value || !isMobileMenuOpen.value || !hasMobileMenu()}>
+          ?hidden=${() => !isMobile.value || !isMobileMenuOpen.value || !hasMobileMenu.value}>
           <slot name="mobile-menu"></slot>
         </div>
       </nav>

@@ -13,17 +13,19 @@ import {
   useSlots,
   watchEffect,
 } from '@vielzeug/ore';
-import { computed, watch as rippleWatch } from '@vielzeug/ripple';
+import { computed, signal, watch as rippleWatch } from '@vielzeug/ripple';
 
 import type { ComponentSize } from '../../types';
 
 import {
   lifecycleSignal,
   createInteraction,
-  createOptionList,
   type DropdownCloseReason,
-  type OverlayOpenDetail,
-} from '../../headless';
+  type OverlayOpenChangeDetail,
+  type OverlayOpenReason,
+} from '../../core';
+import { createListControl, createDropdownPositioner } from '../../core/_internal';
+import { createOutsidePointerDismissal, restoreFocus } from '../../core/overlay';
 import { disablableBundle, MENU_SIZE_PRESET, sizableBundle } from '../../shared';
 import { colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styles';
 import menuItemStyles from './menu-item.css?inline';
@@ -40,8 +42,7 @@ export interface MenuSelectDetail {
 export type OreMenuItemType = 'checkbox' | 'radio';
 
 export type OreMenuEvents = {
-  close: { reason: DropdownCloseReason };
-  open: OverlayOpenDetail;
+  'open-change': OverlayOpenChangeDetail;
   select: MenuSelectDetail;
 };
 
@@ -53,7 +54,11 @@ export type OreMenuItemProps = {
 };
 
 export type OreMenuProps = {
+  /** Initial uncontrolled open state. Ignored when `open` is set. */
+  'default-open'?: boolean;
   disabled?: boolean;
+  /** Controlled open state. */
+  open?: boolean;
   placement?: 'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' | 'top-end';
   size?: ComponentSize;
 };
@@ -175,6 +180,9 @@ define(SEPARATOR_TAG, {
 const isCheckableItemType = (value: string | null): value is OreMenuItemType =>
   value === 'checkbox' || value === 'radio';
 
+const parseOptionalBool = (value: string | null): boolean | undefined =>
+  value == null ? undefined : value === '' || value === 'true';
+
 /**
  * Action dropdown menu triggered by a slotted trigger element.
  *
@@ -183,11 +191,12 @@ const isCheckableItemType = (value: string | null): value is OreMenuItemType =>
  * @element ore-menu-separator - Visual divider between menu groups
  *
  * @attr {boolean} disabled - Disables opening and keyboard interaction
+ * @attr {boolean} open - Controlled open state
+ * @attr {boolean} default-open - Initial uncontrolled open state
  * @attr {string} placement - Panel placement: 'bottom' | 'bottom-start' | 'bottom-end' | 'top' | 'top-start' | 'top-end' (default: 'bottom-start')
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
  *
- * @fires open - Fired when the menu opens. detail: { reason: 'trigger' | 'programmatic' }
- * @fires close - Fired when the menu closes. detail: { reason: 'escape' | 'outsideClick' | 'programmatic' | 'trigger' }
+ * @fires open-change - Fired when the menu state changes. detail: { open, reason }
  * @fires select - Fired when an item is selected. detail: { value: string, checked?: boolean }
  *
  * @slot trigger - Trigger element that toggles menu visibility
@@ -217,6 +226,8 @@ define<OreMenuProps>(MENU_TAG, {
   props: {
     ...sizableBundle,
     ...disablableBundle,
+    'default-open': prop.bool(false),
+    open: { default: undefined as boolean | undefined, parse: parseOptionalBool },
     placement: prop.oneOf(
       ['bottom', 'bottom-start', 'bottom-end', 'top', 'top-start', 'top-end'] as const,
       'bottom-start',
@@ -256,30 +267,95 @@ define<OreMenuProps>(MENU_TAG, {
       });
     }
 
-    const optionList = createOptionList<HTMLElement>({
-      getBoundary: () => el,
-      getItems: getItems,
-      getPanel: () => panelEl,
+    const isOpenSignal = signal(false);
+    let stopPositioning: (() => void) | null = null;
+    const positioner = createDropdownPositioner({
+      getFloating: () => panelEl,
+      getPlacement: () => (props.placement.value ?? 'bottom-start') as Placement,
       getReference: () => triggerEl,
-      getTrigger: () => triggerEl,
-      isDisabled: () => isDisabled.value,
+      matchWidth: false,
+      offsetPx: 4,
+      padding: 6,
+    });
+    const list = createListControl<HTMLElement>({
+      disabled: computed(() => !isOpenSignal.value),
+      getItems: getItems,
       isItemDisabled: (item) => item.hasAttribute('disabled'),
-      onClose: (reason) => emit('close', { reason }),
       onNavigate: (_action, index) => {
         const nextItem = getItems()[index];
 
         getItemFocusable(nextItem)?.focus();
       },
-      onOpen: (reason) => emit('open', { reason }),
-      positioning: {
-        getPlacement: () => (props.placement.value ?? 'bottom-start') as Placement,
-        matchWidth: false,
-        offsetPx: 4,
-        padding: 6,
-      },
       signal: abortSignal,
     });
-    const { isOpen: isOpenSignal } = optionList;
+
+    const close = (reason: DropdownCloseReason = 'programmatic', shouldRestoreFocus = true): void => {
+      if (!isOpenSignal.value) return;
+
+      isOpenSignal.value = false;
+      list.reset();
+      stopPositioning?.();
+      stopPositioning = null;
+
+      if (shouldRestoreFocus) restoreFocus(() => triggerEl);
+
+      emit('open-change', { open: false, reason });
+    };
+
+    const open = (reason: OverlayOpenReason = 'programmatic'): void => {
+      if (isDisabled.value || isOpenSignal.value) return;
+
+      isOpenSignal.value = true;
+      positioner.update();
+      stopPositioning = positioner.startAutoUpdate?.() ?? null;
+      emit('open-change', { open: true, reason });
+    };
+
+    const toggle = (): void => {
+      if (isOpenSignal.value) close('trigger');
+      else open('click');
+    };
+
+    createOutsidePointerDismissal({
+      getTargets: () => [el, panelEl],
+      isActive: () => isOpenSignal.value,
+      onDismiss: () => close('outsideClick'),
+      signal: abortSignal,
+    });
+
+    let initialized = false;
+
+    rippleWatch(
+      props.open,
+      (value) => {
+        if (value === undefined) {
+          if (!initialized) {
+            if (props['default-open'].value) open('programmatic');
+          } else {
+            close('programmatic');
+          }
+        } else if (value) {
+          open('programmatic');
+        } else {
+          close('programmatic');
+        }
+
+        initialized = true;
+      },
+      { immediate: true },
+    );
+    abortSignal.addEventListener(
+      'abort',
+      () => {
+        if (!isOpenSignal.value) return;
+
+        isOpenSignal.value = false;
+        list.reset();
+        stopPositioning?.();
+        stopPositioning = null;
+      },
+      { once: true },
+    );
 
     const activateItem = (item: HTMLElement): void => {
       const type = item.getAttribute('type');
@@ -299,21 +375,21 @@ define<OreMenuProps>(MENU_TAG, {
       emit('select', { checked, value });
 
       if (!isCheckable) {
-        optionList.close('programmatic');
+        close('programmatic');
       }
     };
 
     const openFromKeyboardPress = createInteraction({
       keys: ['Enter', ' ', 'ArrowDown'],
       onPress: () => {
-        optionList.open('keyboard');
-        requestAnimationFrame(() => optionList.set(0));
+        open('keyboard');
+        requestAnimationFrame(() => list.set(0));
       },
     });
 
     const activateFocusedFromKeyboardPress = createInteraction({
       onPress: () => {
-        const focused = optionList.getActiveItem();
+        const focused = list.getActiveItem();
 
         if (focused) activateItem(focused);
       },
@@ -334,9 +410,16 @@ define<OreMenuProps>(MENU_TAG, {
 
       const currentFocusedIndex = getFocusedItemIndex();
 
-      if (currentFocusedIndex >= 0) optionList.set(currentFocusedIndex);
+      if (currentFocusedIndex >= 0) list.set(currentFocusedIndex);
 
-      if (optionList.handleKeydown(e)) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        close('escape');
+
+        return;
+      }
+
+      if (list.handleKeydown(e)) return;
 
       // When open: navigate and activate
       if (e.key === ' ' || e.key === 'Enter') {
@@ -346,7 +429,7 @@ define<OreMenuProps>(MENU_TAG, {
       }
 
       if (e.key === 'Tab') {
-        optionList.close('programmatic');
+        close('programmatic');
       }
     }
 
@@ -406,7 +489,7 @@ define<OreMenuProps>(MENU_TAG, {
 
         if (isDisabled.value) return;
 
-        optionList.toggle();
+        toggle();
       };
       const onTriggerKeydown = (event: KeyboardEvent) => {
         handleMenuKeydown(event);
@@ -444,6 +527,7 @@ define<OreMenuProps>(MENU_TAG, {
         @keydown="${handleMenuKeydown}"
         ref="${(el: HTMLElement | null) => {
           panelEl = el;
+          panelEl?.toggleAttribute('data-open', isOpenSignal.value);
         }}">
         <slot></slot>
       </div>

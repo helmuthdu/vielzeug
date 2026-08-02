@@ -137,7 +137,8 @@ define('settings-view', {
             min="0"
             max="360"
             value=${() => accentHue.value}
-            @change=${(e: Event) => setAccentHue((e as CustomEvent<{ value: number }>).detail.value)}></ore-slider>
+            @change=${(e: Event) =>
+              setAccentHue(Number((e.currentTarget as HTMLElementTagNameMap['ore-slider']).value))}></ore-slider>
         </div>
 
         <div class="settings-view__row">
@@ -148,7 +149,8 @@ define('settings-view', {
           <ore-select
             options=${CURRENCY_OPTIONS}
             value=${() => currentCurrency.value}
-            @change=${(e: Event) => setCurrency((e as CustomEvent<{ values: string[] }>).detail.values[0] as never)}></ore-select>
+            @change=${(e: Event) =>
+              setCurrency((e.currentTarget as HTMLElementTagNameMap['ore-select']).value as never)}></ore-select>
         </div>
 
         <div class="settings-view__row">
@@ -161,7 +163,7 @@ define('settings-view', {
             options=${USER_OPTIONS}
             value=${() => currentUser.value.id}
             @change=${(e: Event) => {
-              const selected = (e as CustomEvent<{ values: string[] }>).detail.values[0];
+              const selected = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value;
               const user = seedUsers.find((u) => u.id === selected);
 
               if (user) currentUser.value = user;

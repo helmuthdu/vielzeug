@@ -18,7 +18,7 @@ Listen for the `change` event to react to selections:
 
 ```js
 document.querySelector('ore-date-picker').addEventListener('change', (e) => {
-  console.log(e.detail.isoValue); // '2025-06-15' or null
+  console.log(e.currentTarget.value); // '2025-06-15' or ''
 });
 ```
 

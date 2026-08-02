@@ -2,7 +2,6 @@ import {
   createStableId,
   define,
   html,
-  inject,
   prop,
   ref,
   bind,
@@ -10,7 +9,6 @@ import {
   onCleanup,
   onEvent,
   onMounted,
-  useEmit,
   useSlots,
 } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore';
@@ -18,10 +16,10 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { createErrorHelperState, createSliderControl } from '../../headless';
+import { createErrorHelperState, createSliderControl } from '../../core';
 import { disablableBundle, sizableBundle, SLIDER_SIZE_PRESET, themableBundle } from '../../shared';
-import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { colorThemeMixin, disabledStateMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
+import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './slider.css?inline';
 
@@ -34,7 +32,8 @@ const guard =
 /** Slider component properties */
 
 export type OreSliderEvents = {
-  change: { from?: number; originalEvent?: Event; to?: number; value: number | { from: number; to: number } };
+  change: Event;
+  input: Event;
 };
 
 export type OreSliderProps = {
@@ -96,7 +95,8 @@ export type OreSliderProps = {
  * @attr {string}  error  - Error message below the slider
  * @attr {boolean} fullwidth - Stretch to full width of container
  *
- * @fires change - detail always includes `value`; single mode: { value: number }, range mode: { value: { from, to }, from, to }, plus optional originalEvent
+ * @fires input - Emitted when the slider value changes.
+ * @fires change - Emitted when the slider value changes.
  *
  * @slot - Slider label text
  *
@@ -145,7 +145,6 @@ define<OreSliderProps>(SLIDER_TAG, {
   },
   setup(props) {
     const el = getHost();
-    const emit = useEmit<OreSliderEvents>();
     const slots = useSlots();
 
     // Treat `range` as static — determined at first render
@@ -157,10 +156,8 @@ define<OreSliderProps>(SLIDER_TAG, {
       step: props.step,
     });
     // ── Single-value state ────────────────────────────────────────
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
     const isDragging = signal(false);
-    const isDisabled = fCtxProps.disabled;
+    const isDisabled = computed(() => Boolean(props.disabled.value));
     const labelledById = signal<string | undefined>(undefined);
     const assistiveId = createStableId('helper');
     const assistive = createErrorHelperState({ error: props.error, helper: props.helper });
@@ -171,19 +168,14 @@ define<OreSliderProps>(SLIDER_TAG, {
     bind({
       attr: {
         'data-dragging': () => (isDragging.value ? true : undefined),
-        size: fCtxProps.size,
+        size: props.size,
       },
     });
 
-    let sliderFd:
-      | {
-          reportValidity: () => boolean;
-        }
-      | undefined;
     const valueSignal = signal('0');
 
     if (!isRange) {
-      sliderFd = useField({ disabled: isDisabled, value: valueSignal });
+      useField({ disabled: isDisabled, value: valueSignal });
       watch(
         props.value,
         (v) => {
@@ -210,8 +202,28 @@ define<OreSliderProps>(SLIDER_TAG, {
     const startVal = signal(0);
     const endVal = signal(100);
 
+    defineFieldValue(
+      el,
+      () => (isRange ? `${startVal.value},${endVal.value}` : valueSignal.value),
+      (value) => {
+        if (isRange) {
+          const [from, to] = value.split(',').map(Number);
+
+          if (Number.isFinite(from)) startVal.value = sliderControl.snap(from);
+
+          if (Number.isFinite(to)) endVal.value = sliderControl.snap(to);
+
+          return;
+        }
+
+        const next = Number(value);
+
+        if (Number.isFinite(next)) valueSignal.value = String(sliderControl.snap(next));
+      },
+    );
+
     if (isRange) {
-      sliderFd = useField<{
+      useField<{
         from: number;
         to: number;
       }>({
@@ -249,6 +261,7 @@ define<OreSliderProps>(SLIDER_TAG, {
     // ── Refs ──────────────────────────────────────────────────────
     const containerRef = ref<HTMLDivElement>();
     const labelRef = ref<HTMLSpanElement>();
+    const trackRef = ref<HTMLDivElement>();
     const thumbStartRef = ref<HTMLDivElement>();
     const thumbEndRef = ref<HTMLDivElement>();
     const startId = createStableId('slider-start');
@@ -270,19 +283,20 @@ define<OreSliderProps>(SLIDER_TAG, {
       el.style.setProperty('--_fill-start', `${s}%`);
       el.style.setProperty('--_fill-width', `${e - s}%`);
     };
+    const emitValueChange = () => {
+      const value = isRange ? `${startVal.value},${endVal.value}` : valueSignal.value;
 
-    // ── Range mode setup ──────────────────────────────────────────
-    const triggerValidation = (on: 'blur' | 'change') => {
-      if (formCtx?.validateOn?.value === on) {
-        sliderFd?.reportValidity();
-      }
+      setFieldValue(el, value);
+      dispatchNativeFieldEvent(el, 'input');
+      dispatchNativeFieldEvent(el, 'change');
     };
 
-    const setupRangeMode = (container: HTMLDivElement) => {
+    // ── Range mode setup ──────────────────────────────────────────
+    const setupRangeMode = (container: HTMLDivElement, track: HTMLDivElement) => {
       updateRangeCSS();
 
       const clientToValue = (clientX: number) => {
-        const rect = container.getBoundingClientRect();
+        const rect = track.getBoundingClientRect();
 
         return sliderControl.fromClientX(clientX, rect);
       };
@@ -294,12 +308,7 @@ define<OreSliderProps>(SLIDER_TAG, {
         startVal.value = sliderControl.clamp(startVal.value);
         endVal.value = sliderControl.clamp(endVal.value);
         updateRangeCSS();
-        emit('change', {
-          from: startVal.value,
-          to: endVal.value,
-          value: { from: startVal.value, to: endVal.value },
-        });
-        triggerValidation('change');
+        emitValueChange();
       };
 
       onEvent(
@@ -356,13 +365,7 @@ define<OreSliderProps>(SLIDER_TAG, {
         e.preventDefault();
         setVal(sliderControl.snap(next));
         updateRangeCSS();
-        emit('change', {
-          from: startVal.value,
-          originalEvent: e,
-          to: endVal.value,
-          value: { from: startVal.value, to: endVal.value },
-        });
-        triggerValidation('change');
+        emitValueChange();
       };
       const thumbStartEl = thumbStartRef.value;
       const thumbEndEl = thumbEndRef.value;
@@ -422,20 +425,19 @@ define<OreSliderProps>(SLIDER_TAG, {
       }
     };
     // ── Single-value mode setup ───────────────────────────────────
-    const setupSingleMode = (container: HTMLDivElement) => {
+    const setupSingleMode = (container: HTMLDivElement, track: HTMLDivElement) => {
       updateSingleCSS(Number(valueSignal.value));
 
       const updateValue = (clientX: number) => {
         if (isDisabled.value) return;
 
-        const rect = container.getBoundingClientRect();
+        const rect = track.getBoundingClientRect();
         const newValue = sliderControl.fromClientX(clientX, rect);
 
         if (Number(valueSignal.value) !== newValue) {
           valueSignal.value = newValue.toString();
           updateSingleCSS(newValue);
-          emit('change', { value: newValue });
-          triggerValidation('change');
+          emitValueChange();
         }
       };
       let isPointerDragging = false;
@@ -498,8 +500,7 @@ define<OreSliderProps>(SLIDER_TAG, {
             if (newValue !== val) {
               valueSignal.value = newValue.toString();
               updateSingleCSS(newValue);
-              emit('change', { originalEvent: e, value: newValue });
-              triggerValidation('change');
+              emitValueChange();
             }
           },
         ),
@@ -508,8 +509,9 @@ define<OreSliderProps>(SLIDER_TAG, {
 
     onMounted(() => {
       const container = containerRef.value;
+      const track = trackRef.value;
 
-      if (!container) return;
+      if (!container || !track) return;
 
       if (slots.has().value && labelRef.value) {
         const labelId = createStableId('slider-label');
@@ -519,13 +521,13 @@ define<OreSliderProps>(SLIDER_TAG, {
         if (!isRange) labelledById.value = labelId;
       }
 
-      if (isRange) setupRangeMode(container);
-      else setupSingleMode(container);
+      if (isRange) setupRangeMode(container, track);
+      else setupSingleMode(container, track);
     });
 
     return html`
       <div class="slider-container" part="slider" ref=${containerRef}>
-        <div class="slider-track" part="track">
+        <div class="slider-track" part="track" ref=${trackRef}>
           <div class="slider-fill" part="fill"></div>
           <div class="slider-thumb slider-thumb-sole" part="thumb"></div>
           <div
@@ -555,6 +557,6 @@ define<OreSliderProps>(SLIDER_TAG, {
     colorThemeMixin,
     sizeVariantMixin(SLIDER_SIZE_PRESET),
     componentStyles,
-    coarsePointerMixin,
+    reducedMotionMixin,
   ],
 });

@@ -4,7 +4,7 @@ A slide-in panel that overlays page content from any edge of the screen. Built o
 
 ## Placements
 
-Toggle the `open` attribute to show and hide the drawer. Use the `placement` attribute to control which edge the drawer slides in from: `left`, `right` (default), `top`, or `bottom`.
+Use `open` as the controlled state and update it from `open-change`; use `default-open` only to initialize an uncontrolled drawer. Use `placement` to control which edge the drawer slides in from: `left`, `right` (default), `top`, or `bottom`.
 
 <ComponentPreview height="400px">
 
@@ -200,11 +200,10 @@ Use `backdrop` to match dialog behavior:
 </ore-drawer>
 
 <script type="module">
-  import '@vielzeug/refine';
+  import '@vielzeug/refine/drawer';
 
   const drawer = document.getElementById('my-drawer');
-  drawer.addEventListener('open', (e) => console.log('drawer opened because:', e.detail.reason));
-  drawer.addEventListener('close', (e) => console.log('drawer closed because:', e.detail.reason));
+  drawer.addEventListener('open-change', (e) => console.log('drawer open:', e.detail.open, e.detail.reason));
   drawer.addEventListener('close-request', (e) => {
     if (e.detail.reason === 'outside-click') {
       console.log('close requested from backdrop click');
@@ -219,7 +218,8 @@ Use `backdrop` to match dialog behavior:
 
 | Attribute               | Type                                     | Default     | Description                                       |
 | ----------------------- | ---------------------------------------- | ----------- | ------------------------------------------------- |
-| `open`                  | `boolean`                                | `false`     | Controls visibility                               |
+| `open`                  | `boolean`                                | —           | Controlled visibility                             |
+| `default-open`          | `boolean`                                | `false`     | Initial visibility when `open` is not provided    |
 | `placement`             | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'`   | Edge the drawer slides in from                    |
 | `size`                  | `'sm' \| 'md' \| 'lg' \| 'full'`         | `'md'`      | Panel width (or height for top/bottom placements) |
 | `label`                 | `string`                                 | —           | Accessible title shown in the header bar          |
@@ -240,8 +240,7 @@ Use `backdrop` to match dialog behavior:
 
 | Event           | Detail                                                                                                                      | Description                             |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
-| `open`          | `{ placement: 'left' \| 'right' \| 'top' \| 'bottom', reason: 'programmatic' }`                                             | Fired when the drawer opens             |
-| `close`         | `{ placement: 'left' \| 'right' \| 'top' \| 'bottom', reason: 'programmatic' \| 'trigger' \| 'escape' \| 'outside-click' }` | Fired when the drawer closes            |
+| `open-change`   | `{ open: boolean, reason: string }`                                                                                          | Fired whenever the drawer opens or closes |
 | `close-request` | `{ placement: 'left' \| 'right' \| 'top' \| 'bottom', reason: 'trigger' \| 'escape' \| 'outside-click' }`                   | Fired before close and can be prevented |
 
 ### CSS Custom Properties

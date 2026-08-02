@@ -6,7 +6,7 @@
  * - `./prop-bundles` — reusable ore prop bundle objects
  * - `./size-presets` — sizeVariantMixin size preset constants
  *
- * `src/types/` re-exports from this file for the public `@vielzeug/refine/types` entry point.
+ * Component modules import these types directly; this module is not a public package boundary.
  */
 
 export * from './prop-bundles';

@@ -142,13 +142,12 @@ describe('ore-radio', () => {
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
 
-      const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
+      const target = (changeHandler.mock.calls[0][0] as Event).target as HTMLElement & { checked: boolean };
 
-      expect(detail.checked).toBe(true);
-      expect(detail.value).toBe('yes');
+      expect(target.checked).toBe(true);
     });
 
-    it('includes originalEvent in change detail', async () => {
+    it('exposes the selected state through the change event target', async () => {
       fixture = await mount('ore-radio', { attrs: { name: 'ev2', value: 'yes' } });
 
       const changeHandler = vi.fn();
@@ -157,10 +156,9 @@ describe('ore-radio', () => {
 
       fireClick(fixture.element);
 
-      const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
+      const target = (changeHandler.mock.calls[0][0] as Event).target as HTMLElement & { checked: boolean };
 
-      expect(detail.originalEvent).toBeDefined();
-      expect(detail.value).toBe('yes');
+      expect(target.checked).toBe(true);
     });
 
     it('does not emit change when disabled', async () => {
@@ -185,7 +183,10 @@ describe('ore-radio', () => {
       fireKeyDown(fixture.element, { key: ' ' });
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
-      expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.checked).toBe(true);
+
+      const target = (changeHandler.mock.calls[0][0] as Event).target as HTMLElement & { checked: boolean };
+
+      expect(target.checked).toBe(true);
     });
 
     it('emits change via Enter key', async () => {

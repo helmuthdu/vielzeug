@@ -16,4 +16,4 @@ export type { OreMenuEvents, OreMenuItemProps, OreMenuItemType, OreMenuProps, Me
 export { POPOVER_TAG } from './popover/popover';
 export type { OrePopoverEvents, OrePopoverProps } from './popover/popover';
 export { TOOLTIP_TAG } from './tooltip/tooltip';
-export type { OreTooltipProps } from './tooltip/tooltip';
+export type { OreTooltipEvents, OreTooltipProps } from './tooltip/tooltip';

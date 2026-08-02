@@ -27,12 +27,21 @@ describe('ore-menu', () => {
 
       const onOpen = vi.fn();
 
-      fixture.element.addEventListener('open', onOpen);
+      fixture.element.addEventListener('open-change', onOpen);
 
       fireClick(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
 
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
-      expect((onOpen.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'click' });
+      expect((onOpen.mock.calls[0][0] as CustomEvent).detail).toEqual({ open: true, reason: 'click' });
+    });
+
+    it('initializes an uncontrolled menu with default-open', async () => {
+      fixture = await mount('ore-menu', {
+        attrs: { 'default-open': '' },
+        html: '<button slot="trigger">Open</button><ore-menu-item value="edit">Edit</ore-menu-item>',
+      });
+
+      expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
     });
 
     it('emits select and closes for normal menu items', async () => {
@@ -47,7 +56,7 @@ describe('ore-menu', () => {
       const onClose = vi.fn();
 
       fixture.element.addEventListener('select', onSelect);
-      fixture.element.addEventListener('close', onClose);
+      fixture.element.addEventListener('open-change', onClose);
 
       fireClick(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
       fireClick(fixture.element.querySelector<MenuItemElement>('[value="edit"]')!);
@@ -55,7 +64,7 @@ describe('ore-menu', () => {
       expect(onSelect).toHaveBeenCalledTimes(1);
       expect((onSelect.mock.calls[0][0] as CustomEvent).detail.value).toBe('edit');
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(false);
-      expect((onClose.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'programmatic' });
+      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'programmatic' });
     });
 
     it('toggles checkbox menu item without closing menu', async () => {
@@ -200,7 +209,7 @@ describe('ore-menu', () => {
 
       const onOpen = vi.fn();
 
-      fixture.element.addEventListener('open', onOpen);
+      fixture.element.addEventListener('open-change', onOpen);
 
       const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
 
@@ -236,12 +245,12 @@ describe('ore-menu', () => {
 
       const onClose = vi.fn();
 
-      fixture.element.addEventListener('close', onClose);
+      fixture.element.addEventListener('open-change', onClose);
 
       fireClick(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
       fireKeyDown(fixture.query('.menu-panel')!, { key: 'Escape' });
 
-      expect((onClose.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'escape' });
+      expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'escape' });
     });
 
     it('moves focus to the next menu item with ArrowDown', async () => {

@@ -46,6 +46,12 @@ describe('ore-dialog', () => {
       expect(fixture.query('dialog[open]')).toBeTruthy();
     });
 
+    it('initializes an uncontrolled dialog with default-open', async () => {
+      fixture = await mount('ore-dialog', { attrs: { 'default-open': '' } });
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+    });
+
     it('renders slot content', async () => {
       fixture = await mount('ore-dialog', { attrs: { open: '' }, html: 'Dialog body' });
 
@@ -92,45 +98,45 @@ describe('ore-dialog', () => {
   });
 
   describe('Events', () => {
-    it('fires open event when dialog opens', async () => {
+    it('fires open-change when dialog opens', async () => {
       fixture = await mount('ore-dialog');
 
       const handler = vi.fn();
 
-      fixture.element.addEventListener('open', handler);
+      fixture.element.addEventListener('open-change', handler);
 
       await fixture.attr('open', '');
 
       expect(handler).toHaveBeenCalled();
-      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('programmatic');
+      expect((handler.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ open: true, reason: 'programmatic' });
     });
 
-    it('fires close event when dialog closes', async () => {
+    it('fires open-change when dialog closes', async () => {
       fixture = await mount('ore-dialog', { attrs: { open: '' } });
 
       const handler = vi.fn();
 
-      fixture.element.addEventListener('close', handler);
+      fixture.element.addEventListener('open-change', handler);
 
       fixture.element.removeAttribute('open');
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
-      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('programmatic');
+      expect((handler.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'programmatic' });
     });
 
-    it('fires close event when dismiss button clicked', async () => {
+    it('fires open-change when dismiss button clicked', async () => {
       fixture = await mount('ore-dialog', { attrs: { dismissible: '', open: '' } });
 
       const handler = vi.fn();
 
-      fixture.element.addEventListener('close', handler);
+      fixture.element.addEventListener('open-change', handler);
 
       fireClick(fixture.query<HTMLElement>('[aria-label="Close dialog"]')!);
       await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
-      expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('trigger');
+      expect((handler.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ open: false, reason: 'trigger' });
     });
 
     it('fires close-request with reason="trigger" from dismiss button', async () => {
@@ -180,7 +186,7 @@ describe('ore-dialog', () => {
       const closeHandler = vi.fn();
       const closeRequestHandler = vi.fn();
 
-      fixture.element.addEventListener('close', closeHandler);
+      fixture.element.addEventListener('open-change', closeHandler);
       fixture.element.addEventListener('close-request', closeRequestHandler);
 
       fixture
@@ -230,7 +236,7 @@ describe('ore-dialog', () => {
       const closeHandler = vi.fn();
       const closeRequestHandler = vi.fn();
 
-      fixture.element.addEventListener('close', closeHandler);
+      fixture.element.addEventListener('open-change', closeHandler);
       fixture.element.addEventListener('close-request', closeRequestHandler);
 
       fixture.element

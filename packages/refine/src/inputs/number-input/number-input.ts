@@ -1,20 +1,20 @@
 import { clamp } from '@vielzeug/arsenal';
-import { define, html, inject, prop, ref, bind, onElement, useEmit, watchEffect } from '@vielzeug/ore';
+import { define, html, prop, ref, bind, getHost, onElement, watchEffect } from '@vielzeug/ore';
 import { computed, signal, watch as rippleWatch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
-import { createSpinnerControl } from '../../headless';
+import { createSpinnerControl } from '../../core';
 import '../../content/icon/icon';
 import '../input/input';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { disabledLoadingMixin } from '../../styles';
-import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './number-input.css?inline';
 
 export type OreNumberInputEvents = {
-  change: { originalEvent?: Event; value: number | null };
-  input: { originalEvent?: Event; value: number | null };
+  change: Event;
+  input: InputEvent;
 };
 
 /** Number Input props */
@@ -94,8 +94,8 @@ export type OreNumberInputProps = {
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {string} placeholder - Input placeholder
  *
- * @fires change - On committed value change. detail: { value: number | null, originalEvent?: Event }
- * @fires input - On every keystroke. detail: { value: number | null, originalEvent?: Event }
+ * @fires input - On every keystroke.
+ * @fires change - On committed value change.
  *
  * @slot prefix - Content before the input (e.g. icon)
  * @slot suffix - Content after the input (e.g. unit label)
@@ -147,17 +147,23 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
     variant: prop.string<VisualVariant>(),
   },
   setup(props) {
-    const emit = useEmit<OreNumberInputEvents>();
+    const el = getHost();
     const watch = watchEffect;
 
-    const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(props, formCtx);
     // `loading` behaves like a temporary `disabled` — see ore-input's identical computation.
-    const isDisabled = computed(() => fCtxProps.disabled.value || props.loading.value);
+    const isDisabled = computed(() => props.disabled.value || props.loading.value);
     const isReadonly = computed(() => Boolean(props.readonly.value));
 
     // Internal numeric value signal (string representation for the input)
     const fieldValue = signal(props.value.value != null ? String(props.value.value) : '');
+
+    defineFieldValue(
+      el,
+      () => fieldValue.value,
+      (value) => {
+        fieldValue.value = value;
+      },
+    );
 
     // Keep fieldValue in sync when props.value changes externally
     rippleWatch(props.value, (v) => {
@@ -176,7 +182,7 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
       return Number.isNaN(n) ? null : n;
     }
 
-    function commit(val: number | null, originalEvent?: Event) {
+    function commit(val: number | null, _originalEvent?: Event) {
       const min = props.min.value != null ? Number(props.min.value) : undefined;
       const max = props.max.value != null ? Number(props.max.value) : undefined;
       const clamped = val != null ? clamp(val, min, max) : null;
@@ -184,7 +190,8 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
 
       if (fieldValue.value !== nextValue) fieldValue.value = nextValue;
 
-      emit('change', { originalEvent, value: clamped });
+      setFieldValue(el, nextValue);
+      dispatchNativeFieldEvent(el, 'change');
     }
 
     const spinner = createSpinnerControl({
@@ -236,10 +243,10 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
 
       const handleInput = (e: Event) => {
         const val = (e.target as HTMLInputElement).value;
-        const n = val !== '' ? Number.parseFloat(val) : null;
 
         fieldValue.value = val;
-        emit('input', { originalEvent: e, value: Number.isNaN(n ?? NaN) ? null : n });
+        setFieldValue(el, val);
+        dispatchNativeFieldEvent(el, 'input');
       };
 
       rawInput.addEventListener('change', handleChange);
@@ -281,9 +288,9 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
 
     bind({
       attr: {
-        size: fCtxProps.size,
+        size: props.size,
         value: () => fieldValue.value || null,
-        variant: fCtxProps.variant,
+        variant: props.variant,
       },
     });
 
@@ -308,11 +315,11 @@ define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
         name="${() => props.name.value ?? ''}"
         helper="${() => props.helper.value ?? ''}"
         error="${() => props.error.value ?? ''}"
-        size="${fCtxProps.size}"
+        size="${props.size}"
         color="${() => props.color.value ?? ''}"
-        variant="${fCtxProps.variant}"
+        variant="${props.variant}"
         rounded="${() => props.rounded.value}"
-        ?disabled="${fCtxProps.disabled}"
+        ?disabled="${props.disabled}"
         ?readonly="${isReadonly}"
         ?fullwidth="${() => props.fullwidth.value}"
         ?loading="${() => props.loading.value}"

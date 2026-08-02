@@ -3,9 +3,8 @@ import { test as base } from '@playwright/test';
 /**
  * Shared Playwright test fixture for refine e2e specs — the real-browser counterpart to this
  * same folder's jsdom `axeCheck()`/ARIA helpers (`index.ts`), just Playwright/Chromium-only
- * instead of jsdom-only. Not part of the public `@vielzeug/refine/testing` sub-path — `index.ts`
- * never imports it, so it's never bundled into that export's output; it lives here purely so
- * every `*.e2e.ts` file's test infra sits next to its jsdom equivalent.
+ * instead of jsdom-only. It remains private test infrastructure so every `*.e2e.ts` file's
+ * harness lives next to its jsdom equivalent.
  *
  * Loads the full IIFE dependency stack (same load order as verify-layout.mjs and the
  * docs component preview) via page.setContent() with inline scripts. Tests call
@@ -46,13 +45,13 @@ const IIFE_ENTRIES: Array<{ path: string; shim?: string }> = [
   { path: path.join(PKG, 'refine/dist/refine.iife.js') },
 ];
 
-// `dist/styles/styles.css` is just four `@import url(...)` lines (LightningCSS keeps them
-// external so consumers' bundlers can dedupe/split them) — pointing a `<link>` at it via
+// The token stylesheet keeps its imports external so consumers' bundlers can dedupe/split them.
+// Pointing a `<link>` at it via
 // `page.setContent()` fails silently: the page's own origin is `about:blank`, so the `file://`
 // stylesheet (and its own nested `@import`s) is cross-origin and Chromium never applies it —
 // `getComputedStyle()` on anything under `.frame` then sees none of the `--size-*`/`--color-*`
 // tokens every component's CSS falls back through, not even as a loud error. Reading and
-// concatenating the four imported files directly (same order `styles.css` imports them in)
+// Concatenating the files directly in the production cascade order
 // sidesteps needing a real file:// page origin at all.
 const STYLES_DIR = path.join(PKG, 'refine/dist/styles');
 const STYLES_CSS = ['preflight.css', 'theme.css', 'animation.css', 'layer.css']

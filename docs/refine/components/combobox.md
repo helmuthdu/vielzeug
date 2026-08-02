@@ -200,8 +200,7 @@ In multiple mode the `change` event detail includes both `value` (comma-separate
 
 ```js
 document.querySelector('ore-combobox').addEventListener('change', (e) => {
-  console.log('csv:', e.detail.value); // "ts,rust,go"
-  console.log('array:', e.detail.values); // ["ts", "rust", "go"]
+  console.log('value:', e.currentTarget.value); // ["ts", "rust", "go"] in multiple mode
 });
 ```
 
@@ -306,7 +305,7 @@ Add `creatable` to allow users to create a new option when their query does not 
 ```js
 document.querySelector('ore-combobox').addEventListener('change', (e) => {
   // Both selected and newly created options fire change
-  console.log('Selected/created:', e.detail.value, e.detail.labels);
+  console.log('Selected/created:', e.currentTarget.value);
 });
 ```
 
@@ -345,19 +344,19 @@ Assigning a new array to `options` updates the dropdown immediately. When both `
 
 ## In a Form
 
-`ore-combobox` is form-associated — its `name` attribute participates in `FormData` submissions. Set `required` to fail constraint validation while nothing is selected — `<ore-form>` blocks submit and `checkValidity()`/`reportValidity()` return `false` until an option is chosen; resetting the ancestor form restores whichever selection it started with.
+`ore-combobox` is form-associated — its `name` attribute participates in native `FormData` submissions. Set `required` to fail constraint validation while nothing is selected — a native `<form>` blocks submission and `checkValidity()`/`reportValidity()` return `false` until an option is chosen; resetting the ancestor form restores the initial selection.
 
 <ComponentPreview height="400px">
 
 ```html
-<ore-form id="myForm">
+<form id="myForm">
   <ore-combobox name="country" label="Country" placeholder="Search countries…" required>
     <ore-combobox-option value="us">United States</ore-combobox-option>
     <ore-combobox-option value="de">Germany</ore-combobox-option>
     <ore-combobox-option value="gb">United Kingdom</ore-combobox-option>
   </ore-combobox>
   <ore-button type="submit">Submit</ore-button>
-</ore-form>
+</form>
 ```
 
 </ComponentPreview>
@@ -389,9 +388,8 @@ const cb = document.getElementById('my-cb');
 
 // Fired when a value is selected from the list
 cb.addEventListener('change', (e) => {
-  console.log('value:', e.detail.value, 'labels:', e.detail.labels);
-  // In multiple mode, e.detail.values is a string array
-  console.log('values:', e.detail.values);
+  console.log('value:', e.currentTarget.value);
+  // In multiple mode, value is a string array.
 });
 
 // Fired on every keystroke in the input
@@ -399,13 +397,8 @@ cb.addEventListener('search', (e) => {
   console.log('query:', e.detail.query);
 });
 
-// Fired when the popup opens/closes
-cb.addEventListener('open', (e) => {
-  console.log('opened because:', e.detail.reason); // 'trigger' | 'programmatic'
-});
-
-cb.addEventListener('close', (e) => {
-  console.log('closed because:', e.detail.reason); // 'escape' | 'outside-click' | 'programmatic'
+cb.addEventListener('open-change', (e) => {
+  console.log('dropdown open:', e.detail.open, e.detail.reason);
 });
 ```
 
@@ -433,7 +426,7 @@ cb.addEventListener('close', (e) => {
 | `multiple`        | `boolean`                                                                 | `false`   | Allow selecting multiple options (chips are shown in field) |
 | `fullwidth`       | `boolean`                                                                 | `false`   | Expand to fill the container width                          |
 | `disabled`        | `boolean`                                                                 | `false`   | Disable the control                                         |
-| `required`        | `boolean`                                                                 | `false`   | Require a non-blank selection for `<ore-form>` validation    |
+| `required`        | `boolean`                                                                 | `false`   | Require a non-blank selection for native-form validation     |
 
 **`ore-combobox` Slots**
 
@@ -461,8 +454,7 @@ cb.addEventListener('close', (e) => {
 | Event    | Detail                                                                         | Description                                  |
 | -------- | ------------------------------------------------------------------------------ | -------------------------------------------- |
 | `change` | `{ value: string, values: string[], labels: string[], originalEvent?: Event }` | Emitted when selected value(s) change        |
-| `open`   | `{ reason: 'trigger' \| 'programmatic' }`                                      | Emitted when the dropdown opens              |
-| `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' }`                    | Emitted when the dropdown closes             |
+| `open-change` | `{ open: boolean, reason: string }`                                        | Emitted whenever the dropdown opens or closes |
 | `search` | `{ query: string }`                                                            | Emitted on every keystroke in the text input |
 
 **CSS Custom Properties**

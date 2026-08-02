@@ -3,7 +3,7 @@ import { watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { announce } from '../../headless';
+import { announce } from '../../core';
 import { sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
 import componentStyles from './typing-indicator.css?inline';
@@ -24,7 +24,7 @@ export type OreTypingIndicatorProps = {
  * use `ore-chat-message`'s `streaming` attribute (a blinking cursor) instead.
  *
  * The dots are decorative (`aria-hidden`) — `label` is the entire accessibility contract,
- * announced through the shared singleton live region (`headless/announcer.ts`) rather than a
+ * announced through the shared singleton live region (`core/announcer.ts`) rather than a
  * static `aria-live` element in the template. A live region populated in the same paint as
  * its own insertion is unreliable across browsers/screen readers; routing through the shared
  * announcer (pre-existing region, clear-then-set) is the same pattern already used for other

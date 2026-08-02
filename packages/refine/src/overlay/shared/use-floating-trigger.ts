@@ -3,7 +3,8 @@ import type { Placement } from '@vielzeug/orbit';
 import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
 import { type Readable, type Signal, signal, watch } from '@vielzeug/ripple';
 
-import { lifecycleSignal, createOverlayControl, type DialogCloseReason, type OverlayOpenReason } from '../../headless';
+import { lifecycleSignal, type DialogCloseReason, type OverlayOpenReason } from '../../core';
+import { createOutsidePointerDismissal } from '../../core/overlay';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -14,6 +15,8 @@ export type AriaBindFn = (triggerEl: HTMLElement) => () => void;
 export type FloatingTriggerOptions = {
   /** ARIA binding factory: called with the trigger element, returns a cleanup. */
   bindTriggerAria: AriaBindFn;
+  /** Initial uncontrolled visibility. Ignored when `openProp` is defined. */
+  defaultOpen: Readable<boolean | undefined>;
   /** If true, disable all trigger interactions and close if open. */
   disabled: Readable<boolean>;
   /** Returns the host element (e.g. ore-popover) so slotted content clicks aren't treated as outside clicks. */
@@ -78,6 +81,7 @@ export type FloatingTriggerHandle = {
 export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTriggerHandle => {
   const {
     bindTriggerAria,
+    defaultOpen,
     disabled,
     getPanel,
     onClose,
@@ -105,29 +109,6 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
   const isControlled = () => openProp.value !== undefined;
   let currentTrigger: HTMLElement | null = null;
   let triggerBinding: (() => void) | null = null;
-
-  const overlay = createOverlayControl({
-    getBoundary: () => document.body,
-    getPanel,
-    getTrigger: () => currentTrigger,
-    isDisabled: () => disabled.value,
-    isOpen: () => visible.value,
-    onClose,
-    onOpen,
-    positioner: {
-      floating: getPanel,
-      reference: () => currentTrigger,
-      update: updatePosition,
-    },
-    restoreFocus: false,
-    setOpen: (next) => {
-      if (isControlled()) return;
-
-      if (next) showFloat();
-      else hideFloat();
-    },
-    signal: abortSignal,
-  });
 
   function updatePosition(): void {
     const panel = getPanel();
@@ -186,36 +167,28 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
   }
 
   function open(reason: OverlayOpenReason = 'programmatic'): void {
-    if (!isControlled()) overlay.open(reason);
+    if (isControlled() || disabled.value || visible.value) return;
+
+    showFloat();
+    onOpen?.(reason);
   }
 
   function close(reason: DialogCloseReason = 'trigger'): void {
-    if (!isControlled()) overlay.close(reason, false);
+    if (isControlled() || !visible.value) return;
+
+    hideFloat();
+    onClose?.(reason);
   }
 
   function toggle(): void {
-    if (!isControlled()) overlay.toggle();
+    if (isControlled()) return;
+
+    if (visible.value) close();
+    else open('click');
   }
 
   function handleKeydown(e: KeyboardEvent): void {
     if (e.key === 'Escape') close('escape');
-  }
-
-  function handleClickOutside(e: PointerEvent | MouseEvent): void {
-    if (!visible.value) return;
-
-    const path = e.composedPath();
-    const panel = getPanel();
-    const host = options.getHost?.();
-
-    if (
-      (currentTrigger && path.includes(currentTrigger)) ||
-      (panel && path.includes(panel)) ||
-      (host && path.includes(host))
-    )
-      return;
-
-    close('outsideClick');
   }
 
   function handleFocusOut(e: FocusEvent): void {
@@ -260,7 +233,6 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
 
     if (t.includes('click')) {
       add(triggerEl, 'click', toggle as EventListener);
-      add(document, 'pointerdown', handleClickOutside as EventListener, { capture: true });
     }
 
     if (t.includes('hover')) {
@@ -295,13 +267,33 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
     };
   };
 
+  const stopOutsidePointerDismissal = createOutsidePointerDismissal({
+    getTargets: () => [currentTrigger, getPanel(), options.getHost?.()],
+    isActive: () => visible.value && triggers.value.includes('click'),
+    onDismiss: () => close('outsideClick'),
+    signal: abortSignal,
+  });
+
   const mount = (): (() => void) => {
+    let initializedOpenProp = false;
+
     watch(slotElements, bindEvents, { immediate: true });
 
     watch(
       openProp,
       (openVal) => {
-        if (openVal === undefined || openVal === null) return;
+        if (openVal === undefined || openVal === null) {
+          if (initializedOpenProp && visible.value) {
+            hideFloat();
+            onClose?.('programmatic');
+          }
+
+          initializedOpenProp = true;
+
+          return;
+        }
+
+        initializedOpenProp = true;
 
         if (openVal) {
           showFloat();
@@ -313,6 +305,11 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
       },
       { immediate: true },
     );
+
+    if (openProp.value === undefined && defaultOpen.value) {
+      showFloat();
+      onOpen?.('programmatic');
+    }
 
     watch(disabled, (isNowDisabled) => {
       if (isNowDisabled) close('programmatic');
@@ -336,7 +333,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
         }
       }
 
-      overlay.dispose();
+      stopOutsidePointerDismissal();
     };
   };
 
