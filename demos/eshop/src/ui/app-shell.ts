@@ -402,7 +402,7 @@ define('app-shell', {
         label="Command palette"
         placeholder="Search models, jump to a view…"
         no-filter
-        :items=${paletteItems}
+        items=${paletteItems}
         @search=${(e: Event) => {
           paletteQuery.value = (e as CustomEvent<{ query: string }>).detail.query;
         }}

@@ -159,10 +159,10 @@ define<ModelConfiguratorProps>('model-configurator', {
            product shot instead of a second, competing headline below it. -->
       <div class="configurator__hero">
         <car-silhouette
-          :body-type=${() => model().bodyType}
-          :color-hex=${() => color.value.hex}
-          :color-name=${() => color.value.name}
-          :hero-hue=${() => model().heroHue}></car-silhouette>
+          body-type=${() => model().bodyType}
+          color-hex=${() => color.value.hex}
+          color-name=${() => color.value.name}
+          hero-hue=${() => model().heroHue}></car-silhouette>
         <div class="configurator__intro">
           <h1>${() => model().name}</h1>
           <p class="configurator__tagline">${() => `${model().segment} — ${model().tagline}`}</p>
@@ -191,13 +191,13 @@ define<ModelConfiguratorProps>('model-configurator', {
         <div class="configurator__specs">
           <div class="spec">
             <span class="spec__label">${() => t('model.topSpeed')}</span>
-            <spec-tooltip :text=${() => t('model.topSpeedTooltip')}>
+            <spec-tooltip text=${() => t('model.topSpeedTooltip')}>
               <strong>${() => `${model().topSpeedKph} km/h`}</strong>
             </spec-tooltip>
           </div>
           <div class="spec">
             <span class="spec__label">${() => t('model.zeroToHundred')}</span>
-            <spec-tooltip :text=${() => t('model.zeroToHundredTooltip')}>
+            <spec-tooltip text=${() => t('model.zeroToHundredTooltip')}>
               <strong>${() => `${model().zeroToHundredSec}s`}</strong>
             </spec-tooltip>
           </div>
@@ -210,7 +210,7 @@ define<ModelConfiguratorProps>('model-configurator', {
             () => html`
               <div class="spec">
                 <span class="spec__label">${() => t('model.range')}</span>
-                <spec-tooltip :text=${() => t('model.rangeTooltip')}>
+                <spec-tooltip text=${() => t('model.rangeTooltip')}>
                   <strong>${() => `${model().rangeKm} km`}</strong>
                 </spec-tooltip>
               </div>
@@ -283,14 +283,14 @@ define<ModelConfiguratorProps>('model-configurator', {
 
       <section class="configurator__section">
         <h2>${() => t('model.selectWheels')}</h2>
-        <ore-select :options=${wheelOptions} :value=${() => wheelId.value} @change=${onWheelChange}></ore-select>
+        <ore-select options=${wheelOptions} value=${() => wheelId.value} @change=${onWheelChange}></ore-select>
       </section>
 
       <section class="configurator__section">
         <h2>
-          <spec-tooltip :text=${() => t('model.selectTrimTooltip')}>${() => t('model.selectTrim')}</spec-tooltip>
+          <spec-tooltip text=${() => t('model.selectTrimTooltip')}>${() => t('model.selectTrim')}</spec-tooltip>
         </h2>
-        <ore-select :options=${trimOptions} :value=${() => trimId.value} @change=${onTrimChange}></ore-select>
+        <ore-select options=${trimOptions} value=${() => trimId.value} @change=${onTrimChange}></ore-select>
         <p class="configurator__helper">${() => trim.value.description}</p>
         ${when(
           () => includedPackages.value.length > 0,
@@ -309,13 +309,13 @@ define<ModelConfiguratorProps>('model-configurator', {
 
       <section class="configurator__section">
         <h2>
-          <spec-tooltip :text=${() => t('model.packagesTooltip')}>${() => t('model.packages')}</spec-tooltip>
+          <spec-tooltip text=${() => t('model.packagesTooltip')}>${() => t('model.packages')}</spec-tooltip>
         </h2>
         ${when(
           () => optionalPackages.value.length > 0,
           () => html`
             <p class="configurator__helper">${() => t('model.optionalPackages')}</p>
-            <ore-checkbox-group :values=${() => extraPackageIds.value.join(',')} @change=${onPackagesChange}>
+            <ore-checkbox-group values=${() => extraPackageIds.value.join(',')} @change=${onPackagesChange}>
               ${optionalPackages.value.map(
                 (p) => html`
                   <ore-checkbox value=${p.id}>${p.name} — ${formatPrice(p.priceDelta)}</ore-checkbox>
@@ -354,15 +354,15 @@ define<ModelConfiguratorProps>('model-configurator', {
               label=${() => t('model.finance.downPayment')}
               min="0"
               step="500"
-              :max=${() => Number(breakdown.value.total)}
-              :value=${() => financeDownPayment.value}
+              max=${() => Number(breakdown.value.total)}
+              value=${() => financeDownPayment.value}
               @input=${(e: Event) =>
                 (financeDownPayment.value =
                   (e as CustomEvent<{ value: number | null }>).detail.value ?? 0)}></ore-number-input>
             <ore-select
               label=${() => t('model.finance.term')}
-              :options=${FINANCE_TERM_OPTIONS.map((months) => ({ label: t('checkout.payment.termOption', { months }), value: String(months) }))}
-              :value=${() => String(financeTermMonths.value)}
+              options=${FINANCE_TERM_OPTIONS.map((months) => ({ label: t('checkout.payment.termOption', { months }), value: String(months) }))}
+              value=${() => String(financeTermMonths.value)}
               @change=${(e: Event) =>
                 (financeTermMonths.value = Number(
                   (e as CustomEvent<{ values: string[] }>).detail.values[0],
@@ -425,8 +425,8 @@ define<ModelConfiguratorProps>('model-configurator', {
               ${relatedModels.value.map(
                 (m) => html`
                   <model-card
-                    :model=${() => m}
-                    :in-compare=${() => compareModelIds.value.includes(m.id)}
+                    model=${() => m}
+                    in-compare=${() => compareModelIds.value.includes(m.id)}
                     @toggle-compare=${() => toggleCompare(m.id)}
                     @view=${() => void router.navigate({ name: 'modelDetail', params: { slug: m.slug } })}></model-card>
                 `,

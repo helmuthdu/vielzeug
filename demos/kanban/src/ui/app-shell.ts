@@ -239,8 +239,8 @@ define('app-shell', {
                 <ore-avatar
                   size="xs"
                   status="online"
-                  :alt=${() => u.value.name}
-                  :initials=${() => initialsFromName(u.value.name)}></ore-avatar>
+                  alt=${() => u.value.name}
+                  initials=${() => initialsFromName(u.value.name)}></ore-avatar>
               `,
             )}
             ${when(
@@ -280,7 +280,7 @@ define('app-shell', {
         label="Command palette"
         placeholder="Search tasks, jump to a view…"
         no-filter
-        :items=${paletteItems}
+        items=${paletteItems}
         @search=${(e: Event) => {
           paletteQuery.value = (e as CustomEvent<{ query: string }>).detail.query;
         }}

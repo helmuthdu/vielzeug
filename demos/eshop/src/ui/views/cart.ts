@@ -61,10 +61,10 @@ define('cart-view', {
                 return html`
                   <div class="cart-line">
                     <car-silhouette
-                      :body-type=${() => l.value.model.bodyType}
-                      :color-hex=${() => resolved().color.hex}
-                      :color-name=${() => resolved().color.name}
-                      :hero-hue=${() => l.value.model.heroHue}></car-silhouette>
+                      body-type=${() => l.value.model.bodyType}
+                      color-hex=${() => resolved().color.hex}
+                      color-name=${() => resolved().color.name}
+                      hero-hue=${() => l.value.model.heroHue}></car-silhouette>
                     <div class="cart-line__info">
                       <h3>${() => l.value.model.name}</h3>
                       <p class="cart-line__config">
@@ -75,7 +75,7 @@ define('cart-view', {
                         size="sm"
                         min="1"
                         max="5"
-                        :value=${() => l.value.item.quantity}
+                        value=${() => l.value.item.quantity}
                         @input=${(e: Event) =>
                           setCartItemQuantity(
                             l.value.item.id,
@@ -98,8 +98,8 @@ define('cart-view', {
           <div class="cart-view__promo">
             <ore-input
               placeholder=${() => t('cart.promoPlaceholder')}
-              :value=${() => promoInput.value}
-              :error=${() => promoError.value}
+              value=${() => promoInput.value}
+              error=${() => promoError.value}
               @input=${(e: Event) => (promoInput.value = (e as CustomEvent<{ value: string }>).detail.value)}></ore-input>
             <ore-button rounded variant="bordered" @click=${applyPromo}>${() => t('cart.promoApply')}</ore-button>
             ${when(

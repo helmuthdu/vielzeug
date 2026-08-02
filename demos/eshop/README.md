@@ -41,9 +41,9 @@ purpose (product register — consistent and boring by design). The catalog brea
 card-grid rhythm with one featured flagship hero (`ui/views/catalog.ts`, pinned to the V500 — the
 one model whose own catalog copy calls it "the Vielzeug flagship"). `ui/components/car-silhouette.ts`
 stages `assets/car.svg` like a product shot (radial stage glow, a faded mirrored ground
-reflection) instead of a flat icon, injecting the SVG once via `@vielzeug/ore`'s `raw()` directive
-(a pass-through sanitizer is registered for it in `main.ts` — the markup is a build-time-bundled
-asset, never user input) and recoloring it purely through the wrapping element's CSS `color`,
+reflection) instead of a flat icon, injecting the SVG once via `@vielzeug/ore`'s `unsafeHtml()`
+directive (the markup is a build-time-bundled asset, never user input) and recoloring it purely
+through the wrapping element's CSS `color`,
 which the SVG's body-panel paths pick up via `fill="currentColor"`. It never moves on its own —
 no autoplaying idle loop, matching the same restrained, static presentation the reference OEM
 sites use — only a brief opacity dip-and-restore in direct response to the shopper picking a new
@@ -117,4 +117,3 @@ While building this demo, package APIs were looked up via `@vielzeug/codex`'s bu
 (`loadData()` from `packages/codex/dist/data.js`) rather than reading every package's source
 file-by-file — the same MCP data `codex` serves to AI clients, queried directly here to avoid
 re-implementing its lookup logic.
-

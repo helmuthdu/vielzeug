@@ -31,7 +31,7 @@ define('board-view', {
           // whole point of the optimization. Fatal for anything that calls `attachInternals()` —
           // e.g. `ore-button` — since that throws the second time it runs.
           (col) => html`
-            <ore-grid-item><board-column :status=${() => col.value.id}></board-column></ore-grid-item>
+            <ore-grid-item><board-column status=${() => col.value.id}></board-column></ore-grid-item>
           `,
         )}
       </ore-grid>

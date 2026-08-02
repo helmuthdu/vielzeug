@@ -67,11 +67,11 @@ define('share-build-dialog', {
       <ore-dialog
         size="md"
         dismissible
-        :label=${() => t('confirmation.shareBuild')}
+        label=${() => t('confirmation.shareBuild')}
         ?open=${() => requestSignal.value !== null}
         @close=${onClose}>
         <div class="share-build__preview" ref=${containerRef}></div>
-        <ore-copy-command :value=${embedSnippet} size="sm"></ore-copy-command>
+        <ore-copy-command value=${embedSnippet} size="sm"></ore-copy-command>
         <div slot="footer">
           <ore-button rounded variant="bordered" @click=${onClose}>${() => t('common.close')}</ore-button>
         </div>

@@ -85,14 +85,14 @@ define('settings-view', {
           <div class="settings-view__row-text">
             <span class="settings-view__row-label">${() => t('settings.languageLabel')}</span>
           </div>
-          <div class="settings-view__option-buttons" role="group" :aria-label=${() => t('settings.languageLabel')}>
+          <div class="settings-view__option-buttons" role="group" aria-label=${() => t('settings.languageLabel')}>
             ${each(
               LANGUAGES,
               (lang) => lang.code,
               (lang) => html`
                 <ore-button
                   size="sm"
-                  :variant=${() => (currentLocale.value === lang.value.code ? 'solid' : 'bordered')}
+                  variant=${() => (currentLocale.value === lang.value.code ? 'solid' : 'bordered')}
                   @click=${() => setLocale(lang.value.code)}>
                   ${() => lang.value.label}
                 </ore-button>
@@ -107,14 +107,14 @@ define('settings-view', {
             <span class="settings-view__row-label">${() => t('settings.themeLabel')}</span>
             <span class="settings-view__row-hint">${() => t('settings.themeHint')}</span>
           </div>
-          <div class="settings-view__option-buttons" role="group" :aria-label=${() => t('settings.themeLabel')}>
+          <div class="settings-view__option-buttons" role="group" aria-label=${() => t('settings.themeLabel')}>
             ${each(
               THEMES,
               (theme) => theme.code,
               (theme) => html`
                 <ore-button
                   size="sm"
-                  :variant=${() => (themePreference.value === theme.value.code ? 'solid' : 'bordered')}
+                  variant=${() => (themePreference.value === theme.value.code ? 'solid' : 'bordered')}
                   @click=${() => setThemePreference(theme.value.code)}>
                   ${() => theme.value.label()}
                 </ore-button>
@@ -129,9 +129,9 @@ define('settings-view', {
             <span class="settings-view__row-hint">${() => t('settings.userHint')}</span>
           </div>
           <ore-select
-            :label=${() => t('settings.userLabel')}
-            :options=${USER_OPTIONS}
-            :value=${() => currentUser.value.id}
+            label=${() => t('settings.userLabel')}
+            options=${USER_OPTIONS}
+            value=${() => currentUser.value.id}
             @change=${(e: Event) => {
               const selected = (e as CustomEvent<{ values: string[] }>).detail.values[0];
               const user = seedUsers.find((u) => u.id === selected);
@@ -168,7 +168,7 @@ define('settings-view', {
                         <span class="settings-view__debug-ts">${() => formatTimestamp(entry.value.timestamp)}</span>
                         <span
                           class="settings-view__debug-level"
-                          :style=${() => `color:${LEVEL_COLORS[entry.value.level] ?? '#ccc'}`}>
+                          style=${() => `color:${LEVEL_COLORS[entry.value.level] ?? '#ccc'}`}>
                           ${() => entry.value.level.toUpperCase()}
                         </span>
                         <span class="settings-view__debug-msg">${() => entry.value.message ?? '(no message)'}</span>

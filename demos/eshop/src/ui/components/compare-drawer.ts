@@ -155,7 +155,7 @@ define('compare-drawer', {
       <ore-drawer
         placement="bottom"
         size="lg"
-        :title=${() => t('compare.title')}
+        title=${() => t('compare.title')}
         ?open=${() => isOpen.value}
         @close=${onClose}>
         ${when(
@@ -170,7 +170,7 @@ define('compare-drawer', {
             (m) => m.id,
             (m) => html`
               <div class="compare-drawer__chip" data-model-id=${() => m.value.id}>
-                <ore-avatar size="sm" :initials=${() => m.value.name.slice(0, 2)}></ore-avatar>
+                <ore-avatar size="sm" initials=${() => m.value.name.slice(0, 2)}></ore-avatar>
                 <span class="compare-drawer__chip-name">${() => m.value.name}</span>
                 <ore-button
                   rounded
@@ -192,8 +192,8 @@ define('compare-drawer', {
               <ore-button
                 rounded
                 size="sm"
-                :variant=${() => (highlightBest.value ? 'flat' : 'ghost')}
-                :color=${() => (highlightBest.value ? 'primary' : undefined)}
+                variant=${() => (highlightBest.value ? 'flat' : 'ghost')}
+                color=${() => (highlightBest.value ? 'primary' : undefined)}
                 aria-pressed=${() => String(highlightBest.value)}
                 @click=${() => (highlightBest.value = !highlightBest.value)}>
                 ${() => t('compare.highlightBest')}
@@ -201,8 +201,8 @@ define('compare-drawer', {
               <ore-button
                 rounded
                 size="sm"
-                :variant=${() => (hideIdentical.value ? 'flat' : 'ghost')}
-                :color=${() => (hideIdentical.value ? 'primary' : undefined)}
+                variant=${() => (hideIdentical.value ? 'flat' : 'ghost')}
+                color=${() => (hideIdentical.value ? 'primary' : undefined)}
                 aria-pressed=${() => String(hideIdentical.value)}
                 @click=${() => (hideIdentical.value = !hideIdentical.value)}>
                 ${() => t('compare.hideIdentical')}

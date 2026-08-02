@@ -95,7 +95,7 @@ define('settings-view', {
                 <ore-button
                   rounded
                   size="sm"
-                  :variant=${() => (currentLocale.value === lang.value.code ? 'solid' : 'bordered')}
+                  variant=${() => (currentLocale.value === lang.value.code ? 'solid' : 'bordered')}
                   @click=${() => setLocale(lang.value.code)}>
                   ${() => lang.value.label}
                 </ore-button>
@@ -118,7 +118,7 @@ define('settings-view', {
                 <ore-button
                   rounded
                   size="sm"
-                  :variant=${() => (themePreference.value === theme.value.code ? 'solid' : 'bordered')}
+                  variant=${() => (themePreference.value === theme.value.code ? 'solid' : 'bordered')}
                   @click=${() => setThemePreference(theme.value.code)}>
                   ${() => theme.value.label()}
                 </ore-button>
@@ -136,7 +136,7 @@ define('settings-view', {
           <ore-slider
             min="0"
             max="360"
-            :value=${() => accentHue.value}
+            value=${() => accentHue.value}
             @change=${(e: Event) => setAccentHue((e as CustomEvent<{ value: number }>).detail.value)}></ore-slider>
         </div>
 
@@ -146,8 +146,8 @@ define('settings-view', {
             <span class="settings-view__row-label">${() => t('settings.currencyLabel')}</span>
           </div>
           <ore-select
-            :options=${CURRENCY_OPTIONS}
-            :value=${() => currentCurrency.value}
+            options=${CURRENCY_OPTIONS}
+            value=${() => currentCurrency.value}
             @change=${(e: Event) => setCurrency((e as CustomEvent<{ values: string[] }>).detail.values[0] as never)}></ore-select>
         </div>
 
@@ -157,9 +157,9 @@ define('settings-view', {
             <span class="settings-view__row-hint">${() => t('settings.userHint')}</span>
           </div>
           <ore-select
-            :label=${() => t('settings.userLabel')}
-            :options=${USER_OPTIONS}
-            :value=${() => currentUser.value.id}
+            label=${() => t('settings.userLabel')}
+            options=${USER_OPTIONS}
+            value=${() => currentUser.value.id}
             @change=${(e: Event) => {
               const selected = (e as CustomEvent<{ values: string[] }>).detail.values[0];
               const user = seedUsers.find((u) => u.id === selected);
@@ -191,7 +191,7 @@ define('settings-view', {
                         <span class="settings-view__debug-ts">${() => formatTimestamp(entry.value.timestamp)}</span>
                         <span
                           class="settings-view__debug-level"
-                          :style=${() => `color:${LEVEL_COLORS[entry.value.level] ?? '#ccc'}`}>
+                          style=${() => `color:${LEVEL_COLORS[entry.value.level] ?? '#ccc'}`}>
                           ${() => entry.value.level.toUpperCase()}
                         </span>
                         <span class="settings-view__debug-msg">${() => entry.value.message ?? '(no message)'}</span>

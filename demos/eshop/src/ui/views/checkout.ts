@@ -211,8 +211,8 @@ define('checkout-shipping', {
       <ore-input
         label=${label}
         required
-        :value=${() => shippingForm.get(name)}
-        :error=${() => errors.value[name] ?? ''}
+        value=${() => shippingForm.get(name)}
+        error=${() => errors.value[name] ?? ''}
         @input=${(e: Event) => shippingForm.set(name, (e as CustomEvent<{ value: string }>).detail.value, { touched: true })}></ore-input>
     `;
 
@@ -233,7 +233,7 @@ define('checkout-shipping', {
         <h2>${() => t('checkout.delivery.title')}</h2>
         <ore-radio-group
           label=${() => t('checkout.delivery.methodLabel')}
-          :value=${() => deliveryMethod.value}
+          value=${() => deliveryMethod.value}
           @change=${onDeliveryMethodChange}>
           <ore-radio value="delivery">${() => t('checkout.delivery.methodDelivery')}</ore-radio>
           <ore-radio value="pickup">${() => t('checkout.delivery.methodPickup')}</ore-radio>
@@ -243,9 +243,9 @@ define('checkout-shipping', {
           () => html`
             <ore-select
               label=${() => t('checkout.delivery.dealerLabel')}
-              :options=${DEALER_OPTIONS}
-              :value=${() => dealerId.value ?? ''}
-              :error=${() => dealerError.value}
+              options=${DEALER_OPTIONS}
+              value=${() => dealerId.value ?? ''}
+              error=${() => dealerError.value}
               @change=${onDealerChange}></ore-select>
           `,
         )}
@@ -324,7 +324,7 @@ define('checkout-payment', {
       <h1>${() => t('checkout.payment.title')}</h1>
       <ore-radio-group
         label=${() => t('checkout.payment.methodLabel')}
-        :value=${() => method.value}
+        value=${() => method.value}
         @change=${onMethodChange}>
         <ore-radio value="cash">${() => t('checkout.payment.methodCash')}</ore-radio>
         <ore-radio value="financing">${() => t('checkout.payment.methodFinancing')}</ore-radio>
@@ -338,19 +338,19 @@ define('checkout-payment', {
               label=${() => t('checkout.payment.downPaymentLabel')}
               min="0"
               step="500"
-              :max=${() => Number(displayTotal())}
-              :value=${() => downPayment.value}
+              max=${() => Number(displayTotal())}
+              value=${() => downPayment.value}
               @input=${(e: Event) => (downPayment.value = (e as CustomEvent<{ value: number | null }>).detail.value ?? 0)}></ore-number-input>
             <ore-select
               label=${() => t('checkout.payment.termLabel')}
-              :options=${TERM_MONTH_OPTIONS.map((months) => ({ label: t('checkout.payment.termOption', { months }), value: String(months) }))}
-              :value=${() => String(termMonths.value)}
+              options=${TERM_MONTH_OPTIONS.map((months) => ({ label: t('checkout.payment.termOption', { months }), value: String(months) }))}
+              value=${() => String(termMonths.value)}
               @change=${(e: Event) => (termMonths.value = Number((e as CustomEvent<{ values: string[] }>).detail.values[0]))}></ore-select>
           </div>
           <ore-otp-input
             label=${() => t('checkout.payment.verificationCode')}
             length="6"
-            :value=${() => verificationCode.value}
+            value=${() => verificationCode.value}
             @change=${(e: Event) => (verificationCode.value = (e as CustomEvent<{ value: string }>).detail.value)}></ore-otp-input>
           <p class="checkout-form__hint">${() => t('checkout.payment.verificationHint')}</p>
         `,
@@ -364,7 +364,7 @@ define('checkout-payment', {
 
       <section class="checkout-tradein">
         <h2>${() => t('checkout.tradeIn.title')}</h2>
-        <ore-radio-group :value=${() => (tradeInEnabled.value ? 'yes' : 'no')} @change=${onTradeInToggle}>
+        <ore-radio-group value=${() => (tradeInEnabled.value ? 'yes' : 'no')} @change=${onTradeInToggle}>
           <ore-radio value="no">${() => t('checkout.tradeIn.no')}</ore-radio>
           <ore-radio value="yes">${() => t('checkout.tradeIn.toggle')}</ore-radio>
         </ore-radio-group>
@@ -374,13 +374,13 @@ define('checkout-payment', {
             <div class="checkout-form__row">
               <ore-input
                 label=${() => t('checkout.tradeIn.descriptionLabel')}
-                :value=${() => tradeInDescription.value}
+                value=${() => tradeInDescription.value}
                 @input=${(e: Event) => (tradeInDescription.value = (e as CustomEvent<{ value: string }>).detail.value)}></ore-input>
               <ore-number-input
                 label=${() => t('checkout.tradeIn.valueLabel')}
                 min="0"
                 step="500"
-                :value=${() => tradeInValue.value}
+                value=${() => tradeInValue.value}
                 @input=${(e: Event) => (tradeInValue.value = (e as CustomEvent<{ value: number | null }>).detail.value ?? 0)}></ore-number-input>
             </div>
             <div class="checkout-tradein__photos">

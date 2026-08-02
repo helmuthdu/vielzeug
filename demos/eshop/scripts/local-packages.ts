@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 /**
- * Maps every `@vielzeug/*` dependency (and its sub-path exports, e.g. `@vielzeug/ore/directives`)
+ * Maps every `@vielzeug/*` dependency and any published sub-path export (e.g. `@vielzeug/ore/testing`)
  * to its real TS source file inside a sibling `../../packages/` checkout — the shared logic
  * behind both `vite.config.ts`'s dev-time module aliasing and `write-local-tsconfig.ts`'s `tsc`
  * `paths` generation, so the two can't drift out of sync as two hand-maintained copies.
@@ -11,7 +11,7 @@ import path from 'node:path';
  * copied just this demo's own folder) — callers fall back to the real npm dependencies.
  *
  * @param demoRoot absolute path to this demo's own directory (e.g. `demos/eshop`)
- * @returns specifier (e.g. '@vielzeug/ore/directives') -> absolute source path
+ * @returns specifier (e.g. '@vielzeug/ore/testing') -> absolute source path
  */
 export function collectLocalPackageMap(demoRoot: string): Record<string, string> {
   const packagesDir = path.resolve(demoRoot, '../../packages');

@@ -196,10 +196,10 @@ define('orders-view', {
                     <section class="order-spotlight">
                       <div class="order-spotlight__hero">
                         <car-silhouette
-                          :body-type=${() => heroModel.value?.bodyType ?? 'sedan'}
-                          :color-hex=${() => heroColor.value?.hex ?? '#c7ccd1'}
-                          :color-name=${() => heroColor.value?.name ?? ''}
-                          :hero-hue=${() => heroModel.value?.heroHue ?? 220}></car-silhouette>
+                          body-type=${() => heroModel.value?.bodyType ?? 'sedan'}
+                          color-hex=${() => heroColor.value?.hex ?? '#c7ccd1'}
+                          color-name=${() => heroColor.value?.name ?? ''}
+                          hero-hue=${() => heroModel.value?.heroHue ?? 220}></car-silhouette>
                         <div class="order-spotlight__intro">
                           <p class="order-spotlight__eyebrow">${() => t('orders.current.sectionEyebrow')}</p>
                           <h2 class="order-spotlight__headline">
@@ -221,7 +221,7 @@ define('orders-view', {
                         <div class="order-spotlight__panels">
                           <div class="order-spotlight__panel">
                             <h3>${() => t('orders.current.statusTitle')}</h3>
-                            <order-timeline :status=${() => order.value.status}></order-timeline>
+                            <order-timeline status=${() => order.value.status}></order-timeline>
                           </div>
                           <div class="order-spotlight__panel">
                             <h3>${() => t('orders.current.configTitle')}</h3>
@@ -370,7 +370,7 @@ define('orders-view', {
       <ore-dialog
         size="sm"
         dismissible
-        :label=${() => t('orders.cancelConfirmTitle')}
+        label=${() => t('orders.cancelConfirmTitle')}
         ?open=${() => cancelTarget.value !== null}
         @close=${() => (cancelTarget.value = null)}>
         <p>${() => t('orders.cancelConfirmBody')}</p>

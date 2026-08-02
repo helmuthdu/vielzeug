@@ -71,7 +71,7 @@ const TaskDraftSchema = s.object({
  * (via the `:value=` bindings below) — typing into the field updates its own internal render
  * state and fires an `input`/`change` event, but never writes back into that prop. Reading
  * `el.value` at save time would silently return the pre-edit value, not what the user typed.
- * `@vielzeug/ore`'s `model()` doesn't help here either — it hardcodes native
+ * Ore's removed `model()` directive would not help here either — it hardcoded native
  * `<input>`/`<select>`/`<textarea>` event/value shapes, not these components' custom event
  * `detail` payloads (`values`/`isoValue`/etc. — see each field's `@change`/`@input` below). Each
  * field's own event listener keeps this draft signal current instead.
@@ -251,7 +251,7 @@ define('task-dialog', {
       <ore-dialog
         size="md"
         dismissible
-        :label=${dialogLabel}
+        label=${dialogLabel}
         ?open=${() => requestSignal.value !== null}
         @close=${onCancel}>
         <div style="display:flex;flex-direction:column;gap:var(--size-4)">
@@ -259,21 +259,21 @@ define('task-dialog', {
             label=${() => t('taskDialog.title')}
             required
             ?disabled=${readOnly}
-            :value=${() => draft.value.title}
-            :error=${titleError}
+            value=${() => draft.value.title}
+            error=${titleError}
             @input=${(e: Event) => patchDraft({ title: (e as CustomEvent<{ value: string }>).detail.value })}></ore-input>
           <ore-textarea
             label=${() => t('taskDialog.description')}
             rows="3"
             ?disabled=${readOnly}
-            :value=${() => draft.value.description}
+            value=${() => draft.value.description}
             @input=${(e: Event) => patchDraft({ description: (e as CustomEvent<{ value: string }>).detail.value })}></ore-textarea>
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:var(--size-4)">
             <ore-select
               label=${() => t('taskDialog.status')}
-              :options=${STATUS_OPTIONS}
+              options=${STATUS_OPTIONS}
               ?disabled=${readOnly}
-              :value=${() => draft.value.status}
+              value=${() => draft.value.status}
               @change=${(e: Event) =>
                 patchDraft({
                   status: ((e as CustomEvent<{ values: string[] }>).detail.values[0] ??
@@ -281,9 +281,9 @@ define('task-dialog', {
                 })}></ore-select>
             <ore-select
               label=${() => t('taskDialog.priority')}
-              :options=${PRIORITY_OPTIONS}
+              options=${PRIORITY_OPTIONS}
               ?disabled=${readOnly}
-              :value=${() => draft.value.priority}
+              value=${() => draft.value.priority}
               @change=${(e: Event) =>
                 patchDraft({
                   priority: ((e as CustomEvent<{ values: string[] }>).detail.values[0] ??
@@ -293,9 +293,9 @@ define('task-dialog', {
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:var(--size-4)">
             <ore-select
               label=${() => t('taskDialog.assignee')}
-              :options=${ASSIGNEE_OPTIONS}
+              options=${ASSIGNEE_OPTIONS}
               ?disabled=${readOnly}
-              :value=${() => draft.value.assigneeId}
+              value=${() => draft.value.assigneeId}
               @change=${(e: Event) =>
                 patchDraft({
                   assigneeId: (e as CustomEvent<{ values: string[] }>).detail.values[0] ?? '',
@@ -303,7 +303,7 @@ define('task-dialog', {
             <ore-date-picker
               label=${() => t('taskDialog.dueDate')}
               ?disabled=${readOnly}
-              :value=${() => draft.value.dueDate}
+              value=${() => draft.value.dueDate}
               @change=${(e: Event) =>
                 patchDraft({
                   dueDate: (e as CustomEvent<{ isoValue: string | null }>).detail.isoValue ?? '',
@@ -314,7 +314,7 @@ define('task-dialog', {
               label=${() => t('taskDialog.budget')}
               min="0"
               ?disabled=${readOnly}
-              :value=${() => draft.value.budgetAmount}
+              value=${() => draft.value.budgetAmount}
               @input=${(e: Event) =>
                 patchDraft({
                   budgetAmount: (e as CustomEvent<{ value: number | null }>).detail.value,
@@ -348,7 +348,7 @@ define('task-dialog', {
       <ore-dialog
         size="sm"
         dismissible
-        :label=${() => t('taskDialog.deleteConfirmTitle')}
+        label=${() => t('taskDialog.deleteConfirmTitle')}
         ?open=${confirmDeleteOpen}
         @close=${onDeleteCancel}>
         <p>

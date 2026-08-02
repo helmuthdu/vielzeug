@@ -93,8 +93,8 @@ define<TaskCardProps>('task-card', {
     return html`
       <div class="task-card__header">
         <ore-chip
-          :label=${() => task().priority}
-          :color=${() => PRIORITY_COLOR[task().priority]}
+          label=${() => task().priority}
+          color=${() => PRIORITY_COLOR[task().priority]}
           variant="flat"
           size="sm">
           ${() => task().priority}
@@ -116,14 +116,14 @@ define<TaskCardProps>('task-card', {
               () => html`
                 <ore-avatar
                   size="xs"
-                  :alt=${() => userMap.value.get(task().assigneeId ?? '')?.name ?? task().assigneeId}
-                  :initials=${() => userInitials(task().assigneeId ?? '')}></ore-avatar>
+                  alt=${() => userMap.value.get(task().assigneeId ?? '')?.name ?? task().assigneeId}
+                  initials=${() => userInitials(task().assigneeId ?? '')}></ore-avatar>
               `,
             )}
             ${when(
               () => Boolean(task().dueDate),
               () => html`
-                <span :class=${dueClass}>
+                <span class=${dueClass}>
                   <ore-icon name="calendar-days" size="12"></ore-icon>
                   ${() => formatDueDate(task().dueDate!)}
                 </span>

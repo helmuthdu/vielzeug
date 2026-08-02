@@ -30,7 +30,7 @@ type ModelCardEvents = { 'toggle-compare': void; view: void };
  * `model` has no safe default (`prop.data<Model>()` — a placeholder `Model` would be worse than
  * just waiting): when this element is created *declaratively* inside `each()` (as it is in
  * `ui/views/catalog.ts`), ore connects/upgrades it — running `setup()` — before applying the
- * parent template's `:model=` binding (see demos/kanban's board-column.ts comment on the same
+ * parent template's `model=` binding (see demos/kanban's board-column.ts comment on the same
  * hazard). Reading `props.model.value` unconditionally at the top of `setup()` — or via `bind()`,
  * which runs its effect immediately and unconditionally, unlike a template's own bindings —
  * threw here on that first, still-`undefined` pass, aborting `setup()` before it ever reached
@@ -52,7 +52,7 @@ define<ModelCardProps>('model-card', {
     // `prop.bool` (not `prop.data<boolean>`): `prop.data`'s parser always returns its default,
     // discarding whatever it's called with — correct for JS-only, non-serialisable values set
     // via a real property assignment, but this prop is set through a template attribute binding
-    // (`:in-compare=` in catalog.ts's `each()`), which round-trips every primitive through that
+    // (`in-compare=` in catalog.ts's `each()`), which round-trips every primitive through that
     // parser. `prop.bool` reads the string it's given, so the boolean this component actually
     // needs to react to (`props.inCompare.value`) survives the round-trip.
     inCompare: prop.bool(false),
@@ -85,10 +85,10 @@ define<ModelCardProps>('model-card', {
               @activate=${() => emit('view')}>
               <div slot="media" class="model-card__media">
                 <car-silhouette
-                  :body-type=${() => model().bodyType}
-                  :color-hex=${() => color.value.hex}
-                  :color-name=${() => color.value.name}
-                  :hero-hue=${() => model().heroHue}></car-silhouette>
+                  body-type=${() => model().bodyType}
+                  color-hex=${() => color.value.hex}
+                  color-name=${() => color.value.name}
+                  hero-hue=${() => model().heroHue}></car-silhouette>
                 <div class="model-card__swatches" role="radiogroup" aria-label=${() => t('model.selectColor')}>
                   ${model().colors.map(
                     (c) => html`
@@ -100,7 +100,10 @@ define<ModelCardProps>('model-card', {
                         style=${`--swatch-color: ${c.hex}`}
                         title=${c.name}
                         aria-label=${c.name}
-                        @click.stop=${() => (colorId.value = c.id)}></button>
+                        @click=${(event: Event) => {
+                          event.stopPropagation();
+                          colorId.value = c.id;
+                        }}></button>
                     `,
                   )}
                 </div>
@@ -149,13 +152,13 @@ define<ModelCardProps>('model-card', {
                   ${() => t('common.viewDetails')}
                 </ore-button>
                 <ore-tooltip
-                  :content="${() => (props.inCompare.value ? t('common.removeFromCompare') : t('common.addToCompare'))}"
+                  content="${() => (props.inCompare.value ? t('common.removeFromCompare') : t('common.addToCompare'))}"
                   placement="top">
                   <ore-button
                     rounded
                     icon-only
-                    :variant=${() => (props.inCompare.value ? 'flat' : 'outline')}
-                    :color=${() => (props.inCompare.value ? 'primary' : undefined)}
+                    variant=${() => (props.inCompare.value ? 'flat' : 'outline')}
+                    color=${() => (props.inCompare.value ? 'primary' : undefined)}
                     aria-pressed=${() => String(props.inCompare.value)}
                     @click=${() => emit('toggle-compare')}>
                     <ore-icon name="git-compare" size="14" aria-hidden="true"></ore-icon>

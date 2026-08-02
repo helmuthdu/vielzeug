@@ -83,10 +83,10 @@ define('catalog-view', {
           <section class="catalog__hero">
             <div class="catalog__hero-media">
               <car-silhouette
-                :body-type=${() => featuredModel.value!.bodyType}
-                :color-hex=${() => featuredModel.value!.colors[0]?.hex ?? '#c7ccd1'}
-                :color-name=${() => featuredModel.value!.colors[0]?.name ?? ''}
-                :hero-hue=${() => featuredModel.value!.heroHue}></car-silhouette>
+                body-type=${() => featuredModel.value!.bodyType}
+                color-hex=${() => featuredModel.value!.colors[0]?.hex ?? '#c7ccd1'}
+                color-name=${() => featuredModel.value!.colors[0]?.name ?? ''}
+                hero-hue=${() => featuredModel.value!.heroHue}></car-silhouette>
             </div>
             <div class="catalog__hero-content">
               <p class="catalog__hero-segment">
@@ -143,8 +143,8 @@ define('catalog-view', {
             @input=${onSearchInput}></ore-input>
           <ore-select
             class="catalog__sort"
-            :options=${SORT_OPTIONS}
-            :value=${() => sortOrder.value}
+            options=${SORT_OPTIONS}
+            value=${() => sortOrder.value}
             @change=${onSortChange}></ore-select>
         </div>
       </div>
@@ -156,8 +156,8 @@ define('catalog-view', {
           (m) => html`
             <ore-grid-item>
               <model-card
-                :model=${() => m.value}
-                :in-compare=${() => compareModelIds.value.includes(m.value.id)}
+                model=${() => m.value}
+                in-compare=${() => compareModelIds.value.includes(m.value.id)}
                 @toggle-compare=${() => toggleCompare(m.value.id)}
                 @view=${() => void router.navigate({ name: 'modelDetail', params: { slug: m.value.slug } })}></model-card>
             </ore-grid-item>

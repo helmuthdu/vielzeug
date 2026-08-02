@@ -628,8 +628,8 @@ pnpm add -D @vielzeug/assay
 **Key Features:**
 
 - `within()` — scoped `query`/`queryAll`/`queryByText`/`queryByTestId` and shadow-DOM-aware `queryInShadow`/`queryPart`
-- `fire.*` — low-level synchronous DOM event dispatchers (click, keyboard, pointer, custom, and more)
-- `waitFor()`/`waitForEvent()` — deterministic async waiting with a dedicated `AssayTimeoutError`
+- Named exact event dispatchers such as `fireClick()`, `fireInput()`, and `fireKeyDown()`
+- `waitUntil()`/`retry()`/`waitForEvent()` — cancellable async waiting with typed timeout errors
 - Zero dependencies, no coupling to any UI framework — used by `@vielzeug/ore/testing` and `@vielzeug/refine/testing`
 
 [📖 Documentation](https://vielzeug.dev/assay/) • [Examples](https://vielzeug.dev/assay/examples)

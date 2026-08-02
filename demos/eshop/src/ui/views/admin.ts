@@ -143,7 +143,7 @@ define('admin-view', {
           clearable
           @input=${onSearch}></ore-input>
         <ore-checkbox
-          :checked=${() => visibleOrders.value.length > 0 && selectedIds.value.size === visibleOrders.value.length}
+          checked=${() => visibleOrders.value.length > 0 && selectedIds.value.size === visibleOrders.value.length}
           @change=${toggleSelectAll}>
           ${() => t('admin.selectAll')}
         </ore-checkbox>
@@ -157,9 +157,9 @@ define('admin-view', {
           <section class="admin__bulk-bar">
             <ore-select
               size="sm"
-              :label=${() => t('admin.bulkStatusLabel')}
-              :options=${statusOptions}
-              :value=${() => bulkStatus.value}
+              label=${() => t('admin.bulkStatusLabel')}
+              options=${statusOptions}
+              value=${() => bulkStatus.value}
               @change=${(e: Event) => {
                 const status = (e as CustomEvent<{ values: OrderStatus[] }>).detail.values[0];
 
@@ -180,7 +180,7 @@ define('admin-view', {
               <div class="order-card__header">
                 <div class="order-card__header-left">
                   <ore-checkbox
-                    :checked=${() => selectedIds.value.has(o.value.id)}
+                    checked=${() => selectedIds.value.has(o.value.id)}
                     @change=${() => toggleSelected(o.value.id)}></ore-checkbox>
                   <span class="order-card__id">${() => o.value.id}</span>
                 </div>
@@ -189,8 +189,8 @@ define('admin-view', {
               <p class="order-card__meta">${() => `${o.value.userId} — ${formatShortDate(o.value.placedAt)}`}</p>
               <ore-select
                 size="sm"
-                :options=${statusOptions}
-                :value=${() => o.value.status}
+                options=${statusOptions}
+                value=${() => o.value.status}
                 @change=${(e: Event) => onStatusChange(o.value, e)}></ore-select>
             </div>
           `,

@@ -1,9 +1,9 @@
 {
   "changes": [
     {
-      "comment": "refactor(forge) root and scoped forms now share one implementation (createFormView); removed submitOrThrow/ForgeValidationError (use submit()'s SubmitResult), validate(name)/validate(fields[]) overloads (use validateFields), for-await iteration (use subscribe), FieldState.hasError (use error !== undefined)",
+      "comment": "refactor!: root and scoped forms now share one implementation (createFormView); removed submitOrThrow/ForgeValidationError (use submit()'s SubmitResult), validate(name)/validate(fields[]) overloads (use validateFields), for-await iteration (use subscribe), FieldState.hasError (use error !== undefined)",
       "packageName": "@vielzeug/forge",
-      "type": "minor"
+      "type": "major"
     }
   ],
   "email": "agent@vielzeug",

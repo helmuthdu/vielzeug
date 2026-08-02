@@ -245,7 +245,7 @@ define('backlog-view', {
           @change=${onSearchChange}></ore-input>
         <ore-select
           placeholder=${() => t('backlog.filterByStatus')}
-          :options=${STATUS_OPTIONS}
+          options=${STATUS_OPTIONS}
           @change=${onFilterChange}></ore-select>
       </div>
       <div class="backlog__list-area" ref=${listAreaRef}></div>

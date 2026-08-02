@@ -1,5 +1,5 @@
 import { define, getHost, html, prop } from '@vielzeug/ore';
-import { raw } from '@vielzeug/ore/directives';
+import { unsafeHtml } from '@vielzeug/ore';
 import { computed, effect } from '@vielzeug/ripple';
 
 import type { BodyType } from '../../core/types';
@@ -8,9 +8,8 @@ import carSvgMarkup from '../../assets/car.svg?raw';
 import { prefersReducedMotion } from '../../core/motion';
 
 /**
- * The car artwork — `src/assets/car.svg`, injected via `@vielzeug/ore`'s `raw()` directive
- * (registered with a pass-through sanitizer in `main.ts`: this is a build-time-bundled asset
- * from our own repo, never user input, so that trust boundary is correct here). Staged like a
+ * The car artwork — `src/assets/car.svg`, injected via `@vielzeug/ore`'s `unsafeHtml()` directive.
+ * This is a build-time-bundled asset from our own repo, never user input. Staged like a
  * quiet studio product shot — a soft neutral floor and a faded mirrored ground reflection — the
  * same restrained, static presentation real OEM configurators (Mercedes-Benz Store, BMW's
  * Neuwagensuche) use: the car itself is the subject, not a glowing showroom backdrop. It never
@@ -132,8 +131,8 @@ define<CarSilhouetteProps>('car-silhouette', {
         role="img"
         aria-label=${() => `${props.bodyType.value} in ${props.colorName.value || props.colorHex.value}`}>
         <div class="rig">
-          <div class="art" style=${style}>${raw(artMarkup)}</div>
-          <div class="reflection" aria-hidden="true" style=${style}>${raw(reflectionMarkup)}</div>
+          <div class="art" style=${style}>${unsafeHtml(artMarkup)}</div>
+          <div class="reflection" aria-hidden="true" style=${style}>${unsafeHtml(reflectionMarkup)}</div>
         </div>
       </div>
       <style>
