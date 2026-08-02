@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/ore` &nbsp;·&nbsp; **Category:** UI Primitives
 
-**Key exports:** `define`, `html`, `css`, `prop`, `ref`, `onMounted`, `onCleanup`, `onEvent`, `onElement`, `watch`, `bind`, `aria`, `provide`, `inject`, `useEmit`, `useSlots`, `getHost`, `each`, `when`, `model`, `live`
+**Key exports:** `define`, `html`, `css`, `prop`, `ref`, `onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect`, `bind`, `provide`, `inject`, `useEmit`, `useSlots`, `getHost`, `each`, `when`, `live`, `unsafeHtml`, `useField`
 
 **When to use:** Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, observers, and testing utilities.
 
@@ -17,14 +17,15 @@
 
 </details>
 
-`@vielzeug/ore` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+`@vielzeug/ore` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output. Install
+`@vielzeug/ripple` alongside it: Ore uses the application's Ripple runtime as a peer dependency.
 
 ## Installation
 
 ```sh
-pnpm add @vielzeug/ore
-npm install @vielzeug/ore
-yarn add @vielzeug/ore
+pnpm add @vielzeug/ore @vielzeug/ripple
+npm install @vielzeug/ore @vielzeug/ripple
+yarn add @vielzeug/ore @vielzeug/ripple
 ```
 
 ## Quick Start
@@ -62,7 +63,7 @@ define('my-counter', {
 });
 ```
 
-`setup()` takes only `props`. Everything else — lifecycle hooks (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watch`), host bindings (`bind`, `aria`), context (`inject`/`injectStrict`/`provide`), and per-instance factories (`useEmit<Emits>()`, `useSlots<SlotNames>()`) — are plain functions imported from `@vielzeug/ore`, resolved through the current component while `setup()` (or a composable it calls) is running. Form-association helpers (`useField`, `createFormContext`) live under `@vielzeug/ore/forms`.
+`setup()` takes only `props`. Everything else — lifecycle hooks (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect`), host bindings (`bind`), context (`inject`/`injectStrict`/`provide`), and per-instance factories (`useEmit<Emits>()`, `useSlots<SlotNames>()`) — is imported from `@vielzeug/ore` and resolved while `setup()` (or a composable it calls) is running. Setup state is connection-scoped: disconnect disposes it and reconnect runs setup again.
 
 ## Testing
 
@@ -92,7 +93,9 @@ import { install } from '@vielzeug/ore/testing';
 install(afterEach); // add { formInternals: true } when testing form-associated (useField) components
 ```
 
-Also available from `@vielzeug/ore/testing`: `renderHook` (test a composable in isolation, without a full template), `fire`/`user` (dispatch DOM/user-interaction events), `waitFor`/`waitForEvent`, and `within` (scoped queries for slotted content). See the [Usage Guide](https://vielzeug.dev/ore/usage) for the full API.
+Also available from `@vielzeug/ore/testing`: `renderHook` (test a composable in isolation, without a full template),
+`flush`, and form-internals support. Import generic DOM interactions, queries, and waiting helpers from
+`@vielzeug/assay`. See the [Usage Guide](https://vielzeug.dev/ore/usage) for the full API.
 
 ## Documentation
 

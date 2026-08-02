@@ -13,26 +13,12 @@ import { cleanup } from './mount';
 // Testing-only error: flush() is its only thrower in this package (a pending-work timeout —
 // see flush.ts). Exported here (not from the main `.` entry) so components with no interest
 // in the testing sub-path don't carry a testing-only error class in their public type surface.
-// waitFor()/waitForEvent() throw @vielzeug/assay's own AssayTimeoutError instead — re-exported
-// below alongside them, since it's a generic DOM-testing concern, not an ore-specific one.
+// Generic DOM interaction helpers belong to @vielzeug/assay, not this Ore-specific test API.
 export { OreTimeoutError } from '../errors';
-
-// Generic DOM-testing primitives with no ore-specific logic — re-exported from @vielzeug/assay
-// (used by other @vielzeug/* UI packages too) rather than duplicated here.
-export {
-  fire,
-  createPointerEvent,
-  within,
-  waitFor,
-  waitForEvent,
-  type QueryScope,
-  type WaitOptions,
-} from '@vielzeug/assay';
 
 export { debugFlush, flush, type FlushOptions } from './flush';
 export { walkFlatTree } from './dom';
 export { installFormInternalsPolyfill } from './form-internals-polyfill';
-export { user } from './interactions';
 export { cleanup, mock, mount, mountComponent, type Fixture, type MountOptions, type MountSetup } from './mount';
 export { renderHook, type HookFixture } from './render-hook';
 export { resetOreForTests } from './reset';

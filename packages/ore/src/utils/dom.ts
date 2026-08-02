@@ -39,7 +39,7 @@ export const removeNodes = (nodes: Node[]): void => {
  * resets to empty, ready for the next render.
  *
  * Every directive/binding that swaps its rendered content when a reactive source changes
- * (`when()`, `raw()`, `each()`'s empty-list fallback, `applyHtmlBinding()`) needs exactly this
+ * (`when()`, `unsafeHtml()`, `each()`'s empty-list fallback, `applyHtmlBinding()`) needs exactly this
  * bookkeeping — this is the one shared implementation instead of four independently-maintained
  * `currentNodes`/`currentCleanups` variable pairs.
  */
@@ -122,7 +122,7 @@ export const setAttr = (el: Element, name: string, val: unknown): void => {
 
   if (lowerName === 'srcdoc') {
     warn(
-      `Blocked setAttribute("srcdoc", ...) — "srcdoc" holds raw HTML, not a URL, and is not supported via attribute binding. Use raw() with a registered sanitizer if you need to inject trusted HTML.`,
+      `Blocked setAttribute("srcdoc", ...) — "srcdoc" holds raw HTML, not a URL, and is not supported via attribute binding. Sanitize untrusted content, then use unsafeHtml() if HTML injection is required.`,
     );
     el.removeAttribute(name);
 

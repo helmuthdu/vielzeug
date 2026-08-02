@@ -5,7 +5,7 @@
  * process-global, so brands survive a duplicated module graph (two copies of ore bundled into
  * one page — the exact failure mode `src/iife.ts`'s header documents). Identity-based checks
  * silently fail across those copies: an object stamped by one graph is invisible to the other.
- * Every branded runtime object in ore (`HTMLResult`, `DirectiveResult`, `SpreadObject`,
+ * Every branded runtime object in ore (`HTMLResult`, `DirectiveResult`,
  * `LiveBinding`, `CSSResult`) goes through this helper — do not introduce a second mechanism.
  */
 

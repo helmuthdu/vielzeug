@@ -8,9 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(
   getBundleConfig(__dirname, {
-    // IIFE-only aggregate entry (index + directives + forms + observers merged
-    // onto one `window.Ore` global) — see src/iife.ts for why.
-    entry: resolve(__dirname, 'src/iife.ts'),
+    entry: resolve(__dirname, 'src/index.ts'),
     external: ['@vielzeug/ripple'],
     fileName: 'ore',
     name: 'Ore',

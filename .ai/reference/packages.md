@@ -22,7 +22,7 @@ Human-readable package catalogue derived from `.ai/data/packages.json`.
 | `@vielzeug/ledger` | State | no | Async undo/redo command history with Ripple reactive state | `ripple` | — | — |
 | `@vielzeug/lingua` | i18n | no | Typed i18n with pluralization and async loading | — | — | — |
 | `@vielzeug/orbit` | UI | no | Floating element positioning (tooltip, popover) | `arsenal`, `ripple` | — | — |
-| `@vielzeug/ore` | UI | yes | Functional web-component authoring on top of ripple | `ripple` | `assay` | — |
+| `@vielzeug/ore` | UI | yes | Functional web-component authoring on top of ripple | — | `assay` | — |
 | `@vielzeug/prism` | Charts | yes | Reactive SVG charting library — line, bar, area, pie, sparkline | `orbit`, `ripple` | — | — |
 | `@vielzeug/pulse` | WebSockets | no | Typed WebSocket client with channels, rooms, presence, reconnect | `ripple` | — | — |
 | `@vielzeug/refine` | UI | yes | Accessible, themeable web components built on ore | `arsenal`, `assay`, `dnd`, `keymap`, `orbit`, `ore`, `ripple`, `tempo` | — | `pnpm --filter @vielzeug/refine test` |

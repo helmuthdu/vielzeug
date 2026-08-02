@@ -258,14 +258,14 @@ describe('OreError', () => {
   });
 
   it('exposes component and phase', () => {
-    const err = new OreError('async setup failed', {
+    const err = new OreError('setup failed', {
       cause: new Error('net err'),
       component: 'ore-loader',
-      phase: 'async-setup',
+      phase: 'setup',
     });
 
     expect(err.component).toBe('ore-loader');
-    expect(err.phase).toBe('async-setup');
+    expect(err.phase).toBe('setup');
   });
 
   it('exposes the original error as cause', () => {

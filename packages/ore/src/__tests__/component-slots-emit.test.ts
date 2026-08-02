@@ -1,8 +1,9 @@
+import { waitForEvent } from '@vielzeug/assay';
 import { signal } from '@vielzeug/ripple';
 
 import { define, html, prop, useEmit, useSlots, when } from '../index';
 import { onMounted } from '../runtime';
-import { mount, waitForEvent } from '../testing';
+import { mount } from '../testing';
 import { expectType, uniqueTag } from './test-utils';
 
 describe('component slots and emit', () => {
@@ -178,7 +179,7 @@ describe('component slots and emit', () => {
 
   it('dispatches bubbling (non-composed) custom events from setup emit', async () => {
     const { element } = await mount(((_props) => {
-      const emit = useEmit();
+      const emit = useEmit<{ ping: { ok: boolean } }>();
 
       setTimeout(() => emit('ping', { ok: true }), 30);
 

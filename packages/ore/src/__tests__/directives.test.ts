@@ -5,9 +5,8 @@
 
 import { computed, signal } from '@vielzeug/ripple';
 
-import { createDirectiveResult, createSpreadObject, live, raw, setRawSanitizer } from '../directives/index';
-import { classMap, each, html, model, styleMap, when } from '../index';
-import { fire, mount } from '../testing';
+import { classMap, each, html, live, styleMap, unsafeHtml, when } from '../index';
+import { mount } from '../testing';
 import { register } from './test-utils';
 
 describe('Directive: each()', () => {
@@ -559,27 +558,23 @@ describe('Directive: each()', () => {
   });
 });
 
-describe('Directive: raw()', () => {
-  it('should render HTML without escaping', async () => {
-    setRawSanitizer((s) => s);
-
+describe('Directive: unsafeHtml()', () => {
+  it('renders caller-sanitized HTML without global configuration', async () => {
+    const sanitized = '<strong>bold</strong>';
     const { query } = await mount(
       () => html`
-        <div>${raw('<strong>bold</strong>')}</div>
+        <div>${unsafeHtml(sanitized)}</div>
       `,
     );
 
     expect(query('strong')?.textContent).toBe('bold');
   });
 
-  it('should update reactively', async () => {
-    setRawSanitizer((s) => s);
-
+  it('updates a reactive source', async () => {
     const content = signal('<b>one</b>');
-
     const { flush, query } = await mount(
       () => html`
-        <div>${raw(content)}</div>
+        <div>${unsafeHtml(content)}</div>
       `,
     );
 
@@ -587,155 +582,25 @@ describe('Directive: raw()', () => {
 
     content.value = '<i>two</i>';
     await flush();
+
     expect(query('i')?.textContent).toBe('two');
     expect(query('b')).toBeNull();
   });
 
-  it('should pass content through the registered sanitizer', async () => {
-    const sanitized: string[] = [];
-
-    setRawSanitizer((html) => {
-      sanitized.push(html);
-
-      // Strip script tags as a minimal sanitizer
-      return html.replace(/<script[^>]*>.*?<\/script>/gi, '');
-    });
-
-    const { query } = await mount(
-      () => html`
-        <div>${raw('<b>safe</b><script>alert(1)</script>')}</div>
-      `,
-    );
-
-    expect(sanitized).toHaveLength(1);
-    expect(query('b')?.textContent).toBe('safe');
-    // Script tag removed by sanitizer
-    expect(query('script')).toBeNull();
-  });
-
-  it('should pass reactive values through the sanitizer on each update', async () => {
-    const calls: string[] = [];
-
-    setRawSanitizer((html) => {
-      calls.push(html);
-
-      return html;
-    });
-
-    const content = signal('<b>first</b>');
-    const { flush } = await mount(
-      () => html`
-        <div>${raw(content)}</div>
-      `,
-    );
-
-    expect(calls).toHaveLength(1);
-
-    content.value = '<i>second</i>';
-    await flush();
-    expect(calls).toHaveLength(2);
-    expect(calls[1]).toBe('<i>second</i>');
-  });
-
-  it('should warn in DEV mode when no sanitizer is registered', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    await mount(
-      () => html`
-        <div>${raw('<b>content</b>')}</div>
-      `,
-    );
-
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('setRawSanitizer'));
-    warn.mockRestore();
-  });
-
-  it('should warn in all environments (not only DEV) when no sanitizer is registered', async () => {
-    // The warning is unconditional (no import.meta.env.DEV guard) to surface
-    // sanitizer-omission mistakes in production builds as well.
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    // Empty string does NOT warn (no content to inject)
-    await mount(
-      () => html`
-        <div>${raw('')}</div>
-      `,
-    );
-    expect(warn).not.toHaveBeenCalled();
-
-    // Non-empty string DOES warn regardless of environment flag
-    await mount(
-      () => html`
-        <div>${raw('<em>text</em>')}</div>
-      `,
-    );
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('setRawSanitizer'));
-    warn.mockRestore();
-  });
-
-  it('accepts a getter function and updates reactively', async () => {
-    setRawSanitizer((s) => s);
-
-    const content = signal('<b>hello</b>');
-    const { flush, query } = await mount(
-      () => html`
-        <div>${raw(() => content.value)}</div>
-      `,
-    );
-
-    expect(query('b')?.textContent).toBe('hello');
-
-    content.value = '<i>world</i>';
-    await flush();
-    expect(query('i')?.textContent).toBe('world');
-    expect(query('b')).toBeNull();
-  });
-
-  it('re-warns after setRawSanitizer(null) clears the sanitizer', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    await mount(
-      () => html`
-        <div>${raw('<b>first</b>')}</div>
-      `,
-    );
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-
-    setRawSanitizer((s) => s);
-    await mount(
-      () => html`
-        <div>${raw('<b>second</b>')}</div>
-      `,
-    );
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-
-    setRawSanitizer(null);
-    await mount(
-      () => html`
-        <div>${raw('<b>third</b>')}</div>
-      `,
-    );
-    expect(warnSpy).toHaveBeenCalledTimes(2);
-
-    warnSpy.mockRestore();
-  });
-
-  it('getter-fn: DOM stops updating after component dispose (computed disposed)', async () => {
-    setRawSanitizer((s) => s);
-
+  it('accepts a reactive getter and stops on disposal', async () => {
     const content = signal('<b>initial</b>');
     const { dispose, flush, query } = await mount(
       () => html`
-        <div>${raw(() => content.value)}</div>
+        <div>${unsafeHtml(() => content.value)}</div>
       `,
     );
 
     expect(query('b')?.textContent).toBe('initial');
 
     dispose();
-
     content.value = '<i>after-dispose</i>';
     await flush();
+
     expect(query('i')).toBeNull();
   });
 });
@@ -747,7 +612,7 @@ describe('Directive: styleMap()', () => {
 
     const { flush, query } = await mount(
       () => html`
-        <div class="box" :style=${styleMap({ color, display: 'block', width: () => `${width.value}px` })}></div>
+        <div class="box" style=${styleMap({ color, display: 'block', width: () => `${width.value}px` })}></div>
       `,
     );
 
@@ -768,7 +633,7 @@ describe('Directive: styleMap()', () => {
   it('should strip semicolons from values to prevent CSS declaration injection', async () => {
     const { query } = await mount(
       () => html`
-        <div class="box" :style=${styleMap({ color: 'red; display:none' })}></div>
+        <div class="box" style=${styleMap({ color: 'red; display:none' })}></div>
       `,
     );
 
@@ -782,7 +647,7 @@ describe('Directive: styleMap()', () => {
   it('should strip braces from values', async () => {
     const { query } = await mount(
       () => html`
-        <div class="box" :style=${styleMap({ color: 'red} body{display:none' })}></div>
+        <div class="box" style=${styleMap({ color: 'red} body{display:none' })}></div>
       `,
     );
 
@@ -795,7 +660,7 @@ describe('Directive: styleMap()', () => {
   it('should strip semicolons from property name keys to prevent declaration injection', async () => {
     const { query } = await mount(
       () => html`
-        <div class="box" :style=${styleMap({ 'color; background': 'red' })}></div>
+        <div class="box" style=${styleMap({ 'color; background': 'red' })}></div>
       `,
     );
 
@@ -809,7 +674,7 @@ describe('Directive: styleMap()', () => {
   it('should drop entries with empty property names after sanitization', async () => {
     const { query } = await mount(
       () => html`
-        <div class="box" :style=${styleMap({ ';{}': 'red' })}></div>
+        <div class="box" style=${styleMap({ ';{}': 'red' })}></div>
       `,
     );
 
@@ -826,7 +691,7 @@ describe('Directive: classMap()', () => {
     const hidden = signal(false);
     const { flush, query } = await mount(
       () => html`
-        <div :class=${classMap({ active, hidden, static: true })}></div>
+        <div class=${classMap({ active, hidden, static: true })}></div>
       `,
     );
 
@@ -844,7 +709,7 @@ describe('Directive: classMap()', () => {
   it('should strip whitespace from class name keys to prevent token injection', async () => {
     const { query } = await mount(
       () => html`
-        <div :class=${classMap({ 'foo bar': true })}></div>
+        <div class=${classMap({ 'foo bar': true })}></div>
       `,
     );
 
@@ -1042,281 +907,12 @@ describe('Directive: when()', () => {
   });
 });
 
-describe('Directive: model()', () => {
-  it('syncs text input value from signal to DOM', async () => {
-    const name = signal('Alice');
-    const { query } = await mount(
-      () => html`
-        <input class="f" type="text" ${model(name)} />
-      `,
-    );
-
-    expect(query<HTMLInputElement>('.f')?.value).toBe('Alice');
-  });
-
-  it('syncs text input DOM value back to signal on input event', async () => {
-    const name = signal('');
-    const { act, query } = await mount(
-      () => html`
-        <input class="f" type="text" ${model(name)} />
-      `,
-    );
-    const input = query<HTMLInputElement>('.f')!;
-
-    await act(() => {
-      input.value = 'Bob';
-      fire.input(input);
-    });
-
-    expect(name.value).toBe('Bob');
-  });
-
-  it('syncs number input value from signal to DOM', async () => {
-    const count = signal(42);
-    const { query } = await mount(
-      () => html`
-        <input class="f" type="number" ${model(count)} />
-      `,
-    );
-
-    expect(query<HTMLInputElement>('.f')?.value).toBe('42');
-  });
-
-  it('syncs number input DOM value back to signal as a number', async () => {
-    const count = signal(0);
-    const { act, query } = await mount(
-      () => html`
-        <input class="f" type="number" ${model(count)} />
-      `,
-    );
-    const input = query<HTMLInputElement>('.f')!;
-
-    await act(() => {
-      input.value = '7';
-      fire.input(input);
-    });
-
-    expect(count.value).toBe(7);
-    expect(typeof count.value).toBe('number');
-  });
-
-  it('sets signal to 0 when number input is cleared', async () => {
-    const count = signal(5);
-    const { act, query } = await mount(
-      () => html`
-        <input class="f" type="number" ${model(count)} />
-      `,
-    );
-    const input = query<HTMLInputElement>('.f')!;
-
-    await act(() => {
-      input.value = '';
-      fire.input(input);
-    });
-
-    expect(count.value).toBe(0);
-  });
-
-  it('syncs range input DOM value back to signal as a number', async () => {
-    const vol = signal(50);
-    const { act, query } = await mount(
-      () => html`
-        <input class="f" type="range" ${model(vol)} />
-      `,
-    );
-    const input = query<HTMLInputElement>('.f')!;
-
-    await act(() => {
-      input.value = '75';
-      fire.input(input);
-    });
-
-    expect(vol.value).toBe(75);
-    expect(typeof vol.value).toBe('number');
-  });
-
-  it('syncs checkbox checked state from signal to DOM', async () => {
-    const checked = signal(true);
-    const { query } = await mount(
-      () => html`
-        <input class="f" type="checkbox" ${model(checked)} />
-      `,
-    );
-
-    expect(query<HTMLInputElement>('.f')?.checked).toBe(true);
-  });
-
-  it('syncs checkbox DOM state back to signal as boolean', async () => {
-    const checked = signal(false);
-    const { act, query } = await mount(
-      () => html`
-        <input class="f" type="checkbox" ${model(checked)} />
-      `,
-    );
-    const input = query<HTMLInputElement>('.f')!;
-
-    await act(() => {
-      input.checked = true;
-      fire.input(input);
-    });
-
-    expect(checked.value).toBe(true);
-    expect(typeof checked.value).toBe('boolean');
-  });
-
-  it('syncs select value from signal to DOM', async () => {
-    const choice = signal('b');
-    const { query } = await mount(
-      () => html`
-        <select class="f" ${model(choice)}>
-          <option value="a">A</option>
-          <option value="b">B</option>
-          <option value="c">C</option>
-        </select>
-      `,
-    );
-
-    expect(query<HTMLSelectElement>('.f')?.value).toBe('b');
-  });
-
-  it('syncs select DOM value back to signal on change event', async () => {
-    const choice = signal('a');
-    const { act, query } = await mount(
-      () => html`
-        <select class="f" ${model(choice)}>
-          <option value="a">A</option>
-          <option value="b">B</option>
-        </select>
-      `,
-    );
-    const select = query<HTMLSelectElement>('.f')!;
-
-    await act(() => {
-      select.value = 'b';
-      fire.change(select);
-    });
-
-    expect(choice.value).toBe('b');
-  });
-
-  it('syncs multi-select value from signal array to DOM', async () => {
-    const selected = signal<string[]>(['a', 'c']);
-    const { query } = await mount(
-      () => html`
-        <select class="f" multiple ${model(selected)}>
-          <option value="a">A</option>
-          <option value="b">B</option>
-          <option value="c">C</option>
-        </select>
-      `,
-    );
-    const sel = query<HTMLSelectElement>('.f')!;
-
-    expect(sel.options[0]!.selected).toBe(true);
-    expect(sel.options[1]!.selected).toBe(false);
-    expect(sel.options[2]!.selected).toBe(true);
-  });
-
-  it('syncs multi-select DOM selection back to signal array on change', async () => {
-    const selected = signal<string[]>([]);
-    const { act, query } = await mount(
-      () => html`
-        <select class="f" multiple ${model(selected)}>
-          <option value="a">A</option>
-          <option value="b">B</option>
-          <option value="c">C</option>
-        </select>
-      `,
-    );
-    const sel = query<HTMLSelectElement>('.f')!;
-
-    await act(() => {
-      sel.options[0]!.selected = true;
-      sel.options[2]!.selected = true;
-      fire.change(sel);
-    });
-
-    expect(selected.value).toEqual(['a', 'c']);
-  });
-
-  it('updates multi-select DOM when signal array changes reactively', async () => {
-    const selected = signal<string[]>([]);
-    const { act, query } = await mount(
-      () => html`
-        <select class="f" multiple ${model(selected)}>
-          <option value="x">X</option>
-          <option value="y">Y</option>
-        </select>
-      `,
-    );
-    const sel = query<HTMLSelectElement>('.f')!;
-
-    await act(() => {
-      selected.value = ['x'];
-    });
-
-    expect(sel.options[0]!.selected).toBe(true);
-    expect(sel.options[1]!.selected).toBe(false);
-  });
-
-  it('syncs textarea value from signal to DOM', async () => {
-    const text = signal('hello');
-    const { query } = await mount(
-      () => html`
-        <textarea class="f" ${model(text)}></textarea>
-      `,
-    );
-
-    expect(query<HTMLTextAreaElement>('.f')?.value).toBe('hello');
-  });
-
-  it('syncs textarea DOM value back to signal on input event', async () => {
-    const text = signal('');
-    const { act, query } = await mount(
-      () => html`
-        <textarea class="f" ${model(text)}></textarea>
-      `,
-    );
-    const ta = query<HTMLTextAreaElement>('.f')!;
-
-    await act(() => {
-      ta.value = 'typed';
-      fire.input(ta);
-    });
-
-    expect(text.value).toBe('typed');
-  });
-
-  it('stops syncing signal → DOM and DOM → signal once the host disconnects', async () => {
-    const name = signal('Alice');
-    const { dispose, element, flush, query } = await mount(
-      () => html`
-        <input class="f" type="text" ${model(name)} />
-      `,
-    );
-    const input = query<HTMLInputElement>('.f')!;
-
-    dispose();
-
-    // Signal → DOM: further signal writes must not reach the (now detached) input.
-    name.value = 'Bob';
-    await flush();
-    expect(input.value).toBe('Alice');
-
-    // DOM → signal: firing input on the detached element must not update the signal.
-    input.value = 'Charlie';
-    fire.input(input);
-    expect(name.value).toBe('Bob');
-    expect(element.isConnected).toBe(false);
-  });
-});
-
 describe('Directive: live()', () => {
   it('should not clobber user-typed input when app state is stale', async () => {
     const model = signal('server');
     const { query } = await mount(
       () => html`
-        <input class="field" :value=${live(model)} @input=${() => undefined} />
+        <input class="field" value=${live(model)} @input=${() => undefined} />
       `,
     );
 
@@ -1355,8 +951,8 @@ describe('Directive: live()', () => {
     const model = signal('server');
     const { query } = await mount(
       () => html`
-        <input class="live-field" :value=${live(model)} />
-        <input class="plain-field" :value=${model} />
+        <input class="live-field" value=${live(model)} />
+        <input class="plain-field" value=${model} />
       `,
     );
 
@@ -1374,63 +970,5 @@ describe('Directive: live()', () => {
     // signal still receives it (live() marks the binding site, not the signal).
     expect(liveInput.value).toBe('user-typed');
     expect(plainInput.value).toBe('new-server');
-  });
-});
-
-describe('Directive authoring: createDirectiveResult() / createSpreadObject()', () => {
-  it('a custom directive built via createDirectiveResult() mounts real DOM through the template engine', async () => {
-    const banner = () =>
-      createDirectiveResult((anchor, registerCleanup) => {
-        const el = document.createElement('span');
-
-        el.className = 'custom-banner';
-        el.textContent = 'from a custom directive';
-        anchor.parentNode?.insertBefore(el, anchor);
-        registerCleanup(() => el.remove());
-      });
-
-    const { query } = await mount(
-      () => html`
-        <div>${banner()}</div>
-      `,
-    );
-
-    expect(query('.custom-banner')?.textContent).toBe('from a custom directive');
-  });
-
-  it("an unbranded object matching DirectiveResult's shape is NOT recognized (must go through createDirectiveResult)", async () => {
-    // Regression guard for the "closed extension point" gap: hand-building an object with the
-    // same { mount } shape as DirectiveResult, without the factory's brand, must not be treated
-    // as a directive by the template engine.
-    const fakeDirective = { mount: () => {} };
-    const { element } = await mount(
-      () => html`
-        <div>${fakeDirective}</div>
-      `,
-    );
-
-    expect(element.shadowRoot?.textContent).toContain('[object Object]');
-  });
-
-  it('a custom two-way binding built via createSpreadObject() applies to the target element', async () => {
-    let appliedTo: HTMLElement | undefined;
-
-    const markApplied = () =>
-      createSpreadObject((el, registerCleanup) => {
-        appliedTo = el;
-        el.setAttribute('data-marked', 'true');
-        registerCleanup(() => el.removeAttribute('data-marked'));
-      });
-
-    const { query } = await mount(
-      () => html`
-        <input class="field" ${markApplied()} />
-      `,
-    );
-
-    const input = query<HTMLInputElement>('.field');
-
-    expect(appliedTo).toBe(input);
-    expect(input?.getAttribute('data-marked')).toBe('true');
   });
 });

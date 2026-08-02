@@ -8,9 +8,7 @@
 
 import { computed, isReactive, type Readable } from '@vielzeug/ripple';
 
-import { warn } from '../_dev';
-import { invariant, ORE_ERRORS, OreApiError } from '../errors';
-import { applyModifiers } from '../utils/event-modifiers';
+import { invariant } from '../errors';
 import { type Binding, type HtmlBindingValue } from './binding-types';
 import { applyBinding, createAttrBindingFromValue, resolveStaticText } from './bindings';
 import { followPath, getStaticTemplate, SlotKind } from './compiler';
@@ -20,7 +18,6 @@ import {
   type HTMLResult,
   isDirectiveResult,
   isHtmlResult,
-  isSpreadObject,
   type Ref,
   type RefCallback,
 } from './result';
@@ -70,10 +67,6 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
   const boundSlots: BoundSlot[] = compiled.slots.map((slot, i) => {
     const value = values[i];
 
-    if (slot.kind === SlotKind.CLOSE_TAG) {
-      return { slot, value };
-    }
-
     if (slot.kind === SlotKind.NODE) {
       const commentPath = slot.commentId !== undefined ? compiled.commentPaths.get(slot.commentId) : undefined;
 
@@ -89,41 +82,8 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
     return { el: followPath(fragment, elementPath) as HTMLElement, slot, value };
   });
 
-  // Phase 2a: Process tagname slots first — replace placeholders with real elements
-  const tagReplacements = new Map<HTMLElement, HTMLElement>();
-
-  for (const { el, slot, value } of boundSlots) {
-    if (slot.kind !== SlotKind.TAG_NAME || !el) continue;
-
-    const tagName = String(value);
-
-    // Throws immediately, every build: a malformed dynamic tag name is a programming bug in
-    // the template, not a runtime race, and this happens synchronously during instantiation
-    // (not inside a reactive effect) — there's no risk of an uncaught throw here corrupting an
-    // unrelated batch of effects the way rethrowing from each()'s reconciliation would (see
-    // each.ts's duplicate-key handling, which instead reports via reportRuntimeError() since it
-    // runs inside a reactive effect).
-    if (!/^[a-z][a-z0-9._-]*$/i.test(tagName)) {
-      throw new OreApiError(ORE_ERRORS.invalidDynamicTagName(tagName));
-    }
-
-    const realEl = document.createElement(tagName);
-
-    for (const attr of Array.from(el.attributes)) realEl.setAttribute(attr.name, attr.value);
-
-    while (el.firstChild) realEl.appendChild(el.firstChild);
-
-    el.replaceWith(realEl);
-    tagReplacements.set(el, realEl);
-  }
-
-  // Phase 2b: Build bindings (may modify DOM for static content)
-  for (const { comment, el: rawEl, slot, value } of boundSlots) {
-    if (slot.kind === SlotKind.TAG_NAME || slot.kind === SlotKind.CLOSE_TAG) continue;
-
-    // Resolve element through tagname replacements
-    const el = rawEl ? (tagReplacements.get(rawEl) ?? rawEl) : rawEl;
-
+  // Phase 2: Build bindings (may modify DOM for static content).
+  for (const { comment, el, slot, value } of boundSlots) {
     if (slot.kind === SlotKind.NODE) {
       const anchor = comment;
 
@@ -183,9 +143,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
       invariant(name, 'compiled template produced an event slot without an event name');
 
       if (typeof value === 'function') {
-        const { handler, options } = applyModifiers(name, value as (e: Event) => void, slot.modifiers ?? []);
-
-        bindings.push({ el, handler, name, options, type: 'event' });
+        bindings.push({ el, handler: value as (e: Event) => void, name, type: 'event' });
       } else if (isReactive(value)) {
         const signalValue = value as Readable<unknown>;
         const handler = (e: Event) => {
@@ -193,9 +151,8 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
           if (typeof h === 'function') (h as (e: Event) => void)(e);
         };
-        const { handler: wrapped, options } = applyModifiers(name, handler, slot.modifiers ?? []);
 
-        bindings.push({ el, handler: wrapped, name, options, type: 'event' });
+        bindings.push({ el, handler, name, type: 'event' });
       }
 
       continue;
@@ -204,22 +161,6 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
     if (slot.kind === SlotKind.REF) {
       if (value) {
         bindings.push({ el, ref: value as Ref<Element> | RefCallback<Element>, type: 'ref' });
-      }
-
-      continue;
-    }
-
-    if (slot.kind === SlotKind.SPREAD) {
-      if (isSpreadObject(value)) {
-        bindings.push({ el, spread: value, type: 'spread' });
-      } else {
-        // Interpolation landed inside a start tag but isn't a SpreadObject — almost
-        // always a typo (e.g. a missing model() call or a stray expression), and it
-        // would otherwise vanish silently: no binding, no text, no error.
-        warn(
-          'html`...`: interpolation inside a tag is only valid for spread objects (e.g. model(signal)). ' +
-            `Received ${typeof value} — it was ignored.`,
-        );
       }
 
       continue;

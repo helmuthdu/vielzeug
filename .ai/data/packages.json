@@ -151,7 +151,7 @@
       "category": "UI",
       "description": "Functional web-component authoring on top of ripple",
       "domOutput": true,
-      "dependencies": ["ripple"],
+      "dependencies": [],
       "optionalPeers": ["assay"]
     },
     {

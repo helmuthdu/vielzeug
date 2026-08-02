@@ -1,6 +1,6 @@
 // noinspection HtmlUnknownAttribute
 import { html, ref, onMounted } from '../index';
-import { intersectionObserver } from '../observers';
+import { intersectionObserver } from '../index';
 import { mount } from '../testing';
 
 describe('intersectionObserver()', () => {

@@ -9,7 +9,8 @@ description: Practical Ore usage patterns for components, props, templates, slot
 
 `define(tag, definition)` registers a custom element.
 
-Your `setup()` function receives typed prop signals and a context bag, then returns an `HTMLResult` directly.
+Your `setup()` function receives typed prop signals and returns an `HTMLResult` directly. Its state belongs to the
+current connection: disconnect disposes it, and reconnecting the same element runs setup again.
 
 ```ts
 import { signal } from '@vielzeug/ripple';
@@ -116,7 +117,7 @@ define('x-button', {
   },
   setup(props) {
     return html`
-      <button ?disabled=${props.disabled} :data-variant=${props.variant}>${props.label} (${props.count})</button>
+      <button ?disabled=${props.disabled} data-variant=${props.variant}>${props.label} (${props.count})</button>
     `;
   },
 });
@@ -136,11 +137,11 @@ define('profile-name', {
     const inputRef = ref<HTMLInputElement>();
 
     return html`
-      <label :title=${computed(() => 'Current: ' + name.value)}>Name</label>
+      <label title=${computed(() => 'Current: ' + name.value)}>Name</label>
       <input
         ref=${inputRef}
-        :value=${name}
-        :aria-label=${() => 'Current name ' + name.value}
+        value=${name}
+        aria-label=${() => 'Current name ' + name.value}
         @input=${(event: Event) => {
           name.value = (event.target as HTMLInputElement).value;
         }} />
@@ -152,7 +153,8 @@ define('profile-name', {
 
 ## directives
 
-Ore includes `each`, `classMap`, `styleMap`, `when`, and `model` — the everyday template directives most components need, imported directly from `@vielzeug/ore` alongside `define`/`html`. The advanced/niche ones (`live`, `raw`) live behind a separate `@vielzeug/ore/directives` import — see below.
+Ore exports `each`, `classMap`, `styleMap`, `when`, `live`, and `unsafeHtml` from `@vielzeug/ore`. Use ordinary
+attribute bindings plus native event handlers for two-way input state; no special model directive is required.
 
 ```ts
 import { signal } from '@vielzeug/ripple';
@@ -166,7 +168,7 @@ define('task-list', {
     return html`
       <ul
         class="${classMap({ ready: () => tasks.value.length > 0 })}"
-        :style=${styleMap({ opacity: () => (active.value ? 1 : 0.5) })}>
+        style=${styleMap({ opacity: () => (active.value ? 1 : 0.5) })}>
         ${when(
           () => active.value,
           () => html`<li>Active</li>`,
@@ -207,15 +209,14 @@ Use `live(signal)` for inputs that should preserve in-progress user edits instea
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { live } from '@vielzeug/ore/directives';
-import { define, html } from '@vielzeug/ore';
+import { define, html, live } from '@vielzeug/ore';
 
 define('live-search', {
   setup() {
     const query = signal('');
 
     return html`
-      <input :value=${live(query)} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
+      <input value=${live(query)} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
     `;
   },
 });
@@ -386,7 +387,7 @@ define('count-consumer', {
 ```ts
 import { signal } from '@vielzeug/ripple';
 import { define, html, prop } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 
 define('rating-input', {
   formAssociated: true,
@@ -405,33 +406,13 @@ define('rating-input', {
 });
 ```
 
-## async setup
-
-When `setup()` returns a `Promise<HTMLResult>`, ore renders `loading()` immediately and swaps in the real template once the promise resolves. Use `onError` to handle failures gracefully.
-
-```ts
-import { define, html, prop } from '@vielzeug/ore';
-
-define('user-profile', {
-  props: { userId: prop.string('') },
-  loading: () => html`<p>Loading…</p>`,
-  onError: (_err, el) => html`<p>Failed to load for ${el.getAttribute('user-id')}</p>`,
-  async setup(props) {
-    const user = await fetch(`/api/users/${props.userId.value}`).then((r) => r.json());
-
-    return html`<p>${user.name}</p>`;
-  },
-});
-```
-
 ## platform observers
 
-Observer helpers from `@vielzeug/ore/observers` require real DOM nodes, so call them inside `onMounted()`.
+Observer helpers from `@vielzeug/ore` require real DOM nodes, so call them inside `onMounted()`.
 
 ```ts
 import { effect } from '@vielzeug/ripple';
-import { define, html, onMounted, ref } from '@vielzeug/ore';
-import { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/ore/observers';
+import { define, html, intersectionObserver, mediaObserver, onMounted, ref, resizeObserver } from '@vielzeug/ore';
 
 define('x-observed', {
   setup(_props) {
@@ -463,8 +444,9 @@ Import from `@vielzeug/ore/testing`.
 ```ts
 import { afterEach, describe, expect, it } from 'vitest';
 import { signal } from '@vielzeug/ripple';
+import { fireClick } from '@vielzeug/assay';
 import { html } from '@vielzeug/ore';
-import { cleanup, fire, mount } from '@vielzeug/ore/testing';
+import { cleanup, mount } from '@vielzeug/ore/testing';
 
 describe('my-counter', () => {
   afterEach(cleanup);
@@ -478,7 +460,7 @@ describe('my-counter', () => {
 
     expect(query('button')?.textContent).toBe('0');
 
-    await act(() => fire.click(query('button')!));
+    await act(() => fireClick(query('button')!));
 
     expect(query('button')?.textContent).toBe('1');
   });
@@ -555,27 +537,25 @@ define('theme-toggle', {
 
 ### With Forge
 
-Use `@vielzeug/forge` for typed form state alongside Ore's `useField()` for form-associated elements.
+Use `@vielzeug/forge` for typed form state. `useField()` remains intentionally narrow: it connects a form-associated
+custom element to native `ElementInternals` without imposing submission, validation, or dirty-state policy.
 
 ```ts
 import { createForm } from '@vielzeug/forge';
-import { s } from '@vielzeug/spell';
-import { define, html, provide } from '@vielzeug/ore';
-import { createFormContext, FORM_CONTEXT_KEY } from '@vielzeug/ore/forms';
+import { define, html } from '@vielzeug/ore';
 
 define('signup-form', {
   setup(_props) {
-    const formCtx = createFormContext({
-      onSubmit: async (e) => {
-        e?.preventDefault();
-        // submit logic
-      },
-    });
-
-    provide(FORM_CONTEXT_KEY, formCtx);
+    const form = createForm({ defaultValues: { email: '' } });
 
     return html`
-      <form @submit.prevent=${() => formCtx.submit()}>
+      <form
+        @submit=${(event: SubmitEvent) => {
+          event.preventDefault();
+          void form.submit(async (values) => {
+            console.log(values);
+          });
+        }}>
         <slot></slot>
       </form>
     `;
@@ -593,4 +573,5 @@ define('signup-form', {
 - Call `onCleanup()` for every resource allocated in `setup()` (WebSockets, intervals, external subscriptions).
 - Use `live(signal)` for form inputs to prevent clobbering user-in-progress edits.
 - Extract composable helper functions freely — `onMounted`/`onCleanup`/`bind`/... resolve the active component through implicit context, so they work from any function called (transitively) during `setup()`, with no need to pass them in as parameters.
-- Test with `@vielzeug/ore/testing` helpers (`mount`, `flush`, `waitFor`) rather than direct DOM manipulation.
+- Test component mounting and lifecycle with `@vielzeug/ore/testing`; import generic DOM events, queries, and waits
+  from `@vielzeug/assay`.

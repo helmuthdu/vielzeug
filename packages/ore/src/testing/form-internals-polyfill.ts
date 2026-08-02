@@ -5,7 +5,7 @@ import { walkFlatTree } from './dom';
  * not `setValidity`, not the `checkValidity`/`reportValidity`/`validity`/`validationMessage`
  * mixin real browsers put on every `formAssociated: true` element, not even `FormData`
  * collecting a form-associated element's set value, or `<form>.reset()` invoking
- * `formResetCallback()`. Every one of those gaps is exercised by `useField()` (`@vielzeug/ore/forms`),
+ * `formResetCallback()`. Every one of those gaps is exercised by `useField()` (`@vielzeug/ore`),
  * so any package testing a form-associated component needs all of them, not just one.
  *
  * Opt-in via `install(afterEach, { formInternals: true })` (or call this directly) —

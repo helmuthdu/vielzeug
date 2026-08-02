@@ -1,8 +1,9 @@
+import { fireClick } from '@vielzeug/assay';
 import { signal } from '@vielzeug/ripple';
 import { vi } from 'vitest';
 
 import { define, html, prop } from '../index';
-import { fire, flush, mount } from '../testing';
+import { flush, mount } from '../testing';
 import { expectType, uniqueTag } from './test-utils';
 
 describe('component props', () => {
@@ -80,9 +81,8 @@ describe('component props', () => {
   });
 
   it('applies custom parse functions for child prop bindings', async () => {
-    const suffix = Math.random().toString(36).slice(2);
-    const childTag = `test-custom-parse-child-${suffix}`;
-    const parentTag = `test-custom-parse-parent-${suffix}`;
+    const childTag = 'ore-custom-parse-child';
+    const parentTag = 'ore-custom-parse-parent';
 
     define(childTag, {
       props: {
@@ -103,7 +103,9 @@ describe('component props', () => {
       setup: () => {
         const size = signal('3');
 
-        return html`<${childTag} size=${size}></${childTag}>`;
+        return html`
+          <ore-custom-parse-child size=${size}></ore-custom-parse-child>
+        `;
       },
     });
 
@@ -114,9 +116,8 @@ describe('component props', () => {
   });
 
   it('passes array values through bindings without stringifying structured props', async () => {
-    const suffix = Math.random().toString(36).slice(2);
-    const childTag = `test-array-child-${suffix}`;
-    const parentTag = `test-array-parent-${suffix}`;
+    const childTag = 'ore-array-props-child';
+    const parentTag = 'ore-array-props-parent';
 
     define<{ items: string[] }>(childTag, {
       props: { items: prop.json([] as string[]) },
@@ -136,7 +137,7 @@ describe('component props', () => {
         return html`
           <div>
             <button @click=${() => (items.value = ['gamma', 'delta'])}>Update</button>
-            <${childTag} items=${items}></${childTag}>
+            <ore-array-props-child items=${items}></ore-array-props-child>
           </div>
         `;
       },
@@ -147,7 +148,7 @@ describe('component props', () => {
 
     expect(child.shadowRoot?.querySelector('.items')?.textContent?.trim()).toBe('alpha|beta');
 
-    fire.click(query('button')!);
+    fireClick(query('button')!);
     await new Promise((r) => setTimeout(r, 10));
 
     expect(child.shadowRoot?.querySelector('.items')?.textContent?.trim()).toBe('gamma|delta');

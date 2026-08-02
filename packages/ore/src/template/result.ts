@@ -37,23 +37,6 @@ export const createDirectiveResult = (mount: DirectiveResult['mount']): Directiv
 
 export const isDirectiveResult = directiveBrand.is;
 
-// ─── Spread object ────────────────────────────────────────────────────────────
-// Returned by model() and similar helpers that apply multiple bindings to one element.
-
-export type SpreadObject = {
-  apply(el: HTMLElement, registerCleanup: (fn: () => void) => void): void;
-};
-
-const spreadBrand = makeBrand<SpreadObject>('ore:spread');
-
-/**
- * Creates a registered SpreadObject. Used by model() to attach multiple bindings
- * (value sync + input event) to an element via a single template expression.
- */
-export const createSpreadObject = (apply: SpreadObject['apply']): SpreadObject => spreadBrand.stamp({ apply });
-
-export const isSpreadObject = spreadBrand.is;
-
 // ─── HTML result ──────────────────────────────────────────────────────────────
 
 /**

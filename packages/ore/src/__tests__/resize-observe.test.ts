@@ -1,6 +1,6 @@
 // noinspection HtmlUnknownAttribute
 import { html, ref, onMounted } from '../index';
-import { resizeObserver } from '../observers';
+import { resizeObserver } from '../index';
 import { mount } from '../testing';
 
 describe('resizeObserver()', () => {

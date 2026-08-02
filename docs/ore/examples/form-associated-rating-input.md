@@ -16,7 +16,7 @@ Use `useField()` with `formAssociated: true` to wire a signal to the element's f
 ```ts
 import { signal } from '@vielzeug/ripple';
 import { define, html } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 
 define('rating-input', {
   formAssociated: true,
@@ -40,7 +40,7 @@ define('rating-input', {
 ```ts
 import { signal } from '@vielzeug/ripple';
 import { define, html, prop } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 
 define<{ disabled?: boolean }>('rating-input-v2', {
   formAssociated: true,
@@ -72,7 +72,7 @@ define<{ disabled?: boolean }>('rating-input-v2', {
 ```ts
 import { signal, computed } from '@vielzeug/ripple';
 import { define, html, prop } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 
 define<{ required?: boolean }>('rating-input-v3', {
   formAssociated: true,

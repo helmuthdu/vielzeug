@@ -36,17 +36,24 @@ export { html } from './template/instantiator';
 export { type HTMLResult, ref, type Ref, type RefCallback } from './template/result';
 
 // Near-universal template directives — used in most non-trivial components (lists,
-// conditionals, class/style maps, two-way form binding). Kept in the main entry alongside
+// conditionals, and class/style maps. Kept in the main entry alongside
 // `html`/`define` rather than a separate sub-path: tree-shaking already means an unused export
 // costs nothing in a bundled consumer, so splitting these off only adds an extra import line
-// for functionality most components need on day one. Contrast with `@vielzeug/ore/directives`,
-// which holds the genuinely niche/advanced pieces (`raw()` — security-sensitive HTML injection,
-// `live()` — form-control-specific) plus the custom-directive authoring API.
+// for functionality most components need on day one. `unsafeHtml()` and `live()` remain here
+// too: their explicit names make their specialized behavior clear without a second import path.
 export { classMap } from './directives/classMap';
 export { each } from './directives/each';
-export { model } from './directives/model';
+export { live, type LiveBinding } from './directives/live';
 export { styleMap } from './directives/styleMap';
+export { unsafeHtml } from './directives/unsafe-html';
 export { when } from './directives/when';
+
+export { useField, type FormFieldHandle, type FormFieldOptions } from './forms/field';
+
+export { intersectionObserver } from './observers/intersection-observe';
+export { mediaObserver } from './observers/media-observe';
+export { mutationObserver, type MutationObserverValue } from './observers/mutation-observe';
+export { resizeObserver } from './observers/resize-observe';
 
 export { css, type CSSResult } from './utils/css';
 

@@ -2,8 +2,7 @@ import { scope as _scope, type Scope, untrack } from '@vielzeug/ripple';
 
 import type { ComponentDefinition } from './component-types';
 
-import { warn } from './_dev';
-import { type OreErrorPhase, OreLifecycleError, reportRuntimeError } from './errors';
+import { OreApiError, type OreErrorPhase, OreLifecycleError, ORE_ERRORS, reportRuntimeError } from './errors';
 import { createProps, getPropMeta, type InferProps, type PropInputDefs, type PropsDef } from './props';
 import {
   beginPendingWork,
@@ -20,7 +19,6 @@ import { loadStylesheet } from './utils/css';
 // Internal to BaseElement — the only state machine and event dispatcher in the package.
 
 const ComponentPhase = {
-  LOADING: 'loading',
   SETUP_DONE: 'setup_done',
   SETUP_RUNNING: 'setup_running',
   UNINITIALIZED: 'uninitialized',
@@ -39,7 +37,7 @@ const LIFECYCLE_EVENTS = {
 type ComponentState = {
   /** Registered via `onFormReset()` — persists across mount callbacks, unlike `mountCallbacks`. */
   formResetCallbacks: OnFormResetCallback[];
-  /** Incremented on every disconnect — guards both mount callbacks and async setup results. */
+  /** Incremented on every disconnect — invalidates queued mount callbacks. */
   generation: number;
   mountCallbacks: OnMountedCallback[];
   phase: ComponentPhase;
@@ -56,21 +54,25 @@ const createComponentState = (): ComponentState => ({
   templateResult: null,
 });
 
+const isPromiseLike = (value: unknown): value is PromiseLike<unknown> =>
+  (typeof value === 'object' || typeof value === 'function') &&
+  value !== null &&
+  'then' in value &&
+  typeof value.then === 'function';
+
 // ─── BaseElement ──────────────────────────────────────────────────────────────
 
 /**
  * Phase transitions:
  *
  * ```
- * UNINITIALIZED ──_runSetup()──┬─(sync result)──► SETUP_DONE
- *                               └─(promise)──────► LOADING ──(resolves)──► SETUP_DONE
- * SETUP_DONE / LOADING ──disconnectedCallback()──► UNMOUNTED ──(reset)──► UNINITIALIZED
+ * UNINITIALIZED ──_runSetup()──► SETUP_DONE
+ * SETUP_DONE ──disconnectedCallback()──► UNMOUNTED ──(reset)──► UNINITIALIZED
  * ```
  *
- * `generation` increments on every disconnect and is captured before an async
- * `setup()` is awaited; if it no longer matches when the promise settles, the
- * element was disconnected (and possibly reconnected) in the meantime and the
- * result is discarded (see `_isStale`).
+ * `generation` increments on every disconnect. Scheduled mount callbacks capture
+ * it so callbacks belonging to a disconnected instance cannot run after a
+ * reconnect (see `_isStale`).
  *
  * Why this lives on the class instead of a standalone pure reducer: every
  * transition here is triggered by running actual user code (`def.setup()`,
@@ -82,7 +84,7 @@ const createComponentState = (): ComponentState => ({
  * procedural steps instead of a reducer + effect interpreter.
  */
 export class BaseElement extends HTMLElement {
-  static _definition: ComponentDefinition<any>;
+  static _definition: ComponentDefinition;
   static _normalizedPropDefs: PropsDef<Record<never, never>> | undefined;
   static formAssociated = false;
   static observedAttributes: string[] = [];
@@ -132,8 +134,13 @@ export class BaseElement extends HTMLElement {
     this._component.generation++;
     this._component.phase = ComponentPhase.UNMOUNTED;
     this.dispatchEvent(new CustomEvent(LIFECYCLE_EVENTS.DISCONNECT, { bubbles: false, composed: false }));
+    this._resetSetupState();
+  }
+
+  /** Dispose one connection's resources before its state can be rebuilt. */
+  private _resetSetupState(): void {
     this._component.scope.dispose();
-    // Reset mutable fields for next connect, keeping the same object for stable references
+    // Reset mutable fields for next connection, keeping the same object for stable references.
     this._component.formResetCallbacks = [];
     this._component.mountCallbacks = [];
     this._component.phase = ComponentPhase.UNINITIALIZED;
@@ -151,27 +158,18 @@ export class BaseElement extends HTMLElement {
       try {
         callback();
       } catch (error) {
-        this._handleSetupError(error, 'form-reset');
+        this._reportLifecycleError(error, 'form-reset');
       }
     }
   }
 
-  private _handleSetupError(error: unknown, phase: OreErrorPhase = 'setup'): HTMLResult | void {
+  private _reportLifecycleError(error: unknown, phase: OreErrorPhase): void {
     const err = error instanceof Error ? error : new Error(String(error));
     const oreError = new OreLifecycleError(`<${this.localName}> failed during ${this._component.phase} (${phase})`, {
       cause: err,
       component: this.localName,
       phase,
     });
-    const def = (this.constructor as typeof BaseElement)._definition;
-
-    if (def?.onError) {
-      try {
-        return def.onError(oreError, this);
-      } catch {
-        /* fall through */
-      }
-    }
 
     reportRuntimeError(oreError, this);
   }
@@ -184,7 +182,7 @@ export class BaseElement extends HTMLElement {
     const ctx = createRuntimeContext(this);
 
     try {
-      let setupResult: HTMLResult | null | Promise<HTMLResult | null> | undefined;
+      let setupResult: HTMLResult | null | undefined;
 
       this._component.scope.run(() => {
         setupResult = runWithContext(ctx, () => {
@@ -198,96 +196,21 @@ export class BaseElement extends HTMLElement {
       this._component.mountCallbacks.push(...ctx.mountCallbacks);
       this._component.formResetCallbacks.push(...ctx.formResetCallbacks);
 
-      if (setupResult != null && typeof (setupResult as Promise<HTMLResult | null>).then === 'function') {
-        // Async setup: show loading template immediately, swap when resolved.
-        // Store captured mount callbacks; they will be scheduled after the real template mounts.
-        const pendingCallbacks = this._component.mountCallbacks.splice(0);
+      if (isPromiseLike(setupResult)) throw new OreApiError(ORE_ERRORS.asyncSetupUnsupported);
 
-        this._component.phase = ComponentPhase.LOADING;
-
-        if (def.loading) {
-          this._component.templateResult = def.loading();
-        }
-
-        // Capture the current generation so the async handler can detect staleness:
-        // if the element disconnects+reconnects before the promise resolves, generation is
-        // incremented and the old promise result must be discarded.
-        //
-        // Deliberately NOT tracked via beginPendingWork(): the awaited promise is
-        // arbitrary, user-controlled application code (e.g. a real network fetch) with no
-        // upper bound — the LOADING template it renders in the meantime is a valid, stable
-        // state, not a transient one to wait out. `testing/flush()` only needs to wait for
-        // ore's own bounded internal scheduling (queueMicrotask'd mount callbacks below),
-        // never for how long a consumer's setup() takes to resolve.
-        void this._runSetupAsync(
-          setupResult as Promise<HTMLResult | null>,
-          pendingCallbacks,
-          this._component.generation,
-        );
-      } else {
-        this._component.templateResult = (setupResult as HTMLResult | null) ?? null;
-        this._component.phase = ComponentPhase.SETUP_DONE;
-      }
+      this._component.templateResult = setupResult ?? null;
+      this._component.phase = ComponentPhase.SETUP_DONE;
     } catch (error) {
-      const recoveryTemplate = this._handleSetupError(error);
-
-      if (recoveryTemplate) {
-        this._component.templateResult = recoveryTemplate;
-        this._component.phase = ComponentPhase.SETUP_DONE;
-      } else {
-        this._component.phase = ComponentPhase.UNINITIALIZED;
-        throw error;
-      }
+      this._reportLifecycleError(error, 'setup');
+      // Setup is atomic: a failed run must not leave partial effects or cleanups
+      // live until a later disconnect.
+      this._resetSetupState();
+      throw error;
     }
   }
 
-  /**
-   * True once the element has disconnected (and possibly reconnected) since
-   * `capturedGeneration` was recorded — an in-flight async `setup()` result
-   * arriving after that point is for an instance state that no longer exists.
-   */
   private _isStale(capturedGeneration: number): boolean {
     return this._component.generation !== capturedGeneration || !this.isConnected;
-  }
-
-  private async _runSetupAsync(
-    promise: Promise<HTMLResult | null>,
-    pendingCallbacks: OnMountedCallback[],
-    capturedGeneration: number,
-  ): Promise<void> {
-    try {
-      const result = await promise;
-
-      if (this._isStale(capturedGeneration)) {
-        warn(`<${this.localName}> async setup result discarded — element disconnected before setup resolved.`);
-
-        return;
-      }
-
-      this._component.templateResult = result ?? null;
-      this._component.phase = ComponentPhase.SETUP_DONE;
-      this._component.mountCallbacks.push(...pendingCallbacks);
-
-      if (result) this._applyResult(result);
-
-      this._scheduleMountCallbacks();
-    } catch (error) {
-      if (this._isStale(capturedGeneration)) {
-        warn(`<${this.localName}> async setup error discarded — element disconnected before setup resolved.`);
-
-        return;
-      }
-
-      const recovery = this._handleSetupError(error, 'async-setup');
-
-      if (recovery) {
-        this._component.templateResult = recovery;
-        this._component.phase = ComponentPhase.SETUP_DONE;
-        this._applyResult(recovery);
-      } else {
-        this._component.phase = ComponentPhase.UNINITIALIZED;
-      }
-    }
   }
 
   private _applyResult(result: HTMLResult | null): void {
@@ -295,8 +218,7 @@ export class BaseElement extends HTMLElement {
 
     const host: Element | ShadowRoot = this.shadowRoot ?? this;
 
-    // Clear previous content (e.g. a LOADING template being swapped out), then
-    // insert + wire in one step via the result's mount().
+    // Insert and wire the template in one step via the result's mount().
     host.replaceChildren();
     this._component.scope.run(() => {
       result.mount(host, null, onCleanup);
@@ -307,7 +229,7 @@ export class BaseElement extends HTMLElement {
     this._applyStyles();
     this._mountTemplate();
 
-    // Only schedule mount callbacks once setup is fully complete (not in LOADING state)
+    // Setup completes before the template mounts, so callbacks always observe live DOM.
     if (this._component.phase === ComponentPhase.SETUP_DONE) this._scheduleMountCallbacks();
   }
 
@@ -363,7 +285,7 @@ export class BaseElement extends HTMLElement {
               this._component.formResetCallbacks.push(...nestedCtx.formResetCallbacks);
             }
           } catch (error) {
-            this._handleSetupError(error, 'mounted');
+            this._reportLifecycleError(error, 'mounted');
           }
         }
 

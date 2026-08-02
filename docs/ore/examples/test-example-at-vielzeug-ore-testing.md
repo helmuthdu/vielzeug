@@ -11,13 +11,28 @@ You want to write unit tests for a Ore custom element — rendering it in a test
 
 ### Solution
 
-Use `mount()` from `@vielzeug/ore/testing` to render components, `fire.*` or `user.*` for interactions, and `waitFor()` for async assertions.
+Use `mount()` from `@vielzeug/ore/testing` to render components, and import generic interactions and async waiting
+from `@vielzeug/assay`.
 
 ```ts
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, mount, user, waitFor } from '@vielzeug/ore/testing';
+import { fireClick } from '@vielzeug/assay';
+import { signal } from '@vielzeug/ripple';
+import { define, html } from '@vielzeug/ore';
+import { cleanup, mount } from '@vielzeug/ore/testing';
 
-// Assumes 'simple-counter' is defined elsewhere
+define('simple-counter', {
+  setup() {
+    const count = signal(0);
+
+    return html`
+      <button @click=${() => count.value--}>-</button>
+      <strong>${count}</strong>
+      <button @click=${() => count.value++}>+</button>
+    `;
+  },
+});
+
 describe('simple-counter', () => {
   afterEach(cleanup);
 
@@ -25,10 +40,11 @@ describe('simple-counter', () => {
     const fixture = await mount('simple-counter');
     const inc = fixture.queryAll<HTMLButtonElement>('button')[1]!;
 
-    await user.click(inc);
-    await user.click(inc);
+    fireClick(inc);
+    fireClick(inc);
 
-    await waitFor(() => fixture.query('strong')?.textContent === '2');
+    await fixture.flush();
+    expect(fixture.get('strong').textContent).toBe('2');
 
     fixture.dispose();
   });
@@ -39,7 +55,8 @@ describe('simple-counter', () => {
 
 - Omitting `cleanup()` in `afterEach` leaks mounted elements into subsequent tests, causing flaky failures from shared DOM state.
 - Shadow DOM queries require `fixture.query()` (which searches inside the shadow root), not `document.querySelector()` which only searches the light DOM.
-- `user.click()` is async and triggers reactive updates. Always `await` it before asserting on DOM changes.
+- `fireClick()` is synchronous. Await `fixture.flush()` after an Ore interaction, or use Assay's
+  `waitUntil()` only when application code schedules asynchronous work.
 
 ### Related
 

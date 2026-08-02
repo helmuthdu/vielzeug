@@ -15,14 +15,11 @@ import { resetOreForTests } from './reset';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-// Fixture's query/queryAll/queryBy*/queryAllBy* methods are exactly QueryScope's surface —
-// extending it (rather than redeclaring all six signatures a second time) means a future
-// addition to one is automatically part of the other, with the type system enforcing it.
+// Fixture inherits Assay's complete QueryScope. Keeping that relationship structural means new
+// scoped query capabilities are immediately available to fixtures without a duplicate contract.
 /**
- * A mounted component ready for assertions. Every inherited `QueryScope` method (`query`,
- * `queryAll`, `queryByText`, `queryAllByText`, `queryByTestId`, `queryAllByTestId`) is scoped
- * to `element.shadowRoot` — falling back to `element` itself for light-DOM components
- * (`shadow: false` / no shadow root).
+ * A mounted component ready for assertions. All inherited `QueryScope` methods are scoped to
+ * `element.shadowRoot`, falling back to `element` for light-DOM components (`shadow: false`).
  */
 export interface Fixture<T extends HTMLElement = HTMLElement> extends QueryScope {
   /** Delegates to `dispose()`. Enables `using` declarations. */
@@ -55,14 +52,14 @@ export interface MountOptions {
   /** Parent container (default: document.body) */
   container?: HTMLElement;
   /** Extra component options when passing an inline setup function */
-  componentOptions?: Omit<ComponentDefinition<any>, 'setup'>;
+  componentOptions?: Omit<ComponentDefinition<Record<string, unknown>>, 'setup'>;
 }
 
 type MountProps = { readonly [x: string]: Readable<unknown> };
 
 // Bivariant callback type keeps inline test callbacks ergonomic across varying prop specializations.
 export type MountSetup = {
-  bivarianceHack: (props: MountProps) => HTMLResult | null | Promise<HTMLResult | null>;
+  bivarianceHack: (props: MountProps) => HTMLResult | null;
 }['bivarianceHack'];
 
 // ─── Test environment state ───────────────────────────────────────────────────
@@ -146,7 +143,7 @@ export async function mount<T extends HTMLElement = HTMLElement>(
   const { attrs = {}, componentOptions, container = document.body, html, props = {} } = options;
 
   let tagName: string;
-  let inlineDefinition: ComponentDefinition<any> | undefined;
+  let inlineDefinition: ComponentDefinition<Record<string, unknown>> | undefined;
 
   if (typeof tagOrSetup === 'string') {
     tagName = tagOrSetup;
@@ -154,7 +151,7 @@ export async function mount<T extends HTMLElement = HTMLElement>(
     tagName = `trial-${++_componentTagCounter}`;
     inlineDefinition = {
       ...(componentOptions ?? {}),
-      setup: tagOrSetup as ComponentDefinition<any>['setup'],
+      setup: tagOrSetup,
     };
   }
 
@@ -251,9 +248,9 @@ export async function mount<T extends HTMLElement = HTMLElement>(
  *   setup: (props) => html`<div>${props.count}</div>`,
  * });
  */
-export async function mountComponent<T extends HTMLElement = HTMLElement>(
+export async function mountComponent<Props extends Record<string, unknown>, T extends HTMLElement = HTMLElement>(
   tag: string,
-  definition: ComponentDefinition<any>,
+  definition: ComponentDefinition<Props>,
   options?: MountOptions,
 ): Promise<Fixture<T>> {
   define(tag, definition);

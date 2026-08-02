@@ -8,7 +8,7 @@ import { makeBrand } from '../utils/brand';
  * so other bindings of the same signal are unaffected.
  *
  * @example
- * html`<input :value="${live(model)}" />`
+ * html`<input value="${live(model)}" />`
  */
 export type LiveBinding<T> = { readonly source: Readable<T> };
 

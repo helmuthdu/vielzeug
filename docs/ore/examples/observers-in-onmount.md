@@ -15,7 +15,7 @@ Call observer helpers inside `onMounted()` after refs have resolved.
 
 ```ts
 import { define, html, onMounted, ref, watchEffect } from '@vielzeug/ore';
-import { mediaObserver, resizeObserver } from '@vielzeug/ore/observers';
+import { mediaObserver, resizeObserver } from '@vielzeug/ore';
 
 define('observed-panel', {
   setup(_props) {

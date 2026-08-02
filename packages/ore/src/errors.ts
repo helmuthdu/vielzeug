@@ -10,8 +10,7 @@ import { error as logError } from './_dev';
 //     onFormReset, each() reconciliation)
 //     → wrap in `OreLifecycleError` and report via `reportRuntimeError()`
 //       (`ore:error` DOM event + dev console) so other callbacks keep running.
-//   Recoverable oddity (unknown event modifier, non-spread interpolation,
-//     overwrite warnings, blocked attribute writes)
+//   Recoverable oddity (overwrite warnings, blocked attribute writes)
 //     → dev `warn()`/`error()` and continue. Never swallow silently.
 //   Internal impossibility (compiled template metadata out of sync)
 //     → `invariant()` throws `OreInternalError`, every build.
@@ -52,12 +51,11 @@ export class OreInternalError extends OreError {
 /**
  * The phase in which a component error occurred.
  * - `'setup'` — synchronous setup() threw
- * - `'async-setup'` — async setup() promise rejected
  * - `'mounted'` — an onMounted callback threw
  * - `'form-reset'` — an onFormReset callback threw
  * - `'each-reconcile'` — `each()` failed to reconcile a list update (e.g. duplicate keys)
  */
-export type OreErrorPhase = 'async-setup' | 'each-reconcile' | 'form-reset' | 'mounted' | 'setup';
+export type OreErrorPhase = 'each-reconcile' | 'form-reset' | 'mounted' | 'setup';
 
 /**
  * Structured error thrown by the Ore runtime when component setup fails.
@@ -90,7 +88,7 @@ export class OreLifecycleError extends OreError {
  * when console output is stripped in production.
  */
 export function reportRuntimeError(error: OreLifecycleError, target: EventTarget): void {
-  logError(`<${error.component}> setup error (phase: ${error.phase}):`, error.cause);
+  logError(`<${error.component}> lifecycle error (phase: ${error.phase}):`, error.cause);
 
   target.dispatchEvent(
     new CustomEvent('ore:error', {
@@ -107,22 +105,22 @@ export function reportRuntimeError(error: OreLifecycleError, target: EventTarget
 export class OreTimeoutError extends OreError {}
 
 export const ORE_ERRORS = {
+  asyncSetupUnsupported: 'setup() must return an HTMLResult or null; use reactive state for asynchronous work',
   defineDuplicate: (tag: string): string => `define('${tag}') called twice — custom element already registered`,
   defineFieldRequiresFormAssociated: (tag: string): string =>
     `useField() requires define('${tag}', { formAssociated: true })`,
   defineRequiresTag: 'define() requires a tag name',
   eachDuplicateKey: (key: string, index: number): string => `each() received duplicate key "${key}" at index ${index}`,
+  eventModifiersUnsupported: (eventName: string): string =>
+    `@${eventName}: event modifiers are unsupported; call native event methods in the handler instead`,
   injectStrictFailed: (key: string, tag: string): string => `injectStrict() could not resolve key "${key}" in <${tag}>`,
-  invalidDynamicTagName: (tagName: string): string =>
-    `html\`...\`: dynamic tag name "${tagName}" is not a valid HTML element name`,
   invariantViolated: (message: string): string => `invariant violated: ${message}`,
   lifecycleOutsideSetup: 'Lifecycle hooks must be called during component setup',
   listenNullTarget: (eventName: string): string =>
     `listen() called with a null/undefined target for event "${eventName}" — listener not attached`,
-  mismatchedDynamicCloseTag: 'html`...`: dynamic closing tag has no matching dynamic opening tag',
   propInvalidReflect: 'Structured props cannot use reflect:true — use prop.json() with reflect:false',
-  unknownEventModifier: (modifier: string, eventName: string): string =>
-    `@${eventName}.${modifier}: unknown event modifier ".${modifier}" — supported: prevent, stop, self, capture, once, passive`,
+  templateInterpolationInTag:
+    'html`...`: interpolations inside a tag must be named attributes, boolean attributes, events, or refs',
   useFieldAlreadyCalled: (tag: string): string =>
     `useField() was already called on <${tag}>. Call it only once per component.`,
   validationFailed: (tag: string, errors: string[]): string => `Validation failed for <${tag}>:\n${errors.join('\n')}`,

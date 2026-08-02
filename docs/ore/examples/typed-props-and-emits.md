@@ -47,7 +47,7 @@ define<AlertBoxProps>('alert-box', {
       ${when(
         () => props.open.value,
         () => html`
-          <div :data-variant=${props.variant}>
+          <div data-variant=${props.variant}>
             <span>${props.message}</span>
             <button @click=${close}>Close</button>
           </div>

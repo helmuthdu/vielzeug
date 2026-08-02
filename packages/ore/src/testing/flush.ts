@@ -30,9 +30,9 @@ export interface FlushOptions {
 
 /**
  * Flush pending reactive updates: waits for every tracked in-flight component
- * operation (an awaited async `setup()`, scheduled `onMounted` microtasks — including
- * ones registered by other `onMounted` callbacks) to settle, then yields one animation
- * frame and one final microtask pass for rAF-scheduled work.
+ * operation (scheduled `onMounted` microtasks — including ones registered by other
+ * `onMounted` callbacks) to settle, then yields one animation frame and one final
+ * microtask pass for rAF-scheduled work.
  *
  * This is deterministic, not a fixed number of guessed turns — `@vielzeug/ripple`'s
  * reactive graph itself settles synchronously on every signal write, so the only real
@@ -56,7 +56,7 @@ export interface FlushOptions {
 export async function flush(options: FlushOptions = {}): Promise<void> {
   const { logger } = options;
 
-  logger?.('[flush] draining pending component work (async setup, scheduled mount callbacks)');
+  logger?.('[flush] draining pending component work (scheduled mount callbacks)');
 
   let turns = 0;
 
@@ -64,7 +64,7 @@ export async function flush(options: FlushOptions = {}): Promise<void> {
     if (++turns > MAX_FLUSH_ITERATIONS) {
       throw new OreTimeoutError(
         `flush(): pending component work did not settle after ${MAX_FLUSH_ITERATIONS} microtask turns — ` +
-          `check for a component whose onMounted callback keeps re-registering itself, or an async setup() that never resolves.`,
+          `check for a component whose onMounted callback keeps re-registering itself.`,
       );
     }
 
@@ -95,7 +95,7 @@ export async function flush(options: FlushOptions = {}): Promise<void> {
  *
  * // in a test
  * await debugFlush();
- * // [flush] draining pending component work (async setup, scheduled mount callbacks)
+ * // [flush] draining pending component work (scheduled mount callbacks)
  * // [flush] pending work remains, turn 1
  * // ...
  * ```

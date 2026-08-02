@@ -312,88 +312,14 @@ describe('onFormReset()', () => {
   });
 });
 
-describe('async setup: no onError recovery', () => {
-  it('resets phase to UNINITIALIZED so component is not stuck in LOADING', async () => {
-    const errors: Event[] = [];
-
-    const { element } = await mount(
-      async () => {
-        throw new Error('async setup failed');
-      },
-      {
-        componentOptions: {
-          onError: () => {
-            errors.push(new Event('caught'));
-
-            return undefined;
-          },
-        },
-      },
-    );
-
-    expect(element).toBeDefined();
-  });
-
-  it('recovers with onError template when async setup throws', async () => {
-    const { query } = await mount(
-      async () => {
-        throw new Error('async setup failed');
-      },
-      {
-        componentOptions: {
-          onError: () => html`
-            <p class="error">Error</p>
-          `,
-        },
-      },
-    );
-
-    expect(query('.error')?.textContent).toBe('Error');
-  });
-});
-
-describe('async setup: stale result discard on disconnect', () => {
-  it('discards async setup result if element disconnects before promise resolves', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    let resolve!: () => void;
-    const blocker = new Promise<void>((r) => {
-      resolve = r;
-    });
-
-    const { element, flush } = await mount(
-      async () => {
-        await blocker;
-
-        return html`
-          <p class="content">Loaded</p>
-        `;
-      },
-      {
-        componentOptions: {
-          loading: () => html`
-            <p class="loading">Loading...</p>
-          `,
-        },
-      },
-    );
-
-    // Component is in LOADING state — loading template visible
-    expect(element.shadowRoot?.querySelector('.loading')).not.toBeNull();
-
-    // Disconnect before the async setup resolves
-    element.remove();
-    await flush();
-
-    // Now resolve the promise
-    resolve();
-    await flush();
-
-    // Element is disconnected — warn should have fired and content should NOT be mounted
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('disconnected'));
-    expect(document.body.contains(element)).toBe(false);
-
-    warnSpy.mockRestore();
+describe('setup return value', () => {
+  it('rejects a promise returned by untyped JavaScript consumers', async () => {
+    await expect(
+      mount((() =>
+        Promise.resolve(html`
+          <p>Later</p>
+        `)) as unknown as Parameters<typeof mount>[0]),
+    ).rejects.toThrow('setup() must return an HTMLResult or null');
   });
 });
 
@@ -510,20 +436,6 @@ describe('lifecycle hook aliases (R9)', () => {
   });
 });
 
-describe('html template: dynamic tag-name guard (R5)', () => {
-  it('throws immediately for an invalid dynamic tag name, same as the each() duplicate-key guard', async () => {
-    await expect(mount(() => html`<${'invalid tag name'}></${'invalid tag name'}>`)).rejects.toThrow(
-      'not a valid HTML element name',
-    );
-  });
-
-  it('throws immediately for a dynamic closing tag with no matching dynamic opening tag', async () => {
-    await expect(mount(() => html`<div>content</${'div'}>`)).rejects.toThrow(
-      'dynamic closing tag has no matching dynamic opening tag',
-    );
-  });
-});
-
 describe('testing/flush(): deterministic pending-work draining', () => {
   it('settles a deeply nested chain of self-registering onMounted callbacks with a single default flush()', async () => {
     // Regression test: flush() used to drain a fixed, guessed number of microtask turns
@@ -553,40 +465,5 @@ describe('testing/flush(): deterministic pending-work draining', () => {
     await flush();
 
     expect(ranDepth).toBe(DEPTH + 1);
-  });
-
-  it('does not hang waiting for an async setup() that has not resolved yet', async () => {
-    // Regression test: pending work must only track ore's own bounded, internal scheduling
-    // (queueMicrotask'd mount callbacks) — never an arbitrary, user-controlled setup()
-    // promise. A component deliberately left in LOADING state is a valid, stable state;
-    // flush() must return promptly instead of waiting for that promise to ever resolve.
-    let resolveSetup!: () => void;
-    const blocker = new Promise<void>((resolve) => {
-      resolveSetup = resolve;
-    });
-
-    const { element, flush } = await mount(
-      async () => {
-        await blocker;
-
-        return html`
-          <p class="loaded"></p>
-        `;
-      },
-      {
-        componentOptions: {
-          loading: () => html`
-            <p class="loading"></p>
-          `,
-        },
-      },
-    );
-
-    await expect(flush()).resolves.toBeUndefined();
-    expect(element.shadowRoot?.querySelector('.loading')).not.toBeNull();
-
-    // Cleanup: let the blocked setup resolve so it doesn't leak into other tests.
-    resolveSetup();
-    await flush();
   });
 });

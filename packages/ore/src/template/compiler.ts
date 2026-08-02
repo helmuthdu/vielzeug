@@ -7,8 +7,6 @@
  * - Expose `getStaticTemplate()` for use by the instantiator.
  */
 
-import { OreApiError, ORE_ERRORS } from '../errors';
-
 // ─── Slot kinds ───────────────────────────────────────────────────────────────
 // Const object + derived union, same pattern as `ComponentPhase`/`LIFECYCLE_EVENTS`
 // in types.ts — used here (rather than plain string literals) because the kind
@@ -19,19 +17,15 @@ import { OreApiError, ORE_ERRORS } from '../errors';
 export const SlotKind = {
   ATTR: 'attr',
   BOOL_ATTR: 'boolAttr',
-  CLOSE_TAG: 'closeTag',
   EVENT: 'event',
   NODE: 'node',
   REF: 'ref',
-  SPREAD: 'spread',
-  TAG_NAME: 'tagname',
 } as const;
 
 export type DetectedSlotKind = (typeof SlotKind)[keyof typeof SlotKind];
 
 type DetectedSlot = {
   kind: DetectedSlotKind;
-  modifiers?: string[];
   name?: string;
   prefix: string;
 };
@@ -45,7 +39,6 @@ export type SlotMeta = {
   elementId?: number;
   kind: DetectedSlotKind;
   mode?: 'attr' | 'bool';
-  modifiers?: string[];
   name?: string;
 };
 
@@ -61,37 +54,18 @@ export type CompiledStaticTemplate = {
 const EVENT_RE = /\s+@([a-zA-Z_][-a-zA-Z0-9_.-]*)\s*=\s*["']?$/;
 const REF_RE = /\s+ref\s*=\s*["']?$/;
 const BOOL_ATTR_RE = /\s+\?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
-const ATTR_RE = /\s+:?([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
-
-const isInsideStartTag = (str: string): boolean => {
-  const lastOpen = str.lastIndexOf('<');
-  const lastClose = str.lastIndexOf('>');
-
-  if (lastOpen <= lastClose) return false;
-
-  // Must not be a closing tag (</...)
-  return str[lastOpen + 1] !== '/';
-};
+const ATTR_RE = /\s+([a-zA-Z_][-a-zA-Z0-9_]*)\s*=\s*["']?$/;
 
 const detectSlot = (str: string): DetectedSlot => {
   let m: RegExpExecArray | null;
-  const trimmed = str.trimEnd();
-
-  // Dynamic closing tag: interpolation is the closing tag name, e.g. strings[i] = "</"
-  if (trimmed.endsWith('</')) {
-    return { kind: SlotKind.CLOSE_TAG, prefix: str };
-  }
-
-  // Dynamic opening tag name: interpolation is the tag name itself, e.g. strings[i] = "<"
-  if (trimmed.endsWith('<')) {
-    return { kind: SlotKind.TAG_NAME, prefix: str };
-  }
 
   if ((m = EVENT_RE.exec(str))) {
     const prefix = str.slice(0, -m[0].length);
-    const parts = m[1].split('.');
+    const [name, ...modifiers] = m[1].split('.');
 
-    return { kind: SlotKind.EVENT, modifiers: parts.slice(1), name: parts[0], prefix };
+    if (modifiers.length > 0) throw new OreApiError(ORE_ERRORS.eventModifiersUnsupported(m[1]));
+
+    return { kind: SlotKind.EVENT, name, prefix };
   }
 
   if ((m = REF_RE.exec(str))) {
@@ -106,8 +80,11 @@ const detectSlot = (str: string): DetectedSlot => {
     return { kind: SlotKind.ATTR, name: m[1], prefix: str.slice(0, -m[0].length) };
   }
 
-  if (isInsideStartTag(str)) {
-    return { kind: SlotKind.SPREAD, prefix: str.trimEnd() };
+  const lastOpen = str.lastIndexOf('<');
+  const lastClose = str.lastIndexOf('>');
+
+  if (lastOpen > lastClose && str[lastOpen + 1] !== '/') {
+    throw new OreApiError(ORE_ERRORS.templateInterpolationInTag);
   }
 
   return { kind: SlotKind.NODE, prefix: str };
@@ -119,18 +96,17 @@ const templateCache = new WeakMap<TemplateStringsArray, CompiledStaticTemplate>(
 
 /**
  * Matches a string that ends in an attribute-assignment context, e.g. `...attr=`,
- * `...:value=`, `...@click=`, `...?disabled=`. Used together with tag-context
+ * `...@click=`, `...?disabled=`. Used together with tag-context
  * tracking (see below) to decide whether a quote immediately before an
  * interpolation is an attribute-value quote (strip it) or a literal text quote
  * (keep it) — previously every adjacent quote was stripped, so both
  * `` html`"${value}"` `` and prose like `area = "${area}"` lost their quotes.
  */
-const ATTR_VALUE_CONTEXT_RE = /[@?:]?[a-zA-Z_][-a-zA-Z0-9_.]*\s*=\s*$/;
+const ATTR_VALUE_CONTEXT_RE = /[@?]?[a-zA-Z_][-a-zA-Z0-9_.]*\s*=\s*$/;
 
 /**
- * Pre-process template strings to strip surrounding attribute quotes and the
- * closing `>` that follows a dynamic tag-name slot. This lets the main loop
- * operate on clean strings with no per-iteration state flags.
+ * Pre-process template strings to strip surrounding attribute quotes. This lets
+ * the main loop operate on clean strings with no per-iteration state flags.
  *
  * Quote stripping requires BOTH an attr-assignment tail AND start-tag context
  * (tracked by replaying the raw strings): `class = "${c}"` inside a tag is
@@ -146,8 +122,8 @@ const normalizeTemplateStrings = (strings: TemplateStringsArray): string[] => {
 
     // Tag context at the interpolation boundary is determined by all raw string
     // content up to it — including this string's own text before its final quote
-    // (same naive heuristic as isInsideStartTag: last angle bracket wins; attribute
-    // values containing '<'/'>' are outside the supported syntax either way).
+    // (last angle bracket wins; attribute values containing '<'/'>' are outside
+    // the supported syntax either way).
     for (const ch of s) {
       if (ch === '<') insideTag = true;
       else if (ch === '>') insideTag = false;
@@ -160,16 +136,6 @@ const normalizeTemplateStrings = (strings: TemplateStringsArray): string[] => {
       const next = out[i + 1];
 
       if (next.startsWith(lastChar)) out[i + 1] = next.slice(1);
-    }
-
-    // Strip leading `>` from the string that follows a dynamic closing tag:
-    // </${tagName}> — the `>` is the first character of strings[i+1]
-    const cur = out[i];
-
-    if (cur.trimEnd().endsWith('</')) {
-      const next = out[i + 1];
-
-      if (next.startsWith('>')) out[i + 1] = next.slice(1);
     }
   }
 
@@ -220,40 +186,12 @@ const buildStaticTemplate = (strings: TemplateStringsArray): CompiledStaticTempl
   let elementCounter = 0;
   let commentCounter = 0;
   const slots: SlotMeta[] = [];
-  const tagNameStack: number[] = [];
 
   for (let i = 0; i < normalized.length - 1; i++) {
     const raw = normalized[i];
     const slot = detectSlot(raw);
 
-    if (slot.kind === SlotKind.TAG_NAME) {
-      // Dynamic opening tag name: emit a placeholder custom element
-      const id = elementCounter++;
-
-      activeElementId = id;
-      tagNameStack.push(id);
-
-      // Remove trailing '<' from prefix and open placeholder element
-      const prefixWithoutAngle = raw.replace(/<\s*$/, '');
-
-      html += prefixWithoutAngle + `<ore-dyn-${id} ${ELEMENT_MARKER_ATTR}="${id}"`;
-      slots.push({ elementId: id, kind: SlotKind.TAG_NAME });
-    } else if (slot.kind === SlotKind.CLOSE_TAG) {
-      // Dynamic closing tag: close the matching placeholder element. An empty
-      // stack means this closing interpolation has no matching dynamic opener
-      // (malformed template) — fail fast instead of silently closing the
-      // wrong (or a nonexistent) placeholder element.
-      if (tagNameStack.length === 0) {
-        throw new OreApiError(ORE_ERRORS.mismatchedDynamicCloseTag);
-      }
-
-      const id = tagNameStack.pop()!;
-      const prefixWithoutClose = raw.replace(/<\/\s*$/, '');
-
-      html += prefixWithoutClose + `</ore-dyn-${id}>`;
-      slots.push({ kind: SlotKind.CLOSE_TAG });
-      activeElementId = undefined;
-    } else if (slot.kind === SlotKind.NODE) {
+    if (slot.kind === SlotKind.NODE) {
       html += slot.prefix + `<!--ore:${commentCounter}-->`;
       slots.push({ commentId: commentCounter, kind: SlotKind.NODE });
       commentCounter++;
@@ -272,7 +210,7 @@ const buildStaticTemplate = (strings: TemplateStringsArray): CompiledStaticTempl
       const mode: 'attr' | 'bool' | undefined =
         slot.kind === SlotKind.BOOL_ATTR ? 'bool' : slot.kind === SlotKind.ATTR ? 'attr' : undefined;
 
-      slots.push({ elementId: activeElementId, kind: slot.kind, mode, modifiers: slot.modifiers, name: slot.name });
+      slots.push({ elementId: activeElementId, kind: slot.kind, mode, name: slot.name });
     }
   }
 
@@ -311,3 +249,4 @@ export const followPath = (root: Node, path: NodePath): Node => {
 
   return node;
 };
+import { OreApiError, ORE_ERRORS } from '../errors';

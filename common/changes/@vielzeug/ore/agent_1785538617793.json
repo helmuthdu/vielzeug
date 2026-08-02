@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: consolidate runtime APIs at the root; remove subpaths, model(), form-controller policy, onError recovery, and colon bindings; require synchronous setup and explicit unsafeHtml()",
+      "packageName": "@vielzeug/ore",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

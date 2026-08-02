@@ -26,7 +26,7 @@ define('search-list', {
     );
 
     return html`
-      <input :value=${query} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
+      <input value=${query} @input=${(e: Event) => (query.value = (e.target as HTMLInputElement).value)} />
 
       ${when(
         () => filtered.value.length > 0,

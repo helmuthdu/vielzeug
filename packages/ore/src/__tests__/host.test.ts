@@ -455,9 +455,9 @@ describe('core/host.ts', () => {
         const CountKey = Symbol('count') as InjectionKey<number>;
         let consumerValue: number | undefined;
 
-        const consumerTag = `test-nc-consumer-${Math.random().toString(36).slice(2)}`;
-        const innerTag = `test-nc-inner-${Math.random().toString(36).slice(2)}`;
-        const outerTag = `test-nc-outer-${Math.random().toString(36).slice(2)}`;
+        const consumerTag = 'ore-nearest-context-consumer';
+        const innerTag = 'ore-nearest-context-inner';
+        const outerTag = 'ore-nearest-context-outer';
 
         register(consumerTag, () => {
           consumerValue = inject(CountKey);
@@ -469,12 +469,16 @@ describe('core/host.ts', () => {
         register(innerTag, (_p) => {
           provide(CountKey, 2);
 
-          return html`<${consumerTag}></${consumerTag}>`;
+          return html`
+            <ore-nearest-context-consumer></ore-nearest-context-consumer>
+          `;
         });
         register(outerTag, (_p) => {
           provide(CountKey, 1);
 
-          return html`<${innerTag}></${innerTag}>`;
+          return html`
+            <ore-nearest-context-inner></ore-nearest-context-inner>
+          `;
         });
 
         const { element, flush } = await mount(outerTag);
@@ -550,7 +554,7 @@ describe('core/host.ts', () => {
 
       it('enables type-safe context sharing between parent and child components', async () => {
         const UserCtx = createContext<{ name: string; role: string }>('test-user');
-        const childTag = `test-ctx-child-${Math.random().toString(36).slice(2)}`;
+        const childTag = 'ore-context-sharing-child';
 
         register(childTag, () => {
           const user = inject(UserCtx);
@@ -563,7 +567,9 @@ describe('core/host.ts', () => {
         const { element, flush } = await mount((_p) => {
           provide(UserCtx, { name: 'Alice', role: 'admin' });
 
-          return html`<${childTag}></${childTag}>`;
+          return html`
+            <ore-context-sharing-child></ore-context-sharing-child>
+          `;
         });
 
         await flush();

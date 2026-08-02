@@ -3,10 +3,11 @@
  * Tests for the core HTML template system, attribute binding, event handling, and lifecycle
  */
 
+import { fireClick } from '@vielzeug/assay';
 import { computed, signal } from '@vielzeug/ripple';
 
 import { html } from '../index';
-import { fire, mount } from '../testing';
+import { mount } from '../testing';
 import { register } from './test-utils';
 
 describe('Template: HTML System', () => {
@@ -123,16 +124,22 @@ describe('Template: HTML System', () => {
       expect(query('div')?.textContent).toContain(payload);
     });
 
-    it('should produce identical DOM structure for the same template', () => {
+    it('mounts independent DOM for the same template', () => {
       const first = html`
         <div>${signal(1)}</div>
       `;
       const second = html`
         <div>${signal(2)}</div>
       `;
+      const firstHost = document.createElement('div');
+      const secondHost = document.createElement('div');
+      const cleanup = () => undefined;
 
-      // Both fragments come from the same cached template element
-      expect(first.fragment.firstElementChild?.tagName).toBe(second.fragment.firstElementChild?.tagName);
+      first.mount(firstHost, null, cleanup);
+      second.mount(secondHost, null, cleanup);
+
+      expect(firstHost.querySelector('div')?.textContent).toBe('1');
+      expect(secondHost.querySelector('div')?.textContent).toBe('2');
     });
 
     it('should preserve adjacent tag whitespace in compiled output', async () => {
@@ -368,7 +375,7 @@ describe('Template: HTML System', () => {
         `,
       );
 
-      fire.click(query('button')!);
+      fireClick(query('button')!);
       expect(clicked).toBe(true);
     });
 
@@ -560,41 +567,35 @@ describe('Template: HTML System', () => {
       expect(hasNumericComment).toBe(true);
     });
 
-    it('warns when an in-tag interpolation is not a spread object', async () => {
-      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      await mount(
-        () => html`
-          <div ${'not-a-spread'}></div>
-        `,
-      );
-
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining('spread'));
-      spy.mockRestore();
+    it('rejects anonymous interpolations inside a tag', async () => {
+      await expect(
+        mount(
+          () => html`
+            <div ${'not-an-attribute'}></div>
+          `,
+        ),
+      ).rejects.toThrow('interpolations inside a tag must be named attributes');
     });
 
-    it('warns on unknown event modifiers', async () => {
-      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      await mount(
-        () => html`
-          <button @click.preven=${() => undefined}>x</button>
-        `,
-      );
-
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining('.preven'));
-      spy.mockRestore();
+    it('rejects event modifiers with a native-event migration message', async () => {
+      await expect(
+        mount(
+          () => html`
+            <button @click.stop=${() => undefined}>x</button>
+          `,
+        ),
+      ).rejects.toThrow('event modifiers are unsupported');
     });
   });
 });
 
-describe('Native value/checked sync via :value/:checked', () => {
-  it('should set input value via :value binding', async () => {
+describe('Native value and checked binding', () => {
+  it('sets an input value through an ordinary binding', async () => {
     const { query } = await mount(() => {
       const text = signal('hello');
 
       return html`
-        <input type="text" :value=${text} />
+        <input type="text" value=${text} />
       `;
     });
 
@@ -603,14 +604,14 @@ describe('Native value/checked sync via :value/:checked', () => {
     expect(input?.value).toBe('hello');
   });
 
-  it('should update :value binding when signal changes', async () => {
+  it('updates an ordinary value binding when its signal changes', async () => {
     const { flush, query } = await mount(() => {
       const text = signal('hello');
 
       return html`
         <div>
           <button @click=${() => (text.value = 'world')}>Update</button>
-          <input type="text" :value=${text} />
+          <input type="text" value=${text} />
         </div>
       `;
     });
@@ -619,10 +620,30 @@ describe('Native value/checked sync via :value/:checked', () => {
 
     expect(input.value).toBe('hello');
 
-    fire.click(query('button')!);
+    fireClick(query('button')!);
     await flush();
 
     expect(input.value).toBe('world');
+  });
+
+  it('sets a radio input checked state through an ordinary boolean binding', async () => {
+    const selected = signal(true);
+    const { flush, query } = await mount(
+      () => html`
+        <input type="radio" ?checked=${selected} value="choice" />
+      `,
+    );
+
+    const input = query<HTMLInputElement>('input')!;
+
+    expect(input.checked).toBe(true);
+    expect(input.value).toBe('choice');
+
+    selected.value = false;
+    await flush();
+
+    expect(input.checked).toBe(false);
+    expect(input.value).toBe('choice');
   });
 });
 
@@ -949,7 +970,7 @@ describe('Computed Values', () => {
         () => html`
           <input
             type="email"
-            :value=${computed(() => email.value)}
+            value=${computed(() => email.value)}
             @input=${(e: Event) => (email.value = (e.target as HTMLInputElement).value)} />
           <span class="error">${error}</span>
         `,
@@ -985,7 +1006,7 @@ describe('Computed Values', () => {
         () => html`
           <input
             type="password"
-            :value=${computed(() => password.value)}
+            value=${computed(() => password.value)}
             @input=${(e: Event) => (password.value = (e.target as HTMLInputElement).value)} />
           <div class="strength">${strength}</div>
         `,

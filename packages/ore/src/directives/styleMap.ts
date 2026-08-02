@@ -32,7 +32,7 @@ const toStyleValue = (value: StyleInput): string => {
  * const color = signal('red');
  * const size = signal(16);
  *
- * html`<div :style=${styleMap({
+ * html`<div style=${styleMap({
  *   backgroundColor: color,
  *   width: () => `${size.value}px`,
  *   padding: '10px'

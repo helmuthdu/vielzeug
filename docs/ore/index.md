@@ -5,7 +5,7 @@ package: ore
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, refine, orbit]
-exports: [define, prop, html, css, ref, createContext, inject, injectStrict, provide, onMounted, onCleanup, useEmit, useSlots, getHost, bind, aria, each, when, classMap, styleMap, model, createId, createStableId, resetStableIdCounter, setRawSanitizer, OreError, BindOptions]
+exports: [define, prop, html, css, ref, createContext, inject, injectStrict, provide, onMounted, onCleanup, onEvent, onElement, onFormReset, watchEffect, useEmit, useSlots, getHost, bind, each, when, classMap, styleMap, live, unsafeHtml, useField, intersectionObserver, mediaObserver, mutationObserver, resizeObserver, createId, createStableId, resetStableIdCounter, OreError, OreApiError, OreInternalError, OreLifecycleError, BindOptions]
 environments: [browser]
 ---
 
@@ -70,15 +70,15 @@ define('my-counter', {
 ::: code-group
 
 ```sh [pnpm]
-pnpm add @vielzeug/ore
+pnpm add @vielzeug/ore @vielzeug/ripple
 ```
 
 ```sh [npm]
-npm install @vielzeug/ore
+npm install @vielzeug/ore @vielzeug/ripple
 ```
 
 ```sh [yarn]
-yarn add @vielzeug/ore
+yarn add @vielzeug/ore @vielzeug/ripple
 ```
 
 :::
@@ -127,13 +127,13 @@ define('my-counter', {
 - Props via `prop.*` helpers (`prop.string`, `prop.number`, `prop.bool`, `prop.oneOf`, `prop.json`, `prop.data`) or raw `PropDef` objects
 - `setup(props)` takes only props and returns an `HTMLResult` directly: `return html\`...\``
 - Lifecycle hooks — `onMounted`, `onCleanup`, `onEvent`, `onElement`, `watchEffect` — plain functions imported from `@vielzeug/ore`, called directly from `setup()` or any composable it calls
-- Directives: `each` (keyed reactive list rendering), `classMap`, `styleMap`, `when`, `model`, `raw`
+- Directives: `each` (keyed reactive list rendering), `classMap`, `styleMap`, `when`, `live`, `unsafeHtml`
 - Host bindings via `bind({ attr, class, style, on })` — pass `{ target: el }` to bind any off-host element
 - Reactive ARIA sync via `bind({ aria }, { target })` — applies `aria-*` attributes reactively to any element, auto-cleanup on disconnect
 - Context via `provide(key, value)` / `inject(key)`; typed emit/slots via `useEmit<Emits>()` / `useSlots<SlotNames>()`
-- Form-associated helpers (`@vielzeug/ore/forms`): `useField()`, `createFormContext()`
-- Observers (`@vielzeug/ore/observers`)
-- Testing utilities (`@vielzeug/ore/testing`) — `mount`, `renderHook`, `fire`, `user`, `waitFor`, `cleanup`
+- Form-associated `useField()` and observer helpers are root exports
+- Testing utilities (`@vielzeug/ore/testing`) — `mount`, `renderHook`, `flush`, `cleanup`
+- Generic testing utilities (scoped queries, named event dispatchers, and async waits) are exported by `@vielzeug/assay`
 - Debug utilities (`@vielzeug/ore/testing`) — `debugFlush()` for diagnosing update timing
 
 </div>
@@ -142,11 +142,9 @@ define('my-counter', {
 
 | Import                      | Purpose                                                                       |
 | --------------------------- | ----------------------------------------------------------------------------- |
-| `@vielzeug/ore`            | Core component API and utilities (`define`, `prop`, `html`, `css`, context), plus the everyday template directives (`each`, `when`, `model`, `classMap`, `styleMap`) |
-| `@vielzeug/ore/directives` | The advanced/niche directives (`live`, `raw`) and the custom-directive authoring API (`createDirectiveResult`, `createSpreadObject`) |
-| `@vielzeug/ore/forms`      | `useField`, `createFormContext`, `FORM_CONTEXT_KEY`                          |
-| `@vielzeug/ore/observers`  | `resizeObserver`, `intersectionObserver`, `mediaObserver`, `mutationObserver` |
-| `@vielzeug/ore/testing`    | `mount`, `fire`, `user`, `waitFor`, `cleanup`, `debugFlush`, and helpers      |
+| `@vielzeug/ore`            | All browser runtime APIs: components, directives, `useField`, and observers |
+| `@vielzeug/ore/testing`    | Ore-specific mounting, lifecycle flushing, hooks, cleanup, and form internals |
+| `@vielzeug/assay`          | Generic DOM events, scoped queries, and async waiting                         |
 
 ## Documentation
 

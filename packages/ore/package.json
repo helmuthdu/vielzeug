@@ -16,24 +16,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./directives": {
-      "source": "./src/directives/index.ts",
-      "types": "./dist/directives/index.d.ts",
-      "import": "./dist/directives.js",
-      "require": "./dist/directives.cjs"
-    },
-    "./forms": {
-      "source": "./src/forms/index.ts",
-      "types": "./dist/forms/index.d.ts",
-      "import": "./dist/forms.js",
-      "require": "./dist/forms.cjs"
-    },
-    "./observers": {
-      "source": "./src/observers/index.ts",
-      "types": "./dist/observers/index.d.ts",
-      "import": "./dist/observers.js",
-      "require": "./dist/observers.cjs"
-    },
     "./testing": {
       "source": "./src/testing/index.ts",
       "types": "./dist/testing/index.d.ts",
@@ -49,6 +31,7 @@
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
     "test": "vitest",
+    "test:types": "tsc -p tsconfig.json --noEmit",
     "build:bundle": "vite build --config vite.bundle.config.ts"
   },
   "publishConfig": {
@@ -58,11 +41,9 @@
   "engines": {
     "node": ">=22"
   },
-  "dependencies": {
-    "@vielzeug/ripple": "workspace:*"
-  },
   "peerDependencies": {
-    "@vielzeug/assay": "workspace:^"
+    "@vielzeug/assay": "workspace:^",
+    "@vielzeug/ripple": "workspace:^"
   },
   "peerDependenciesMeta": {
     "@vielzeug/assay": {
@@ -72,6 +53,7 @@
   "devDependencies": {
     "@types/node": "^26.1.0",
     "@vielzeug/assay": "workspace:*",
+    "@vielzeug/ripple": "workspace:*",
     "axe-core": "^4.12.1",
     "jsdom": "^29.1.1",
     "typescript": "^6.0.3",

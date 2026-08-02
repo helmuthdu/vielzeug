@@ -9,7 +9,7 @@
 import { type Readable } from '@vielzeug/ripple';
 
 import { type PropMeta } from '../props';
-import { type DirectiveResult, type HTMLResult, type Ref, type RefCallback, type SpreadObject } from './result';
+import { type DirectiveResult, type HTMLResult, type Ref, type RefCallback } from './result';
 
 // ─── Binding variants ─────────────────────────────────────────────────────────
 
@@ -40,7 +40,6 @@ export type EventBinding = {
   el: HTMLElement;
   handler: (e: Event) => void;
   name: string;
-  options?: AddEventListenerOptions;
   type: 'event';
 };
 
@@ -65,11 +64,4 @@ export type DirectiveBinding = {
   type: 'directive';
 };
 
-/** Element-spread binding applied by model() and similar helpers. */
-export type SpreadBinding = {
-  el: HTMLElement;
-  spread: SpreadObject;
-  type: 'spread';
-};
-
-export type Binding = AttrBinding | EventBinding | RefBinding | HtmlBinding | DirectiveBinding | SpreadBinding;
+export type Binding = AttrBinding | EventBinding | RefBinding | HtmlBinding | DirectiveBinding;

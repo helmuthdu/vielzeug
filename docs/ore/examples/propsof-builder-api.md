@@ -26,7 +26,7 @@ define('x-button', {
   },
   setup(props) {
     return html`
-      <button ?disabled=${props.disabled} :data-size=${props.size} :data-variant=${props.variant}>
+      <button ?disabled=${props.disabled} data-size=${props.size} data-variant=${props.variant}>
         ${() => (props.count.value > 0 ? html`<span class="badge">${props.count}</span>` : '')} ${props.label}
       </button>
     `;

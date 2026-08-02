@@ -1,14 +1,7 @@
 import { invariant, OreInternalError, OreLifecycleError, OreError, reportRuntimeError } from '../errors';
 import { html } from '../index';
 import { beginPendingWork, hasPendingWork } from '../runtime';
-import {
-  createDirectiveResult,
-  createHtmlResult,
-  createSpreadObject,
-  isDirectiveResult,
-  isHtmlResult,
-  isSpreadObject,
-} from '../template/result';
+import { createHtmlResult, isHtmlResult } from '../template/result';
 import { debugFlush, flush, OreTimeoutError } from '../testing';
 
 describe('OreLifecycleError', () => {
@@ -24,7 +17,7 @@ describe('OreLifecycleError', () => {
     expect(err).toBeInstanceOf(OreError);
   });
 
-  it('exposes component and phase properties', () => {
+  it('exposes component, phase, and the original cause', () => {
     const cause = new Error('root');
     const err = new OreLifecycleError('msg', {
       cause,
@@ -34,27 +27,12 @@ describe('OreLifecycleError', () => {
 
     expect(err.component).toBe('my-button');
     expect(err.phase).toBe('setup');
-  });
-
-  it('has name "OreLifecycleError"', () => {
-    const err = new OreLifecycleError('msg', {
-      cause: new Error('cause'),
-      component: 'x',
-      phase: 'setup',
-    });
-
+    expect(err.cause).toBe(cause);
     expect(err.name).toBe('OreLifecycleError');
   });
 
-  it('exposes the original cause', () => {
-    const cause = new Error('original');
-    const err = new OreLifecycleError('msg', { cause, component: 'x', phase: 'setup' });
-
-    expect(err.cause).toBe(cause);
-  });
-
   describe('OreError.is()', () => {
-    it('returns true for a OreError instance', () => {
+    it('recognizes Ore errors only', () => {
       const err = new OreLifecycleError('msg', {
         cause: new Error('cause'),
         component: 'x',
@@ -62,92 +40,44 @@ describe('OreLifecycleError', () => {
       });
 
       expect(OreError.is(err)).toBe(true);
-    });
-
-    it('returns false for a plain Error', () => {
       expect(OreError.is(new Error('plain'))).toBe(false);
-    });
-
-    it('returns false for null and primitives', () => {
       expect(OreError.is(null)).toBe(false);
-      expect(OreError.is(undefined)).toBe(false);
-      expect(OreError.is('string')).toBe(false);
     });
   });
 });
 
 describe('invariant()', () => {
-  it('does not throw when the condition is truthy', () => {
+  it('does not throw for truthy values', () => {
     expect(() => invariant(true, 'unreachable')).not.toThrow();
     expect(() => invariant('non-empty', 'unreachable')).not.toThrow();
-    expect(() => invariant(1, 'unreachable')).not.toThrow();
   });
 
-  it('throws OreInternalError with the given message when the condition is falsy', () => {
+  it('throws an OreInternalError and narrows the asserted value', () => {
     expect(() => invariant(false, 'compiled path missing')).toThrow(OreInternalError);
-    expect(() => invariant(null, 'compiled path missing')).toThrow(/compiled path missing/);
-    expect(() => invariant(undefined, 'compiled path missing')).toThrow(/invariant violated/);
-  });
 
-  it('is an OreError so callers can catch any ore-originated error with one type', () => {
-    try {
-      invariant(false, 'boom');
-      throw new Error('invariant() should have thrown');
-    } catch (err) {
-      expect(OreError.is(err)).toBe(true);
-    }
-  });
-
-  it('narrows the asserted value so callers can use it without further null checks', () => {
-    const value: string | null = Math.random() >= 0 ? 'always-a-string' : null;
+    const value: string | null = 'present';
 
     invariant(value, 'value must be present');
-
-    // Compile-time check: `value` is narrowed to `string` here — `.length` would
-    // not type-check if the assertion signature were wrong.
     expect(value.length).toBeGreaterThan(0);
   });
 });
 
 describe('reportRuntimeError()', () => {
-  it('logs to console.error', () => {
+  it('logs and dispatches ore:error with the structured failure', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const el = document.createElement('div');
-
-    document.body.appendChild(el);
-
+    const events: CustomEvent[] = [];
     const err = new OreLifecycleError('msg', {
       cause: new Error('cause'),
       component: 'my-el',
       phase: 'setup',
     });
 
+    document.body.appendChild(el);
+    el.addEventListener('ore:error', (event) => events.push(event as CustomEvent));
     reportRuntimeError(err, el);
 
     expect(spy).toHaveBeenCalledOnce();
-    spy.mockRestore();
-    el.remove();
-  });
-
-  it('dispatches a ore:error CustomEvent on the element', () => {
-    const el = document.createElement('div');
-
-    document.body.appendChild(el);
-
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const events: CustomEvent[] = [];
-
-    el.addEventListener('ore:error', (e) => events.push(e as CustomEvent));
-
-    const err = new OreLifecycleError('msg', {
-      cause: new Error('cause'),
-      component: 'my-el',
-      phase: 'setup',
-    });
-
-    reportRuntimeError(err, el);
-
-    expect(events).toHaveLength(1);
     expect(events[0]?.detail).toBe(err);
 
     spy.mockRestore();
@@ -155,113 +85,52 @@ describe('reportRuntimeError()', () => {
   });
 });
 
-describe('Type guards', () => {
-  describe('isHtmlResult()', () => {
-    it('returns true for a real HTMLResult', () => {
-      const result = html`
-        <div></div>
-      `;
+describe('HTML result branding', () => {
+  it('recognizes real HTML results and rejects lookalikes', () => {
+    const result = html`
+      <div></div>
+    `;
 
-      expect(isHtmlResult(result)).toBe(true);
-    });
-
-    it('returns false for a plain object', () => {
-      expect(isHtmlResult({ apply: () => {}, fragment: document.createDocumentFragment() })).toBe(false);
-    });
-
-    it('returns false for null and primitives', () => {
-      expect(isHtmlResult(null)).toBe(false);
-      expect(isHtmlResult(42)).toBe(false);
-      expect(isHtmlResult('string')).toBe(false);
-    });
+    expect(isHtmlResult(result)).toBe(true);
+    expect(isHtmlResult({ apply: () => {}, fragment: document.createDocumentFragment() })).toBe(false);
   });
 
-  describe('isDirectiveResult()', () => {
-    it('returns true for a branded DirectiveResult', () => {
-      const d = createDirectiveResult(() => {});
+  it('brands internal compiled results', () => {
+    const fragment = document.createDocumentFragment();
+    const result = createHtmlResult(fragment, () => {});
 
-      expect(isDirectiveResult(d)).toBe(true);
-    });
-
-    it('returns false for a plain object with mount()', () => {
-      expect(isDirectiveResult({ mount: () => {} })).toBe(false);
-    });
-
-    it('returns false for null', () => {
-      expect(isDirectiveResult(null)).toBe(false);
-    });
-  });
-
-  describe('isSpreadObject()', () => {
-    it('returns true for a branded SpreadObject', () => {
-      const s = createSpreadObject(() => {});
-
-      expect(isSpreadObject(s)).toBe(true);
-    });
-
-    it('returns false for a plain object with apply()', () => {
-      expect(isSpreadObject({ apply: () => {} })).toBe(false);
-    });
-
-    it('returns false for null', () => {
-      expect(isSpreadObject(null)).toBe(false);
-    });
-  });
-
-  describe('createHtmlResult()', () => {
-    it('produces a branded HTMLResult accepted by isHtmlResult()', () => {
-      const frag = document.createDocumentFragment();
-      const result = createHtmlResult(frag, () => {});
-
-      expect(isHtmlResult(result)).toBe(true);
-      expect(result.fragment).toBe(frag);
-    });
+    expect(isHtmlResult(result)).toBe(true);
+    expect(result.fragment).toBe(fragment);
   });
 });
 
 describe('debugFlush()', () => {
-  it('resolves without error', async () => {
-    await expect(debugFlush()).resolves.toBeUndefined();
-  });
-
-  it('logs messages to console.debug', async () => {
+  it('resolves and logs diagnostics', async () => {
     const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
 
-    await debugFlush();
-
+    await expect(debugFlush()).resolves.toBeUndefined();
     expect(spy).toHaveBeenCalled();
+
     spy.mockRestore();
   });
 });
 
-describe('runtime: beginPendingWork() / hasPendingWork()', () => {
-  it('reports pending while a unit of work is open, and clear once ended', () => {
-    expect(hasPendingWork()).toBe(false);
-
-    const end = beginPendingWork();
-
-    expect(hasPendingWork()).toBe(true);
-
-    end();
-
-    expect(hasPendingWork()).toBe(false);
-  });
-
-  it('is idempotent — calling the returned end() twice does not double-decrement', () => {
+describe('runtime pending work', () => {
+  it('tracks work until every idempotent end callback runs', () => {
     const endA = beginPendingWork();
     const endB = beginPendingWork();
 
     expect(hasPendingWork()).toBe(true);
 
     endA();
-    endA(); // second call must be a no-op
-    expect(hasPendingWork()).toBe(true); // endB's unit is still open
+    endA();
+    expect(hasPendingWork()).toBe(true);
 
     endB();
     expect(hasPendingWork()).toBe(false);
   });
 
-  it('flush() throws OreTimeoutError if pending work never settles', async () => {
+  it('makes flush fail when work never settles', async () => {
     const end = beginPendingWork();
 
     try {

@@ -3,12 +3,11 @@
  *
  * Responsibilities:
  * - Apply each Binding variant to the live DOM (attr, event, html, ref,
- *   directive, spread).
+ *   directive).
  * - Manage reactive effects and cleanup registration.
  * - Expose `applyBinding()` as the single dispatch entry point.
- * - Own the one signal-to-form-control write path (`syncFormControl`) shared by
- *   the attr engine and `model()` — there is no second implementation of
- *   input value/checked semantics anywhere else in the package.
+ * - Own the signal-to-form-control write path (`syncFormControl`) for regular
+ *   attribute bindings.
  */
 
 import { computed, effect as rawEffect, isReactive, type Readable, untrack } from '@vielzeug/ripple';
@@ -25,7 +24,6 @@ import {
   type HtmlBinding,
   type HtmlBindingValue,
   type RefBinding,
-  type SpreadBinding,
 } from './binding-types';
 import { isHtmlResult } from './result';
 
@@ -50,16 +48,14 @@ const signalEffect = (
 const isNativeFormInput = (el: HTMLElement): el is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement =>
   el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement;
 
-const isCheckbox = (el: HTMLElement): el is HTMLInputElement =>
-  el instanceof HTMLInputElement && el.type === 'checkbox';
+const isCheckableInput = (el: HTMLElement): el is HTMLInputElement =>
+  el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio');
 
 type LiveWriteState = { last: unknown };
 
 /**
  * The single write path from a reactive value to a form control's `value`/`checked`
- * property. Used by the attr binding engine (`value`/`checked` special cases) and
- * by `model()` — both share value-shape coercion and live-write semantics, so both
- * call this instead of keeping their own copies.
+ * property for regular attribute bindings.
  *
  * Live-write: when the binding was created from `live(source)`, a write is skipped
  * if the DOM value has diverged from this binding's last write (in-progress user
@@ -71,13 +67,13 @@ export const syncFormControl = (
   isLive?: boolean,
   state: LiveWriteState = { last: undefined },
 ): void => {
-  const checkbox = isCheckbox(el);
-  const next: boolean | string = checkbox ? Boolean(value) : value == null ? '' : String(value);
-  const current: boolean | string = checkbox ? (el as HTMLInputElement).checked : el.value;
+  const checkable = isCheckableInput(el);
+  const next: boolean | string = checkable ? Boolean(value) : value == null ? '' : String(value);
+  const current: boolean | string = checkable ? (el as HTMLInputElement).checked : el.value;
 
   if (isLive && state.last !== undefined && !Object.is(current, state.last) && !Object.is(current, next)) return;
 
-  if (checkbox) (el as HTMLInputElement).checked = next as boolean;
+  if (checkable) (el as HTMLInputElement).checked = next as boolean;
   else el.value = next as string;
 
   if (isLive) state.last = next;
@@ -148,7 +144,7 @@ export const applyAttrBinding = (binding: AttrBinding, registerCleanup: Register
 // ─── Events ───────────────────────────────────────────────────────────────────
 
 const applyEventBinding = (binding: EventBinding, registerCleanup: RegisterCleanup): void => {
-  registerCleanup(listen(binding.el, binding.name, binding.handler, binding.options));
+  registerCleanup(listen(binding.el, binding.name, binding.handler));
 };
 
 // ─── Refs ─────────────────────────────────────────────────────────────────────
@@ -228,12 +224,6 @@ const applyDirectiveBinding = (binding: DirectiveBinding, registerCleanup: Regis
   binding.directive.mount(binding.anchor, registerCleanup);
 };
 
-// ─── Spread ───────────────────────────────────────────────────────────────────
-
-const applySpreadBinding = (binding: SpreadBinding, registerCleanup: RegisterCleanup): void => {
-  binding.spread.apply(binding.el, registerCleanup);
-};
-
 // ─── Binding dispatch ─────────────────────────────────────────────────────────
 
 export const applyBinding = (binding: Binding, registerCleanup: RegisterCleanup): void => {
@@ -252,9 +242,6 @@ export const applyBinding = (binding: Binding, registerCleanup: RegisterCleanup)
       break;
     case 'ref':
       applyRefBinding(binding, registerCleanup);
-      break;
-    case 'spread':
-      applySpreadBinding(binding, registerCleanup);
       break;
   }
 };

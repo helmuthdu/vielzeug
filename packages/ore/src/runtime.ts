@@ -56,17 +56,14 @@ export const createRuntimeContext = (element: HTMLElement): RuntimeContext => ({
 // Why this exists: `@vielzeug/ripple`'s reactive graph settles fully synchronously on
 // every signal write (see ripple's scheduling.ts) — there is no async flush queue to wait
 // for there. The only genuinely async work `testing/flush()` needs to wait for is ore's own
-// bounded, internal scheduling: `queueMicrotask`-scheduled onMounted callbacks. An awaited
-// async setup() promise is deliberately NOT tracked here — it's arbitrary, unbounded
-// user-controlled application code (e.g. a real network fetch), and the LOADING template it
-// renders in the meantime is a valid, stable state to observe, not a transient one to wait
-// out. `testing/flush()` polls `hasPendingWork()` to know precisely when the bounded work has
+// bounded, internal scheduling: `queueMicrotask`-scheduled onMounted callbacks.
+// `testing/flush()` polls `hasPendingWork()` to know precisely when that work has
 // settled, instead of draining a fixed, guessed number of microtask turns.
 let pendingWork = 0;
 
 /**
- * @internal Mark one unit of async component work as started (async setup, a scheduled
- * mount-callback microtask). Call the returned function exactly once when it completes.
+ * @internal Mark one scheduled mount-callback microtask as started. Call the
+ * returned function exactly once when it completes.
  */
 export const beginPendingWork = (): (() => void) => {
   pendingWork++;

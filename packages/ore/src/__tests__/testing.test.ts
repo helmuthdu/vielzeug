@@ -1,3 +1,4 @@
+import { fireClick } from '@vielzeug/assay';
 /**
  * Testing - Render Utilities Tests
  * Tests for the testing utilities themselves
@@ -5,7 +6,7 @@
 import { signal } from '@vielzeug/ripple';
 
 import { html, prop } from '../index';
-import { cleanup, fire, mock, mount, mountComponent, user } from '../testing';
+import { cleanup, mock, mount, mountComponent } from '../testing';
 
 describe('Testing: Render Utilities', () => {
   describe('mount()', () => {
@@ -72,89 +73,8 @@ describe('Testing: Render Utilities', () => {
         `,
       );
 
-      fire.click(query('button')!);
+      fireClick(query('button')!);
       expect(spy).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('user', () => {
-    it('should type text', async () => {
-      const input = document.createElement('input');
-
-      document.body.appendChild(input);
-      await user.type(input, 'Hello');
-      expect(input.value).toBe('Hello');
-      input.remove();
-    });
-
-    it('should fill input (clear then type)', async () => {
-      const input = document.createElement('input');
-
-      input.value = 'old';
-      document.body.appendChild(input);
-      await user.fill(input, 'new');
-      expect(input.value).toBe('new');
-      input.remove();
-    });
-
-    it('should clear input', async () => {
-      const input = document.createElement('input');
-
-      input.value = 'initial';
-      document.body.appendChild(input);
-      await user.clear(input);
-      expect(input.value).toBe('');
-      input.remove();
-    });
-
-    it('should select option', async () => {
-      const select = document.createElement('select');
-
-      select.innerHTML = '<option value="1">One</option><option value="2">Two</option>';
-      document.body.appendChild(select);
-      await user.select(select, '2');
-      expect(select.value).toBe('2');
-      select.remove();
-    });
-
-    it('should press a key (keydown + keyup)', async () => {
-      const downSpy = vi.fn();
-      const upSpy = vi.fn();
-      const input = document.createElement('input');
-
-      input.addEventListener('keydown', downSpy);
-      input.addEventListener('keyup', upSpy);
-      document.body.appendChild(input);
-      await user.press(input, 'Enter');
-      expect(downSpy).toHaveBeenCalledOnce();
-      expect(upSpy).toHaveBeenCalledOnce();
-      input.remove();
-    });
-
-    it('should hover and unhover an element', async () => {
-      const enterSpy = vi.fn();
-      const leaveSpy = vi.fn();
-      const div = document.createElement('div');
-
-      div.addEventListener('pointerenter', enterSpy);
-      div.addEventListener('pointerleave', leaveSpy);
-      document.body.appendChild(div);
-      await user.hover(div);
-      expect(enterSpy).toHaveBeenCalledOnce();
-      await user.unhover(div);
-      expect(leaveSpy).toHaveBeenCalledOnce();
-      div.remove();
-    });
-
-    it('should double-click an element', async () => {
-      const spy = vi.fn();
-      const button = document.createElement('button');
-
-      button.addEventListener('dblclick', spy);
-      document.body.appendChild(button);
-      await user.dblClick(button);
-      expect(spy).toHaveBeenCalledOnce();
-      button.remove();
     });
   });
 
@@ -265,7 +185,7 @@ describe('Testing: Render Utilities', () => {
       });
 
       expect(query('.count')?.textContent).toBe('0');
-      await act(() => fire.click(query('button')!));
+      await act(() => fireClick(query('button')!));
       expect(query('.count')?.textContent).toBe('1');
     });
   });

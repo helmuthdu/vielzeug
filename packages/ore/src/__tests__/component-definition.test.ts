@@ -1,6 +1,6 @@
 import { signal } from '@vielzeug/ripple';
 
-import { define, html, prop } from '../index';
+import { define, html, onCleanup, prop } from '../index';
 import { mount } from '../testing';
 import { uniqueTag } from './test-utils';
 
@@ -113,25 +113,65 @@ describe('component definition and rendering', () => {
     });
 
     it('rebuilds setup state correctly after reconnect', async () => {
+      let setupRuns = 0;
+
       const fixture = await mount(
         (props) => {
+          const setupRun = ++setupRuns;
+
           return html`
-            <div class="count">${() => props.count.value}</div>
+            <div class="count">${() => `${setupRun}:${props.count.value}`}</div>
           `;
         },
         { componentOptions: { props: { count: prop.number(0) } } },
       );
 
       await fixture.attr('count', '1');
-      expect(fixture.query('.count')?.textContent).toBe('1');
+      expect(fixture.query('.count')?.textContent).toBe('1:1');
 
       fixture.element.remove();
       await fixture.flush();
       document.body.appendChild(fixture.element);
       await fixture.flush();
 
+      expect(setupRuns).toBe(2);
+
       await fixture.attr('count', '2');
-      expect(fixture.query('.count')?.textContent).toBe('2');
+      expect(fixture.query('.count')?.textContent).toBe('2:2');
+    });
+
+    it('disposes partial setup state when setup throws before a later retry', () => {
+      const cleanup = vi.fn();
+      const tag = uniqueTag('setup-retry');
+      let shouldThrow = true;
+
+      define(tag, {
+        setup: () => {
+          onCleanup(cleanup);
+
+          if (shouldThrow) throw new Error('setup failed');
+
+          return html`
+            <p>Recovered</p>
+          `;
+        },
+      });
+
+      const element = document.createElement(tag) as HTMLElement & {
+        connectedCallback(): void;
+        disconnectedCallback(): void;
+      };
+
+      expect(() => element.connectedCallback()).toThrow('setup failed');
+      expect(cleanup).toHaveBeenCalledOnce();
+
+      shouldThrow = false;
+      element.connectedCallback();
+
+      expect(element.shadowRoot?.textContent).toContain('Recovered');
+
+      element.disconnectedCallback();
+      expect(cleanup).toHaveBeenCalledTimes(2);
     });
   });
 
