@@ -310,7 +310,7 @@ define<OreStepperProps>(STEPPER_TAG, {
     });
 
     return html`
-      <nav part="nav" :aria-label="${props.label}">
+      <nav part="nav" aria-label="${props.label}">
         <ol class="steps" role="list" part="list">
           <slot></slot>
         </ol>

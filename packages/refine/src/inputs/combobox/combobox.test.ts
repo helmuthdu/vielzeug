@@ -1,5 +1,6 @@
+import { fireClick, fireInput, fireKeyDown } from '@vielzeug/assay';
 import { html } from '@vielzeug/ore';
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 import { signal } from '@vielzeug/ripple';
 
 describe('ore-combobox', () => {
@@ -49,7 +50,8 @@ describe('ore-combobox', () => {
 
       fixture.element.addEventListener('search', onInput);
 
-      await user.type(getInput()!, 'uni');
+      getInput()!.value += 'uni';
+      fireInput(getInput()!);
 
       expect(onInput).toHaveBeenCalled();
       expect((onInput.mock.calls.at(-1)?.[0] as CustomEvent).detail.query).toContain('uni');
@@ -69,9 +71,9 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
-      await user.press(input, 'Escape');
+      fireKeyDown(input, { key: 'Escape' });
       await fixture.flush();
 
       expect(onOpen).toHaveBeenCalled();
@@ -92,7 +94,7 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.press(input, 'Enter');
+      fireKeyDown(input, { key: 'Enter' });
       await fixture.flush();
 
       expect((onOpen.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('keyboard');
@@ -110,7 +112,7 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
 
       document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
@@ -131,10 +133,10 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
-      await user.click(fixture.query<HTMLElement>('.option')!);
+      fireClick(fixture.query<HTMLElement>('.option')!);
       await fixture.flush();
 
       expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('programmatic');
@@ -154,14 +156,14 @@ describe('ore-combobox', () => {
       const input = getInput();
 
       expect(input).toBeTruthy();
-      await user.click(input!);
+      fireClick(input!);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       const firstOption = fixture.query<HTMLElement>('.option');
 
       expect(firstOption).toBeTruthy();
-      await user.click(firstOption!);
+      fireClick(firstOption!);
 
       expect(onChange).toHaveBeenCalled();
 
@@ -182,14 +184,14 @@ describe('ore-combobox', () => {
       const input = getInput()!;
 
       // Open and select first option
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
-      await user.click(fixture.query<HTMLElement>('.option')!);
+      fireClick(fixture.query<HTMLElement>('.option')!);
       await fixture.flush();
 
       // Reopen
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -207,18 +209,18 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
-      await user.click(fixture.queryAll<HTMLElement>('.option')[0]!);
+      fireClick(fixture.queryAll<HTMLElement>('.option')[0]!);
       await fixture.flush();
 
       expect(input.value).toBe('United States');
       expect((fixture.element as ComboboxHost).value).toBe('us');
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
-      await user.press(input, 'Escape');
+      fireKeyDown(input, { key: 'Escape' });
       await fixture.flush();
 
       expect((fixture.element as ComboboxHost).value).toBe('us');
@@ -234,13 +236,13 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
-      await user.click(fixture.queryAll<HTMLElement>('.option')[0]!);
+      fireClick(fixture.queryAll<HTMLElement>('.option')[0]!);
       await fixture.flush();
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
 
       document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
@@ -259,17 +261,18 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
-      await user.click(fixture.queryAll<HTMLElement>('.option')[0]!);
+      fireClick(fixture.queryAll<HTMLElement>('.option')[0]!);
       await fixture.flush();
 
       expect((fixture.element as ComboboxHost).value).toBe('us');
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
-      await user.type(input, 'Ger');
+      input.value += 'Ger';
+      fireInput(input);
       await fixture.flush();
 
       expect((fixture.element as ComboboxHost).value).toBe('us');
@@ -329,7 +332,7 @@ describe('ore-combobox', () => {
 
       expect(input.getAttribute('aria-expanded')).toBe('false');
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
 
       expect(input.getAttribute('aria-expanded')).toBe('true');
@@ -371,8 +374,8 @@ describe('ore-combobox', () => {
       const input = getInput()!;
 
       input.focus();
-      await user.press(input, 'ArrowDown');
-      await user.press(input, 'Enter');
+      fireKeyDown(input, { key: 'ArrowDown' });
+      fireKeyDown(input, { key: 'Enter' });
 
       expect(onChange).toHaveBeenCalled();
     });
@@ -388,7 +391,7 @@ describe('ore-combobox', () => {
       const input = getInput()!;
 
       // Open the dropdown first, then type a query with no matches.
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -421,8 +424,9 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
-      await user.type(input, 'ger');
+      fireClick(input);
+      input.value += 'ger';
+      fireInput(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -447,7 +451,7 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -456,7 +460,8 @@ describe('ore-combobox', () => {
 
       expect(initialHeight).toBeGreaterThan(0);
 
-      await user.type(input, 'ger');
+      input.value += 'ger';
+      fireInput(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -480,11 +485,12 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
-      await user.type(input, 'king');
+      input.value += 'king';
+      fireInput(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -503,7 +509,7 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -511,7 +517,7 @@ describe('ore-combobox', () => {
 
       const option = fixture.query('.option'); // Select first option
 
-      await user.click(option!);
+      fireClick(option!);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -532,7 +538,7 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -542,12 +548,13 @@ describe('ore-combobox', () => {
 
       expect(firstOption).toBeTruthy();
 
-      await user.click(firstOption);
+      fireClick(firstOption);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
-      await user.type(input, 'ru');
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
+      input.value += 'ru';
+      fireInput(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -577,15 +584,15 @@ describe('ore-combobox', () => {
 
       if (!initialInput) throw new Error('Expected combobox input to exist before first click');
 
-      await user.click(initialInput);
+      fireClick(initialInput);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
-      await user.click(fixture.queryAll<HTMLElement>('.option')[0]!);
+      fireClick(fixture.queryAll<HTMLElement>('.option')[0]!);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
 
       const liveInput = getLocalInput();
@@ -594,7 +601,8 @@ describe('ore-combobox', () => {
 
       expect(fixture.element.shadowRoot?.querySelector('ore-input.trigger')?.shadowRoot?.activeElement).toBe(liveInput);
 
-      await user.type(liveInput, 'ru');
+      liveInput.value += 'ru';
+      fireInput(liveInput);
       await fixture.flush();
 
       const optionTexts = fixture.queryAll<HTMLElement>('.option').map((option) => option.textContent ?? '');
@@ -614,15 +622,16 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
-      await user.click(fixture.queryAll<HTMLElement>('.option')[0]!);
+      fireClick(fixture.queryAll<HTMLElement>('.option')[0]!);
       await fixture.flush();
 
-      await user.type(input, 'ger');
-      await user.press(input, 'Enter');
+      input.value += 'ger';
+      fireInput(input);
+      fireKeyDown(input, { key: 'Enter' });
       await fixture.flush();
 
       const detail = (onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail;
@@ -671,7 +680,7 @@ describe('ore-combobox', () => {
 
       expect(removeBtn).toBeTruthy();
 
-      await user.click(removeBtn!);
+      fireClick(removeBtn!);
       await fixture.flush();
 
       expect(fixture.queryAll('ore-chip').length).toBe(1);
@@ -690,7 +699,7 @@ describe('ore-combobox', () => {
 
       fixture.element.addEventListener('change', onChange);
 
-      await user.click(fixture.query<HTMLElement>('.clear-btn')!);
+      fireClick(fixture.query<HTMLElement>('.clear-btn')!);
       await fixture.flush();
 
       const detail = (onChange.mock.calls.at(-1)?.[0] as CustomEvent).detail;
@@ -709,7 +718,7 @@ describe('ore-combobox', () => {
 
       expect(input).toBeTruthy();
 
-      await user.click(input!);
+      fireClick(input!);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -723,7 +732,7 @@ describe('ore-combobox', () => {
       expect(usOption).toBeTruthy();
       expect(gbOption).toBeTruthy();
 
-      await user.click(usOption);
+      fireClick(usOption);
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('open')).toBe(true);
@@ -738,7 +747,7 @@ describe('ore-combobox', () => {
 
       expect(updatedGbOption).toBeTruthy();
 
-      await user.click(updatedGbOption);
+      fireClick(updatedGbOption);
       await fixture.flush();
 
       const remainingOptionTexts = fixture.queryAll<HTMLElement>('.option').map((opt) => opt.textContent ?? '');
@@ -758,7 +767,7 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -777,13 +786,13 @@ describe('ore-combobox', () => {
 
       const input = getInput()!;
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
-      await user.click(fixture.queryAll<HTMLElement>('.option')[1]!);
+      fireClick(fixture.queryAll<HTMLElement>('.option')[1]!);
       await fixture.flush();
 
-      await user.click(input);
+      fireClick(input);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -829,7 +838,7 @@ describe('ore-combobox', () => {
         combobox.shadowRoot?.querySelector('ore-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input') ??
         null;
 
-      await user.click(input as HTMLInputElement);
+      fireClick(input as HTMLInputElement);
       await fixture.flush();
 
       expect(
@@ -840,7 +849,7 @@ describe('ore-combobox', () => {
 
       optionsRef!.value = [{ label: 'Gamma', value: 'g' }];
       await fixture.flush();
-      await user.click(input as HTMLInputElement);
+      fireClick(input as HTMLInputElement);
       await fixture.flush();
 
       expect(
@@ -864,7 +873,7 @@ describe('ore-combobox', () => {
         combobox.shadowRoot?.querySelector('ore-input.trigger')?.shadowRoot?.querySelector<HTMLInputElement>('input') ??
         null;
 
-      await user.click(input as HTMLInputElement);
+      fireClick(input as HTMLInputElement);
       await fixture.flush();
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -884,8 +893,8 @@ describe('ore-combobox', () => {
 
       expect(element.checkValidity()).toBe(false);
 
-      await user.click(getInput()!);
-      await user.click(fixture.query('.option')!);
+      fireClick(getInput()!);
+      fireClick(fixture.query('.option')!);
 
       expect(element.checkValidity()).toBe(true);
     });
@@ -904,8 +913,8 @@ describe('ore-combobox', () => {
       document.body.appendChild(form);
       fixture = await mount('ore-combobox', { attrs: { value: 'us' }, container: form, html: optionsHtml });
 
-      await user.click(getInput()!);
-      await user.click(fixture.queryAll('.option')[1]!); // gb
+      fireClick(getInput()!);
+      fireClick(fixture.queryAll('.option')[1]!); // gb
 
       form.reset();
       await fixture.flush();

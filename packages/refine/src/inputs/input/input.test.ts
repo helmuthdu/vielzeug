@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick, fireInput } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-input', () => {
   let fixture: Fixture<HTMLElement>;
@@ -247,7 +248,8 @@ describe('ore-input', () => {
       document.body.appendChild(form);
       fixture = await mount('ore-input', { attrs: { value: 'initial' }, container: form });
 
-      await user.type(fixture.query<HTMLInputElement>('input')!, ' typed');
+      fixture.query<HTMLInputElement>('input')!.value += ' typed';
+      fireInput(fixture.query<HTMLInputElement>('input')!);
       expect(fixture.query<HTMLInputElement>('input')?.value).toBe('initial typed');
 
       form.reset();
@@ -266,7 +268,8 @@ describe('ore-input', () => {
       // Matches native <input>: programmatically setting the value attribute (unlike typing)
       // updates what a later reset() reverts to.
       await fixture.attr('value', 'updated-default');
-      await user.type(fixture.query<HTMLInputElement>('input')!, ' more');
+      fixture.query<HTMLInputElement>('input')!.value += ' more';
+      fireInput(fixture.query<HTMLInputElement>('input')!);
 
       form.reset();
       await fixture.flush();
@@ -352,7 +355,8 @@ describe('ore-input', () => {
 
       fixture.element.addEventListener('input', inputHandler);
 
-      await user.type(fixture.query<HTMLInputElement>('input')!, 'a');
+      fixture.query<HTMLInputElement>('input')!.value += 'a';
+      fireInput(fixture.query<HTMLInputElement>('input')!);
 
       expect(inputHandler).toHaveBeenCalledTimes(1);
 
@@ -528,7 +532,7 @@ describe('ore-input', () => {
     it('clicking the clear button empties the value and refocuses the input', async () => {
       fixture = await mount('ore-input', { attrs: { clearable: '', value: 'hello' } });
 
-      await user.click(fixture.query<HTMLButtonElement>('.clear-btn')!);
+      fireClick(fixture.query<HTMLButtonElement>('.clear-btn')!);
 
       expect(fixture.query<HTMLInputElement>('input')?.value).toBe('');
       expect(fixture.shadow?.activeElement).toBe(fixture.query('input'));
@@ -543,7 +547,7 @@ describe('ore-input', () => {
       fixture.element.addEventListener('input', inputHandler);
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.click(fixture.query<HTMLButtonElement>('.clear-btn')!);
+      fireClick(fixture.query<HTMLButtonElement>('.clear-btn')!);
 
       expect(inputHandler).toHaveBeenCalledWith(
         expect.objectContaining({ detail: expect.objectContaining({ value: '' }) }),
@@ -572,13 +576,13 @@ describe('ore-input', () => {
 
       const toggle = fixture.query<HTMLButtonElement>('.pwd-toggle-btn')!;
 
-      await user.click(toggle);
+      fireClick(toggle);
 
       expect(fixture.query<HTMLInputElement>('input')?.type).toBe('text');
       expect(toggle.getAttribute('aria-pressed')).toBe('true');
       expect(toggle.getAttribute('aria-label')).toBe('Hide password');
 
-      await user.click(toggle);
+      fireClick(toggle);
 
       expect(fixture.query<HTMLInputElement>('input')?.type).toBe('password');
       expect(toggle.getAttribute('aria-pressed')).toBe('false');
@@ -587,7 +591,7 @@ describe('ore-input', () => {
     it('refocuses the input after toggling visibility', async () => {
       fixture = await mount('ore-input', { attrs: { type: 'password', value: 'secret' } });
 
-      await user.click(fixture.query<HTMLButtonElement>('.pwd-toggle-btn')!);
+      fireClick(fixture.query<HTMLButtonElement>('.pwd-toggle-btn')!);
 
       expect(fixture.shadow?.activeElement).toBe(fixture.query('input'));
     });
@@ -778,7 +782,8 @@ describe('ore-input accessibility', () => {
 
       const inputEl = fixture.query<HTMLInputElement>('input')!;
 
-      await user.type(inputEl, 'hello');
+      inputEl.value += 'hello';
+      fireInput(inputEl);
 
       expect(inputEl.value).toBe('hello');
     });

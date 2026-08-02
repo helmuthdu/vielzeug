@@ -56,17 +56,6 @@ export const getAriaControls = (el: Element): null | string => el.getAttribute('
 /** Returns the `role` attribute value, or null. */
 export const getRole = (el: Element): null | string => el.getAttribute('role');
 
-// ── DOM query helpers ─────────────────────────────────────────────────────────
-
-/**
- * Generic, framework-agnostic — re-exported from `@vielzeug/assay` rather than duplicated here.
- * `dispatchPointer(el, type, init)` from earlier versions of this module is now
- * `fire.pointer<Type>(el, init)` (e.g. `fire.pointerEnter`/`fire.pointerLeave`), imported from
- * `@vielzeug/ore/testing` alongside `mount()` — pass `{ composed: true }` explicitly if you need
- * the event to cross shadow boundaries.
- */
-export { queryInShadow, queryAllInShadow, queryPart, getSlotted } from '@vielzeug/assay';
-
 // ── Form-associated component helpers ─────────────────────────────────────────
 
 /**
@@ -85,16 +74,6 @@ export const getFormValue = (el: HTMLElement & { value?: string }): null | strin
 export const isFormValid = (el: HTMLElement & { validity?: ValidityState }): boolean => {
   return el.validity?.valid ?? true;
 };
-
-// ── Timing helpers ────────────────────────────────────────────────────────────
-
-/**
- * Generic, framework-agnostic — re-exported from `@vielzeug/assay` rather than duplicated here.
- * `keyEvent(key, init)` from earlier versions of this module (construct-only, no dispatch, and
- * unused anywhere in this package's own tests) has been removed — use `fire.keyDown`/
- * `fire.keyboard` from `@vielzeug/ore/testing`, which construct and dispatch in one call.
- */
-export { nextTick, wait } from '@vielzeug/assay';
 
 // ── ID counter ────────────────────────────────────────────────────────────────
 

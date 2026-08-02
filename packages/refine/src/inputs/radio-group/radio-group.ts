@@ -14,7 +14,7 @@ import {
   watchEffect,
   when,
 } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 import { type Readable } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
@@ -286,9 +286,9 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
       <fieldset
         role="radiogroup"
         aria-required="${() => String(Boolean(props.required.value))}"
-        :aria-invalid="${choice.ariaInvalid}"
-        :aria-errormessage="${choice.ariaErrorMessage}"
-        :aria-describedby="${choice.ariaDescribedBy}">
+        aria-invalid="${choice.ariaInvalid}"
+        aria-errormessage="${choice.ariaErrorMessage}"
+        aria-describedby="${choice.ariaDescribedBy}">
         <legend id="${legendId}" ?hidden=${() => !props.label.value}>
           ${props.label}${when(
             () => Boolean(props.required.value),
@@ -304,7 +304,7 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
           class="helper-text"
           part="helper"
           id="${choice.assistiveId}"
-          :role="${() => (choice.errorText.value ? 'alert' : null)}"
+          role="${() => (choice.errorText.value ? 'alert' : null)}"
           aria-live="polite"
           ?hidden="${() => !choice.errorText.value && !choice.helperText.value}">
           ${() => choice.errorText.value || choice.helperText.value}

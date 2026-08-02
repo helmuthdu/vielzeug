@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireInput } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-textarea', () => {
   let fixture: Fixture<HTMLElement>;
@@ -144,7 +145,8 @@ describe('ore-textarea', () => {
       document.body.appendChild(form);
       fixture = await mount('ore-textarea', { attrs: { value: 'initial' }, container: form });
 
-      await user.type(fixture.query<HTMLTextAreaElement>('textarea')!, ' typed');
+      fixture.query<HTMLTextAreaElement>('textarea')!.value += ' typed';
+      fireInput(fixture.query<HTMLTextAreaElement>('textarea')!);
       expect(fixture.query<HTMLTextAreaElement>('textarea')?.value).toBe('initial typed');
 
       form.reset();
@@ -163,7 +165,8 @@ describe('ore-textarea', () => {
       // Matches native <textarea>: programmatically setting the value attribute (unlike
       // typing) updates what a later reset() reverts to.
       await fixture.attr('value', 'updated-default');
-      await user.type(fixture.query<HTMLTextAreaElement>('textarea')!, ' more');
+      fixture.query<HTMLTextAreaElement>('textarea')!.value += ' more';
+      fireInput(fixture.query<HTMLTextAreaElement>('textarea')!);
 
       form.reset();
       await fixture.flush();
@@ -270,7 +273,8 @@ describe('ore-textarea', () => {
 
       fixture.element.addEventListener('input', inputHandler);
 
-      await user.type(fixture.query<HTMLTextAreaElement>('textarea')!, 'h');
+      fixture.query<HTMLTextAreaElement>('textarea')!.value += 'h';
+      fireInput(fixture.query<HTMLTextAreaElement>('textarea')!);
 
       expect(inputHandler).toHaveBeenCalled();
 
@@ -404,7 +408,8 @@ describe('ore-textarea', () => {
       expect(counter?.className).not.toContain('at-limit');
 
       // Type 9 characters (90% of maxlength) - should trigger near-limit
-      await user.type(ta, '123456789');
+      ta.value += '123456789';
+      fireInput(ta);
       await fixture.flush();
 
       // Re-query the counter-element to get updated class
@@ -415,7 +420,8 @@ describe('ore-textarea', () => {
       expect(counter?.className).toContain('near-limit');
 
       // Type 1 more character to reach the limit
-      await user.type(ta, '0');
+      ta.value += '0';
+      fireInput(ta);
       await fixture.flush();
 
       // Re-query the counter-element again
@@ -558,7 +564,8 @@ describe('ore-textarea accessibility', () => {
 
       const ta = fixture.query<HTMLTextAreaElement>('textarea')!;
 
-      await user.type(ta, 'hello');
+      ta.value += 'hello';
+      fireInput(ta);
 
       expect(ta.value).toBe('hello');
     });

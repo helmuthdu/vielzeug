@@ -1,5 +1,6 @@
+import { fireClick } from '@vielzeug/assay';
 import { css } from '@vielzeug/ore';
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 vi.mock('../../styles', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../styles')>();
@@ -191,7 +192,7 @@ describe('ore-checkbox-group', () => {
 
       const second = getCheckboxes()[1];
 
-      await user.click(second);
+      fireClick(second);
       await fixture.flush();
 
       expect(fixture.element.getAttribute('values')).toBe('a,b');
@@ -213,7 +214,7 @@ describe('ore-checkbox-group', () => {
         valuesDuringChange = fixture.element.getAttribute('values');
       });
 
-      await user.click(getCheckboxes()[1]!);
+      fireClick(getCheckboxes()[1]!);
 
       // Pins the reactive `bind({ attr: { values } })` write to run synchronously with the
       // selection change, not on a later microtask/flush — the attribute is a public part of
@@ -249,7 +250,7 @@ describe('ore-checkbox-group', () => {
 
       expect(element.checkValidity()).toBe(false);
 
-      await user.click(getCheckboxes()[0]!);
+      fireClick(getCheckboxes()[0]!);
       await fixture.flush();
 
       expect(element.checkValidity()).toBe(true);
@@ -271,7 +272,7 @@ describe('ore-checkbox-group', () => {
       fixture = await mount('ore-checkbox-group', { attrs: { values: 'a' }, container: form, html: checkboxHtml });
       await fixture.flush();
 
-      await user.click(getCheckboxes()[1]!);
+      fireClick(getCheckboxes()[1]!);
       await fixture.flush();
       expect(fixture.element.getAttribute('values')).toBe('a,b');
 

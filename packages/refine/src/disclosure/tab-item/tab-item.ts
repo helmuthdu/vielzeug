@@ -139,7 +139,7 @@ define<OreTabItemProps>(TAB_ITEM_TAG, {
         type="button"
         part="tab"
         ref="${buttonRef}"
-        :id="${tabId}"
+        id="${tabId}"
         aria-selected="${isActive}"
         tabindex="${() => (isActive.value ? '0' : '-1')}"
         aria-disabled="${isDisabled}"

@@ -11,7 +11,7 @@ import {
   useEmit,
   watchEffect,
 } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { AddEventListeners, ComponentSize, RoundedSize, ThemeColor } from '../../types';
@@ -791,20 +791,20 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
       <ore-input
         class="trigger"
         ref=${bitInputRef}
-        :label="${() => props.label.value ?? ''}"
-        :placeholder="${inputPlaceholder}"
-        :label-placement="${() => props['label-placement'].value ?? 'inset'}"
-        :color="${inputColor}"
-        :size="${inputSize}"
-        :variant="${inputVariant}"
-        :rounded="${inputRounded}"
-        :helper="${() => props.helper.value ?? ''}"
-        :error="${() => props.error.value ?? ''}"
+        label="${() => props.label.value ?? ''}"
+        placeholder="${inputPlaceholder}"
+        label-placement="${() => props['label-placement'].value ?? 'inset'}"
+        color="${inputColor}"
+        size="${inputSize}"
+        variant="${inputVariant}"
+        rounded="${inputRounded}"
+        helper="${() => props.helper.value ?? ''}"
+        error="${() => props.error.value ?? ''}"
         ?disabled="${isDisabled}"
         ?required="${() => false}"
         ?fullwidth="${inputFullwidth}"
         ?success="${() => props.success.value}"
-        :name="${() => props.name.value ?? ''}"
+        name="${() => props.name.value ?? ''}"
         @click="${(e: MouseEvent) => {
           fieldPress.handleClick(e);
         }}"
@@ -868,7 +868,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
         <div
           role="listbox"
           id="${() => `${comboId}-listbox`}"
-          :style="${() =>
+          style="${() =>
             isOpen.value && filteredOptions.value.length > 0 ? `height:${filteredOptions.value.length * 36}px;` : ''}"
           aria-label="${() => props.label.value || props.placeholder.value || 'Options'}"
           ref=${(el: HTMLElement | null) => {
@@ -905,7 +905,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
                   id="${`${comboId}-opt-${index}`}"
                   data-option-index="${index}"
                   data-option-value="${option.value}"
-                  :aria-selected="${() =>
+                  aria-selected="${() =>
                     String(
                       isMultiple() ? selectedValues.value.includes(option.value) : selectedValue.value === option.value,
                     )}"

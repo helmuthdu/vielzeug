@@ -1,11 +1,12 @@
-import { fire, type Fixture, mount } from '@vielzeug/ore/testing';
+import { fireClick, fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function open(fixture: Fixture<HTMLElement>): Promise<void> {
   const trigger = fixture.query('ore-input.trigger');
 
-  fire.click(trigger!);
+  fireClick(trigger!);
   await fixture.flush();
 }
 
@@ -113,7 +114,7 @@ describe('ore-date-picker', () => {
       const cells = getDayCells(fixture);
       const nonSelected = cells.find((c) => c.getAttribute('aria-selected') !== 'true');
 
-      fire.click(nonSelected!);
+      fireClick(nonSelected!);
       await fixture.flush();
 
       expect(events.length).toBe(1);
@@ -130,7 +131,7 @@ describe('ore-date-picker', () => {
 
       const selected = getSelectedDay(fixture);
 
-      fire.click(selected!);
+      fireClick(selected!);
       await fixture.flush();
 
       // Re-clicking the selected day still fires change (implementation toggles or re-selects)
@@ -176,7 +177,7 @@ describe('ore-date-picker', () => {
 
       const disabled = fixture.query('.cal-cell-day[aria-disabled="true"]');
 
-      fire.click(disabled!);
+      fireClick(disabled!);
       await fixture.flush();
 
       expect(events.length).toBe(0);
@@ -215,7 +216,7 @@ describe('ore-date-picker', () => {
 
       const calendar = fixture.query('.calendar[data-open]')!;
 
-      fire.keyDown(calendar, { key: 'Escape' });
+      fireKeyDown(calendar, { key: 'Escape' });
       await fixture.flush();
 
       expect(getCalendar(fixture)).toBeNull();
@@ -227,7 +228,7 @@ describe('ore-date-picker', () => {
 
       const selected = getSelectedDay(fixture)!;
 
-      fire.keyDown(selected, { key: 'Enter' });
+      fireKeyDown(selected, { key: 'Enter' });
       await fixture.flush();
 
       expect(getCalendar(fixture)).toBeNull();
@@ -303,7 +304,7 @@ describe('ore-date-picker', () => {
       fixture = await mount('ore-date-picker', { attrs: { value: '2024-03-15' } });
 
       await open(fixture);
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       const rows = fixture.queryAll('.cal-grid-months [role="row"]');

@@ -157,11 +157,11 @@ define<OrePasswordStrengthProps>(PASSWORD_STRENGTH_TAG, {
       <div
         class="meter"
         role="meter"
-        :aria-label="${props.label}"
+        aria-label="${props.label}"
         aria-valuemin="0"
         aria-valuemax="4"
-        :aria-valuenow="${() => String(score.value)}"
-        :aria-valuetext="${() => ariaValueText.value}">
+        aria-valuenow="${() => String(score.value)}"
+        aria-valuetext="${() => ariaValueText.value}">
         <div class="segments" aria-hidden="true">
           <div class="${segClass(1)}"></div>
           <div class="${segClass(2)}"></div>

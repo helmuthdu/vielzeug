@@ -1,5 +1,5 @@
 import { define, html, inject, prop, bind, getHost, onCleanup, onMounted, useEmit, useSlots } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 import { computed, effect, signal, watch } from '@vielzeug/ripple';
 
 import type { ChoiceChangeDetail, DropdownCloseReason, OverlayOpenDetail, OverlayOpenReason } from '../../headless';
@@ -477,19 +477,19 @@ define<OreSelectProps>(SELECT_TAG, {
         role="combobox"
         aria-haspopup="listbox"
         aria-controls="${listboxId}"
-        :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-        :aria-expanded="${() => String(isOpen.value)}"
-        :aria-invalid="${() => (props.error.value ? 'true' : null)}"
-        :value="${inputValue}"
-        :label="${inputLabel}"
-        :placeholder="${inputPlaceholder}"
-        :label-placement="${inputLabelPlacement}"
-        :color="${inputColor}"
-        :size="${inputSize}"
-        :variant="${inputVariant}"
-        :rounded="${inputRounded}"
-        :helper="${inputHelper}"
-        :error="${inputError}"
+        aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+        aria-expanded="${() => String(isOpen.value)}"
+        aria-invalid="${() => (props.error.value ? 'true' : null)}"
+        value="${inputValue}"
+        label="${inputLabel}"
+        placeholder="${inputPlaceholder}"
+        label-placement="${inputLabelPlacement}"
+        color="${inputColor}"
+        size="${inputSize}"
+        variant="${inputVariant}"
+        rounded="${inputRounded}"
+        helper="${inputHelper}"
+        error="${inputError}"
         ?disabled="${inputDisabled}"
         ?required="${inputRequired}"
         ?fullwidth="${inputFullwidth}"

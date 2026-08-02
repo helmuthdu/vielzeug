@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick, fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-checkbox', () => {
   let fixture: Fixture<HTMLElement>;
@@ -57,9 +58,9 @@ describe('ore-checkbox', () => {
 
     it('toggles checked on user click', async () => {
       fixture = await mount('ore-checkbox');
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(true);
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(false);
     });
 
@@ -86,7 +87,7 @@ describe('ore-checkbox', () => {
 
     it('clears indeterminate on click without toggling checked', async () => {
       fixture = await mount('ore-checkbox', { attrs: { indeterminate: true } });
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.hasAttribute('indeterminate')).toBe(false);
       // First click clears indeterminate state; checked remains as it was
       expect(fixture.element.hasAttribute('checked')).toBe(false);
@@ -94,9 +95,9 @@ describe('ore-checkbox', () => {
 
     it('transitions indeterminate → unchecked → checked on successive clicks', async () => {
       fixture = await mount('ore-checkbox', { attrs: { indeterminate: true } });
-      await user.click(fixture.element); // clears indeterminate
+      fireClick(fixture.element); // clears indeterminate
       expect(fixture.element.hasAttribute('indeterminate')).toBe(false);
-      await user.click(fixture.element); // now checks
+      fireClick(fixture.element); // now checks
       expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
   });
@@ -110,7 +111,7 @@ describe('ore-checkbox', () => {
 
     it('does not toggle checked when disabled', async () => {
       fixture = await mount('ore-checkbox', { attrs: { disabled: true } });
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(false);
     });
 
@@ -120,7 +121,7 @@ describe('ore-checkbox', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(onChange).not.toHaveBeenCalled();
     });
 
@@ -142,7 +143,7 @@ describe('ore-checkbox', () => {
           disabled: true,
         },
       });
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
   });
@@ -155,7 +156,7 @@ describe('ore-checkbox', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(onChange).toHaveBeenCalledTimes(1);
 
       const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
@@ -171,7 +172,7 @@ describe('ore-checkbox', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.click(fixture.element);
+      fireClick(fixture.element);
 
       const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
 
@@ -184,7 +185,7 @@ describe('ore-checkbox', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.press(fixture.element, ' ');
+      fireKeyDown(fixture.element, { key: ' ' });
       expect(onChange).toHaveBeenCalledTimes(1);
     });
 
@@ -194,7 +195,7 @@ describe('ore-checkbox', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.press(fixture.element, 'Enter');
+      fireKeyDown(fixture.element, { key: 'Enter' });
       expect(onChange).toHaveBeenCalledTimes(1);
     });
   });
@@ -232,7 +233,7 @@ describe('ore-checkbox', () => {
 
       expect(element.checkValidity()).toBe(false);
 
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(element.checkValidity()).toBe(true);
     });
 
@@ -256,7 +257,7 @@ describe('ore-checkbox', () => {
       document.body.appendChild(form);
       fixture = await mount('ore-checkbox', { attrs: { checked: true }, container: form });
 
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(false);
 
       form.reset();
@@ -341,7 +342,7 @@ describe('ore-checkbox', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.press(fixture.element, ' ');
+      fireKeyDown(fixture.element, { key: ' ' });
       expect(onChange).toHaveBeenCalled();
     });
   });
@@ -350,7 +351,7 @@ describe('ore-checkbox', () => {
   describe('Edge Cases', () => {
     it('handles rapid toggling without getting stuck', async () => {
       fixture = await mount('ore-checkbox');
-      for (let i = 0; i < 5; i++) await user.click(fixture.element);
+      for (let i = 0; i < 5; i++) fireClick(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
 
@@ -422,9 +423,9 @@ describe('ore-checkbox accessibility', () => {
       const fixture = await mount('ore-checkbox');
 
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
       fixture.dispose();
     });
@@ -462,7 +463,7 @@ describe('ore-checkbox accessibility', () => {
     it('toggles state on Space (standard checkbox activation key)', async () => {
       const fixture = await mount('ore-checkbox');
 
-      await user.press(fixture.element, ' ');
+      fireKeyDown(fixture.element, { key: ' ' });
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       fixture.dispose();
     });
@@ -470,7 +471,7 @@ describe('ore-checkbox accessibility', () => {
     it('toggles state on Enter', async () => {
       const fixture = await mount('ore-checkbox');
 
-      await user.press(fixture.element, 'Enter');
+      fireKeyDown(fixture.element, { key: 'Enter' });
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       fixture.dispose();
     });
@@ -480,7 +481,7 @@ describe('ore-checkbox accessibility', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.press(fixture.element, ' ');
+      fireKeyDown(fixture.element, { key: ' ' });
       expect(onChange).not.toHaveBeenCalled();
       fixture.dispose();
     });

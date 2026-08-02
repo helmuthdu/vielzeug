@@ -11,7 +11,7 @@ import {
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { resizeObserver } from '@vielzeug/ore/observers';
+import { resizeObserver } from '@vielzeug/ore';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
 import type { ElevationLevel, RoundedSize, ThemeColor, VisualVariant } from '../../types';
@@ -710,7 +710,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
           class="mobile-menu-panel"
           part="mobile-menu"
           role="navigation"
-          :aria-label="${() => `${props.label.value} mobile menu`}"
+          aria-label="${() => `${props.label.value} mobile menu`}"
           ?hidden=${() => !isMobile.value || !isMobileMenuOpen.value || !hasMobileMenu()}>
           <slot name="mobile-menu"></slot>
         </div>
@@ -815,8 +815,8 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
               class="item"
               part="item"
               href="${props.href}"
-              :rel="${effectiveRel}"
-              :target="${props.target}"
+              rel="${effectiveRel}"
+              target="${props.target}"
               aria-current="${() => (props.active.value ? 'page' : null)}"
               @click=${closeMobileMenuIfOpen}>
               ${renderItemContent()}

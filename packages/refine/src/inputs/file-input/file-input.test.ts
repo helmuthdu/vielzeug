@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick, fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-file-input', () => {
   let fixture: Fixture<HTMLElement>;
@@ -211,7 +212,7 @@ describe('ore-file-input', () => {
       await fixture.flush();
       expect(fixture.query('.file-card')).toBeTruthy();
 
-      await user.click(fixture.query<HTMLElement>('.file-card-remove')!);
+      fireClick(fixture.query<HTMLElement>('.file-card-remove')!);
 
       expect(fixture.query('.file-card')).toBeFalsy();
       expect(revokeSpy).toHaveBeenCalled();
@@ -302,7 +303,7 @@ describe('ore-file-input', () => {
       const clickSpy = vi.spyOn(input, 'click');
 
       dropzone.focus();
-      await user.press(dropzone, 'Enter');
+      fireKeyDown(dropzone, { key: 'Enter' });
 
       expect(clickSpy).toHaveBeenCalledTimes(1);
     });

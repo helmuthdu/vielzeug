@@ -1,5 +1,5 @@
 import { define, html, inject, prop, bind, getHost, onCleanup, onMounted, useEmit } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
@@ -267,7 +267,7 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
     });
 
     return html`
-      <div class="otp-group" part="group" role="group" :aria-label="${props.label}">
+      <div class="otp-group" part="group" role="group" aria-label="${props.label}">
         ${() =>
           cells.value.map(
             (i) => html`
@@ -280,12 +280,12 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
               <input
                 class="cell"
                 part="cell"
-                :type="${() => (props.masked.value ? 'password' : 'text')}"
-                :inputmode="${() => (props.type.value === 'numeric' ? 'numeric' : 'text')}"
+                type="${() => (props.masked.value ? 'password' : 'text')}"
+                inputmode="${() => (props.type.value === 'numeric' ? 'numeric' : 'text')}"
                 maxlength="1"
-                :autocomplete="${() => (i === 0 ? 'one-time-code' : 'off')}"
-                :aria-label="${() => `Digit ${i + 1} of ${lengthValue.value}`}"
-                :disabled="${() => (isDisabled.value ? true : null)}"
+                autocomplete="${() => (i === 0 ? 'one-time-code' : 'off')}"
+                aria-label="${() => `Digit ${i + 1} of ${lengthValue.value}`}"
+                disabled="${() => (isDisabled.value ? true : null)}"
                 @input="${(e: Event) => handleInput(e, i)}"
                 @keydown="${(e: KeyboardEvent) => handleKeydown(e, i)}"
                 @paste="${(e: ClipboardEvent) => (i === 0 ? handlePaste(e) : e.preventDefault())}"

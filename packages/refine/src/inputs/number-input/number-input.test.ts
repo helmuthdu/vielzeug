@@ -1,4 +1,5 @@
-import { fire, type Fixture, mount } from '@vielzeug/ore/testing';
+import { fireClick } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 function getInput(fixture: Fixture<HTMLElement>): HTMLInputElement | null {
   const bitInput = fixture.query('ore-input.field');
@@ -126,7 +127,7 @@ describe('ore-number-input', () => {
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Increase"]');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -138,7 +139,7 @@ describe('ore-number-input', () => {
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Decrease"]');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -150,7 +151,7 @@ describe('ore-number-input', () => {
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Increase"]');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -162,7 +163,7 @@ describe('ore-number-input', () => {
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Increase"]');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -174,7 +175,7 @@ describe('ore-number-input', () => {
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Decrease"]');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -209,7 +210,7 @@ describe('ore-number-input', () => {
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Increase"]');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -229,7 +230,7 @@ describe('ore-number-input', () => {
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Increase"]');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -247,7 +248,7 @@ describe('ore-number-input', () => {
 
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Increase"]');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -268,7 +269,7 @@ describe('ore-number-input', () => {
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Increase"]');
 
       expect(btn).toBeTruthy();
-      fire.click(btn!);
+      fireClick(btn!);
       await fixture.flush();
 
       const innerInput = fixture.query<HTMLElement & { value: string }>('ore-input.field');
@@ -282,7 +283,7 @@ describe('ore-number-input', () => {
       const btn = fixture.query<HTMLButtonElement>('[aria-label="Decrease"]');
 
       expect(btn).toBeTruthy();
-      fire.click(btn!);
+      fireClick(btn!);
       await fixture.flush();
 
       const innerInput = fixture.query<HTMLElement & { value: string }>('ore-input.field');

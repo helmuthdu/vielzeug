@@ -1,5 +1,5 @@
 import { define, html, inject, prop, ref, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { VisualVariant } from '../../shared';
@@ -499,18 +499,18 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
         role="combobox"
         aria-haspopup="listbox"
         aria-controls="${dialogId}"
-        :aria-expanded="${() => String(isOpen.value)}"
-        :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-        :value="${inputValue}"
-        :label="${inputLabel}"
-        :placeholder="${inputPlaceholder}"
-        :label-placement="${inputLabelPlacement}"
-        :color="${inputColor}"
-        :size="${inputSize}"
-        :variant="${inputVariant}"
-        :rounded="${inputRounded}"
-        :helper="${inputHelper}"
-        :error="${inputError}"
+        aria-expanded="${() => String(isOpen.value)}"
+        aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+        value="${inputValue}"
+        label="${inputLabel}"
+        placeholder="${inputPlaceholder}"
+        label-placement="${inputLabelPlacement}"
+        color="${inputColor}"
+        size="${inputSize}"
+        variant="${inputVariant}"
+        rounded="${inputRounded}"
+        helper="${inputHelper}"
+        error="${inputError}"
         ?disabled="${inputDisabled}"
         ?required="${inputRequired}"
         ?fullwidth="${inputFullwidth}"
@@ -545,8 +545,8 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
                       part="option"
                       role="option"
                       tabindex="${() => (pendingHour.value === h && !disabled ? '0' : '-1')}"
-                      :aria-selected="${() => String(pendingHour.value === h)}"
-                      :aria-disabled="${() => String(disabled)}"
+                      aria-selected="${() => String(pendingHour.value === h)}"
+                      aria-disabled="${() => String(disabled)}"
                       ?data-disabled="${() => disabled}"
                       @click="${() => {
                         if (!disabled) pendingHour.value = h;
@@ -576,8 +576,8 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
                       part="option"
                       role="option"
                       tabindex="${() => (pendingMinute.value === m && !disabled ? '0' : '-1')}"
-                      :aria-selected="${() => String(pendingMinute.value === m)}"
-                      :aria-disabled="${() => String(disabled)}"
+                      aria-selected="${() => String(pendingMinute.value === m)}"
+                      aria-disabled="${() => String(disabled)}"
                       ?data-disabled="${() => disabled}"
                       @click="${() => {
                         if (!disabled) commitFromMinute(m);
@@ -604,7 +604,7 @@ define<OreTimePickerProps>(TIME_PICKER_TAG, {
                             part="option"
                             role="option"
                             tabindex="${() => (pendingPeriod.value === p ? '0' : '-1')}"
-                            :aria-selected="${() => String(pendingPeriod.value === p)}"
+                            aria-selected="${() => String(pendingPeriod.value === p)}"
                             @click="${() => {
                               pendingPeriod.value = p;
                             }}"

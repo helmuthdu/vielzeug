@@ -105,8 +105,8 @@ define<OreFormProps>(FORM_TAG, {
     return html`
       <form
         part="form"
-        :novalidate="${props.novalidate}"
-        :aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
+        novalidate="${props.novalidate}"
+        aria-disabled="${() => (props.disabled.value ? 'true' : null)}"
         @submit="${handleSubmit}"
         @reset="${handleReset}">
         <slot></slot>

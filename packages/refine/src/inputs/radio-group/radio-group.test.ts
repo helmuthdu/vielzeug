@@ -1,5 +1,6 @@
+import { fireClick, fireKeyDown } from '@vielzeug/assay';
 import { css } from '@vielzeug/ore';
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 vi.mock('../../styles', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../styles')>();
@@ -125,7 +126,7 @@ describe('ore-radio-group', () => {
 
       expect(element.checkValidity()).toBe(false);
 
-      await user.click(fixture.element.querySelectorAll<HTMLElement>('ore-radio')[0]!);
+      fireClick(fixture.element.querySelectorAll<HTMLElement>('ore-radio')[0]!);
       expect(element.checkValidity()).toBe(true);
     });
 
@@ -143,7 +144,7 @@ describe('ore-radio-group', () => {
       document.body.appendChild(form);
       fixture = await mount('ore-radio-group', { attrs: { value: 'a' }, container: form, html: radioHtml });
 
-      await user.click(fixture.element.querySelectorAll<HTMLElement>('ore-radio')[1]!);
+      fireClick(fixture.element.querySelectorAll<HTMLElement>('ore-radio')[1]!);
       expect(fixture.element.getAttribute('value')).toBe('b');
 
       form.reset();
@@ -208,7 +209,7 @@ describe('ore-radio-group', () => {
       const radios = fixture.element.querySelectorAll<HTMLElement>('ore-radio');
 
       radios[0].focus();
-      await user.press(fixture.element, 'ArrowRight');
+      fireKeyDown(fixture.element, { key: 'ArrowRight' });
 
       expect(radios[1].hasAttribute('checked')).toBe(true);
       expect(radios[1].getAttribute('tabindex')).toBe('0');

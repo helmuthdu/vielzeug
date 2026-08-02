@@ -1,4 +1,5 @@
-import { type Fixture, mount, user, waitFor } from '@vielzeug/ore/testing';
+import { delay, fireClick, retry } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 import type { ToastElement } from './toast';
 
@@ -103,7 +104,7 @@ describe('ore-toast', () => {
       fixture.element.add({ message: 'Test notification' });
       await fixture.flush();
 
-      await waitFor(() => {
+      await retry(() => {
         expect(fixture.query('ore-alert')?.textContent?.trim()).toContain('Test notification');
       });
     });
@@ -147,7 +148,7 @@ describe('ore-toast', () => {
       await fixture.flush();
 
       // After rAF resolves: entering class should be gone
-      await waitFor(() => {
+      await retry(() => {
         const inner = fixture.query('.toast-inner');
 
         expect(inner?.classList.contains('entering')).toBe(false);
@@ -212,7 +213,7 @@ describe('ore-toast', () => {
 
       expect(closeBtn).toBeTruthy();
 
-      await user.click(closeBtn!);
+      fireClick(closeBtn!);
       await fixture.flush();
 
       await completeExit(fixture, () => fixture.flush());
@@ -500,7 +501,7 @@ describe('ore-toast accessibility', () => {
 
       expect(btn).toBeTruthy();
 
-      await user.click(btn!);
+      fireClick(btn!);
       await fixture.flush();
 
       await completeExit(fixture, () => fixture.flush());
@@ -802,7 +803,6 @@ describe('toast service promise()', () => {
 
 describe('ore-toast hover/focus pause', () => {
   let fixture: Fixture<HTMLElement & ToastElement>;
-  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
   beforeAll(async () => {
     await import('../alert/alert');
@@ -822,14 +822,14 @@ describe('ore-toast hover/focus pause', () => {
     const container = fixture.element.shadowRoot!.querySelector('.toast-container')!;
 
     container.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
-    await wait(80);
+    await delay(80);
     await fixture.flush();
 
     // Timer was paused before it could fire — the toast is still present.
     expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeTruthy();
 
     container.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
-    await wait(80);
+    await delay(80);
     await completeExit(fixture, fixture.flush);
 
     expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeNull();
@@ -844,13 +844,13 @@ describe('ore-toast hover/focus pause', () => {
     const container = fixture.element.shadowRoot!.querySelector('.toast-container')!;
 
     container.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
-    await wait(80);
+    await delay(80);
     await fixture.flush();
 
     expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeTruthy();
 
     container.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
-    await wait(80);
+    await delay(80);
     await completeExit(fixture, fixture.flush);
 
     expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeNull();

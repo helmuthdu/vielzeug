@@ -263,8 +263,8 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
         ref=${(ref: HTMLElement) => {
           tooltipEl = ref;
         }}
-        :data-placement="${activePlacement}"
-        :aria-hidden="${() => String(!floating.visible.value)}">
+        data-placement="${activePlacement}"
+        aria-hidden="${() => String(!floating.visible.value)}">
         <slot name="content"><span class="tooltip-text">${props.content}</span></slot>
       </div>
     `;

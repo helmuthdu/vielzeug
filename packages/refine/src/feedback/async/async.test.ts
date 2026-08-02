@@ -1,4 +1,5 @@
-import { fire, type Fixture, mount } from '@vielzeug/ore/testing';
+import { fireClick } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-async', () => {
   let fixture: Fixture<HTMLElement>;
@@ -136,7 +137,7 @@ describe('ore-async', () => {
       fixture = await mount('ore-async', { attrs: { retryable: '', status: 'error' } });
       fixture.element.addEventListener('retry', (e) => calls.push(e));
 
-      fire.click(fixture.query('.retry-btn')!);
+      fireClick(fixture.query('.retry-btn')!);
 
       expect(calls).toHaveLength(1);
     });

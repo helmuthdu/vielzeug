@@ -127,7 +127,7 @@ define<OreCopyCommandProps>(COPY_COMMAND_TAG, {
 
     return html`
       <div class="wrapper" part="wrapper">
-        <button class="command" part="command" type="button" :aria-label="${btnLabel}" @click=${handleCopy}>
+        <button class="command" part="command" type="button" aria-label="${btnLabel}" @click=${handleCopy}>
           <code class="command-text" part="command-text">${props.value}</code>
           <span class="copy-icon" part="copy-icon" aria-hidden="true">
             ${() => {

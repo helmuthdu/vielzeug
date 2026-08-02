@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick, fireInput, fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 import type { CommandPaletteItemInput } from './command-palette.types';
 
@@ -139,7 +140,8 @@ describe('ore-command-palette', () => {
     it('filters items as the user types', async () => {
       fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
 
-      await user.type(getInput()!, 'theme');
+      getInput()!.value += 'theme';
+      fireInput(getInput()!);
 
       expect(getRows()).toHaveLength(1);
       expect(getRows()[0]?.textContent).toContain('Toggle Theme');
@@ -148,7 +150,8 @@ describe('ore-command-palette', () => {
     it('matches against keywords in addition to the label', async () => {
       fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
 
-      await user.type(getInput()!, 'dark');
+      getInput()!.value += 'dark';
+      fireInput(getInput()!);
 
       expect(getRows()).toHaveLength(1);
       expect(getRows()[0]?.textContent).toContain('Toggle Theme');
@@ -161,7 +164,8 @@ describe('ore-command-palette', () => {
 
       fixture.element.addEventListener('search', onSearch);
 
-      await user.type(getInput()!, 'new');
+      getInput()!.value += 'new';
+      fireInput(getInput()!);
 
       expect(onSearch).toHaveBeenCalled();
       expect((onSearch.mock.calls.at(-1)?.[0] as CustomEvent).detail.query).toBe('new');
@@ -173,7 +177,8 @@ describe('ore-command-palette', () => {
         props: { items },
       });
 
-      await user.type(getInput()!, 'zzz-no-match');
+      getInput()!.value += 'zzz-no-match';
+      fireInput(getInput()!);
 
       expect(getRows()).toHaveLength(4);
     });
@@ -187,7 +192,8 @@ describe('ore-command-palette', () => {
       fixture.element.addEventListener('select', onSelect);
       fixture.element.addEventListener('close', onClose);
 
-      await user.click(getRows()[0]!);
+      fireClick(getRows()[0]!);
+      await fixture.flush();
 
       expect(onSelect).toHaveBeenCalledTimes(1);
       expect((onSelect.mock.calls[0]?.[0] as CustomEvent).detail).toMatchObject({
@@ -207,7 +213,7 @@ describe('ore-command-palette', () => {
 
       const disabledRow = getRows().find((row) => row.textContent?.includes('Close File'))!;
 
-      await user.click(disabledRow);
+      fireClick(disabledRow);
 
       expect(onSelect).not.toHaveBeenCalled();
       expect(fixture.query('dialog[open]')).toBeTruthy();
@@ -221,8 +227,8 @@ describe('ore-command-palette', () => {
       fixture.element.addEventListener('select', onSelect);
 
       // The palette pre-focuses the first item on open, so a single ArrowDown moves to the second.
-      await user.press(getInput()!, 'ArrowDown');
-      await user.press(getInput()!, 'Enter');
+      fireKeyDown(getInput()!, { key: 'ArrowDown' });
+      fireKeyDown(getInput()!, { key: 'Enter' });
 
       expect((onSelect.mock.calls[0]?.[0] as CustomEvent).detail.value).toBe('open-file');
     });
@@ -234,7 +240,7 @@ describe('ore-command-palette', () => {
 
       fixture.element.addEventListener('select', onSelect);
 
-      await user.press(getInput()!, 'Enter');
+      fireKeyDown(getInput()!, { key: 'Enter' });
 
       expect((onSelect.mock.calls[0]?.[0] as CustomEvent).detail.value).toBe('new-file');
     });
@@ -257,7 +263,7 @@ describe('ore-command-palette', () => {
 
       fixture.element.addEventListener('select', onSelect);
 
-      await user.press(getInput()!, 'Enter');
+      fireKeyDown(getInput()!, { key: 'Enter' });
 
       expect(onSelect).toHaveBeenCalledTimes(1);
       expect((onSelect.mock.calls[0]?.[0] as CustomEvent).detail.value).toBe('open-file');
@@ -266,9 +272,9 @@ describe('ore-command-palette', () => {
     it('ArrowDown navigation skips disabled items', async () => {
       fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
 
-      await user.press(getInput()!, 'ArrowDown');
-      await user.press(getInput()!, 'ArrowDown');
-      await user.press(getInput()!, 'ArrowDown');
+      fireKeyDown(getInput()!, { key: 'ArrowDown' });
+      fireKeyDown(getInput()!, { key: 'ArrowDown' });
+      fireKeyDown(getInput()!, { key: 'ArrowDown' });
 
       const focused = getRows().find((row) => row.hasAttribute('data-focused'));
 
@@ -285,7 +291,7 @@ describe('ore-command-palette', () => {
 
       fixture.element.addEventListener('close', onClose);
 
-      await user.click(getRows()[0]!);
+      fireClick(getRows()[0]!);
 
       expect(onClose).not.toHaveBeenCalled();
       expect(fixture.query('dialog[open]')).toBeTruthy();
@@ -294,7 +300,8 @@ describe('ore-command-palette', () => {
     it('resets the query when the palette closes and reopens', async () => {
       fixture = await mount('ore-command-palette', { attrs: { open: '' }, props: { items } });
 
-      await user.type(getInput()!, 'theme');
+      getInput()!.value += 'theme';
+      fireInput(getInput()!);
       expect(getRows()).toHaveLength(1);
 
       await fixture.attr('open', false);
@@ -311,7 +318,7 @@ describe('ore-command-palette', () => {
 
       fixture.element.addEventListener('close', onClose);
 
-      await user.press(fixture.query('dialog')!, 'Escape');
+      fireKeyDown(fixture.query('dialog')!, { key: 'Escape' });
       fixture.query('dialog')?.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
       await fixture.flush();
 
@@ -364,7 +371,7 @@ describe('ore-command-palette', () => {
 
       const input = getInput()!;
 
-      await user.press(input, 'ArrowDown');
+      fireKeyDown(input, { key: 'ArrowDown' });
 
       const focusedRow = getRows().find((row) => row.hasAttribute('data-focused'))!;
 
@@ -419,7 +426,8 @@ describe('ore-command-palette', () => {
         props: { items },
       });
 
-      await user.type(getInput()!, 'zzzznomatch');
+      getInput()!.value += 'zzzznomatch';
+      fireInput(getInput()!);
 
       expect(fixture.query('.empty')?.hasAttribute('hidden')).toBe(false);
       expect(fixture.query('.empty')?.textContent?.trim()).toBe('Nothing here');

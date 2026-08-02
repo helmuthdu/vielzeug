@@ -1,6 +1,5 @@
 import { define, html, inject, prop, ref, bind, onCleanup, onElement, useEmit, useSlots } from '@vielzeug/ore';
-import { live } from '@vielzeug/ore/directives';
-import { useField } from '@vielzeug/ore/forms';
+import { live, useField } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
@@ -301,19 +300,19 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
           class="field"
           part="field"
           ref="${textareaRef}"
-          :rows="${() => props.rows.value ?? 1}"
-          :name="${() => props.name.value ?? ''}"
-          :placeholder="${() => props.placeholder.value ?? 'Message…'}"
-          :maxlength="${() => props.maxlength.value}"
+          rows="${() => props.rows.value ?? 1}"
+          name="${() => props.name.value ?? ''}"
+          placeholder="${() => props.placeholder.value ?? 'Message…'}"
+          maxlength="${() => props.maxlength.value}"
           ?disabled="${isDisabled}"
           ?readonly="${() => Boolean(props.readonly.value)}"
           ?required="${() => Boolean(props.required.value)}"
-          :value="${live(tf.value)}"
-          :aria-label="${() => props.label.value || 'Message'}"
-          :aria-keyshortcuts="${composer.keyShortcutsHint}"
-          :aria-describedby="${tf.ariaDescribedBy}"
-          :aria-errormessage="${tf.ariaErrorMessage}"
-          :aria-invalid="${tf.ariaInvalid}"></textarea>
+          value="${live(tf.value)}"
+          aria-label="${() => props.label.value || 'Message'}"
+          aria-keyshortcuts="${composer.keyShortcutsHint}"
+          aria-describedby="${tf.ariaDescribedBy}"
+          aria-errormessage="${tf.ariaErrorMessage}"
+          aria-invalid="${tf.ariaInvalid}"></textarea>
         ${renderStatusIcon(tf.errorText)} ${renderFieldStatusRegion(tf)}
         <div class="toolbar" part="toolbar">
           <div class="toolbar-start" part="toolbar-start">
@@ -332,9 +331,9 @@ define<OreMessageComposerProps>(MESSAGE_COMPOSER_TAG, {
                       type="button"
                       icon-only
                       variant="solid"
-                      :color="${() => props.color.value || 'primary'}"
-                      :size="${fCtxProps.size}"
-                      :label="${() => props['send-label'].value || DEFAULT_SEND_LABEL}"
+                      color="${() => props.color.value || 'primary'}"
+                      size="${fCtxProps.size}"
+                      label="${() => props['send-label'].value || DEFAULT_SEND_LABEL}"
                       ?loading="${() => Boolean(props.loading.value)}"
                       ?disabled="${() => !composer.canSend.value}"
                       @click="${(e: MouseEvent) => composer.send(e)}">

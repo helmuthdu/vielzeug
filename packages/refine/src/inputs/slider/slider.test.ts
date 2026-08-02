@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-slider', () => {
   let fixture: Fixture<HTMLElement>;
@@ -88,7 +89,7 @@ describe('ore-slider', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.press(fixture.element, 'ArrowRight');
+      fireKeyDown(fixture.element, { key: 'ArrowRight' });
 
       expect(changeHandler).not.toHaveBeenCalled();
     });
@@ -104,7 +105,7 @@ describe('ore-slider', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.press(fixture.element, 'ArrowRight');
+      fireKeyDown(fixture.element, { key: 'ArrowRight' });
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
 
@@ -121,7 +122,7 @@ describe('ore-slider', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.press(fixture.element, 'ArrowRight');
+      fireKeyDown(fixture.element, { key: 'ArrowRight' });
 
       expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.value).toBeGreaterThan(50);
     });
@@ -133,7 +134,7 @@ describe('ore-slider', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.press(fixture.element, 'ArrowLeft');
+      fireKeyDown(fixture.element, { key: 'ArrowLeft' });
 
       expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.value).toBeLessThan(50);
     });
@@ -376,7 +377,7 @@ describe('ore-slider accessibility', () => {
     it('updates aria-valuenow after keyboard increment', async () => {
       fixture = await mount('ore-slider', { attrs: { value: '50' } });
 
-      await user.press(fixture.element, 'ArrowRight');
+      fireKeyDown(fixture.element, { key: 'ArrowRight' });
 
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('51');
     });
@@ -384,7 +385,7 @@ describe('ore-slider accessibility', () => {
     it('updates aria-valuenow after keyboard decrement', async () => {
       fixture = await mount('ore-slider', { attrs: { value: '50' } });
 
-      await user.press(fixture.element, 'ArrowLeft');
+      fireKeyDown(fixture.element, { key: 'ArrowLeft' });
 
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('49');
     });
@@ -394,7 +395,7 @@ describe('ore-slider accessibility', () => {
     it('ArrowRight increments value', async () => {
       fixture = await mount('ore-slider', { attrs: { value: '30' } });
 
-      await user.press(fixture.element, 'ArrowRight');
+      fireKeyDown(fixture.element, { key: 'ArrowRight' });
 
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('31');
     });
@@ -402,7 +403,7 @@ describe('ore-slider accessibility', () => {
     it('ArrowUp increments value', async () => {
       fixture = await mount('ore-slider', { attrs: { value: '30' } });
 
-      await user.press(fixture.element, 'ArrowUp');
+      fireKeyDown(fixture.element, { key: 'ArrowUp' });
 
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('31');
     });
@@ -410,7 +411,7 @@ describe('ore-slider accessibility', () => {
     it('ArrowLeft decrements value', async () => {
       fixture = await mount('ore-slider', { attrs: { value: '30' } });
 
-      await user.press(fixture.element, 'ArrowLeft');
+      fireKeyDown(fixture.element, { key: 'ArrowLeft' });
 
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('29');
     });
@@ -418,7 +419,7 @@ describe('ore-slider accessibility', () => {
     it('ArrowDown decrements value', async () => {
       fixture = await mount('ore-slider', { attrs: { value: '30' } });
 
-      await user.press(fixture.element, 'ArrowDown');
+      fireKeyDown(fixture.element, { key: 'ArrowDown' });
 
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('29');
     });
@@ -426,7 +427,7 @@ describe('ore-slider accessibility', () => {
     it('does not respond to keyboard when disabled', async () => {
       fixture = await mount('ore-slider', { attrs: { disabled: '', value: '30' } });
 
-      await user.press(fixture.element, 'ArrowRight');
+      fireKeyDown(fixture.element, { key: 'ArrowRight' });
 
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('30');
     });

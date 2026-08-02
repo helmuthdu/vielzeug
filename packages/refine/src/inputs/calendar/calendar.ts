@@ -1,5 +1,5 @@
 import { define, html, prop, bind, useEmit, styleMap } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { Temporal, format } from '@vielzeug/tempo';
 
@@ -443,7 +443,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
           <button
             class="cal-label-btn"
             type="button"
-            :aria-label="${() =>
+            aria-label="${() =>
               `Switch to ${currentView.value === 'day' ? 'month' : currentView.value === 'month' ? 'year' : 'day'} view`}"
             ?disabled="${isDisabled}"
             @click="${handleHeaderClick}">
@@ -462,7 +462,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
           class="cal-grid cal-grid-days"
           role="grid"
           part="grid"
-          :aria-label="${() => displayLabel.value}"
+          aria-label="${() => displayLabel.value}"
           ?hidden="${() => currentView.value !== 'day'}">
           <div role="row" class="cal-grid-row">
             ${() =>
@@ -487,9 +487,9 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                         class="cal-cell cal-cell-day"
                         role="gridcell"
                         part="day"
-                        :aria-selected="${() => String(cell.isSelected)}"
-                        :aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
-                        :aria-current="${() => (cell.isToday ? 'date' : null)}"
+                        aria-selected="${() => String(cell.isSelected)}"
+                        aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
+                        aria-current="${() => (cell.isToday ? 'date' : null)}"
                         ?data-selected="${() => cell.isSelected}"
                         ?data-today="${() => cell.isToday}"
                         ?data-outside="${() => cell.isOutsideMonth}"
@@ -531,7 +531,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                                       size="xs"
                                       rounded="sm"
                                       aria-label="${evt.label}"
-                                      :style="${styleMap({
+                                      style="${styleMap({
                                         '--badge-bg': evt.color,
                                         '--badge-border-color': evt.color,
                                       })}">
@@ -555,7 +555,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                                     dot
                                     size="xs"
                                     aria-hidden="true"
-                                    :style="${styleMap({
+                                    style="${styleMap({
                                       '--badge-bg': evt.color,
                                       '--badge-border-color': evt.color,
                                     })}"></ore-badge>
@@ -584,7 +584,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
         <div
           class="cal-grid cal-grid-months"
           role="grid"
-          :aria-label="${() => displayYear_.value}"
+          aria-label="${() => displayYear_.value}"
           ?hidden="${() => currentView.value !== 'month'}">
           ${() => {
             const cells = monthCells.value;
@@ -600,8 +600,8 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                       <div
                         class="cal-cell cal-cell-month"
                         role="gridcell"
-                        :aria-selected="${() => String(cell.isSelected)}"
-                        :aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
+                        aria-selected="${() => String(cell.isSelected)}"
+                        aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
                         ?data-selected="${() => cell.isSelected}"
                         ?data-disabled="${() => cell.isDisabled || isDisabled.value}"
                         tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
@@ -638,8 +638,8 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                       <div
                         class="cal-cell cal-cell-year"
                         role="gridcell"
-                        :aria-selected="${() => String(cell.isSelected)}"
-                        :aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
+                        aria-selected="${() => String(cell.isSelected)}"
+                        aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
                         ?data-selected="${() => cell.isSelected}"
                         ?data-disabled="${() => cell.isDisabled || isDisabled.value}"
                         tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"

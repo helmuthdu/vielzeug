@@ -152,8 +152,8 @@ define<OrePopoverProps>(POPOVER_TAG, {
         role="dialog"
         aria-modal="false"
         popover="manual"
-        :aria-label="${props.label}"
-        :aria-hidden="${() => String(!floating.visible.value)}"
+        aria-label="${props.label}"
+        aria-hidden="${() => String(!floating.visible.value)}"
         ref=${(ref: HTMLElement) => {
           panelEl = ref;
         }}>

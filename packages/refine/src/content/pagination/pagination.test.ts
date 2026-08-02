@@ -1,4 +1,5 @@
-import { fire, type Fixture, mount } from '@vielzeug/ore/testing';
+import { fireClick } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-pagination', () => {
   let fixture: Fixture<HTMLElement>;
@@ -110,7 +111,7 @@ describe('ore-pagination', () => {
       const pageBtn = fixture.shadow?.querySelector<HTMLButtonElement>('[aria-label="Page 3"]');
 
       expect(pageBtn).toBeTruthy();
-      fire.click(pageBtn!);
+      fireClick(pageBtn!);
       await fixture.flush();
 
       expect(fixture.element.getAttribute('page')).toBe('3');
@@ -122,7 +123,7 @@ describe('ore-pagination', () => {
       const nextBtn = fixture.query<HTMLButtonElement>('[aria-label="Next page"]');
 
       expect(nextBtn).toBeTruthy();
-      fire.click(nextBtn!);
+      fireClick(nextBtn!);
       await fixture.flush();
 
       expect(fixture.element.getAttribute('page')).toBe('3');
@@ -134,7 +135,7 @@ describe('ore-pagination', () => {
       const prevBtn = fixture.query<HTMLButtonElement>('[aria-label="Previous page"]');
 
       expect(prevBtn).toBeTruthy();
-      fire.click(prevBtn!);
+      fireClick(prevBtn!);
       await fixture.flush();
 
       expect(fixture.element.getAttribute('page')).toBe('2');
@@ -146,7 +147,7 @@ describe('ore-pagination', () => {
       const firstBtn = fixture.query<HTMLButtonElement>('[aria-label="First page"]');
 
       expect(firstBtn).toBeTruthy();
-      fire.click(firstBtn!);
+      fireClick(firstBtn!);
       await fixture.flush();
 
       expect(fixture.element.getAttribute('page')).toBe('1');
@@ -158,7 +159,7 @@ describe('ore-pagination', () => {
       const lastBtn = fixture.query<HTMLButtonElement>('[aria-label="Last page"]');
 
       expect(lastBtn).toBeTruthy();
-      fire.click(lastBtn!);
+      fireClick(lastBtn!);
       await fixture.flush();
 
       expect(fixture.element.getAttribute('page')).toBe('5');
@@ -190,7 +191,7 @@ describe('ore-pagination', () => {
       const pageBtn = fixture.shadow?.querySelector<HTMLButtonElement>('[aria-label="Page 2"]');
 
       expect(pageBtn).toBeTruthy();
-      fire.click(pageBtn!);
+      fireClick(pageBtn!);
 
       await fixture.flush();
 
@@ -209,7 +210,7 @@ describe('ore-pagination', () => {
       const pageBtn = fixture.shadow?.querySelector<HTMLButtonElement>('[aria-label="Page 3"]');
 
       expect(pageBtn).toBeTruthy();
-      fire.click(pageBtn!);
+      fireClick(pageBtn!);
 
       await fixture.flush();
 
@@ -226,7 +227,7 @@ describe('ore-pagination', () => {
       const currentBtn = fixture.shadow?.querySelector<HTMLButtonElement>('[aria-current="page"]');
 
       expect(currentBtn).toBeTruthy();
-      fire.click(currentBtn!);
+      fireClick(currentBtn!);
 
       await fixture.flush();
 

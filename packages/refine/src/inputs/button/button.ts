@@ -1,5 +1,5 @@
 import { define, html, inject, prop, bind, getHost } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import type { ButtonType, ComponentSize, LinkTarget, RoundedSize, ThemeColor } from '../../types';
@@ -214,8 +214,8 @@ define<OreButtonProps>(BUTTON_TAG, {
                 role="presentation"
                 tabindex="-1"
                 href="${props.href}"
-                :rel="${effectiveRel}"
-                :target="${props.target}"
+                rel="${effectiveRel}"
+                target="${props.target}"
                 @click="${handleClick}">
                 ${buttonContent}
               </a>

@@ -14,7 +14,7 @@ import {
   useEmit,
   when,
 } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import '../../content/icon/icon';
@@ -411,26 +411,26 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
           part="dropzone"
           ref=${dropzoneRef}
           role="button"
-          :tabindex="${() => (isDisabled.value ? '-1' : '0')}"
-          :aria-disabled="${() => String(isDisabled.value)}"
-          :aria-label="${() => (!props.label.value ? 'File upload drop zone' : null)}"
-          :aria-labelledby="${() => (props.label.value ? labelId : null)}"
+          tabindex="${() => (isDisabled.value ? '-1' : '0')}"
+          aria-disabled="${() => String(isDisabled.value)}"
+          aria-label="${() => (!props.label.value ? 'File upload drop zone' : null)}"
+          aria-labelledby="${() => (props.label.value ? labelId : null)}"
           aria-describedby="${helperId}">
           <input
             type="file"
             ref=${inputRef}
             part="input"
             id="${fileInputId}"
-            :accept="${props.accept}"
+            accept="${props.accept}"
             ?multiple="${props.multiple}"
             ?required="${props.required}"
             ?disabled="${isDisabled}"
-            :name="${props.name}"
+            name="${props.name}"
             hidden
             inert
             tabindex="-1" />
           <div class="dropzone-content">
-            <span class="dropzone-icon" aria-hidden="true" :data-status="${() => (isInvalid.value ? 'error' : null)}">
+            <span class="dropzone-icon" aria-hidden="true" data-status="${() => (isInvalid.value ? 'error' : null)}">
               ${() =>
                 isInvalid.value
                   ? html`
@@ -559,7 +559,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
                           <ore-progress
                             type="linear"
                             size="sm"
-                            :value=${() => queue.uploadPercent(file)}
+                            value=${() => queue.uploadPercent(file)}
                             label=${() => `${queue.uploadPercent(file)}%`}></ore-progress>
                           <span class="file-progress-meta">${() => queue.uploadMetaText(file)}</span>
                         `,
@@ -589,7 +589,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
                             <ore-progress
                               type="linear"
                               size="sm"
-                              :value=${() => queue.uploadPercent(file)}
+                              value=${() => queue.uploadPercent(file)}
                               label=${() => `${queue.uploadPercent(file)}%`}></ore-progress>
                             <span class="file-progress-meta">${() => queue.uploadMetaText(file)}</span>
                           `,

@@ -14,7 +14,7 @@ import {
   watchEffect,
   when,
 } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 import { computed, type Readable, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';

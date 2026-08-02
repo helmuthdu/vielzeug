@@ -1,6 +1,5 @@
 import { define, html, inject, prop, ref, bind, onCleanup, onElement, useEmit, watchEffect } from '@vielzeug/ore';
-import { live } from '@vielzeug/ore/directives';
-import { useField } from '@vielzeug/ore/forms';
+import { live, useField } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';
@@ -247,19 +246,19 @@ define<OreTextareaProps>(TEXTAREA_TAG, {
             part="textarea"
             ref="${textareaRef}"
             id="${textareaId}"
-            :name="${props.name}"
-            :placeholder="${props.placeholder}"
-            :rows="${props.rows}"
-            :maxlength="${props.maxlength}"
+            name="${props.name}"
+            placeholder="${props.placeholder}"
+            rows="${props.rows}"
+            maxlength="${props.maxlength}"
             ?disabled="${isDisabled}"
             ?readonly="${props.readonly}"
             ?required="${props.required}"
-            :value="${live(tf.value)}"
-            :aria-describedby="${ariaDescribedBy}"
-            :aria-errormessage="${ariaErrorMessage}"
-            :aria-invalid="${ariaInvalid}"
-            :aria-labelledby="${ariaLabelledBy}"
-            :aria-busy="${() => (props.loading.value ? 'true' : null)}"></textarea>
+            value="${live(tf.value)}"
+            aria-describedby="${ariaDescribedBy}"
+            aria-errormessage="${ariaErrorMessage}"
+            aria-invalid="${ariaInvalid}"
+            aria-labelledby="${ariaLabelledBy}"
+            aria-busy="${() => (props.loading.value ? 'true' : null)}"></textarea>
           ${renderStatusIcon(errorText)}
           <span class="field-spinner" part="spinner" role="status" aria-label="Loading"></span>
         </div>

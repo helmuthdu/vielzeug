@@ -116,7 +116,7 @@ define<OreBadgeProps>(BADGE_TAG, {
     });
 
     return html`
-      <span class="badge" part="badge" :aria-label="${ariaLabel}">
+      <span class="badge" part="badge" aria-label="${ariaLabel}">
         <slot name="icon"></slot>
         <span ?hidden="${() => label.value == null}">${label}</span>
         <span class="badge-label" ?hidden="${() => label.value != null}"><slot></slot></span>

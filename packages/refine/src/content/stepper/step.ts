@@ -268,7 +268,7 @@ define<OreStepProps>(STEP_TAG, {
                   type="button"
                   class="control"
                   part="control"
-                  :aria-current="${() => (isCurrent() ? 'step' : null)}"
+                  aria-current="${() => (isCurrent() ? 'step' : null)}"
                   aria-disabled="${isDisabled}"
                   tabindex="${() => (isCurrent() ? '0' : '-1')}"
                   @click="${handleClick}">
@@ -276,7 +276,7 @@ define<OreStepProps>(STEP_TAG, {
                 </button>
               `
             : html`
-                <div class="control" part="control" :aria-current="${() => (isCurrent() ? 'step' : null)}">
+                <div class="control" part="control" aria-current="${() => (isCurrent() ? 'step' : null)}">
                   ${indicatorTemplate()}${contentTemplate()}
                 </div>
               `}

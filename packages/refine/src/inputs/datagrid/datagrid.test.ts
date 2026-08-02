@@ -1,5 +1,6 @@
 import { sleep } from '@vielzeug/arsenal';
-import { fire, type Fixture, mount } from '@vielzeug/ore/testing';
+import { fireChange, fireClick, fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 import { ariaSortValue, sortIconName, type OreDataGridProps } from './datagrid';
 
@@ -272,7 +273,7 @@ describe('ore-datagrid', () => {
     it('sets aria-sort="ascending" after first sort click', async () => {
       fixture = await mountGrid();
 
-      fire.click(getSortButton(fixture, 'Name')!);
+      fireClick(getSortButton(fixture, 'Name')!);
       await Promise.resolve();
 
       expect(getSortableHeader(fixture, 'Name')?.getAttribute('aria-sort')).toBe('ascending');
@@ -283,9 +284,9 @@ describe('ore-datagrid', () => {
 
       const btn = getSortButton(fixture, 'Name')!;
 
-      fire.click(btn);
+      fireClick(btn);
       await Promise.resolve();
-      fire.click(btn);
+      fireClick(btn);
       await Promise.resolve();
 
       expect(getSortableHeader(fixture, 'Name')?.getAttribute('aria-sort')).toBe('descending');
@@ -349,7 +350,7 @@ describe('ore-datagrid', () => {
     it('sorts rows ascending on first sort-button click', async () => {
       fixture = await mountGrid();
 
-      fire.click(getSortButton(fixture, 'Name')!);
+      fireClick(getSortButton(fixture, 'Name')!);
       await Promise.resolve();
 
       expect(getCell(fixture, 0, 0)?.textContent?.trim()).toBe('Alice');
@@ -360,9 +361,9 @@ describe('ore-datagrid', () => {
 
       const btn = getSortButton(fixture, 'Name')!;
 
-      fire.click(btn);
+      fireClick(btn);
       await Promise.resolve();
-      fire.click(btn);
+      fireClick(btn);
       await Promise.resolve();
 
       expect(getCell(fixture, 0, 0)?.textContent?.trim()).toBe('Carol');
@@ -373,11 +374,11 @@ describe('ore-datagrid', () => {
 
       const btn = getSortButton(fixture, 'Name')!;
 
-      fire.click(btn);
+      fireClick(btn);
       await Promise.resolve();
-      fire.click(btn);
+      fireClick(btn);
       await Promise.resolve();
-      fire.click(btn);
+      fireClick(btn);
       await Promise.resolve();
 
       expect(getSortableHeader(fixture, 'Name')?.getAttribute('aria-sort')).toBe('none');
@@ -386,7 +387,7 @@ describe('ore-datagrid', () => {
     it('sorts numeric column correctly ascending', async () => {
       fixture = await mountGrid();
 
-      fire.click(getSortButton(fixture, 'Age')!);
+      fireClick(getSortButton(fixture, 'Age')!);
       await Promise.resolve();
 
       expect(getCell(fixture, 0, 2)?.textContent?.trim()).toBe('25');
@@ -401,7 +402,7 @@ describe('ore-datagrid', () => {
         detail = (e as CustomEvent<{ direction: string; key: string }>).detail;
       });
 
-      fire.click(getSortButton(fixture, 'Name')!);
+      fireClick(getSortButton(fixture, 'Name')!);
       await Promise.resolve();
 
       expect(detail).toEqual({ direction: 'asc', key: 'name' });
@@ -421,7 +422,7 @@ describe('ore-datagrid', () => {
         detail = (e as CustomEvent<{ direction: string; key: string }>).detail;
       });
 
-      fire.click(getSortButton(fixture, 'Name')!);
+      fireClick(getSortButton(fixture, 'Name')!);
       await Promise.resolve();
 
       expect(detail).toEqual({ direction: 'asc', key: 'name' });
@@ -437,7 +438,7 @@ describe('ore-datagrid', () => {
 
       const rows = getBodyRows(fixture);
 
-      fire.click(rows[0]);
+      fireClick(rows[0]);
       await Promise.resolve();
 
       expect(rows[0].getAttribute('aria-selected')).toBe('true');
@@ -448,9 +449,9 @@ describe('ore-datagrid', () => {
 
       const rows = getBodyRows(fixture);
 
-      fire.click(rows[0]);
+      fireClick(rows[0]);
       await Promise.resolve();
-      fire.click(rows[1]);
+      fireClick(rows[1]);
       await Promise.resolve();
 
       expect(rows[0].getAttribute('aria-selected')).toBe('false');
@@ -462,9 +463,9 @@ describe('ore-datagrid', () => {
 
       const rows = getBodyRows(fixture);
 
-      fire.click(rows[0]);
+      fireClick(rows[0]);
       await Promise.resolve();
-      fire.click(rows[0]);
+      fireClick(rows[0]);
       await Promise.resolve();
 
       expect(rows[0].getAttribute('aria-selected')).toBe('false');
@@ -479,7 +480,7 @@ describe('ore-datagrid', () => {
         detail = (e as CustomEvent<{ keys: string[]; rows: User[] }>).detail;
       });
 
-      fire.click(getBodyRows(fixture)[0]);
+      fireClick(getBodyRows(fixture)[0]);
       await Promise.resolve();
 
       expect(detail!.keys).toEqual(['1']);
@@ -491,7 +492,7 @@ describe('ore-datagrid', () => {
 
       const rows = getBodyRows(fixture);
 
-      fire.keyDown(rows[0] as HTMLElement, { key: 'Enter' });
+      fireKeyDown(rows[0] as HTMLElement, { key: 'Enter' });
       await Promise.resolve();
 
       expect(rows[0].getAttribute('aria-selected')).toBe('true');
@@ -529,9 +530,9 @@ describe('ore-datagrid', () => {
       const rows = getBodyRows(fixture);
       const checks = fixture.queryAll('.dg-td-check ore-checkbox');
 
-      fire.change(checks[0]);
+      fireChange(checks[0]);
       await Promise.resolve();
-      fire.change(checks[1]);
+      fireChange(checks[1]);
       await Promise.resolve();
 
       expect(rows[0].getAttribute('aria-selected')).toBe('true');
@@ -543,7 +544,7 @@ describe('ore-datagrid', () => {
 
       const selectAll = fixture.query('.dg-th-check ore-checkbox') as HTMLElement | null;
 
-      fire.change(selectAll!);
+      fireChange(selectAll!);
       await Promise.resolve();
 
       for (const row of getBodyRows(fixture)) {
@@ -556,9 +557,9 @@ describe('ore-datagrid', () => {
 
       const selectAll = fixture.query('.dg-th-check ore-checkbox') as HTMLElement | null;
 
-      fire.change(selectAll!);
+      fireChange(selectAll!);
       await Promise.resolve();
-      fire.change(selectAll!);
+      fireChange(selectAll!);
       await Promise.resolve();
 
       for (const row of getBodyRows(fixture)) {
@@ -571,7 +572,7 @@ describe('ore-datagrid', () => {
 
       const checks = fixture.queryAll('.dg-td-check ore-checkbox');
 
-      fire.change(checks[0]);
+      fireChange(checks[0]);
       await Promise.resolve();
 
       const selectAll = fixture.query('.dg-th-check ore-checkbox') as HTMLElement | null;
@@ -585,7 +586,7 @@ describe('ore-datagrid', () => {
 
       const selectAll = fixture.query('.dg-th-check ore-checkbox') as HTMLElement | null;
 
-      fire.change(selectAll!);
+      fireChange(selectAll!);
       await Promise.resolve();
 
       expect(selectAll?.hasAttribute('checked')).toBe(true);
@@ -623,7 +624,7 @@ describe('ore-datagrid', () => {
 
       const rows = getBodyRows(fixture);
 
-      fire.click(rows[0]);
+      fireClick(rows[0]);
       await Promise.resolve();
 
       (fixture.element as GridElement).selectedKeys = [];
@@ -647,7 +648,7 @@ describe('ore-datagrid', () => {
 
       const nextBtn = fixture.query('[aria-label="Next page"]') as HTMLButtonElement;
 
-      fire.click(nextBtn);
+      fireClick(nextBtn);
       await Promise.resolve();
 
       expect(getBodyRows(fixture).length).toBe(1);
@@ -666,7 +667,7 @@ describe('ore-datagrid', () => {
 
       const nextBtn = fixture.query('[aria-label="Next page"]') as HTMLButtonElement;
 
-      fire.click(nextBtn);
+      fireClick(nextBtn);
       await Promise.resolve();
 
       expect((fixture.query('[aria-label="Next page"]') as HTMLButtonElement).disabled).toBe(true);
@@ -681,7 +682,7 @@ describe('ore-datagrid', () => {
         pageDetail = (e as CustomEvent<{ pageIndex: number }>).detail;
       });
 
-      fire.click(fixture.query('[aria-label="Next page"]') as HTMLButtonElement);
+      fireClick(fixture.query('[aria-label="Next page"]') as HTMLButtonElement);
       await Promise.resolve();
 
       expect(pageDetail!.pageIndex).toBe(1);
@@ -709,7 +710,7 @@ describe('ore-datagrid', () => {
 
       const rows = getBodyRows(fixture);
 
-      fire.click(rows[0]);
+      fireClick(rows[0]);
       await Promise.resolve();
 
       expect(rows[0].getAttribute('aria-selected')).not.toBe('true');
@@ -795,7 +796,7 @@ describe('ore-datagrid', () => {
         detail = (e as CustomEvent<{ keys: string[] }>).detail;
       });
 
-      fire.click(getBodyRows(fixture)[0]);
+      fireClick(getBodyRows(fixture)[0]);
       await Promise.resolve();
 
       expect(detail!.keys[0]).toBe('user-1');
@@ -815,7 +816,7 @@ describe('ore-datagrid', () => {
       fixture = await mountGrid({});
 
       expect(fixture.query('.dg-search-input')).toBeNull();
-      fire.click(fixture.query('[aria-label="Search"]') as HTMLElement);
+      fireClick(fixture.query('[aria-label="Search"]') as HTMLElement);
       await Promise.resolve();
       expect(fixture.query('.dg-search-input')).toBeTruthy();
     });
@@ -836,7 +837,7 @@ describe('ore-datagrid', () => {
     it('filters rows matching the search query', async () => {
       fixture = await mountGrid({});
 
-      fire.click(fixture.query('[aria-label="Search"]') as HTMLElement);
+      fireClick(fixture.query('[aria-label="Search"]') as HTMLElement);
       await Promise.resolve();
 
       const search = fixture.query('.dg-search-input') as HTMLElement;
@@ -858,11 +859,11 @@ describe('ore-datagrid', () => {
 
       expect(paginationLabel?.textContent?.trim()).toBe('1 / 2');
 
-      fire.click(fixture.query('[aria-label="Next page"]') as HTMLElement);
+      fireClick(fixture.query('[aria-label="Next page"]') as HTMLElement);
       await Promise.resolve();
       expect(paginationLabel?.textContent?.trim()).toBe('2 / 2');
 
-      fire.click(fixture.query('[aria-label="Search"]') as HTMLElement);
+      fireClick(fixture.query('[aria-label="Search"]') as HTMLElement);
       await Promise.resolve();
 
       const search = fixture.query('.dg-search-input') as HTMLElement;
@@ -877,7 +878,7 @@ describe('ore-datagrid', () => {
     it('shows all rows again when query is cleared', async () => {
       fixture = await mountGrid({});
 
-      fire.click(fixture.query('[aria-label="Search"]') as HTMLElement);
+      fireClick(fixture.query('[aria-label="Search"]') as HTMLElement);
       await Promise.resolve();
 
       const search = fixture.query('.dg-search-input') as HTMLElement;
@@ -896,7 +897,7 @@ describe('ore-datagrid', () => {
     it('Escape key closes search and restores all rows', async () => {
       fixture = await mountGrid({});
 
-      fire.click(fixture.query('[aria-label="Search"]') as HTMLElement);
+      fireClick(fixture.query('[aria-label="Search"]') as HTMLElement);
       await Promise.resolve();
 
       const search = fixture.query('.dg-search-input') as HTMLElement;
@@ -966,7 +967,7 @@ describe('ore-datagrid', () => {
       el.pageSizeOptions = [2, 10];
       await Promise.resolve();
 
-      fire.click(fixture.query('[aria-label="Next page"]') as HTMLElement);
+      fireClick(fixture.query('[aria-label="Next page"]') as HTMLElement);
       await Promise.resolve();
       expect(fixture.query('.dg-page-label')?.textContent?.trim()).toBe('2 / 2');
 
@@ -1042,7 +1043,7 @@ describe('ore-datagrid', () => {
         detail = (e as CustomEvent<{ id: string; label: string }>).detail;
       });
 
-      fire.click(fixture.queryAll('.dg-tab')[1] as HTMLElement);
+      fireClick(fixture.queryAll('.dg-tab')[1] as HTMLElement);
       await Promise.resolve();
 
       expect(detail).toEqual({ id: 'open', label: 'Open' });
@@ -1409,7 +1410,7 @@ describe('ore-datagrid', () => {
       el.filterOptions = [{ key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] }];
       await Promise.resolve();
 
-      fire.click(fixture.query('[aria-label="Search"]') as HTMLElement);
+      fireClick(fixture.query('[aria-label="Search"]') as HTMLElement);
       await Promise.resolve();
 
       const search = fixture.query('.dg-search-input') as HTMLElement;
@@ -1435,7 +1436,7 @@ describe('ore-datagrid', () => {
       el.filterOptions = [{ key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] }];
       await Promise.resolve();
 
-      fire.click(fixture.query('[aria-label="Next page"]') as HTMLElement);
+      fireClick(fixture.query('[aria-label="Next page"]') as HTMLElement);
       await Promise.resolve();
       expect(fixture.query('.dg-page-label')?.textContent?.trim()).toBe('2 / 2');
 
@@ -1609,7 +1610,7 @@ describe('ore-datagrid', () => {
 
       const btn = fixture.queryAll('.dg-expand-btn')[0] as HTMLElement;
 
-      fire.click(btn);
+      fireClick(btn);
       await Promise.resolve();
 
       expect(fixture.query('.dg-tr-expanded')).toBeTruthy();
@@ -1621,9 +1622,9 @@ describe('ore-datagrid', () => {
 
       const btn = fixture.queryAll('.dg-expand-btn')[0] as HTMLElement;
 
-      fire.click(btn);
+      fireClick(btn);
       await Promise.resolve();
-      fire.click(btn);
+      fireClick(btn);
       await Promise.resolve();
 
       expect(fixture.query('.dg-tr-expanded')).toBeNull();
@@ -1635,7 +1636,7 @@ describe('ore-datagrid', () => {
       const btn = fixture.queryAll('.dg-expand-btn')[0] as HTMLElement;
       const row = getBodyRows(fixture)[0];
 
-      fire.click(btn);
+      fireClick(btn);
       await Promise.resolve();
 
       expect(row.getAttribute('aria-expanded')).toBe('true');
@@ -1658,7 +1659,7 @@ describe('ore-datagrid', () => {
         detail = (e as CustomEvent<{ expanded: boolean; key: string }>).detail;
       });
 
-      fire.click(fixture.queryAll('.dg-expand-btn')[0] as HTMLElement);
+      fireClick(fixture.queryAll('.dg-expand-btn')[0] as HTMLElement);
       await Promise.resolve();
 
       expect(detail!.expanded).toBe(true);
@@ -1670,7 +1671,7 @@ describe('ore-datagrid', () => {
 
       const btn = fixture.queryAll('.dg-expand-btn')[0] as HTMLElement;
 
-      fire.click(btn);
+      fireClick(btn);
       await Promise.resolve();
 
       let detail: { expanded: boolean; key: string } | null = null;
@@ -1679,7 +1680,7 @@ describe('ore-datagrid', () => {
         detail = (e as CustomEvent<{ expanded: boolean; key: string }>).detail;
       });
 
-      fire.click(btn);
+      fireClick(btn);
       await Promise.resolve();
 
       expect(detail!.expanded).toBe(false);
@@ -1690,9 +1691,9 @@ describe('ore-datagrid', () => {
 
       const btns = fixture.queryAll('.dg-expand-btn') as HTMLElement[];
 
-      fire.click(btns[0]);
+      fireClick(btns[0]);
       await Promise.resolve();
-      fire.click(btns[1]);
+      fireClick(btns[1]);
       await Promise.resolve();
 
       expect(fixture.queryAll('.dg-tr-expanded').length).toBe(2);
@@ -1701,17 +1702,17 @@ describe('ore-datagrid', () => {
     it('expanded panel colspan spans all columns', async () => {
       fixture = await mountExpandable();
 
-      fire.click(fixture.queryAll('.dg-expand-btn')[0] as HTMLElement);
+      fireClick(fixture.queryAll('.dg-expand-btn')[0] as HTMLElement);
       await Promise.resolve();
 
       // effectiveColCount = data columns + 1 expander column
       expect(fixture.query('.dg-td-expanded')?.getAttribute('colspan')).toBe(String(EXPANDABLE_COLS.length + 1));
     });
 
-    it('expanded panel content updates reactively when row data changes (raw() binding, not a one-shot innerHTML write)', async () => {
+    it('expanded panel content updates reactively when row data changes (unsafeHtml() binding, not a one-shot innerHTML write)', async () => {
       fixture = await mountExpandable();
 
-      fire.click(fixture.queryAll('.dg-expand-btn')[0] as HTMLElement);
+      fireClick(fixture.queryAll('.dg-expand-btn')[0] as HTMLElement);
       await Promise.resolve();
 
       expect(fixture.query('.dg-td-expanded')?.innerHTML).toContain('Alice');
@@ -1737,7 +1738,7 @@ describe('ore-datagrid', () => {
       el.rows = ROWS;
       await Promise.resolve();
 
-      fire.click(fixture.queryAll('.dg-expand-btn')[0] as HTMLElement);
+      fireClick(fixture.queryAll('.dg-expand-btn')[0] as HTMLElement);
       await Promise.resolve();
 
       expect(fixture.query('.dg-tr-expanded')).toBeTruthy();
@@ -1799,7 +1800,7 @@ describe('ore-datagrid', () => {
 
       expect(getBodyRows(fixture).length).toBe(3);
 
-      fire.click(getBodyRows(fixture)[0]);
+      fireClick(getBodyRows(fixture)[0]);
       await Promise.resolve();
 
       expect(getBodyRows(fixture)[0].getAttribute('aria-selected')).toBe('true');

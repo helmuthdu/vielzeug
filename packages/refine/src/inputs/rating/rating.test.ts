@@ -1,4 +1,5 @@
-import { fire, type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick, fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-rating', () => {
   let fixture: Fixture<HTMLElement>;
@@ -106,7 +107,7 @@ describe('ore-rating', () => {
       const star3 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="3"]');
 
       if (star3) {
-        fire.click(star3);
+        fireClick(star3);
         await fixture.flush();
 
         expect(fixture.element.getAttribute('value')).toBe('3');
@@ -119,7 +120,7 @@ describe('ore-rating', () => {
       const star4 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="4"]');
 
       if (star4) {
-        fire.click(star4);
+        fireClick(star4);
         await fixture.flush();
 
         expect(fixture.element.getAttribute('value')).toBe('0');
@@ -132,7 +133,7 @@ describe('ore-rating', () => {
       const star2 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="2"]');
 
       if (star2) {
-        fire.click(star2);
+        fireClick(star2);
         await fixture.flush();
 
         expect(fixture.element.getAttribute('value')).toBe('0');
@@ -151,7 +152,7 @@ describe('ore-rating', () => {
       expect(star3?.hasAttribute('data-filled')).toBe(false);
 
       if (star4) {
-        fire.click(star4);
+        fireClick(star4);
         await fixture.flush();
       }
 
@@ -181,14 +182,14 @@ describe('ore-rating', () => {
       const star5 = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="5"]');
 
       if (star2) {
-        fire.click(star2);
+        fireClick(star2);
         await fixture.flush();
       }
 
       expect(fixture.element.getAttribute('value')).toBe('2');
 
       if (star5) {
-        fire.click(star5);
+        fireClick(star5);
         await fixture.flush();
       }
 
@@ -205,7 +206,7 @@ describe('ore-rating', () => {
       if (!star2) return;
 
       star2.focus();
-      await user.press(star2, 'ArrowRight');
+      fireKeyDown(star2, { key: 'ArrowRight' });
       await fixture.flush();
 
       expect(fixture.element.getAttribute('value')).toBe('3');
@@ -219,11 +220,11 @@ describe('ore-rating', () => {
       if (!star4) return;
 
       star4.focus();
-      await user.press(star4, 'Home');
+      fireKeyDown(star4, { key: 'Home' });
       await fixture.flush();
       expect(fixture.element.getAttribute('value')).toBe('1');
 
-      await user.press(star4, 'End');
+      fireKeyDown(star4, { key: 'End' });
       await fixture.flush();
       expect(fixture.element.getAttribute('value')).toBe('7');
     });
@@ -241,7 +242,7 @@ describe('ore-rating', () => {
 
       const star = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="4"]');
 
-      if (star) fire.click(star);
+      if (star) fireClick(star);
 
       await fixture.flush();
 
@@ -259,7 +260,7 @@ describe('ore-rating', () => {
 
       const star = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="2"]');
 
-      if (star) fire.click(star);
+      if (star) fireClick(star);
 
       await fixture.flush();
 
@@ -276,7 +277,7 @@ describe('ore-rating', () => {
 
       const firstStar = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="1"]');
 
-      if (firstStar) fire.click(firstStar);
+      if (firstStar) fireClick(firstStar);
 
       await fixture.flush();
 
@@ -292,7 +293,7 @@ describe('ore-rating', () => {
 
       const star = fixture.shadow?.querySelector<HTMLButtonElement>('[data-star="5"]');
 
-      if (star) fire.click(star);
+      if (star) fireClick(star);
 
       await fixture.flush();
 

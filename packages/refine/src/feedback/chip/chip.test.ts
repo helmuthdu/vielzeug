@@ -1,4 +1,5 @@
-import { fire, type Fixture, mount } from '@vielzeug/ore/testing';
+import { fireClick } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-chip', () => {
   let fixture: Fixture<HTMLElement> | undefined;
@@ -91,7 +92,7 @@ describe('ore-chip', () => {
 
       fixture.element.addEventListener('remove', handler);
 
-      fire.click(fixture.query<HTMLElement>('.remove-btn')!);
+      fireClick(fixture.query<HTMLElement>('.remove-btn')!);
 
       expect(handler).toHaveBeenCalled();
     });
@@ -105,7 +106,7 @@ describe('ore-chip', () => {
         detail = (e as CustomEvent).detail;
       });
 
-      fire.click(fixture.query<HTMLElement>('.remove-btn')!);
+      fireClick(fixture.query<HTMLElement>('.remove-btn')!);
 
       expect(detail?.value).toBe('chip-x');
       expect(detail?.originalEvent).toBeInstanceOf(MouseEvent);
@@ -118,7 +119,7 @@ describe('ore-chip', () => {
 
       fixture.element.addEventListener('remove', handler);
 
-      fire.click(fixture.query<HTMLElement>('.remove-btn')!);
+      fireClick(fixture.query<HTMLElement>('.remove-btn')!);
 
       expect(handler).not.toHaveBeenCalled();
       await fixture.attr('disabled', false);
@@ -135,7 +136,7 @@ describe('ore-chip', () => {
 
       const toggle = fixture.query<HTMLButtonElement>('.chip-btn')!;
 
-      fire.click(toggle);
+      fireClick(toggle);
       await fixture.flush();
 
       expect(handler).toHaveBeenCalledTimes(1);
@@ -171,7 +172,7 @@ describe('ore-chip', () => {
 
       expect(toggle.getAttribute('aria-checked')).toBe('true');
 
-      fire.click(toggle);
+      fireClick(toggle);
 
       expect(handler).toHaveBeenCalledTimes(1);
 
@@ -192,7 +193,7 @@ describe('ore-chip', () => {
       expect(toggle.getAttribute('aria-checked')).toBe('true');
       expect(fixture.element.hasAttribute('checked')).toBe(true);
 
-      fire.click(toggle);
+      fireClick(toggle);
       await fixture.flush();
 
       expect(toggle.getAttribute('aria-checked')).toBe('true');
@@ -206,7 +207,7 @@ describe('ore-chip', () => {
 
       fixture.element.addEventListener('change', handler);
 
-      fire.click(fixture.query<HTMLButtonElement>('.chip-btn')!);
+      fireClick(fixture.query<HTMLButtonElement>('.chip-btn')!);
 
       expect(handler).not.toHaveBeenCalled();
       await fixture.attr('disabled', false);
@@ -229,7 +230,7 @@ describe('ore-chip', () => {
 
       fixture.element.addEventListener('click', handler);
 
-      fire.click(fixture.query<HTMLButtonElement>('.chip-btn')!);
+      fireClick(fixture.query<HTMLButtonElement>('.chip-btn')!);
 
       expect(handler).toHaveBeenCalledTimes(1);
 
@@ -249,7 +250,7 @@ describe('ore-chip', () => {
 
       fixture.element.addEventListener('click', handler);
 
-      fire.click(fixture.query<HTMLButtonElement>('.chip-btn')!);
+      fireClick(fixture.query<HTMLButtonElement>('.chip-btn')!);
 
       expect(handler).not.toHaveBeenCalled();
       await fixture.attr('disabled', false);

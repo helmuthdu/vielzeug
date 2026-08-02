@@ -13,7 +13,7 @@ import {
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
@@ -534,7 +534,7 @@ define<OreSliderProps>(SLIDER_TAG, {
             ref=${thumbStartRef}
             role="slider"
             tabindex="${() => (isDisabled.value ? '-1' : '0')}"
-            :aria-describedby="${ariaDescribedBy}"
+            aria-describedby="${ariaDescribedBy}"
             id="${startId}"></div>
           <div
             class="slider-thumb slider-thumb-end"
@@ -542,7 +542,7 @@ define<OreSliderProps>(SLIDER_TAG, {
             ref=${thumbEndRef}
             role="slider"
             tabindex="${() => (isDisabled.value ? '-1' : '0')}"
-            :aria-describedby="${ariaDescribedBy}"
+            aria-describedby="${ariaDescribedBy}"
             id="${endId}"></div>
         </div>
       </div>

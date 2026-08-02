@@ -1,5 +1,5 @@
 import { define, html, prop, bind, getHost, onMounted } from '@vielzeug/ore';
-import { intersectionObserver } from '@vielzeug/ore/observers';
+import { intersectionObserver } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize } from '../../types';
@@ -146,7 +146,7 @@ define<OreSkeletonProps>(SKELETON_TAG, {
               props.variant.value === 'text' && renderLineCount() > 1 && index === renderLineCount() - 1;
 
             return html`
-              <div class="bone" part="bone" aria-hidden="true" :data-last="${() => (isLastLine ? 'true' : null)}"></div>
+              <div class="bone" part="bone" aria-hidden="true" data-last="${() => (isLastLine ? 'true' : null)}"></div>
             `;
           })}
       </div>

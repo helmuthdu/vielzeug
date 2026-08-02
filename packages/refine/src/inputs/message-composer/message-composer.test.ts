@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick, fireInput, fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 const getTextarea = (fixture: Fixture<HTMLElement>): HTMLTextAreaElement => fixture.query('textarea')!;
 
@@ -72,7 +73,8 @@ describe('ore-message-composer', () => {
     it('disables the send button when whitespace-only', async () => {
       fixture = await mount('ore-message-composer');
 
-      await user.type(getTextarea(fixture), '   ');
+      getTextarea(fixture).value += '   ';
+      fireInput(getTextarea(fixture));
       await fixture.flush();
 
       expect((getSendButton(fixture) as HTMLElementTagNameMap['ore-button']).disabled).toBe(true);
@@ -81,7 +83,8 @@ describe('ore-message-composer', () => {
     it('enables the send button once non-blank', async () => {
       fixture = await mount('ore-message-composer');
 
-      await user.type(getTextarea(fixture), 'hi');
+      getTextarea(fixture).value += 'hi';
+      fireInput(getTextarea(fixture));
       await fixture.flush();
 
       expect((getSendButton(fixture) as HTMLElementTagNameMap['ore-button']).disabled).toBe(false);
@@ -110,7 +113,7 @@ describe('ore-message-composer', () => {
 
       fixture.element.addEventListener('send', sendHandler);
 
-      await user.click(getSendButton(fixture));
+      fireClick(getSendButton(fixture));
 
       expect(sendHandler).toHaveBeenCalledTimes(1);
       expect((sendHandler.mock.calls[0][0] as CustomEvent).detail.value).toBe('hello');
@@ -126,8 +129,9 @@ describe('ore-message-composer', () => {
 
       const textarea = getTextarea(fixture);
 
-      await user.type(textarea, 'hello');
-      await user.press(textarea, 'Enter');
+      textarea.value += 'hello';
+      fireInput(textarea);
+      fireKeyDown(textarea, { key: 'Enter' });
 
       expect(sendHandler).toHaveBeenCalledTimes(1);
       expect(textarea.value).toBe('');
@@ -142,8 +146,9 @@ describe('ore-message-composer', () => {
 
       const textarea = getTextarea(fixture);
 
-      await user.type(textarea, 'hello');
-      await user.press(textarea, 'Enter', { shiftKey: true });
+      textarea.value += 'hello';
+      fireInput(textarea);
+      fireKeyDown(textarea, { key: 'Enter', ...{ shiftKey: true } });
 
       expect(sendHandler).not.toHaveBeenCalled();
       expect(textarea.value).toBe('hello');
@@ -156,7 +161,7 @@ describe('ore-message-composer', () => {
 
       fixture.element.addEventListener('send', sendHandler);
 
-      await user.click(getSendButton(fixture));
+      fireClick(getSendButton(fixture));
 
       expect(sendHandler).not.toHaveBeenCalled();
     });
@@ -168,7 +173,7 @@ describe('ore-message-composer', () => {
 
       fixture.element.addEventListener('send', sendHandler);
 
-      await user.click(getSendButton(fixture));
+      fireClick(getSendButton(fixture));
 
       expect((sendHandler.mock.calls[0][0] as CustomEvent).detail.value).toBe('hi');
     });
@@ -178,7 +183,7 @@ describe('ore-message-composer', () => {
 
       fixture.element.addEventListener('send', (e) => e.preventDefault());
 
-      await user.click(getSendButton(fixture));
+      fireClick(getSendButton(fixture));
 
       expect(getTextarea(fixture).value).toBe('hello');
     });
@@ -189,7 +194,7 @@ describe('ore-message-composer', () => {
       fixture.element.addEventListener('send', (e) => e.preventDefault());
 
       getTextarea(fixture).blur();
-      await user.click(getSendButton(fixture));
+      fireClick(getSendButton(fixture));
 
       // preventDefault() means "skip the default clear + refocus" — both halves, not just the
       // clear — so focus should land wherever the click itself left it, not get yanked back.
@@ -199,7 +204,7 @@ describe('ore-message-composer', () => {
     it('keeps the value when clear-on-send is false', async () => {
       fixture = await mount('ore-message-composer', { attrs: { 'clear-on-send': 'false', value: 'hello' } });
 
-      await user.click(getSendButton(fixture));
+      fireClick(getSendButton(fixture));
 
       expect(getTextarea(fixture).value).toBe('hello');
     });
@@ -207,7 +212,7 @@ describe('ore-message-composer', () => {
     it('refocuses the field after a send', async () => {
       fixture = await mount('ore-message-composer', { attrs: { value: 'hello' }, container: document.body });
 
-      await user.click(getSendButton(fixture));
+      fireClick(getSendButton(fixture));
 
       expect(fixture.shadow?.activeElement).toBe(getTextarea(fixture));
     });
@@ -225,8 +230,9 @@ describe('ore-message-composer', () => {
 
       const textarea = getTextarea(fixture);
 
-      await user.type(textarea, 'hello');
-      await user.press(textarea, 'Enter');
+      textarea.value += 'hello';
+      fireInput(textarea);
+      fireKeyDown(textarea, { key: 'Enter' });
 
       expect(sendHandler).not.toHaveBeenCalled();
     });
@@ -240,8 +246,9 @@ describe('ore-message-composer', () => {
 
       const textarea = getTextarea(fixture);
 
-      await user.type(textarea, 'hello');
-      await user.press(textarea, 'Enter', { metaKey: true });
+      textarea.value += 'hello';
+      fireInput(textarea);
+      fireKeyDown(textarea, { key: 'Enter', ...{ metaKey: true } });
 
       expect(sendHandler).toHaveBeenCalledTimes(1);
     });
@@ -417,7 +424,8 @@ describe('ore-message-composer', () => {
 
       expect(element.checkValidity()).toBe(false);
 
-      await user.type(getTextarea(fixture), 'hi');
+      getTextarea(fixture).value += 'hi';
+      fireInput(getTextarea(fixture));
       expect(element.checkValidity()).toBe(true);
     });
 
@@ -443,7 +451,8 @@ describe('ore-message-composer', () => {
       document.body.appendChild(form);
       fixture = await mount('ore-message-composer', { attrs: { value: 'initial' }, container: form });
 
-      await user.type(getTextarea(fixture), ' more');
+      getTextarea(fixture).value += ' more';
+      fireInput(getTextarea(fixture));
       expect(getTextarea(fixture).value).toBe('initial more');
 
       form.reset();
@@ -460,7 +469,8 @@ describe('ore-message-composer', () => {
       fixture = await mount('ore-message-composer', { attrs: { value: 'initial' }, container: form });
 
       await fixture.attr('value', 'updated-default');
-      await user.type(getTextarea(fixture), ' more');
+      getTextarea(fixture).value += ' more';
+      fireInput(getTextarea(fixture));
 
       form.reset();
       await fixture.flush();
@@ -569,7 +579,8 @@ describe('ore-message-composer', () => {
 
       const textarea = getTextarea(fixture);
 
-      await user.type(textarea, 'hello');
+      textarea.value += 'hello';
+      fireInput(textarea);
       textarea.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, isComposing: true, key: 'Enter' }));
       await fixture.flush();
 
@@ -593,7 +604,8 @@ describe('ore-message-composer', () => {
 
       fixture.element.addEventListener('input', inputHandler);
 
-      await user.type(getTextarea(fixture), 'h');
+      getTextarea(fixture).value += 'h';
+      fireInput(getTextarea(fixture));
 
       expect(inputHandler).toHaveBeenCalled();
       expect((inputHandler.mock.calls[0][0] as CustomEvent).detail.value).toBe('h');

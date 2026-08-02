@@ -1,3 +1,4 @@
+import { delay, getSlotted, nextTick, queryAllInShadow, queryInShadow, queryPart } from '@vielzeug/assay';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -7,7 +8,6 @@ import {
   getAriaLabelledBy,
   getAriaState,
   getRole,
-  getSlotted,
   isAriaChecked,
   isAriaDisabled,
   isAriaExpanded,
@@ -16,12 +16,7 @@ import {
   isAriaInvalid,
   isAriaPressed,
   isAriaRequired,
-  nextTick,
   propsToAttrs,
-  queryAllInShadow,
-  queryInShadow,
-  queryPart,
-  wait,
 } from '..';
 
 // ── ARIA attribute helpers ────────────────────────────────────────────────────
@@ -164,14 +159,14 @@ describe('getSlotted()', () => {
   });
 });
 
-describe('nextTick() / wait()', () => {
-  it('nextTick() resolves on a microtask, before a macrotask wait()', async () => {
+describe('nextTick() / delay()', () => {
+  it('nextTick() resolves on a microtask, before a macrotask delay()', async () => {
     const order: string[] = [];
 
     void nextTick().then(() => order.push('tick'));
     order.push('sync');
 
-    await wait(0);
+    await delay(0);
 
     expect(order).toEqual(['sync', 'tick']);
   });

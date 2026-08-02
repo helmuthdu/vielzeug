@@ -1,5 +1,5 @@
 import { createStableId, define, html, inject, prop, bind, getHost, useEmit } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
@@ -207,8 +207,8 @@ define<OreRatingProps>(RATING_TAG, {
         class="stars"
         part="stars"
         role="radiogroup"
-        :aria-label="${props.label}"
-        :aria-describedby="${ariaDescribedBy}">
+        aria-label="${props.label}"
+        aria-describedby="${ariaDescribedBy}">
         ${() =>
           stars.value.map(
             (star) => html`
@@ -217,11 +217,11 @@ define<OreRatingProps>(RATING_TAG, {
                 part="star"
                 type="button"
                 role="radio"
-                :aria-label="${() => `${star} ${star === 1 ? 'star' : 'stars'}`}"
-                :aria-checked="${() => String(star === normalizedValue.value)}"
-                :data-star="${star}"
+                aria-label="${() => `${star} ${star === 1 ? 'star' : 'stars'}`}"
+                aria-checked="${() => String(star === normalizedValue.value)}"
+                data-star="${star}"
                 ?data-filled="${() => star <= displayValue.value}"
-                :disabled="${() => (!isInteractive.value ? true : null)}"
+                disabled="${() => (!isInteractive.value ? true : null)}"
                 @click="${(e: Event) => select(star, e)}"
                 @pointerenter="${() => {
                   if (isInteractive.value) hovered.value = star;

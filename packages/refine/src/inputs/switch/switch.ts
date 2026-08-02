@@ -1,5 +1,5 @@
 import { define, html, inject, prop, onCleanup, useEmit } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 

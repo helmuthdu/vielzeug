@@ -20,8 +20,8 @@ const disablePluginTimings = processEnv?.CI === 'true' || processEnv?.RUSHSTACK_
 const refineExternals = readWorkspaceDeps(__dirname);
 
 // Rollup/Rolldown's `external` matches array-of-strings entries by exact equality only — it
-// does NOT treat them as prefixes. Without this, subpath imports like `@vielzeug/ore/forms` or
-// `@vielzeug/ore/directives` fail to match `@vielzeug/ore` and get bundled (vendored) into this
+// does NOT treat them as prefixes. Keep the prefix check so the retained
+// `@vielzeug/ore/testing` subpath stays external rather than being bundled into Refine.
 // package's own dist instead of staying external. That silently creates a second, private copy
 // of ore's module-scope singleton state (e.g. the `getHost()` setup-context tracker), which
 // breaks the moment a consumer app also imports `@vielzeug/ore` directly: refine's own

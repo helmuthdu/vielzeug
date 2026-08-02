@@ -37,10 +37,9 @@ export type DataGridColumn<T = Record<string, unknown>> = {
    * `<ore-datagrid expandable>` shows a toggle button in each row.
    * Receives the full row item and returns an HTML string.
    *
-   * @security The returned string is inserted via ore's `raw()` directive — it participates
-   * in any sanitizer registered with `setRawSanitizer()`, but if none is registered it is
-   * inserted as-is. If any part of the returned markup is derived from untrusted data
-   * (row/user content), sanitize it yourself before returning (e.g. with DOMPurify).
+   * @security The returned string is inserted through Ore's `unsafeHtml()` directive. If
+   * any part of the returned markup is derived from untrusted data (row/user content),
+   * sanitize it yourself before returning (for example, with DOMPurify).
    *
    * @example
    * ```js

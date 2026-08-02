@@ -117,9 +117,9 @@ define<OreTabPanelProps>(TAB_PANEL_TAG, {
         part="panel"
         role="tabpanel"
         ref="${panelRef}"
-        :id="${panelId}"
+        id="${panelId}"
         aria-hidden="${() => String(!isActive.value)}"
-        :style="${panelStyle}"
+        style="${panelStyle}"
         tabindex="0">
         ${when(
           shouldRender,

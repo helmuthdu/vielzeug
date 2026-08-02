@@ -1,6 +1,5 @@
 import { define, html, inject, prop, ref, bind, onCleanup, onElement, useEmit, useSlots } from '@vielzeug/ore';
-import { live } from '@vielzeug/ore/directives';
-import { useField } from '@vielzeug/ore/forms';
+import { live, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';
@@ -295,23 +294,23 @@ define<OreInputProps>(INPUT_TAG, {
             <input
               part="input"
               id="${inputId}"
-              :type="${resolvedInputType}"
-              :name="${props.name}"
-              :placeholder="${props.placeholder}"
-              :autocomplete="${props.autocomplete}"
-              :inputmode="${props.inputmode}"
-              :maxlength="${props.maxlength}"
-              :minlength="${props.minlength}"
-              :pattern="${props.pattern}"
+              type="${resolvedInputType}"
+              name="${props.name}"
+              placeholder="${props.placeholder}"
+              autocomplete="${props.autocomplete}"
+              inputmode="${props.inputmode}"
+              maxlength="${props.maxlength}"
+              minlength="${props.minlength}"
+              pattern="${props.pattern}"
               ?disabled="${isDisabled}"
               ?readonly="${props.readonly}"
               ?required="${props.required}"
-              :value="${live(fieldValue)}"
-              :aria-labelledby="${ariaLabelledBy}"
-              :aria-describedby="${ariaDescribedBy}"
-              :aria-errormessage="${ariaErrorMessage}"
-              :aria-invalid="${ariaInvalid}"
-              :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+              value="${live(fieldValue)}"
+              aria-labelledby="${ariaLabelledBy}"
+              aria-describedby="${ariaDescribedBy}"
+              aria-errormessage="${ariaErrorMessage}"
+              aria-invalid="${ariaInvalid}"
+              aria-busy="${() => (props.loading.value ? 'true' : null)}"
               ref="${inputRef}" />
             <slot name="suffix"></slot>
             ${renderStatusIcon(errorText)}
@@ -320,9 +319,9 @@ define<OreInputProps>(INPUT_TAG, {
               class="pwd-toggle-btn"
               part="pwd-toggle"
               type="button"
-              :aria-label="${passwordToggleLabel}"
-              :aria-pressed="${passwordTogglePressed}"
-              :tabindex="${pwdToggleTabIndex}"
+              aria-label="${passwordToggleLabel}"
+              aria-pressed="${passwordTogglePressed}"
+              tabindex="${pwdToggleTabIndex}"
               @click="${togglePassword}">
               ${passwordToggleIcon}
             </button>
@@ -331,7 +330,7 @@ define<OreInputProps>(INPUT_TAG, {
               class="clear-btn"
               part="clear"
               type="button"
-              :tabindex="${clearTabIndex}"
+              tabindex="${clearTabIndex}"
               @click="${clear}">
               <ore-icon aria-hidden="true" name="x" size="12" stroke-width="2.5"></ore-icon>
             </button>
@@ -346,8 +345,8 @@ define<OreInputProps>(INPUT_TAG, {
         <div
           class="char-counter"
           part="char-counter"
-          :data-near-limit="${counterNearLimit}"
-          :data-at-limit="${counterAtLimit}"
+          data-near-limit="${counterNearLimit}"
+          data-at-limit="${counterAtLimit}"
           ?hidden="${counterHidden}">
           ${counterText}
         </div>

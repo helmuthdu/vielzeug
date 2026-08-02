@@ -129,12 +129,12 @@ define<OreProgressProps>(PROGRESS_TAG, {
       <div
         class="circular-track"
         role="progressbar"
-        :aria-valuenow="${ariaValueNow}"
+        aria-valuenow="${ariaValueNow}"
         aria-valuemin="0"
-        :aria-valuemax="${props.max}"
-        :aria-label="${ariaLabel}"
-        :aria-valuetext="${props['value-text']}"
-        :style="${circularStyle}">
+        aria-valuemax="${props.max}"
+        aria-label="${ariaLabel}"
+        aria-valuetext="${props['value-text']}"
+        style="${circularStyle}">
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
           <circle class="circle-bg" cx="50" cy="50" r="${RADIUS}"></circle>
           <circle
@@ -142,8 +142,8 @@ define<OreProgressProps>(PROGRESS_TAG, {
             cx="50"
             cy="50"
             r="${RADIUS}"
-            :stroke-dasharray="${strokeDasharray}"
-            :stroke-dashoffset="${strokeDashoffset}"></circle>
+            stroke-dasharray="${strokeDasharray}"
+            stroke-dashoffset="${strokeDashoffset}"></circle>
         </svg>
         <div class="circular-inner">
           <span class="circular-label">${() => props.label.value ?? ''}</span>
@@ -158,17 +158,17 @@ define<OreProgressProps>(PROGRESS_TAG, {
           <span class="progress-title">${() => props.title.value ?? ''}</span>
           <span class="end-label header-label">${() => props.label.value ?? ''}</span>
         </div>
-        <div :class=${() => `bar-row${isVertical.value ? ' bar-row-vertical' : ''}`}>
+        <div class=${() => `bar-row${isVertical.value ? ' bar-row-vertical' : ''}`}>
           <div class="track-outer">
             <div
               class="track"
               role="progressbar"
-              :aria-valuenow="${ariaValueNow}"
+              aria-valuenow="${ariaValueNow}"
               aria-valuemin="0"
-              :aria-valuemax="${props.max}"
-              :aria-label="${ariaLabel}"
-              :aria-valuetext="${props['value-text']}">
-              <div class="fill" part="fill" :style="${linearFillStyle}"></div>
+              aria-valuemax="${props.max}"
+              aria-label="${ariaLabel}"
+              aria-valuetext="${props['value-text']}">
+              <div class="fill" part="fill" style="${linearFillStyle}"></div>
             </div>
             ${() =>
               !isVertical.value

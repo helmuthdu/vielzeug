@@ -451,8 +451,8 @@ define<OreDrawerProps>(DRAWER_TAG, {
       <dialog
         ref=${dialogRef}
         aria-modal="true"
-        :aria-label="${() => props.label.value ?? null}"
-        :aria-labelledby="${() => (!props.label.value ? drawerLabelId : null)}">
+        aria-label="${() => props.label.value ?? null}"
+        aria-labelledby="${() => (!props.label.value ? drawerLabelId : null)}">
         <div class="panel" part="panel" ref=${panelRef}>
           <div class="drag-handle" part="drag-handle" aria-label="Drag to close" role="button"></div>
           <div class="header" part="header" ?hidden=${() => !hasHeader()}>

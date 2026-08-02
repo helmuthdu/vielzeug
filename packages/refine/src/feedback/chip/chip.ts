@@ -256,9 +256,9 @@ define<OreChipComponentProps>(CHIP_TAG, {
         class="remove-btn"
         part="remove-btn"
         type="button"
-        :aria-label="${removeBtnLabel}"
+        aria-label="${removeBtnLabel}"
         ?hidden="${() => props.mode.value !== 'removable'}"
-        :disabled="${props.disabled}"
+        disabled="${props.disabled}"
         @click="${handleRemove}">
         <ore-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></ore-icon>
       </button>
@@ -270,9 +270,9 @@ define<OreChipComponentProps>(CHIP_TAG, {
         part="chip-btn"
         type="button"
         role="checkbox"
-        :aria-checked="${() => String(isChecked.value)}"
-        :aria-label="${props.label}"
-        :disabled="${props.disabled}"
+        aria-checked="${() => String(isChecked.value)}"
+        aria-label="${props.label}"
+        disabled="${props.disabled}"
         @click="${handleSelectableActivate}">
         <span class="chip" part="chip">${renderChipContent()}</span>
       </button>
@@ -283,8 +283,8 @@ define<OreChipComponentProps>(CHIP_TAG, {
         class="chip-btn"
         part="chip-btn"
         type="button"
-        :aria-label="${props.label}"
-        :disabled="${props.disabled}"
+        aria-label="${props.label}"
+        disabled="${props.disabled}"
         @click="${handleActionClick}">
         <span class="chip" part="chip">${renderChipContent()}</span>
       </button>

@@ -277,9 +277,9 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
       <details part="item" ?open="${props.expanded}" ref="${detailsRef}">
         <summary
           part="summary"
-          :aria-expanded="${() => String(props.expanded.value)}"
-          :aria-disabled="${() => (props.disabled.value ? 'true' : 'false')}"
-          :tabindex="${() => (props.disabled.value ? '-1' : null)}"
+          aria-expanded="${() => String(props.expanded.value)}"
+          aria-disabled="${() => (props.disabled.value ? 'true' : 'false')}"
+          tabindex="${() => (props.disabled.value ? '-1' : null)}"
           ref="${summaryRef}">
           <slot name="prefix"></slot>
           <div class="header-content" part="header">

@@ -1,5 +1,5 @@
 import { define, html, inject, prop, ref, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore/forms';
+import { useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { Temporal, format } from '@vielzeug/tempo';
 
@@ -531,18 +531,18 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
         role="combobox"
         aria-haspopup="dialog"
         aria-controls="${dialogId}"
-        :aria-expanded="${() => String(isOpen.value)}"
-        :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-        :value="${inputValue}"
-        :label="${inputLabel}"
-        :placeholder="${inputPlaceholder}"
-        :label-placement="${inputLabelPlacement}"
-        :color="${inputColor}"
-        :size="${inputSize}"
-        :variant="${inputVariant}"
-        :rounded="${inputRounded}"
-        :helper="${inputHelper}"
-        :error="${inputError}"
+        aria-expanded="${() => String(isOpen.value)}"
+        aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
+        value="${inputValue}"
+        label="${inputLabel}"
+        placeholder="${inputPlaceholder}"
+        label-placement="${inputLabelPlacement}"
+        color="${inputColor}"
+        size="${inputSize}"
+        variant="${inputVariant}"
+        rounded="${inputRounded}"
+        helper="${inputHelper}"
+        error="${inputError}"
         ?disabled="${inputDisabled}"
         ?required="${inputRequired}"
         ?fullwidth="${inputFullwidth}"
@@ -559,7 +559,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
         id="${dialogId}"
         role="dialog"
         aria-modal="true"
-        :aria-label="${() => `Choose date — ${displayLabel.value}`}"
+        aria-label="${() => `Choose date — ${displayLabel.value}`}"
         ?data-open="${isOpen}"
         @keydown="${handleCalendarKeydown}">
         <!-- Calendar header -->
@@ -570,7 +570,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
           <button
             class="cal-label-btn"
             type="button"
-            :aria-label="${() =>
+            aria-label="${() =>
               `Switch to ${currentView.value === 'day' ? 'month' : currentView.value === 'month' ? 'year' : 'day'} view`}"
             @click="${handleHeaderClick}">
             <span class="cal-label-month">${displayMonth_}</span>
@@ -587,7 +587,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
           class="cal-grid cal-grid-days"
           role="grid"
           part="grid"
-          :aria-label="${() => displayLabel.value}"
+          aria-label="${() => displayLabel.value}"
           ?hidden="${() => currentView.value !== 'day'}">
           <div role="row" class="cal-grid-row">
             ${() =>
@@ -612,9 +612,9 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
                         class="cal-cell cal-cell-day"
                         role="gridcell"
                         part="day"
-                        :aria-selected="${() => String(cell.isSelected)}"
-                        :aria-disabled="${() => String(cell.isDisabled)}"
-                        :aria-current="${() => (cell.isToday ? 'date' : null)}"
+                        aria-selected="${() => String(cell.isSelected)}"
+                        aria-disabled="${() => String(cell.isDisabled)}"
+                        aria-current="${() => (cell.isToday ? 'date' : null)}"
                         ?data-selected="${() => cell.isSelected}"
                         ?data-today="${() => cell.isToday}"
                         ?data-outside="${() => cell.isOutsideMonth}"
@@ -637,7 +637,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
         <div
           class="cal-grid cal-grid-months"
           role="grid"
-          :aria-label="${() => displayYear_.value}"
+          aria-label="${() => displayYear_.value}"
           ?hidden="${() => currentView.value !== 'month'}">
           ${() => {
             const cells = monthCells.value;
@@ -653,8 +653,8 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
                       <div
                         class="cal-cell cal-cell-month"
                         role="gridcell"
-                        :aria-selected="${() => String(cell.isSelected)}"
-                        :aria-disabled="${() => String(cell.isDisabled)}"
+                        aria-selected="${() => String(cell.isSelected)}"
+                        aria-disabled="${() => String(cell.isDisabled)}"
                         ?data-selected="${() => cell.isSelected}"
                         ?data-disabled="${() => cell.isDisabled}"
                         tabindex="${() => (cell.isDisabled ? '-1' : '0')}"
@@ -695,8 +695,8 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
                       <div
                         class="cal-cell cal-cell-year"
                         role="gridcell"
-                        :aria-selected="${() => String(cell.isSelected)}"
-                        :aria-disabled="${() => String(cell.isDisabled)}"
+                        aria-selected="${() => String(cell.isSelected)}"
+                        aria-disabled="${() => String(cell.isDisabled)}"
                         ?data-selected="${() => cell.isSelected}"
                         ?data-disabled="${() => cell.isDisabled}"
                         tabindex="${() => (cell.isDisabled ? '-1' : '0')}"

@@ -135,7 +135,7 @@ define<OreAlertProps>(ALERT_TAG, {
         ref="${(ref: HTMLElement) => {
           announceEl = ref;
         }}"></span>
-      <div class="alert" :role="${alertRole}" part="alert">
+      <div class="alert" role="${alertRole}" part="alert">
         <span class="icon" part="icon" aria-hidden="true" ?hidden="${() => !slots.has('icon').value}">
           <slot name="icon"></slot>
         </span>

@@ -175,7 +175,7 @@ define<OreDialogProps>(DIALOG_TAG, {
     return html`
       <dialog ref=${dialogRef} class="dialog" part="dialog" aria-label="${props.label}" aria-modal="true">
         <div class="overlay" part="overlay" aria-hidden="true"></div>
-        <div class="panel" part="panel" :data-size="${props.size}">
+        <div class="panel" part="panel" data-size="${props.size}">
           <div class="header" part="header" ?hidden=${() => !hasHeader()}>
             <slot name="header">
               <span class="title" part="title">${props.label}</span>

@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick, fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 import type { OreMenuItemProps } from './menu';
 
@@ -28,7 +29,7 @@ describe('ore-menu', () => {
 
       fixture.element.addEventListener('open', onOpen);
 
-      await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
+      fireClick(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
 
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
       expect((onOpen.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'click' });
@@ -48,8 +49,8 @@ describe('ore-menu', () => {
       fixture.element.addEventListener('select', onSelect);
       fixture.element.addEventListener('close', onClose);
 
-      await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
-      await user.click(fixture.element.querySelector<MenuItemElement>('[value="edit"]')!);
+      fireClick(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
+      fireClick(fixture.element.querySelector<MenuItemElement>('[value="edit"]')!);
 
       expect(onSelect).toHaveBeenCalledTimes(1);
       expect((onSelect.mock.calls[0][0] as CustomEvent).detail.value).toBe('edit');
@@ -65,11 +66,11 @@ describe('ore-menu', () => {
         `,
       });
 
-      await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
+      fireClick(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
 
       const item = fixture.element.querySelector<MenuItemElement>('[value="show-ids"]')!;
 
-      await user.click(item);
+      fireClick(item);
 
       expect(item.hasAttribute('checked')).toBe(true);
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
@@ -83,7 +84,7 @@ describe('ore-menu', () => {
         `,
       });
 
-      await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
+      fireClick(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
 
       const item = fixture.element.querySelector<MenuItemElement>('[value="show-ids"]')!;
       const initialCheck = item.shadowRoot?.querySelector<HTMLElement>('.item-check');
@@ -93,7 +94,7 @@ describe('ore-menu', () => {
       expect(initialItem?.getAttribute('aria-checked')).toBe('false');
       expect(initialCheck).toBeTruthy();
 
-      await user.click(item);
+      fireClick(item);
 
       const internalItem = item.shadowRoot?.querySelector<HTMLElement>('.item');
       const internalCheck = item.shadowRoot?.querySelector<HTMLElement>('.item-check');
@@ -150,7 +151,7 @@ describe('ore-menu', () => {
       expect(trigger.getAttribute('aria-haspopup')).toBe('menu');
       expect(trigger.getAttribute('aria-expanded')).toBe('false');
 
-      await user.click(trigger);
+      fireClick(trigger);
       expect(trigger.getAttribute('aria-expanded')).toBe('true');
     });
 
@@ -183,7 +184,7 @@ describe('ore-menu', () => {
 
       const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
 
-      await user.press(trigger, 'ArrowDown');
+      fireKeyDown(trigger, { key: 'ArrowDown' });
 
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
     });
@@ -203,7 +204,7 @@ describe('ore-menu', () => {
 
       const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
 
-      await user.press(trigger, 'Enter');
+      fireKeyDown(trigger, { key: 'Enter' });
 
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
       expect((onOpen.mock.calls[0][0] as CustomEvent).detail.reason).toBe('keyboard');
@@ -220,7 +221,7 @@ describe('ore-menu', () => {
 
       const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
 
-      await user.press(trigger, ' ');
+      fireKeyDown(trigger, { key: ' ' });
 
       expect(fixture.query('.menu-panel')?.hasAttribute('data-open')).toBe(true);
     });
@@ -237,8 +238,8 @@ describe('ore-menu', () => {
 
       fixture.element.addEventListener('close', onClose);
 
-      await user.click(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
-      await user.press(fixture.query('.menu-panel')!, 'Escape');
+      fireClick(fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!);
+      fireKeyDown(fixture.query('.menu-panel')!, { key: 'Escape' });
 
       expect((onClose.mock.calls[0][0] as CustomEvent).detail).toEqual({ reason: 'escape' });
     });
@@ -254,9 +255,9 @@ describe('ore-menu', () => {
 
       const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
 
-      await user.press(trigger, 'ArrowDown');
+      fireKeyDown(trigger, { key: 'ArrowDown' });
       await fixture.flush();
-      await user.press(fixture.query('.menu-panel')!, 'ArrowDown');
+      fireKeyDown(fixture.query('.menu-panel')!, { key: 'ArrowDown' });
       await fixture.flush();
 
       const items = fixture.element.querySelectorAll<MenuItemElement>('ore-menu-item');
@@ -280,11 +281,11 @@ describe('ore-menu', () => {
 
       const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
 
-      await user.press(trigger, 'ArrowDown');
+      fireKeyDown(trigger, { key: 'ArrowDown' });
       await fixture.flush();
-      await user.press(fixture.query('.menu-panel')!, 'ArrowDown');
+      fireKeyDown(fixture.query('.menu-panel')!, { key: 'ArrowDown' });
       await fixture.flush();
-      await user.press(fixture.query('.menu-panel')!, 'Enter');
+      fireKeyDown(fixture.query('.menu-panel')!, { key: 'Enter' });
       await fixture.flush();
 
       expect(onSelect).toHaveBeenCalledTimes(1);
@@ -306,11 +307,11 @@ describe('ore-menu', () => {
 
       const trigger = fixture.element.querySelector<HTMLElement>('button[slot="trigger"]')!;
 
-      await user.press(trigger, 'ArrowDown');
+      fireKeyDown(trigger, { key: 'ArrowDown' });
       await fixture.flush();
-      await user.press(fixture.query('.menu-panel')!, 'ArrowDown');
+      fireKeyDown(fixture.query('.menu-panel')!, { key: 'ArrowDown' });
       await fixture.flush();
-      await user.press(fixture.query('.menu-panel')!, ' ');
+      fireKeyDown(fixture.query('.menu-panel')!, { key: ' ' });
       await fixture.flush();
 
       expect(onSelect).toHaveBeenCalledTimes(1);

@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-alert', () => {
   let fixture: Fixture<HTMLElement>;
@@ -38,7 +39,7 @@ describe('ore-alert', () => {
       const handler = vi.fn();
 
       fixture.element.addEventListener('dismiss', handler);
-      await user.click(fixture.query<HTMLElement>('.close')!);
+      fireClick(fixture.query<HTMLElement>('.close')!);
       expect(handler).not.toHaveBeenCalled();
     });
 
@@ -114,7 +115,7 @@ describe('ore-alert', () => {
 
       fixture.element.addEventListener('dismiss', handler);
 
-      await user.click(fixture.query<HTMLElement>('.close')!);
+      fireClick(fixture.query<HTMLElement>('.close')!);
       // jsdom does not run CSS animations; manually fire animationend
       fixture.element.dispatchEvent(new Event('animationend'));
       await fixture.flush();
@@ -129,7 +130,7 @@ describe('ore-alert', () => {
 
       fixture.element.addEventListener('dismiss', handler);
 
-      await user.click(fixture.query<HTMLElement>('.close')!);
+      fireClick(fixture.query<HTMLElement>('.close')!);
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('dismissed')).toBe(true);
@@ -226,7 +227,7 @@ describe('ore-alert accessibility', () => {
       const btn = fixture.query<HTMLElement>('.close')!;
 
       btn.focus();
-      await user.click(btn);
+      fireClick(btn);
       // jsdom does not run CSS animations; manually fire animationend
       fixture.element.dispatchEvent(new Event('animationend'));
       await fixture.flush();

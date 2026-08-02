@@ -1,4 +1,5 @@
-import { fire, type Fixture, mount } from '@vielzeug/ore/testing';
+import { fireClick } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-popover', () => {
   let fixture: Fixture<HTMLElement>;
@@ -91,7 +92,7 @@ describe('ore-popover', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -132,7 +133,7 @@ describe('ore-popover', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -148,7 +149,7 @@ describe('ore-popover', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -162,11 +163,11 @@ describe('ore-popover', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -183,7 +184,7 @@ describe('ore-popover', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -199,13 +200,13 @@ describe('ore-popover', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
       const panel = fixture.query('[role="dialog"]') as HTMLElement | null;
 
-      if (panel) fire.click(panel);
+      if (panel) fireClick(panel);
 
       await fixture.flush();
 
@@ -219,7 +220,7 @@ describe('ore-popover', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -247,7 +248,7 @@ describe('ore-popover', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -266,11 +267,11 @@ describe('ore-popover', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -289,7 +290,7 @@ describe('ore-popover', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -312,7 +313,7 @@ describe('ore-popover', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -336,7 +337,7 @@ describe('ore-popover', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -382,7 +383,7 @@ describe('ore-popover accessibility', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 
@@ -434,7 +435,7 @@ describe('ore-popover accessibility', () => {
 
       const btn = fixture.element.querySelector<HTMLButtonElement>('button');
 
-      if (btn) fire.click(btn);
+      if (btn) fireClick(btn);
 
       await fixture.flush();
 

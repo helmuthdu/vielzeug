@@ -1,4 +1,5 @@
-import { fire, type Fixture, mount } from '@vielzeug/ore/testing';
+import { fireClick, fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -21,7 +22,7 @@ function getToday(fixture: Fixture<HTMLElement>): Element | null {
 function clickDay(fixture: Fixture<HTMLElement>, iso: string): void {
   const cell = fixture.query(`[data-iso="${iso}"]`);
 
-  if (cell) fire.click(cell);
+  if (cell) fireClick(cell);
 }
 
 function getHeaderLabel(fixture: Fixture<HTMLElement>): string {
@@ -175,7 +176,7 @@ describe('ore-calendar', () => {
 
       const labelBefore = getHeaderLabel(fixture);
 
-      fire.click(fixture.query('.nav-btn[aria-label="Previous"]')!);
+      fireClick(fixture.query('.nav-btn[aria-label="Previous"]')!);
       await fixture.flush();
 
       const labelAfter = getHeaderLabel(fixture);
@@ -187,7 +188,7 @@ describe('ore-calendar', () => {
     it('next button moves to next month', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-06-01' } });
 
-      fire.click(fixture.query('.nav-btn[aria-label="Next"]')!);
+      fireClick(fixture.query('.nav-btn[aria-label="Next"]')!);
       await fixture.flush();
 
       expect(getHeaderLabel(fixture)).toMatch(/July/i);
@@ -196,7 +197,7 @@ describe('ore-calendar', () => {
     it('previous wraps from January to December of prior year', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-01-01' } });
 
-      fire.click(fixture.query('.nav-btn[aria-label="Previous"]')!);
+      fireClick(fixture.query('.nav-btn[aria-label="Previous"]')!);
       await fixture.flush();
 
       const label = getHeaderLabel(fixture);
@@ -208,7 +209,7 @@ describe('ore-calendar', () => {
     it('header click switches to month view', async () => {
       fixture = await mount('ore-calendar');
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       expect(fixture.query('.cal-grid-months:not([hidden])')).toBeTruthy();
@@ -217,14 +218,14 @@ describe('ore-calendar', () => {
     it('clicking a month in month view switches to day view', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-06-01' } });
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       const marchCell = Array.from(fixture.queryAll('.cal-cell-month')).find((el) =>
         el.textContent?.trim().toLowerCase().startsWith('mar'),
       );
 
-      fire.click(marchCell!);
+      fireClick(marchCell!);
       await fixture.flush();
 
       expect(getGrid(fixture)).toBeTruthy();
@@ -234,9 +235,9 @@ describe('ore-calendar', () => {
     it('second header click switches to year view', async () => {
       fixture = await mount('ore-calendar');
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       expect(fixture.query('.cal-grid-years:not([hidden])')).toBeTruthy();
@@ -245,14 +246,14 @@ describe('ore-calendar', () => {
     it('clicking a year in year view switches to month view', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-01-01' } });
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       const yearCell = Array.from(fixture.queryAll('.cal-cell-year')).find((el) => el.textContent?.trim() === '2023');
 
-      fire.click(yearCell!);
+      fireClick(yearCell!);
       await fixture.flush();
 
       expect(fixture.query('.cal-grid-months:not([hidden])')).toBeTruthy();
@@ -331,7 +332,7 @@ describe('ore-calendar', () => {
 
       const cell = fixture.query('[data-iso="2023-06-10"]')!;
 
-      fire.keyDown(cell, { key: 'Enter' });
+      fireKeyDown(cell, { key: 'Enter' });
       await fixture.flush();
 
       expect(events.length).toBe(1);
@@ -347,7 +348,7 @@ describe('ore-calendar', () => {
 
       const cell = fixture.query('[data-iso="2023-06-10"]')!;
 
-      fire.keyDown(cell, { key: ' ' });
+      fireKeyDown(cell, { key: ' ' });
       await fixture.flush();
 
       expect(events.length).toBe(1);
@@ -360,7 +361,7 @@ describe('ore-calendar', () => {
       const next = fixture.query('[data-iso="2023-06-11"]') as HTMLElement;
 
       cell.focus();
-      fire.keyDown(cell, { key: 'ArrowRight' });
+      fireKeyDown(cell, { key: 'ArrowRight' });
       await fixture.flush();
 
       // jsdom does not propagate focus from focus() calls triggered inside handlers,
@@ -375,7 +376,7 @@ describe('ore-calendar', () => {
       const prev = fixture.query('[data-iso="2023-06-09"]') as HTMLElement;
 
       cell.focus();
-      fire.keyDown(cell, { key: 'ArrowLeft' });
+      fireKeyDown(cell, { key: 'ArrowLeft' });
       await fixture.flush();
 
       expect(prev).toBeTruthy();
@@ -388,7 +389,7 @@ describe('ore-calendar', () => {
       const oneWeekLater = fixture.query('[data-iso="2023-06-17"]') as HTMLElement;
 
       cell.focus();
-      fire.keyDown(cell, { key: 'ArrowDown' });
+      fireKeyDown(cell, { key: 'ArrowDown' });
       await fixture.flush();
 
       expect(oneWeekLater).toBeTruthy();
@@ -401,7 +402,7 @@ describe('ore-calendar', () => {
       const oneWeekEarlier = fixture.query('[data-iso="2023-06-03"]') as HTMLElement;
 
       cell.focus();
-      fire.keyDown(cell, { key: 'ArrowUp' });
+      fireKeyDown(cell, { key: 'ArrowUp' });
       await fixture.flush();
 
       expect(oneWeekEarlier).toBeTruthy();
@@ -413,7 +414,7 @@ describe('ore-calendar', () => {
       // 2023-06-10 is a Saturday — row starts on Sunday 2023-06-04
       const cell = fixture.query('[data-iso="2023-06-10"]') as HTMLElement;
 
-      expect(() => fire.keyDown(cell, { key: 'Home' })).not.toThrow();
+      expect(() => fireKeyDown(cell, { key: 'Home' })).not.toThrow();
     });
 
     it('End moves focus to the last cell in the same row', async () => {
@@ -422,20 +423,20 @@ describe('ore-calendar', () => {
       // 2023-06-04 is a Sunday — row ends on Saturday 2023-06-10
       const cell = fixture.query('[data-iso="2023-06-04"]') as HTMLElement;
 
-      expect(() => fire.keyDown(cell, { key: 'End' })).not.toThrow();
+      expect(() => fireKeyDown(cell, { key: 'End' })).not.toThrow();
     });
 
     it('Enter on a month cell navigates to day view', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-06-01' } });
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       const julyCell = Array.from(fixture.queryAll('.cal-cell-month')).find((el) =>
         el.textContent?.trim().toLowerCase().startsWith('jul'),
       )!;
 
-      fire.keyDown(julyCell, { key: 'Enter' });
+      fireKeyDown(julyCell, { key: 'Enter' });
       await fixture.flush();
 
       expect(getGrid(fixture)).toBeTruthy();
@@ -445,14 +446,14 @@ describe('ore-calendar', () => {
     it('Enter on a year cell navigates to month view', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-01-01' } });
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       const yearCell = Array.from(fixture.queryAll('.cal-cell-year')).find((el) => el.textContent?.trim() === '2023')!;
 
-      fire.keyDown(yearCell, { key: 'Enter' });
+      fireKeyDown(yearCell, { key: 'Enter' });
       await fixture.flush();
 
       expect(fixture.query('.cal-grid-months:not([hidden])')).toBeTruthy();
@@ -461,13 +462,13 @@ describe('ore-calendar', () => {
     it('ArrowRight moves focus between month cells', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-06-01' } });
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       const cells = [...fixture.queryAll<HTMLElement>('.cal-cell-month')];
 
       cells[0].focus();
-      fire.keyDown(cells[0], { key: 'ArrowRight' });
+      fireKeyDown(cells[0], { key: 'ArrowRight' });
       await fixture.flush();
 
       expect(fixture.shadow?.activeElement).toBe(cells[1]);
@@ -476,13 +477,13 @@ describe('ore-calendar', () => {
     it('ArrowDown moves focus 4 cells forward in month view (one row)', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-06-01' } });
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       const cells = [...fixture.queryAll<HTMLElement>('.cal-cell-month')];
 
       cells[0].focus();
-      fire.keyDown(cells[0], { key: 'ArrowDown' });
+      fireKeyDown(cells[0], { key: 'ArrowDown' });
       await fixture.flush();
 
       expect(fixture.shadow?.activeElement).toBe(cells[4]);
@@ -491,19 +492,19 @@ describe('ore-calendar', () => {
     it('Home/End move focus to the first/last cell in the same month-view row', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-06-01' } });
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       const cells = [...fixture.queryAll<HTMLElement>('.cal-cell-month')];
 
       cells[1].focus();
-      fire.keyDown(cells[1], { key: 'End' });
+      fireKeyDown(cells[1], { key: 'End' });
       await fixture.flush();
 
       expect(fixture.shadow?.activeElement).toBe(cells[3]);
 
       cells[2].focus();
-      fire.keyDown(cells[2], { key: 'Home' });
+      fireKeyDown(cells[2], { key: 'Home' });
       await fixture.flush();
 
       expect(fixture.shadow?.activeElement).toBe(cells[0]);
@@ -512,15 +513,15 @@ describe('ore-calendar', () => {
     it('ArrowRight moves focus between year cells', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-01-01' } });
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       const cells = [...fixture.queryAll<HTMLElement>('.cal-cell-year')];
 
       cells[0].focus();
-      fire.keyDown(cells[0], { key: 'ArrowRight' });
+      fireKeyDown(cells[0], { key: 'ArrowRight' });
       await fixture.flush();
 
       expect(fixture.shadow?.activeElement).toBe(cells[1]);
@@ -570,7 +571,7 @@ describe('ore-calendar', () => {
     it('month view wraps cells in role="row" elements', async () => {
       fixture = await mount('ore-calendar');
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       const rows = fixture.queryAll('.cal-grid-months [role="row"]');
@@ -582,9 +583,9 @@ describe('ore-calendar', () => {
     it('year view wraps cells in role="row" elements', async () => {
       fixture = await mount('ore-calendar');
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       const rows = fixture.queryAll('.cal-grid-years [role="row"]');
@@ -809,7 +810,7 @@ describe('ore-calendar', () => {
     it('navigates month grids across year boundaries correctly', async () => {
       fixture = await mount('ore-calendar', { props: { value: '2023-12-01' } });
 
-      fire.click(fixture.query('.nav-btn[aria-label="Next"]')!);
+      fireClick(fixture.query('.nav-btn[aria-label="Next"]')!);
       await fixture.flush();
 
       expect(getHeaderLabel(fixture)).toContain('2024');
@@ -824,7 +825,7 @@ describe('ore-calendar', () => {
     it('month view shows 12 month cells', async () => {
       fixture = await mount('ore-calendar');
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       expect(fixture.queryAll('.cal-cell-month').length).toBe(12);
@@ -833,9 +834,9 @@ describe('ore-calendar', () => {
     it('year view shows 12 year cells', async () => {
       fixture = await mount('ore-calendar');
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       expect(fixture.queryAll('.cal-cell-year').length).toBe(12);
@@ -844,11 +845,11 @@ describe('ore-calendar', () => {
     it('third header click cycles back to day view', async () => {
       fixture = await mount('ore-calendar');
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       expect(getGrid(fixture)).toBeTruthy();
@@ -857,7 +858,7 @@ describe('ore-calendar', () => {
     it('clicking a month cell when disabled does not emit change', async () => {
       fixture = await mount('ore-calendar', { props: { disabled: true, value: '2023-06-01' } });
 
-      fire.click(fixture.query('.cal-label-btn')!);
+      fireClick(fixture.query('.cal-label-btn')!);
       await fixture.flush();
 
       const events: CustomEvent[] = [];
@@ -868,7 +869,7 @@ describe('ore-calendar', () => {
         el.textContent?.trim().toLowerCase().startsWith('mar'),
       )!;
 
-      fire.click(marchCell);
+      fireClick(marchCell);
       await fixture.flush();
 
       expect(events.length).toBe(0);

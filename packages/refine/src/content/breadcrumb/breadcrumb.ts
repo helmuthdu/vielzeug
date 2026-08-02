@@ -48,9 +48,9 @@ define<OreBreadcrumbItemProps>(BREADCRUMB_ITEM_TAG, {
         <span class="separator" part="separator" aria-hidden="true">${props.separator}</span>
         <a
           class="link"
-          :href="${props.href}"
-          :aria-current="${() => (props.active.value ? 'page' : null)}"
-          :tabindex="${() => (props.active.value ? '-1' : null)}"
+          href="${props.href}"
+          aria-current="${() => (props.active.value ? 'page' : null)}"
+          tabindex="${() => (props.active.value ? '-1' : null)}"
           part="link">
           <span class="icon"><slot name="icon"></slot></span>
           <span class="label"><slot></slot></span>
@@ -130,7 +130,7 @@ define<OreBreadcrumbProps>(BREADCRUMB_TAG, {
     });
 
     return html`
-      <nav part="nav" :aria-label="${props.label}">
+      <nav part="nav" aria-label="${props.label}">
         <ol role="list" part="list">
           <slot></slot>
         </ol>

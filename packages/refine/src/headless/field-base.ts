@@ -301,9 +301,9 @@ export const createLabelState = (options: LabelStateOptions): LabelStateHandle =
  * ```html
  * <label id="${labelId}" ?hidden="${() => !labelVisible.value}">...</label>
  * <input
- *   :aria-labelledby="${ariaLabelledBy}"
- *   :aria-describedby="${ariaDescribedBy}"
- *   :aria-invalid="${ariaInvalid}" />
+ *   aria-labelledby="${ariaLabelledBy}"
+ *   aria-describedby="${ariaDescribedBy}"
+ *   aria-invalid="${ariaInvalid}" />
  * ```
  */
 export type FieldHandle = AssistiveStateHandle & LabelStateHandle;

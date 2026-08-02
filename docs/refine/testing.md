@@ -9,10 +9,11 @@ description: ARIA helpers, typed mount wrappers, and event utilities for testing
 
 `@vielzeug/refine/testing` provides helpers for writing component tests on top of `@vielzeug/ore/testing`. All helpers are tree-shakeable with no runtime side-effects.
 
-The module groups into three concerns: **ARIA assertions** (check what the DOM exposes to assistive technology — refine-specific, since they're about testing a component's accessibility *contract*), **form helpers** (read form-associated values), and **typed mount wrappers**. The generic, framework-agnostic pieces — shadow DOM queries, event dispatch, async timing — are re-exported from [`@vielzeug/assay`](/assay/) rather than duplicated here.
+The module groups into three concerns: **ARIA assertions** (check what the DOM exposes to assistive technology — refine-specific, since they're about testing a component's accessibility *contract*), **form helpers** (read form-associated values), and **typed mount wrappers**. Import generic DOM queries, events, and timing directly from [`@vielzeug/assay`](/assay/).
 
 ```ts
-import { isAriaInvalid, queryInShadow, mountOreInput } from '@vielzeug/refine/testing';
+import { queryInShadow } from '@vielzeug/assay';
+import { isAriaInvalid, mountOreInput } from '@vielzeug/refine/testing';
 ```
 
 ## ARIA Helpers
@@ -45,7 +46,7 @@ expect(getAriaState(input)).toMatchObject({ invalid: 'true', required: 'true' })
 
 ## Shadow DOM Queries
 
-Re-exported from [`@vielzeug/assay`](/assay/api#query-helpers) — return `null`/`[]` instead of throwing when the host has no shadow root:
+Import from [`@vielzeug/assay`](/assay/api#query-helpers). These helpers return `null`/`[]` instead of throwing when the host has no shadow root:
 
 ```ts
 // Query a single element inside the host's shadow root
@@ -73,23 +74,24 @@ const valid = isFormValid(el);
 
 ## Event and Timing Helpers
 
-Simulate interactions with [`@vielzeug/ore/testing`](/ore/usage#testing-utilities)'s `fire.*` (it re-exports `@vielzeug/assay`'s dispatchers):
+Dispatch generic DOM events with Assay's named helpers:
 
 ```ts
-import { fire } from '@vielzeug/ore/testing';
+import { fireKeyDown } from '@vielzeug/assay';
 
-fire.keyDown(element, { key: 'ArrowDown', shiftKey: true });
-fire.pointerEnter(trigger); // replaces the removed dispatchPointer(el, 'enter')
+fireKeyDown(element, { key: 'ArrowDown', shiftKey: true });
 ```
 
-`nextTick()`/`wait()` are re-exported from `@vielzeug/refine/testing` (sourced from `@vielzeug/assay`):
+Import timing helpers from Assay:
 
 ```ts
+import { delay, nextTick } from '@vielzeug/assay';
+
 // Wait for reactive signal effects to settle (microtask flush)
 await nextTick();
 
-// Wait a fixed number of milliseconds — use sparingly, prefer nextTick()/waitFor()
-await wait(50);
+// Wait a fixed number of milliseconds — use sparingly, prefer nextTick()/waitUntil()
+await delay(50);
 ```
 
 ## ID Counter Reset

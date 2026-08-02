@@ -131,15 +131,15 @@ define<OreAvatarProps>(AVATAR_TAG, {
     const avatarRole = () => (avatarLabel() ? 'img' : null);
 
     return html`
-      <span class="avatar" part="avatar" :aria-label="${avatarLabel}" :role="${avatarRole}">
+      <span class="avatar" part="avatar" aria-label="${avatarLabel}" role="${avatarRole}">
         ${() =>
           props.src.value
             ? html`
                 <img
                   ref="${attachImgListeners}"
                   part="img"
-                  :src="${props.src}"
-                  :alt="${props.alt}"
+                  src="${props.src}"
+                  alt="${props.alt}"
                   ?hidden="${() => !showImage.value}"
                   aria-hidden="true" />
               `
@@ -160,7 +160,7 @@ define<OreAvatarProps>(AVATAR_TAG, {
       ${() =>
         props.status.value
           ? html`
-              <span class="status" part="status" :data-status="${props.status}" aria-hidden="true"></span>
+              <span class="status" part="status" data-status="${props.status}" aria-hidden="true"></span>
             `
           : ''}
     `;

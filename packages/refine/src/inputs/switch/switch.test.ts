@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick, fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-switch', () => {
   let fixture: Fixture<HTMLElement>;
@@ -40,9 +41,9 @@ describe('ore-switch', () => {
 
     it('toggles checked on click', async () => {
       fixture = await mount('ore-switch');
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(true);
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(false);
     });
 
@@ -69,7 +70,7 @@ describe('ore-switch', () => {
 
     it('does not toggle when disabled', async () => {
       fixture = await mount('ore-switch', { attrs: { disabled: true } });
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(false);
     });
 
@@ -79,7 +80,7 @@ describe('ore-switch', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(onChange).not.toHaveBeenCalled();
     });
 
@@ -90,7 +91,7 @@ describe('ore-switch', () => {
           disabled: true,
         },
       });
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
 
@@ -109,7 +110,7 @@ describe('ore-switch', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(onChange).toHaveBeenCalledTimes(1);
 
       const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
@@ -125,7 +126,7 @@ describe('ore-switch', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.click(fixture.element);
+      fireClick(fixture.element);
 
       const detail = (onChange.mock.calls[0][0] as CustomEvent).detail;
 
@@ -139,7 +140,7 @@ describe('ore-switch', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.press(fixture.element, ' ');
+      fireKeyDown(fixture.element, { key: ' ' });
       expect(onChange).toHaveBeenCalledTimes(1);
     });
 
@@ -149,7 +150,7 @@ describe('ore-switch', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.press(fixture.element, 'Enter');
+      fireKeyDown(fixture.element, { key: 'Enter' });
       expect(onChange).toHaveBeenCalledTimes(1);
     });
   });
@@ -236,7 +237,7 @@ describe('ore-switch', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.press(fixture.element, ' ');
+      fireKeyDown(fixture.element, { key: ' ' });
       expect(onChange).toHaveBeenCalled();
     });
   });
@@ -245,7 +246,7 @@ describe('ore-switch', () => {
   describe('Edge Cases', () => {
     it('handles rapid toggling without getting stuck', async () => {
       fixture = await mount('ore-switch');
-      for (let i = 0; i < 5; i++) await user.click(fixture.element);
+      for (let i = 0; i < 5; i++) fireClick(fixture.element);
       expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
 
@@ -299,9 +300,9 @@ describe('ore-switch accessibility', () => {
     it('updates aria-checked dynamically as the switch is toggled', async () => {
       const fixture = await mount('ore-switch');
 
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
-      await user.click(fixture.element);
+      fireClick(fixture.element);
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
       fixture.dispose();
     });
@@ -333,7 +334,7 @@ describe('ore-switch accessibility', () => {
     it('toggles on Space keypress', async () => {
       const fixture = await mount('ore-switch');
 
-      await user.press(fixture.element, ' ');
+      fireKeyDown(fixture.element, { key: ' ' });
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       fixture.dispose();
     });
@@ -341,7 +342,7 @@ describe('ore-switch accessibility', () => {
     it('toggles on Enter keypress', async () => {
       const fixture = await mount('ore-switch');
 
-      await user.press(fixture.element, 'Enter');
+      fireKeyDown(fixture.element, { key: 'Enter' });
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       fixture.dispose();
     });
@@ -351,7 +352,7 @@ describe('ore-switch accessibility', () => {
       const onChange = vi.fn();
 
       fixture.element.addEventListener('change', onChange);
-      await user.press(fixture.element, ' ');
+      fireKeyDown(fixture.element, { key: ' ' });
       expect(onChange).not.toHaveBeenCalled();
       fixture.dispose();
     });

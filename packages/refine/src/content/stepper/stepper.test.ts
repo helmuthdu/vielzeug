@@ -1,4 +1,5 @@
-import { type Fixture, flush, mount, user } from '@vielzeug/ore/testing';
+import { fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, flush, mount } from '@vielzeug/ore/testing';
 
 describe('ore-stepper', () => {
   let fixture: Fixture<HTMLElement>;
@@ -244,7 +245,7 @@ describe('ore-stepper', () => {
 
       const steps = fixture.element.querySelectorAll<HTMLElement>('ore-step');
 
-      await user.press(steps[0], 'ArrowRight');
+      fireKeyDown(steps[0], { key: 'ArrowRight' });
       expect(fixture.element.getAttribute('value')).toBe('shipping');
     });
 
@@ -261,7 +262,7 @@ describe('ore-stepper', () => {
 
       const steps = fixture.element.querySelectorAll<HTMLElement>('ore-step');
 
-      await user.press(steps[0], 'ArrowRight');
+      fireKeyDown(steps[0], { key: 'ArrowRight' });
       expect(fixture.element.getAttribute('value')).toBe('payment');
     });
 

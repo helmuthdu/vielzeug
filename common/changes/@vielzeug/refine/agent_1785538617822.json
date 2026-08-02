@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: migrate to Ore's root-only runtime API, ordinary reactive bindings, and Assay testing utilities",
+      "packageName": "@vielzeug/refine",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

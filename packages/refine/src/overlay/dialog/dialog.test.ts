@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-dialog', () => {
   let fixture: Fixture<HTMLElement>;
@@ -125,7 +126,8 @@ describe('ore-dialog', () => {
 
       fixture.element.addEventListener('close', handler);
 
-      await user.click(fixture.query<HTMLElement>('[aria-label="Close dialog"]')!);
+      fireClick(fixture.query<HTMLElement>('[aria-label="Close dialog"]')!);
+      await fixture.flush();
 
       expect(handler).toHaveBeenCalled();
       expect((handler.mock.calls[0]?.[0] as CustomEvent<{ reason: string }>).detail.reason).toBe('trigger');
@@ -140,7 +142,7 @@ describe('ore-dialog', () => {
         detail = (e as CustomEvent<{ reason: string }>).detail;
       });
 
-      await user.click(fixture.query<HTMLElement>('[aria-label="Close dialog"]')!);
+      fireClick(fixture.query<HTMLElement>('[aria-label="Close dialog"]')!);
 
       expect(detail?.reason).toBe('trigger');
     });
@@ -149,7 +151,7 @@ describe('ore-dialog', () => {
       fixture = await mount('ore-dialog', { attrs: { dismissible: '', open: '' } });
 
       fixture.element.addEventListener('close-request', (e) => e.preventDefault());
-      await user.click(fixture.query<HTMLElement>('[aria-label="Close dialog"]')!);
+      fireClick(fixture.query<HTMLElement>('[aria-label="Close dialog"]')!);
       await fixture.flush();
 
       expect(fixture.query('dialog[open]')).toBeTruthy();

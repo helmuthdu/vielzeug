@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-chat-message', () => {
   let fixture: Fixture<HTMLElement>;
@@ -195,7 +196,7 @@ describe('ore-chat-message', () => {
       const onRetry = vi.fn();
 
       fixture.element.addEventListener('retry', onRetry);
-      await user.click(fixture.query<HTMLElement>('.retry')!);
+      fireClick(fixture.query<HTMLElement>('.retry')!);
 
       expect(onRetry).toHaveBeenCalledTimes(1);
     });

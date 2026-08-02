@@ -11,7 +11,7 @@ import {
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { resizeObserver } from '@vielzeug/ore/observers';
+import { resizeObserver } from '@vielzeug/ore';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
 import '../../content/icon/icon';
@@ -636,7 +636,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
                   aria-current="${item.active ? 'page' : null}"
                   data-active="${item.active ? 'true' : null}">
                   <span class="bottom-tab-icon" aria-hidden="true" ?hidden=${() => !item.iconName}>
-                    <ore-icon :name="${item.iconName}" size="18" stroke-width="2"></ore-icon>
+                    <ore-icon name="${item.iconName}" size="18" stroke-width="2"></ore-icon>
                   </span>
                   <span class="bottom-tab-label">${item.label}</span>
                 </a>
@@ -652,7 +652,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
                 data-active="${item.active ? 'true' : null}"
                 @click=${() => item.source.click()}>
                 <span class="bottom-tab-icon" aria-hidden="true" ?hidden=${() => !item.iconName}>
-                  <ore-icon :name="${item.iconName}" size="18" stroke-width="2"></ore-icon>
+                  <ore-icon name="${item.iconName}" size="18" stroke-width="2"></ore-icon>
                 </span>
                 <span class="bottom-tab-label">${item.label}</span>
               </button>
@@ -889,8 +889,8 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
               class="item"
               part="item"
               href="${props.href}"
-              :rel="${effectiveRel}"
-              :target="${props.target}"
+              rel="${effectiveRel}"
+              target="${props.target}"
               aria-current="${() => (props.active.value ? 'page' : null)}">
               ${renderItemContent()}
             </a>

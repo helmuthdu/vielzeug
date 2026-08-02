@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-accordion', () => {
   let fixture: Fixture<HTMLElement>;
@@ -196,7 +197,7 @@ describe('ore-accordion accessibility', () => {
       if (!summary) return;
 
       summary.focus();
-      await user.click(summary);
+      fireClick(summary);
 
       // After click, details should be open
       const details = item.shadowRoot?.querySelector('details');

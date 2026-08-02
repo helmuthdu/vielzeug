@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-navbar', () => {
   let fixture: Fixture<HTMLElement>;
@@ -142,7 +143,7 @@ describe('ore-navbar', () => {
 
       expect(btn?.hasAttribute('hidden')).toBe(false);
 
-      await user.click(btn!);
+      fireClick(btn!);
       await fixture.flush();
 
       expect(sidebar.toggleMobile).toHaveBeenCalledTimes(1);
@@ -271,7 +272,7 @@ describe('ore-navbar', () => {
 
       const item = fixture.element.querySelector('ore-navbar-item')!;
 
-      await user.click(item.shadowRoot!.querySelector('.item')!);
+      fireClick(item.shadowRoot!.querySelector('.item')!);
       await fixture.flush();
       expect(fixture.element.hasAttribute('data-mobile-open')).toBe(false);
     } finally {
@@ -347,7 +348,7 @@ describe('ore-navbar', () => {
       const btn = fixture.query<HTMLButtonElement>('[part="mobile-toggle"]');
 
       expect(btn).toBeTruthy();
-      await user.click(btn!);
+      fireClick(btn!);
       await fixture.flush();
 
       expect(btn?.getAttribute('aria-expanded')).toBe('true');

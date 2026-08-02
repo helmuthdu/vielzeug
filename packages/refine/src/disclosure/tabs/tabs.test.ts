@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-tabs', () => {
   let fixture: Fixture<HTMLElement>;
@@ -108,7 +109,7 @@ describe('ore-tabs', () => {
     it('supports keyboard navigation on horizontal tabs', async () => {
       fixture = await mount('ore-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
 
-      await user.press(fixture.element, 'ArrowRight');
+      fireKeyDown(fixture.element, { key: 'ArrowRight' });
       expect(fixture.element.getAttribute('value')).toBe('settings');
     });
 
@@ -139,14 +140,14 @@ describe('ore-tabs', () => {
       expect(overviewButton).toBeTruthy();
       expect(overviewPanel).toBeTruthy();
 
-      if (overviewButton && 'ariaControlsElements' in overviewButton) {
-        expect(Array.from(overviewButton.ariaControlsElements ?? [])).toEqual([overviewPanel]);
+      if (overviewButton?.ariaControlsElements) {
+        expect(Array.from(overviewButton.ariaControlsElements)).toEqual([overviewPanel]);
       } else {
         expect(overviewButton?.getAttribute('aria-controls')).toBe(overviewPanel?.id);
       }
 
-      if (overviewPanel && 'ariaLabelledByElements' in overviewPanel) {
-        expect(Array.from(overviewPanel.ariaLabelledByElements ?? [])).toEqual([overviewButton]);
+      if (overviewPanel?.ariaLabelledByElements) {
+        expect(Array.from(overviewPanel.ariaLabelledByElements)).toEqual([overviewButton]);
       } else {
         expect(overviewPanel?.getAttribute('aria-labelledby')).toBe(overviewButton?.id);
       }
@@ -173,10 +174,10 @@ describe('ore-tabs', () => {
 
       tabs[0]?.focus();
 
-      await user.press(tabs[0]!, 'ArrowRight');
+      fireKeyDown(tabs[0]!, { key: 'ArrowRight' });
       expect(fixture.element.getAttribute('value')).toBe('overview');
 
-      await user.press(tabs[1]!, 'Enter');
+      fireKeyDown(tabs[1]!, { key: 'Enter' });
       expect(fixture.element.getAttribute('value')).toBe('settings');
     });
 
@@ -190,10 +191,10 @@ describe('ore-tabs', () => {
 
       tabs[0]?.focus();
 
-      await user.press(tabs[0]!, 'ArrowRight');
+      fireKeyDown(tabs[0]!, { key: 'ArrowRight' });
       expect(fixture.element.getAttribute('value')).toBe('overview');
 
-      await user.press(tabs[1]!, ' ');
+      fireKeyDown(tabs[1]!, { key: ' ' });
       expect(fixture.element.getAttribute('value')).toBe('settings');
     });
   });

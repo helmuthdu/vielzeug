@@ -93,7 +93,7 @@ define<OreButtonGroupProps>(BUTTON_GROUP_TAG, {
     });
 
     return html`
-      <div class="button-group" part="group" role="group" :aria-label="${props.label}">
+      <div class="button-group" part="group" role="group" aria-label="${props.label}">
         <slot></slot>
       </div>
     `;

@@ -1,5 +1,5 @@
 import { define, html, prop, getHost, onMounted, watchEffect } from '@vielzeug/ore';
-import { resizeObserver } from '@vielzeug/ore/observers';
+import { resizeObserver } from '@vielzeug/ore';
 
 import styles from './grid.css?inline';
 

@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -151,7 +152,7 @@ describe('ore-button', () => {
       const handler = vi.fn();
 
       fixture.element.addEventListener('click', handler);
-      await user.click(fixture.query<HTMLElement>('[part="button"]')!);
+      fireClick(fixture.query<HTMLElement>('[part="button"]')!);
 
       expect(handler).not.toHaveBeenCalled();
     });
@@ -162,7 +163,7 @@ describe('ore-button', () => {
       const handler = vi.fn();
 
       fixture.element.addEventListener('click', handler);
-      await user.click(fixture.query<HTMLElement>('[part="button"]')!);
+      fireClick(fixture.query<HTMLElement>('[part="button"]')!);
 
       expect(handler).not.toHaveBeenCalled();
     });
@@ -188,7 +189,7 @@ describe('ore-button', () => {
       const handler = vi.fn();
 
       fixture.element.addEventListener('click', handler);
-      await user.click(fixture.query<HTMLElement>('[part="button"]')!);
+      fireClick(fixture.query<HTMLElement>('[part="button"]')!);
 
       expect(handler).toHaveBeenCalledTimes(1);
     });
@@ -203,7 +204,7 @@ describe('ore-button', () => {
       const btn = fixture.query<HTMLElement>('[part="button"]')!;
 
       btn.focus();
-      await user.click(btn);
+      fireClick(btn);
 
       expect(handler).toHaveBeenCalled();
     });
@@ -218,7 +219,7 @@ describe('ore-button', () => {
       const btn = fixture.query<HTMLElement>('[part="button"]')!;
 
       btn.focus();
-      await user.click(btn);
+      fireClick(btn);
 
       expect(handler).not.toHaveBeenCalled();
     });
@@ -270,7 +271,7 @@ describe('ore-button', () => {
       const submitHandler = vi.fn((e: Event) => e.preventDefault());
 
       form.addEventListener('submit', submitHandler);
-      await user.click(btn);
+      fireClick(btn);
 
       expect(submitHandler).not.toHaveBeenCalled();
       destroy();
@@ -288,7 +289,7 @@ describe('ore-button', () => {
       const submitHandler = vi.fn((e: Event) => e.preventDefault());
 
       form.addEventListener('submit', submitHandler);
-      await user.click(btn);
+      fireClick(btn);
 
       expect(submitHandler).not.toHaveBeenCalled();
       destroy();
@@ -375,7 +376,7 @@ describe('ore-button', () => {
       const submitHandler = vi.fn((e: Event) => e.preventDefault());
 
       wrapper.querySelector('form')!.addEventListener('submit', submitHandler);
-      await user.click(btn);
+      fireClick(btn);
 
       expect(submitHandler).not.toHaveBeenCalled();
       wrapper.remove();

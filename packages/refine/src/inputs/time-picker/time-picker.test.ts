@@ -1,4 +1,5 @@
-import { fire, type Fixture, mount } from '@vielzeug/ore/testing';
+import { fireClick, fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -6,7 +7,7 @@ import { fire, type Fixture, mount } from '@vielzeug/ore/testing';
 async function open(fixture: Fixture<HTMLElement>): Promise<void> {
   const trigger = fixture.query('ore-input.trigger');
 
-  fire.click(trigger!);
+  fireClick(trigger!);
   await fixture.flush();
 }
 
@@ -31,7 +32,7 @@ function getSelected(fixture: Fixture<HTMLElement>, label: string): Element | nu
 function clickOption(fixture: Fixture<HTMLElement>, columnLabel: string, text: string): void {
   const option = getColumnOptions(fixture, columnLabel).find((o) => o.textContent?.trim() === text);
 
-  if (option) fire.click(option);
+  if (option) fireClick(option);
 }
 
 // ── Suite ──────────────────────────────────────────────────────────────────────
@@ -142,7 +143,7 @@ describe('ore-time-picker', () => {
       fixture = await mount('ore-time-picker');
       await open(fixture);
 
-      fire.click(fixture.query('ore-input.trigger')!);
+      fireClick(fixture.query('ore-input.trigger')!);
       await fixture.flush();
 
       expect(getDropdown(fixture)).toBeNull();
@@ -152,7 +153,7 @@ describe('ore-time-picker', () => {
       fixture = await mount('ore-time-picker');
       await open(fixture);
 
-      fire.keyDown(fixture.query('.dropdown')!, { key: 'Escape' });
+      fireKeyDown(fixture.query('.dropdown')!, { key: 'Escape' });
       await fixture.flush();
 
       expect(getDropdown(fixture)).toBeNull();
@@ -162,7 +163,7 @@ describe('ore-time-picker', () => {
       fixture = await mount('ore-time-picker');
       await open(fixture);
 
-      fire.keyDown(fixture.query('ore-input.trigger')!, { key: 'Escape' });
+      fireKeyDown(fixture.query('ore-input.trigger')!, { key: 'Escape' });
       await fixture.flush();
 
       expect(getDropdown(fixture)).toBeNull();
@@ -171,7 +172,7 @@ describe('ore-time-picker', () => {
     it('opens on ArrowDown key on trigger', async () => {
       fixture = await mount('ore-time-picker');
 
-      fire.keyDown(fixture.query('ore-input.trigger')!, { key: 'ArrowDown' });
+      fireKeyDown(fixture.query('ore-input.trigger')!, { key: 'ArrowDown' });
       await fixture.flush();
 
       expect(getDropdown(fixture)).toBeTruthy();
@@ -363,7 +364,7 @@ describe('ore-time-picker', () => {
       const selectedOption = getSelected(fixture, 'Hours');
       const selectedBefore = selectedOption?.textContent?.trim();
 
-      fire.keyDown(selectedOption!, { key: 'ArrowDown' });
+      fireKeyDown(selectedOption!, { key: 'ArrowDown' });
       await fixture.flush();
 
       const selectedAfter = getSelected(fixture, 'Hours')?.textContent?.trim();
@@ -377,7 +378,7 @@ describe('ore-time-picker', () => {
 
       const selectedOption = getSelected(fixture, 'Hours');
 
-      fire.keyDown(selectedOption!, { key: 'ArrowUp' });
+      fireKeyDown(selectedOption!, { key: 'ArrowUp' });
       await fixture.flush();
 
       const selected = getSelected(fixture, 'Hours')?.textContent?.trim();
@@ -393,7 +394,7 @@ describe('ore-time-picker', () => {
 
       const selectedOption = getSelected(fixture, 'Period');
 
-      fire.keyDown(selectedOption!, { key: 'ArrowDown' });
+      fireKeyDown(selectedOption!, { key: 'ArrowDown' });
       await fixture.flush();
 
       const selected = getSelected(fixture, 'Period')?.textContent?.trim();
@@ -552,7 +553,7 @@ describe('ore-time-picker', () => {
 
       const selectedOption = getSelected(fixture, 'Hours');
 
-      fire.keyDown(selectedOption!, { key: 'ArrowDown' });
+      fireKeyDown(selectedOption!, { key: 'ArrowDown' });
       await fixture.flush();
 
       const selected = getSelected(fixture, 'Hours')?.textContent?.trim();
@@ -566,7 +567,7 @@ describe('ore-time-picker', () => {
 
       const selectedOption = getSelected(fixture, 'Hours');
 
-      fire.keyDown(selectedOption!, { key: 'ArrowUp' });
+      fireKeyDown(selectedOption!, { key: 'ArrowUp' });
       await fixture.flush();
 
       const selected = getSelected(fixture, 'Hours')?.textContent?.trim();

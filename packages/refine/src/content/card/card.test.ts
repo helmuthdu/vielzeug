@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick, fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-card', () => {
   let fixture: Fixture<HTMLElement>;
@@ -54,7 +55,7 @@ describe('ore-card', () => {
 
     fixture.element.addEventListener('activate', handler);
 
-    await user.click(fixture.element);
+    fireClick(fixture.element);
 
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler.mock.calls[0][0].detail.trigger).toBe('pointer');
@@ -69,7 +70,7 @@ describe('ore-card', () => {
     fixture.element.addEventListener('activate', handler);
 
     fixture.element.focus();
-    await user.press(fixture.element, 'Enter');
+    fireKeyDown(fixture.element, { key: 'Enter' });
 
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler.mock.calls[0][0].detail.trigger).toBe('keyboard');
@@ -84,7 +85,7 @@ describe('ore-card', () => {
     fixture.element.addEventListener('activate', handler);
 
     fixture.element.focus();
-    await user.press(fixture.element, ' ');
+    fireKeyDown(fixture.element, { key: ' ' });
 
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler.mock.calls[0][0].detail.trigger).toBe('keyboard');
@@ -97,9 +98,9 @@ describe('ore-card', () => {
 
     fixture.element.addEventListener('activate', handler);
 
-    await user.click(fixture.element);
+    fireClick(fixture.element);
     fixture.element.focus();
-    await user.press(fixture.element, 'Enter');
+    fireKeyDown(fixture.element, { key: 'Enter' });
 
     expect(handler).not.toHaveBeenCalled();
   });
@@ -116,7 +117,7 @@ describe('ore-card', () => {
 
     const button = fixture.element.querySelector('#inner-action') as HTMLButtonElement;
 
-    await user.click(button);
+    fireClick(button);
 
     expect(handler).not.toHaveBeenCalled();
   });
@@ -155,7 +156,7 @@ describe('ore-card', () => {
     const handler = vi.fn();
 
     fixture.element.addEventListener('activate', handler);
-    await user.click(fixture.element);
+    fireClick(fixture.element);
 
     expect(fixture.element.getAttribute('color')).toBe('danger');
     expect(fixture.element.getAttribute('padding')).toBe('2xl');

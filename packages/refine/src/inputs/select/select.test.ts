@@ -1,5 +1,6 @@
+import { fireClick, fireKeyDown } from '@vielzeug/assay';
 import { html } from '@vielzeug/ore';
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 import { signal } from '@vielzeug/ripple';
 
 export const SELECT_OPTIONS = `
@@ -48,7 +49,7 @@ describe('ore-select', () => {
     it('renders option items in the dropdown', async () => {
       fixture = await mount('ore-select', { html: SELECT_OPTIONS });
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
 
       const items = fixture.query('.dropdown')?.querySelectorAll('[role="option"]');
@@ -59,7 +60,7 @@ describe('ore-select', () => {
     it('renders optgroups when provided', async () => {
       fixture = await mount('ore-select', { html: SELECT_OPTIONS_WITH_GROUPS });
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
 
       const groups = fixture.query('.dropdown')?.querySelectorAll('.optgroup-label');
@@ -110,9 +111,9 @@ describe('ore-select', () => {
 
       expect(chipsRow?.hasAttribute('hidden')).toBe(true);
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
-      await user.click(fixture.query<HTMLElement>('[role="option"]')!);
+      fireClick(fixture.query<HTMLElement>('[role="option"]')!);
       await fixture.flush();
 
       expect(chipsRow?.hasAttribute('hidden')).toBe(true);
@@ -135,20 +136,20 @@ describe('ore-select', () => {
       fixture = await mount('ore-select', { html: SELECT_OPTIONS });
       expect(fixture.element.hasAttribute('open')).toBe(false);
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
 
       expect(fixture.element.hasAttribute('open')).toBe(true);
     });
 
     it('closes dropdown after selecting an option', async () => {
       fixture = await mount('ore-select', { html: SELECT_OPTIONS });
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
       expect(fixture.element.hasAttribute('open')).toBe(true);
 
       const option = fixture.query('[role="option"]')!;
 
-      await user.click(option);
+      fireClick(option);
 
       expect(fixture.element.hasAttribute('open')).toBe(false);
     });
@@ -164,9 +165,9 @@ describe('ore-select', () => {
 
       const trigger = fixture.query<HTMLElement>('ore-input.trigger')!;
 
-      await user.click(trigger);
+      fireClick(trigger);
       await fixture.flush();
-      await user.press(trigger, 'Escape');
+      fireKeyDown(trigger, { key: 'Escape' });
       await fixture.flush();
 
       expect(onOpen).toHaveBeenCalled();
@@ -184,9 +185,9 @@ describe('ore-select', () => {
 
       const trigger = fixture.query<HTMLElement>('ore-input.trigger')!;
 
-      await user.click(trigger);
+      fireClick(trigger);
       await fixture.flush();
-      await user.click(trigger);
+      fireClick(trigger);
       await fixture.flush();
 
       expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('trigger');
@@ -199,7 +200,7 @@ describe('ore-select', () => {
 
       fixture.element.addEventListener('close', onClose);
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
 
       document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, composed: true }));
@@ -215,9 +216,9 @@ describe('ore-select', () => {
 
       fixture.element.addEventListener('close', onClose);
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
-      await user.click(fixture.query<HTMLElement>('[role="option"]')!);
+      fireClick(fixture.query<HTMLElement>('[role="option"]')!);
       await fixture.flush();
 
       expect((onClose.mock.calls.at(-1)?.[0] as CustomEvent).detail.reason).toBe('programmatic');
@@ -230,12 +231,12 @@ describe('ore-select', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
 
       const firstOption = fixture.query('[role="option"]')!;
 
-      await user.click(firstOption);
+      fireClick(firstOption);
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
 
@@ -253,13 +254,13 @@ describe('ore-select', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
 
       const disabledOption = fixture.query('[role="option"][aria-disabled="true"]');
 
       if (disabledOption) {
-        await user.click(disabledOption as HTMLElement);
+        fireClick(disabledOption as HTMLElement);
         expect(changeHandler).not.toHaveBeenCalled();
       }
     });
@@ -287,12 +288,12 @@ describe('ore-select', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
 
       const firstOption = fixture.query('[role="option"]')!;
 
-      await user.click(firstOption);
+      fireClick(firstOption);
 
       const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
 
@@ -305,7 +306,7 @@ describe('ore-select', () => {
         html: SELECT_OPTIONS_WITH_GROUPS,
       });
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
 
       const carrotOption = Array.from(fixture.queryAll<HTMLElement>('[role="option"]')).find(
@@ -314,7 +315,7 @@ describe('ore-select', () => {
 
       expect(carrotOption).toBeTruthy();
 
-      await user.click(carrotOption!);
+      fireClick(carrotOption!);
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('open')).toBe(true);
@@ -341,7 +342,7 @@ describe('ore-select', () => {
         html: SELECT_OPTIONS,
       });
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
 
       expect(fixture.element.hasAttribute('open')).toBe(false);
     });
@@ -364,8 +365,8 @@ describe('ore-select', () => {
 
       expect(element.checkValidity()).toBe(false);
 
-      await user.click(fixture.query('ore-input.trigger')!);
-      await user.click(fixture.queryAll('[role="option"]')[0]!);
+      fireClick(fixture.query('ore-input.trigger')!);
+      fireClick(fixture.queryAll('[role="option"]')[0]!);
 
       expect(element.checkValidity()).toBe(true);
     });
@@ -384,8 +385,8 @@ describe('ore-select', () => {
       document.body.appendChild(form);
       fixture = await mount('ore-select', { attrs: { value: 'apple' }, container: form, html: SELECT_OPTIONS });
 
-      await user.click(fixture.query('ore-input.trigger')!);
-      await user.click(fixture.queryAll('[role="option"]')[1]!); // banana
+      fireClick(fixture.query('ore-input.trigger')!);
+      fireClick(fixture.queryAll('[role="option"]')[1]!); // banana
 
       form.reset();
       await fixture.flush();
@@ -480,7 +481,7 @@ describe('ore-select', () => {
 
       expect(removeBtn).toBeTruthy();
 
-      await user.click(removeBtn!);
+      fireClick(removeBtn!);
       await fixture.flush();
 
       expect(fixture.queryAll('ore-chip').length).toBe(1);
@@ -558,7 +559,7 @@ describe('ore-select', () => {
       const select = fixture.query<HTMLElement>('ore-select')!;
       const trigger = select.shadowRoot?.querySelector<HTMLElement>('ore-input.trigger');
 
-      await user.click(trigger as HTMLInputElement);
+      fireClick(trigger as HTMLInputElement);
       await fixture.flush();
 
       expect(
@@ -567,15 +568,15 @@ describe('ore-select', () => {
         ),
       ).toEqual(['Alpha', 'Beta']);
 
-      await user.click(fixture.query<HTMLElement>('button')!);
+      fireClick(fixture.query<HTMLElement>('button')!);
       await fixture.flush();
 
       if (select.hasAttribute('open')) {
-        await user.click(trigger as HTMLInputElement);
+        fireClick(trigger as HTMLInputElement);
         await fixture.flush();
       }
 
-      await user.click(trigger as HTMLInputElement);
+      fireClick(trigger as HTMLInputElement);
       await fixture.flush();
 
       expect(
@@ -597,7 +598,7 @@ describe('ore-select', () => {
       const select = fixture.query<HTMLElement>('ore-select')!;
       const trigger = select.shadowRoot?.querySelector<HTMLElement>('ore-input.trigger');
 
-      await user.click(trigger as HTMLElement);
+      fireClick(trigger as HTMLElement);
       await fixture.flush();
 
       expect(
@@ -647,7 +648,7 @@ describe('ore-select accessibility', () => {
         html: SELECT_OPTIONS,
       });
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
 
       const options = fixture.query('.dropdown')?.querySelectorAll('[role="option"]');
@@ -684,7 +685,7 @@ describe('ore-select accessibility', () => {
         html: SELECT_OPTIONS,
       });
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
 
       expect(fixture.query('ore-input.trigger')?.getAttribute('aria-expanded')).toBe('true');
     });
@@ -695,12 +696,12 @@ describe('ore-select accessibility', () => {
         html: SELECT_OPTIONS,
       });
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
 
       const firstOption = fixture.query('[role="option"]') as HTMLElement;
 
-      await user.click(firstOption);
+      fireClick(firstOption);
 
       expect(fixture.query('ore-input.trigger')?.getAttribute('aria-expanded')).toBe('false');
     });
@@ -711,7 +712,7 @@ describe('ore-select accessibility', () => {
         html: SELECT_OPTIONS,
       });
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       await fixture.flush();
 
       const selectedOption = fixture.query('[role="option"][aria-selected="true"]');
@@ -760,7 +761,7 @@ describe('ore-select accessibility', () => {
         html: SELECT_OPTIONS,
       });
 
-      await user.press(fixture.query<HTMLElement>('ore-input.trigger')!, 'Enter');
+      fireKeyDown(fixture.query<HTMLElement>('ore-input.trigger')!, { key: 'Enter' });
 
       expect(fixture.element.hasAttribute('open')).toBe(true);
     });
@@ -771,7 +772,7 @@ describe('ore-select accessibility', () => {
         html: SELECT_OPTIONS,
       });
 
-      await user.press(fixture.query<HTMLElement>('ore-input.trigger')!, ' ');
+      fireKeyDown(fixture.query<HTMLElement>('ore-input.trigger')!, { key: ' ' });
 
       expect(fixture.element.hasAttribute('open')).toBe(true);
     });
@@ -782,10 +783,10 @@ describe('ore-select accessibility', () => {
         html: SELECT_OPTIONS,
       });
 
-      await user.click(fixture.query<HTMLElement>('ore-input.trigger')!);
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
       expect(fixture.element.hasAttribute('open')).toBe(true);
 
-      await user.press(fixture.query<HTMLElement>('ore-input.trigger')!, 'Escape');
+      fireKeyDown(fixture.query<HTMLElement>('ore-input.trigger')!, { key: 'Escape' });
 
       expect(fixture.element.hasAttribute('open')).toBe(false);
     });
@@ -802,11 +803,11 @@ describe('ore-select accessibility', () => {
 
       const trigger = fixture.query<HTMLElement>('ore-input.trigger')!;
 
-      await user.press(trigger, 'Enter');
+      fireKeyDown(trigger, { key: 'Enter' });
       await fixture.flush();
-      await user.press(trigger, 'ArrowDown');
+      fireKeyDown(trigger, { key: 'ArrowDown' });
       await fixture.flush();
-      await user.press(trigger, 'Enter');
+      fireKeyDown(trigger, { key: 'Enter' });
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('open')).toBe(false);
@@ -826,11 +827,11 @@ describe('ore-select accessibility', () => {
 
       const trigger = fixture.query<HTMLElement>('ore-input.trigger')!;
 
-      await user.press(trigger, ' ');
+      fireKeyDown(trigger, { key: ' ' });
       await fixture.flush();
-      await user.press(trigger, 'ArrowDown');
+      fireKeyDown(trigger, { key: 'ArrowDown' });
       await fixture.flush();
-      await user.press(trigger, ' ');
+      fireKeyDown(trigger, { key: ' ' });
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('open')).toBe(false);

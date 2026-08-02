@@ -25,7 +25,7 @@ export const renderHelperRegion = (
       class="helper-text"
       part="helper-text"
       id="${assistiveId}"
-      :role="${() => (errorText.value ? 'alert' : null)}"
+      role="${() => (errorText.value ? 'alert' : null)}"
       aria-live="polite"
       ?hidden="${() => !errorText.value && !helperText.value}"
       ref=${(el: HTMLElement | null) => {
@@ -46,7 +46,7 @@ export const renderStatusIcon = (errorText: Readable<string>) => html`
     class="status-icon"
     part="status-icon"
     aria-hidden="true"
-    :data-status="${() => (errorText.value ? 'error' : 'success')}">
+    data-status="${() => (errorText.value ? 'error' : 'success')}">
     ${() =>
       errorText.value
         ? html`

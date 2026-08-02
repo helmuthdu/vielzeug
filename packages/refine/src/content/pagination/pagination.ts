@@ -132,7 +132,7 @@ define<OrePaginationProps>(PAGINATION_TAG, {
     const isLast = computed(() => (props.page.value || 1) >= (props['total-pages'].value || 1));
 
     return html`
-      <nav :aria-label="${props.label}" part="nav">
+      <nav aria-label="${props.label}" part="nav">
         <ol class="pagination" part="list">
           ${() =>
             props['show-first-last'].value

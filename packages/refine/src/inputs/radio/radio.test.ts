@@ -1,4 +1,5 @@
-import { type Fixture, mount, user } from '@vielzeug/ore/testing';
+import { fireClick, fireKeyDown } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 describe('ore-radio', () => {
   let fixture: Fixture<HTMLElement>;
@@ -57,7 +58,7 @@ describe('ore-radio', () => {
     it('becomes checked on click', async () => {
       fixture = await mount('ore-radio', { attrs: { name: 'grp' } });
 
-      await user.click(fixture.element);
+      fireClick(fixture.element);
 
       expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
@@ -65,7 +66,7 @@ describe('ore-radio', () => {
     it('stays checked when clicked again (radio cannot uncheck itself)', async () => {
       fixture = await mount('ore-radio', { attrs: { checked: true, name: 'grp2' } });
 
-      await user.click(fixture.element);
+      fireClick(fixture.element);
 
       expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
@@ -103,7 +104,7 @@ describe('ore-radio', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.click(fixture.element);
+      fireClick(fixture.element);
 
       expect(changeHandler).not.toHaveBeenCalled();
       expect(fixture.element.hasAttribute('checked')).toBe(false);
@@ -137,7 +138,7 @@ describe('ore-radio', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.click(fixture.element);
+      fireClick(fixture.element);
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
 
@@ -154,7 +155,7 @@ describe('ore-radio', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.click(fixture.element);
+      fireClick(fixture.element);
 
       const detail = (changeHandler.mock.calls[0][0] as CustomEvent).detail;
 
@@ -169,7 +170,7 @@ describe('ore-radio', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.click(fixture.element);
+      fireClick(fixture.element);
 
       expect(changeHandler).not.toHaveBeenCalled();
     });
@@ -181,7 +182,7 @@ describe('ore-radio', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.press(fixture.element, ' ');
+      fireKeyDown(fixture.element, { key: ' ' });
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
       expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.checked).toBe(true);
@@ -194,7 +195,7 @@ describe('ore-radio', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.press(fixture.element, 'Enter');
+      fireKeyDown(fixture.element, { key: 'Enter' });
 
       expect(changeHandler).toHaveBeenCalledTimes(1);
     });
@@ -306,7 +307,7 @@ describe('ore-radio', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.click(fixture.element);
+      fireClick(fixture.element);
 
       // Radio without name silently does nothing (no group to manage)
       expect(changeHandler).not.toHaveBeenCalled();
@@ -330,7 +331,7 @@ describe('ore-radio', () => {
 
       fixture.element.addEventListener('change', changeHandler);
 
-      await user.click(fixture.element);
+      fireClick(fixture.element);
 
       expect(changeHandler).not.toHaveBeenCalled();
     });
@@ -485,7 +486,7 @@ describe('ore-radio accessibility', () => {
     it('selects radio on Space key', async () => {
       fixture = await mount('ore-radio', { attrs: { name: 'kb-grp' } });
 
-      await user.press(fixture.element, ' ');
+      fireKeyDown(fixture.element, { key: ' ' });
 
       expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
@@ -493,7 +494,7 @@ describe('ore-radio accessibility', () => {
     it('selects radio on Enter key', async () => {
       fixture = await mount('ore-radio', { attrs: { name: 'kb-grp2' } });
 
-      await user.press(fixture.element, 'Enter');
+      fireKeyDown(fixture.element, { key: 'Enter' });
 
       expect(fixture.element.hasAttribute('checked')).toBe(true);
     });
@@ -509,7 +510,7 @@ describe('ore-radio accessibility', () => {
       const f2 = await mount('ore-radio', { attrs: { name: 'nav-grp', value: 'b' } });
 
       f1.element.focus();
-      await user.press(f1.element, 'ArrowDown');
+      fireKeyDown(f1.element, { key: 'ArrowDown' });
 
       expect(f2.element.hasAttribute('checked')).toBe(true);
       expect(f1.element.hasAttribute('checked')).toBe(false);
@@ -531,7 +532,7 @@ describe('ore-radio accessibility', () => {
       });
 
       f1.element.focus();
-      await user.press(f1.element, 'ArrowRight');
+      fireKeyDown(f1.element, { key: 'ArrowRight' });
 
       expect(f2.element.hasAttribute('checked')).toBe(true);
       expect(f1.element.hasAttribute('checked')).toBe(false);
@@ -553,7 +554,7 @@ describe('ore-radio accessibility', () => {
       });
 
       f2.element.focus();
-      await user.press(f2.element, 'ArrowUp');
+      fireKeyDown(f2.element, { key: 'ArrowUp' });
 
       expect(f1.element.hasAttribute('checked')).toBe(true);
       expect(f2.element.hasAttribute('checked')).toBe(false);
@@ -570,7 +571,7 @@ describe('ore-radio accessibility', () => {
         },
       });
 
-      await user.press(fixture.element, ' ');
+      fireKeyDown(fixture.element, { key: ' ' });
 
       expect(fixture.element.hasAttribute('checked')).toBe(false);
     });
@@ -583,7 +584,7 @@ describe('ore-radio accessibility', () => {
       fixture = await mount('ore-radio', { attrs: { name: 'dyn-grp' } });
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
 
-      await user.click(fixture.element);
+      fireClick(fixture.element);
 
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
     });
