@@ -11,5 +11,8 @@ export class AssayError extends Error {
   }
 }
 
-/** Thrown by `waitFor`/`waitForEvent` when a condition is not met within the timeout. */
+/** Thrown when a required query has no match. */
+export class AssayQueryError extends AssayError {}
+
+/** Thrown by `waitUntil`/`retry`/`waitForEvent` when the timeout elapses. */
 export class AssayTimeoutError extends AssayError {}

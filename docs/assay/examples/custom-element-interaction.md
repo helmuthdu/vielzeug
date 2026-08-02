@@ -11,10 +11,10 @@ You've written a vanilla custom element and want to assert on its behavior — c
 
 ### Solution
 
-Use `within()` to scope queries to the element and `fire.click()` to simulate the interaction.
+Use `within()` to scope queries to the element and `fireClick()` to dispatch the interaction.
 
 ```ts
-import { fire, within } from '@vielzeug/assay';
+import { fireClick, within } from '@vielzeug/assay';
 
 customElements.define(
   'like-button',
@@ -34,22 +34,22 @@ const el = document.createElement('like-button');
 
 document.body.appendChild(el);
 
-const { query } = within(el);
+const view = within(el);
 
-fire.click(query('button')!);
+fireClick(view.get('button'));
 
-console.log(query('.count')?.textContent); // '1'
+console.log(view.get('.count').textContent); // '1'
 
 el.remove();
 ```
 
 ### Pitfalls
 
-- `within(el)` queries `el`'s light DOM — if your element renders into a shadow root, scope to `el.shadowRoot` instead: `within(el.shadowRoot!)`.
+- `within(el)` queries `el`'s light DOM — if your element renders into a shadow root, scope to `el.shadowRoot` instead.
 - Remove the element (`el.remove()`) when you're done — Assay has no auto-cleanup registry.
-- `fire.click()` is synchronous; if the click handler triggers an async update, `await waitFor(...)` afterward instead of asserting immediately.
+- `fireClick()` is synchronous; if the handler triggers an async update, await `waitUntil(...)` afterward.
 
 ### Related
 
 - [Waiting for Async Updates](./waiting-for-async-updates.md)
-- [Ore Usage Guide — Testing Utilities](/ore/usage#testing-utilities) — `@vielzeug/ore/testing`'s `mount()` re-exports these same primitives for Ore components
+- [Ore Usage Guide — Testing Utilities](/ore/usage#testing-utilities)

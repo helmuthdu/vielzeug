@@ -1,18 +1,26 @@
-export { AssayError, AssayTimeoutError } from './errors';
+export { AssayError, AssayQueryError, AssayTimeoutError } from './errors';
 
-export { fire, createPointerEvent } from './events';
 export {
-  within,
-  query,
-  queryAll,
-  queryByTestId,
-  queryAllByTestId,
-  queryByText,
-  queryAllByText,
-  queryInShadow,
-  queryAllInShadow,
-  queryPart,
-  getSlotted,
-  type QueryScope,
-} from './query';
-export { waitFor, waitForEvent, nextTick, wait, type WaitOptions } from './wait';
+  dispatch,
+  fireBlur,
+  fireChange,
+  fireClick,
+  fireCustom,
+  fireFocus,
+  fireInput,
+  fireKeyDown,
+  fireKeyUp,
+  fireSubmit,
+  type CustomEventOptions,
+} from './events';
+export { within, queryInShadow, queryAllInShadow, queryPart, getSlotted, type QueryScope } from './query';
+export {
+  delay,
+  nextTick,
+  retry,
+  waitForEvent,
+  waitUntil,
+  type DelayOptions,
+  type RetryOptions,
+  type WaitOptions,
+} from './wait';

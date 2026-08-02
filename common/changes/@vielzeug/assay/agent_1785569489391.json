@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: replace synthetic user interactions and duplicate queries with explicit dispatch, scoped required queries, and cancellable waits",
+      "packageName": "@vielzeug/assay",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/assay"
+}

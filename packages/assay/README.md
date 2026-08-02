@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/assay` &nbsp;·&nbsp; **Category:** Testing
 
-**Key exports:** `within`, `queryByText`, `queryAllByText`, `fire`, `createPointerEvent`, `waitFor`, `waitForEvent`, `AssayError`, `AssayTimeoutError`
+**Key exports:** `within`, `fireClick`, `fireInput`, `fireKeyDown`, `waitUntil`, `retry`, `waitForEvent`, `AssayError`, `AssayQueryError`, `AssayTimeoutError`
 
 **When to use:** Writing DOM-level tests for any custom-element or vanilla-DOM code — scoped element queries, low-level synchronous event dispatch, and deterministic async waiting — without pulling in a full testing-library dependency or coupling to a specific component framework.
 
@@ -30,14 +30,14 @@ yarn add -D @vielzeug/assay
 ## Quick Start
 
 ```ts
-import { fire, waitFor, within } from '@vielzeug/assay';
+import { fireClick, waitUntil, within } from '@vielzeug/assay';
 
 const panel = document.querySelector('.panel')!;
-const { query, queryByText } = within(panel);
+const view = within(panel);
 
-fire.click(query('button.submit')!);
+fireClick(view.get('button.submit'));
 
-await waitFor(() => queryByText('Saved') !== null);
+await waitUntil(() => view.queryByText('Saved') !== null);
 ```
 
 ## Documentation

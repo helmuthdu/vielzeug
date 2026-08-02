@@ -1,60 +1,64 @@
-/**
- * DOM query helpers for test environments.
- */
+import { AssayQueryError } from './errors';
+
+/** DOM query helpers for test environments. */
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-/** Scoped query helpers for any DOM element — see {@link within} */
+/** Scoped query helpers for any queryable DOM root — see {@link within}. */
 export interface QueryScope {
+  get<E extends Element = Element>(selector: string): E;
   query<E extends Element = Element>(selector: string): E | null;
   queryAll<E extends Element = Element>(selector: string): E[];
+  getByText<E extends Element = Element>(text: string, selector?: string): E;
   queryByText<E extends Element = Element>(text: string, selector?: string): E | null;
   queryAllByText<E extends Element = Element>(text: string, selector?: string): E[];
+  getByTestId<E extends Element = Element>(testId: string): E;
   queryByTestId<E extends Element = Element>(testId: string): E | null;
   queryAllByTestId<E extends Element = Element>(testId: string): E[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Query a single element within `root`. Equivalent to `root.querySelector(selector)`. */
-export function query<E extends Element = Element>(root: Element | ShadowRoot, selector: string): E | null {
-  return root.querySelector<E>(selector);
-}
+type QueryRoot = ParentNode;
 
-/** Query every element within `root` matching `selector`. */
-export function queryAll<E extends Element = Element>(root: Element | ShadowRoot, selector: string): E[] {
+const describeRoot = (root: QueryRoot): string => {
+  if (root instanceof Element) return root.outerHTML.slice(0, 500);
+
+  if (root instanceof ShadowRoot) return `<shadow-root>${root.innerHTML.slice(0, 500)}</shadow-root>`;
+
+  return root.nodeName;
+};
+
+const requireMatch = <E extends Element>(element: E | null, description: string, root: QueryRoot): E => {
+  if (element) return element;
+
+  throw new AssayQueryError(`Unable to find ${description} within ${describeRoot(root)}.`);
+};
+
+const query = <E extends Element = Element>(root: QueryRoot, selector: string): E | null =>
+  root.querySelector<E>(selector);
+
+const queryAll = <E extends Element = Element>(root: QueryRoot, selector: string): E[] => {
   return Array.from(root.querySelectorAll<E>(selector));
-}
+};
 
-/** Query a single element within `root` by its `data-testid` attribute. */
-export function queryByTestId<E extends Element = Element>(root: Element | ShadowRoot, testId: string): E | null {
-  return root.querySelector<E>(`[data-testid="${testId}"]`);
-}
+const queryByTestId = <E extends Element = Element>(root: QueryRoot, testId: string): E | null =>
+  queryAll<E>(root, '[data-testid]').find((element) => element.getAttribute('data-testid') === testId) ?? null;
 
-/** Query every element within `root` matching a `data-testid` attribute. */
-export function queryAllByTestId<E extends Element = Element>(root: Element | ShadowRoot, testId: string): E[] {
-  return Array.from(root.querySelectorAll<E>(`[data-testid="${testId}"]`));
-}
+const queryAllByTestId = <E extends Element = Element>(root: QueryRoot, testId: string): E[] =>
+  queryAll<E>(root, '[data-testid]').filter((element) => element.getAttribute('data-testid') === testId);
 
-export function queryByText<E extends Element = Element>(
-  root: Element | ShadowRoot,
-  text: string,
-  selector: string,
-): E | null {
+const queryByText = <E extends Element = Element>(root: QueryRoot, text: string, selector = '*'): E | null => {
   for (const el of root.querySelectorAll<E>(selector)) {
     if (el.textContent?.trim() === text) return el;
   }
 
   return null;
-}
+};
 
-export function queryAllByText<E extends Element = Element>(
-  root: Element | ShadowRoot,
-  text: string,
-  selector: string,
-): E[] {
+const queryAllByText = <E extends Element = Element>(root: QueryRoot, text: string, selector = '*'): E[] => {
   return Array.from(root.querySelectorAll<E>(selector)).filter((el) => el.textContent?.trim() === text);
-}
+};
 
 /**
  * Queries the shadow root of a custom element for a matching CSS selector.
@@ -62,12 +66,12 @@ export function queryAllByText<E extends Element = Element>(
  * both open-shadow custom elements and plain elements without checking `shadowRoot` first.
  */
 export function queryInShadow<E extends Element = Element>(host: Element, selector: string): E | null {
-  return host.shadowRoot?.querySelector<E>(selector) ?? null;
+  return host.shadowRoot ? query<E>(host.shadowRoot, selector) : null;
 }
 
 /** Queries all matching elements inside the shadow root of a custom element. */
 export function queryAllInShadow<E extends Element = Element>(host: Element, selector: string): E[] {
-  return Array.from(host.shadowRoot?.querySelectorAll<E>(selector) ?? []);
+  return host.shadowRoot ? queryAll<E>(host.shadowRoot, selector) : [];
 }
 
 /**
@@ -79,41 +83,49 @@ export function queryAllInShadow<E extends Element = Element>(host: Element, sel
  * expect(btn).not.toBeNull();
  */
 export function queryPart<E extends Element = Element>(host: Element, part: string): E | null {
-  return queryInShadow<E>(host, `[part="${part}"]`);
+  return (
+    queryAllInShadow<E>(host, '[part]').find((element) => element.getAttribute('part')?.split(/\s+/).includes(part)) ??
+    null
+  );
 }
 
 /**
- * Returns the light-DOM children assigned to a named slot, or every slotted child (elements
- * with no `slot` attribute) when no name is given.
+ * Returns the light-DOM children assigned to a named slot, or every child assigned to the
+ * default slot when no name is given.
  *
  * @example
  * const slides = getSlotted(carousel);
  * expect(slides).toHaveLength(3);
  */
 export function getSlotted<E extends Element = Element>(host: Element, slotName?: string): E[] {
-  const selector = slotName ? `[slot="${slotName}"]` : ':not([slot])';
-
-  return Array.from(host.querySelectorAll<E>(`:scope > ${selector}`));
+  return Array.from(host.children).filter((element) =>
+    slotName === undefined ? !element.getAttribute('slot') : element.getAttribute('slot') === slotName,
+  ) as E[];
 }
 
 // ─── API ─────────────────────────────────────────────────────────────────────
 
 /**
- * Create query helpers scoped to any element — useful for slotted/light DOM content.
+ * Create query helpers scoped to a DOM root — useful for light DOM and shadow roots.
  *
  * @example
- * const panel = fixture.query('.panel')!;
- * const { query } = within(panel);
- * expect(query('.title')?.textContent).toBe('Hello');
+ * const view = within(fixture.shadow!);
+ * expect(view.get('.title').textContent).toBe('Hello');
  */
-export function within(element: Element): QueryScope {
+export function within(root: QueryRoot): QueryScope {
   return {
-    query: <E extends Element = Element>(selector: string) => query<E>(element, selector),
-    queryAll: <E extends Element = Element>(selector: string) => queryAll<E>(element, selector),
-    queryAllByTestId: <E extends Element = Element>(testId: string) => queryAllByTestId<E>(element, testId),
+    get: <E extends Element = Element>(selector: string) =>
+      requireMatch(query<E>(root, selector), `"${selector}"`, root),
+    getByTestId: <E extends Element = Element>(testId: string) =>
+      requireMatch(queryByTestId<E>(root, testId), `data-testid "${testId}"`, root),
+    getByText: <E extends Element = Element>(text: string, selector = '*') =>
+      requireMatch(queryByText<E>(root, text, selector), `text "${text}" matching "${selector}"`, root),
+    query: <E extends Element = Element>(selector: string) => query<E>(root, selector),
+    queryAll: <E extends Element = Element>(selector: string) => queryAll<E>(root, selector),
+    queryAllByTestId: <E extends Element = Element>(testId: string) => queryAllByTestId<E>(root, testId),
     queryAllByText: <E extends Element = Element>(text: string, selector = '*') =>
-      queryAllByText<E>(element, text, selector),
-    queryByTestId: <E extends Element = Element>(testId: string) => queryByTestId<E>(element, testId),
-    queryByText: <E extends Element = Element>(text: string, selector = '*') => queryByText<E>(element, text, selector),
+      queryAllByText<E>(root, text, selector),
+    queryByTestId: <E extends Element = Element>(testId: string) => queryByTestId<E>(root, testId),
+    queryByText: <E extends Element = Element>(text: string, selector = '*') => queryByText<E>(root, text, selector),
   };
 }

@@ -1,254 +1,107 @@
 ---
 title: Assay — API Reference
-description: Full API reference for @vielzeug/assay — queries, event dispatch, and async waiting.
+description: API reference for @vielzeug/assay queries, event dispatch, and async waiting.
 ---
 
 [[toc]]
 
-## API Overview
+## Queries
 
-| Symbol              | Purpose                                              | Execution mode | Common gotcha |
-| -------------------- | ----------------------------------------------------- | -------------- | -------------- |
-| `within(element)`    | Scoped query helpers for one element/subtree           | Sync            | Returns a fresh `QueryScope` per call — cheap, but don't cache it across DOM mutations you care about |
-| `query()` / `queryAll()` | Free-function equivalents of `within(root).query`/`.queryAll` | Sync    | Use these when you already have a root and don't need the rest of `QueryScope` |
-| `queryByTestId()` / `queryAllByTestId()` | Match a `data-testid` attribute        | Sync            | Free-function equivalents of `within(root).queryByTestId`/`.queryAllByTestId` |
-| `queryByText()`      | First element matching trimmed text content            | Sync            | Matches exact trimmed text, not substrings |
-| `queryAllByText()`   | Every element matching trimmed text content            | Sync            | Same exact-match caveat as `queryByText()` |
-| `queryInShadow()` / `queryAllInShadow()` | Query inside a host's shadow root       | Sync            | Returns `null`/`[]` (not a throw) when the host has no shadow root |
-| `queryPart()`        | Query a shadow-DOM element by its `part` attribute      | Sync            | Shorthand for `queryInShadow(host, '[part="x"]')` |
-| `getSlotted()`       | Light-DOM children assigned to a slot                   | Sync            | Only direct children (`:scope >`) — doesn't recurse into further-nested slots |
-| `fire.*`             | Dispatch a DOM event synchronously                     | Sync            | Doesn't wait for anything — pair with `waitFor()`/`await` for async reactions |
-| `createPointerEvent()` | Build a `PointerEvent`, falling back to `MouseEvent` | Sync            | Only needed if you're constructing an event by hand instead of using `fire.pointer*` |
-| `waitFor()`          | Poll until a callback returns truthy or resolves       | Async           | Always rejects with `AssayTimeoutError` on timeout — the original failure is `.cause`, never the thrown error's own type |
-| `waitForEvent()`     | Resolve on the next matching event                     | Async           | Rejects with `AssayTimeoutError`, not a plain `Error`, on timeout |
-| `nextTick()`         | Resolve after one microtask tick                        | Async           | Doesn't wait for `setTimeout`-scheduled work — use `wait()` for that |
-| `wait()`             | Resolve after a fixed millisecond delay                 | Async           | A fixed delay, not a condition — prefer `waitFor()` when you can express a condition instead |
+### `within(root)`
 
-## Package Entry Point
+Creates a `QueryScope` for an `Element`, `ShadowRoot`, `Document`, or `DocumentFragment`.
 
-| Import              | Purpose                                                            |
-| -------------------- | ------------------------------------------------------------------- |
-| `@vielzeug/assay`    | The entire public API — queries, event dispatch, async waiting     |
+| Method | Returns | Use |
+| --- | --- | --- |
+| `get(selector)` | `Element` | Required CSS match; throws `AssayQueryError` |
+| `query(selector)` | `Element \| null` | Optional CSS match |
+| `queryAll(selector)` | `Element[]` | All CSS matches |
+| `getByText(text, selector?)` | `Element` | Required exact trimmed-text match |
+| `queryByText(text, selector?)` | `Element \| null` | Optional exact trimmed-text match |
+| `queryAllByText(text, selector?)` | `Element[]` | All exact trimmed-text matches |
+| `getByTestId(id)` | `Element` | Required `data-testid` match |
+| `queryByTestId(id)` | `Element \| null` | Optional `data-testid` match |
+| `queryAllByTestId(id)` | `Element[]` | All `data-testid` matches |
 
-## Query Helpers
+Text selectors default to `'*'`. Required-query failures include the lookup and a bounded view of the scoped DOM.
 
-### `within(element)`
+### Shadow and slot helpers
 
-Creates query helpers scoped to a single element or shadow root.
+| Function | Returns | Description |
+| --- | --- | --- |
+| `queryInShadow(host, selector)` | `Element \| null` | First match in an open shadow root |
+| `queryAllInShadow(host, selector)` | `Element[]` | All matches in an open shadow root |
+| `queryPart(host, part)` | `Element \| null` | First shadow element whose `part` token matches |
+| `getSlotted(host, slotName?)` | `Element[]` | Direct light-DOM children in a named or default slot |
 
-**Parameters**
+These helpers return `null` or `[]` when there is no shadow root. Dynamic test IDs, parts, and slot names are matched
+as attribute values rather than interpolated into CSS selectors.
 
-| Name      | Type       | Description                          |
-| --------- | ---------- | ------------------------------------- |
-| `element` | `Element`  | The root to scope every query to      |
+## Event dispatch
 
-**Returns:** `QueryScope`
-
-**Example**
+All event helpers synchronously return `dispatchEvent()`'s boolean result.
 
 ```ts
-import { within } from '@vielzeug/assay';
+import {
+  dispatch,
+  fireBlur,
+  fireChange,
+  fireClick,
+  fireCustom,
+  fireFocus,
+  fireInput,
+  fireKeyDown,
+  fireKeyUp,
+  fireSubmit,
+} from '@vielzeug/assay';
 
-const { query, queryAll, queryByTestId, queryAllByTestId, queryByText, queryAllByText } = within(panel);
+fireClick(button, { clientX: 20 });
+fireInput(input);
+fireKeyDown(input, { key: 'Enter' });
+fireCustom(element, { detail: { id: '42' }, type: 'item-added' });
+dispatch(element, new Event('ready'));
 ```
 
-`QueryScope` methods:
+| Function | Event class | Defaults |
+| --- | --- | --- |
+| `fireBlur` / `fireFocus` | `FocusEvent` | Platform defaults (`bubbles: false`) |
+| `fireChange` | `Event` | `bubbles: true` |
+| `fireInput` | `InputEvent` | `bubbles: true` |
+| `fireClick` | `MouseEvent` | `bubbles: true`, `cancelable: true` |
+| `fireKeyDown` / `fireKeyUp` | `KeyboardEvent` | `bubbles: true`, `cancelable: true` |
+| `fireSubmit` | `SubmitEvent` | `bubbles: true`, `cancelable: true` |
+| `fireCustom` | `CustomEvent` | `bubbles: true`, `cancelable: true`, `composed: false` |
 
-| Method                            | Returns          |
-| ---------------------------------- | ----------------- |
-| `query(selector)`                  | `Element \| null` |
-| `queryAll(selector)`               | `Element[]`       |
-| `queryByText(text, selector?)`     | `Element \| null` |
-| `queryAllByText(text, selector?)`  | `Element[]`       |
-| `queryByTestId(testId)`            | `Element \| null` |
-| `queryAllByTestId(testId)`         | `Element[]`       |
+`fireCustom(target, { type, ...init })` requires the event type in its options object. Assay intentionally does not
+provide browser-default or fallback pointer/touch simulation.
 
-`selector` defaults to `'*'` for the text-matching methods.
-
----
-
-### `query(root, selector)` / `queryAll(root, selector)`
-
-Free-function equivalents of `within(root).query`/`.queryAll` — a thin wrapper over `root.querySelector(All)`, exported directly so every `QueryScope` method has both a scoped and unscoped form.
-
-**Returns:** `Element | null` / `Element[]`
-
----
-
-### `queryByTestId(root, testId)` / `queryAllByTestId(root, testId)`
-
-Free-function equivalents of `within(root).queryByTestId`/`.queryAllByTestId` — matches a `data-testid` attribute.
-
-**Returns:** `Element | null` / `Element[]`
-
----
-
-### `queryByText(root, text, selector)`
-
-The unscoped function `within()` is built on — useful when you already have a root and don't need the rest of `QueryScope`.
-
-**Parameters**
-
-| Name       | Type                   | Description                                  |
-| ---------- | ---------------------- | ---------------------------------------------- |
-| `root`     | `Element \| ShadowRoot`| Subtree to search                             |
-| `text`     | `string`               | Exact text to match against trimmed `textContent` |
-| `selector` | `string`               | CSS selector narrowing candidate elements      |
-
-**Returns:** `Element | null` — the first matching element, or `null`.
-
----
-
-### `queryAllByText(root, text, selector)`
-
-Same matching rules as `queryByText`, returning every match.
-
-**Returns:** `Element[]`
-
----
-
-### `queryInShadow(host, selector)` / `queryAllInShadow(host, selector)`
-
-Query inside `host.shadowRoot`. Returns `null` (or `[]` for the `All` variant) instead of throwing when `host` has no shadow root — safe to call without an `if (host.shadowRoot)` guard.
-
-**Returns:** `Element | null` / `Element[]`
-
----
-
-### `queryPart(host, part)`
-
-Shorthand for `queryInShadow(host, '[part="' + part + '"]')`.
-
-**Returns:** `Element | null`
-
----
-
-### `getSlotted(host, slotName?)`
-
-Returns the light-DOM children assigned to a named slot, or every slotted child (`:not([slot])`) when `slotName` is omitted.
-
-**Returns:** `Element[]`
-
-## Event Dispatch
-
-### `fire`
-
-An object of synchronous event dispatchers. Every method calls `element.dispatchEvent(...)` with an appropriately-typed `Event` subclass and sensible defaults, and returns `dispatchEvent`'s own boolean result.
+## Async waiting
 
 ```ts
-import { fire } from '@vielzeug/assay';
-
-fire.click(el, opts?: PointerEventInit);
-fire.blur(el, opts?: FocusEventInit);
-fire.change(el, opts?: EventInit);
-fire.custom(el, name, opts?: CustomEventInit);
-fire.event(el, event: Event);
-fire.focus(el, name?, opts?: FocusEventInit);
-fire.input(el, opts?: EventInit);
-fire.keyboard(el, type, opts?: KeyboardEventInit);
-fire.keyDown(el, opts?: KeyboardEventInit);
-fire.keyUp(el, opts?: KeyboardEventInit);
-fire.mouse(el, type, opts?: MouseEventInit);
-fire.pointerCancel(el, opts?: PointerEventInit);
-fire.pointerDown(el, opts?: PointerEventInit);
-fire.pointerEnter(el, opts?: PointerEventInit);
-fire.pointerLeave(el, opts?: PointerEventInit);
-fire.pointerMove(el, opts?: PointerEventInit);
-fire.pointerUp(el, opts?: PointerEventInit);
-fire.submit(el, opts?: EventInit);
-fire.touch(el, type, opts?: EventInit);
+await waitUntil(() => ready, { interval: 20, signal, timeout: 1000 });
+await retry(() => expect(spy).toHaveBeenCalled(), { signal, timeout: 1000 });
+await waitForEvent(target, 'ready', { signal, timeout: 1000 });
+await delay(100, { signal });
+await nextTick();
 ```
 
-`fire.touch` falls back to `CustomEvent` in environments without a `TouchEvent` constructor. `fire.pointer*` methods route through `createPointerEvent()`, so they fall back to `MouseEvent` the same way.
+| Function | Success condition | Options |
+| --- | --- | --- |
+| `waitUntil(predicate, options?)` | Predicate returns `true` | `timeout`, `interval`, `signal` |
+| `retry(assertion, options?)` | Assertion stops throwing | `timeout`, `interval`, `signal`, `message` |
+| `waitForEvent(target, type, options?)` | Target emits `type` | `timeout`, `signal` |
+| `delay(ms?, options?)` | Timer elapses | `signal` |
+| `nextTick()` | Next microtask | none |
 
----
-
-### `createPointerEvent(type, init?)`
-
-Builds a `PointerEvent`, or a `MouseEvent` when `PointerEvent` isn't available in the current environment.
-
-**Returns:** `Event`
-
-## Async Waiting
-
-### `waitFor(fn, options?)`
-
-Polls `fn` until it returns truthy, returns `undefined` (a bare `expect()` call that didn't throw), or the timeout elapses.
-
-**Parameters**
-
-| Name              | Type                | Default | Description                                  |
-| ------------------ | ------------------- | ------- | ---------------------------------------------- |
-| `fn`               | `() => unknown`      | —       | Condition to poll                             |
-| `options.timeout`  | `number`             | `1000`  | Maximum wait time in ms                       |
-| `options.interval` | `number`             | `50`    | Delay between polling attempts in ms          |
-| `options.message`  | `string`             | —       | Prefixed in front of the default timing summary in the timeout error — never replaces it |
-
-**Returns:** `Promise<void>`
-
-**Throws:** `AssayTimeoutError` on timeout, unconditionally — regardless of whether the last polling attempt returned a falsy value or threw. The original failure (a thrown error, or its message) is preserved as `.cause` and folded into the timeout message; `fn`'s thrown error itself is never mutated.
-
-**Example**
-
-```ts
-await waitFor(() => queryByText('Saved') !== null);
-await waitFor(() => expect(spy).toHaveBeenCalled(), { timeout: 2000 });
-```
-
----
-
-### `waitForEvent<T>(element, name, timeout?)`
-
-Resolves with the next event of the given name.
-
-**Parameters**
-
-| Name      | Type      | Default | Description                     |
-| --------- | --------- | ------- | --------------------------------- |
-| `element` | `Element` | —       | Element to listen on             |
-| `name`    | `string`  | —       | Event name                       |
-| `timeout` | `number`  | `1000`  | Maximum wait time in ms          |
-
-**Returns:** `Promise<T>` — the event instance, typed as `T extends Event` (defaults to `Event`).
-
----
-
-### `nextTick()`
-
-Resolves after one microtask tick (`queueMicrotask`) — for waiting on reactivity (signal effects, promise-chain continuations) without moving into the macrotask queue.
-
-**Returns:** `Promise<void>`
-
----
-
-### `wait(ms?)`
-
-Resolves after `ms` milliseconds (default `0`).
-
-**Returns:** `Promise<void>`
-
-## Types
-
-```ts
-interface QueryScope {
-  query<E extends Element = Element>(selector: string): E | null;
-  queryAll<E extends Element = Element>(selector: string): E[];
-  queryByText<E extends Element = Element>(text: string, selector?: string): E | null;
-  queryAllByText<E extends Element = Element>(text: string, selector?: string): E[];
-  queryByTestId<E extends Element = Element>(testId: string): E | null;
-  queryAllByTestId<E extends Element = Element>(testId: string): E[];
-}
-
-interface WaitOptions {
-  timeout?: number;
-  interval?: number;
-  message?: string;
-}
-```
+`waitUntil`, `retry`, and `waitForEvent` reject with `AssayTimeoutError` when their timeout expires. A supplied abort
+signal rejects with its reason and removes timers and event listeners.
 
 ## Errors
 
-| Error               | Thrown by                    | Notable properties |
-| -------------------- | ------------------------------ | -------------------- |
-| `AssayError`         | Base class for every Assay error — use `instanceof AssayError` to catch any of them | `AssayError.is(err)` static type guard |
-| `AssayTimeoutError`  | `waitFor()`, `waitForEvent()` when the timeout elapses | Extends `AssayError` |
+| Error | Meaning |
+| --- | --- |
+| `AssayError` | Base class for Assay-originated errors |
+| `AssayQueryError` | A required `get*` query had no match |
+| `AssayTimeoutError` | A wait operation reached its timeout |
+
+`AssayError.is(value)` narrows any value to the Assay error hierarchy.
