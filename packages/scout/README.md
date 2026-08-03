@@ -8,7 +8,7 @@ Fast fuzzy-search. Builds a trigram inverted index at construction — O(candida
 - **Multi-field weighted ranking** — per-field weights, custom stringifiers
 - **Match highlighting** — character-range offsets for UI rendering
 - **Reactive layer** — `createSearch()` wraps any index in `ripple` signals with debounce
-- **Framework adapters** — `toSearchFn()` for sourcerer, `toFilterPredicate()` for filter pipelines
+- **Framework adapters** — `toSearchMatcher()` for sourcerer, `toFilterPredicate()` for filter pipelines
 - **Incremental updates** — `add()`, `remove()`, `reindex()` patch the index in O(field_length)
 - **Unsegmented-script helper** — `segmentWords()` pre-splits CJK/Thai text into words via `Intl.Segmenter`
 - **Devtools** — `@vielzeug/scout/devtools`'s `debugSearch()` logs query/results transitions
@@ -54,10 +54,10 @@ search.query.value = 'alice';
 ## Sourcerer integration
 
 ```ts
-import { createIndex, toSearchFn } from '@vielzeug/scout';
+import { createIndex, toSearchMatcher } from '@vielzeug/scout';
 
 const index = createIndex(users, { fields: ['name', 'email'] });
-const source = createLocalSource(users, { searchFn: toSearchFn(index) });
+const source = createLocalSource(users, { match: toSearchMatcher(index) });
 ```
 
 ## Highlighting

@@ -1,255 +1,127 @@
-import type { CursorConfig, CursorMeta, CursorSource, CursorSourceQuery, SearchOptions } from './types';
+import type { CursorPagination, CursorQuery, CursorQueryPatch, CursorSource, CursorSourceConfig } from './types';
 
-import { clampPositiveInt, defaultKeyOf, extractError, retry } from './_utils';
-import { createAsyncSearchCoordinator } from './asyncSearch';
+import { warn } from './_dev';
 import { createAsyncSource } from './asyncSource';
-import { SourcererError } from './errors';
+import { positiveInteger, sameQuery, totalItems } from './pagination';
 
-/** Creates a cursor-based (keyset-pagination) source that fetches data from a network endpoint. */
-export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCursor>): CursorSource<T, TCursor> {
-  const keyOf = cfg.queryKey ?? defaultKeyOf;
+const createPagination = <TCursor>(result?: {
+  nextCursor?: TCursor;
+  previousCursor?: TCursor;
+  total?: number;
+}): CursorPagination<TCursor> => ({
+  hasNext: result?.nextCursor !== undefined,
+  hasPrevious: result?.previousCursor !== undefined,
+  kind: 'cursor',
+  ...(result?.nextCursor !== undefined && { nextCursor: result.nextCursor }),
+  ...(result?.previousCursor !== undefined && { previousCursor: result.previousCursor }),
+  ...(result?.total !== undefined && { total: totalItems(result.total) }),
+});
 
-  // ── Mutable state ───────────────────────────────────────────────────────────
-  let limit = clampPositiveInt(cfg.limit ?? 20, 'createCursorSource', 'limit');
-  let search = '';
-  let afterCursor: TCursor | undefined;
-  let beforeCursor: TCursor | undefined;
-  let nextCursor: TCursor | undefined;
-  let prevCursor: TCursor | undefined;
-  let items: readonly T[] = [];
-  let total = 0;
-  let error: SourcererError | null = null;
+const normalizeQuery = <TCursor>(
+  current: CursorQuery<TCursor>,
+  patch: CursorQueryPatch<TCursor> = {},
+): CursorQuery<TCursor> => {
+  if (patch.after !== undefined && patch.before !== undefined) {
+    throw new RangeError('Cursor query cannot include both after and before');
+  }
 
-  // ── Cached accessors ────────────────────────────────────────────────────────
-  let cachedCurrent: readonly T[] = [];
-  let cachedMeta: CursorMeta = {
+  const resetsCursor = patch.pageSize !== undefined || patch.search !== undefined;
+  const after = resetsCursor || 'before' in patch ? undefined : 'after' in patch ? patch.after : current.after;
+  const before = resetsCursor || 'after' in patch ? undefined : 'before' in patch ? patch.before : current.before;
+
+  return {
+    ...(after !== undefined && { after }),
+    ...(before !== undefined && { before }),
+    pageSize: positiveInteger(patch.pageSize ?? current.pageSize, 'pageSize'),
+    search: patch.search ?? current.search,
+  };
+};
+
+/** Cursor sources retain loaded cursors while pendingQuery records newer navigation. */
+export function createCursorSource<T, TCursor = string>(
+  config: CursorSourceConfig<T, TCursor>,
+): CursorSource<T, TCursor> {
+  const initialQuery: CursorQuery<TCursor> = { pageSize: 20, search: '' };
+  let requestedQuery = normalizeQuery(initialQuery, config.initialQuery);
+  const asyncSource = createAsyncSource<T, CursorQuery<TCursor>, CursorPagination<TCursor>>({
+    data: [],
     error: null,
-    hasNextPage: false,
-    hasPrevPage: false,
-    isLoading: false,
-    isSearchPending: false,
-    pageSize: limit,
-    totalItems: 0,
-  };
-
-  const refreshMeta = () => {
-    cachedCurrent = items;
-    cachedMeta = {
-      error,
-      hasNextPage: nextCursor !== undefined,
-      hasPrevPage: prevCursor !== undefined,
-      isLoading: base.pendingCount() > 0,
-      isSearchPending: base.core.isScheduled,
-      pageSize: limit,
-      totalItems: total,
-    };
-  };
-
-  // onBeforeNotify ensures refreshMeta() runs before any subscriber observes the new state,
-  // eliminating the need for a parallel listeners Set.
-  const base = createAsyncSource<CursorSourceQuery<TCursor>>(cfg, keyOf, refreshMeta);
-  const { autoFetch, debounceMs, retryAttempts, retryDelay } = base;
-
-  refreshMeta();
-
-  const notifyListeners = () => {
-    if (base.disposed) return;
-
-    base.core.notify();
-  };
-  const searchCoordinator = createAsyncSearchCoordinator(base.core, notifyListeners);
-
-  // ── Core fetch ──────────────────────────────────────────────────────────────
-  const toRemoteQuery = (): CursorSourceQuery<TCursor> => ({
-    ...(afterCursor !== undefined && { after: afterCursor }),
-    ...(beforeCursor !== undefined && { before: beforeCursor }),
-    ...(search && { search }),
-    limit,
+    isFetching: false,
+    pagination: createPagination(),
+    query: requestedQuery,
   });
 
-  const fetchQuery = (q: CursorSourceQuery<TCursor>): Promise<void> => {
-    error = null;
+  const fetch = (query: CursorQuery<TCursor>): Promise<void> =>
+    asyncSource.fetch({
+      failure: (previous, error) => ({ ...previous, error, isFetching: false, pendingQuery: undefined }),
+      load: (signal) => config.load({ query, signal }),
+      pending: (previous) => ({ ...previous, error: null, isFetching: true, pendingQuery: query }),
+      success: (result) => ({
+        data: result.data,
+        error: null,
+        isFetching: false,
+        pagination: createPagination(result),
+        query,
+      }),
+    });
 
-    return base.fetch(
-      q,
-      async (q, signal, isLatest) => {
-        const startTime = Date.now();
+  const reload = (): Promise<void> => fetch(requestedQuery);
 
-        try {
-          const result = await retry((sig) => cfg.fetch(q, sig!), {
-            delay: retryDelay,
-            signal,
-            times: retryAttempts + 1,
-          });
+  const setQuery = async (patch: CursorQueryPatch<TCursor>): Promise<void> => {
+    const current = asyncSource.snapshot.pendingQuery ?? asyncSource.snapshot.query;
+    const next = normalizeQuery(current, patch);
 
-          if (isLatest()) {
-            items = result.items;
-            total = result.total ?? result.items.length;
-            nextCursor = result.nextCursor;
-            prevCursor = result.prevCursor;
-            error = null;
-            cfg.onFetch?.({ durationMs: Date.now() - startTime, query: q, status: 'success' });
-          }
-        } catch (reason: unknown) {
-          if (signal.aborted) return;
+    if (sameQuery(next, requestedQuery)) return;
 
-          if (isLatest()) {
-            items = [];
-            total = 0;
-            nextCursor = undefined;
-            prevCursor = undefined;
-            error = new SourcererError(extractError(reason), {
-              cause: reason,
-              context: { kind: 'cursor', limit: q.limit, ...(q.search && { search: q.search }) },
-            });
-            cfg.onFetch?.({ durationMs: Date.now() - startTime, error, query: q, status: 'error' });
-          }
-        }
-      },
-      () => {
-        notifyListeners();
-
-        searchCoordinator.settleIfIdle(base.pendingCount());
-      },
-    );
+    requestedQuery = next;
+    await fetch(next);
   };
 
-  const doUpdate = () => fetchQuery(toRemoteQuery());
-
-  // ── Auto-fetch + refresh interval ───────────────────────────────────────────
-  if (autoFetch) void doUpdate();
-
-  base.startRefreshInterval(() => void doUpdate());
-
-  // ── Public API ──────────────────────────────────────────────────────────────
-  return {
-    get current() {
-      return cachedCurrent;
-    },
-
+  const source: CursorSource<T, TCursor> = {
     get disposalSignal() {
-      return base.disposalSignal;
+      return asyncSource.disposalSignal;
     },
 
-    dispose: () => {
-      searchCoordinator.cancel();
-      searchCoordinator.dispose();
-      base.dispose();
-    },
+    dispose: asyncSource.dispose,
 
     get disposed() {
-      return base.disposed;
+      return asyncSource.disposed;
     },
 
-    get meta() {
-      return cachedMeta;
+    page: {
+      next() {
+        const cursor = asyncSource.snapshot.pagination.nextCursor;
+
+        return asyncSource.snapshot.isFetching || cursor === undefined
+          ? Promise.resolve()
+          : setQuery({ after: cursor });
+      },
+
+      previous() {
+        const cursor = asyncSource.snapshot.pagination.previousCursor;
+
+        return asyncSource.snapshot.isFetching || cursor === undefined
+          ? Promise.resolve()
+          : setQuery({ before: cursor });
+      },
     },
 
-    next() {
-      if (!nextCursor) return Promise.resolve();
+    reload,
+    setQuery,
 
-      afterCursor = nextCursor;
-      beforeCursor = undefined;
-
-      return doUpdate();
+    get snapshot() {
+      return asyncSource.snapshot;
     },
 
-    patch(changes) {
-      let changed = false;
+    subscribe: asyncSource.subscribe,
 
-      if (changes.limit !== undefined) {
-        const next = clampPositiveInt(changes.limit, 'source.patch', 'limit');
-
-        if (next !== limit) {
-          limit = next;
-          afterCursor = undefined;
-          beforeCursor = undefined;
-          changed = true;
-        }
-      }
-
-      // `|| base.core.isScheduled` also catches patching in the same search text as an already-pending
-      // debounced search() call — that still needs flushing, not silently dropping as a no-op.
-      if ('search' in changes && (changes.search !== search || base.core.isScheduled)) {
-        search = changes.search ?? '';
-        afterCursor = undefined;
-        beforeCursor = undefined;
-        changed = true;
-      }
-
-      if (!changed) return Promise.resolve();
-
-      // patch() is documented as a single atomic fetch — cancel any debounced search()
-      // still pending so it doesn't fire a second, redundant fetch afterwards.
-      searchCoordinator.cancel();
-
-      return doUpdate();
-    },
-
-    prev() {
-      if (!prevCursor) return Promise.resolve();
-
-      beforeCursor = prevCursor;
-      afterCursor = undefined;
-
-      return doUpdate();
-    },
-
-    get query() {
-      return {
-        ...(afterCursor !== undefined && { after: afterCursor }),
-        ...(beforeCursor !== undefined && { before: beforeCursor }),
-        ...(search && { search }),
-        limit,
-      };
-    },
-
-    ready(timeout) {
-      return base.ready(timeout);
-    },
-
-    refresh() {
-      return doUpdate();
-    },
-
-    reset() {
-      searchCoordinator.cancel();
-      search = '';
-      afterCursor = undefined;
-      beforeCursor = undefined;
-
-      return doUpdate();
-    },
-
-    search(q, opts?: SearchOptions): Promise<void> {
-      if (opts?.immediate) {
-        // A pending debounced search for this same text still needs flushing —
-        // `q === search` alone doesn't mean the fetch already happened.
-        if (q === search && !base.core.isScheduled) return Promise.resolve();
-
-        searchCoordinator.cancel();
-        search = q;
-        afterCursor = undefined;
-        beforeCursor = undefined;
-
-        return doUpdate();
-      }
-
-      if (q === search) return Promise.resolve();
-
-      search = q;
-      afterCursor = undefined;
-      beforeCursor = undefined;
-
-      return searchCoordinator.schedule(() => void doUpdate(), debounceMs);
-    },
-
-    subscribe: (listener) => base.core.subscribe(listener),
-
-    [Symbol.dispose]: () => {
-      searchCoordinator.cancel();
-      searchCoordinator.dispose();
-      base.dispose();
+    [Symbol.dispose]() {
+      source.dispose();
     },
   };
+
+  if (config.autoStart !== false)
+    void reload().catch(() => warn('Initial load failed. Inspect source.snapshot.error.'));
+
+  return source;
 }

@@ -1,71 +1,34 @@
-import type { SourcererError, SourceMeta } from './types';
+import type { PagePagination } from './types';
 
-const clampInt = (value: number, minimum: number) => {
-  const parsed = Math.trunc(value);
+export function positiveInteger(value: number, name: string): number {
+  if (!Number.isInteger(value) || value < 1) throw new RangeError(`${name} must be a positive integer`);
 
-  if (!Number.isFinite(parsed)) {
-    return minimum;
-  }
+  return value;
+}
 
-  return Math.max(minimum, parsed);
-};
+export function totalItems(value: number): number {
+  if (!Number.isInteger(value) || value < 0) throw new RangeError('Source loader total must be a non-negative integer');
 
-export const pageCount = (total: number, limit: number) => {
-  const safeTotal = clampInt(total, 0);
-  const safeLimit = clampInt(limit, 1);
+  return value;
+}
 
-  return Math.max(1, Math.ceil(safeTotal / safeLimit));
-};
-
-export const clampPage = (page: number, pages: number) => {
-  return Math.max(1, Math.min(clampInt(page, 1), Math.max(1, pages)));
-};
-
-export const createMeta = (state: {
-  error: SourcererError | null;
-  isLoading: boolean;
-  isSearchPending: boolean;
-  pageNumber: number;
-  pageSize: number;
-  totalItems: number;
-}): SourceMeta => {
-  const safeLimit = clampInt(state.pageSize, 1);
-  const safeTotal = clampInt(state.totalItems, 0);
-  const pages = pageCount(safeTotal, safeLimit);
-  const page = clampPage(state.pageNumber, pages);
+export function createPagePagination(index: number, size: number, total: number): PagePagination {
+  const count = Math.max(1, Math.ceil(total / size));
+  const safeIndex = Math.min(index, count);
 
   return {
-    error: state.error,
-    isLoading: state.isLoading,
-    isSearchPending: state.isSearchPending,
-    pageCount: pages,
-    pageNumber: page,
-    pageSize: safeLimit,
-    totalItems: safeTotal,
+    count,
+    hasNext: safeIndex < count,
+    hasPrevious: safeIndex > 1,
+    index: safeIndex,
+    kind: 'page',
+    size,
+    total,
   };
-};
+}
 
-/**
- * Computes the 1-based display range of items on the current page.
- * Returns `{ start: 0, end: 0 }` when there are no items.
- *
- * @example
- * ```ts
- * const { start, end } = itemRange(source.meta);
- * // "Showing 11–20 of 50"
- * console.log(`Showing ${start}–${end} of ${source.meta.totalItems}`);
- * ```
- */
-export function itemRange(meta: Readonly<{ pageNumber: number; pageSize: number; totalItems: number }>): {
-  end: number;
-  start: number;
-} {
-  if (meta.totalItems === 0) return { end: 0, start: 0 };
+export function sameQuery<T extends Record<string, unknown>>(left: T, right: T): boolean {
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
 
-  const start = (meta.pageNumber - 1) * meta.pageSize + 1;
-
-  return {
-    end: Math.min(meta.pageNumber * meta.pageSize, meta.totalItems),
-    start,
-  };
+  return [...keys].every((key) => Object.is(left[key], right[key]));
 }

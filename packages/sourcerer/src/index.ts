@@ -1,45 +1,33 @@
-export { decodeQuery, encodeQuery } from './codecs';
-export type { DecodeQueryOptions } from './codecs';
 export { createCursorSource } from './cursorSource';
-export { deriveSource } from './derive';
 export { createInfiniteSource } from './infiniteSource';
 export { createLocalSource } from './localSource';
-export { mergeSource } from './merge';
-export { itemRange } from './pagination';
-export { prefetchSource, prefetchSourceAndKeep } from './prefetch';
-export { filterContains, filterEquals, filterRange, searchBy, sortBy } from './presets';
-export { createRemoteSource } from './remoteSource';
-export { sourceState } from './state';
-export { SourcererDisposedError, SourcererError, SourcererTimeoutError } from './errors';
+export { createPageSource } from './pageSource';
 export type {
-  CursorConfig,
-  CursorMeta,
+  CursorPagination,
+  CursorQuery,
+  CursorQueryPatch,
+  CursorResult,
   CursorSource,
-  CursorSourceQuery,
-  DerivedSource,
-  FetchEvent,
-  InfiniteConfig,
-  InfiniteMeta,
+  CursorSourceConfig,
+  InfinitePagination,
+  InfiniteQuery,
+  InfiniteQueryPatch,
   InfiniteSource,
-  InfiniteSourceQuery,
+  InfiniteSourceConfig,
+  LocalQuery,
+  LocalQueryPatch,
   LocalSource,
   LocalSourceConfig,
-  LocalSourceQuery,
-  MergedSource,
-  PageNavigator,
+  PageLoadContext,
+  PagePagination,
+  PageQuery,
+  PageQueryPatch,
+  PageResult,
+  PageSource,
+  PageSourceConfig,
+  AnyPagination,
   Predicate,
-  QueryParams,
-  QueryParamsInput,
-  ReactiveSource,
-  RemoteConfig,
-  RemoteSource,
-  RemoteSourceQuery,
-  RetryConfig,
-  SearchOptions,
   Sorter,
-  SourcererErrorContext,
-  SourceMeta,
-  SourceQuery,
+  Source,
   SourceSnapshot,
-  SourceState,
 } from './types';

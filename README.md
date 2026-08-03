@@ -492,7 +492,7 @@ pnpm add @vielzeug/scout
 - `createSearch()` for single-shot queries and `createReactiveSearch()` for signal-driven live filtering
 - Per-field boost weights and configurable score threshold
 - `highlight()` and `highlightField()` for match range extraction and rendering helpers
-- `toSearchFn()` and `toFilterPredicate()` adapters for integration with existing pipelines
+- `toSearchMatcher()` and `toFilterPredicate()` adapters for integration with existing pipelines
 
 [📖 Documentation](https://vielzeug.dev/scout/) • [Examples](https://vielzeug.dev/scout/examples)
 
@@ -508,7 +508,7 @@ pnpm add @vielzeug/sourcerer
 
 **Key Features:**
 
-- `createLocalSource()` and `createRemoteSource()` with a unified query API
+- `createLocalSource()` and `createPageSource()` with atomic source snapshots
 - Reactive `items`, `total`, `loading`, and `error` signals
 - Built-in fuzzy search, multi-field sorting, and pagination
 - Zero dependencies

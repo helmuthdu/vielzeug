@@ -1,79 +1,50 @@
 ---
 title: 'Sourcerer Examples — Reactive Controls with Ripple'
-description: 'Drive a Sourcerer model from Ripple signals so multiple UI controls stay in sync automatically.'
+description: 'Project a local source into Ripple signals.'
 ---
 
 ## Reactive Controls with Ripple
 
 ### Problem
 
-Multiple UI elements — a search input, a role filter dropdown, a sort toggle — all control the same list. Without shared state, each control needs its own callback wired to the source, and keeping them in sync requires threading state manually.
+You need one search control to update a source and one reactive view to consume its current snapshot.
 
 ### Solution
 
-Subscribe to the source and drive Ripple signals from the callback. Store shared control state in a Ripple `store`. An `effect()` projects control changes into the source whenever any value changes.
+Subscribe once, store source snapshots in a Ripple signal, and project control state through `setQuery()`.
 
 ```ts
-import { effect, signal, store } from '@vielzeug/ripple';
+import { effect, signal } from '@vielzeug/ripple';
 import { createLocalSource } from '@vielzeug/sourcerer';
 
-type User = { id: number; name: string; role: 'admin' | 'member' };
+const users = [{ name: 'Ada' }, { name: 'Grace' }];
+const source = createLocalSource(users, {
+  match: (user, search) => user.name.toLowerCase().includes(search.toLowerCase()),
+});
+const search = signal('');
+const snapshot = signal(source.snapshot);
+const stop = source.subscribe((next) => (snapshot.value = next));
 
-const users: User[] = [
-  { id: 1, name: 'Ada Lovelace', role: 'admin' },
-  { id: 2, name: 'Grace Hopper', role: 'admin' },
-  { id: 3, name: 'Linus Torvalds', role: 'member' },
-  { id: 4, name: 'Margaret Hamilton', role: 'member' },
-];
-
-const source = createLocalSource(users, { limit: 2 });
-const current = signal<readonly User[]>([]);
-const meta = signal(source.meta);
-
-// Drive Ripple signals whenever the source changes
-const unsub = source.subscribe(() => {
-  current.value = source.current;
-  meta.value = source.meta;
+const stopEffect = effect(() => {
+  source.setQuery({ search: search.value });
 });
 
-const controls = store({
-  query: '',
-  role: 'all' as 'all' | 'admin' | 'member',
-  sort: 'name' as 'name' | 'role',
-});
+search.value = 'ada';
+console.log(snapshot.value.data); // [{ name: 'Ada' }]
 
-// Reactively project shared UI state into the source
-effect(() => {
-  const { query, role, sort } = controls.value;
-  void source.patch({
-    filter: role === 'all' ? undefined : (user) => user.role === role,
-    sort: sort === 'name' ? (a, b) => a.name.localeCompare(b.name) : (a, b) => a.role.localeCompare(b.role),
-  });
-  void source.search(query); // debounced — fires after debounceMs
-});
-
-// Any update to controls automatically re-filters/sorts/paginates the source
-controls.patch({ query: 'a' });
-controls.patch({ role: 'admin' });
-
-// current and meta update automatically
-console.log(current.value); // filtered + sorted page 1
-console.log(meta.value.totalItems);
-
-// Clean up when done
-unsub();
+stopEffect.dispose();
+stop();
 source.dispose();
 ```
 
 ### Pitfalls
 
-- The `effect()` runs immediately on creation. Make sure the source is initialized before the effect is created.
-- Do **not** write to `controls` inside the `effect()` callback — this creates an infinite reactive loop. Only read from `controls` in the effect; write from UI event handlers.
-- The example above already combines `filter`/`sort` into one `patch()` call to avoid two separate recomputes; folding `search` into the same `patch({ filter, sort, search })` call would collapse all three into a single recompute, but then loses `search()`'s built-in debounce — only do this if you also debounce `controls.query` yourself.
-- Always call `unsub()` and `source.dispose()` when the component or page is torn down.
+- Do not recreate a source inside a reactive effect.
+- Dispose both the source subscription and the effect with their owner.
+- Debounce UI input before writing remote source queries.
 
 ### Related
 
-- [Local Pagination and Filtering](./local-pagination-and-filtering.md)
-- [Ripple Signals](/ripple/examples/signals)
-- [Remote Data with Courier](./sourcerer-with-courier.md)
+- [Ripple](/ripple/)
+- [Local pagination and search](./local-pagination-and-filtering)
+- [Framework integration](./framework-integration)

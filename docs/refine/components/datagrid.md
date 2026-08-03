@@ -607,21 +607,24 @@ Set `selectedKeys` to programmatically control which rows are selected. Any chan
 
 `ore-datagrid` integrates directly with [`@vielzeug/sourcerer`](/sourcerer/) via the `source` JS property. When a source is provided:
 
-- `rows` is ignored — `source.current` drives the displayed items.
-- The pagination footer is driven by `source.meta` (pageCount, pageNumber, totalItems).
-- Prev/next buttons call `source.prev()` / `source.next()`.
-- The inline search input calls `source.search(query)`.
-- `source.meta.isLoading` is reflected in the grid's `aria-busy` state.
-- Client-side sort and filter are bypassed — wire `sort-change` to `source.patch()` for server-side sorting.
+- `rows` is ignored — `source.snapshot.data` drives displayed items.
+- The pagination footer reads `source.snapshot.pagination`.
+- Prev/next buttons call `source.page.previous()` / `source.page.next()`.
+- The inline search input calls `source.setQuery({ search })`.
+- `source.snapshot.isFetching` is reflected in the grid's `aria-busy` state.
+- Client-side sort and filter are bypassed — wire `sort-change` to `source.setQuery()` for server-side sorting.
 
 ### Local Source (in-memory)
 
-Use `createLocalSource` when data is already in memory. The source handles search, pagination, and optional async filter/sort pipelines (e.g. Web Worker offloading).
+Use `createLocalSource` when data is already in memory. The source exposes synchronous snapshots and explicit matching.
 
 ```js
 import { createLocalSource } from '@vielzeug/sourcerer';
 
-const source = createLocalSource(myRows, { limit: 10 });
+const source = createLocalSource(myRows, {
+  initialQuery: { pageSize: 10 },
+  match: (row, search) => row.name.toLowerCase().includes(search.toLowerCase()),
+});
 const grid = document.querySelector('ore-datagrid');
 grid.columns = [
   { key: 'name', label: 'Name', sortable: true },
@@ -629,35 +632,37 @@ grid.columns = [
 ];
 grid.source = source;
 
-// Server-side sort wiring (sort-mode="server"):
-grid.addEventListener('sort-change', async ({ detail: { key, direction } }) => {
-  if (direction === 'none') await source.patch({ sort: undefined });
-  else await source.patch({ sort: (a, b) => direction === 'asc'
-    ? String(a[key]).localeCompare(String(b[key]))
-    : String(b[key]).localeCompare(String(a[key])) });
+// Local sort wiring:
+grid.addEventListener('sort-change', ({ detail: { key, direction } }) => {
+  // Keep local sorting in application-owned data preparation.
+  grid.rows = direction === 'none'
+    ? rows
+    : rows.toSorted((left, right) =>
+        direction === 'asc' ? String(left[key]).localeCompare(String(right[key])) : String(right[key]).localeCompare(String(left[key])),
+      );
 });
 
 // Clean up when done:
 // source.dispose();
 ```
 
-### Remote Source (API-backed)
+### Page Source (API-backed)
 
-Use `createRemoteSource` for server-driven pagination and search. The grid calls `source.search(q)` and `source.next()` / `source.prev()` automatically — no manual wiring needed.
+Use `createPageSource` for server-driven pagination and search. The grid consumes atomic snapshots and calls `source.page.next()` / `source.page.previous()`.
 
 ```js
-import { createRemoteSource } from '@vielzeug/sourcerer';
+import { createPageSource } from '@vielzeug/sourcerer';
 
-const source = createRemoteSource({
-  fetch: async (q, signal) => {
+const source = createPageSource({
+  initialQuery: { pageSize: 20 },
+  load: async ({ query, signal }) => {
     const url = new URL('/api/users', location.origin);
-    url.searchParams.set('page', String(q.page));
-    url.searchParams.set('limit', String(q.limit));
-    if (q.search) url.searchParams.set('search', q.search);
-    const { items, total } = await fetch(url, { signal }).then(r => r.json());
-    return { items, total };
+    url.searchParams.set('page', String(query.page));
+    url.searchParams.set('pageSize', String(query.pageSize));
+    url.searchParams.set('search', query.search);
+    const { data, total } = await fetch(url, { signal }).then(r => r.json());
+    return { data, total };
   },
-  limit: 20,
 });
 
 const grid = document.querySelector('ore-datagrid');
@@ -711,7 +716,7 @@ type DataGridSource<T> = {
 | `filterOptions`      | `FilterOption[]`                       | —                         | Pre-defined filter option definitions per column key. When set, those options replace auto-derived ones in the Filter by popover (JS property) |
 | `pageSizeOptions`    | `number[]`                             | —                         | When set, renders a page-size `ore-select` in the footer (JS property)                                                                    |
 | `source`             | `DataGridSource`                       | —                         | A reactive sourcerer source. When set, drives rows, pagination, and search — the `rows` prop is ignored (JS property)                    |
-| `loading`            | `boolean`                              | `false`                   | Show busy/loading state. Also set automatically from `source.meta.isLoading` when `source` is provided                                   |
+| `loading`            | `boolean`                              | `false`                   | Show busy/loading state. Also set automatically from `source.snapshot.isFetching` when `source` is provided                                   |
 | `disabled`           | `boolean`                              | `false`                   | Disable all interaction                                                                                                                  |
 
 ### DataGridColumn

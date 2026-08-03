@@ -57,14 +57,14 @@ importers:
         specifier: ^1.1.2
         version: 1.1.2
       '@vielzeug/scout':
-        specifier: ^1.1.6
-        version: 1.1.6
+        specifier: link:../../packages/scout
+        version: link:../../packages/scout
       '@vielzeug/scroll':
         specifier: ^1.1.3
         version: 1.1.3
       '@vielzeug/sourcerer':
-        specifier: ^1.0.6
-        version: 1.0.6
+        specifier: link:../../packages/sourcerer
+        version: link:../../packages/sourcerer
       '@vielzeug/spell':
         specifier: ^1.2.1
         version: 1.2.1
@@ -412,16 +412,8 @@ packages:
     resolution: {integrity: sha512-3CEfE8q6v4mJonV9Y6LQffoKzdP/vFHclEQTtZaHoSmfDhqSN0rqKjBk5mpG0nRntQ5GF/00rNbJS50adVH4Vw==}
     engines: {node: '>=22'}
 
-  '@vielzeug/scout@1.1.6':
-    resolution: {integrity: sha512-OCvOEA/Avh9BdJsdsVysXUWawPOgYpCtbF2WfzXN1ZEViaGq8Tkqxg+XNkA5wXCuuP9nTdA4t3U8an2ouXM57A==}
-    engines: {node: '>=22'}
-
   '@vielzeug/scroll@1.1.3':
     resolution: {integrity: sha512-sCdLCUS0jnyPdoyXsUy8yEV7UbtzYySu5aUyZ/jxwMxfU4hZUa4XLUVs3uuXgYQzz4ERtwd/olnjX3t+LgD0xg==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/sourcerer@1.0.6':
-    resolution: {integrity: sha512-0Q0U9ppcpyO8SaAgMWCwcpzJpcNEQvwwqKJpu0ptyz0romqZHHdgMe9KLws66X31cSUTmhT6e7qZvGkCZ52kIA==}
     engines: {node: '>=22'}
 
   '@vielzeug/spell@1.2.1':
@@ -834,17 +826,9 @@ snapshots:
 
   '@vielzeug/rune@1.1.2': {}
 
-  '@vielzeug/scout@1.1.6':
-    dependencies:
-      '@vielzeug/ripple': 1.2.3
-
   '@vielzeug/scroll@1.1.3':
     dependencies:
       '@vielzeug/ripple': 1.2.3
-
-  '@vielzeug/sourcerer@1.0.6':
-    dependencies:
-      '@vielzeug/arsenal': 1.1.2
 
   '@vielzeug/spell@1.2.1':
     dependencies:

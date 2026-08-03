@@ -1,62 +1,43 @@
 ---
 title: Sourcerer — Reactive Query Sources
-description: Typed reactive data sources for pagination, filtering, sorting, search, and infinite scroll.
+description: Framework-agnostic collection sources for local, page, cursor, and infinite pagination.
 package: sourcerer
 category: data
-keywords: [pagination, filtering, sorting, search, data-source, query, remote, local, cursor, infinite-scroll]
-related: [courier, ripple, wayfinder]
+keywords: [pagination, data-source, cursor, infinite-scroll, search]
+related: [courier, ripple, scout, wayfinder]
 exports:
   [
-    createLocalSource,
-    createRemoteSource,
     createCursorSource,
     createInfiniteSource,
-    deriveSource,
-    mergeSource,
-    SourcererDisposedError,
-    SourcererError,
-    SourcererTimeoutError,
-    sourceState,
-    itemRange,
-    prefetchSource,
-    prefetchSourceAndKeep,
-    FetchEvent,
-    SearchOptions,
-    filterContains,
-    filterEquals,
-    filterRange,
-    sortBy,
-    encodeQuery,
-    decodeQuery,
-    DecodeQueryOptions,
-    LocalSourceQuery,
-    LocalSourceConfig,
-    LocalSource,
-    RemoteSource,
-    RemoteConfig,
-    RemoteSourceQuery,
+    createLocalSource,
+    createPageSource,
+    AnyPagination,
+    CursorPagination,
+    CursorQuery,
+    CursorQueryPatch,
+    CursorResult,
     CursorSource,
-    CursorConfig,
-    CursorSourceQuery,
+    CursorSourceConfig,
+    InfinitePagination,
+    InfiniteQuery,
+    InfiniteQueryPatch,
     InfiniteSource,
-    InfiniteConfig,
-    InfiniteSourceQuery,
-    DerivedSource,
-    MergedSource,
-    ReactiveSource,
-    PageNavigator,
-    SourceQuery,
-    SourceMeta,
-    CursorMeta,
-    InfiniteMeta,
-    SourceState,
-    SourceSnapshot,
-    SourcererErrorContext,
-    RetryConfig,
-    QueryParams,
-    QueryParamsInput,
+    InfiniteSourceConfig,
+    LocalQuery,
+    LocalQueryPatch,
+    LocalSource,
+    LocalSourceConfig,
+    PageLoadContext,
+    PagePagination,
+    PageQuery,
+    PageQueryPatch,
+    PageResult,
+    PageSource,
+    PageSourceConfig,
     Predicate,
     Sorter,
+    Source,
+    SourceSnapshot,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -67,42 +48,40 @@ environments: [browser, node, ssr, deno]
 
 ## Why Sourcerer?
 
-Managing paginated lists across local and remote data usually means writing different state models for each case, wiring separate loading flags, and duplicating URL serialization logic. Sourcerer provides one typed contract — `current`, `meta`, and `subscribe` — that works the same whether data lives in memory or comes from a server.
+Lists often combine pagination, search, request cancellation, and render state. Sourcerer gives local arrays and remote loaders one snapshot contract while leaving caching, retries, and transport policy to your application.
 
 ```ts
-// Without Sourcerer — manual local list state
-const [items, setItems] = useState(allUsers);
-const [page, setPage] = useState(1);
-const [search, setSearch] = useState('');
-const pageSize = 10;
-const filtered = items.filter((u) => u.name.includes(search));
-const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
-const totalPages = Math.ceil(filtered.length / pageSize);
-// ... repeat for remote with loading/error/abort logic ...
+import { createPageSource } from '@vielzeug/sourcerer';
 
-// With Sourcerer — same API for both
-const source = createLocalSource(allUsers, { limit: 10 }); // or createRemoteSource(...)
-await source.search(search, { immediate: true });
-// source.current, source.meta.pageCount — both cases handled
+type User = { id: number; name: string };
+
+// Before: query changes can mix old items with new loading and page state.
+let items: User[] = [];
+let page = 1;
+let isLoading = false;
+
+// After: one source publishes internally consistent loaded state.
+const source = createPageSource<User>({
+  autoStart: false,
+  load: async () => ({ data: [{ id: 1, name: 'Ada' }], total: 1 }),
+});
+source.subscribe((snapshot) => console.log(snapshot.data));
+source.dispose();
 ```
 
-| Feature                             | Sourcerer                                       | TanStack Query                             | SWR                                                             |
-| ----------------------------------- | ----------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------- |
-| Bundle size                         | <PackageInfo package="sourcerer" type="size" /> | ~16 kB                                     | ~6 kB                                                           |
-| In-memory source primitive          | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>                          |
-| Remote source primitive             | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                      |
-| Cursor-based pagination             | <ore-icon name="check" size="16"></ore-icon>      | Partial                                    | Partial                                                         |
-| Infinite scroll source              | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                      |
-| Typed page/filter/sort/search model | <ore-icon name="check" size="16"></ore-icon>      | Partial                                    | Partial                                                         |
-| Optimistic updates                  | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                      |
-| URL query encode/decode helpers     | <ore-icon name="check" size="16"></ore-icon>      | Partial                                    | Partial                                                         |
-| Framework agnostic                  | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> React-first |
+| Feature | Sourcerer | Manual list state | Courier query cache |
+| --- | --- | --- | --- |
+| Bundle size | <PackageInfo package="sourcerer" type="size" /> | Application-defined | <PackageInfo package="courier" type="size" /> |
+| Zero runtime dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Local and remote collections | <ore-icon name="check" size="16"></ore-icon> | Application-defined | <ore-icon name="triangle-alert" size="16"></ore-icon> |
+| Cursor and infinite pagination | <ore-icon name="check" size="16"></ore-icon> | Application-defined | <ore-icon name="triangle-alert" size="16"></ore-icon> |
+| Latest-request cancellation | <ore-icon name="check" size="16"></ore-icon> | Application-defined | Transport-level |
 
 <div class="decision-callout">
 
-**Use Sourcerer when** you want one typed source abstraction for both local collections and server-backed lists, with built-in support for pagination, search, filters, and optimistic mutation.
+**Use Sourcerer when** one UI collection needs local or remote pagination with an explicit, framework-independent snapshot contract.
 
-**Consider TanStack Query when** your data layer is already built around query keys, cache invalidation across many components, and React-first DevTools integration.
+**Consider Courier alone when** you only need cached HTTP queries and pagination state belongs elsewhere.
 
 </div>
 
@@ -126,53 +105,49 @@ yarn add @vielzeug/sourcerer
 
 ## Quick Start
 
-```ts
-import { createLocalSource } from '@vielzeug/sourcerer';
-
-const source = createLocalSource(
-  [
-    { id: 1, name: 'Ada' },
-    { id: 2, name: 'Grace' },
-    { id: 3, name: 'Linus' },
-  ],
-  { limit: 2 },
-);
-
-await source.search('ada', { immediate: true });
-console.log(source.current); // [{ id: 1, name: 'Ada' }]
-console.log(source.meta.pageNumber); // 1
-```
+Create a page source, load it, then dispose it with its owner.
 
 ```ts
-import { createRemoteSource } from '@vielzeug/sourcerer';
+import { createPageSource } from '@vielzeug/sourcerer';
 
-const source = createRemoteSource({
-  fetch: async ({ filter, limit, page, search, sort }, signal) => {
-    const res = await fetch(`/api/users?page=${page}&limit=${limit}`, { signal });
-    return res.json(); // { items: User[], total: number }
+type User = { id: number; name: string };
+
+const source = createPageSource<User>({
+  autoStart: false,
+  load: async ({ query }) => {
+    const users = [
+      { id: 1, name: 'Ada' },
+      { id: 2, name: 'Grace' },
+      { id: 3, name: 'Linus' },
+    ];
+    const start = (query.page - 1) * query.pageSize;
+
+    return { data: users.slice(start, start + query.pageSize), total: users.length };
   },
-  limit: 20,
 });
 
-// autoFetch is true by default — initial data loads immediately
-await source.ready();
-console.log(source.current, source.meta.totalItems);
+try {
+  await source.reload();
+  console.log(source.snapshot.data);
+} catch (error) {
+  console.error(error);
+} finally {
+  source.dispose();
+}
 ```
 
 ## Features
 
 <div class="features-grid">
 
-| Factory                  | Data model      | Navigation          | Key extras                                                          |
-| ------------------------ | --------------- | ------------------- | ------------------------------------------------------------------- |
-| `createLocalSource()`    | In-memory array | Page number         | `filterAsync`, `sortAsync`, `patch()`, custom `searchFn`, `ready()` |
-| `createRemoteSource()`   | Server fetch    | Page number         | `staleTime`, `optimisticUpdate`, `patch()`, `ready()`, `queryKey`   |
-| `createCursorSource()`   | Server fetch    | Cursor tokens       | `patch()`, `ready()`, `queryKey`                                    |
-| `createInfiniteSource()` | Server fetch    | Append (`loadMore`) | `patch()`, `loadedPages`, `ready()`, `queryKey`                     |
+- `createLocalSource()` — synchronous search and numbered pagination over an array
+- `createPageSource()` — numbered remote pages with latest-request cancellation
+- `createCursorSource()` — sequential opaque-cursor navigation
+- `createInfiniteSource()` — append-only page loading
+- `SourceSnapshot` — loaded `query`, `data`, and `pagination` plus optional `pendingQuery`
+- `debugSource()` — opt-in `console.debug` observer from `/devtools`
 
 </div>
-
-`@vielzeug/sourcerer/devtools`: opt-in `debugSource()` for `console.debug` state-transition logging across any source type, tree-shaken from production.
 
 ## Documentation
 
@@ -188,9 +163,10 @@ console.log(source.current, source.meta.totalItems);
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — reactive signals; Sourcerer's loading, error, and data state are exposed as signals for framework-agnostic UI binding
-- [Arsenal](/arsenal/) — utility functions used inside Sourcerer's fetch and transform pipelines
-- [Wayfinder](/wayfinder/) — client-side router; sync Sourcerer's pagination and filter state with URL search params
+- [Courier](/courier/) — use as transport, caching, and retry policy inside a page loader
+- [Scout](/scout/) — adapt an indexed search matcher for local sources
+- [Ripple](/ripple/) — project source snapshots into reactive application state
+- [Wayfinder](/wayfinder/) — validate and synchronize page query fields with route state
 
 </div>
 

@@ -402,15 +402,15 @@ const user = parseJSON(raw, {
 
 ### With Sourcerer
 
-Use `fuzzy` and `sort` from arsenal as transform functions inside a `createLocalSource`.
+Use Arsenal helpers in explicit Sourcerer query callbacks.
 
 ```ts
-import { fuzzy, sort } from '@vielzeug/arsenal';
+import { fuzzy } from '@vielzeug/arsenal';
 import { createLocalSource } from '@vielzeug/sourcerer';
 
-const source = createLocalSource(users, {
-  search: (items, query) => fuzzy(items, query),
-  sort: (items, key, dir) => sort(items, { [key]: dir }),
+const sortedUsers = users.toSorted((left, right) => left.name.localeCompare(right.name));
+const source = createLocalSource(sortedUsers, {
+  match: (user, query) => fuzzy([user], query).length > 0,
 });
 ```
 

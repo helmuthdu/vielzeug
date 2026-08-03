@@ -5,6 +5,7 @@ import '@vielzeug/refine/badge';
 import '@vielzeug/refine/avatar';
 import { define, html, onCleanup, onMounted, ref } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
+import { toSearchMatcher } from '@vielzeug/scout';
 import { createVirtualScroller } from '@vielzeug/scroll';
 import { createLocalSource } from '@vielzeug/sourcerer';
 
@@ -141,12 +142,8 @@ define('backlog-view', {
     let statusFilter: TaskStatus | '' = '';
 
     const source = createLocalSource<Task>(boardSignal.value.tasks, {
-      limit: PAGE_SIZE,
-      searchFn: (items, query) => {
-        const results = taskIndex.search(query, { limit: items.length });
-
-        return results.map((r) => r.item);
-      },
+      initialQuery: { pageSize: PAGE_SIZE },
+      match: toSearchMatcher(taskIndex),
     });
 
     const openTask = (taskId: string): void => openTaskDialog({ kind: 'edit', taskId });
@@ -170,15 +167,15 @@ define('backlog-view', {
       });
 
       function syncView(): void {
-        scroller.setItems([...source.current]);
+        const snapshot = source.snapshot;
 
-        const meta = source.meta;
+        scroller.setItems([...snapshot.data]);
 
-        pageNumber.value = meta.pageNumber;
-        pageCount.value = meta.pageCount;
-        totalItems.value = meta.totalItems;
-        canGoPrev.value = meta.pageNumber > 1;
-        canGoNext.value = meta.pageNumber < meta.pageCount;
+        pageNumber.value = snapshot.pagination.index;
+        pageCount.value = snapshot.pagination.count;
+        totalItems.value = snapshot.pagination.total;
+        canGoPrev.value = snapshot.pagination.hasPrevious;
+        canGoNext.value = snapshot.pagination.hasNext;
       }
 
       source.subscribe(syncView);
@@ -195,7 +192,7 @@ define('backlog-view', {
 
         const filtered = statusFilter ? tasks.filter((t) => t.status === statusFilter) : tasks;
 
-        void source.setData(filtered);
+        source.setData(filtered);
       }
 
       const boardSub = boardSignal.subscribe(refreshSourceData);
@@ -210,13 +207,13 @@ define('backlog-view', {
     const onSearchInput = (e: Event): void => {
       const query = (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '';
 
-      void source.search(query);
+      source.setQuery({ search: query });
     };
 
     const onSearchChange = (e: Event): void => {
       const query = (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '';
 
-      void source.search(query, { immediate: true });
+      source.setQuery({ search: query });
     };
 
     const onFilterChange = (e: Event): void => {
@@ -225,7 +222,7 @@ define('backlog-view', {
       const tasks = boardSignal.value.tasks;
       const filtered = statusFilter ? tasks.filter((t) => t.status === statusFilter) : tasks;
 
-      void source.setData(filtered);
+      source.setData(filtered);
     };
 
     return html`
@@ -244,11 +241,15 @@ define('backlog-view', {
       </div>
       <div class="backlog__list-area" ref=${listAreaRef}></div>
       <div class="backlog__pagination">
-        <ore-button variant="bordered" size="sm" ?disabled=${() => !canGoPrev.value} @click=${() => void source.prev()}>
+        <ore-button
+          variant="bordered"
+          size="sm"
+          ?disabled=${() => !canGoPrev.value}
+          @click=${() => source.page.previous()}>
           ${() => t('backlog.prev')}
         </ore-button>
         <span class="backlog__pagination-info">${pageInfoText}</span>
-        <ore-button variant="bordered" size="sm" ?disabled=${() => !canGoNext.value} @click=${() => void source.next()}>
+        <ore-button variant="bordered" size="sm" ?disabled=${() => !canGoNext.value} @click=${() => source.page.next()}>
           ${() => t('backlog.next')}
         </ore-button>
       </div>

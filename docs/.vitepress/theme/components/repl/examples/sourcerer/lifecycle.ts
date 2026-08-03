@@ -1,46 +1,16 @@
 export const lifecycleExample = {
-  code: `// Source lifecycle: disposed, disposalSignal, ready() on disposed source
-import { createRemoteSource, SourcererDisposedError } from '@vielzeug/sourcerer'
+  code: `import { createPageSource } from '@vielzeug/sourcerer'
 
-const dataset = Array.from({ length: 8 }, (_, i) => ({ id: i + 1, name: \`Item \${i + 1}\` }))
-
-const source = createRemoteSource({
-  autoFetch: false,
-  fetch: async ({ limit, page }) => ({
-    items: dataset.slice((page - 1) * limit, page * limit),
-    total: dataset.length,
-  }),
-  limit: 4,
+const source = createPageSource({
+  autoStart: false,
+  load: async () => ({ data: ['item'], total: 1 }),
 })
 
-// --- Check disposed state ---
-console.log('disposed before fetch:', source.disposed)        // false
-console.log('signal aborted before fetch:', source.disposalSignal.aborted) // false
-
-await source.refresh()
-console.log('items:', source.current.length, '| total:', source.meta.totalItems)
-
-// --- disposalSignal: wire into AbortSignal-aware APIs ---
-source.disposalSignal.addEventListener('abort', () => {
-  console.log('disposalSignal fired — source cleaned up')
-})
-
+console.log(source.disposed)
+source.disposalSignal.addEventListener('abort', () => console.log('disposed'))
+await source.reload()
+console.log(source.snapshot.data)
 source.dispose()
-
-console.log('disposed after dispose():', source.disposed)           // true
-console.log('signal aborted after dispose():', source.disposalSignal.aborted) // true
-
-// --- ready() rejects immediately on disposed source ---
-try {
-  await source.ready()
-} catch (err) {
-  if (err instanceof SourcererDisposedError) {
-    console.log('ready() on disposed source:', err.message)
-  }
-}
-
-// --- Double-dispose is safe ---
-source.dispose()
-console.log('double dispose: no throw')`,
+console.log(source.disposalSignal.aborted)`,
   name: 'Source Lifecycle',
 };

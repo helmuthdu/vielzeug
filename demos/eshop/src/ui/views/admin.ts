@@ -54,8 +54,10 @@ define('admin-view', {
     let chartHandle: ChartHandle | null = null;
 
     function syncSource(): void {
-      visibleOrders.value = [...source.current];
-      pageInfo.value = { page: source.meta.pageNumber, pageCount: source.meta.pageCount };
+      const snapshot = source.snapshot;
+
+      visibleOrders.value = [...snapshot.data];
+      pageInfo.value = { page: snapshot.pagination.index, pageCount: snapshot.pagination.count };
     }
 
     onMounted(() => {
@@ -79,7 +81,7 @@ define('admin-view', {
           chartHandle = createBarChart(chartContainer, config);
         });
 
-        void source.setData(allOrdersSignal.value);
+        source.setData(allOrdersSignal.value);
       });
 
       source.subscribe(syncSource);
@@ -93,7 +95,7 @@ define('admin-view', {
     });
 
     const onSearch = (e: Event): void => {
-      void source.search((e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '');
+      source.setQuery({ search: (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '' });
     };
 
     const onStatusChange = (order: Order, e: Event): void => {
@@ -200,9 +202,9 @@ define('admin-view', {
         () => pageInfo.value.pageCount > 1,
         () => html`
           <div class="admin__pagination">
-            <ore-button rounded size="sm" variant="bordered" @click=${() => void source.prev()}>← Prev</ore-button>
+            <ore-button rounded size="sm" variant="bordered" @click=${() => source.page.previous()}>← Prev</ore-button>
             <span>${() => `Page ${pageInfo.value.page} / ${pageInfo.value.pageCount}`}</span>
-            <ore-button rounded size="sm" variant="bordered" @click=${() => void source.next()}>Next →</ore-button>
+            <ore-button rounded size="sm" variant="bordered" @click=${() => source.page.next()}>Next →</ore-button>
           </div>
         `,
       )}

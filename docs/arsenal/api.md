@@ -622,5 +622,5 @@ Both subclasses extend `ArsenalError` with no additional members — they exist 
 
 - [`@vielzeug/coins`](/coins/) — money formatting and currency conversion (`currency`, `exchange`)
 - [`@vielzeug/tempo`](/tempo/) — date/time utilities (`expires`, `timeDiff`, `dateRange`)
-- [`@vielzeug/sourcerer`](/sourcerer/) — reactive paginated sources (`createLocalSource`, `createRemoteSource`)
+- [`@vielzeug/sourcerer`](/sourcerer/) — reactive paginated sources (`createLocalSource`, `createPageSource`)
 - [`@vielzeug/spell`](/spell/) — schema validation to pair with `parseJSON` and `assert`

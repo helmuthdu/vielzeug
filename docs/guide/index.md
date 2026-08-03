@@ -328,7 +328,7 @@ const api = await container.resolve(ApiToken);
 | **Vault + Courier**         | Persist query results in IndexedDB for offline-capable apps                                                  |
 | **Ward + Wayfinder**        | Check permissions in router middleware before the route handler runs                                         |
 | **Conduit + Rune**          | Register a scoped logger per service in your DI container                                                    |
-| **Sourcerer + Courier**     | Use Courier as the HTTP transport inside `createRemoteSource` for pagination with caching                    |
+| **Sourcerer + Courier**     | Use Courier as transport inside `createPageSource` for paginated collections with caching                    |
 | **Sourcerer + Wayfinder**   | Sync source query state (page, filters, sort) with the URL so links stay shareable                           |
 | **Scroll + Orbit**          | Render a virtualised list inside an Orbit-positioned dropdown for high-count comboboxes                      |
 | **Dnd + Scroll**            | Combine sortable drag handles with a virtual list for large reorderable datasets                             |
@@ -340,7 +340,7 @@ const api = await container.resolve(ApiToken);
 | **Flux + Courier** | `fromSse()` / `fromQuery()` adapt Courier event iterators and query handles into stream pipelines |
 | **Flux + Pulse**            | `fromPulse()` / `fromPresence()` convert Pulse WebSocket channels into composable Flux streams              |
 | **Scout + Ripple**          | `createReactiveSearch()` wraps the index in Ripple signals — query and results are reactive computed values  |
-| **Scout + Sourcerer**       | `toSearchFn()` wires a Scout index directly into `createLocalSource` as the search function                 |
+| **Scout + Sourcerer**       | `toSearchMatcher()` wires a Scout index into `createLocalSource` as its matcher                 |
 | **Keymap + Ledger**         | Wire `ctrl+z` / `ctrl+shift+z` to `ledger.undo()` / `ledger.redo()` with no boilerplate                    |
 | **Keymap + Herald**         | Publish shortcut events to a bus instead of calling handlers directly — decouples keyboard from logic       |
 | **Ledger + Ripple**         | `canUndo`, `canRedo`, and `isProcessing` are Ripple `Computed` values — bind directly to UI templates       |

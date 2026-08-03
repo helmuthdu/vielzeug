@@ -1,160 +1,52 @@
 ---
 title: 'Sourcerer Examples — Framework Integration'
-description: Integrate createLocalSource and createRemoteSource with React, Vue, and Svelte.
+description: 'Subscribe to page source snapshots from a React component.'
 ---
 
 ## Framework Integration
 
 ### Problem
 
-You are using React, Vue, or Svelte and need to wire a Sourcerer source into your component's render cycle — subscribing to changes, triggering initial loads, and cleaning up on unmount.
+You need framework rendering to follow source snapshots without recreating a source during every render.
 
 ### Solution
 
-Subscribe to the source in the appropriate component lifecycle hook for your framework. The source exposes a `subscribe()` method that returns an unsubscribe function. For remote sources, set `autoFetch: false` and call `refresh()` explicitly from the mount hook so there is exactly one fetch, tied to a lifecycle you control.
+Create one source per component lifetime and subscribe through the framework’s external-store API.
 
-#### Local source
+```tsx
+import { createPageSource } from '@vielzeug/sourcerer';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 
-::: code-group
+type User = { id: number; name: string };
+const users: User[] = [{ id: 1, name: 'Ada' }];
 
-```tsx [React]
-import { createLocalSource } from '@vielzeug/sourcerer';
-import { useEffect, useMemo, useState } from 'react';
-
-export function LocalUsers({ users }: { users: { id: number; name: string }[] }) {
-  const source = useMemo(() => createLocalSource(users, { limit: 10 }), [users]);
-  const [, rerender] = useState(0);
-
-  useEffect(() => source.subscribe(() => rerender((n) => n + 1)), [source]);
-
-  return (
-    <>
-      <input onChange={(e) => source.search(e.target.value)} />
-      {source.current.map((u) => (
-        <div key={u.id}>{u.name}</div>
-      ))}
-    </>
-  );
-}
-```
-
-```ts [Vue]
-import { createLocalSource } from '@vielzeug/sourcerer';
-import { onUnmounted, ref } from 'vue';
-
-const source = createLocalSource(users, { limit: 10 });
-const tick = ref(0);
-const stop = source.subscribe(() => {
-  tick.value += 1;
-});
-
-onUnmounted(stop);
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { onDestroy } from 'svelte';
-  import { createLocalSource } from '@vielzeug/sourcerer';
-
-  const source = createLocalSource(users, { limit: 10 });
-  let tick = 0;
-  const stop = source.subscribe(() => {
-    tick += 1;
-  });
-
-  onDestroy(stop);
-</script>
-
-{#each source.current as user}
-  <div>{user.name}</div>
-{/each}
-```
-
-:::
-
-#### Remote source
-
-::: code-group
-
-```tsx [React]
-import { createRemoteSource } from '@vielzeug/sourcerer';
-import { useEffect, useMemo, useState } from 'react';
-
-export function RemoteIssues() {
+export function UserList() {
   const source = useMemo(
     () =>
-      createRemoteSource({
-        autoFetch: false, // fetch explicitly from useEffect below, not on creation
-        fetch: ({ limit, page, search }) => api.issues.list({ limit, page, search }),
-        limit: 20,
+      createPageSource<User>({
+        load: async () => ({ data: users, total: users.length }),
       }),
     [],
   );
-  const [, rerender] = useState(0);
+  const snapshot = useSyncExternalStore(source.subscribe, () => source.snapshot);
 
-  useEffect(() => source.subscribe(() => rerender((n) => n + 1)), [source]);
-  useEffect(() => {
-    source.refresh();
-  }, [source]);
+  useEffect(() => () => source.dispose(), [source]);
 
-  return <p>{source.meta.isLoading ? 'Loading...' : `${source.meta.totalItems} issues`}</p>;
+  if (snapshot.isFetching && snapshot.data.length === 0) return <p>Loading</p>;
+  if (snapshot.error) return <p>{snapshot.error.message}</p>;
+
+  return <ul>{snapshot.data.map((user) => <li key={user.id}>{user.name}</li>)}</ul>;
 }
 ```
 
-```ts [Vue]
-import { createRemoteSource } from '@vielzeug/sourcerer';
-import { onMounted, onUnmounted, ref } from 'vue';
-
-const source = createRemoteSource({
-  autoFetch: false, // fetch explicitly from onMounted below, not on creation
-  fetch: ({ limit, page, search }) => api.issues.list({ limit, page, search }),
-  limit: 20,
-});
-const tick = ref(0);
-const stop = source.subscribe(() => {
-  tick.value += 1;
-});
-
-onMounted(() => source.refresh());
-onUnmounted(stop);
-```
-
-```svelte [Svelte]
-<script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
-  import { createRemoteSource } from '@vielzeug/sourcerer';
-
-  const source = createRemoteSource({
-    autoFetch: false, // fetch explicitly from onMount below, not on creation
-    fetch: ({ limit, page, search }) => api.issues.list({ limit, page, search }),
-    limit: 20,
-  });
-
-  let tick = 0;
-  const stop = source.subscribe(() => {
-    tick += 1;
-  });
-
-  onMount(() => {
-    source.refresh();
-  });
-
-  onDestroy(stop);
-</script>
-
-<p>{source.meta.isLoading ? 'Loading...' : `${source.meta.totalItems} issues`}</p>
-```
-
-:::
-
 ### Pitfalls
 
-- Remote sources auto-fetch on creation by default (`autoFetch: true`). Calling `refresh()` from a mount hook on top of that default double-fetches. The examples above set `autoFetch: false` and trigger the one fetch explicitly from the mount hook; the alternative is to keep the default and call `ready()` in the mount hook to await the already-in-flight fetch instead of calling `refresh()`.
-- Each component instance should create its own source (or share one via context/store); subscribing to a shared source that another component mutates can cause duplicate re-renders.
-- In React, wrap `createLocalSource`/`createRemoteSource` in `useMemo` to avoid recreating the source on every render.
+- Keep the source stable with `useMemo()` or equivalent lifecycle ownership.
+- Dispose sources when their component unmounts.
+- Render loaded `snapshot.data` while `pendingQuery` indicates newer work.
 
 ### Related
 
-- [Local Pagination and Filtering](./local-pagination-and-filtering.md)
-- [Remote Search with URL State](./remote-search-with-url-state.md)
-- [Reactive Controls with Ripple](./sourcerer-with-ripple.md)
+- [Usage Guide](../usage#framework-integration)
+- [Reactive controls with Ripple](./sourcerer-with-ripple)
+- [Page source API](../api#createpagesource)

@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/sourcerer",
   "version": "1.1.0",
-  "description": "Typed data-source adapter — pagination, filtering, sorting, search, and cursor-based infinite scroll",
+  "description": "Framework-agnostic reactive collection sources with local, page, cursor, and infinite pagination",
   "type": "module",
   "files": [
     "dist"
@@ -39,9 +39,6 @@
   },
   "engines": {
     "node": ">=22"
-  },
-  "dependencies": {
-    "@vielzeug/arsenal": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.1.0",

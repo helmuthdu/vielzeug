@@ -33,7 +33,7 @@
     "@vielzeug/sandbox": "^1.2.2",
     "@vielzeug/scout": "^1.1.7",
     "@vielzeug/scroll": "^1.1.4",
-    "@vielzeug/sourcerer": "^1.1.0",
+    "@vielzeug/sourcerer": "link:../../packages/sourcerer",
     "@vielzeug/spell": "^1.2.2",
     "@vielzeug/tempo": "^1.0.5",
     "@vielzeug/vault": "^1.0.4",

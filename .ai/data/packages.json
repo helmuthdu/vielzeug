@@ -233,7 +233,7 @@
       "category": "Data",
       "description": "Reactive data sources with pagination and search",
       "domOutput": false,
-      "dependencies": ["arsenal"],
+      "dependencies": [],
       "optionalPeers": []
     },
     {

@@ -420,10 +420,10 @@ function useScoutSearch(items: User[]) {
 
 ### With Sourcerer
 
-`toSearchFn()` adapts a `ScoutIndex` to the `searchFn` slot in sourcerer's `createLocalSource` — Scout handles fuzzy matching, sourcerer handles pagination and filtering.
+`toSearchMatcher()` adapts a `ScoutIndex` to `createLocalSource`'s explicit `match` callback. Scout decides which items match; Sourcerer keeps source query and pagination.
 
 ```ts
-import { createIndex, toSearchFn } from '@vielzeug/scout';
+import { createIndex, toSearchMatcher } from '@vielzeug/scout';
 import { createLocalSource } from '@vielzeug/sourcerer';
 
 const index = createIndex(users, {
@@ -431,13 +431,13 @@ const index = createIndex(users, {
 });
 
 const source = createLocalSource(users, {
-  searchFn: toSearchFn(index),
+  match: toSearchMatcher(index),
 });
 
-source.patch({ search: 'alice' });
+source.setQuery({ search: 'alice' });
 ```
 
-> The `items` argument received by `searchFn` is ignored — the index is the source of truth. Keep the index in sync using `index.add()` / `index.remove()` / `index.reindex()`.
+> Keep the index in sync using `index.add()` / `index.remove()` / `index.reindex()`.
 
 ### With Vault
 

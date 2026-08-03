@@ -169,11 +169,11 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
   /**
    * A reactive data source from `@vielzeug/sourcerer` (or any compatible object).
    * When set, the source drives row data, pagination, and search — the `rows` prop is ignored.
-   * Client-side sort and filter are bypassed; wire `sort-change` to `source.patch()` externally.
+   * Client-side sort and filter are bypassed; wire `sort-change` to `source.setQuery()` externally.
    * @example
    * ```js
-   * import { createRemoteSource } from '@vielzeug/sourcerer';
-   * const source = createRemoteSource({ fetch: (q, sig) => api.users(q, sig), limit: 20 });
+   * import { createPageSource } from '@vielzeug/sourcerer';
+   * const source = createPageSource({ load: ({ query, signal }) => api.users(query, { signal }) });
    * grid.source = source;
    * ```
    */
@@ -267,26 +267,25 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
 /**
  * Minimal structural interface for a reactive data source accepted by `ore-datagrid`.
  *
- * Any `@vielzeug/sourcerer` source (`LocalSource<T>`, `RemoteSource<T>`, `PageNavigator<T>`)
- * satisfies this interface automatically — no direct sourcerer import is required in refine.
+ * Any page-shaped `@vielzeug/sourcerer` source satisfies this interface automatically — no direct
+ * sourcerer import is required in refine.
  *
  * When `source` is set on the grid:
- * - `rows` prop is ignored; `source.current` drives the displayed items.
- * - Pagination is driven by `source.meta` (pageCount, pageNumber, totalItems).
- * - Prev/next buttons call `source.prev()` / `source.next()`.
- * - The search input calls `source.search(query)` when available.
- * - `source.meta.isLoading` contributes to the grid's `aria-busy` state.
- * - Client-side sort and filter are bypassed; wire `sort-change` to `source.patch()` externally.
+ * - `rows` prop is ignored; `source.snapshot.data` drives displayed items.
+ * - Pagination reads `source.snapshot.pagination`.
+ * - Prev/next buttons call `source.page.previous()` / `source.page.next()`.
+ * - Search calls `source.setQuery({ search })`.
+ * - `source.snapshot.isFetching` contributes to the grid's `aria-busy` state.
+ * - Client-side sort and filter are bypassed; wire `sort-change` to `source.setQuery()` externally.
  *
  * @example
  * ```ts
- * import { createRemoteSource } from '@vielzeug/sourcerer';
+ * import { createPageSource } from '@vielzeug/sourcerer';
  *
- * const source = createRemoteSource({
- *   fetch: (q, signal) =>
- *     fetch(`/api/users?page=${q.page}&limit=${q.limit}&search=${q.search ?? ''}`, { signal })
+ * const source = createPageSource({
+ *   load: ({ query, signal }) =>
+ *     fetch(`/api/users?page=${query.page}&limit=${query.pageSize}&search=${query.search}`, { signal })
  *       .then(r => r.json()),
- *   limit: 20,
  * });
  *
  * const grid = document.querySelector('ore-datagrid');
@@ -294,27 +293,27 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
  * ```
  */
 export type DataGridSource<T = Record<string, unknown>> = {
-  /** Current page of items. Updated reactively after each fetch or patch. */
-  readonly current: readonly T[];
-  /** Navigate to a specific 1-indexed page number. */
-  goTo?(page: number): Promise<void>;
-  /** Pagination and loading metadata. */
-  readonly meta: {
-    readonly error: { message: string } | null;
-    readonly isLoading: boolean;
-    readonly pageCount: number;
-    readonly pageNumber: number;
-    readonly pageSize: number;
-    readonly totalItems: number;
+  readonly page?: {
+    next(): Promise<void> | void;
+    previous(): Promise<void> | void;
   };
-  /** Navigate to the next page. No-op when on the last page. */
-  next?(): Promise<void>;
-  /** Navigate to the previous page. No-op when on the first page. */
-  prev?(): Promise<void>;
-  /** Debounced text search. No-op when not implemented by the source. */
-  search?(query: string, opts?: { immediate?: boolean }): Promise<void>;
-  /** Subscribe to source updates. Returns an unsubscribe function. */
-  subscribe(listener: () => void): () => void;
+  setQuery?(changes: { search?: string }): Promise<void> | void;
+  readonly snapshot: {
+    readonly data: readonly T[];
+    readonly error: { message: string } | null;
+    readonly isFetching: boolean;
+    readonly pagination: {
+      readonly count: number;
+      readonly hasNext: boolean;
+      readonly hasPrevious: boolean;
+      readonly index: number;
+      readonly kind: 'page';
+      readonly size: number;
+      readonly total: number;
+    };
+    readonly query: { readonly search?: string };
+  };
+  subscribe(listener: (snapshot: DataGridSource<T>['snapshot']) => void): () => void;
 };
 
 export const DATAGRID_TAG = 'ore-datagrid' as const;
@@ -476,9 +475,16 @@ define<OreDataGridProps>(DATAGRID_TAG, {
           return;
         }
 
-        const update = (): void => {
-          sourceItems.value = src.current as Record<string, unknown>[];
-          sourceMeta.value = src.meta as SourceMetaState;
+        const update = (snapshot: DataGridSource['snapshot'] = src.snapshot): void => {
+          sourceItems.value = snapshot.data as Record<string, unknown>[];
+          sourceMeta.value = {
+            error: snapshot.error,
+            isLoading: snapshot.isFetching,
+            pageCount: snapshot.pagination.count,
+            pageNumber: snapshot.pagination.index,
+            pageSize: snapshot.pagination.size,
+            totalItems: snapshot.pagination.total,
+          };
         };
 
         update();
@@ -513,7 +519,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
     const debouncedSearch = debounce((query: unknown) => {
       const source = props.source.value;
 
-      if (source?.search) void source.search(query as string);
+      if (source?.setQuery) void source.setQuery({ search: query as string });
       else model.setSearchQuery(query as string);
     }, 250);
 
@@ -576,8 +582,8 @@ define<OreDataGridProps>(DATAGRID_TAG, {
       const src = props.source.value;
 
       if (src) {
-        if (direction === 'prev') void src.prev?.();
-        else void src.next?.();
+        if (direction === 'prev') void src.page?.previous();
+        else void src.page?.next();
 
         return;
       }
@@ -1059,7 +1065,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                         if (e.key === 'Escape') {
                           const src = props.source.value;
 
-                          if (src?.search) void src.search('');
+                          if (src?.setQuery) void src.setQuery({ search: '' });
 
                           model.toggleSearch();
                         }
@@ -1080,7 +1086,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
               @click="${() => {
                 const src = props.source.value;
 
-                if (src?.search && model.searchActive.value) void src.search('');
+                if (src?.setQuery && model.searchActive.value) void src.setQuery({ search: '' });
 
                 model.toggleSearch();
               }}">

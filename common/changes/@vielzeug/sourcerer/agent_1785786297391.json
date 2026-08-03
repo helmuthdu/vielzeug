@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: replace source APIs with atomic snapshots",
+      "packageName": "@vielzeug/sourcerer",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/sourcerer"
+}

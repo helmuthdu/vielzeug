@@ -1,17 +1,17 @@
 ---
-title: 'Sourcerer Examples — Local Pagination and Filtering'
-description: 'Build an in-memory paginated list with filtering and sorting using createLocalSource.'
+title: 'Sourcerer Examples — Local Pagination and Search'
+description: 'Search and paginate a prepared in-memory collection.'
 ---
 
-## Local Pagination and Filtering
+## Local Pagination and Search
 
 ### Problem
 
-You have an in-memory dataset you need to paginate, filter, and sort without sending requests to a server. The filtering and sort logic change at runtime based on user input, and page state must reset correctly when filters change.
+You have a prepared local collection and need page controls plus a text search field. Filtering and ranking should remain application-owned logic.
 
 ### Solution
 
-Use `createLocalSource()`. The source owns page state; `patch({ filter })` or `patch({ sort })` resets to page 1 automatically.
+Prepare data before creating source. Supply an explicit `match` function for text search.
 
 ```ts
 import { createLocalSource } from '@vielzeug/sourcerer';
@@ -19,67 +19,29 @@ import { createLocalSource } from '@vielzeug/sourcerer';
 type Product = { id: number; name: string; price: number };
 
 const products: Product[] = [
-  { id: 1, name: 'Apple', price: 2 },
-  { id: 2, name: 'Banana', price: 1 },
-  { id: 3, name: 'Orange', price: 3 },
-  { id: 4, name: 'Apricot', price: 4 },
+  { id: 1, name: 'Keyboard', price: 99 },
+  { id: 2, name: 'Mouse', price: 49 },
+  { id: 3, name: 'Monitor', price: 299 },
 ];
-
-const source = createLocalSource(products, { limit: 2 });
-
-// Filter to items whose name contains 'ap' (case-insensitive)
-await source.patch({ filter: (p) => p.name.toLowerCase().includes('ap') });
-
-// Sort by price ascending
-await source.patch({ sort: (a, b) => a.price - b.price });
-
-console.log(source.current);
-// [{ id: 1, name: 'Apple', price: 2 }, { id: 4, name: 'Apricot', price: 4 }]
-console.log(source.meta.totalItems); // 2 (only items matching the filter)
-```
-
-### Apply filter and sort atomically
-
-Use `patch()` to apply both in one recompute — a single computation pass and a single subscriber notification:
-
-```ts
-await source.patch({
-  filter: (p) => p.name.toLowerCase().includes('ap'),
-  sort: (a, b) => a.price - b.price,
+const prepared = products.filter((product) => product.price < 200).toSorted((left, right) => left.price - right.price);
+const source = createLocalSource(prepared, {
+  initialQuery: { pageSize: 1 },
+  match: (product, search) => product.name.toLowerCase().includes(search.toLowerCase()),
 });
-```
 
-Calling `patch({ filter })` and `patch({ sort })` in sequence (as above) triggers two separate recomputes. Passing both fields to a single `patch()` call is the preferred approach whenever multiple query fields change together.
-
-You can also set both as initial config if the values are known up front:
-
-```ts
-const source = createLocalSource(products, {
-  limit: 2,
-  filter: (p) => p.name.toLowerCase().includes('ap'),
-  sort: (a, b) => a.price - b.price,
-});
-```
-
-### Compose predicates
-
-Inline composition keeps things explicit and avoids external dependencies:
-
-```ts
-await source.patch({ filter: (p) => p.name.toLowerCase().includes('a') && p.price <= 3 });
+source.setQuery({ search: 'key' });
+console.log(source.snapshot.data); // [{ id: 1, name: 'Keyboard', price: 99 }]
+source.dispose();
 ```
 
 ### Pitfalls
 
-- Calling `patch({ filter })` and `patch({ sort })` separately triggers two recomputes and two subscriber notifications. Use `patch({ filter, sort })` instead to apply both in a single recompute with one notification.
-- The default `searchFn` uses fuzzy matching. For exact substring matching in tests or precise UIs, provide a custom `searchFn`:
-  ```ts
-  createLocalSource(data, {
-    searchFn: (items, q) => items.filter((item) => item.name.toLowerCase().includes(q.toLowerCase())),
-  });
-  ```
+- Keep dynamic filters and sort order outside `LocalQuery`; pass prepared results to `setData()`.
+- Return a new array to `setData()` after changing the collection.
+- Read `snapshot.pagination` after each query change; search resets to page 1.
 
 ### Related
 
-- [Reactive Controls with Ripple](./sourcerer-with-ripple.md)
-- [Remote Search with URL State](./remote-search-with-url-state.md)
+- [Usage Guide](../usage#local-collection)
+- [Scout integration](../../scout/examples/sourcerer-integration)
+- [Page query with URL state](./remote-search-with-url-state)

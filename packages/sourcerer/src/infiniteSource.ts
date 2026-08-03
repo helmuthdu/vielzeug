@@ -1,254 +1,123 @@
-import type { InfiniteConfig, InfiniteMeta, InfiniteSource, InfiniteSourceQuery, SearchOptions } from './types';
+import type {
+  InfinitePagination,
+  InfiniteQuery,
+  InfiniteQueryPatch,
+  InfiniteSource,
+  InfiniteSourceConfig,
+} from './types';
 
-import { clampPositiveInt, defaultKeyOf, extractError, retry } from './_utils';
-import { createAsyncSearchCoordinator } from './asyncSearch';
+import { warn } from './_dev';
 import { createAsyncSource } from './asyncSource';
-import { SourcererError } from './errors';
+import { positiveInteger, sameQuery, totalItems } from './pagination';
 
-/** Creates an infinite-scroll source that appends pages on `loadMore()`. */
-export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<T> {
-  const keyOf = cfg.queryKey ?? defaultKeyOf;
+const createPagination = (loaded: number, total: number, isLoadingMore: boolean): InfinitePagination => ({
+  hasMore: loaded < total,
+  isLoadingMore,
+  kind: 'infinite',
+  loaded,
+  total,
+});
 
-  // ── Mutable state ───────────────────────────────────────────────────────────
-  let limit = clampPositiveInt(cfg.limit ?? 20, 'createInfiniteSource', 'limit');
-  let search = '';
-  let currentPage = 1;
-  let loadedPages = 0;
-  let items: readonly T[] = [];
-  let total = 0;
-  let error: SourcererError | null = null;
-  let isLoadingMore = false;
+const normalizeQuery = (current: InfiniteQuery, patch: InfiniteQueryPatch = {}): InfiniteQuery => ({
+  pageSize: positiveInteger(patch.pageSize ?? current.pageSize, 'pageSize'),
+  search: patch.search ?? current.search,
+});
 
-  // ── Cached accessors ─────────────────────────────────────────────────────────
-  let cachedCurrent: readonly T[] = [];
-  let cachedMeta: InfiniteMeta = {
+/** Infinite sources preserve loaded collection state while a pending query replaces it. */
+export function createInfiniteSource<T>(config: InfiniteSourceConfig<T>): InfiniteSource<T> {
+  const initialQuery: InfiniteQuery = { pageSize: 20, search: '' };
+  let requestedQuery = normalizeQuery(initialQuery, config.initialQuery);
+  let nextPage = 1;
+  const asyncSource = createAsyncSource<T, InfiniteQuery, InfinitePagination>({
+    data: [],
     error: null,
-    hasMore: false,
-    isLoading: false,
-    isLoadingMore: false,
-    isSearchPending: false,
-    loadedPages: 0,
-    pageSize: limit,
-    totalItems: 0,
-  };
+    isFetching: false,
+    pagination: createPagination(0, 0, false),
+    query: requestedQuery,
+  });
 
-  const refreshMeta = () => {
-    cachedCurrent = items;
-    cachedMeta = {
-      error,
-      hasMore: items.length < total,
-      isLoading: base.pendingCount() > 0 && !isLoadingMore,
-      isLoadingMore,
-      isSearchPending: base.core.isScheduled,
-      loadedPages,
-      pageSize: limit,
-      totalItems: total,
-    };
-  };
+  const fetch = (query: InfiniteQuery, page: number, append: boolean): Promise<void> => {
+    const loadedData = asyncSource.snapshot.data;
 
-  // onBeforeNotify ensures refreshMeta() runs before any subscriber observes the new state,
-  // eliminating the need for a parallel listeners Set.
-  const base = createAsyncSource<InfiniteSourceQuery>(cfg, keyOf, refreshMeta);
-  const { autoFetch, debounceMs, retryAttempts, retryDelay } = base;
+    return asyncSource.fetch({
+      failure: (previous, error) => ({ ...previous, error, isFetching: false, pendingQuery: undefined }),
+      load: (signal) => config.load({ query: { ...query, page, pageSize: query.pageSize }, signal }),
+      pending: (previous) => ({
+        ...previous,
+        error: null,
+        isFetching: true,
+        pagination: createPagination(previous.data.length, previous.pagination.total, append),
+        pendingQuery: query,
+      }),
+      success: (result) => {
+        const total = totalItems(result.total);
+        const data = append ? [...loadedData, ...result.data] : result.data;
 
-  refreshMeta();
+        nextPage = page + 1;
 
-  const notifyListeners = () => {
-    if (base.disposed) return;
-
-    base.core.notify();
-  };
-  const searchCoordinator = createAsyncSearchCoordinator(base.core, notifyListeners);
-
-  // ── Core fetch ──────────────────────────────────────────────────────────────
-  const fetchPage = (targetPage: number, append: boolean): Promise<void> => {
-    const q: InfiniteSourceQuery = {
-      ...(search && { search }),
-      limit,
-      page: targetPage,
-    };
-
-    error = null;
-
-    return base.fetch(
-      q,
-      async (q, signal, isLatest) => {
-        const startTime = Date.now();
-
-        try {
-          const result = await retry((sig) => cfg.fetch(q, sig!), {
-            delay: retryDelay,
-            signal,
-            times: retryAttempts + 1,
-          });
-
-          if (isLatest()) {
-            if (append) {
-              items = [...items, ...result.items];
-            } else {
-              items = result.items;
-            }
-
-            total = result.total;
-            currentPage = targetPage;
-            loadedPages = append ? loadedPages + 1 : 1;
-            error = null;
-            cfg.onFetch?.({ durationMs: Date.now() - startTime, query: q, status: 'success' });
-          }
-        } catch (reason: unknown) {
-          if (signal.aborted) return;
-
-          if (isLatest()) {
-            if (!append) items = [];
-
-            total = append ? total : 0;
-            error = new SourcererError(extractError(reason), {
-              cause: reason,
-              context: { kind: 'infinite', limit: q.limit, page: q.page, ...(q.search && { search: q.search }) },
-            });
-            cfg.onFetch?.({ durationMs: Date.now() - startTime, error, query: q, status: 'error' });
-          }
-        } finally {
-          isLoadingMore = false;
-        }
+        return {
+          data,
+          error: null,
+          isFetching: false,
+          pagination: createPagination(data.length, total, false),
+          query,
+        };
       },
-      () => {
-        notifyListeners();
-
-        searchCoordinator.settleIfIdle(base.pendingCount());
-      },
-    );
+    });
   };
 
-  const doFetch = () => fetchPage(1, false);
+  const reload = (): Promise<void> => {
+    nextPage = 1;
 
-  // ── Auto-fetch + refresh interval ───────────────────────────────────────────
-  if (autoFetch) void doFetch();
+    return fetch(requestedQuery, 1, false);
+  };
 
-  base.startRefreshInterval(() => void doFetch());
+  const setQuery = async (patch: InfiniteQueryPatch): Promise<void> => {
+    const current = asyncSource.snapshot.pendingQuery ?? asyncSource.snapshot.query;
+    const next = normalizeQuery(current, patch);
 
-  // ── Public API ──────────────────────────────────────────────────────────────
-  return {
-    get current() {
-      return cachedCurrent;
-    },
+    if (sameQuery(next, requestedQuery)) return;
 
+    requestedQuery = next;
+    nextPage = 1;
+    await fetch(next, 1, false);
+  };
+
+  const source: InfiniteSource<T> = {
     get disposalSignal() {
-      return base.disposalSignal;
+      return asyncSource.disposalSignal;
     },
 
-    dispose: () => {
-      searchCoordinator.cancel();
-      searchCoordinator.dispose();
-      base.dispose();
-    },
+    dispose: asyncSource.dispose,
 
     get disposed() {
-      return base.disposed;
+      return asyncSource.disposed;
     },
 
     loadMore() {
-      if (!cachedMeta.hasMore || base.pendingCount() > 0 || isLoadingMore) return Promise.resolve();
+      const { isFetching, pagination } = asyncSource.snapshot;
 
-      isLoadingMore = true;
-      refreshMeta();
-
-      return fetchPage(currentPage + 1, true);
+      return isFetching || (asyncSource.snapshot.data.length > 0 && !pagination.hasMore)
+        ? Promise.resolve()
+        : fetch(requestedQuery, nextPage, true);
     },
 
-    get meta() {
-      return cachedMeta;
+    reload,
+    setQuery,
+
+    get snapshot() {
+      return asyncSource.snapshot;
     },
 
-    patch(changes) {
-      let changed = false;
+    subscribe: asyncSource.subscribe,
 
-      if (changes.limit !== undefined) {
-        const next = clampPositiveInt(changes.limit, 'source.patch', 'limit');
-
-        if (next !== limit) {
-          limit = next;
-          changed = true;
-        }
-      }
-
-      // `|| base.core.isScheduled` also catches patching in the same search text as an already-pending
-      // debounced search() call — that still needs flushing, not silently dropping as a no-op.
-      if ('search' in changes && (changes.search !== search || base.core.isScheduled)) {
-        search = changes.search ?? '';
-        changed = true;
-      }
-
-      if (!changed) return Promise.resolve();
-
-      // patch() is documented as a single atomic fetch — cancel any debounced search()
-      // still pending so it doesn't fire a second, redundant fetch afterwards.
-      searchCoordinator.cancel();
-
-      items = [];
-      total = 0;
-      currentPage = 1;
-      loadedPages = 0;
-
-      return doFetch();
-    },
-
-    get query() {
-      return {
-        ...(search && { search }),
-        limit,
-        page: currentPage,
-      };
-    },
-
-    ready(timeout) {
-      return base.ready(timeout);
-    },
-
-    reset() {
-      searchCoordinator.cancel();
-      currentPage = 1;
-      loadedPages = 0;
-      items = [];
-      total = 0;
-      search = '';
-
-      return doFetch();
-    },
-
-    search(q, opts?: SearchOptions): Promise<void> {
-      if (opts?.immediate) {
-        // A pending debounced search for this same text still needs flushing —
-        // `q === search` alone doesn't mean the fetch already happened.
-        if (q === search && !base.core.isScheduled) return Promise.resolve();
-
-        searchCoordinator.cancel();
-        search = q;
-        items = [];
-        total = 0;
-        loadedPages = 0;
-        currentPage = 1;
-
-        return doFetch();
-      }
-
-      if (q === search) return Promise.resolve();
-
-      search = q;
-      items = [];
-      total = 0;
-      loadedPages = 0;
-      currentPage = 1;
-
-      return searchCoordinator.schedule(() => void doFetch(), debounceMs);
-    },
-
-    subscribe: (listener) => base.core.subscribe(listener),
-
-    [Symbol.dispose]: () => {
-      searchCoordinator.cancel();
-      searchCoordinator.dispose();
-      base.dispose();
+    [Symbol.dispose]() {
+      source.dispose();
     },
   };
+
+  if (config.autoStart !== false)
+    void reload().catch(() => warn('Initial load failed. Inspect source.snapshot.error.'));
+
+  return source;
 }

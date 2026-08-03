@@ -1,29 +1,53 @@
 ---
-title: 'Sourcerer Examples — Remote Data with Courier'
-description: 'Use Courier as the HTTP transport inside a remote Sourcerer source.'
+title: 'Sourcerer Examples — Page Source with Courier'
+description: 'Use Courier for HTTP transport while Sourcerer owns page state.'
 ---
 
-## Remote Data with Courier
+## Page Source with Courier
 
-Pass a Courier request directly through `createRemoteSource()` and forward Sourcerer's signal so
-superseded requests are cancelled at the network layer.
+### Problem
+
+You need HTTP headers, retries, and caching policy from Courier while keeping page query state and cancellation in Sourcerer.
+
+### Solution
+
+Pass Courier calls through a page source loader. Forward Sourcerer’s signal into Courier.
 
 ```ts
-import { createCourier, withBearerAuth } from '@vielzeug/courier';
-import { createRemoteSource } from '@vielzeug/sourcerer';
+import { createCourier } from '@vielzeug/courier';
+import { createPageSource } from '@vielzeug/sourcerer';
 
-const courier = createCourier({ baseUrl: '/api' });
-courier.use(withBearerAuth(async () => tokenStore.getAccessToken()));
+type Issue = { id: number; title: string };
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async () =>
+  new Response(JSON.stringify({ data: [{ id: 1, title: 'Document source state' }], total: 1 }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
 
-const source = createRemoteSource<Issue, IssueFilter, IssueSort>({
-  fetch: ({ filter, limit, page, search, sort }, signal) =>
-    courier.get('/issues', {
-      query: { filter: JSON.stringify(filter), limit, page, q: search, sort: JSON.stringify(sort) },
-      signal,
-    }),
-  limit: 25,
+const courier = createCourier({ baseUrl: 'https://api.example.test' });
+const source = createPageSource<Issue>({
+  autoStart: false,
+  load: ({ query, signal }) => courier.get('/issues', { query, signal }),
 });
+
+try {
+  await source.reload();
+  console.log(source.snapshot.data);
+} finally {
+  source.dispose();
+  courier.dispose();
+  globalThis.fetch = originalFetch;
+}
 ```
 
-Keep the Courier client outside the callback. It then reuses its headers and interceptors for every
-Sourcerer request.
+### Pitfalls
+
+- Keep Courier retry, cache, authentication, and telemetry configuration on Courier.
+- Pass loader `signal` to Courier so superseded requests cancel at transport level.
+- Do not add cache policy back into Sourcerer configuration.
+
+### Related
+
+- [Usage Guide](../usage#working-with-other-vielzeug-libraries)
+- [Courier](/courier/)
+- [Page query with URL state](./remote-search-with-url-state)

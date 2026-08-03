@@ -2,24 +2,24 @@ import type { ScoutIndex } from './scout-index';
 import type { SearchConstraints } from './types';
 
 /**
- * Wraps a `ScoutIndex` as a `searchFn` compatible with `sourcerer`'s `LocalSourceConfig`.
- *
- * The returned function ignores the `items` argument (the index is the source of truth)
- * and delegates entirely to `index.search()`, returning plain items in score order.
- *
- * @example
- * ```ts
- * const index = createIndex(users, { fields: ['name', 'email'] });
- *
- * // Pass directly to sourcerer's searchFn option
- * const source = createLocalSource(users, { searchFn: toSearchFn(index) });
- * ```
+ * Adapts a `ScoutIndex` to sourcerer's explicit local `match` callback.
+ * Caches one match set per query so local filtering does not repeat index work per item.
  */
-export function toSearchFn<T>(
+export function toSearchMatcher<T>(
   index: ScoutIndex<T>,
   options?: SearchConstraints,
-): (items: readonly T[], query: string) => readonly T[] {
-  return (_items, query) => index.search(query, options).map((r) => r.item);
+): (item: T, query: string) => boolean {
+  let lastQuery: string | undefined;
+  let matches = new Set<T>();
+
+  return (item, query) => {
+    if (query !== lastQuery) {
+      lastQuery = query;
+      matches = new Set(index.search(query, options).map((result) => result.item));
+    }
+
+    return matches.has(item);
+  };
 }
 
 /**
@@ -29,26 +29,13 @@ export function toSearchFn<T>(
  * query or corpus changes.
  *
  * Compatible with `Array.filter`, `vault`'s `query.filter()`, or any predicate pipeline.
- *
- * @example
- * ```ts
- * const index = createIndex(products, { fields: ['title', 'sku'] });
- *
- * // Array filter
- * const results = products.filter(toFilterPredicate(index, 'widget'));
- *
- * // vault query builder
- * const rows = await db.query('products')
- *   .filter(toFilterPredicate(index, searchTerm))
- *   .toArray();
- * ```
  */
 export function toFilterPredicate<T>(
   index: ScoutIndex<T>,
   query: string,
   options?: SearchConstraints,
 ): (item: T) => boolean {
-  const matchSet = new Set(index.search(query, options).map((r) => r.item));
+  const matchSet = new Set(index.search(query, options).map((result) => result.item));
 
   return (item) => matchSet.has(item);
 }

@@ -15,7 +15,7 @@ exports:
     highlightField,
     segmentWords,
     toFilterPredicate,
-    toSearchFn,
+    toSearchMatcher,
   ]
 related: [arsenal, sourcerer, vault, ripple]
 environments: [browser, node, ssr, deno]
@@ -94,7 +94,7 @@ const results = index.search('alice');
 - `createSearch()` — Reactive search state backed by an existing `ScoutIndex`; share one index across many states
 - `highlight()` / `highlightField()` — Split field text into `HighlightPart[]` fragments for styled rendering
 - `findMatchRanges()` — Compute match ranges for custom display strings (truncated previews, formatted values)
-- `toSearchFn()` — Drop-in `searchFn` adapter for sourcerer's `LocalSource`
+- `toSearchMatcher()` — Matcher adapter for sourcerer's `LocalSource`
 - `toFilterPredicate()` — Snapshot `(item: T) => boolean` predicate for `Array.filter` or vault queries
 - Incremental updates — `add()` / `remove()` / `reindex()` patch the index in O(field_length); no full rebuild
 - `onMutate()` — Subscribe to index mutations; powers `createSearch()`'s reactivity to `add`/`remove`/`reindex`
@@ -119,7 +119,7 @@ const results = index.search('alice');
 
 - [Arsenal](/arsenal/) — Use `fuzzyFilter` for ad-hoc filtering of small lists (< 200 items) without building an index
 - [Ripple](/ripple/) — `createReactiveSearch()` and `createSearch()` use Ripple signals for reactive query state and debounce
-- [Sourcerer](/sourcerer/) — `toSearchFn()` adapts a `ScoutIndex` as a drop-in `searchFn` for `createLocalSource`
+- [Sourcerer](/sourcerer/) — use a `ScoutIndex` inside `createLocalSource`'s explicit `match` callback
 - [Vault](/vault/) — `toFilterPredicate()` wraps a one-time Scout query as a vault-compatible `filter()` predicate
 
 </div>

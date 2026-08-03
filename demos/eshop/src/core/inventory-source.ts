@@ -10,17 +10,14 @@ import type { Order } from './types';
  */
 export function createOrdersSource(orders: Order[], pageSize = 25): ReturnType<typeof createLocalSource<Order>> {
   return createLocalSource<Order>(orders, {
-    limit: pageSize,
-    searchFn: (items, query) => {
-      const q = query.trim().toLowerCase();
+    initialQuery: { pageSize },
+    match: (order, search) => {
+      const query = search.trim().toLowerCase();
 
-      if (!q) return items;
-
-      return items.filter(
-        (order) =>
-          order.id.toLowerCase().includes(q) ||
-          order.status.toLowerCase().includes(q) ||
-          order.items.some((i) => i.modelName.toLowerCase().includes(q)),
+      return (
+        order.id.toLowerCase().includes(query) ||
+        order.status.toLowerCase().includes(query) ||
+        order.items.some((item) => item.modelName.toLowerCase().includes(query))
       );
     },
   });

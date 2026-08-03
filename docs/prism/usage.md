@@ -769,13 +769,15 @@ data.value = [
 Bind chart data to a Sourcerer remote source so charts update whenever the list refreshes.
 
 ```ts
-import { createRemoteSource } from '@vielzeug/sourcerer';
-import { computed } from '@vielzeug/ripple';
+import { createPageSource } from '@vielzeug/sourcerer';
+import { computed, signal } from '@vielzeug/ripple';
 import { createBarChart } from '@vielzeug/prism';
 
-const source = createRemoteSource({ fetch: ({ page }) => api.stats.list({ page }) });
+const source = createPageSource({ load: ({ query, signal }) => api.stats.list(query, { signal }) });
+const snapshot = signal(source.snapshot);
+source.subscribe((next) => (snapshot.value = next));
 
-const chartData = computed(() => source.items.value.map((item) => ({ key: item.label, value: item.count })));
+const chartData = computed(() => snapshot.value.data.map((item) => ({ key: item.label, value: item.count })));
 
 const chart = createBarChart(container, {
   series: [{ data: chartData, name: 'Series' }],

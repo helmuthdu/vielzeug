@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: replace toSearchFn with toSearchMatcher",
+      "packageName": "@vielzeug/scout",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/scout"
+}

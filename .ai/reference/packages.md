@@ -31,7 +31,7 @@ Human-readable package catalogue derived from `.ai/data/packages.json`.
 | `@vielzeug/sandbox` | AI | no | Sandboxed iframe runtime with typed postMessage state bridge | — | — | — |
 | `@vielzeug/scout` | Utilities | no | Trigram fuzzy-search index with highlighting and reactive layer | `ripple` | — | — |
 | `@vielzeug/scroll` | UI | no | Virtual list engine for large datasets | `ripple` | — | — |
-| `@vielzeug/sourcerer` | Data | no | Reactive data sources with pagination and search | `arsenal` | — | — |
+| `@vielzeug/sourcerer` | Data | no | Reactive data sources with pagination and search | — | — | — |
 | `@vielzeug/spell` | Validation | no | Zero-dep schema validation (Zod-like) | `arsenal` | — | — |
 | `@vielzeug/tempo` | Date/Time | no | Temporal-powered date utilities | — | — | — |
 | `@vielzeug/vault` | Storage | no | IndexedDB + LocalStorage unified typed API | — | — | — |

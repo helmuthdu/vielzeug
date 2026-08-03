@@ -1,6 +1,6 @@
 ---
 title: Scout — API Reference
-description: Complete API reference for @vielzeug/scout — createIndex, createReactiveSearch, createSearch, highlight, highlightField, toSearchFn, toFilterPredicate.
+description: Complete API reference for @vielzeug/scout — createIndex, createReactiveSearch, createSearch, highlight, highlightField, toSearchMatcher, toFilterPredicate.
 ---
 
 [[toc]]
@@ -21,7 +21,7 @@ description: Complete API reference for @vielzeug/scout — createIndex, createR
 | `findMatchRanges()`       | Compute match ranges for a text + query pair          | Sync           | Returns sorted, non-overlapping `[start, end]` ranges         |
 | `highlight()`             | Split text into highlighted/unhighlighted fragments   | Sync           | Ranges must be sorted and non-overlapping                     |
 | `highlightField()`        | Highlight a named field from a `SearchResult`         | Sync           | Shorthand for the `matches.find(…).ranges → highlight()` pattern |
-| `toSearchFn()`            | Adapt `ScoutIndex` to sourcerer's `searchFn` API      | Sync           | Ignores the `items` arg — index is the source of truth        |
+| `toSearchMatcher()`            | Adapt `ScoutIndex` to Sourcerer's `match` callback    | Sync           | Caches one match set per query                                |
 | `toFilterPredicate()`     | Snapshot predicate from a one-time query              | Sync           | Re-call when query or corpus changes                          |
 | `segmentWords()`          | Split unsegmented-script text (CJK, Thai, ...) into words | Sync       | Uses native `Intl.Segmenter` — not applied inside `tokenize()` itself (see Pitfalls) |
 | `debugSearch()`           | Log a `SearchState`'s query/results transitions       | Sync           | Import from `@vielzeug/scout/devtools`, not the main entry point |
@@ -30,7 +30,7 @@ description: Complete API reference for @vielzeug/scout — createIndex, createR
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/scout` | All exports — `createIndex`, `createReactiveSearch`, `createSearch`, `findMatchRanges`, `highlight`, `highlightField`, `segmentWords`, `toSearchFn`, `toFilterPredicate`, all types |
+| `@vielzeug/scout` | All exports — `createIndex`, `createReactiveSearch`, `createSearch`, `findMatchRanges`, `highlight`, `highlightField`, `segmentWords`, `toSearchMatcher`, `toFilterPredicate`, all types |
 | `@vielzeug/scout/devtools` | `debugSearch` — reactive search state logger (dev only) |
 
 ---
@@ -284,18 +284,18 @@ When the field has no match (e.g. the query matched via a different field), retu
 
 ---
 
-## `toSearchFn(index, options?)`
+## `toSearchMatcher(index, options?)`
 
-Returns a `(items, query) => items` function compatible with `sourcerer`'s `searchFn` option.
+Returns an `(item, query) => boolean` matcher compatible with `sourcerer`'s `match` option.
 
 ```ts
-function toSearchFn<T>(index: ScoutIndex<T>, options?: SearchConstraints): (items: readonly T[], query: string) => readonly T[]
+function toSearchMatcher<T>(index: ScoutIndex<T>, options?: SearchConstraints): (item: T, query: string) => boolean
 ```
 
-The `items` argument is ignored — the index is always the source of truth.
+One matching-item set is cached per query, so filtering does not repeat index work per item.
 
 ```ts
-const source = createLocalSource(users, { searchFn: toSearchFn(index) });
+const source = createLocalSource(users, { match: toSearchMatcher(index) });
 ```
 
 ---
