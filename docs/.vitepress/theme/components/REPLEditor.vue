@@ -353,7 +353,7 @@ function loadExample(exampleKey: string): void {
 }
 
 function handleExampleSelect(e: Event): void {
-  const key = (e as CustomEvent<{ values: string[] }>).detail?.values?.[0] ?? '';
+  const key = (e.target as HTMLElement & { value: string }).value ?? '';
   selectedExample.value = key;
   if (key) loadExample(key);
 }
