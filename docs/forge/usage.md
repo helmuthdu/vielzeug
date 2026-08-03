@@ -1,534 +1,205 @@
 ---
 title: Forge — Usage Guide
-description: Practical usage patterns for values, validation, submission, subscriptions, connect, scope, and framework integration.
+description: Build immutable forms, validate whole values, and use optional adapters.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-```ts
-import { createForm } from '@vielzeug/forge';
-
-const form = createForm({
-  defaultValues: {
-    email: '',
-    password: '',
-    profile: { age: 0, name: '' },
-  },
-  validators: {
-    email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined),
-    password: (v) => (String(v).length < 8 ? 'Min 8 chars' : undefined),
-  },
-});
-
-form.set('profile.age', 30);
-form.set('profile.name', 'Alice');
-
-const email = form.get('email');
-const values = form.values();
-```
-
-## Typed Paths
-
-Forge is path-typed first. Provide a concrete values shape so field paths and value types are inferred.
-
-```ts
-type Values = {
-  email: string;
-  profile: { age: number; name: string };
-};
-
-const form = createForm<Values>({
-  defaultValues: { email: '', profile: { age: 0, name: '' } },
-});
-
-form.set('profile.age', 42); // TypeScript error if type is wrong
-```
-
-Dynamic shape escape hatch:
-
-```ts
-const dynamicForm = createForm<Record<string, unknown>>({});
-dynamicForm.set('custom.field', 'value');
-```
-
-## Validation
-
-```ts
-await form.validateFields(['password']);
-await form.validate();
-await form.validateFields(['email', 'password']);
-
-const controller = new AbortController();
-await form.validate(controller.signal);
-controller.abort();
-```
-
-Validation result:
-
-```ts
-const result = await form.validateFields(['email']);
-
-console.log(result.valid); // true only if no errors exist after this run
-console.log(result.errors); // full current error map after the run
-```
-
-Validation race semantics:
-
-- Forge aborts superseded runs instead of surfacing them as failures.
-- The newest validation run owns final field errors.
-- Aborted runs resolve without throwing in normal API usage.
-
-Schema integration — pass a `safeParse`-compatible schema directly to `validator`:
+Create one form value and update object branches through stable typed operations. Form values support primitives, plain objects, arrays, `File`, and `Blob`; mutable class instances such as `Date`, `Map`, and `Set` are rejected.
 
 ```ts
 import { createForm } from '@vielzeug/forge';
-import { s } from '@vielzeug/spell';
-
-const schema = s.object({
-  age: s.number().min(18, 'Must be 18+'),
-  email: s.string().email('Invalid email'),
-});
 
 const form = createForm({
-  defaultValues: { age: 0, email: '' },
-  validator: schema, // auto-detected as a safeParse schema
+  initialValues: { profile: { email: '', name: '' }, tags: [] as string[] },
+  validate: (value) => ({
+    fields: { profile: { email: value.profile.email.includes('@') ? undefined : 'Invalid email' } },
+  }),
 });
+
+const email = form.field('profile').field('email');
+email.set('ada@example.com');
+form.field('tags').set((tags) => [...tags, 'typescript']);
+
+console.log(form.value.profile.email);
 ```
 
-For per-field validation with a schema, use `fieldValidator` from `@vielzeug/forge/validators`:
+## Reset Values and Branches
+
+Reset a field when one branch should return to its exact baseline. Reset the form with a value when newly loaded data should become the clean baseline.
 
 ```ts
-import { fieldValidator } from '@vielzeug/forge/validators';
-import { s } from '@vielzeug/spell';
+const name = form.field('profile').field('name');
 
-const form = createForm({
-  defaultValues: { age: 0, email: '' },
-  validators: {
-    age: fieldValidator(s.number().min(18, 'Must be 18+')),
-    email: fieldValidator(s.string().email('Invalid email')),
-  },
-});
+name.set('Ada');
+name.touch();
+name.reset();
+
+form.reset({ profile: { email: 'ada@example.com', name: 'Ada' }, tags: [] });
 ```
 
-## Submission
+An absent optional parent remains absent after a child reset. Arrays are complete values; replace them with an updater instead of retaining index handles.
+
+## Validate and Submit
+
+Return `fields` and an optional `formError` from one validator. `validate()` replaces the complete validation snapshot and returns an explicit status.
 
 ```ts
-const result = await form.submit(async (values) => {
-  const res = await fetch('/api/submit', {
-    body: JSON.stringify(values),
-    headers: { 'Content-Type': 'application/json' },
-    method: 'POST',
-  });
-  return res.json();
+const passwordForm = createForm({
+  initialValues: { password: '', passwordConfirmation: '' },
+  validate: (value) => ({
+    fields: {
+      password: value.password.length >= 8 ? undefined : 'Use at least eight characters',
+      passwordConfirmation: value.password === value.passwordConfirmation ? undefined : 'Passwords must match',
+    },
+  }),
 });
 
-if (!result.ok && result.type === 'validation') {
-  console.log(result.errors);
-}
+const validation = await passwordForm.validate();
 
-if (result.ok) {
-  console.log(result.value); // typed return value from the handler
-}
+if (validation.status === 'invalid') console.log(validation.errors);
+if (validation.status === 'aborted') console.log('Validation cancelled');
+
+const result = await passwordForm.submit((value) => Promise.resolve(value.password.length));
+
+if (result.ok) console.log(result.value);
 ```
 
-`submit()` always:
+Starting another validation aborts the previous run. Field edits preserve existing errors until the next validation replaces them. Unexpected validator failures reject as `ForgeValidationError` with the original error as `cause`.
 
-1. Marks all known fields touched
-2. Runs full validation
-3. If invalid: returns `{ ok: false, type: 'validation', errors }`
-4. If valid: calls the handler and returns `{ ok: true, value }`
+## Observe State
 
-Calling `submit()` while a submission is already in progress rejects the returned promise with a `ForgeSubmitError` (it's an `async function`, so this is never a synchronous throw) — guard with `state.isSubmitting` if needed.
-
-## Async Default Values
-
-Pass an async factory to `defaultValues` to load initial state remotely. The form's `state.isLoading` / `form.isLoading` is `true` while the factory is pending.
+Use form subscriptions for aggregate metadata and field subscriptions for one branch. Subscribing after disposal throws `ForgeDisposedError`.
 
 ```ts
-const form = createForm({
-  defaultValues: async () => {
-    const res = await fetch('/api/user/me');
-    return res.json();
-  },
+const errors: unknown[] = [];
+const observedForm = createForm({
+  initialValues: { email: '' },
+  onSubscriberError: (error) => errors.push(error),
 });
 
-// isLoading is true until the factory resolves
-form.subscribe((state) => {
-  if (!state.isLoading) renderForm(form.values());
-});
-```
+const stopForm = observedForm.subscribe((state) => {
+  console.log(state.valid, state.submitting);
+}, { immediate: true });
+const stopField = observedForm.field('email').subscribe((state) => {
+  console.log(state.value, state.error);
+}, { immediate: true });
 
-## Connect (Field Binding)
-
-`connect()` returns a live binding object with DOM event handlers and live getters. Call once per field and store the result — do not destructure. Each binding owns its own independent debounce timer; call `dispose()` when the field unmounts to cancel it.
-
-```ts
-const emailConn = form.connect('email');
-
-input.addEventListener('change', (e) => emailConn.onChange(e.target.value));
-input.addEventListener('blur', () => emailConn.onBlur());
-
-// Live getters re-evaluate on every access
-console.log(emailConn.value, emailConn.error, emailConn.touched, emailConn.dirty);
-
-// On unmount: cancel any pending debounce timer
-emailConn.dispose();
-```
-
-### Validation Modes
-
-Pass a `ConnectOptions` object (or a `ValidationModes` preset) to control when validation triggers:
-
-```ts
-import { createForm, ValidationModes } from '@vielzeug/forge';
-
-// Global default for all connect() calls
-const form = createForm({
-  defaultValues: { email: '', password: '' },
-  connect: ValidationModes.onBlur, // validate each field on blur
-});
-
-// Per-field override
-const emailConn = form.connect('email', ValidationModes.onChange);
-const passwordConn = form.connect('password', { validateOnBlur: true, debounce: 300 });
-```
-
-| Preset                               | `touchOnBlur`                              | `validateOnBlur`                           | `validateOnChange`                         | `validateOnTouch`                          |
-| ------------------------------------ | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
-| `ValidationModes.onSubmit` (default) | —                                          | —                                          | —                                          | —                                          |
-| `ValidationModes.onBlur`             | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | —                                          | —                                          |
-| `ValidationModes.onChange`           | <ore-icon name="check" size="16"></ore-icon> | —                                          | <ore-icon name="check" size="16"></ore-icon> | —                                          |
-| `ValidationModes.onTouched`          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | —                                          | <ore-icon name="check" size="16"></ore-icon> |
-
-`debounce` delays auto-triggered validation by a given number of milliseconds — useful for async validators on `onChange` to avoid one request per keystroke.
-
-## Scoped Sub-Forms
-
-`scope(prefix)` returns a sub-form whose field paths are relative to the prefix. All state and lifecycle is shared with the parent form.
-
-```ts
-const form = createForm({
-  defaultValues: {
-    name: 'Alice',
-    address: { city: 'New York', street: '123 Main St', zip: '10001' },
-  },
-  validators: {
-    'address.city': (v) => (!v ? 'City is required' : undefined),
-  },
-});
-
-// scope() is memoized — repeated calls with the same prefix return the same object
-const address = form.scope('address');
-
-address.get('city'); // same as form.get('address.city')
-address.set('city', 'Portland'); // same as form.set('address.city', 'Portland')
-address.connect('city'); // same as form.connect('address.city')
-await address.validate(); // validates only address.* fields; returns scoped errors (no prefix)
-await address.submit((vals) => vals); // validates and submits only address.* fields
-```
-
-### Root vs Scoped Path Semantics
-
-| Surface                    | Root form (`form`) | Scoped form (`form.scope('address')`) |
-| -------------------------- | ------------------ | ------------------------------------- |
-| `get` / `set` / `field`    | absolute keys      | relative keys                         |
-| `errors` in `state`        | absolute keys      | relative keys                         |
-| `touchedFields` in `state` | absolute keys      | relative keys                         |
-| `validatingFields` in `state` | absolute keys   | relative keys                         |
-| `validateFields()` input | absolute keys      | relative keys                         |
-| `validate()` result keys   | absolute keys      | relative keys                         |
-
-### Recommended Scoped Patterns
-
-1. Call `const address = form.scope('address')` once per UI/module boundary and pass that around.
-2. Use `address.validate()` / `address.submit()` instead of manually feeding `state.touchedFields` into `validateFields(fields[])`.
-3. Use `address.subscribe(...)` for section UIs — on a scoped form `subscribe` is already prefix-filtered, so sibling/root mutations do not trigger redraws.
-
-**Key characteristics:**
-
-- `dispose()` on a scoped form is a no-op — call `parentForm.dispose()` to tear down.
-- `scope.state` returns a **scoped projection**: `errors`, `touchedFields`, `validatingFields`, `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect only fields within the scope's prefix and use relative keys. `isSubmitting`, `isLoading`, and `submitCount` reflect the full form. Use `scope.validate()` or `scope.submit()` for scoped validity checks; their results also use relative keys.
-
-### Scoped Subscriptions
-
-On a scoped form, `subscribe()` delivers form state filtered to the scope's prefix. `errors`, `touchedFields`, and `validatingFields` use relative keys. `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect **only the scoped fields**. The listener **only fires when the scoped projection changes** — mutations outside the prefix are suppressed. (On a root form, `subscribe()` behaves identically to today — no filtering applies.)
-
-```ts
-const address = form.scope('address');
-
-address.subscribe((state) => {
-  // state.errors → { city: 'Required' }  (not 'address.city')
-  // state.isDirty → true only when an address.* field is dirty
-  // does not fire when form.set('name', 'Alice') is called
-  renderAddressErrors(state.errors);
-});
-```
-
-## Subscriptions
-
-```ts
-const stopForm = form.subscribe((state) => {
-  console.log(state.isValid, state.isDirty, state.errors);
-});
-
-const stopEmail = form.subscribeField('email', (field) => {
-  console.log(field.value, field.error, field.touched, field.dirty);
-});
-
-// Pass sync: true to receive the current snapshot immediately on subscription
-form.subscribeField('email', (field) => updatePreview(String(field.value)), { sync: true });
-
-stopEmail();
+stopField();
 stopForm();
 ```
 
-Snapshot semantics:
+Without `onSubscriberError`, Forge rethrows subscriber failures asynchronously after completing its state transition.
 
-- `form.state` and `form.field(name)` return stable, frozen snapshots.
-- Reference identity is preserved until a relevant mutation occurs.
-- These are directly compatible with external-store patterns such as React `useSyncExternalStore`, Vue `shallowRef`, and the Svelte store protocol.
+## Testing
 
-## History (Snapshot / Restore)
-
-Capture and replay complete form state for undo/redo or "discard changes" flows, via the `history` namespace:
+Test the form without a DOM. Read its immutable value, invoke a method, then assert the resulting state or validation result.
 
 ```ts
-const draft = form.history.snapshot();
+import { expect, test } from 'vitest';
+import { createForm } from '@vielzeug/forge';
 
-// ... user edits ...
-form.set('email', 'different@example.com');
+test('requires an email address', async () => {
+  const form = createForm({
+    initialValues: { email: '' },
+    validate: (value) => ({ fields: { email: value.email.includes('@') ? undefined : 'Invalid email' } }),
+  });
 
-// Revert all changes, including errors, touched, dirty, and submitCount
-form.history.restore(draft);
-```
-
-## Arrays
-
-```ts
-const items = form.array('items');
-
-items.append({ name: '' });
-items.prepend({ name: 'first' });
-items.insert(1, { name: 'middle' });
-items.remove(0);
-items.move(1, 0);
-items.swap(0, 1);
-items.replace(0, { name: 'updated' });
-```
-
-`form.array()` returns a cached helper — call it once and reuse.
-
-## Batching
-
-Wrap multiple mutations in `batch()` to emit only one notification:
-
-```ts
-form.batch(() => {
-  form.set('firstName', 'Alice');
-  form.set('lastName', 'Smith');
-  form.touch('firstName');
+  await expect(form.validate()).resolves.toEqual({
+    errors: { email: 'Invalid email' },
+    formError: undefined,
+    status: 'invalid',
+  });
 });
-// subscribers notified once
 ```
-
-## Reset, Replace, and Patch
-
-```ts
-form.reset(); // restore all values to baseline; clear errors/touched/dirty/submitCount
-form.replace({ email: '', name: '' }); // replace values and baseline; also resets submitCount
-form.patch({ name: 'Alice' }); // merge specific fields into store and baseline (marks them clean)
-form.resetField('email'); // restore single field to baseline
-form.fields.remove('coupon'); // drop field entirely (value, touched, error, validator)
-```
-
-`patch()` accepts a `DeepPartial` object — nested paths are flattened automatically. Useful for applying a server response without dirtying the form.
-
-## Lifecycle
-
-```ts
-form.dispose(); // tear down: abort all pending validation, clear listeners
-console.log(form.disposed); // true after dispose()
-```
-
-After `dispose()`, all mutating APIs throw.
-
-## Debugging
-
-Import `debugForm()` from the dedicated `/devtools` sub-path to log per-field value/error/touched/dirty changes and submit/loading transitions via `console.debug`:
-
-```ts
-import { debugForm } from '@vielzeug/forge/devtools';
-
-const detach = debugForm(form, { label: 'signup' });
-// later, e.g. on unmount:
-detach();
-```
-
-It is a no-op in production (`__FORGE_PROD__` set) and never imported from the main entry point, so it is tree-shaken out of production bundles entirely. See [API Reference → Devtools](./api.md#devtools-vielzeug-forge-devtools) for the full contract.
 
 ## Framework Integration
 
-Forge has no framework-specific packages — `form.subscribe()`, `form.subscribeField()`, and `form.connect()` are the framework-agnostic primitives every integration is built on. Each snippet below is ~10 lines of glue; keep it in a shared `lib/form-hooks.ts`-style module and reuse it across forms.
+Use `form.value` and subscriptions with any renderer. Bind one DOM input through `/dom`; validation scheduling remains application policy.
 
 ::: code-group
 
-```tsx [React]
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+```ts [React]
+import { useEffect, useState } from 'react';
 import { createForm } from '@vielzeug/forge';
-import type { ConnectOptions, FlatKeyOf, Form, TypeAtPath } from '@vielzeug/forge';
 
-function useField<T extends Record<string, unknown>, K extends FlatKeyOf<T>>(form: Form<T>, name: K) {
-  return useSyncExternalStore(
-    (onChange) => form.subscribeField(name, onChange),
-    () => form.field(name),
-  );
-}
+const form = createForm({ initialValues: { email: '' } });
 
-// Live connect() binding, recreated when `name` or an option value changes, disposed on unmount
-function useConnect<T extends Record<string, unknown>, K extends FlatKeyOf<T>>(
-  form: Form<T>,
-  name: K,
-  options?: ConnectOptions,
-) {
-  const bindingRef = useRef<{ dispose(): void; disposed: boolean; value: TypeAtPath<T, K> } | null>(null);
-
-  if (!bindingRef.current || bindingRef.current.disposed) bindingRef.current = form.connect(name, options);
+export function EmailForm() {
+  const [, rerender] = useState(0);
 
   useEffect(() => {
-    const binding = form.connect(name, options);
+    const stop = form.subscribe(() => rerender((revision) => revision + 1));
 
-    bindingRef.current = binding;
+    return () => stop();
+  }, []);
 
-    return () => binding.dispose();
-  }, [form, name, options?.debounce, options?.touchOnBlur, options?.validateOnBlur, options?.validateOnChange]);
-
-  return bindingRef.current;
-}
-
-const form = createForm({ defaultValues: { email: '', password: '' } });
-
-function LoginForm() {
-  const email = useField(form, 'email');
-  const conn = useConnect(form, 'email', { touchOnBlur: true });
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        form.submit(handleLogin);
-      }}>
-      <input
-        value={email.value as string}
-        onChange={(e) => conn.onChange(e.target.value)}
-        onBlur={() => conn.onBlur()}
-      />
-      {email.error && <p>{email.error}</p>}
-      <button type="submit">Submit</button>
-    </form>
-  );
+  return <input value={form.field('email').value} onChange={(event) => form.field('email').set(event.target.value)} />;
 }
 ```
 
 ```ts [Vue 3]
-import { onScopeDispose, shallowRef } from 'vue';
+import { onUnmounted, ref } from 'vue';
 import { createForm } from '@vielzeug/forge';
-import type { FlatKeyOf, Form } from '@vielzeug/forge';
 
-// Wraps a field in a reactive shallowRef; auto-unsubscribes when the scope tears down
-function useField<T extends Record<string, unknown>, K extends FlatKeyOf<T>>(form: Form<T>, name: K) {
-  const ref = shallowRef(form.field(name));
+const form = createForm({ initialValues: { email: '' } });
+const revision = ref(0);
+const stop = form.subscribe(() => revision.value++);
 
-  onScopeDispose(form.subscribeField(name, (state) => (ref.value = state)));
-
-  return ref;
-}
-
-const form = createForm({ defaultValues: { email: '' } });
-
-export default {
-  setup() {
-    const email = useField(form, 'email');
-    const conn = form.connect('email');
-
-    return { email, conn };
-  },
-};
+onUnmounted(stop);
 ```
 
-```svelte [Svelte]
-<script>
+```ts [Svelte]
+<script lang="ts">
+  import { onDestroy } from 'svelte';
   import { createForm } from '@vielzeug/forge';
 
-  const form = createForm({ defaultValues: { email: '' } });
+  const form = createForm({ initialValues: { email: '' } });
+  let revision = 0;
+  const stop = form.subscribe(() => revision++);
 
-  // Any object exposing subscribe() is a valid Svelte store — form.subscribeField() already fits
-  const email = {
-    subscribe(run) {
-      run(form.field('email'));
-      return form.subscribeField('email', run);
-    },
-  };
-  const conn = form.connect('email');
+  onDestroy(stop);
 </script>
 
-<form on:submit|preventDefault={() => form.submit(handleSubmit)}>
-  <input
-    bind:value={$email.value}
-    on:change={(e) => conn.onChange(e.target.value)}
-    on:blur={() => conn.onBlur()}
-  />
-  {#if $email.error}<span>{$email.error}</span>{/if}
-  <button>Submit</button>
-</form>
+<input value={form.field('email').value} on:input={(event) => form.field('email').set(event.currentTarget.value)} />
 ```
 
 :::
 
-Reuse the same `subscribe`/`subscribeField` pattern for `useFormState`/`useFormValues`-style helpers — swap `form.subscribeField(name, ...)` / `form.field(name)` for `form.subscribe(...)` / `form.state` (or `form.values()`).
-
 ## Working with Other Vielzeug Libraries
 
-### With Spell
-
-Combine Spell schemas with Forge to get typed validation rules without writing validator functions by hand.
+Use Spell when one schema owns validation and Vault when an explicit record codec owns persistence.
 
 ```ts
 import { createForm } from '@vielzeug/forge';
-import { fieldValidator } from '@vielzeug/forge/validators';
+import { customValidator } from '@vielzeug/forge/spell';
 import { s } from '@vielzeug/spell';
 
-// Per-field validation with a Spell schema
-const form = createForm({
-  defaultValues: { email: '', password: '', age: 0 },
-  validators: {
-    age: fieldValidator(s.number().min(18, 'Must be 18+')),
-    email: fieldValidator(s.string().email('Invalid email')),
-    password: fieldValidator(s.string().min(8, 'Min 8 characters')),
-  },
-});
-
-// Full-form schema validation (auto-detects safeParse)
-const schema = s.object({
-  age: s.number().min(18, 'Must be 18+'),
-  email: s.string().email('Invalid email'),
-  password: s.string().min(8, 'Min 8 characters'),
-});
-
-const formWithSchema = createForm({
-  defaultValues: { email: '', password: '', age: 0 },
-  validator: schema,
-});
+const Profile = s.object({ email: s.string().email() });
+const form = createForm({ initialValues: { email: '' }, validate: customValidator(Profile) });
 ```
+
+`customValidator()` preserves unrelated Spell errors, maps each union to its closest branch, and maps array-item failures to the parent array field. Parse again at the submit boundary when a Spell transform must produce the outgoing payload.
+
+```ts
+import { loadForm, saveForm } from '@vielzeug/forge/vault';
+
+await saveForm(form, db, 'drafts', codec);
+const restored = await loadForm(form, db, 'drafts', 'profile', codec);
+console.log(restored);
+```
+
+`loadForm()` uses `form.reset()`, so a restored value is clean. Store a selected `File`, not `FileList`, in form state; `FileList` is transport-only for `toFormData()`.
 
 ## Best Practices
 
-- Call `connect()` once per field and store the result — never call it inside a render or update loop. Call `binding.dispose()` when the field unmounts to cancel any pending debounce timer.
-- `scope()` is memoized — repeated calls with the same prefix return the same object. Store the result for clarity, but it is safe to call multiple times.
-- Prefer `scope.validate()` over `scope.validateFields([...state.touchedFields])` on scoped forms to avoid double-prefixed paths.
-- Wrap multi-field mutations in `batch()` to emit a single subscriber notification.
-- Pass a `signal` to long-running validators where applicable — Forge passes its own abort signal to validators on `dispose()`.
-- Set a `connect` default in `createForm()` using `ValidationModes` presets rather than repeating per-field options.
-- Use `replace()` after a successful async load instead of `reset()` — `replace()` updates the baseline so `isDirty` reflects changes against the new data.
-- Guard concurrent submissions with `form.isSubmitting` or `state.isSubmitting` — calling `submit()` while a submission is in progress rejects the returned promise with a `ForgeSubmitError` (not a synchronous throw, since `submit()` is async).
+- Keep form values to primitives, plain objects, arrays, `File`, and `Blob`.
+- Update array fields through immutable replacement functions.
+- Validate complete values instead of rebuilding field-validator graphs.
+- Handle `aborted` validation results before rendering errors.
+- Preserve errors through field edits until a deliberate validation refresh.
+- Return subscription cleanup from framework lifecycle hooks.
+- Provide `onSubscriberError` when application subscribers can throw.
+- Decode Vault records before passing them to `loadForm()`.

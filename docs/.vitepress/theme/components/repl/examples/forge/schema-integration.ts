@@ -1,48 +1,16 @@
 export const schemaIntegrationExample = {
-  code: `// Pass any safeParse-compatible schema directly to validator — no wrapper needed
-import { createForm } from '@vielzeug/forge'
+  code: `import { createForm } from '@vielzeug/forge'
+import { customValidator } from '@vielzeug/forge/spell'
+import { s } from '@vielzeug/spell'
 
-const error = (path, message) => ({
-  message,
-  path: [path],
-})
-
-// Simulates @vielzeug/spell, Zod, Valibot, or any safeParse-compatible schema
-const mockSchema = {
-  safeParse(data) {
-    const value = data ?? {}
-    const issues = []
-
-    if (!value.username || value.username.length < 3) {
-      issues.push(error('username', 'Min 3 characters'))
-    }
-
-    if (!value.email || !value.email.includes('@')) {
-      issues.push(error('email', 'Invalid email'))
-    }
-
-    return issues.length > 0
-      ? { success: false, error: { issues } }
-      : { success: true }
-  },
-}
-
+const Profile = s.object({ email: s.string().email() })
 const form = createForm({
-  defaultValues: { username: '', email: '' },
-  validator: mockSchema, // auto-detected as a safeParse schema
+  initialValues: { email: '' },
+  validate: customValidator(Profile),
 })
 
-form.set('username', 'ab')
-form.set('email', 'notanemail')
-
-const invalid = await form.validate()
-console.log('Valid:', invalid.valid)
-console.log('Errors:', invalid.errors)
-
-form.set('username', 'alice')
-form.set('email', 'alice@example.com')
-
-const valid = await form.validate()
-console.log('After fix — Valid:', valid.valid)`,
-  name: 'Schema Integration - safeParse Auto-detection',
+form.field('email').set('ada')
+console.log(await form.validate())
+console.log(form.field('email').error)`,
+  name: 'Spell Schema Integration',
 };

@@ -546,7 +546,7 @@ import { define, html } from '@vielzeug/ore';
 
 define('signup-form', {
   setup(_props) {
-    const form = createForm({ defaultValues: { email: '' } });
+    const form = createForm({ initialValues: { email: '' } });
 
     return html`
       <form

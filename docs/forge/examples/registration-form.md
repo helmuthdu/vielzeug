@@ -1,86 +1,51 @@
 ---
 title: 'Forge Examples — Registration Form'
-description: 'Registration Form examples for forge.'
+description: Perform cross-field and asynchronous validation in one validator.
 ---
 
 ## Registration Form
 
 ### Problem
 
-A registration form needs a confirmed password field (both values must match) and an async email-uniqueness check that queries the server while the user is still typing.
+Registration needs password confirmation plus an asynchronous username check. A newer validation must make older validation results irrelevant.
 
 ### Solution
 
-Use `createForm()` with async field validators for uniqueness checks and a form-level `validator` to cross-validate the password confirmation field.
+Read all related values in one asynchronous validator and pass Forge's signal to remote work.
 
-```typescript
+```ts
 import { createForm } from '@vielzeug/forge';
-import { composeValidators } from '@vielzeug/forge/validators';
 
-const registrationForm = createForm({
-  defaultValues: {
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  },
-  validators: {
-    username: composeValidators(
-      (v) => (!v ? 'Username is required' : undefined),
-      (v) => (v && String(v).length < 3 ? 'Username must be at least 3 characters' : undefined),
-      async (v) => {
-        if (!v) return;
-        const response = await fetch(`/api/check-username?username=${v}`);
-        const { exists } = await response.json();
-        if (exists) return 'Username is already taken';
+const form = createForm({
+  initialValues: { email: '', password: '', passwordConfirmation: '', username: '' },
+  validate: async (value, signal) => {
+    const usernameTaken = value.username
+      ? await fetch(`/api/users/${encodeURIComponent(value.username)}`, { signal }).then((response) => response.ok)
+      : false;
+
+    return {
+      fields: {
+        email: value.email.includes('@') ? undefined : 'Enter a valid email',
+        password: value.password.length >= 8 ? undefined : 'Use at least eight characters',
+        passwordConfirmation: value.password === value.passwordConfirmation ? undefined : 'Passwords must match',
+        username: usernameTaken ? 'Username is already taken' : undefined,
       },
-    ),
-    email: composeValidators(
-      (v) => (!v ? 'Email is required' : undefined),
-      (v) => (v && !String(v).includes('@') ? 'Invalid email format' : undefined),
-    ),
-    password: composeValidators(
-      (v) => (!v ? 'Password is required' : undefined),
-      (v) => (v && String(v).length < 8 ? 'Min 8 characters' : undefined),
-      (v) => (v && !/[A-Z]/.test(String(v)) ? 'Must contain uppercase letter' : undefined),
-      (v) => (v && !/[0-9]/.test(String(v)) ? 'Must contain a number' : undefined),
-    ),
-  },
-  validator: (values) => {
-    const errors: Record<string, string> = {};
-    if (values['password'] !== values['confirmPassword']) {
-      errors['confirmPassword'] = 'Passwords must match';
-    }
-    return errors;
+    };
   },
 });
 
-// Submit
-async function handleRegistration() {
-  const result = await registrationForm.submit(async (values) => {
-    const response = await fetch('/api/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    });
-    return response.json();
-  });
-
-  if (!result.ok) {
-    console.log(result.errors);
-    return;
-  }
-}
+form.field('username').set('ada');
+console.log(await form.validate());
 ```
 
 ### Pitfalls
 
-- Async validators run on every `validate()` call, including on every blur. Debounce them to avoid an API request on each keystroke.
-- The password-confirmation validator must re-run when the original password field changes, not only when confirmation changes. Read `form.get('password')` inside the confirmation validator.
-- `form.state.isSubmitting` stays `true` until the submit handler resolves or rejects. Unhandled rejections inside the handler leave the form stuck in the submitting state.
+- Pass `signal` to every abortable remote request.
+- Treat an `aborted` validation result as neither valid nor invalid.
+- Validate the full value after changing password or password confirmation.
 
 ### Related
 
-- [Schema Validation with Spell](/spell/)
-- [Contact Form with File Upload](./contact-form-with-file-upload.md)
-- [Dynamic Form Fields](./dynamic-form-fields.md)
+- [Login Form](./login-form.md)
+- [Spell](/spell/)
+- [Courier](/courier/)

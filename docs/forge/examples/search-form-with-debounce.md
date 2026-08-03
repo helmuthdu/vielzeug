@@ -1,61 +1,45 @@
 ---
 title: 'Forge Examples — Search Form with Debounce'
-description: 'Search Form with Debounce examples for forge.'
+description: Debounce application-owned search work from a field subscription.
 ---
 
 ## Search Form with Debounce
 
 ### Problem
 
-A search input should trigger an API query as the user types, but not on every keystroke. Requests must be debounced so only the final value after a pause is sent, and stale responses must be ignored.
+A search input should request results after typing pauses. Search is application behavior, not form validation, so it needs its own timer and cancellation policy.
 
 ### Solution
 
-Use `connect()` with `validateOnChange` and `debounce` to schedule async work after the user stops typing:
+Subscribe to the query field and debounce the search side effect outside Forge.
 
 ```ts
 import { createForm } from '@vielzeug/forge';
 
-const form = createForm({
-  defaultValues: { query: '', category: 'all', sortBy: 'relevance' },
+const form = createForm({ initialValues: { query: '' } });
+const query = form.field('query');
+let timer: ReturnType<typeof setTimeout> | undefined;
+
+const stop = query.subscribe(({ value }) => {
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    if (value.length >= 2) console.log(`Search for ${value}`);
+  }, 300);
 });
 
-const queryConn = form.connect('query', {
-  validateOnChange: true,
-  debounce: 300,
-});
-
-// Register an async "validator" that runs the search and updates results
-form.fields.setValidator('query', async (value, signal) => {
-  if (!value || String(value).length < 2) {
-    updateResultsUI([]);
-    return undefined;
-  }
-
-  const category = form.get('category');
-  const sortBy = form.get('sortBy');
-  const url = `/api/search?q=${encodeURIComponent(String(value))}&category=${category}&sort=${sortBy}`;
-
-  const response = await fetch(url, { signal });
-  const results = await response.json();
-
-  updateResultsUI(results);
-  return undefined; // no error to display
-});
-
-function updateResultsUI(results: unknown[]) {
-  console.log('Search results:', results);
-}
+query.set('forge');
+stop();
+clearTimeout(timer);
 ```
 
 ### Pitfalls
 
-- The validator receives an `AbortSignal`. Always pass it to `fetch` so stale requests are cancelled automatically when a newer keystroke triggers a new run.
-- Subscribing to the full form state and triggering search inside `subscribe()` fires on every field change, including programmatic writes. Using `subscribeField('query', ...)` scopes the trigger correctly.
-- Setting `debounce` too low defeats the purpose; 200–500 ms is a reasonable default for remote searches.
+- Cancel the timer when the screen unmounts.
+- Abort in-flight network requests separately; a debounce timer cannot cancel a completed request.
+- Keep search effects outside the form validator unless search validity is part of submission rules.
 
 ### Related
 
-- [CRUD Operations (Courier)](/courier/examples/)
-- [Login Form](./login-form.md)
 - [Dynamic Form Fields](./dynamic-form-fields.md)
+- [Scout](/scout/)
+- [Sourcerer](/sourcerer/)

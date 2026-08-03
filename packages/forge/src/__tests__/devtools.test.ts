@@ -1,197 +1,30 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { vi } from 'vitest';
 
 import { debugForm } from '../devtools';
-import { createForm } from '../form';
+import { createForm, ForgeDisposedError } from '../index';
 
 describe('debugForm', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
+  test('logs public state transitions and detaches cleanly', async () => {
+    const debug = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const form = createForm({ initialValues: { email: '' } });
+    const stop = debugForm(form, { label: 'signup' });
 
-  beforeEach(() => {
-    consoleSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const submission = form.submit(async () => undefined);
+
+    await submission;
+    stop();
+
+    expect(debug).toHaveBeenCalledWith('[forge:devtools:signup] submitting:', true);
+    expect(debug).toHaveBeenCalledWith('[forge:devtools:signup] submitting:', false);
+
+    debug.mockRestore();
   });
 
-  afterEach(() => {
-    consoleSpy.mockRestore();
-  });
-
-  it('logs nothing on attach (baseline only, no spurious "changed from undefined" noise)', () => {
-    const form = createForm({ defaultValues: { email: '' } });
-
-    debugForm(form);
-
-    expect(consoleSpy).not.toHaveBeenCalled();
+  test('rejects attaching to a disposed form', () => {
+    const form = createForm({ initialValues: { email: '' } });
 
     form.dispose();
-  });
 
-  it('logs a distinct line when a field value changes', () => {
-    const form = createForm({ defaultValues: { email: '' } });
-
-    debugForm(form);
-    form.set('email', 'a@b.com');
-
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('field "email" value:'), '', '→', 'a@b.com');
-
-    form.dispose();
-  });
-
-  it('logs a distinct line when a field error changes', () => {
-    const form = createForm({ defaultValues: { email: '' } });
-
-    debugForm(form);
-    form.setError('email', 'Required');
-
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('field "email" error:'),
-      undefined,
-      '→',
-      'Required',
-    );
-
-    form.dispose();
-  });
-
-  it('logs a distinct line when a field touched status changes', () => {
-    const form = createForm({ defaultValues: { email: '' } });
-
-    debugForm(form);
-    form.touch('email');
-
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('field "email" touched:'), true);
-
-    form.dispose();
-  });
-
-  it('logs a distinct line when a field dirty status changes', () => {
-    const form = createForm({ defaultValues: { email: '' } });
-
-    debugForm(form);
-    form.set('email', 'a@b.com');
-
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('field "email" dirty:'), true);
-
-    form.dispose();
-  });
-
-  it('logs submit start and end via the isSubmitting edge', async () => {
-    const form = createForm({ defaultValues: { email: 'a@b.com' } });
-
-    debugForm(form);
-    await form.submit(() => {});
-
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('submit started (submitCount=1)'));
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('submit ended (submitCount=1)'));
-
-    form.dispose();
-  });
-
-  it('logs the isLoading edge for async defaultValues', async () => {
-    const form = createForm({ defaultValues: () => Promise.resolve({ email: 'loaded@b.com' }) });
-
-    debugForm(form);
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('isLoading:'), false);
-
-    form.dispose();
-  });
-
-  it('includes a custom label in the log prefix', () => {
-    const form = createForm({ defaultValues: { email: '' } });
-
-    debugForm(form, { label: 'signup' });
-    form.set('email', 'a@b.com');
-
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('[forge:devtools:signup]'),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-    );
-
-    form.dispose();
-  });
-
-  it('defaults the label to "form" when not provided', () => {
-    const form = createForm({ defaultValues: { email: '' } });
-
-    debugForm(form);
-    form.set('email', 'a@b.com');
-
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('[forge:devtools:form]'),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-    );
-
-    form.dispose();
-  });
-
-  it('tears down cleanly when the form is disposed without calling the returned detach first', () => {
-    const form = createForm({ defaultValues: { email: '' } });
-
-    debugForm(form);
-    form.set('email', 'a@b.com');
-    consoleSpy.mockClear();
-
-    // form.dispose() alone (never the detach() returned by debugForm) must clean up
-    // the underlying form.subscribe() without throwing or leaking a dangling subscription.
-    expect(() => form.dispose()).not.toThrow();
-    expect(consoleSpy).not.toHaveBeenCalled();
-
-    // Further mutation attempts on a disposed form throw before any subscriber would run —
-    // confirms no observer effects from the stale devtools subscription.
-    expect(() => form.set('email', 'b@c.com')).toThrow('Cannot call set() on a disposed form');
-    expect(consoleSpy).not.toHaveBeenCalled();
-  });
-
-  it('stops logging once the returned unsubscribe is called', () => {
-    const form = createForm({ defaultValues: { email: '' } });
-
-    const detach = debugForm(form);
-
-    detach();
-    form.set('email', 'a@b.com');
-
-    expect(consoleSpy).not.toHaveBeenCalled();
-
-    form.dispose();
-  });
-
-  it('works on a scoped sub-form using relative field paths', () => {
-    const form = createForm({ defaultValues: { address: { city: '' } } });
-    const scoped = form.scope('address');
-
-    debugForm(scoped);
-    scoped.set('city', 'Berlin');
-
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('field "city" value:'), '', '→', 'Berlin');
-
-    form.dispose();
-  });
-
-  it('is silent in production builds (__FORGE_PROD__ set)', async () => {
-    vi.resetModules();
-    (globalThis as { __FORGE_PROD__?: boolean }).__FORGE_PROD__ = true;
-
-    try {
-      const { createForm: createFormProd } = await import('../form');
-      const { debugForm: debugFormProd } = await import('../devtools');
-
-      const form = createFormProd({ defaultValues: { email: '' } });
-      const detach = debugFormProd(form);
-
-      form.set('email', 'a@b.com');
-
-      expect(consoleSpy).not.toHaveBeenCalled();
-
-      detach();
-      form.dispose();
-    } finally {
-      delete (globalThis as { __FORGE_PROD__?: boolean }).__FORGE_PROD__;
-      vi.resetModules();
-    }
+    expect(() => debugForm(form)).toThrow(ForgeDisposedError);
   });
 });

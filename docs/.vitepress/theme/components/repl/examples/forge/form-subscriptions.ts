@@ -2,30 +2,15 @@ export const formSubscriptionsExample = {
   code: `import { createForm } from '@vielzeug/forge'
 
 const form = createForm({
-  defaultValues: {
-    name: '',
-    email: '',
-  },
+  initialValues: { email: '', name: '' },
+  onSubscriberError: (error) => console.log('Subscriber error:', error),
 })
+const stopForm = form.subscribe((state) => console.log('Valid:', state.valid), { immediate: true })
+const stopEmail = form.field('email').subscribe((state) => console.log('Email:', state), { immediate: true })
 
-const unsubscribeForm = form.subscribe((state) => {
-  console.log('Form state:', {
-    isDirty: state.isDirty,
-    isValid: state.isValid,
-    errors: state.errors,
-  })
-}, { sync: true })
-
-const unsubscribeEmail = form.subscribeField('email', (field) => {
-  console.log('Email field:', field)
-}, { sync: true })
-
-form.set('name', 'Alice')
-form.set('email', 'alice@example.com')
-form.touch('email')
-
-unsubscribeEmail()
-unsubscribeForm()
-console.log('Unsubscribed both listeners')`,
-  name: 'Form Subscriptions - Reactive Updates',
+form.field('name').set('Ada')
+form.field('email').set('ada@example.com')
+stopEmail()
+stopForm()`,
+  name: 'Form and Field Subscriptions',
 };

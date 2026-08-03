@@ -2,41 +2,20 @@ export const formValidationExample = {
   code: `import { createForm } from '@vielzeug/forge'
 
 const form = createForm({
-  defaultValues: {
-    email: '',
-    password: '',
-    confirmPassword: '',
-  },
-  validators: {
-    email: (value) => {
-      if (!value) return 'Email is required'
-      if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(value))) return 'Invalid email format'
+  initialValues: { password: '', passwordConfirmation: '' },
+  validate: (value) => ({
+    fields: {
+      password: value.password.length >= 8 ? undefined : 'Use at least eight characters',
+      passwordConfirmation: value.password === value.passwordConfirmation ? undefined : 'Passwords must match',
     },
-    password: (value) => {
-      if (!value) return 'Password is required'
-      if (String(value).length < 8) return 'Min 8 characters'
-    },
-  },
-  validator: (values) => {
-    if (values.password !== values.confirmPassword) {
-      return { confirmPassword: 'Passwords must match' }
-    }
-  },
+  }),
 })
 
-form.set('email', 'invalid-email')
-form.set('password', 'short')
-form.set('confirmPassword', 'different')
+form.field('password').set('short')
+console.log(await form.validate())
 
-const firstRun = await form.validate()
-console.log('Valid:', firstRun.valid)
-console.log('Errors:', firstRun.errors)
-
-form.set('email', 'user@example.com')
-form.set('password', 'password123')
-form.set('confirmPassword', 'password123')
-
-const secondRun = await form.validate()
-console.log('After fixing:', secondRun.valid ? '✓ Valid' : 'Still errors')`,
-  name: 'Field & Form Validation',
+form.field('password').set('strong-password')
+form.field('passwordConfirmation').set('strong-password')
+console.log(await form.validate())`,
+  name: 'Whole-Value Validation',
 };

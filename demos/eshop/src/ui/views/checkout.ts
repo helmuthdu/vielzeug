@@ -49,15 +49,17 @@ let committedTradeIn: TradeIn | null = null;
 let lastPlacedOrder: Order | null = null;
 
 const shippingForm = createForm<Address>({
-  defaultValues: { city: '', country: '', fullName: '', phone: '', postalCode: '', street: '' },
-  validators: {
-    city: (v) => (String(v).trim() ? undefined : 'City is required'),
-    country: (v) => (String(v).trim() ? undefined : 'Country is required'),
-    fullName: (v) => (String(v).trim() ? undefined : 'Full name is required'),
-    phone: (v) => (String(v).trim() ? undefined : 'Phone is required'),
-    postalCode: (v) => (String(v).trim() ? undefined : 'Postal code is required'),
-    street: (v) => (String(v).trim() ? undefined : 'Street is required'),
-  },
+  initialValues: { city: '', country: '', fullName: '', phone: '', postalCode: '', street: '' },
+  validate: (value) => ({
+    fields: {
+      city: value.city.trim() ? undefined : 'City is required',
+      country: value.country.trim() ? undefined : 'Country is required',
+      fullName: value.fullName.trim() ? undefined : 'Full name is required',
+      phone: value.phone.trim() ? undefined : 'Phone is required',
+      postalCode: value.postalCode.trim() ? undefined : 'Postal code is required',
+      street: value.street.trim() ? undefined : 'Street is required',
+    },
+  }),
 });
 
 /**
@@ -162,7 +164,7 @@ define('checkout-shipping', {
   setup() {
     if (!ensureCartNotEmpty()) return html``;
 
-    const errors = signal<Record<string, string>>({});
+    const errors = signal<Partial<Record<keyof Address, string>>>({});
     const deliveryMethod = signal<DeliveryMethod>(committedDelivery?.method ?? 'delivery');
     const dealerId = signal<string | null>(committedDelivery?.dealerId ?? null);
     const dealerError = signal('');
@@ -178,10 +180,10 @@ define('checkout-shipping', {
     }
 
     async function onContinue(): Promise<void> {
-      const result = await shippingForm.validate();
+      const validation = await shippingForm.validate();
 
-      if (!result.valid) {
-        errors.value = result.errors;
+      if (validation.status !== 'valid') {
+        errors.value = validation.status === 'invalid' ? (validation.errors ?? {}) : {};
 
         return;
       }
@@ -194,7 +196,7 @@ define('checkout-shipping', {
         return;
       }
 
-      committedShipping = shippingForm.values();
+      committedShipping = shippingForm.value;
       committedDelivery = {
         dealerId: deliveryMethod.value === 'pickup' ? dealerId.value : null,
         method: deliveryMethod.value,
@@ -211,12 +213,10 @@ define('checkout-shipping', {
       <ore-input
         label=${label}
         required
-        value=${() => shippingForm.get(name)}
+        value=${() => shippingForm.field(name).value}
         error=${() => errors.value[name] ?? ''}
-        @input=${(e: Event) =>
-          shippingForm.set(name, (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '', {
-            touched: true,
-          })}></ore-input>
+        @input=${(e: Event) => shippingForm.field(name).set((e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '')}
+        @blur=${() => shippingForm.field(name).touch()}></ore-input>
     `;
 
     return html`

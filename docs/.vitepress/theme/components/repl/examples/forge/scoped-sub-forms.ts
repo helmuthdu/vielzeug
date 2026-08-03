@@ -1,35 +1,12 @@
 export const scopedSubFormsExample = {
-  code: `// scope() carves out a sub-form for a nested address block — same state, relative field paths
-import { createForm } from '@vielzeug/forge'
+  code: `import { createForm } from '@vielzeug/forge'
 
-const form = createForm({
-  defaultValues: {
-    customerName: '',
-    shipping: { street: '', city: '', zip: '' },
-  },
-  validators: {
-    customerName: (value) => (!value ? 'Name is required' : undefined),
-    'shipping.street': (value) => (!value ? 'Street is required' : undefined),
-    'shipping.zip': (value) => (!/^\\d{5}$/.test(String(value)) ? 'Invalid ZIP' : undefined),
-  },
-})
+const form = createForm({ initialValues: { shipping: { city: '', street: '' } } })
+const shipping = form.field('shipping')
 
-// scope() is memoized — call once per prefix and reuse the returned object
-const shipping = form.scope('shipping')
-
-shipping.set('street', '123 Main St')
-shipping.set('city', 'Portland')
-console.log('Read via full form:', form.get('shipping.street'))
-console.log('Read via scope:', shipping.get('street'))
-
-const firstCheck = await shipping.validate()
-console.log('Shipping valid?', firstCheck.valid, firstCheck.errors)
-
-shipping.set('zip', '97201')
-const secondCheck = await shipping.validate()
-console.log('After fixing ZIP:', secondCheck.valid ? '✓ valid' : secondCheck.errors)
-
-// Scoped errors use relative keys ('zip'), never the full 'shipping.zip' path
-console.log('Scope state errors:', shipping.state.errors)`,
-  name: 'Scoped Sub-Forms (scope)',
+shipping.field('street').set('123 Main Street')
+shipping.field('city').set('Portland')
+console.log(shipping.value)
+console.log(form.value.shipping)`,
+  name: 'Nested Field Handles',
 };

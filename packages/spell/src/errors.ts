@@ -95,14 +95,15 @@ export class SpellValidationError extends SpellError {
   }
 
   /**
-   * Returns the union branch errors from the most-specific failing branch.
-   * Surfaces the branch with the fewest issues at the deepest path — the one
-   * that "came closest" to matching.
+   * Returns the most-specific branch errors for `issue`, or the first union issue when omitted.
+   * Surfaces the branch with the fewest issues at the deepest path — the one that "came closest" to matching.
    */
-  bestMatch(): Issue[] | null {
-    const unionIssue = this.issues.find(
-      (i): i is Extract<Issue, { code: 'invalid_union' }> => i.code === ErrorCode.invalid_union,
-    );
+  bestMatch(issue?: Extract<Issue, { code: 'invalid_union' }>): Issue[] | null {
+    const unionIssue =
+      issue ??
+      this.issues.find(
+        (entry): entry is Extract<Issue, { code: 'invalid_union' }> => entry.code === ErrorCode.invalid_union,
+      );
 
     if (!unionIssue) return null;
 

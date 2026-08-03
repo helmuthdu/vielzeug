@@ -205,6 +205,24 @@ describe('SpellValidationError.bestMatch()', () => {
     }
   });
 
+  it('selects a requested union when several unions fail', () => {
+    const first = {
+      code: 'invalid_union',
+      message: 'first',
+      params: { errors: [[{ code: 'custom', message: 'A', path: ['a'] }]] },
+      path: ['first'],
+    } as const;
+    const second = {
+      code: 'invalid_union',
+      message: 'second',
+      params: { errors: [[{ code: 'custom', message: 'B', path: ['b'] }]] },
+      path: ['second'],
+    } as const;
+    const error = new SpellValidationError([first, second]);
+
+    expect(error.bestMatch(second)).toEqual([{ code: 'custom', message: 'B', path: ['b'] }]);
+  });
+
   it('returns null when invalid_union has zero branches', () => {
     const error = new SpellValidationError([
       { code: 'invalid_union', message: 'no match', params: { errors: [] }, path: [] },

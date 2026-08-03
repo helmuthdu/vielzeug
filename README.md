@@ -655,6 +655,7 @@ yarn add @vielzeug/forge @vielzeug/courier
 
 ```typescript
 import { createForm } from '@vielzeug/forge';
+import { customValidator } from '@vielzeug/forge/spell';
 import { s, type Infer } from '@vielzeug/spell';
 import { createCourier } from '@vielzeug/courier';
 import { createLogger } from '@vielzeug/rune';
@@ -673,8 +674,8 @@ const courier = createCourier({ baseUrl: 'https://api.example.com' });
 
 // Form wired to the schema
 const form = createForm<LoginInput>({
-  defaultValues: { email: '', password: '' },
-  schema: LoginSchema,
+  initialValues: { email: '', password: '' },
+  validate: customValidator(LoginSchema),
 });
 
 form.submit(async (values) => {

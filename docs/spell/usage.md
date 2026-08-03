@@ -331,7 +331,7 @@ if (!result.success && SpellValidationError.is(result.error)) {
 }
 ```
 
-Use `bestMatch()` on a union failure when you want the branch that came closest to succeeding.
+Use `bestMatch()` on a union failure when you want the branch that came closest to succeeding. Pass a specific `invalid_union` issue when one validation produced multiple union failures.
 
 ## Schema Traversal with walk()
 
@@ -413,6 +413,7 @@ Use Spell as the validation layer and let other packages focus on transport, for
 
 ```ts
 import { createForm } from '@vielzeug/forge';
+import { customValidator } from '@vielzeug/forge/spell';
 import { createCourier } from '@vielzeug/courier';
 import { s } from '@vielzeug/spell';
 
@@ -422,11 +423,11 @@ const Profile = s.object({
 });
 
 const form = createForm({
-  defaultValues: {
+  initialValues: {
     displayName: '',
     newsletter: false,
   },
-  validator: Profile,
+  validate: customValidator(Profile),
 });
 
 const courier = createCourier({ baseUrl: '/api' });

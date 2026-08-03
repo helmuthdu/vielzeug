@@ -1,604 +1,351 @@
 ---
 title: Forge — API Reference
-description: Complete API reference for Forge form creation, validation, submission, subscriptions, connect, scope, and browser helpers.
+description: Complete reference for immutable forms, fields, validation, serialization, and optional adapters.
 ---
 
 [[toc]]
 
 ## API Overview
 
-| Symbol                                                                      | Purpose                                                        | Execution mode                                 | Common gotcha                                                                                                         |
-| --------------------------------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `createForm()`                                                              | Create a typed form controller                                 | Sync (async when `defaultValues` is a factory) | Infer `TValues` from `defaultValues`; explicit type param needed for dynamic shapes                                   |
-| `form.get()` / `form.set()`                                                 | Read/write field values by dot-path                            | Sync                                           | `set()` after `dispose()` throws                                                                                      |
-| `form.field()` / `form.state`                                               | Read field and form snapshots                                  | Sync                                           | Returns a stable frozen snapshot; re-read on each subscriber call                                                     |
-| `form.validate()` / `form.validateFields()`                               | Run validation — all fields, or a specific subset            | Async                                          | Each call re-runs validators from scratch                                                                             |
-| `form.submit()`                                                             | Deterministic submit flow returning a `SubmitResult`           | Async                                          | Rejects if called while already submitting — guard with `form.isSubmitting`                                           |
-| `form.connect()`                                                            | Live field binding with DOM event handlers and live getters    | Sync                                           | Do not destructure — live getters lose context; call `dispose()` on unmount                                           |
-| `form.scope()`                                                              | Memoized scoped sub-form with relative field paths             | Sync                                           | Returns the same object for repeated calls with the same prefix; `state` is scoped — flags reflect only prefix fields |
-| `form.array()`                                                              | Array mutation helpers                                         | Sync                                           | Returns a cached helper — call once and reuse                                                                         |
-| `form.subscribe()` / `form.subscribeField()`                                | Synchronous form and field subscriptions                       | Sync                                           | On a scoped form, `subscribe()` is already prefix-filtered — callbacks receive frozen snapshots                       |
-| `form.history.snapshot()` / `form.history.restore()`                        | Capture and replay complete form state                         | Sync                                           | Useful for undo/redo and draft saving                                                                                 |
-| `form.batch()`                                                              | Group mutations into one notification                          | Sync                                           | Nested `batch()` calls are safe — only the outermost flush notifies                                                   |
-| `form.touch()` / `form.touchAll()`                                          | Mark fields touched                                            | Sync                                           | `touchAll()` marks every key currently in the store                                                                   |
-| `form.setError()` / `form.clearError()` / `form.resetErrors()`              | Manual error management                                        | Sync                                           | `setError()` bypasses validators; cleared on next `validate()` run for that field                                     |
-| `form.reset()` / `form.replace()` / `form.patch()` / `form.fields.remove()` | Baseline and value management                                  | Sync                                           | `replace()` updates the baseline; `reset()` restores to it                                                            |
-| `form.fields.list()`                                                        | Enumerate currently-known field paths                           | Sync                                           | Scoped forms return prefix-relative paths, not absolute paths like `state.touchedFields`                              |
-| `toFormData()`                                                              | Serialize nested values to `FormData`                          | Sync                                           | Nested objects are dot-path serialized; `File` values are passed through                                              |
-| `ValidationModes`                                                           | Named presets for `connect()` validation triggers              | —                                              | Pass as `connect` option in `createForm()` for a global default                                                       |
-| `FORM_ERROR`                                                                | Reserved key `'_form'` for root-level errors                   | —                                              | Use with `setError(FORM_ERROR, msg)` or `form.validator` return value                                                 |
+| Symbol | Purpose | Execution mode | Common gotcha |
+| --- | --- | --- | --- |
+| `createForm()` | Create immutable form state | Sync | `initialValues` cannot contain mutable class instances |
+| `form.field()` | Select a top-level or object child field | Sync | Arrays have no index field handles |
+| `form.validate()` | Validate complete value | Async | Handle `aborted` separately |
+| `form.submit()` | Touch, validate, then invoke handler | Async | Concurrent calls reject |
+| `form.reset()` | Restore or replace baseline | Sync | `reset(next)` makes `next` clean |
+| `form.subscribe()` | Observe form metadata | Sync | Throws after disposal |
+| `toFormData()` | Serialize values for multipart transport | Sync | `FileList` is transport-only |
+| `debugForm()` | Log public state transitions | Sync | Import from `/devtools` |
+| `bindField()` | Bind one DOM element | Sync | Does not schedule validation |
+| `customValidator()` | Adapt a Spell schema | Async | Does not transform `form.value` |
+| `saveForm()` / `loadForm()` | Persist explicit Vault records | Async | Codec owns record shape |
 
-## Package Entry Points
+## Package Entry Point
 
-| Entry                        | Purpose                                                                           |
-| ---------------------------- | ---------------------------------------------------------------------------------- |
-| `@vielzeug/forge`            | `createForm`, `toFormData`, `ValidationModes`, `FORM_ERROR`, and all types          |
-| `@vielzeug/forge/validators` | `fieldValidator`, `composeValidators` — schema and validator composition helpers    |
-| `@vielzeug/forge/devtools`   | `debugForm` — opt-in `console.debug` logging for form state transitions   |
+| Import | Purpose |
+| --- | --- |
+| `@vielzeug/forge` | Core form factory, serialization helper, types, and errors |
+| `@vielzeug/forge/devtools` | `debugForm()` |
+| `@vielzeug/forge/dom` | `bindField()` and DOM binding types |
+| `@vielzeug/forge/spell` | `customValidator()` |
+| `@vielzeug/forge/vault` | `saveForm()`, `loadForm()`, and `FormDraftCodec` |
 
-## createForm()
+## Core Functions
+
+### `createForm(options)`
 
 ```ts
-function createForm<TValues extends Record<string, unknown>>(init?: FormOptions<TValues>): Form<TValues>;
+function createForm<TValues extends Record<string, unknown>>(options: FormOptions<TValues>): Form<TValues>;
 ```
 
-Creates a typed form controller. `TValues` is inferred from `defaultValues` when provided.
+Creates a form with immutable initial values and an optional full-form validator.
 
-### FormOptions
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `options.initialValues` | `TValues` | Initial value and reset baseline. Supports primitives, plain objects, arrays, `File`, and `Blob`. |
+| `options.validate` | `FormValidator<TValues>` | Optional validator for the entire current value. |
+| `options.onSubscriberError` | `(error: unknown) => void` | Optional subscriber failure reporter. |
+
+**Returns:** `Form<TValues>`.
+
+**Example:**
 
 ```ts
-type FormOptions<TValues> = {
-  /** Initial values. May be a static object or an async factory. */
-  defaultValues?: TValues | (() => Promise<TValues>);
+import { createForm } from '@vielzeug/forge';
 
-  /** Field-level validators keyed by dot-notation path. */
-  validators?: Partial<Record<FlatKeyOf<TValues>, FieldValidator>>;
-
-  /**
-   * Form-level validator. Accepts a FormValidator function or any safeParse-
-   * compatible schema (auto-detected — works with @vielzeug/spell, Zod, Valibot).
-   */
-  validator?: FormValidator<TValues> | SafeParseSchema;
-
-  /**
-   * Default connect() behavior. Use ValidationModes presets:
-   *   ValidationModes.onSubmit (default) — validates only on submit
-   *   ValidationModes.onBlur  — validates on blur
-   *   ValidationModes.onChange — validates on every change
-   *   ValidationModes.onTouched — blur first, then change once touched
-   */
-  connect?: ConnectOptions;
-
-  /** Called when the async defaultValues factory rejects. Useful for surfacing load errors. */
-  onLoadError?: (error: unknown) => void;
-};
+const form = createForm({ initialValues: { email: '' } });
 ```
 
-Async `defaultValues` factory — `state.isLoading` / `form.isLoading` is `true` while the factory is pending.
+---
 
-## Values
-
-### form.get(name)
+### `toFormData(values)`
 
 ```ts
-get<K extends FlatKeyOf<TValues>>(name: K): TypeAtPath<TValues, K>
+function toFormData(values: Record<string, unknown>): FormData;
 ```
 
-Returns the stored value for a field path. Returns `undefined` for unknown paths.
+Converts nested values into `FormData` with dot-separated object keys and repeated array keys.
 
-### form.set(name, value, options?)
+**Returns:** a populated `FormData` instance.
+
+**Example:**
 
 ```ts
-set<K extends FlatKeyOf<TValues>>(name: K, value: TypeAtPath<TValues, K>, options?: SetOptions): void
+import { toFormData } from '@vielzeug/forge';
 
-type SetOptions = {
-  touched?: boolean; // default: false
-};
+const body = toFormData({ profile: { email: 'ada@example.com' }, tags: ['typescript', 'forms'] });
 ```
 
-### form.values()
+## Form Handles
+
+### `Form<TValues>`
+
+`createForm()` returns this handle.
+
+| Member | Signature | Description |
+| --- | --- | --- |
+| `value` | `ReadonlyDeep<TValues>` | Current immutable value. |
+| `state` | `FormState<TValues>` | Submission, validation, touch, and error metadata. |
+| `field(key)` | `Field<TValues[K]>` | Select a top-level field. |
+| `set(next)` | `void` | Replace the complete value or derive a replacement. |
+| `reset(next?)` | `void` | Restore baseline or make `next` the baseline. |
+| `validate(signal?)` | `Promise<ValidationResult<TValues>>` | Run full-form validation. |
+| `submit(handler)` | `Promise<SubmitResult<TResult, TValues>>` | Touch, validate, and invoke handler when valid. |
+| `subscribe(listener, options?)` | `Unsubscribe` | Observe form state; throws after disposal. |
+| `dispose()` | `void` | Abort validation and clear subscribers. |
+| `disposed` | `boolean` | Whether the form has been disposed. |
+| `disposalSignal` | `AbortSignal` | Aborts on disposal. |
+
+### `Field<V>`
+
+`form.field(key)` and object-field `.field(key)` return this handle.
+
+| Member | Signature | Description |
+| --- | --- | --- |
+| `value` | `ReadonlyDeep<V>` | Current immutable branch value. |
+| `error` | `string \| undefined` | Current field error. |
+| `dirty` | `boolean` | Whether branch differs from baseline. |
+| `touched` | `boolean` | Whether field was touched. |
+| `field(key)` | `Field<V[K]>` | Select child object field only. |
+| `set(next)` | `void` | Replace branch or derive a replacement. |
+| `reset()` | `void` | Restore exact baseline branch. |
+| `touch()` | `void` | Mark field touched. |
+| `subscribe(listener, options?)` | `Unsubscribe` | Observe field transitions; throws after disposal. |
+
+## Validation Results
+
+### `form.validate(signal?)`
 
 ```ts
-values(): TValues
+function validate(signal?: AbortSignal): Promise<ValidationResult<TValues>>;
 ```
 
-Returns the full nested values object (reconstructed from the flat store).
+Runs the configured validator against the complete value. A newer validation aborts the older run.
 
-### form.patch(partial)
+**Returns:** `ValidationResult<TValues>`.
 
 ```ts
-patch(partial: DeepPartial<TValues>): void
+const result = await form.validate();
+
+if (result.status === 'invalid') console.log(result.errors, result.formError);
 ```
 
-Merges a partial object into both the store and the baseline, marking the affected fields clean. Useful for applying server-returned data without dirtying the form.
-
-## State Access
-
-### form.field(name)
+### `form.submit(handler)`
 
 ```ts
-field<K extends FlatKeyOf<TValues>>(name: K): FieldState<TypeAtPath<TValues, K>>
-
-type FieldState<V = unknown> = {
-  value: V;
-  error: string | undefined;
-  touched: boolean;
-  dirty: boolean;
-};
+function submit<TResult>(handler: (values: ReadonlyDeep<TValues>) => MaybePromise<TResult>): Promise<SubmitResult<TResult, TValues>>;
 ```
 
-Returns a frozen, cached snapshot. The reference stays stable until that field changes.
+Touches all fields, validates once, and invokes `handler` when validation is valid.
 
-### form.state
+**Returns:** `SubmitResult<TResult, TValues>`. Handler failures reject normally.
 
 ```ts
-readonly state: FormState
-
-type FormState = {
-  errors: Readonly<Record<string, string>>;
-  isDirty: boolean;
-  isLoading: boolean;
-  isSubmitting: boolean;
-  isTouched: boolean;
-  isValid: boolean;
-  isValidating: boolean;
-  submitCount: number;
-  /**
-   * Full dot-notation paths of all currently touched fields.
-   * On a scoped form these are still full paths (e.g. "address.city", not "city").
-   * Prefer scope.validateFields() rather than scope.validateFields([...state.touchedFields]).
-   */
-  touchedFields: readonly string[];
-  /** Paths of fields with an active async validation run. */
-  validatingFields: readonly string[];
-};
+const result = await form.submit((value) => Promise.resolve(value));
 ```
 
-### form.isLoading
+## Devtools and Adapters
 
-```ts
-readonly isLoading: boolean
-```
-
-`true` while an async `defaultValues` factory is resolving. Mirrors `state.isLoading`.
-
-### form.isSubmitting
-
-```ts
-readonly isSubmitting: boolean
-```
-
-`true` while a `submit()` call is in progress. Mirrors `state.isSubmitting`. Useful for guarding against concurrent submissions without subscribing to form state.
-
-## Error and Touched Management
-
-```ts
-setError(name: ErrorKeyOf<TValues>, message: string): void
-clearError(name: ErrorKeyOf<TValues>): void
-resetErrors(errors?: Partial<Record<ErrorKeyOf<TValues>, string | undefined>>): void
-touch(name: FlatKeyOf<TValues>): void
-untouch(name: FlatKeyOf<TValues>): void
-touchAll(): void
-untouchAll(): void
-```
-
-- `setError` — set one field error (does not clear the value).
-- `clearError` — remove one field error.
-- `resetErrors` — replace the full error map; omit entries with `undefined` values.
-- `touch` / `untouch` / `touchAll` / `untouchAll` — manage touched state.
-
-To manage validators dynamically see [`form.fields`](#formfields).
-
-## Validation
-
-All three variants share a single unified method:
-
-```ts
-// All fields + form-level validator
-validate(signal?: AbortSignal): Promise<ValidateResult>
-
-// Specific subset of fields (no form-level validator)
-validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>
-
-type ValidateResult = {
-  valid: boolean;
-  errors: Readonly<Record<string, string>>;
-};
-```
-
-- `validate()` — runs all registered field validators plus the form-level validator.
-- `validateFields(fields[])` — runs only the specified fields (no form-level validator); `errors` contains entries only for those fields.
-
-`valid` is `true` only when `errors` is empty after the run.
-
-## submit()
-
-```ts
-submit<TResult = void>(
-  handler: (values: TValues) => MaybePromise<TResult>,
-): Promise<SubmitResult<TResult>>
-
-type SubmitResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; type: 'validation'; errors: Record<string, string> };
-```
-
-Submit behavior:
-
-1. Marks all known fields touched
-2. Runs full validation
-3. If invalid: returns `{ ok: false, type: 'validation', errors }`
-4. If valid: calls `handler(values())` and returns `{ ok: true, value }`
-
-`submit()` always resolves — it never throws for validation failures. Exceptions thrown inside `handler` propagate normally.
-
-`submit()` is an `async function`. Calling it while `state.isSubmitting` is `true` rejects the returned promise with a `ForgeSubmitError` — since it's async, `await` (or `.catch()`) the call to observe the error; it is not thrown synchronously.
-
-## connect()
-
-```ts
-connect<K extends FlatKeyOf<TValues>>(
-  name: K,
-  config?: ConnectOptions,
-): ConnectionResult<TypeAtPath<TValues, K>>
-
-type ConnectOptions = {
-  debounce?: number;          // debounce auto-validation by this many ms (default: 0)
-  touchOnBlur?: boolean;      // mark field touched on blur (default: false)
-  validateOnBlur?: boolean;   // validate on blur (default: false)
-  validateOnChange?: boolean; // validate on every change (default: false)
-  validateOnTouch?: boolean;  // validate on change only after first touch (default: false)
-};
-
-type ConnectionResult<V = unknown> = {
-  readonly value: V;
-  readonly error: string | undefined;
-  readonly touched: boolean;
-  readonly dirty: boolean;
-  /** true after dispose() has been called on this binding. */
-  readonly disposed: boolean;
-  onBlur(): void;
-  onChange(value: V): void;
-  /** Cancel any pending debounce timer owned by this binding. Call on field unmount. */
-  dispose(): void;
-  [Symbol.dispose](): void;
-};
-```
-
-Call once per field and store the result. Do not destructure — getters re-evaluate on every property access. Each `connect()` call creates its own independent debounce timer; cancelling one binding does not affect others. Call `dispose()` when the field unmounts to avoid stale timer fires. Supports `using` declarations.
-
-### ValidationModes
-
-Named presets for `ConnectOptions`. Pass to `createForm({ connect: ... })` or to individual `connect()` calls.
-
-```ts
-import { ValidationModes } from '@vielzeug/forge';
-
-ValidationModes.onSubmit; // {} — no automatic touch or validation
-ValidationModes.onBlur; // { touchOnBlur: true, validateOnBlur: true }
-ValidationModes.onChange; // { touchOnBlur: true, validateOnChange: true }
-ValidationModes.onTouched; // { touchOnBlur: true, validateOnBlur: true, validateOnTouch: true }
-```
-
-## scope()
-
-```ts
-scope<P extends FlatKeyOf<TValues>>(prefix: P): Form<ScopedValues<TValues, P>>
-```
-
-Returns a memoized scoped sub-form whose field paths are relative to `prefix`. Repeated calls with the same prefix return the **same cached object** — no need to store the result yourself, though it is still good practice.
-
-```ts
-const address = form.scope('address');
-
-address.get('city'); // → form.get('address.city')
-address.set('city', 'Portland'); // → form.set('address.city', 'Portland')
-address.validate(); // validates only address.* fields; errors have relative keys
-address.submit((vals) => save(vals)); // validates and submits only address.* scope
-```
-
-**Characteristics:**
-
-- `dispose()` on a scoped form is a no-op. Call `parentForm.dispose()` to tear down.
-- `scope.state` returns a **scoped projection**: `errors`, `touchedFields`, `validatingFields`, `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect only fields within the scope's prefix. `isSubmitting`, `isLoading`, and `submitCount` reflect the full form.
-- `validate()`, `validateFields()`, and `submit()` return errors with relative keys (no prefix) and a `valid` that reflects only the scoped fields.
-- Memoized — `scope(prefix)` always returns the same object; safe to call on every render.
-
-## Subscriptions
-
-```ts
-subscribe(
-  listener: (state: FormState) => void,
-  options?: SubscribeOptions,
-): Unsubscribe
-
-subscribeField<K extends FlatKeyOf<TValues>>(
-  name: K,
-  listener: (state: FieldState<TypeAtPath<TValues, K>>) => void,
-  options?: SubscribeOptions,
-): Unsubscribe
-
-type SubscribeOptions = { sync?: boolean };
-type Unsubscribe = () => void;
-```
-
-Pass `{ sync: true }` to also receive the current snapshot immediately upon subscription.
-
-Subscriptions fire synchronously whenever the form mutates. Because state snapshots are stable (frozen, reference-equal between mutations), these integrate directly with React `useSyncExternalStore`, Vue `shallowRef`, and the Svelte store protocol.
-
-### subscribe on a scoped form
-
-`subscribe` behaves differently depending on which form object it's called on:
-
-- **On a scoped form** — filters `errors`, `touchedFields`, and `validatingFields` to paths within the scope's prefix (remapped to relative paths). The listener is **only called when the scoped projection changes** — mutations outside the scope are suppressed. `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect **only the scoped fields**. `isSubmitting`, `isLoading`, and `submitCount` reflect the full form. `{ sync: true }` emits the current scoped projection immediately, with relative keys — never the unfiltered root state.
-- **On a root form** — no filtering is applied; every mutation notifies the listener.
-
-```ts
-const address = form.scope('address');
-
-address.subscribe((state) => {
-  // state.errors uses relative keys: { city: '...' } not { 'address.city': '...' }
-  // only fires when an address.* field changes
-  console.log(state.errors, state.touchedFields);
-});
-```
-
-## Arrays
-
-```ts
-array(name: FlatKeyOf<TValues>): ArrayField
-
-type ArrayField = {
-  append(value: unknown): void;
-  prepend(value: unknown): void;
-  insert(index: number, value: unknown): void;
-  remove(index: number): void;
-  move(from: number, to: number): void;
-  swap(a: number, b: number): void;
-  replace(index: number, value: unknown): void;
-};
-```
-
-`form.array(name)` returns a cached helper — the same object is returned on repeated calls with the same name.
-
-`append()` and `prepend()` initialize the field as a one-item array when its current value is `undefined` or `null`. If the field already holds a non-array, non-nullish value (e.g. written by `set()`), both are a no-op — they never overwrite an existing scalar with an array. `insert()`, `remove()`, `move()`, `swap()`, and `replace()` are all no-ops when the field's current value is not an array.
-
-## History (Snapshot / Restore)
-
-```ts
-history: {
-  snapshot(): FormSnapshot<TValues>;
-  restore(snap: FormSnapshot<TValues>): void;
-}
-
-type FormSnapshot<TValues> = {
-  readonly baseline: Partial<Record<FlatKeyOf<TValues>, unknown>>;
-  readonly dirty: readonly string[];
-  readonly errors: Readonly<Record<string, string>>;
-  readonly store: Partial<Record<FlatKeyOf<TValues>, unknown>>;
-  readonly submitCount: number;
-  readonly touched: readonly string[];
-};
-```
-
-- `history.snapshot()` — captures the complete form state (values, baseline, errors, touched, dirty, submitCount) into a plain object.
-- `history.restore(snap)` — replaces all state with the snapshot. Aborts any in-flight validation.
-
-Namespaced off the main `Form<T>` surface since it's a distinctly less common operation than reading/writing values — grouped the same way `fields` already groups dynamic-field-lifecycle operations. Useful for undo/redo, draft saving, and "discard changes" flows:
-
-```ts
-const draft = form.history.snapshot();
-
-form.set('email', 'changed@example.com');
-
-form.history.restore(draft); // reverts all changes
-```
-
-## Baseline and Value Management
-
-```ts
-reset(): void
-replace(newValues: TValues): void
-patch(partial: DeepPartial<TValues>): void
-resetField(name: FlatKeyOf<TValues>): void
-```
-
-- `reset()` — restore all values to the current baseline; clear errors, touched, dirty, and `submitCount`. Aborts in-flight validation.
-- `replace(newValues)` — replace values **and** the baseline in one operation; resets `submitCount` to `0`. Aborts in-flight validation.
-- `patch(partial)` — merge specific fields into the store and baseline; those fields become clean.
-- `resetField(name)` — restore one field to its baseline value; clear its error, touched, and dirty state.
-
-## form.fields
-
-Namespace for dynamic field lifecycle management.
-
-```ts
-form.fields: {
-  list(): readonly string[];
-  register<K extends FlatKeyOf<TValues>>(
-    name: K,
-    options?: RegisterFieldOptions<TypeAtPath<TValues, K>>,
-  ): Unsubscribe;
-  remove(name: FlatKeyOf<TValues>): void;
-  setValidator(name: FlatKeyOf<TValues>, validator?: FieldValidator): void;
-}
-
-type RegisterFieldOptions<V> = {
-  defaultValue?: V;
-  validator?: FieldValidator<V>;
-};
-```
-
-- `fields.list()` — enumerate all currently-known field paths: the deduplicated union of populated store keys and keys with a registered validator (the same definition `touchAll()` uses).
-- `fields.register(name, opts?)` — declare a dynamic field with an optional default value and validator. Returns an unregister callback that calls `fields.remove()` on the same field. If the field already exists, `defaultValue` is ignored.
-- `fields.remove(name)` — drop a field entirely: value, dirty, touched, error, and validator.
-- `fields.setValidator(name, validator?)` — add, replace, or remove a field validator. Removing (`undefined`) immediately clears that field's error.
-
-On a scoped form, all paths are relative:
-
-```ts
-const address = form.scope('address');
-const unsub = address.fields.register('zip', { defaultValue: '' });
-// Equivalent to: form.fields.register('address.zip', { defaultValue: '' })
-
-address.fields.list(); // ['zip'] — relative to the scope's prefix, not ['address.zip']
-```
-
-## Lifecycle
-
-```ts
-dispose(): void
-readonly disposed: boolean
-readonly disposalSignal: AbortSignal
-```
-
-After `dispose()`, all mutating APIs throw. In-flight validation is aborted. Subscriptions are cleared.
-
-`disposalSignal` is aborted when `dispose()` is called. Pass it to validators or other async work that should be cancelled when the form tears down.
-
-## batch()
-
-```ts
-batch(fn: () => void): void
-```
-
-Batches all mutations inside `fn` into a single subscriber notification. Notifications always flush at the end — even if `fn` throws.
-
-## Validators (`@vielzeug/forge/validators`)
-
-> Forge has no framework-specific sub-paths — `form.subscribe()`, `form.subscribeField()`, and `form.connect()` are the framework-agnostic primitives every integration is built on. See [Usage → Framework Integration](./usage.md#framework-integration) for copy-pasteable React/Vue/Svelte recipes.
-
-```ts
-import { composeValidators, fieldValidator } from '@vielzeug/forge/validators';
-import { s } from '@vielzeug/spell';
-
-// Wrap a safeParse-compatible field schema into a FieldValidator
-const emailValidator = fieldValidator(s.string().email('Invalid email'));
-
-// Chain multiple validators — short-circuits on the first error
-const passwordValidator = composeValidators(
-  fieldValidator(s.string().min(8, 'At least 8 characters')),
-  async (value, signal) => {
-    const breached = await checkBreachedPasswords(value, signal);
-    return breached ? 'Password found in breach database' : undefined;
-  },
-);
-
-const form = createForm({
-  defaultValues: { email: '', password: '' },
-  validators: { email: emailValidator, password: passwordValidator },
-});
-```
-
-- `fieldValidator(schema)` — wraps any `safeParse`-compatible schema as a `FieldValidator`. The first issue message becomes the field error.
-- `composeValidators(...validators)` — chains validators in order, stopping at the first error. Abort signals are respected between steps.
-
-## Devtools (`@vielzeug/forge/devtools`)
-
-Opt-in `console.debug` logging for form state transitions. Not exported from the main `@vielzeug/forge` entry point — import from this sub-path so the logging code is tree-shaken from production bundles.
+### `debugForm(form, options?)`
 
 ```ts
 function debugForm<TValues extends Record<string, unknown>>(
   form: Form<TValues>,
   options?: ForgeDevtoolsOptions,
 ): Unsubscribe;
-
-type ForgeDevtoolsOptions = {
-  label?: string; // included in every log line; default: 'form'
-};
 ```
 
-Logs one line per observable state transition: per-field `value`/`error`/`touched`/`dirty` changes, `isSubmitting` edges (submit start/end), and `isLoading` edges (async `defaultValues` resolving). Works identically on scoped sub-forms — field paths logged are relative to whatever `form` object is passed in, matching that form's own `state` convention.
+Logs public validity, validation, and submission transitions through `console.debug`.
 
-**Development only:** a no-op when `__FORGE_PROD__` is set on `globalThis` — the same convention forge's internal `_dev.ts` warnings use.
+**Example:**
 
 ```ts
-import { createForm } from '@vielzeug/forge';
 import { debugForm } from '@vielzeug/forge/devtools';
 
-const form = createForm({ defaultValues: { email: '' } });
-const detach = debugForm(form, { label: 'signup' });
-// [forge:devtools:signup] field "email" value: "" → "a@b.com"
-
-detach(); // stop logging
+const stop = debugForm(form, { label: 'checkout' });
+stop();
 ```
 
-## Standalone Utilities
+---
 
-### toFormData()
+### `bindField(element, field, options)`
 
 ```ts
-function toFormData(values: Record<string, unknown>): FormData;
+function bindField<Element extends HTMLElement, V>(
+  element: Element,
+  field: Field<V>,
+  options: FieldBindingOptions<Element, V>,
+): Unsubscribe;
 ```
 
-Serializes a nested values object to `FormData`. Nested keys are flattened with dot notation. `File`, `Blob`, and `FileList` values are appended as-is; all others are coerced to strings. `null` and `undefined` are skipped.
+Binds one field to one element, marks it touched on blur, suppresses writeback from its own input event, and returns teardown.
+
+**Example:**
+
+```ts
+import { bindField } from '@vielzeug/forge/dom';
+
+const stop = bindField(input, form.field('email'), {
+  read: (element) => element.value,
+  write: (element, value) => {
+    element.value = value;
+  },
+});
+```
+
+---
+
+### `customValidator(schema)`
+
+```ts
+function customValidator<TValues extends Record<string, unknown>>(
+  schema: Schema<unknown, TValues>,
+): FormValidator<TValues>;
+```
+
+Adapts a Spell schema. Every failing union maps its closest branch while preserving unrelated errors. Array item issues map to the parent array field; duplicate paths retain the first message.
+
+**Example:**
+
+```ts
+import { customValidator } from '@vielzeug/forge/spell';
+import { s } from '@vielzeug/spell';
+
+const Profile = s.object({ email: s.string().email() });
+const form = createForm({ initialValues: { email: '' }, validate: customValidator(Profile) });
+```
+
+---
+
+### `saveForm()` and `loadForm()`
+
+```ts
+function saveForm<TValues extends Record<string, unknown>, S extends AnySchema, K extends keyof S & string>(
+  form: Form<TValues>, adapter: Adapter<S>, table: K, codec: FormDraftCodec<TValues, S, K>,
+): Promise<void>;
+
+function loadForm<TValues extends Record<string, unknown>, S extends AnySchema, K extends keyof S & string>(
+  form: Form<TValues>, adapter: Adapter<S>, table: K, key: KeyOf<S, K>, codec: FormDraftCodec<TValues, S, K>,
+): Promise<boolean>;
+```
+
+Persists or restores a codec-defined Vault record. `loadForm()` calls `form.reset()` when the codec decodes a record.
+
+**Returns:** `loadForm()` returns `false` for a missing or rejected record.
 
 ## Types
 
 ```ts
-// Core
-type Form<TValues extends Record<string, unknown>>
-type FormOptions<TValues>
-type FormState
-type FieldState<V>
-type FormSnapshot<TValues>
-type RegisterFieldOptions<V>
-type ValidateResult
-type SubmitResult<T>
-type SetOptions
-type SubscribeOptions
-type Unsubscribe
-type MaybePromise<T>
-class ForgeError            // base class — instanceof / ForgeError.is() catches any forge error
-class ForgeConfigError      // unsafe __proto__/constructor/prototype key
-class ForgeDisposedError    // mutating call after dispose()
-class ForgeSubmitError      // submit() called while already submitting
+type Unsubscribe = () => void;
+type MaybePromise<T> = T | PromiseLike<T>;
+type ReadonlyDeep<T> = T extends (...args: never[]) => unknown
+  ? T
+  : T extends readonly (infer Item)[]
+    ? readonly ReadonlyDeep<Item>[]
+    : T extends Record<string, unknown>
+      ? { readonly [K in keyof T]: ReadonlyDeep<T[K]> }
+      : T;
 
-// Validation
-type FieldValidator<V>
-type FormValidator<TValues>
-type SafeParseSchema
-type ConnectOptions
-type ConnectionResult<V>
-const ValidationModes  // named presets object — not a type
-const FORM_ERROR       // string constant '_form' — not a type
+type FormErrors<T> = T extends readonly unknown[]
+  ? string
+  : T extends Record<string, unknown>
+    ? { readonly [K in keyof T]?: FormErrors<T[K]> }
+    : string;
 
-// Devtools (@vielzeug/forge/devtools)
-type ForgeDevtoolsOptions
+type ValidationErrors<TValues extends Record<string, unknown>> = Readonly<{
+  fields?: FormErrors<TValues>;
+  formError?: string;
+}>;
 
-// Utility types
-type DeepPartial<T>
-type FlatKeyOf<TValues>              // capped at MAX_TYPED_PATH_DEPTH (5) — see below
-type TypeAtPath<TValues, K>
-type ErrorKeyOf<TValues>
-type ScopedValues<TValues, P>
-const MAX_TYPED_PATH_DEPTH  // = 5 — not user-configurable, see rationale below
+type FormValidator<TValues extends Record<string, unknown>> = (
+  values: ReadonlyDeep<TValues>, signal: AbortSignal,
+) => MaybePromise<ValidationErrors<TValues> | undefined>;
+
+type FormOptions<TValues extends Record<string, unknown>> = Readonly<{
+  initialValues: TValues;
+  onSubscriberError?: (error: unknown) => void;
+  validate?: FormValidator<TValues>;
+}>;
+
+type SubscribeOptions = Readonly<{ immediate?: boolean }>;
+
+type FieldState<V> = Readonly<{
+  dirty: boolean;
+  error: string | undefined;
+  touched: boolean;
+  value: ReadonlyDeep<V>;
+}>;
+
+type FormState<TValues extends Record<string, unknown> = Record<string, unknown>> = Readonly<{
+  error: string | undefined;
+  errors: FormErrors<TValues> | undefined;
+  submitCount: number;
+  submitting: boolean;
+  touched: boolean;
+  valid: boolean;
+  validating: boolean;
+}>;
+
+type ValidationResult<TValues extends Record<string, unknown> = Record<string, unknown>> =
+  | Readonly<{ status: 'aborted' }>
+  | Readonly<{ status: 'valid' }>
+  | Readonly<{ errors: FormErrors<TValues> | undefined; formError: string | undefined; status: 'invalid' }>;
+
+type SubmitResult<TResult = void, TValues extends Record<string, unknown> = Record<string, unknown>> =
+  | Readonly<{ ok: true; value: TResult }>
+  | Readonly<{ ok: false; type: 'aborted' }>
+  | Readonly<{ errors: FormErrors<TValues> | undefined; formError: string | undefined; ok: false; type: 'validation' }>;
 ```
 
-`FlatKeyOf` falls back to plain `string` for paths deeper than `MAX_TYPED_PATH_DEPTH` — nothing throws, you just lose autocomplete/type-checking on that specific path (a dev-only console warning fires once per deep key so this is discoverable, not silent). This is a fixed constant, not a per-form generic parameter: it exists purely to protect TypeScript compile time, which doesn't get safer by letting one form's type param regress it for everyone importing that form's module.
+```ts
+type Field<V> = {
+  readonly dirty: boolean;
+  readonly error: string | undefined;
+  readonly touched: boolean;
+  readonly value: ReadonlyDeep<V>;
+  field<K extends keyof NonNullable<V> & string>(key: K): Field<NonNullable<V>[K]>;
+  reset(): void;
+  set(next: V | ((previous: ReadonlyDeep<V>) => V)): void;
+  subscribe(listener: (state: FieldState<V>) => void, options?: SubscribeOptions): Unsubscribe;
+  touch(): void;
+};
+
+type Form<TValues extends Record<string, unknown>> = {
+  [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
+  readonly disposed: boolean;
+  readonly state: FormState<TValues>;
+  readonly value: ReadonlyDeep<TValues>;
+  dispose(): void;
+  field<K extends keyof TValues & string>(key: K): Field<TValues[K]>;
+  reset(next?: TValues): void;
+  set(next: TValues | ((previous: ReadonlyDeep<TValues>) => TValues)): void;
+  submit<TResult = void>(handler: (values: ReadonlyDeep<TValues>) => MaybePromise<TResult>): Promise<SubmitResult<TResult, TValues>>;
+  subscribe(listener: (state: FormState<TValues>) => void, options?: SubscribeOptions): Unsubscribe;
+  validate(signal?: AbortSignal): Promise<ValidationResult<TValues>>;
+};
+
+type ForgeDevtoolsOptions = Readonly<{ label?: string }>;
+
+type FieldBindingOptions<Element extends HTMLElement, V> = Readonly<{
+  event?: keyof HTMLElementEventMap;
+  read(element: Element): V;
+  write?: (element: Element, value: ReadonlyDeep<V>) => void;
+}>;
+
+type FormDraftCodec<TValues extends Record<string, unknown>, S extends AnySchema, K extends keyof S & string> = Readonly<{
+  fromRecord(record: RecordOf<S, K>): TValues | undefined;
+  toRecord(values: ReadonlyDeep<TValues>): RecordOf<S, K>;
+}>;
+```
 
 ## Errors
 
-Forge exports a small typed error hierarchy, all extending a common `ForgeError` base:
-
-```ts
-class ForgeError extends Error {
-  static is(err: unknown): err is ForgeError;
-}
-
-class ForgeConfigError extends ForgeError {}
-class ForgeDisposedError extends ForgeError {}
-class ForgeSubmitError extends ForgeError {}
-
-```
-
-- `ForgeError` — base class. Use `instanceof ForgeError` or the static `ForgeError.is(err)` to catch any forge-originated error.
-- `ForgeConfigError` — thrown when a form key contains a reserved prototype-polluting segment (`__proto__`, `constructor`, or `prototype`), e.g. from `form.set('__proto__', ...)`.
-- `ForgeDisposedError` — thrown when a mutating method (e.g. `set()`, `submit()`, `connect()`) is called after `form.dispose()`.
-- `ForgeSubmitError` — thrown when `submit()` is called while a submission is already in progress.
-
-Usage notes:
-
-- `form.submit()` returns `{ ok: false, type: 'validation', errors }` — it **never throws** for validation failures.
-- `form.validate()` / `form.validateFields()` return `{ valid: boolean, errors }` — never throws for validation failures.
-- Other thrown exceptions are programming errors: calling mutating APIs after `dispose()` (`ForgeDisposedError`), using a reserved key (`ForgeConfigError`), or calling `submit()` while already submitting (`ForgeSubmitError`).
+| Error | Trigger | Notable properties |
+| --- | --- | --- |
+| `ForgeError` | Base Forge error | `ForgeError.is(error)` narrows unknown values. |
+| `ForgeConfigError` | Unsafe key or unsupported form value | Extends `ForgeError`. |
+| `ForgeDisposedError` | Operation or subscription after disposal | Message names the attempted operation. |
+| `ForgeSubmitError` | Concurrent `submit()` call | Extends `ForgeError`. |
+| `ForgeValidationError` | Validator throws unexpectedly | Preserves original error as `cause`. |

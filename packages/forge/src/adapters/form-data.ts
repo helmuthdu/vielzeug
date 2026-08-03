@@ -9,17 +9,20 @@ import { flattenValues } from '../_utils';
 export function toFormData(values: Record<string, unknown>): FormData {
   const fd = new FormData();
 
+  const isBlob = (value: unknown): value is Blob => typeof Blob !== 'undefined' && value instanceof Blob;
+  const isFile = (value: unknown): value is File => typeof File !== 'undefined' && value instanceof File;
+  const isFileList = (value: unknown): value is FileList =>
+    typeof FileList !== 'undefined' && value instanceof FileList;
+
   for (const [name, value] of Object.entries(flattenValues(values))) {
     if (value === null || value === undefined) continue;
 
-    if (value instanceof File || value instanceof Blob) {
+    if (isFile(value) || isBlob(value)) {
       fd.append(name, value);
-    } else if (value instanceof FileList) {
+    } else if (isFileList(value)) {
       for (let i = 0; i < value.length; i++) fd.append(name, value[i]);
     } else if (Array.isArray(value)) {
-      for (const item of value) {
-        fd.append(name, item instanceof File || item instanceof Blob ? item : String(item));
-      }
+      for (const item of value) fd.append(name, isFile(item) || isBlob(item) ? item : String(item));
     } else {
       fd.append(name, String(value));
     }

@@ -25,3 +25,6 @@ export class ForgeConfigError extends ForgeError {}
 
 /** Thrown when `submit()` is called while a submission is already in progress. */
 export class ForgeSubmitError extends ForgeError {}
+
+/** Wraps unexpected exceptions from a form validator without converting validation failures into exceptions. */
+export class ForgeValidationError extends ForgeError {}

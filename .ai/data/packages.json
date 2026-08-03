@@ -97,8 +97,8 @@
       "category": "Forms",
       "description": "Typed form state, validation, submission",
       "domOutput": false,
-      "dependencies": ["arsenal", "ripple"],
-      "optionalPeers": []
+      "dependencies": ["arsenal"],
+      "optionalPeers": ["spell", "vault"]
     },
     {
       "slug": "herald",

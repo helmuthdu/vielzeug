@@ -820,7 +820,7 @@ class SpellValidationError extends SpellError {
   readonly issues: Issue[];
   constructor(issues: Issue[], cause?: unknown);
   static is(value: unknown): value is SpellValidationError;
-  bestMatch(): Issue[] | null;
+  bestMatch(issue?: Extract<Issue, { code: 'invalid_union' }>): Issue[] | null;
   flatten(): { fieldErrors: FlatError[]; formErrors: string[] };
   flattenFirst(): { fieldErrors: FlatErrorFirst[]; formErrors: string[] };
   format(): FormattedErrors;

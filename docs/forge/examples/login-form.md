@@ -1,70 +1,55 @@
 ---
 title: 'Forge Examples — Login Form'
-description: 'Login Form examples for forge.'
+description: Validate credentials and submit only a valid immutable login value.
 ---
 
 ## Login Form
 
 ### Problem
 
-A login form must validate email format and password presence, display inline errors after the user blurs each field, disable the submit button while a request is in flight, and surface server-side authentication errors.
+A login screen needs field errors after validation and must avoid calling its API for invalid credentials. It also needs a predictable result for validation failure and submission failure.
 
 ### Solution
 
-Use `createForm()` with per-field `validators` and a `ValidationModes` preset on `connect()` to trigger validation on blur and report errors next to each input.
+Create one validator for the complete login value and inspect the discriminated submit result.
 
 ```ts
-import { createForm, ValidationModes } from '@vielzeug/forge';
+import { createForm } from '@vielzeug/forge';
 
 const form = createForm({
-  defaultValues: {
-    email: '',
-    password: '',
-    rememberMe: false,
-  },
-  connect: ValidationModes.onBlur,
-  validators: {
-    email: (v) => (!v ? 'Email is required' : !String(v).includes('@') ? 'Invalid email format' : undefined),
-    password: (v) => (!v ? 'Password is required' : String(v).length < 8 ? 'Min 8 characters' : undefined),
-  },
+  initialValues: { email: '', password: '' },
+  validate: (value) => ({
+    fields: {
+      email: value.email.includes('@') ? undefined : 'Enter a valid email',
+      password: value.password.length >= 8 ? undefined : 'Use at least eight characters',
+    },
+  }),
 });
 
-const emailConn = form.connect('email');
-const passwordConn = form.connect('password');
+form.field('email').set('ada@example.com');
+form.field('password').set('correct-horse-battery-staple');
 
-async function handleLogin() {
-  const result = await form.submit(async (values) => {
-    const response = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    });
-
-    if (!response.ok) {
-      const { message } = await response.json();
-      throw new Error(message);
-    }
-
-    return response.json();
+const result = await form.submit(async (value) => {
+  const response = await fetch('/api/login', {
+    body: JSON.stringify(value),
+    headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
   });
 
-  if (!result.ok) {
-    // Validation errors are already set on form.state.errors — no manual wiring needed
-    return;
-  }
+  return response.ok;
+});
 
-  window.location.href = '/dashboard';
-}
+if (!result.ok && result.type === 'validation') console.log(result.errors);
 ```
 
 ### Pitfalls
 
-- Disabling submit based solely on `!state.isValid` prevents submission before the user has attempted anything. Use `!state.isValid && state.submitCount > 0` to block re-submission only after a failed attempt.
-- `form.submit()` does not throw on validation failure — it returns `{ ok: false, errors }`. A `try/catch` around `submit()` only catches exceptions thrown inside your async handler.
-- `form.setError('password', '...')` adds an error message but does not clear the field value. Call `form.set('password', '')` separately if you also want to reset the input.
+- Call `touch()` from the input blur handler when errors should follow user interaction.
+- Handle `result.type === 'aborted'` when external validation can be cancelled.
+- Let handler failures reject; Forge only converts validation failure into a result.
 
 ### Related
 
-- [Schema Validation with Spell](/spell/)
 - [Registration Form](./registration-form.md)
-- [Contact Form with File Upload](./contact-form-with-file-upload.md)
+- [Spell](/spell/)
+- [Courier](/courier/)

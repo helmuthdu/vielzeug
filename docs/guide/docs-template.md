@@ -280,11 +280,12 @@ Show the integration as a realistic code block, not a reference to "see the X do
 <One sentence explaining why you'd combine these two.>
 
 \```ts
-import { createForm, schemaValidator } from '@vielzeug/forge';
+import { createForm } from '@vielzeug/forge';
+import { customValidator } from '@vielzeug/forge/spell';
 import { s } from '@vielzeug/spell';
 
 const schema = s.object({ email: s.string().email() });
-const form = createForm({ validator: schemaValidator(schema), defaultValues: { email: '' } });
+const form = createForm({ initialValues: { email: '' }, validate: customValidator(schema) });
 \```
 ````
 

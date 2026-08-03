@@ -1,41 +1,23 @@
 export const fieldBindingExample = {
-  code: `import { createForm, ValidationModes } from '@vielzeug/forge'
+  code: `import { createForm } from '@vielzeug/forge'
+import { bindField } from '@vielzeug/forge/dom'
 
 const form = createForm({
-  defaultValues: {
-    firstName: '',
-    lastName: '',
-    email: '',
-  },
-  connect: ValidationModes.onTouched,
-  validators: {
-    email: (value) => (!String(value).includes('@') ? 'Invalid email' : undefined),
-  },
+  initialValues: { email: '' },
+  validate: (value) => ({ fields: { email: value.email.includes('@') ? undefined : 'Invalid email' } }),
+})
+const email = form.field('email')
+const input = document.createElement('input')
+const stop = bindField(input, email, {
+  read: (element) => element.value,
+  write: (element, value) => { element.value = value },
 })
 
-const firstNameConn = form.connect('firstName')
-const emailConn = form.connect('email')
-
-console.log('Initial connection state:', {
-  firstName: firstNameConn.value,
-  emailError: emailConn.error,
-  disposed: emailConn.disposed,
-})
-
-firstNameConn.onChange('John')
-emailConn.onChange('john')
-console.log('After typing:', form.values())
-
-emailConn.onBlur()
-await form.validateFields(['email'])
-console.log('After blur validation:', form.field('email'))
-
-emailConn.onChange('john@example.com')
-await form.validateFields(['email'])
-console.log('After fixing email:', form.field('email'))
-
-// Simulate unmount — cancel any pending debounce timer
-emailConn.dispose()
-console.log('Binding disposed:', emailConn.disposed)`,
-  name: 'Field Connection (connect)',
+input.value = 'ada'
+input.dispatchEvent(new Event('input'))
+input.dispatchEvent(new Event('blur'))
+console.log(email.value, email.touched)
+console.log(await form.validate())
+stop()`,
+  name: 'DOM Field Binding',
 };

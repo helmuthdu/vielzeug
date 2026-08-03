@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: replace flat controller and Ripple runtime with explicit immutable forms, safe value constraints, and DOM, Spell customValidator, and Vault adapters",
+      "packageName": "@vielzeug/forge",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/forge"
+}

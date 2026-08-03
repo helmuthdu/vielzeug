@@ -1,108 +1,49 @@
 ---
 title: 'Forge Examples — Form with Conditional Fields'
-description: 'Form with Conditional Fields examples for forge.'
+description: Validate conditional values in one full-form rule.
 ---
 
-## Form with Conditional Fields
+## Conditional Values
 
 ### Problem
 
-Some fields should only appear when another field has a specific value — for example, a "Company name" field that is hidden unless the user selects "Business account". Hidden fields must not contribute to validation.
+A business account needs a company name, while a personal account does not. Conditional validation must stay with the complete value instead of adding and removing field validators.
 
 ### Solution
 
-Use `form.subscribe()` combined with `setError()` and `clearError()` to apply conditional validation rules that react to changes in a controlling field.
+Make the condition part of the full-form validator and build a transport payload from the current value.
 
-```typescript
+```ts
 import { createForm } from '@vielzeug/forge';
 
-const profileForm = createForm({
-  defaultValues: {
-    accountType: 'personal' as 'personal' | 'business',
-    name: '',
-    email: '',
-    // Business-only fields
-    companyName: '',
-    vatNumber: '',
-    businessEmail: '',
-  },
-  validators: {
-    name: (v) => (!v ? 'Name is required' : undefined),
-    email: (v) => {
-      if (!v) return 'Email is required';
-      if (!String(v).includes('@')) return 'Invalid email';
+const form = createForm({
+  initialValues: { accountType: 'personal' as 'personal' | 'business', companyName: '', email: '' },
+  validate: (value) => ({
+    fields: {
+      companyName: value.accountType === 'business' && !value.companyName ? 'Company name is required' : undefined,
+      email: value.email.includes('@') ? undefined : 'Enter a valid email',
     },
-  },
+  }),
 });
 
-// Conditional validation based on account type
-profileForm.subscribe(() => {
-  const accountType = profileForm.get('accountType');
+form.field('accountType').set('business');
+form.field('companyName').set('Acme');
 
-  if (accountType === 'business') {
-    if (!profileForm.get('companyName')) {
-      profileForm.setError('companyName', 'Company name is required');
-    } else {
-      profileForm.clearError('companyName');
-    }
-    if (!profileForm.get('vatNumber')) {
-      profileForm.setError('vatNumber', 'VAT number is required');
-    } else {
-      profileForm.clearError('vatNumber');
-    }
-    const businessEmail = profileForm.get('businessEmail');
-    if (!businessEmail) {
-      profileForm.setError('businessEmail', 'Business email is required');
-    } else if (!businessEmail.includes('@')) {
-      profileForm.setError('businessEmail', 'Invalid email');
-    } else {
-      profileForm.clearError('businessEmail');
-    }
-  } else {
-    profileForm.clearError('companyName');
-    profileForm.clearError('vatNumber');
-    profileForm.clearError('businessEmail');
-  }
-});
+const payload = form.value.accountType === 'business'
+  ? form.value
+  : { accountType: form.value.accountType, email: form.value.email };
 
-// Submit
-async function submitProfile() {
-  const result = await profileForm.submit(async (values) => {
-    const payload: Record<string, unknown> = {
-      accountType: values['accountType'],
-      name: values['name'],
-      email: values['email'],
-    };
-
-    if (values['accountType'] === 'business') {
-      payload['companyName'] = values['companyName'];
-      payload['vatNumber'] = values['vatNumber'];
-      payload['businessEmail'] = values['businessEmail'];
-    }
-
-    const response = await fetch('/api/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    return response.json();
-  });
-
-  if (!result.ok) {
-    return;
-  }
-}
+console.log(payload);
 ```
 
 ### Pitfalls
 
-- A hidden field's value is still included in `form.values()` and submitted unless you call `form.fields.remove(name)`. Hide the UI element but also remove the field if it should not be submitted.
-- Validators on conditional fields still run even when the field is hidden if you did not remove it. This can surface validation errors that the user cannot see or act on.
-- Setting up a `subscribeField` listener for a field that does not yet exist is a no-op. Register subscriptions after `fields.register()`, not before.
+- Hidden values remain in `form.value` until application code omits them from its payload.
+- Keep conditional errors in the validator; do not mutate form error state from subscriptions.
+- Revalidate after changing the condition when UI must immediately refresh errors.
 
 ### Related
 
-- [Contact Form with File Upload](./contact-form-with-file-upload.md)
-- [Dynamic Form Fields](./dynamic-form-fields.md)
+- [Login Form](./login-form.md)
 - [Registration Form](./registration-form.md)
+- [Spell](/spell/)

@@ -1,31 +1,6 @@
 # @vielzeug/forge
 
-> Framework-agnostic typed form state with path-safe fields, unified validation API, deterministic submit flow, and browser-friendly helpers.
-
-[![npm version](https://img.shields.io/npm/v/@vielzeug/forge)](https://www.npmjs.com/package/@vielzeug/forge) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<details>
-<summary>Quick Reference</summary>
-
-**Package:** `@vielzeug/forge` &nbsp;·&nbsp; **Category:** Forms
-
-**Key exports:** `createForm`, `toFormData`, `ValidationModes`, `FORM_ERROR`
-
-**When to use:** Typed form state with field validation, dirty tracking, submission handling, and browser helpers. Works with any UI framework or vanilla JS.
-
-**Related:** [@vielzeug/spell](https://vielzeug.dev/spell/) · [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/courier](https://vielzeug.dev/courier/)
-
-</details>
-
-`@vielzeug/forge` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
-
-## Installation
-
-```sh
-pnpm add @vielzeug/forge
-npm install @vielzeug/forge
-yarn add @vielzeug/forge
-```
+> Immutable typed form state with focused fields and explicit full-form validation.
 
 ## Quick Start
 
@@ -33,46 +8,39 @@ yarn add @vielzeug/forge
 import { createForm } from '@vielzeug/forge';
 
 const form = createForm({
-  defaultValues: { email: '', password: '' },
-  validators: {
-    email: (v) => (!String(v).includes('@') ? 'Invalid email' : undefined),
-    password: (v) => (String(v).length < 8 ? 'Min 8 chars' : undefined),
-  },
+  initialValues: { profile: { email: '', name: '' } },
+  validate: (value) => ({
+    fields: { profile: { email: value.profile.email.includes('@') ? undefined : 'Enter a valid email' } },
+  }),
 });
 
-form.set('email', 'alice@example.com');
+const email = form.field('profile').field('email');
+email.set('ada@example.com');
 
-const result = await form.validate();
-console.log(result.valid, result.errors);
-
-const submission = await form.submit(async (values) => {
-  await fetch('/api/login', {
-    body: JSON.stringify(values),
-    headers: { 'Content-Type': 'application/json' },
-    method: 'POST',
-  });
-});
-
-if (!submission.ok && submission.type === 'validation') {
-  console.log(submission.errors);
-}
+const result = await form.submit((value) => saveProfile(value));
 ```
 
-## Scoped Forms Semantics
+`Form` owns one immutable value tree of primitives, plain objects, arrays, `File`, and `Blob`. Object fields select child branches. Arrays are replaced through immutable updater functions. One validator evaluates the whole form and returns `{ fields, formError }`.
 
-`form.scope(prefix)` is memoized and returns a sub-form with **relative** field paths for its APIs and state projection.
+## Optional adapters
 
-- Root form state paths are absolute (for example, `address.city`).
-- Scoped form state paths are relative (for example, `city` within `form.scope('address')`).
-- Prefer `scoped.validate()` / `scoped.submit()` instead of manually passing touched field arrays across root/scoped boundaries.
+- `@vielzeug/forge/dom` — explicit element binding; application owns validation timing.
+- `@vielzeug/forge/spell` — typed `customValidator(schema)` adapter with per-union diagnostics.
+- `@vielzeug/forge/vault` — explicit `saveForm()` and `loadForm()` draft helpers.
+
+## Breaking 2.0 changes
+
+- Removed field validation, numeric array field handles, stable field identity, direct metadata getters, and Ripple runtime coupling.
+- `validate()` returns `{ status: 'valid' | 'invalid' | 'aborted' }`.
+- Read metadata from `form.state`; read values from `form.value`.
 
 ## Documentation
 
 - [Overview](https://vielzeug.dev/forge/)
-- [Usage Guide](https://vielzeug.dev/forge/usage)
-- [API Reference](https://vielzeug.dev/forge/api)
+- [Usage guide](https://vielzeug.dev/forge/usage)
+- [API reference](https://vielzeug.dev/forge/api)
 - [Examples](https://vielzeug.dev/forge/examples)
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © Helmuth Saatkamp — part of the Vielzeug monorepo.

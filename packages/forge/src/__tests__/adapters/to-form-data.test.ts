@@ -57,6 +57,16 @@ describe('toFormData adapter', () => {
     expect((values[3] as File).size).toBe(blob.size);
   });
 
+  test('works when FileList is unavailable', () => {
+    const original = globalThis.FileList;
+
+    globalThis.FileList = undefined as unknown as typeof FileList;
+
+    expect(toFormData({ name: 'Ada' }).get('name')).toBe('Ada');
+
+    globalThis.FileList = original;
+  });
+
   test('appends each file in a FileList as a separate entry', () => {
     const fileA = new File(['a'], 'a.txt');
     const fileB = new File(['bb'], 'b.txt');

@@ -106,23 +106,23 @@ Drop them straight into any project. No framework required.
 
 ### Forge
 
-Type-safe form state — field validation, dirty tracking, submission handling, field arrays, and async defaults.
+Immutable typed form state with focused nested fields, whole-value validation, and deterministic submission.
 
 ```typescript
 import { createForm } from '@vielzeug/forge';
-import { s } from '@vielzeug/spell';
 
 const form = createForm({
-  defaultValues: { email: '', age: 0 },
-  validators: {
-    email: (val) => s.string().email().safeParse(val).error?.message,
-    age: (val) => s.number().min(18).safeParse(Number(val)).error?.message,
-  },
+  initialValues: { email: '', age: 0 },
+  validate: (value) => ({
+    fields: {
+      age: value.age >= 18 ? undefined : 'Must be an adult',
+      email: value.email.includes('@') ? undefined : 'Invalid email',
+    },
+  }),
 });
 
-await form.submit(async (values) => {
-  await fetch('/api/users', { method: 'POST', body: JSON.stringify(values) });
-});
+form.field('email').set('ada@example.com');
+await form.submit((value) => fetch('/api/users', { method: 'POST', body: JSON.stringify(value) }));
 ```
 
 Pairs with [Spell](#spell) — one schema for both form and API validation.

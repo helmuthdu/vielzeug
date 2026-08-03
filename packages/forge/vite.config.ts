@@ -9,9 +9,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig(
   getConfig(__dirname, {
     entry: {
-      'adapters/validators': resolve(__dirname, 'src/adapters/validators.ts'),
       devtools: resolve(__dirname, 'src/devtools.ts'),
+      dom: resolve(__dirname, 'src/dom.ts'),
+      spell: resolve(__dirname, 'src/spell.ts'),
       'src/index': resolve(__dirname, 'src/index.ts'),
+      vault: resolve(__dirname, 'src/vault.ts'),
     },
     external: readWorkspaceDeps(__dirname),
     name: 'forge',

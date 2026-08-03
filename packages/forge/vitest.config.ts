@@ -10,8 +10,8 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: /^@vielzeug\/arsenal$/, replacement: path.resolve(__dirname, '../arsenal/src/index.ts') },
-      { find: /^@vielzeug\/ripple\/watch$/, replacement: path.resolve(__dirname, '../ripple/src/watch.ts') },
-      { find: /^@vielzeug\/ripple$/, replacement: path.resolve(__dirname, '../ripple/src/index.ts') },
+      { find: /^@vielzeug\/spell$/, replacement: path.resolve(__dirname, '../spell/src/index.ts') },
+      { find: /^@vielzeug\/vault$/, replacement: path.resolve(__dirname, '../vault/src/index.ts') },
     ],
   },
   test: {

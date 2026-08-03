@@ -1,14 +1,14 @@
 ---
 title: Forge — Examples
-description: Practical examples and recipes for forge.
+description: Practical immutable form recipes.
 ---
 
 ## Examples
 
-- [Login Form](./examples/login-form.md)
-- [Registration Form](./examples/registration-form.md)
-- [Search Form With Debounce](./examples/search-form-with-debounce.md)
-- [Form With Conditional Fields](./examples/form-with-conditional-fields.md)
-- [Contact Form With File Upload](./examples/contact-form-with-file-upload.md)
-- [Dynamic Form Fields](./examples/dynamic-form-fields.md)
-- [Multi-Step Wizard](./examples/multi-step-wizard.md)
+- [Login form](./examples/login-form.md)
+- [Conditional values](./examples/form-with-conditional-fields.md)
+- [Dynamic arrays](./examples/dynamic-form-fields.md)
+- [Contact form with file upload](./examples/contact-form-with-file-upload.md)
+- [Registration form](./examples/registration-form.md)
+- [Multi-step wizard](./examples/multi-step-wizard.md)
+- [Search form with debounce](./examples/search-form-with-debounce.md)

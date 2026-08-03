@@ -1,78 +1,50 @@
 ---
 title: 'Forge Examples — Dynamic Form Fields'
-description: 'Dynamic Form Fields examples for forge.'
+description: Update repeating form values through immutable array replacement.
 ---
 
 ## Dynamic Form Fields
 
 ### Problem
 
-Users can add or remove repeating entries — such as multiple phone numbers or project links. The number of fields is not known at form creation time, so fields must be added and removed dynamically.
+A team form needs to add and remove members while keeping one immutable form value. Array item positions must not become long-lived field identities because reordering changes their meaning.
 
 ### Solution
 
-Store repeating entries as an array field and use `form.array()` for mutations:
+Store the collection in one array field and replace it with updater functions.
 
 ```ts
 import { createForm } from '@vielzeug/forge';
 
-type TeamMember = { name: string; email: string; role: string };
+type Member = { email: string; name: string };
 
 const form = createForm({
-  defaultValues: {
-    teamName: '',
-    members: [] as TeamMember[],
-  },
-  validators: {
-    teamName: (v) => (!v ? 'Team name is required' : undefined),
-  },
+  initialValues: { members: [] as Member[], teamName: '' },
+  validate: (value) => ({ fields: { teamName: value.teamName ? undefined : 'Team name is required' } }),
 });
 
-const members = form.array('members');
+const members = form.field('members');
 
 function addMember() {
-  members.append({ name: '', email: '', role: 'member' });
+  members.set((previous) => [...previous, { email: '', name: '' }]);
 }
 
 function removeMember(index: number) {
-  members.remove(index);
+  members.set((previous) => previous.filter((_, current) => current !== index));
 }
 
-function moveMemberUp(index: number) {
-  if (index > 0) members.move(index, index - 1);
-}
-
-async function submitTeam() {
-  const result = await form.submit(async (values) => {
-    const response = await fetch('/api/teams', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    });
-    return response.json();
-  });
-
-  if (!result.ok) return;
-}
-```
-
-#### With `fields.list()` (optional)
-
-`form.fields.list()` returns every currently-known field path — the top-level keys (`teamName`, `members`), not individual array indices. Use it to inspect what the form currently tracks, e.g. in a debug panel:
-
-```ts
-console.log(form.fields.list());
-// ['teamName', 'members']
+addMember();
+console.log(form.value.members);
 ```
 
 ### Pitfalls
 
-- Array items are stored as a whole array — `form.set('members', newArray)` or `form.array('members').remove(i)`. Do not register validators on array-item dot-path keys like `members.0.email`; register them on the parent key `members` instead.
-- `members.remove(i)` shifts all subsequent indices — if you hold a cached validator or connection for index `i`, refresh it after removal.
-- After `members.append(...)`, the new item's `touched` state is `false`. Validators still run on submit for all fields, including ones the user has never touched.
+- Do not retain array-index field handles; Forge intentionally does not expose them.
+- Use stable item IDs in rendering code when rows can reorder.
+- Validate member contents in the full-form validator when the collection is submitted.
 
 ### Related
 
-- [Form with Conditional Fields](./form-with-conditional-fields.md)
-- [Contact Form with File Upload](./contact-form-with-file-upload.md)
+- [Conditional Values](./form-with-conditional-fields.md)
 - [Multi-Step Wizard](./multi-step-wizard.md)
+- [Dnd](/dnd/)

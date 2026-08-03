@@ -1,85 +1,51 @@
 ---
 title: 'Forge Examples — Contact Form with File Upload'
-description: 'Contact Form with File Upload examples for forge.'
+description: Validate a file-bearing form and serialize it as multipart data.
 ---
 
 ## Contact Form with File Upload
 
 ### Problem
 
-A contact form collects text fields and a file attachment. The file must be validated client-side (size, type) before being submitted alongside the other fields as `multipart/form-data`.
+A contact form needs text validation plus one optional file attachment. The value must remain immutable while `FormData` preserves the binary file during transport.
 
 ### Solution
 
-Use `createForm()` with a `File` field validator combined with `toFormData()` to serialize the final values for a `multipart/form-data` request.
+Store a selected `File`, not `FileList`, then serialize the submitted value with `toFormData()`.
 
-```typescript
+```ts
 import { createForm, toFormData } from '@vielzeug/forge';
-import { composeValidators } from '@vielzeug/forge/validators';
 
-const contactForm = createForm({
-  defaultValues: {
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
-    attachment: null as File | null,
-  },
-  validators: {
-    name: (v) => (!v ? 'Name is required' : undefined),
-    email: composeValidators(
-      (v) => (!v ? 'Email is required' : undefined),
-      (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
-    ),
-    subject: (v) => (!v ? 'Subject is required' : undefined),
-    message: composeValidators(
-      (v) => (!v ? 'Message is required' : undefined),
-      (v) => (v && String(v).length < 10 ? 'Message must be at least 10 characters' : undefined),
-    ),
-    attachment: (v) => {
-      if (!v) return; // Optional field
-      const file = v as File;
-      if (file.size > 5 * 1024 * 1024) return 'File size must be less than 5MB';
-      const allowed = ['image/jpeg', 'image/png', 'application/pdf'];
-      if (!allowed.includes(file.type)) return 'Only JPEG, PNG, and PDF files are allowed';
+const form = createForm({
+  initialValues: { attachment: null as File | null, email: '', message: '', name: '' },
+  validate: (value) => ({
+    fields: {
+      email: value.email.includes('@') ? undefined : 'Enter a valid email',
+      message: value.message.length >= 10 ? undefined : 'Write at least ten characters',
+      name: value.name ? undefined : 'Name is required',
     },
-  },
+  }),
 });
 
-// Handle file input
-function handleFileChange(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  contactForm.set('attachment', file || null);
+function onFileChange(input: HTMLInputElement) {
+  form.field('attachment').set(input.files?.[0] ?? null);
 }
 
-// Submit
-async function handleSubmit() {
-  const result = await contactForm.submit(async (values) => {
-    // Use toFormData to include the file attachment
-    const response = await fetch('/api/contact', {
-      method: 'POST',
-      body: toFormData(contactForm.values()),
-    });
-    return response.json();
-  });
+const result = await form.submit((value) =>
+  fetch('/api/contact', { body: toFormData(value), method: 'POST' }).then((response) => response.ok),
+);
 
-  if (!result.ok) {
-    console.log(result.errors);
-  }
-}
+if (!result.ok && result.type === 'validation') console.log(result.errors);
 ```
 
 ### Pitfalls
 
-- Do not set `Content-Type` manually when building a `FormData` request. The browser must include the multipart boundary — overriding the header removes it and breaks server parsing.
-- `file.type` is derived from the file extension and can be spoofed. Client-side MIME validation is a UX aid only — always validate the file on the server.
-- `form.state.isSubmitting` is `false` before `submit()` is called. Checking it during the pre-submit validation phase always returns `false`.
-- `FormOptions.validators` accepts one `FieldValidator` function per field, not an array — chain multiple checks with `composeValidators()` from `@vielzeug/forge/validators`.
+- Do not store `FileList`; select an individual `File` before writing form state.
+- Do not set `Content-Type` manually for `FormData`; the browser supplies the multipart boundary.
+- Validate file size and type on the server even when client validation exists.
 
 ### Related
 
-- [File Uploads (Courier)](/courier/examples/file-uploads)
-- [Schema Validation with Spell](/spell/)
 - [Dynamic Form Fields](./dynamic-form-fields.md)
-- [Form with Conditional Fields](./form-with-conditional-fields.md)
+- [Courier](/courier/)
+- [Vault](/vault/)
