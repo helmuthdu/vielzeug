@@ -1,9 +1,9 @@
 {
   "changes": [
     {
-      "comment": "feat: select diagnostics for a specific union failure",
+      "comment": "refactor!: group secondary APIs, remove aliases, make async checks explicit, and require declarative definitions for JSON Schema export",
       "packageName": "@vielzeug/spell",
-      "type": "minor"
+      "type": "major"
     }
   ],
   "email": "agent@vielzeug",

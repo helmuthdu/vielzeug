@@ -73,8 +73,8 @@ describe('SetSchema', () => {
     if (result.success) expect(result.data).toEqual(new Set([1, 2, 3]));
   });
 
-  test('parseAsync() runs async validate() on item schemas (does not silently skip)', async () => {
-    const asyncPositive = s.number().validate(async (n) => n > 0 || 'must be positive');
+  test('parseAsync() runs async checkAsync() on item schemas (does not silently skip)', async () => {
+    const asyncPositive = s.number().checkAsync(async (n) => n > 0 || 'must be positive');
 
     await expect(s.set(asyncPositive).safeParseAsync(new Set([1, 2]))).resolves.toMatchObject({ success: true });
     await expect(s.set(asyncPositive).safeParseAsync(new Set([1, -2]))).resolves.toMatchObject({ success: false });

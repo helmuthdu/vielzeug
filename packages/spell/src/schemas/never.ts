@@ -1,17 +1,20 @@
 import type { SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema } from '../core';
-import { _messages } from '../messages';
 
-export class NeverSchema extends Schema<never> {
+export class NeverSchema<Mode extends import('../core').SchemaMode = 'sync'> extends Schema<never, never, Mode> {
   protected override get _kind(): string {
     return 'never';
   }
 
+  override checkAsync(
+    fn: (value: never, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+  ): NeverSchema<'async'> {
+    return this._addCheck(fn, true) as unknown as NeverSchema<'async'>;
+  }
+
   constructor() {
-    super((_value, ctx) => [
-      { code: ErrorCode.invalid_type, message: (ctx?.messages ?? _messages()).never.invalid(), path: [] },
-    ]);
+    super((_value, ctx) => [{ code: ErrorCode.invalid_type, message: ctx!.messages.never.invalid(), path: [] }]);
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
@@ -22,9 +25,5 @@ export class NeverSchema extends Schema<never> {
     if (visitor.never) return visitor.never(this);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    return other instanceof NeverSchema;
   }
 }

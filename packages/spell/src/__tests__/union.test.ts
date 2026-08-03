@@ -92,7 +92,7 @@ describe('s.union() — sync returns branch output', () => {
 
 describe('s.union() — async', () => {
   it('runs async refinements inside branches', async () => {
-    const a = s.string().validate(async (s) => s.startsWith('a') || 'Must start with a');
+    const a = s.string().checkAsync(async (s) => s.startsWith('a') || 'Must start with a');
     const b = s.number();
     const schema = s.union(a, b);
 
@@ -105,7 +105,7 @@ describe('s.union() — async', () => {
   });
 
   it('check() runs in parseAsync', async () => {
-    const schema = s.union(s.string(), s.number()).validate((v) => v !== 0 || 'Must not be zero');
+    const schema = s.union(s.string(), s.number()).check((v) => v !== 0 || 'Must not be zero');
     const result = await schema.safeParseAsync(0);
 
     expect(result.success).toBe(false);
@@ -118,15 +118,15 @@ describe('s.union() — async', () => {
     expect(result).toBe('fallback');
   });
 
-  it('runs all branches in parallel and returns the first success', async () => {
+  it('uses declared branch order in async mode', async () => {
     const calls: string[] = [];
     const schema = s.union(
-      s.string().validate(async (value) => {
+      s.string().checkAsync(async (value) => {
         calls.push('first');
 
         return value === 'ok' || 'first failed';
       }),
-      s.string().validate(async () => {
+      s.string().checkAsync(async () => {
         calls.push('second');
 
         return true;
@@ -136,8 +136,7 @@ describe('s.union() — async', () => {
     const result = await schema.parseAsync('ok');
 
     expect(result).toBe('ok');
-    // All branches run in parallel (Promise.any semantics); both are started.
-    expect(calls.sort()).toEqual(['first', 'second']);
+    expect(calls).toEqual(['first']);
   });
 });
 
@@ -151,19 +150,9 @@ describe('UnionSchema.schemas introspection', () => {
   });
 });
 
-describe('s.or() alias', () => {
-  it('is equivalent to s.union() with two schemas', () => {
-    const schema = s.or(s.string(), s.number());
-
-    expect(schema.parse('hello')).toBe('hello');
-    expect(schema.parse(42)).toBe(42);
-    expect(schema.safeParse(true).success).toBe(false);
-  });
-});
-
 describe('s.union() — async non-SpellValidationError branch throw', () => {
   it('does not include non-SpellValidationError branch throws in branchErrors', async () => {
-    const badSchema = s.string().validate(async () => {
+    const badSchema = s.string().checkAsync(async () => {
       throw new Error('unexpected internal error');
     });
     const goodSchema = s.number();

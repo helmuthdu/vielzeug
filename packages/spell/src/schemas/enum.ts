@@ -1,7 +1,6 @@
 import type { SchemaDescriptor, ValidateFn } from '../core';
 
 import { ErrorCode, Schema } from '../core';
-import { _messages } from '../messages';
 
 export type EnumValues = readonly [string | number, ...(string | number)[]];
 type EnumType<T extends EnumValues> = T[number];
@@ -15,18 +14,28 @@ function buildEnumValidator(values: readonly unknown[]): ValidateFn {
       : [
           {
             code: ErrorCode.invalid_enum,
-            message: (ctx?.messages ?? _messages()).enum.invalid({ values }),
+            message: ctx!.messages.enum.invalid({ values }),
             params: { values },
             path: [],
           },
         ];
 }
 
-export class EnumSchema<T extends EnumValues> extends Schema<EnumType<T>> {
+export class EnumSchema<T extends EnumValues, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
+  EnumType<T>,
+  EnumType<T>,
+  Mode
+> {
   readonly values: T;
 
   protected override get _kind(): string {
     return 'enum';
+  }
+
+  override checkAsync(
+    fn: (value: EnumType<T>, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+  ): EnumSchema<T, 'async'> {
+    return this._addCheck(fn, true) as unknown as EnumSchema<T, 'async'>;
   }
 
   constructor(values: T) {
@@ -42,11 +51,5 @@ export class EnumSchema<T extends EnumValues> extends Schema<EnumType<T>> {
     if (visitor.enum) return visitor.enum(this);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    if (!(other instanceof EnumSchema)) return false;
-
-    return JSON.stringify(this.values) === JSON.stringify(other.values);
   }
 }

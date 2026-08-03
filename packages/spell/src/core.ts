@@ -1,8 +1,7 @@
 import { isPlainObject } from '@vielzeug/arsenal';
 
-import { fail, resolveMessage, SpellValidationError } from './errors';
-import { schemaToJsonSchema } from './json-schema';
-import { _messages, _dev } from './messages';
+import { SpellDefinitionError, SpellValidationError } from './errors';
+import { createParseContext } from './messages';
 import { defineOwnProperty } from './safe-object';
 import {
   type AnySchema,
@@ -10,18 +9,23 @@ import {
   ErrorCode,
   type FlatError,
   type FlatErrorFirst,
-  type FormattedErrors,
   type Infer,
   type InferInput,
   type InferOutput,
+  type InferSchemaMode,
+  type MergeSchemaModes,
+  type SchemaMode,
   type Issue,
   type JsonSchema,
   type MessageFn,
   type Messages,
   type ParseContext,
   type ParseResult,
+  type SchemaDefinition,
   type SchemaDescriptor,
   type SchemaWalker,
+  schemaInput,
+  schemaOutput,
   type ValidateFn,
   type ValidateResult,
 } from './types';
@@ -32,23 +36,41 @@ export {
   type CheckContext,
   type FlatError,
   type FlatErrorFirst,
-  type FormattedErrors,
   type Infer,
   type InferInput,
   type InferOutput,
+  type InferSchemaMode,
+  type MergeSchemaModes,
+  type SchemaMode,
   type Issue,
   type JsonSchema,
   type MessageFn,
   type Messages,
   type ParseContext,
   type ParseResult,
+  type SchemaDefinition,
   type SchemaDescriptor,
   type SchemaWalker,
   type ValidateFn,
   type ValidateResult,
 };
 
-export { SpellError, SpellValidationError, errorsAt, fail, prependIssuePath, resolveMessage } from './errors';
+export {
+  SpellDefinitionError,
+  SpellError,
+  SpellValidationError,
+  fail,
+  prependIssuePath,
+  resolveMessage,
+} from './errors';
+
+function deepFreeze<T>(value: T): T {
+  if (value === null || typeof value !== 'object' || Object.isFrozen(value)) return value;
+
+  for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+
+  return Object.freeze(value);
+}
 
 function materializeValue<T>(value: T): T {
   if (value == null || typeof value !== 'object') return value;
@@ -87,6 +109,8 @@ export interface SchemaState<Output = unknown> {
   catch?: () => Output;
   defaultValue?: () => Output;
   description?: string;
+  hasAsyncChecks: boolean;
+  hasRuntimeChecks: boolean;
   isNullable: boolean;
   isOptional: boolean;
   postprocessors: Postprocessor[];
@@ -95,7 +119,15 @@ export interface SchemaState<Output = unknown> {
 }
 
 function defaultState<Output>(): SchemaState<Output> {
-  return { isNullable: false, isOptional: false, postprocessors: [], preprocessors: [], validators: [] };
+  return {
+    hasAsyncChecks: false,
+    hasRuntimeChecks: false,
+    isNullable: false,
+    isOptional: false,
+    postprocessors: [],
+    preprocessors: [],
+    validators: [],
+  };
 }
 
 function cloneState<Output>(state: SchemaState<Output>): SchemaState<Output> {
@@ -103,6 +135,8 @@ function cloneState<Output>(state: SchemaState<Output>): SchemaState<Output> {
     catch: state.catch,
     defaultValue: state.defaultValue,
     description: state.description,
+    hasAsyncChecks: state.hasAsyncChecks,
+    hasRuntimeChecks: state.hasRuntimeChecks,
     isNullable: state.isNullable,
     isOptional: state.isOptional,
     postprocessors: [...state.postprocessors],
@@ -122,18 +156,18 @@ type MaybePromise<T> = T | Promise<T>;
 
 /** @internal */
 export function _makeCtx(messages?: Messages): ParseContext {
-  return { messages: messages ?? _messages() };
+  return messages ? { messages } : createParseContext();
 }
 
 /* -------------------- ValidateResult normalizer -------------------- */
 
-function normalizeValidateResult(result: ValidateResult, ctxIssues: Issue[]): Issue[] | null {
+function normalizeValidateResult(result: ValidateResult, ctxIssues: Issue[], ctx: ParseContext): Issue[] | null {
   const issues = [...ctxIssues];
 
   if (typeof result === 'string') {
     issues.push({ code: ErrorCode.custom, message: result, path: [] });
   } else if (result === false && issues.length === 0) {
-    issues.push({ code: ErrorCode.custom, message: _messages().check.default(), path: [] });
+    issues.push({ code: ErrorCode.custom, message: ctx.messages.check.default(), path: [] });
   }
 
   return issues.length ? issues : null;
@@ -141,7 +175,10 @@ function normalizeValidateResult(result: ValidateResult, ctxIssues: Issue[]): Is
 
 /* -------------------- Base Schema -------------------- */
 
-export class Schema<Output = unknown, Input = Output> {
+export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 'sync'> {
+  declare readonly [schemaInput]: Input;
+  declare readonly [schemaOutput]: Output;
+
   protected state: SchemaState<Output>;
 
   protected _annotations: Record<string, unknown> = {};
@@ -156,6 +193,12 @@ export class Schema<Output = unknown, Input = Output> {
   /* -------------------- Parse -------------------- */
 
   parse(value: unknown, ctx?: ParseContext): Output {
+    if (this.state.hasAsyncChecks) {
+      throw new SpellValidationError([
+        { code: ErrorCode.custom, message: 'parse() cannot evaluate async checks. Use parseAsync().', path: [] },
+      ]);
+    }
+
     const c = ctx ?? _makeCtx();
 
     return this._withCatch(() => {
@@ -189,7 +232,7 @@ export class Schema<Output = unknown, Input = Output> {
     try {
       return { data: this.parse(value, ctx), success: true };
     } catch (error) {
-      if (SpellValidationError.is(error)) return { error, success: false };
+      if (error instanceof SpellValidationError) return { error, success: false };
 
       throw error;
     }
@@ -217,7 +260,7 @@ export class Schema<Output = unknown, Input = Output> {
     try {
       return { data: await this.parseAsync(value, ctx), success: true };
     } catch (error) {
-      if (SpellValidationError.is(error)) return { error, success: false };
+      if (error instanceof SpellValidationError) return { error, success: false };
 
       throw error;
     }
@@ -230,6 +273,12 @@ export class Schema<Output = unknown, Input = Output> {
    * @internal
    */
   _parseFullSync(value: unknown, ctx?: ParseContext): { data: unknown; issues: Issue[] } {
+    if (this.state.hasAsyncChecks) {
+      throw new SpellValidationError([
+        { code: ErrorCode.custom, message: 'Sync parsing cannot evaluate async checks. Use parseAsync().', path: [] },
+      ]);
+    }
+
     const c = ctx ?? _makeCtx();
     const prepared = this._prepareInput(value);
 
@@ -286,30 +335,29 @@ export class Schema<Output = unknown, Input = Output> {
   /* -------------------- Validators -------------------- */
 
   /**
-   * Add a custom validation rule. The callback receives the typed value and an optional
-   * `{ addIssue }` context for reporting multiple issues in one pass.
-   *
-   * **Return values:**
-   * - `string` — fail with that message
-   * - `false` — fail silently (use `addIssue` to report)
-   * - `true` / `null` / `void` — pass
-   *
-   * The `|| 'message'` shorthand works naturally:
-   * ```ts
-   * s.string().validate(v => v.length > 0 || 'Cannot be empty')
-   * ```
-   *
-   * For async validation, return a Promise:
-   * ```ts
-   * s.string().validate(async v => (await db.exists(v)) ? 'Already taken' : null)
-   * ```
+   * Add a synchronous domain rule. For asynchronous work, use `checkAsync()`;
+   * making execution mode explicit prevents unchecked Promise-returning callbacks.
    */
-  validate(
+  check<F extends (value: Output, ctx: CheckContext) => ValidateResult | Promise<ValidateResult>>(
+    fn: ReturnType<F> extends PromiseLike<unknown> ? never : F,
+  ): this {
+    return this._addCheck(fn as (value: Output, ctx: CheckContext) => ValidateResult, false);
+  }
+
+  checkAsync(
+    this: Schema<Output, Input, 'sync'>,
+    fn: (value: Output, ctx: CheckContext) => Promise<ValidateResult>,
+  ): Schema<Output, Input, 'async'> {
+    return this._addCheck(fn, true) as unknown as Schema<Output, Input, 'async'>;
+  }
+
+  protected _addCheck(
     fn:
       | ((value: Output, ctx: CheckContext) => ValidateResult)
       | ((value: Output, ctx: CheckContext) => Promise<ValidateResult>),
+    async: boolean,
   ): this {
-    const validator: ValidateFn = (value, _ctx) => {
+    const validator: ValidateFn = (value, ctx) => {
       const ctxIssues: Issue[] = [];
       const checkCtx: CheckContext = {
         addIssue: (issue) => ctxIssues.push({ ...issue, path: issue.path ?? [] } as Issue),
@@ -317,45 +365,41 @@ export class Schema<Output = unknown, Input = Output> {
       const result = fn(value as Output, checkCtx);
 
       if (result instanceof Promise) {
-        return result.then((r) => normalizeValidateResult(r, ctxIssues));
+        return result.then((r) => normalizeValidateResult(r, ctxIssues, ctx!));
       }
 
-      return normalizeValidateResult(result, ctxIssues);
+      return normalizeValidateResult(result, ctxIssues, ctx!);
     };
 
-    return this._addConstraint(validator);
-  }
+    const next = this._addConstraint(validator);
 
-  refine(predicate: (value: Output) => boolean, message?: MessageFn<{ value: Output }>): this {
-    return this._addConstraint((value, ctx) => {
-      if ((predicate as (v: unknown) => boolean)(value)) return null;
+    next.state.hasRuntimeChecks = true;
 
-      const msg = message ? resolveMessage(message, { value: value as Output }) : ctx!.messages.check.default();
+    if (async) next.state.hasAsyncChecks = true;
 
-      return fail(ErrorCode.custom, msg);
-    });
+    return next;
   }
 
   /* -------------------- Nullability / Optionality -------------------- */
 
-  optional(): Schema<Output | undefined, Input | undefined> {
-    const cloned = this._clone() as unknown as Schema<Output | undefined, Input | undefined>;
+  optional(): Schema<Output | undefined, Input | undefined, Mode> {
+    const cloned = this._clone() as unknown as Schema<Output | undefined, Input | undefined, Mode>;
 
     cloned.state.isOptional = true;
 
     return cloned;
   }
 
-  nullable(): Schema<Output | null, Input | null> {
-    const cloned = this._clone() as unknown as Schema<Output | null, Input | null>;
+  nullable(): Schema<Output | null, Input | null, Mode> {
+    const cloned = this._clone() as unknown as Schema<Output | null, Input | null, Mode>;
 
     cloned.state.isNullable = true;
 
     return cloned;
   }
 
-  nullish(): Schema<Output | null | undefined, Input | null | undefined> {
-    const cloned = this._clone() as unknown as Schema<Output | null | undefined, Input | null | undefined>;
+  nullish(): Schema<Output | null | undefined, Input | null | undefined, Mode> {
+    const cloned = this._clone() as unknown as Schema<Output | null | undefined, Input | null | undefined, Mode>;
 
     cloned.state.isOptional = true;
     cloned.state.isNullable = true;
@@ -363,8 +407,8 @@ export class Schema<Output = unknown, Input = Output> {
     return cloned;
   }
 
-  required(): Schema<Exclude<Output, undefined>, Exclude<Input, undefined>> {
-    const cloned = this._clone() as unknown as Schema<Exclude<Output, undefined>, Exclude<Input, undefined>>;
+  required(): Schema<Exclude<Output, undefined>, Exclude<Input, undefined>, Mode> {
+    const cloned = this._clone() as unknown as Schema<Exclude<Output, undefined>, Exclude<Input, undefined>, Mode>;
 
     cloned.state.isOptional = false;
 
@@ -390,8 +434,8 @@ export class Schema<Output = unknown, Input = Output> {
     return cloned;
   }
 
-  transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput, Input> {
-    const next = this._clone() as unknown as Schema<NewOutput, Input>;
+  transform<NewOutput>(fn: (value: Output) => NewOutput): Schema<NewOutput, Input, Mode> {
+    const next = this._clone() as unknown as Schema<NewOutput, Input, Mode>;
 
     next.state.postprocessors.push(fn as (v: unknown) => unknown);
 
@@ -406,8 +450,8 @@ export class Schema<Output = unknown, Input = Output> {
     return cloned;
   }
 
-  pipe<B>(next: Schema<B, NoInfer<Output>>): Schema<B, Input> {
-    return new PipeSchema<B, Input>(this, next);
+  pipe<B extends AnySchema>(next: B): PipeSchema<B, this, MergeSchemaModes<Mode | InferSchemaMode<B>>> {
+    return new PipeSchema(this, next);
   }
 
   /* -------------------- Introspection -------------------- */
@@ -420,15 +464,20 @@ export class Schema<Output = unknown, Input = Output> {
     return cloned;
   }
 
-  toDescriptor(): SchemaDescriptor {
-    if (this.state.preprocessors.length > 0) {
-      _dev(
-        'toDescriptor(): this schema has preprocessors (e.g. trim(), lowercase(), coerce()). ' +
-          'Preprocessors are not serializable and will not appear in the descriptor output.',
+  definition(): SchemaDefinition {
+    if (
+      this.state.catch ||
+      this.state.defaultValue ||
+      this.state.postprocessors.length > 0 ||
+      this.state.preprocessors.length > 0 ||
+      this.state.hasRuntimeChecks
+    ) {
+      throw new SpellDefinitionError(
+        'Schemas with checks, transforms, defaults, catches, or preprocessors have no declarative definition.',
       );
     }
 
-    return this._toDescriptorImpl();
+    return deepFreeze(this._toDescriptorImpl()) as SchemaDefinition;
   }
 
   get description(): string | undefined {
@@ -445,10 +494,6 @@ export class Schema<Output = unknown, Input = Output> {
 
   is(value: unknown): value is Output {
     return this.safeParse(value).success;
-  }
-
-  toJsonSchema(): JsonSchema {
-    return schemaToJsonSchema(this);
   }
 
   assert(value: unknown, label?: string): asserts value is Output {
@@ -470,20 +515,6 @@ export class Schema<Output = unknown, Input = Output> {
     return this._walk(visitor);
   }
 
-  equals(other: AnySchema): boolean {
-    if (other === this) return true;
-
-    if (Object.getPrototypeOf(other) !== Object.getPrototypeOf(this)) return false;
-
-    if (other.isOptional !== this.isOptional) return false;
-
-    if (other.isNullable !== this.isNullable) return false;
-
-    if (other.description !== this.description) return false;
-
-    return this._equalsImpl(other);
-  }
-
   get kind(): string {
     return this._kind;
   }
@@ -500,17 +531,6 @@ export class Schema<Output = unknown, Input = Output> {
       ...(this.state.isNullable ? { isNullable: true as const } : {}),
       ...(this.state.isOptional ? { isOptional: true as const } : {}),
     };
-  }
-
-  protected _annotationsEqual(other: AnySchema): boolean {
-    const a = this._annotations;
-    const b = (other as Schema)._annotations;
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
-
-    if (keysA.length !== keysB.length) return false;
-
-    return keysA.every((k) => a[k] === b[k]);
   }
 
   protected _addConstraint(
@@ -556,10 +576,6 @@ export class Schema<Output = unknown, Input = Output> {
     return { ...this._describeBase(), kind: 'any' };
   }
 
-  protected _equalsImpl(_other: AnySchema): boolean {
-    return true;
-  }
-
   /* -------------------- Private -------------------- */
 
   private _withCatch<T>(fn: () => T): T {
@@ -568,7 +584,7 @@ export class Schema<Output = unknown, Input = Output> {
     try {
       return fn();
     } catch (error) {
-      if (SpellValidationError.is(error)) return this.state.catch() as unknown as T;
+      if (error instanceof SpellValidationError) return this.state.catch() as unknown as T;
 
       throw error;
     }
@@ -580,7 +596,7 @@ export class Schema<Output = unknown, Input = Output> {
     try {
       return await fn();
     } catch (error) {
-      if (SpellValidationError.is(error)) return this.state.catch() as unknown as T;
+      if (error instanceof SpellValidationError) return this.state.catch() as unknown as T;
 
       throw error;
     }
@@ -636,11 +652,13 @@ export class Schema<Output = unknown, Input = Output> {
       const result = validate(value, ctx);
 
       if (result instanceof Promise) {
-        _dev(
-          'An async validate() callback was skipped because parse()/safeParse() cannot await it. ' +
-            'The value passed this check unvalidated — use parseAsync()/safeParseAsync() instead.',
-        );
-        continue;
+        throw new SpellValidationError([
+          {
+            code: ErrorCode.custom,
+            message: 'Sync parsing received an async check. Use checkAsync() and parseAsync().',
+            path: [],
+          },
+        ]);
       }
 
       if (result) issues.push(...result);
@@ -674,15 +692,25 @@ export class Schema<Output = unknown, Input = Output> {
 
 /* -------------------- PipeSchema -------------------- */
 
-export class PipeSchema<Output, Input = unknown> extends Schema<Output, Input> {
-  readonly from: Schema<any, Input>;
-  readonly to: Schema<Output, any>;
+export class PipeSchema<
+  To extends AnySchema,
+  From extends AnySchema,
+  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<To | From>>,
+> extends Schema<InferOutput<To>, InferInput<From>, Mode> {
+  readonly from: From;
+  readonly to: To;
 
   protected override get _kind(): string {
     return 'pipe';
   }
 
-  constructor(from: Schema<any, Input>, to: Schema<Output, any>) {
+  override checkAsync(
+    fn: (value: InferOutput<To>, ctx: CheckContext) => Promise<ValidateResult>,
+  ): PipeSchema<To, From, 'async'> {
+    return this._addCheck(fn, true) as unknown as PipeSchema<To, From, 'async'>;
+  }
+
+  constructor(from: From, to: To) {
     super();
     this.from = from;
     this.to = to;
@@ -722,6 +750,23 @@ export class PipeSchema<Output, Input = unknown> extends Schema<Output, Input> {
       : { data: r2OrPromise.data, issues: [], typeOk: true };
   }
 
+  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<InferOutput<To>> {
+    const c = ctx ?? _makeCtx();
+    const first = await this.from._parseFullAsync(value, c);
+
+    if (first.issues.length > 0) throw new SpellValidationError(first.issues);
+
+    const second = await this.to._parseFullAsync(first.data, c);
+
+    if (second.issues.length > 0) throw new SpellValidationError(second.issues);
+
+    const issues = await this._runValidatorsAsync(second.data, c);
+
+    if (issues.length > 0) throw new SpellValidationError(issues);
+
+    return this._runPostprocessors(second.data) as InferOutput<To>;
+  }
+
   protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     const fromR = this.from.walk(visitor);
     const toR = this.to.walk(visitor);
@@ -734,15 +779,9 @@ export class PipeSchema<Output, Input = unknown> extends Schema<Output, Input> {
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return {
       ...this._describeBase(),
-      from: this.from.toDescriptor(),
+      from: this.from.definition(),
       kind: 'pipe',
-      to: this.to.toDescriptor(),
+      to: this.to.definition(),
     };
-  }
-
-  protected override _equalsImpl(other: AnySchema): boolean {
-    if (!(other instanceof PipeSchema)) return false;
-
-    return this.from.equals(other.from) && this.to.equals(other.to);
   }
 }

@@ -26,18 +26,30 @@ function deepMerge(target: unknown, source: unknown): unknown {
 }
 
 /** All schemas must pass — intersection semantics. */
-export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
-  UnionToIntersection<InferOutput<T[number]>>
-> {
+export class IntersectSchema<
+  T extends readonly AnySchema[],
+  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
+    import('../core').InferSchemaMode<T[number]>
+  >,
+> extends Schema<UnionToIntersection<InferOutput<T[number]>>, unknown, Mode> {
   readonly schemas: T;
 
   protected override get _kind(): string {
     return 'intersect';
   }
 
+  override checkAsync(
+    fn: (
+      value: UnionToIntersection<InferOutput<T[number]>>,
+      ctx: import('../core').CheckContext,
+    ) => Promise<import('../core').ValidateResult>,
+  ): IntersectSchema<T, 'async'> {
+    return this._addCheck(fn, true) as unknown as IntersectSchema<T, 'async'>;
+  }
+
   constructor(schemas: T) {
     super();
-    this.schemas = schemas;
+    this.schemas = Object.freeze([...schemas]) as T;
   }
 
   protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
@@ -101,7 +113,7 @@ export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
-    return { ...this._describeBase(), branches: this.schemas.map((s) => s.toDescriptor()), kind: 'intersect' };
+    return { ...this._describeBase(), branches: this.schemas.map((s) => s.definition()), kind: 'intersect' };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
@@ -110,13 +122,5 @@ export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
     if (visitor.intersect) return visitor.intersect(this, branches);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    if (!(other instanceof IntersectSchema)) return false;
-
-    if (this.schemas.length !== other.schemas.length) return false;
-
-    return this.schemas.every((s, i) => s.equals(other.schemas[i]));
   }
 }

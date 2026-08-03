@@ -1,6 +1,6 @@
 export const asyncValidateExample = {
-  code: `// validate() accepts sync or async rules in one method.
-// Use parseAsync() when any rule in the schema returns a Promise.
+  code: `// checkAsync() declares asynchronous domain rules.
+// Use safeParseAsync() or parseAsync() for schemas containing async checks.
 import { s } from '@vielzeug/spell'
 
 // Simulated async check (e.g. database lookup)
@@ -10,12 +10,12 @@ function isUsernameAvailable(name) {
 
 const UsernameSchema = s.string()
   .min(3)
-  .validate(async (name) => {
+  .checkAsync(async (name) => {
     const available = await isUsernameAvailable(name)
     return available || 'Username is already taken'
   })
 
-// Must use parseAsync() when any validate() callback is async
+// Async checks require safeParseAsync() or parseAsync()
 const ok = await UsernameSchema.safeParseAsync('alice')
 console.log('alice:', ok.success ? 'available' : ok.error.issues[0].message)
 

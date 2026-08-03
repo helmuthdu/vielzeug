@@ -1,6 +1,6 @@
 ---
 title: 'Spell Examples — Async Business Rules'
-description: 'Attach asynchronous business rules to spell schemas using validate() and parse them safely.'
+description: 'Attach asynchronous business rules to spell schemas using checkAsync() and parse them safely.'
 ---
 
 ## Async Business Rules
@@ -11,7 +11,7 @@ A value can be structurally valid but still fail business rules such as uniquene
 
 ### Solution
 
-Use `validate()` with an async callback. Spell awaits the callback when you call `parseAsync()` or `safeParseAsync()`.
+Use `checkAsync()` for async callbacks. Spell awaits them through `parseAsync()` or `safeParseAsync()`.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -27,7 +27,7 @@ const Account = s.object({
   email: s
     .string()
     .email()
-    .validate(async (value, ctx) => {
+    .checkAsync(async (value, ctx) => {
       const domain = value.split('@')[1] ?? '';
 
       if (bannedDomains.has(domain)) {
@@ -61,7 +61,7 @@ const takenSlugs = new Set(['about', 'contact']);
 const Slug = s
   .string()
   .slug()
-  .validate(async (v) => (!takenSlugs.has(v) ? null : `'${v}' is already taken`));
+  .checkAsync(async (v) => (!takenSlugs.has(v) ? null : `'${v}' is already taken`));
 
 await Slug.parseAsync('about'); // throws: 'about' is already taken
 await Slug.parseAsync('changelog'); // 'changelog'
@@ -69,8 +69,8 @@ await Slug.parseAsync('changelog'); // 'changelog'
 
 ### Pitfalls
 
-- Async `validate()` callbacks are silently skipped in synchronous `parse()`. Always use `parseAsync()` when any rule performs I/O.
-- Keep I/O inside `validate()`, not inside `transform()`. Validation failures must go through the issue model.
+- `checkAsync()` makes a schema async-only: TypeScript removes `parse()` and `safeParse()`, while runtime guards still reject sync parsing. Use `parseAsync()` when any rule performs I/O.
+- Keep I/O inside `checkAsync()`, not inside `transform()`. Validation failures must go through the issue model.
 - Call `ctx.addIssue()` more than once to emit multiple issues from a single async rule.
 
 ### Related

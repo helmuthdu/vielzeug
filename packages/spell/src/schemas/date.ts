@@ -1,38 +1,51 @@
 import type { MessageFn, SchemaDescriptor } from '../core';
 
 import { ErrorCode, fail, resolveMessage, Schema } from '../core';
-import { _messages } from '../messages';
 
-export class DateSchema<Input = Date> extends Schema<Date, Input> {
+export class DateSchema<Input = Date, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
+  Date,
+  Input,
+  Mode
+> {
   protected override get _kind(): string {
     return 'date';
+  }
+
+  override checkAsync(
+    fn: (value: Date, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+  ): DateSchema<Input, 'async'> {
+    return this._addCheck(fn, true) as unknown as DateSchema<Input, 'async'>;
   }
 
   constructor() {
     super((value, ctx) =>
       value instanceof Date && !Number.isNaN(value.getTime())
         ? null
-        : fail(ErrorCode.invalid_date, (ctx?.messages ?? _messages()).date.type()),
+        : fail(ErrorCode.invalid_date, ctx!.messages.date.type()),
     );
   }
 
-  min(date: Date, message: MessageFn<{ min: Date; value: Date }> = (ctx) => _messages().date.min(ctx)): this {
-    return this._addConstraint((value, _ctx) => {
+  min(date: Date, message?: MessageFn<{ min: Date; value: Date }>): this {
+    return this._addConstraint((value, ctx) => {
       const typed = value as Date;
 
       return typed >= date
         ? null
-        : fail(ErrorCode.too_small, resolveMessage(message, { min: date, value: typed }), { min: date });
+        : fail(ErrorCode.too_small, resolveMessage(message ?? ctx!.messages.date.min, { min: date, value: typed }), {
+            min: date,
+          });
     });
   }
 
-  max(date: Date, message: MessageFn<{ max: Date; value: Date }> = (ctx) => _messages().date.max(ctx)): this {
-    return this._addConstraint((value, _ctx) => {
+  max(date: Date, message?: MessageFn<{ max: Date; value: Date }>): this {
+    return this._addConstraint((value, ctx) => {
       const typed = value as Date;
 
       return typed <= date
         ? null
-        : fail(ErrorCode.too_big, resolveMessage(message, { max: date, value: typed }), { max: date });
+        : fail(ErrorCode.too_big, resolveMessage(message ?? ctx!.messages.date.max, { max: date, value: typed }), {
+            max: date,
+          });
     });
   }
 
@@ -53,10 +66,6 @@ export class DateSchema<Input = Date> extends Schema<Date, Input> {
     if (visitor.date) return visitor.date(this);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    return other instanceof DateSchema;
   }
 
   static coerce(): DateSchema<unknown> {

@@ -1,6 +1,6 @@
 ---
 title: Spell — Schema validation for TypeScript
-description: Zero-dependency schema validation with sync and async parsing, descriptor round-trips, JSON Schema export, and tree-shakeable builders.
+description: Schema validation with explicit sync/async checks, portable definitions, JSON Schema export, and tree-shakeable entry points.
 package: spell
 category: validation
 keywords: [schema, validation, parsing, json-schema, locale, typescript, descriptors]
@@ -11,18 +11,11 @@ exports:
     Schema,
     PipeSchema,
     SpellValidationError,
+    SpellDefinitionError,
     ErrorCode,
-    errorsAt,
-    fail,
-    descriptorToJsonSchema,
-    schemaToJsonSchema,
-    createParseContext,
-    setMessages,
-    setLogger,
-    withMessages,
-    withLogger,
-    resetMessages,
-    prependIssuePath,
+    diagnostics,
+    "./json",
+    "./predicates",
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -33,7 +26,7 @@ environments: [browser, node, ssr, deno]
 
 ## Why Spell?
 
-Spell keeps runtime validation, static inference, and schema introspection in one API. You can use the namespace form for ergonomics or the `sXxx` exports for tree shaking. Descriptor and JSON Schema output make Spell useful at API boundaries, build tooling, and documentation layers.
+Spell keeps runtime validation, static inference, and portable definitions in one API. Use `s` for schema construction; import JSON conversion and predicates from dedicated subpaths.
 
 This example shows the difference between manual branching and a single reusable schema.
 
@@ -74,13 +67,13 @@ const user = User.parse({ email: 'ada@example.com', role: 'admin' });
 | Bundle size       | <PackageInfo package="spell" type="size" />                               | ~62 kB                                     | ~14 kB                                     |
 | Type inference    | <ore-icon name="check" size="16"></ore-icon> `Infer<T>`                     | <ore-icon name="check" size="16"></ore-icon> | Partial                                    |
 | Coercion API      | <ore-icon name="check" size="16"></ore-icon> `s.coerce.*`                   | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Async validation  | <ore-icon name="check" size="16"></ore-icon> `.validate()`                  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Async validation  | <ore-icon name="check" size="16"></ore-icon> `.checkAsync()`                  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | Error flattening  | <ore-icon name="check" size="16"></ore-icon> `flatten()` + `flattenFirst()` | <ore-icon name="check" size="16"></ore-icon> | Partial                                    |
-| Zero dependencies | <ore-icon name="check" size="16"></ore-icon>                                | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
+| Third-party runtime dependencies | <ore-icon name="x" size="16"></ore-icon>                                | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 
-**Use Spell when** you want a fluent schema API with strong TypeScript inference, structured errors, and zero dependencies.
+**Use Spell when** you want a fluent schema API with strong TypeScript inference, structured errors, and no third-party runtime dependencies.
 
 **Consider alternatives when** you are already standardized on another validator ecosystem and migration cost outweighs the API benefits.
 
@@ -139,13 +132,13 @@ const user = User.parse(payload);
 
 - Namespace and tree-shakeable schema builders.
 - Sync and async parsing with `parse()`, `safeParse()`, `parseAsync()`, and `safeParseAsync()`.
-- Unified `validate()` for both sync and async custom rules; boolean/string shorthand supported.
+- Explicit `check()` and `checkAsync()` rules; sync parsing never skips an async check.
 - Wrapper modes for `optional`, `nullable`, `nullish`, `default`, `catch`, and `required`.
-- Descriptor serialization with `toDescriptor()` and JSON Schema export via `descriptorToJsonSchema()`.
-- Message overrides via `setMessages()` and logger routing via `setLogger()`.
-- Standalone validators for sizes, numeric ranges, and common string formats.
-- Structured errors with flattened, formatted, and best-match union diagnostics.
-- Object parsing and error formatting hardened against prototype-pollution-style keys.
+- Frozen declarative definitions through `definition()` and JSON Schema export via `fromDefinition()` from `@vielzeug/spell/json`.
+- Grouped `diagnostics` and `predicates` utilities keep schema construction focused.
+- Ordered union parsing produces the same selected branch in sync and async modes.
+- Structured errors with direct path lookup, flattened views, and best-match union diagnostics.
+- Object parsing is hardened against prototype-pollution-style keys.
 
 </div>
 

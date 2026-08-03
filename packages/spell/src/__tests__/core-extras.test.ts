@@ -1,102 +1,49 @@
-import { descriptorToJsonSchema, s, setLogger } from '../index';
+import { s, SpellDefinitionError } from '../index';
+import { fromDefinition } from '../json';
 
-// ---------------------------------------------------------------------------
-// descriptorToJsonSchema() as standalone function
-// ---------------------------------------------------------------------------
+describe('declarative definitions', () => {
+  it('converts frozen definitions through JSON tooling', () => {
+    const definition = s.object({ age: s.number(), name: s.string() }).definition();
 
-describe('descriptorToJsonSchema() standalone', () => {
-  it('accepts a descriptor directly and returns the same output as toJsonSchema()', () => {
-    const schema = s.string().min(3).max(50);
-    const descriptor = schema.toDescriptor();
-
-    expect(descriptorToJsonSchema(descriptor)).toEqual(schema.toJsonSchema());
-  });
-
-  it('handles nullable wrapping', () => {
-    const schema = s.number().nullable();
-    const result = descriptorToJsonSchema(schema.toDescriptor());
-
-    expect(result).toHaveProperty('anyOf');
-    expect(result).toMatchObject({
-      anyOf: expect.arrayContaining([{ type: 'null' }, { type: 'number' }]),
-    });
-  });
-
-  it('handles description annotation', () => {
-    const schema = s.boolean().label('is active');
-    const result = descriptorToJsonSchema(schema.toDescriptor());
-
-    expect(result).toMatchObject({ description: 'is active', type: 'boolean' });
-  });
-
-  it('handles object schemas with nested descriptors', () => {
-    const schema = s.object({ age: s.number(), name: s.string() });
-    const result = descriptorToJsonSchema(schema.toDescriptor());
-
-    expect(result).toMatchObject({
-      properties: {
-        age: { type: 'number' },
-        name: { type: 'string' },
-      },
+    expect(Object.isFrozen(definition)).toBe(true);
+    expect(fromDefinition(definition)).toEqual({
+      additionalProperties: false,
+      properties: { age: { type: 'number' }, name: { type: 'string' } },
+      required: ['age', 'name'],
       type: 'object',
     });
   });
-});
 
-// ---------------------------------------------------------------------------
-// toDescriptor() preprocessor warning
-// ---------------------------------------------------------------------------
-
-describe('toDescriptor() preprocessor warning', () => {
-  it('emits a warning when the schema has preprocessors', () => {
-    const warnings: string[] = [];
-
-    setLogger((msg) => warnings.push(msg));
-
-    s.string().trim().toDescriptor();
-
-    setLogger(null);
-
-    expect(warnings.length).toBeGreaterThan(0);
-    expect(warnings[0]).toMatch(/preprocessor/i);
-  });
-
-  it('does not warn for schemas without preprocessors', () => {
-    const warnings: string[] = [];
-
-    setLogger((msg) => warnings.push(msg));
-
-    s.string().min(3).toDescriptor();
-
-    setLogger(null);
-
-    expect(warnings.length).toBe(0);
+  it('rejects runtime behavior that cannot cross a process boundary', () => {
+    expect(() => s.string().trim().definition()).toThrow(SpellDefinitionError);
+    expect(() =>
+      s
+        .string()
+        .check(() => true)
+        .definition(),
+    ).toThrow(SpellDefinitionError);
+    expect(() => s.string().default('value').definition()).toThrow(SpellDefinitionError);
   });
 });
 
-// ---------------------------------------------------------------------------
-// UnionSchema async — non-SpellValidationError re-throw
-// ---------------------------------------------------------------------------
-
-describe('UnionSchema async non-SpellValidationError re-throw', () => {
-  it('re-throws unexpected non-SpellValidationError errors from async branches', async () => {
+describe('UnionSchema async failure boundaries', () => {
+  it('re-throws unexpected errors from asynchronous branches', async () => {
     const boom = new TypeError('unexpected internal error');
-    const badSchema = s.string().validate(async () => {
-      throw boom;
-    });
-    const schema = s.union(s.number(), badSchema);
+    const schema = s.union(
+      s.number(),
+      s.string().checkAsync(async () => {
+        throw boom;
+      }),
+    );
 
     await expect(schema.safeParseAsync('hello')).rejects.toThrow('unexpected internal error');
   });
 
-  it('collects SpellValidationError branch failures normally', async () => {
-    const schema = s.union(s.number(), s.string());
-    const result = await schema.safeParseAsync(true);
+  it('collects validation failures normally', async () => {
+    const result = await s.union(s.number(), s.string()).safeParseAsync(true);
 
-    expect(result.success).toBe(false);
+    expect(result).toMatchObject({ success: false });
 
-    if (!result.success) {
-      expect(result.error.issues[0].code).toBe('invalid_union');
-    }
+    if (!result.success) expect(result.error.issues[0]?.code).toBe('invalid_union');
   });
 });

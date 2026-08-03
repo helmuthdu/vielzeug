@@ -47,8 +47,8 @@ describe('record parseAsync — optional / catch', () => {
     ).toEqual({});
   });
 
-  it('parseAsync() runs async validate() on the value schema (does not silently skip)', async () => {
-    const asyncPositive = s.number().validate(async (n) => n > 0 || 'must be positive');
+  it('parseAsync() runs async checkAsync() on the value schema (does not silently skip)', async () => {
+    const asyncPositive = s.number().checkAsync(async (n) => n > 0 || 'must be positive');
     const schema = s.record(s.string(), asyncPositive);
 
     await expect(schema.safeParseAsync({ a: 1 })).resolves.toMatchObject({ success: true });

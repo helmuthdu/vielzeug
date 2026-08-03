@@ -1,18 +1,27 @@
 import type { SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema } from '../core';
-import { _messages } from '../messages';
 
-export class BooleanSchema<Input = boolean> extends Schema<boolean, Input> {
+export class BooleanSchema<Input = boolean, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
+  boolean,
+  Input,
+  Mode
+> {
   protected override get _kind(): string {
     return 'boolean';
+  }
+
+  override checkAsync(
+    fn: (value: boolean, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+  ): BooleanSchema<Input, 'async'> {
+    return this._addCheck(fn, true) as unknown as BooleanSchema<Input, 'async'>;
   }
 
   constructor() {
     super((value, ctx) =>
       typeof value === 'boolean'
         ? null
-        : [{ code: ErrorCode.invalid_type, message: (ctx?.messages ?? _messages()).boolean.type(), path: [] }],
+        : [{ code: ErrorCode.invalid_type, message: ctx!.messages.boolean.type(), path: [] }],
     );
   }
 
@@ -34,10 +43,6 @@ export class BooleanSchema<Input = boolean> extends Schema<boolean, Input> {
     if (visitor.boolean) return visitor.boolean(this);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    return other instanceof BooleanSchema;
   }
 
   static coerce(): BooleanSchema<unknown> {

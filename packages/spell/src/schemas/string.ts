@@ -1,4 +1,4 @@
-import type { AnySchema, MessageFn, SchemaDescriptor } from '../core';
+import type { MessageFn, SchemaDescriptor } from '../core';
 
 import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 import {
@@ -24,7 +24,7 @@ import {
   isUrl,
   isUuid,
 } from '../formats';
-import { _messages, _dev } from '../messages';
+import { _dev } from '../messages';
 
 /* -------------------- Typed annotations -------------------- */
 
@@ -41,25 +41,39 @@ type UrlOptions = {
   protocols?: readonly string[];
 };
 
-export class StringSchema<Input = string> extends Schema<string, Input> {
+export class StringSchema<Input = string, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
+  string,
+  Input,
+  Mode
+> {
   protected override get _kind(): string {
     return 'string';
   }
 
+  override checkAsync(
+    fn: (value: string, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+  ): StringSchema<Input, 'async'> {
+    return this._addCheck(fn, true) as unknown as StringSchema<Input, 'async'>;
+  }
+
   constructor() {
     super((value, ctx) =>
-      typeof value === 'string' ? null : fail(ErrorCode.invalid_type, (ctx?.messages ?? _messages()).string.type()),
+      typeof value === 'string' ? null : fail(ErrorCode.invalid_type, ctx!.messages.string.type()),
     );
   }
 
-  min(length: number, message: MessageFn<{ min: number; value: string }> = (ctx) => _messages().string.min(ctx)): this {
+  min(length: number, message?: MessageFn<{ min: number; value: string }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if ((value as string).length >= length) return null;
 
-        return fail(ErrorCode.too_small, resolveMessage(message, { min: length, value: value as string }), {
-          min: length,
-        });
+        return fail(
+          ErrorCode.too_small,
+          resolveMessage(message ?? ctx!.messages.string.min, { min: length, value: value as string }),
+          {
+            min: length,
+          },
+        );
       },
       (current) => {
         const ann = current as StringAnnotations;
@@ -72,14 +86,18 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     );
   }
 
-  max(length: number, message: MessageFn<{ max: number; value: string }> = (ctx) => _messages().string.max(ctx)): this {
+  max(length: number, message?: MessageFn<{ max: number; value: string }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if ((value as string).length <= length) return null;
 
-        return fail(ErrorCode.too_big, resolveMessage(message, { max: length, value: value as string }), {
-          max: length,
-        });
+        return fail(
+          ErrorCode.too_big,
+          resolveMessage(message ?? ctx!.messages.string.max, { max: length, value: value as string }),
+          {
+            max: length,
+          },
+        );
       },
       (current) => {
         const ann = current as StringAnnotations;
@@ -92,15 +110,16 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     );
   }
 
-  length(
-    exact: number,
-    message: MessageFn<{ exact: number; value: string }> = (ctx) => _messages().string.length(ctx),
-  ): this {
+  length(exact: number, message?: MessageFn<{ exact: number; value: string }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if ((value as string).length === exact) return null;
 
-        return fail(ErrorCode.invalid_length, resolveMessage(message, { exact, value: value as string }), { exact });
+        return fail(
+          ErrorCode.invalid_length,
+          resolveMessage(message ?? ctx!.messages.string.length, { exact, value: value as string }),
+          { exact },
+        );
       },
       (ann) => ({ ...ann, maxLength: exact, minLength: exact }),
     );
@@ -110,16 +129,20 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
    * Alias for `.nonEmpty()` — validates that the string is not empty.
    * Provided for discoverability alongside `ArraySchema.nonEmpty()`.
    */
-  nonempty(message: MessageFn<{ min: number; value: string }> = () => _messages().string.nonEmpty()): this {
+  nonempty(message?: MessageFn<{ min: number; value: string }>): this {
     return this.nonEmpty(message);
   }
 
-  nonEmpty(message: MessageFn<{ min: number; value: string }> = () => _messages().string.nonEmpty()): this {
+  nonEmpty(message?: MessageFn<{ min: number; value: string }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if ((value as string).length > 0) return null;
 
-        return fail(ErrorCode.too_small, resolveMessage(message, { min: 1, value: value as string }), { min: 1 });
+        return fail(
+          ErrorCode.too_small,
+          resolveMessage(message ?? ctx!.messages.string.nonEmpty, { min: 1, value: value as string }),
+          { min: 1 },
+        );
       },
       (current) => {
         const ann = current as StringAnnotations;
@@ -129,38 +152,41 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     );
   }
 
-  startsWith(
-    prefix: string,
-    message: MessageFn<{ prefix: string; value: string }> = (ctx) => _messages().string.startsWith(ctx),
-  ): this {
-    return this._addConstraint((value, _ctx) => {
+  startsWith(prefix: string, message?: MessageFn<{ prefix: string; value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if ((value as string).startsWith(prefix)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { prefix, value: value as string }), { prefix });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.startsWith, { prefix, value: value as string }),
+        { prefix },
+      );
     });
   }
 
-  endsWith(
-    suffix: string,
-    message: MessageFn<{ suffix: string; value: string }> = (ctx) => _messages().string.endsWith(ctx),
-  ): this {
-    return this._addConstraint((value, _ctx) => {
+  endsWith(suffix: string, message?: MessageFn<{ suffix: string; value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if ((value as string).endsWith(suffix)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { suffix, value: value as string }), { suffix });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.endsWith, { suffix, value: value as string }),
+        { suffix },
+      );
     });
   }
 
-  includes(
-    substr: string,
-    message: MessageFn<{ substr: string; value: string }> = (ctx) => _messages().string.includes(ctx),
-  ): this {
-    return this._addConstraint((value, _ctx) => {
+  includes(substr: string, message?: MessageFn<{ substr: string; value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if ((value as string).includes(substr)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { substr, value: value as string }), {
-        includes: substr,
-      });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.includes, { substr, value: value as string }),
+        {
+          includes: substr,
+        },
+      );
     });
   }
 
@@ -172,26 +198,24 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
    * (e.g. `/(a+)+$/`) are a ReDoS risk when validating untrusted input in server-side contexts.
    * Prefer well-tested, bounded patterns for user-facing validation.
    *
-   * **`.equals()` note:** `.equals()` only compares descriptor-level annotations, never runtime
-   * validator behavior. Chaining more than one `.regex()` collapses the descriptor `pattern` to
-   * `null` (ambiguous), so two schemas with *different* pairs of regexes can compare equal even
-   * though they accept different strings. This mirrors `.equals()`'s general limitation of
-   * ignoring custom `.validate()`/`.refine()` logic — avoid relying on `.equals()` for schemas
-   * with more than one `.regex()` constraint.
    */
-  regex(pattern: RegExp, message: MessageFn<{ value: string }> = (ctx) => _messages().string.regex(ctx)): this {
+  regex(pattern: RegExp, message?: MessageFn<{ value: string }>): this {
     const safePattern = new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ''));
 
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         // Caller-supplied regexes still run against untrusted strings; spell can
         // neutralize stateful /g and /y flags but cannot make arbitrary patterns
         // immune to catastrophic backtracking without breaking the API.
         if (safePattern.test(value as string)) return null;
 
-        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), {
-          pattern: safePattern.source,
-        });
+        return fail(
+          ErrorCode.invalid_string,
+          resolveMessage(message ?? ctx!.messages.string.regex, { value: value as string }),
+          {
+            pattern: safePattern.source,
+          },
+        );
       },
       (current) => {
         const ann = current as StringAnnotations;
@@ -203,7 +227,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
         if (ann.pattern !== safePattern.source) {
           _dev(
             '[spell] Multiple .regex() constraints detected on a single string schema. ' +
-              'JSON Schema `pattern` cannot represent multiple patterns and will be omitted from toJsonSchema() output.',
+              'JSON Schema `pattern` cannot represent multiple patterns and will be omitted from definition output.',
           );
 
           return { ...ann, pattern: null };
@@ -214,206 +238,290 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     );
   }
 
-  email(message: MessageFn<{ value: string }> = () => _messages().string.email()): this {
+  email(message?: MessageFn<{ value: string }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if (isEmail(value as string)) return null;
 
-        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'email' });
+        return fail(
+          ErrorCode.invalid_string,
+          resolveMessage(message ?? ctx!.messages.string.email, { value: value as string }),
+          { format: 'email' },
+        );
       },
       (ann) => ({ ...ann, format: 'email' }),
     );
   }
 
   url(options: UrlOptions = {}): this {
-    const { message = () => _messages().string.url(), protocols = ['http', 'https'] } = options;
+    const { message, protocols = ['http', 'https'] } = options;
 
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if (isUrl(value as string, protocols)) return null;
 
-        return fail(ErrorCode.invalid_url, resolveMessage(message, { value: value as string }), { format: 'url' });
+        return fail(
+          ErrorCode.invalid_url,
+          resolveMessage(message ?? ctx!.messages.string.url, { value: value as string }),
+          { format: 'url' },
+        );
       },
       (ann) => ({ ...ann, format: 'uri' }),
     );
   }
 
-  uuid(message: MessageFn<{ value: string }> = () => _messages().string.uuid()): this {
+  uuid(message?: MessageFn<{ value: string }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if (isUuid(value as string)) return null;
 
-        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'uuid' });
+        return fail(
+          ErrorCode.invalid_string,
+          resolveMessage(message ?? ctx!.messages.string.uuid, { value: value as string }),
+          { format: 'uuid' },
+        );
       },
       (ann) => ({ ...ann, format: 'uuid' }),
     );
   }
 
-  isoDate(message: MessageFn<{ value: string }> = () => _messages().string.date()): this {
+  isoDate(message?: MessageFn<{ value: string }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if (isIsoDate(value as string)) return null;
 
-        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), {
-          format: 'iso-date',
-        });
+        return fail(
+          ErrorCode.invalid_string,
+          resolveMessage(message ?? ctx!.messages.string.date, { value: value as string }),
+          {
+            format: 'iso-date',
+          },
+        );
       },
       (ann) => ({ ...ann, format: 'date' }),
     );
   }
 
-  isoDateTime(message: MessageFn<{ value: string }> = () => _messages().string.dateTime()): this {
+  isoDateTime(message?: MessageFn<{ value: string }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if (isIsoDateTime(value as string)) return null;
 
-        return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), {
-          format: 'iso-datetime',
-        });
+        return fail(
+          ErrorCode.invalid_string,
+          resolveMessage(message ?? ctx!.messages.string.dateTime, { value: value as string }),
+          {
+            format: 'iso-datetime',
+          },
+        );
       },
       (ann) => ({ ...ann, format: 'date-time' }),
     );
   }
 
-  ip(message: MessageFn<{ value: string }> = () => _messages().string.ip()): this {
-    return this._addConstraint((value, _ctx) => {
+  ip(message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isIp(value as string)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'ip' });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.ip, { value: value as string }),
+        { format: 'ip' },
+      );
     });
   }
 
-  cuid(message: MessageFn<{ value: string }> = () => _messages().string.cuid()): this {
-    return this._addConstraint((value, _ctx) => {
+  cuid(message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isCuid(value as string)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'cuid' });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.cuid, { value: value as string }),
+        { format: 'cuid' },
+      );
     });
   }
 
-  cuid2(message: MessageFn<{ value: string }> = () => _messages().string.cuid2()): this {
-    return this._addConstraint((value, _ctx) => {
+  cuid2(message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isCuid2(value as string)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'cuid2' });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.cuid2, { value: value as string }),
+        { format: 'cuid2' },
+      );
     });
   }
 
-  ulid(message: MessageFn<{ value: string }> = () => _messages().string.ulid()): this {
-    return this._addConstraint((value, _ctx) => {
+  ulid(message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isUlid(value as string)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'ulid' });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.ulid, { value: value as string }),
+        { format: 'ulid' },
+      );
     });
   }
 
-  nanoid(length?: number, message: MessageFn<{ value: string }> = () => _messages().string.nanoid()): this {
-    return this._addConstraint((value, _ctx) => {
+  nanoid(length?: number, message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isNanoid(value as string, length)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'nanoid' });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.nanoid, { value: value as string }),
+        { format: 'nanoid' },
+      );
     });
   }
 
-  base64(message: MessageFn<{ value: string }> = () => _messages().string.base64()): this {
+  base64(message?: MessageFn<{ value: string }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if (isBase64(value as string)) return null;
 
-        return fail(ErrorCode.invalid_base64, resolveMessage(message, { value: value as string }), {
-          format: 'base64',
-        });
+        return fail(
+          ErrorCode.invalid_base64,
+          resolveMessage(message ?? ctx!.messages.string.base64, { value: value as string }),
+          {
+            format: 'base64',
+          },
+        );
       },
       (ann) => ({ ...ann, contentEncoding: 'base64' }),
     );
   }
 
-  base64url(message: MessageFn<{ value: string }> = () => _messages().string.base64url()): this {
-    return this._addConstraint((value, _ctx) => {
+  base64url(message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isBase64url(value as string)) return null;
 
-      return fail(ErrorCode.invalid_base64, resolveMessage(message, { value: value as string }), {
-        format: 'base64url',
-      });
+      return fail(
+        ErrorCode.invalid_base64,
+        resolveMessage(message ?? ctx!.messages.string.base64url, { value: value as string }),
+        {
+          format: 'base64url',
+        },
+      );
     });
   }
 
-  hex(message: MessageFn<{ value: string }> = () => _messages().string.hex()): this {
-    return this._addConstraint((value, _ctx) => {
+  hex(message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isHex(value as string)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'hex' });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.hex, { value: value as string }),
+        { format: 'hex' },
+      );
     });
   }
 
-  hexColor(message: MessageFn<{ value: string }> = () => _messages().string.hexColor()): this {
-    return this._addConstraint((value, _ctx) => {
+  hexColor(message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isHexColor(value as string)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), {
-        format: 'hex-color',
-      });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.hexColor, { value: value as string }),
+        {
+          format: 'hex-color',
+        },
+      );
     });
   }
 
-  emoji(message: MessageFn<{ value: string }> = () => _messages().string.emoji()): this {
-    return this._addConstraint((value, _ctx) => {
+  emoji(message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isEmoji(value as string)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'emoji' });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.emoji, { value: value as string }),
+        { format: 'emoji' },
+      );
     });
   }
 
-  jwt(message: MessageFn<{ value: string }> = () => _messages().string.jwt()): this {
-    return this._addConstraint((value, _ctx) => {
+  jwt(message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isJwt(value as string)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'jwt' });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.jwt, { value: value as string }),
+        { format: 'jwt' },
+      );
     });
   }
 
-  time(message: MessageFn<{ value: string }> = () => _messages().string.time()): this {
-    return this._addConstraint((value, _ctx) => {
+  time(message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isTime(value as string)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'time' });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.time, { value: value as string }),
+        { format: 'time' },
+      );
     });
   }
 
-  duration(message: MessageFn<{ value: string }> = () => _messages().string.duration()): this {
+  duration(message?: MessageFn<{ value: string }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if (isDuration(value as string)) return null;
 
-        return fail(ErrorCode.invalid_duration, resolveMessage(message, { value: value as string }), {
-          format: 'duration',
-        });
+        return fail(
+          ErrorCode.invalid_duration,
+          resolveMessage(message ?? ctx!.messages.string.duration, { value: value as string }),
+          {
+            format: 'duration',
+          },
+        );
       },
       (ann) => ({ ...ann, format: 'duration' }),
     );
   }
 
-  semver(message: MessageFn<{ value: string }> = () => _messages().string.semver()): this {
-    return this._addConstraint((value, _ctx) => {
+  semver(message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isSemver(value as string)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'semver' });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.semver, { value: value as string }),
+        { format: 'semver' },
+      );
     });
   }
 
-  slug(message: MessageFn<{ value: string }> = () => _messages().string.slug()): this {
-    return this._addConstraint((value, _ctx) => {
+  slug(message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isSlug(value as string)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'slug' });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.slug, { value: value as string }),
+        { format: 'slug' },
+      );
     });
   }
 
-  numeric(message: MessageFn<{ value: string }> = () => _messages().string.numeric()): this {
-    return this._addConstraint((value, _ctx) => {
+  numeric(message?: MessageFn<{ value: string }>): this {
+    return this._addConstraint((value, ctx) => {
       if (isNumeric(value as string)) return null;
 
-      return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'numeric' });
+      return fail(
+        ErrorCode.invalid_string,
+        resolveMessage(message ?? ctx!.messages.string.numeric, { value: value as string }),
+        { format: 'numeric' },
+      );
     });
   }
 
@@ -429,7 +537,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
 
   /**
    * **Note:** `trim()` adds a preprocessor. Preprocessors are not serializable —
-   * `toDescriptor()` will warn if preprocessors are present.
+   * `definition()` throws because preprocessors are not serializable.
    */
   trim(): this {
     return this.preprocess((v: unknown) => (typeof v === 'string' ? v.trim() : v));
@@ -437,7 +545,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
 
   /**
    * **Note:** `lowercase()` adds a preprocessor. Preprocessors are not serializable —
-   * `toDescriptor()` will warn if preprocessors are present.
+   * `definition()` throws because preprocessors are not serializable.
    */
   lowercase(): this {
     return this.preprocess((v: unknown) => (typeof v === 'string' ? v.toLowerCase() : v));
@@ -445,7 +553,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
 
   /**
    * **Note:** `uppercase()` adds a preprocessor. Preprocessors are not serializable —
-   * `toDescriptor()` will warn if preprocessors are present.
+   * `definition()` throws because preprocessors are not serializable.
    */
   uppercase(): this {
     return this.preprocess((v: unknown) => (typeof v === 'string' ? v.toUpperCase() : v));
@@ -469,12 +577,6 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
       ...(ann.pattern !== undefined ? { pattern: ann.pattern } : {}),
       kind: 'string',
     };
-  }
-
-  protected override _equalsImpl(other: AnySchema): boolean {
-    if (!(other instanceof StringSchema)) return false;
-
-    return this._annotationsEqual(other);
   }
 
   static coerce(): StringSchema<unknown> {

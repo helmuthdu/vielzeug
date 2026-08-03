@@ -1,22 +1,12 @@
-import type { AnySchema, JsonSchema, SchemaDescriptor } from './types';
+import type { JsonSchema, SchemaDefinition, SchemaDescriptor } from './types';
 
 import { defineOwnProperty } from './safe-object';
 
-/**
- * Converts a `Schema` to a JSON Schema object by first calling `toDescriptor()`.
- * This is the entry point used by `Schema.toJsonSchema()`.
- */
-export function schemaToJsonSchema(schema: AnySchema): JsonSchema {
-  return descriptorToJsonSchema(schema.toDescriptor());
+export function definitionToJsonSchema(definition: SchemaDefinition): JsonSchema {
+  return descriptorToJsonSchema(definition);
 }
 
-/**
- * Converts a `SchemaDescriptor` to a JSON Schema object (draft 2020-12 compatible).
- *
- * This is the single authoritative JSON Schema serializer. `Schema.toJsonSchema()`
- * delegates to this function so there is one code path for both introspection and
- * JSON Schema output.
- */
+/** Converts a schema definition to a draft 2020-12-compatible JSON Schema object. */
 export function descriptorToJsonSchema(d: SchemaDescriptor): JsonSchema {
   const base = _descriptorToBase(d);
   let result: JsonSchema = base;

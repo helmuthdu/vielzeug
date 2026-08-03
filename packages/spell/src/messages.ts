@@ -1,6 +1,6 @@
 import type { ParseContext } from './types';
 
-import { warn as _warnFn } from './_dev';
+import { warn } from './_dev';
 import { cloneRecord, defineOwnProperty, isUnsafeObjectKey } from './safe-object';
 
 export type Messages = {
@@ -246,18 +246,15 @@ const _builtinMessages: Messages = {
   },
 };
 
-let _activeMessages: Messages = _builtinMessages;
-
-/** A function that receives internal warning messages from spell. */
-export type Logger = (message: string) => void;
-
-let _logger: Logger = (msg) => {
-  _warnFn(msg);
-};
-
+/**
+ * Built-in constraint callbacks predate ParseContext and resolve their default
+ * messages lazily. This stack scopes that lookup to one synchronous validator
+ * invocation; it never crosses an await boundary, so concurrent parses stay isolated.
+ * @internal
+ */
 /** @internal */
 export function _dev(message: string): void {
-  _logger(message);
+  warn(message);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -288,102 +285,11 @@ function mergeMessages<T extends Record<string, unknown>>(base: T, patch: DeepPa
 }
 
 /**
- * Override any subset of the default validation messages globally.
- * Each call starts from built-ins and applies the provided deep overrides.
- * It does not accumulate previous overrides.
- *
- * For locale integration (e.g. with \@vielzeug/lingua), call this inside
- * your locale-change handler:
- * ```ts
- * i18n.subscribe(() => setMessages(spellMessages[i18n.locale]));
- * ```
+ * Creates an immutable parse context. Pass this context to parse methods when
+ * validation messages vary by request, locale, or form. Spell never stores it globally.
  */
-export function setMessages(messages: DeepPartial<Messages>): void {
-  _activeMessages = mergeMessages(_builtinMessages, messages);
+export function createParseContext(messages: DeepPartial<Messages> = {}): ParseContext {
+  return { messages: mergeMessages(_builtinMessages, messages) };
 }
 
-/**
- * Override the internal warning logger.
- * Pass `null` to silence all internal warnings.
- */
-export function setLogger(logger: Logger | null): void {
-  _logger = logger ?? (() => {});
-}
-
-/** Reset all messages to the built-in defaults. */
-export function resetMessages(): void {
-  _activeMessages = _builtinMessages;
-}
-
-/**
- * Creates a parse context with request-scoped message overrides.
- * Does not mutate global message state.
- */
-export function createParseContext(messages?: DeepPartial<Messages>): ParseContext {
-  if (messages === undefined) return { messages: _activeMessages };
-
-  return { messages: mergeMessages(_activeMessages, messages) };
-}
-
-/**
- * Runs a callback with temporary global message overrides, then restores the previous state.
- * Supports both sync and async callbacks.
- */
-export function withMessages<T>(messages: DeepPartial<Messages>, run: () => T): T;
-export function withMessages<T>(messages: DeepPartial<Messages>, run: () => Promise<T>): Promise<T>;
-export function withMessages<T>(messages: DeepPartial<Messages>, run: () => T | Promise<T>): T | Promise<T> {
-  const previous = _activeMessages;
-
-  _activeMessages = mergeMessages(_builtinMessages, messages);
-
-  try {
-    const result = run();
-
-    if (result instanceof Promise) {
-      return result.finally(() => {
-        _activeMessages = previous;
-      });
-    }
-
-    _activeMessages = previous;
-
-    return result;
-  } catch (error) {
-    _activeMessages = previous;
-    throw error;
-  }
-}
-
-/**
- * Runs a callback with a temporary logger override, then restores the previous logger.
- * Supports both sync and async callbacks.
- */
-export function withLogger<T>(logger: Logger | null, run: () => T): T;
-export function withLogger<T>(logger: Logger | null, run: () => Promise<T>): Promise<T>;
-export function withLogger<T>(logger: Logger | null, run: () => T | Promise<T>): T | Promise<T> {
-  const previous = _logger;
-
-  _logger = logger ?? (() => {});
-
-  try {
-    const result = run();
-
-    if (result instanceof Promise) {
-      return result.finally(() => {
-        _logger = previous;
-      });
-    }
-
-    _logger = previous;
-
-    return result;
-  } catch (error) {
-    _logger = previous;
-    throw error;
-  }
-}
-
-/** @internal — returns the active (possibly overridden) message set. */
-export function _messages(): Messages {
-  return _activeMessages;
-}
+/** @internal */

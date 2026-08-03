@@ -65,22 +65,20 @@ describe('BigIntSchema', () => {
     expect(s.bigint().nullable().parse(null)).toBeNull();
   });
 
-  describe('toDescriptor() — constraint warning', () => {
+  describe('definition() — constraint warning', () => {
     test('warns when bigint has constraints (they are not serializable)', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      s.bigint().min(1n).toDescriptor();
+      s.bigint().min(1n).definition();
 
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('toDescriptor(): this bigint schema has constraints'),
-      );
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('definition(): this bigint schema has constraints'));
       warnSpy.mockRestore();
     });
 
     test('does not warn when bigint has no constraints', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      s.bigint().toDescriptor();
+      s.bigint().definition();
 
       expect(warnSpy).not.toHaveBeenCalled();
       warnSpy.mockRestore();

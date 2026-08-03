@@ -35,7 +35,7 @@ describe('s.array()', () => {
   it('check() on an array receives the parsed items, not the raw input', () => {
     const schema = s
       .array(s.coerce.number())
-      .validate((items) => items.every((n) => typeof n === 'number') || 'Items should be numbers');
+      .check((items) => items.every((n) => typeof n === 'number') || 'Items should be numbers');
 
     expect(schema.parse(['1', '2', '3'])).toEqual([1, 2, 3]);
   });
@@ -125,13 +125,13 @@ describe('ArraySchema.unique()', () => {
 
 describe('ArraySchema.parseAsync() concurrent item parsing', () => {
   it('resolves all items concurrently', async () => {
-    const schema = s.array(s.string().validate(async (val) => val.length > 0 || 'Empty'));
+    const schema = s.array(s.string().checkAsync(async (val) => val.length > 0 || 'Empty'));
 
     await expect(schema.parseAsync(['a', 'b', 'c'])).resolves.toEqual(['a', 'b', 'c']);
   });
 
   it('collects errors from all failing items', async () => {
-    const schema = s.array(s.string().validate(async (val) => val !== 'bad' || 'Bad value'));
+    const schema = s.array(s.string().checkAsync(async (val) => val !== 'bad' || 'Bad value'));
     const result = await schema.safeParseAsync(['ok', 'bad', 'bad']);
 
     expect(result.success).toBe(false);
@@ -154,7 +154,7 @@ describe('ArraySchema.parseAsync() concurrent item parsing', () => {
   });
 
   it('runs array-level validators after items pass', async () => {
-    const schema = s.array(s.number()).validate(async (arr) => arr.length > 0 || 'Empty array');
+    const schema = s.array(s.number()).checkAsync(async (arr) => arr.length > 0 || 'Empty array');
 
     await expect(schema.parseAsync([])).rejects.toThrow('Empty array');
     await expect(schema.parseAsync([1])).resolves.toEqual([1]);

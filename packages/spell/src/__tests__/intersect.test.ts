@@ -65,24 +65,24 @@ describe('s.intersect()', () => {
 
 describe('s.intersect() — async', () => {
   it('runs async refinements on all branches', async () => {
-    const a = s.string().validate(async (s) => s.length >= 3 || 'Too short');
-    const b = s.string().validate(async (s) => s.length <= 10 || 'Too long');
+    const a = s.string().checkAsync(async (s) => s.length >= 3 || 'Too short');
+    const b = s.string().checkAsync(async (s) => s.length <= 10 || 'Too long');
     const schema = s.intersect(a, b);
 
     expect(await schema.parseAsync('hello')).toBe('hello');
     await expect(schema.parseAsync('hi')).rejects.toThrow();
   });
 
-  it('refine() runs in parseAsync', async () => {
-    const schema = s.intersect(s.string(), s.string().min(1)).validate((v) => v !== 'forbidden' || 'Forbidden value');
+  it('check() runs in parseAsync', async () => {
+    const schema = s.intersect(s.string(), s.string().min(1)).check((v) => v !== 'forbidden' || 'Forbidden value');
     const result = await schema.safeParseAsync('forbidden');
 
     expect(result.success).toBe(false);
   });
 
   it('async: safeParseAsync() collects issues from all failing branches', async () => {
-    const a = s.string().validate(async (v) => v.length >= 5 || 'Too short');
-    const b = s.string().validate(async (v) => v.length <= 3 || 'Too long');
+    const a = s.string().checkAsync(async (v) => v.length >= 5 || 'Too short');
+    const b = s.string().checkAsync(async (v) => v.length <= 3 || 'Too long');
     const schema = s.intersect(a, b);
     const result = await schema.safeParseAsync('abcd');
 
@@ -108,15 +108,6 @@ describe('s.intersect() — async', () => {
     const result = await schema.safeParseAsync(true);
 
     expect(result.success).toBe(false);
-  });
-});
-
-describe('s.and() alias', () => {
-  it('is equivalent to s.intersect() with two schemas', () => {
-    const schema = s.and(s.string(), s.string().min(3));
-
-    expect(schema.parse('hello')).toBe('hello');
-    expect(() => schema.parse('hi')).toThrow();
   });
 });
 

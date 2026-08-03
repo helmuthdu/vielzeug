@@ -1,84 +1,36 @@
-export {
-  ErrorCode,
-  PipeSchema,
-  Schema,
-  SpellError,
-  SpellValidationError,
-  errorsAt,
-  fail,
-  type AnySchema,
-  type CheckContext,
-  type FlatError,
-  type FlatErrorFirst,
-  type FormattedErrors,
-  type Infer,
-  type InferInput,
-  type InferOutput,
-  type Issue,
-  type JsonSchema,
-  type MessageFn,
-  type Messages,
-  type ParseContext,
-  type ParseResult,
-  type SchemaDescriptor,
-  type SchemaWalker,
-  type ValidateFn,
-  type ValidateResult,
-  prependIssuePath,
+import { fail, prependIssuePath } from './errors';
+import { createParseContext } from './messages';
+
+export { ErrorCode, PipeSchema, Schema, SpellDefinitionError, SpellError, SpellValidationError } from './core';
+export type {
+  AnySchema,
+  CheckContext,
+  FlatError,
+  FlatErrorFirst,
+  Infer,
+  InferInput,
+  InferOutput,
+  InferSchemaMode,
+  Issue,
+  MergeSchemaModes,
+  SchemaMode,
+  JsonSchema,
+  MessageFn,
+  Messages,
+  ParseContext,
+  ParseResult,
+  SchemaDefinition,
+  SchemaDescriptor,
+  SchemaWalker,
+  ValidateFn,
+  ValidateResult,
 } from './core';
-
-export {
-  createParseContext,
-  resetMessages,
-  setLogger,
-  setMessages,
-  withLogger,
-  withMessages,
-  type DeepPartial,
-  type Logger,
-} from './messages';
-
-export { descriptorToJsonSchema, schemaToJsonSchema } from './json-schema';
-
-export {
-  hasMaxLength,
-  hasMinLength,
-  isArray,
-  isBoolean,
-  isDate,
-  isInteger,
-  isMultipleOf,
-  isNegative,
-  isNonNegative,
-  isNullOrUndefined,
-  isNumber,
-  isPositive,
-  isString,
-  isInRange,
-} from './validators';
-
-export {
-  isBase64,
-  isBase64url,
-  isCuid,
-  isCuid2,
-  isDuration,
-  isEmail,
-  isEmoji,
-  isHex,
-  isHexColor,
-  isIp,
-  isIsoDate,
-  isIsoDateTime,
-  isJwt,
-  isNanoid,
-  isNumeric,
-  isSemver,
-  isSlug,
-  isTime,
-  isUlid,
-  isUrl,
-  isUuid,
-} from './formats';
-
 export { s } from './s';
+export type { DeepPartial } from './messages';
+
+/** Error helpers and immutable parse-context creation are secondary operations. */
+export const diagnostics = {
+  createParseContext,
+  fail,
+  prependIssuePath,
+};

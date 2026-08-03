@@ -23,27 +23,6 @@ export function prependIssuePath(issues: Issue[], prefix: string | number): Issu
   return issues.map((issue) => ({ ...issue, path: [prefix, ...issue.path] }));
 }
 
-/* -------------------- FormattedErrors -------------------- */
-
-export type FormattedErrors = {
-  _errors: string[];
-  [key: string]: FormattedErrors | string[];
-};
-
-export function errorsAt(formatted: FormattedErrors, ...path: (string | number)[]): string[] {
-  let node: FormattedErrors | string[] = formatted;
-
-  for (const key of path) {
-    if (Array.isArray(node)) return [];
-
-    const safeKey = String(key) === '_errors' ? '_errors_' : String(key);
-
-    node = (node as FormattedErrors)[safeKey] ?? { _errors: [] };
-  }
-
-  return Array.isArray(node) ? node : (node as FormattedErrors)._errors;
-}
-
 /* -------------------- SpellError -------------------- */
 
 /** Base class for all spell errors. Use `instanceof SpellError` to catch any spell-originated error. */
@@ -71,16 +50,14 @@ function formatIssues(issues: Issue[]): string {
     .join('\n');
 }
 
+function pathsEqual(left: readonly (string | number)[], right: readonly (string | number)[]): boolean {
+  return left.length === right.length && left.every((segment, index) => segment === right[index]);
+}
+
 export type FlatError = { messages: string[]; path: (string | number)[] };
 export type FlatErrorFirst = { message: string; path: (string | number)[] };
 
-function createFormattedErrors(): FormattedErrors {
-  const node = Object.create(null) as FormattedErrors;
-
-  node._errors = [];
-
-  return node;
-}
+export class SpellDefinitionError extends SpellError {}
 
 export class SpellValidationError extends SpellError {
   readonly issues: Issue[];
@@ -88,10 +65,6 @@ export class SpellValidationError extends SpellError {
   constructor(issues: Issue[], cause?: unknown) {
     super(formatIssues(issues), { cause });
     this.issues = issues;
-  }
-
-  static is(err: unknown): err is SpellValidationError {
-    return err instanceof SpellValidationError;
   }
 
   /**
@@ -155,34 +128,8 @@ export class SpellValidationError extends SpellError {
     };
   }
 
-  format(): FormattedErrors {
-    const root = createFormattedErrors();
-
-    for (const issue of this.issues) {
-      if (issue.path.length === 0) {
-        root._errors.push(issue.message);
-        continue;
-      }
-
-      let node = root;
-
-      for (const segment of issue.path) {
-        const key = String(segment);
-
-        // '_errors' is the reserved internal field; treat it as a sibling key
-        // with a safe prefix to avoid collisions with the FormattedErrors shape.
-        const safeKey = key === '_errors' ? '_errors_' : key;
-
-        if (!Object.hasOwn(node, safeKey)) {
-          node[safeKey] = createFormattedErrors();
-        }
-
-        node = node[safeKey] as FormattedErrors;
-      }
-
-      node._errors.push(issue.message);
-    }
-
-    return root;
+  /** Returns every message attached to exactly `path`, in issue order. */
+  messagesAt(...path: (string | number)[]): string[] {
+    return this.issues.filter((issue) => pathsEqual(issue.path, path)).map((issue) => issue.message);
   }
 }

@@ -11,7 +11,7 @@ Form submissions often arrive as strings, optional fields, and checkboxes. You n
 
 ### Solution
 
-Use coercion, wrappers, and formatted errors to normalize the form payload in one step.
+Use coercion and wrappers to normalize the form payload in one step, then read messages directly by path.
 
 ```ts
 import { SpellValidationError, s } from '@vielzeug/spell';
@@ -32,8 +32,8 @@ const result = SignupForm.safeParse({
 
 if (result.success) {
   console.log(result.data.referralCode);
-} else if (SpellValidationError.is(result.error)) {
-  console.log(result.error.format());
+} else if (result.error instanceof SpellValidationError) {
+  console.log(result.error.messagesAt('email'));
 }
 ```
 

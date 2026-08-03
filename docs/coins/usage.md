@@ -562,11 +562,11 @@ const foodTotal = sum(byCategory.food.map((t) => t.amount));
 
 ```ts
 import { money, InvalidCurrencyError } from '@vielzeug/coins';
-import { object, string } from '@vielzeug/spell';
+import { s } from '@vielzeug/spell';
 
-const MoneyInput = object({
-  amount: string().regex(/^\d+(\.\d{1,3})?$/),
-  currency: string(),
+const MoneyInput = s.object({
+  amount: s.string().regex(/^\d+(\.\d{1,3})?$/),
+  currency: s.string(),
 });
 
 const parsed = MoneyInput.parse(formData);

@@ -1,7 +1,7 @@
 import { type Infer, s } from '../index';
 
-describe('s.variant()', () => {
-  const schema = s.variant('type', {
+describe('s.discriminatedUnion()', () => {
+  const schema = s.discriminatedUnion('type', {
     error: s.object({ message: s.string() }),
     ok: s.object({ data: s.string() }),
   });
@@ -37,7 +37,7 @@ describe('s.variant()', () => {
 
   it('throws for conflicting discriminator fields in a branch', () => {
     expect(() =>
-      s.variant('type', {
+      s.discriminatedUnion('type', {
         ok: s.object({ data: s.string(), type: s.string() }),
       }),
     ).toThrow(/discriminator/i);
@@ -45,14 +45,14 @@ describe('s.variant()', () => {
 
   it('throws for mismatched discriminator literals in a branch', () => {
     expect(() =>
-      s.variant('type', {
+      s.discriminatedUnion('type', {
         ok: s.object({ data: s.string(), type: s.literal('error') }),
       }),
     ).toThrow(/discriminator/i);
   });
 
   it('allows matching discriminator literals defined explicitly in a branch', () => {
-    const explicit = s.variant('type', {
+    const explicit = s.discriminatedUnion('type', {
       ok: s.object({ data: s.string(), type: s.literal('ok') }),
     });
 
@@ -60,24 +60,24 @@ describe('s.variant()', () => {
   });
 });
 
-describe('s.variant() — async', () => {
+describe('s.discriminatedUnion() — async', () => {
   it('optional().parseAsync(undefined) returns undefined', async () => {
-    const schema = s.variant('type', { ok: s.object({ msg: s.string() }) }).optional();
+    const schema = s.discriminatedUnion('type', { ok: s.object({ msg: s.string() }) }).optional();
 
     expect(await schema.parseAsync(undefined)).toBeUndefined();
   });
 
-  it('refine() runs in parseAsync', async () => {
+  it('check() runs in parseAsync', async () => {
     const schema = s
-      .variant('type', { ok: s.object({ msg: s.string() }) })
-      .validate((data) => data.msg !== 'forbidden' || 'Forbidden');
+      .discriminatedUnion('type', { ok: s.object({ msg: s.string() }) })
+      .check((data) => data.msg !== 'forbidden' || 'Forbidden');
     const result = await schema.safeParseAsync({ msg: 'forbidden', type: 'ok' });
 
     expect(result.success).toBe(false);
   });
 
   it('parseAsync() routes to correct branch by discriminator', async () => {
-    const schema = s.variant('kind', {
+    const schema = s.discriminatedUnion('kind', {
       a: s.object({ value: s.number() }),
       b: s.object({ label: s.string() }),
     });
@@ -87,7 +87,7 @@ describe('s.variant() — async', () => {
   });
 
   it('safeParseAsync() returns failure for unknown discriminator value', async () => {
-    const schema = s.variant('kind', { a: s.object({ value: s.number() }) });
+    const schema = s.discriminatedUnion('kind', { a: s.object({ value: s.number() }) });
     const result = await schema.safeParseAsync({ kind: 'z', value: 1 });
 
     expect(result.success).toBe(false);
@@ -98,14 +98,14 @@ describe('s.variant() — async', () => {
   });
 
   it('safeParseAsync() returns failure when discriminator field missing', async () => {
-    const schema = s.variant('type', { ok: s.object({ msg: s.string() }) });
+    const schema = s.discriminatedUnion('type', { ok: s.object({ msg: s.string() }) });
     const result = await schema.safeParseAsync({ msg: 'hello' });
 
     expect(result.success).toBe(false);
   });
 
   it('parseAsync() resolves with sync branch field validators', async () => {
-    const schema = s.variant('kind', {
+    const schema = s.discriminatedUnion('kind', {
       user: s.object({
         name: s.string().min(2),
       }),
@@ -119,9 +119,9 @@ describe('s.variant() — async', () => {
   });
 
   it('parseAsync() runs async branch field validators', async () => {
-    const schema = s.variant('kind', {
+    const schema = s.discriminatedUnion('kind', {
       user: s.object({
-        name: s.string().validate(async (_v) => 'Always fails async'),
+        name: s.string().checkAsync(async (_v) => 'Always fails async'),
       }),
     });
 

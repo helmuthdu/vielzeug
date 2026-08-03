@@ -39,6 +39,9 @@ export type MessageFn<Ctx extends Record<string, unknown> = Record<string, unkno
 /** Plain JSON Schema object (targeting JSON Schema 2020-12). */
 export type JsonSchema = Record<string, unknown>;
 
+/** Frozen data-only representation of a schema that can be exported to tooling. */
+export type SchemaDefinition = SchemaDescriptor;
+
 /* -------------------- Issues -------------------- */
 
 /**
@@ -115,20 +118,20 @@ export type CheckContext = {
 };
 
 /**
- * Return type of a `validate()` callback.
+ * Return type of a `check()` callback.
  * - `string` — validation failed; the string becomes the error message.
  * - `false` — validation failed with no message (use `addIssue` for a message).
  * - `true` / `null` / `void` — validation passed.
  *
  * The shorthand `condition || 'message'` works naturally:
  * ```ts
- * s.string().validate(v => v.length > 0 || 'Cannot be empty')
+ * s.string().check((value) => value.length > 0 || 'Cannot be empty')
  * ```
  */
 export type ValidateResult = boolean | null | void | string;
 
 /** Re-exported from errors for convenience — defined there. */
-export type { FlatError, FlatErrorFirst, FormattedErrors } from './errors';
+export type { FlatError, FlatErrorFirst } from './errors';
 
 /* -------------------- Schema Introspection -------------------- */
 
@@ -140,27 +143,34 @@ export type { FlatError, FlatErrorFirst, FormattedErrors } from './errors';
  * schema-specific properties (e.g. `ArraySchema.itemSchema`) without casting.
  */
 export type SchemaWalker<R> = {
-  array?: (schema: import('./schemas/array').ArraySchema<any>, item: R | null) => R;
-  bigint?: (schema: import('./schemas/bigint').BigIntSchema<any>) => R;
-  boolean?: (schema: import('./schemas/boolean').BooleanSchema<any>) => R;
-  date?: (schema: import('./schemas/date').DateSchema<any>) => R;
-  enum?: (schema: import('./schemas/enum').EnumSchema<any>) => R;
-  instanceof?: (schema: import('./schemas/instanceof').InstanceOfSchema<any>) => R;
-  intersect?: (schema: import('./schemas/intersect').IntersectSchema<any>, branches: (R | null)[]) => R;
-  lazy?: (schema: import('./schemas/lazy').LazySchema<any>) => R;
-  literal?: (schema: import('./schemas/literal').LiteralSchema<any>) => R;
-  map?: (schema: import('./schemas/map').MapSchema<any, any>, key: R | null, value: R | null) => R;
-  never?: (schema: import('./schemas/never').NeverSchema) => R;
-  number?: (schema: import('./schemas/number').NumberSchema<any>) => R;
-  object?: (schema: import('./schemas/object').ObjectSchema<any>, fields: Record<string, R | null>) => R;
-  pipe?: (schema: import('./core').PipeSchema<any, any>, from: R | null, to: R | null) => R;
-  record?: (schema: import('./schemas/record').RecordSchema<any, any>, key: R | null, value: R | null) => R;
-  set?: (schema: import('./schemas/set').SetSchema<any>, item: R | null) => R;
-  string?: (schema: import('./schemas/string').StringSchema<any>) => R;
-  tuple?: (schema: import('./schemas/tuple').TupleSchema<any, any>, items: (R | null)[], rest: R | null) => R;
-  union?: (schema: import('./schemas/union').UnionSchema<any>, branches: (R | null)[]) => R;
+  array?: (schema: import('./schemas/array').ArraySchema<any, SchemaMode>, item: R | null) => R;
+  bigint?: (schema: import('./schemas/bigint').BigIntSchema<any, SchemaMode>) => R;
+  boolean?: (schema: import('./schemas/boolean').BooleanSchema<any, SchemaMode>) => R;
+  date?: (schema: import('./schemas/date').DateSchema<any, SchemaMode>) => R;
+  enum?: (schema: import('./schemas/enum').EnumSchema<any, SchemaMode>) => R;
+  instanceof?: (schema: import('./schemas/instanceof').InstanceOfSchema<any, SchemaMode>) => R;
+  intersect?: (schema: import('./schemas/intersect').IntersectSchema<any, SchemaMode>, branches: (R | null)[]) => R;
+  lazy?: (schema: import('./schemas/lazy').LazySchema<any, any, SchemaMode>) => R;
+  literal?: (schema: import('./schemas/literal').LiteralSchema<any, SchemaMode>) => R;
+  map?: (schema: import('./schemas/map').MapSchema<any, any, SchemaMode>, key: R | null, value: R | null) => R;
+  never?: (schema: import('./schemas/never').NeverSchema<SchemaMode>) => R;
+  number?: (schema: import('./schemas/number').NumberSchema<any, SchemaMode>) => R;
+  object?: (schema: import('./schemas/object').ObjectSchema<any, SchemaMode>, fields: Record<string, R | null>) => R;
+  pipe?: (schema: import('./core').PipeSchema<any, any, SchemaMode>, from: R | null, to: R | null) => R;
+  record?: (schema: import('./schemas/record').RecordSchema<any, any, SchemaMode>, key: R | null, value: R | null) => R;
+  set?: (schema: import('./schemas/set').SetSchema<any, SchemaMode>, item: R | null) => R;
+  string?: (schema: import('./schemas/string').StringSchema<any, SchemaMode>) => R;
+  tuple?: (
+    schema: import('./schemas/tuple').TupleSchema<any, any, SchemaMode>,
+    items: (R | null)[],
+    rest: R | null,
+  ) => R;
+  union?: (schema: import('./schemas/union').UnionSchema<any, SchemaMode>, branches: (R | null)[]) => R;
   unknown?: (schema: AnySchema) => R;
-  variant?: (schema: import('./schemas/variant').VariantSchema<any, any>, branches: Record<string, R | null>) => R;
+  variant?: (
+    schema: import('./schemas/variant').VariantSchema<any, any, SchemaMode>,
+    branches: Record<string, R | null>,
+  ) => R;
 };
 
 type BaseDescriptor = {
@@ -211,11 +221,43 @@ import type { SpellValidationError } from './errors';
 
 export type ParseResult<T> = { data: T; success: true } | { error: SpellValidationError; success: false };
 
-/* -------------------- AnySchema / Infer (forward-references Schema) -------------------- */
+/* -------------------- Schema execution mode / Infer (forward-references Schema) -------------------- */
 
-export type AnySchema = Schema<unknown, unknown>;
-export type InferOutput<T> = T extends Schema<infer O> ? O : never;
-export type InferInput<T> = T extends Schema<any, infer I> ? I : never;
+/** @internal */
+export const schemaInput = Symbol('spell.schemaInput');
+/** @internal */
+export const schemaOutput = Symbol('spell.schemaOutput');
+
+/** Whether a schema can be parsed synchronously or requires asynchronous parsing. */
+export type SchemaMode = 'async' | 'sync';
+
+/** A schema surface, regardless of its parsing capability. */
+type SchemaSurface<Output = unknown> = {
+  _parseFullAsync(value: unknown, ctx?: ParseContext): Promise<{ data: unknown; issues: Issue[] }>;
+  _parseFullSync(value: unknown, ctx?: ParseContext): { data: unknown; issues: Issue[] };
+  definition(): SchemaDefinition;
+  isOptional: boolean;
+  optional(): SchemaSurface<Output | undefined>;
+  required(): SchemaSurface<Exclude<Output, undefined>>;
+  readonly [schemaOutput]: Output;
+  walk<R>(visitor: SchemaWalker<R>): R | null;
+};
+
+export type AnySchema = SchemaSurface<unknown>;
+
+/** Extracts a schema's parsing capability. */
+export type InferSchemaMode<T> = T extends Schema<any, any, infer Mode> ? Mode : never;
+
+/** Selects async mode when any member of a schema collection is async. */
+export type MergeSchemaModes<Modes extends SchemaMode> = 'async' extends Modes ? 'async' : 'sync';
+
+export type InferOutput<T> =
+  T extends Schema<infer Output, unknown, SchemaMode>
+    ? Output
+    : T extends { readonly [schemaOutput]: infer Output }
+      ? Output
+      : never;
+export type InferInput<T> = T extends { readonly [schemaInput]: infer Input } ? Input : unknown;
 export type Infer<T> = InferOutput<T>;
 
 /** Re-exported for convenience — defined in messages.ts. */

@@ -47,7 +47,7 @@ describe('optional nullable nullish required', () => {
       .string()
       .optional()
       .default('fallback')
-      .validate((value) => value !== 'bad' || 'Bad')
+      .check((value) => value !== 'bad' || 'Bad')
       .label('Field')
       .nullable();
 
@@ -67,7 +67,7 @@ describe('optional nullable nullish required', () => {
       .number()
       .optional()
       .default(42)
-      .validate((value) => value !== 0 || 'Zero')
+      .check((value) => value !== 0 || 'Zero')
       .label('Answer')
       .required()
       .nullable();
@@ -263,65 +263,6 @@ describe('assert()', () => {
       expect(e).toBeInstanceOf(SpellValidationError);
       expect((e as SpellValidationError).issues[0].message).not.toMatch(/^undefined:/);
     }
-  });
-});
-
-describe('equals()', () => {
-  it('returns true for structurally identical primitive schemas', () => {
-    expect(s.string().equals(s.string())).toBe(true);
-    expect(s.number().min(1).equals(s.number().min(1))).toBe(true);
-  });
-
-  it('returns false for different schema kinds', () => {
-    expect(s.string().equals(s.number())).toBe(false);
-  });
-
-  it('returns false when annotations differ', () => {
-    expect(s.string().min(3).equals(s.string().min(5))).toBe(false);
-  });
-
-  it('returns true for identical optional wrappers', () => {
-    expect(s.string().optional().equals(s.string().optional())).toBe(true);
-  });
-
-  it('returns false when wrapper modes differ', () => {
-    expect(s.string().optional().equals(s.string().nullable())).toBe(false);
-  });
-
-  it('returns true for identical object schemas', () => {
-    const a = s.object({ id: s.number(), name: s.string() });
-    const b = s.object({ id: s.number(), name: s.string() });
-
-    expect(a.equals(b)).toBe(true);
-  });
-
-  it('returns false when object shapes differ', () => {
-    expect(s.object({ a: s.string() }).equals(s.object({ b: s.string() }))).toBe(false);
-  });
-
-  it('returns false when description differs', () => {
-    expect(s.string().label('A').equals(s.string().label('B'))).toBe(false);
-  });
-
-  it('returns false when isOptional differs', () => {
-    expect(s.string().optional().equals(s.string())).toBe(false);
-  });
-
-  it('two different multi-.regex() string schemas can compare equal (documented limitation)', () => {
-    // Chaining more than one .regex() collapses the descriptor pattern to `null` (ambiguous),
-    // so schemas built from different pairs of regexes are indistinguishable via equals().
-    const a = s
-      .string()
-      .regex(/^[a-z]+$/)
-      .regex(/^.{3,}$/);
-    const b = s
-      .string()
-      .regex(/^[0-9]+$/)
-      .regex(/^.{5,}$/);
-
-    expect(a.equals(b)).toBe(true);
-    expect(a.parse('abc')).toBe('abc');
-    expect(() => b.parse('abc')).toThrow();
   });
 });
 

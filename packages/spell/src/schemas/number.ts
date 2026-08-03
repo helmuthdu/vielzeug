@@ -1,7 +1,6 @@
-import type { AnySchema, MessageFn, SchemaDescriptor } from '../core';
+import type { MessageFn, SchemaDescriptor } from '../core';
 
 import { ErrorCode, fail, resolveMessage, Schema } from '../core';
-import { _messages } from '../messages';
 
 /* -------------------- Typed annotations -------------------- */
 
@@ -14,30 +13,41 @@ interface NumberAnnotations extends Record<string, unknown> {
   typeHint?: 'integer';
 }
 
-export class NumberSchema<Input = number> extends Schema<number, Input> {
+export class NumberSchema<Input = number, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
+  number,
+  Input,
+  Mode
+> {
   protected override get _kind(): string {
     return 'number';
+  }
+
+  override checkAsync(
+    fn: (value: number, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+  ): NumberSchema<Input, 'async'> {
+    return this._addCheck(fn, true) as unknown as NumberSchema<Input, 'async'>;
   }
 
   constructor() {
     super((value, ctx) =>
       typeof value === 'number' && !Number.isNaN(value)
         ? null
-        : fail(ErrorCode.invalid_type, (ctx?.messages ?? _messages()).number.type()),
+        : fail(ErrorCode.invalid_type, ctx!.messages.number.type()),
     );
   }
 
-  min(
-    minimum: number,
-    message: MessageFn<{ min: number; value: number }> = (ctx) => _messages().number.min(ctx),
-  ): this {
+  min(minimum: number, message?: MessageFn<{ min: number; value: number }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if ((value as number) >= minimum) return null;
 
-        return fail(ErrorCode.too_small, resolveMessage(message, { min: minimum, value: value as number }), {
-          min: minimum,
-        });
+        return fail(
+          ErrorCode.too_small,
+          resolveMessage(message ?? ctx!.messages.number.min, { min: minimum, value: value as number }),
+          {
+            min: minimum,
+          },
+        );
       },
       (current) => {
         const ann = current as NumberAnnotations;
@@ -50,17 +60,18 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
     );
   }
 
-  max(
-    maximum: number,
-    message: MessageFn<{ max: number; value: number }> = (ctx) => _messages().number.max(ctx),
-  ): this {
+  max(maximum: number, message?: MessageFn<{ max: number; value: number }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if ((value as number) <= maximum) return null;
 
-        return fail(ErrorCode.too_big, resolveMessage(message, { max: maximum, value: value as number }), {
-          max: maximum,
-        });
+        return fail(
+          ErrorCode.too_big,
+          resolveMessage(message ?? ctx!.messages.number.max, { max: maximum, value: value as number }),
+          {
+            max: maximum,
+          },
+        );
       },
       (current) => {
         const ann = current as NumberAnnotations;
@@ -73,26 +84,33 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
     );
   }
 
-  int(message: MessageFn<{ value: number }> = () => _messages().number.int()): this {
+  int(message?: MessageFn<{ value: number }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if (Number.isInteger(value as number)) return null;
 
-        return fail(ErrorCode.invalid_integer, resolveMessage(message, { value: value as number }));
+        return fail(
+          ErrorCode.invalid_integer,
+          resolveMessage(message ?? ctx!.messages.number.int, { value: value as number }),
+        );
       },
       (ann) => ({ ...ann, typeHint: 'integer' as const }),
     );
   }
 
-  positive(message: MessageFn<{ value: number }> = () => _messages().number.positive()): this {
+  positive(message?: MessageFn<{ value: number }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if ((value as number) > 0) return null;
 
-        return fail(ErrorCode.too_small, resolveMessage(message, { value: value as number }), {
-          exclusive: true,
-          min: 0,
-        });
+        return fail(
+          ErrorCode.too_small,
+          resolveMessage(message ?? ctx!.messages.number.positive, { value: value as number }),
+          {
+            exclusive: true,
+            min: 0,
+          },
+        );
       },
       (current) => {
         const ann = current as NumberAnnotations;
@@ -105,15 +123,19 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
     );
   }
 
-  negative(message: MessageFn<{ value: number }> = () => _messages().number.negative()): this {
+  negative(message?: MessageFn<{ value: number }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if ((value as number) < 0) return null;
 
-        return fail(ErrorCode.too_big, resolveMessage(message, { value: value as number }), {
-          exclusive: true,
-          max: 0,
-        });
+        return fail(
+          ErrorCode.too_big,
+          resolveMessage(message ?? ctx!.messages.number.negative, { value: value as number }),
+          {
+            exclusive: true,
+            max: 0,
+          },
+        );
       },
       (current) => {
         const ann = current as NumberAnnotations;
@@ -126,12 +148,16 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
     );
   }
 
-  nonNegative(message: MessageFn<{ value: number }> = () => _messages().number.nonNegative()): this {
+  nonNegative(message?: MessageFn<{ value: number }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if ((value as number) >= 0) return null;
 
-        return fail(ErrorCode.too_small, resolveMessage(message, { value: value as number }), { min: 0 });
+        return fail(
+          ErrorCode.too_small,
+          resolveMessage(message ?? ctx!.messages.number.nonNegative, { value: value as number }),
+          { min: 0 },
+        );
       },
       (current) => {
         const ann = current as NumberAnnotations;
@@ -141,12 +167,16 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
     );
   }
 
-  nonPositive(message: MessageFn<{ value: number }> = () => _messages().number.nonPositive()): this {
+  nonPositive(message?: MessageFn<{ value: number }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if ((value as number) <= 0) return null;
 
-        return fail(ErrorCode.too_big, resolveMessage(message, { value: value as number }), { max: 0 });
+        return fail(
+          ErrorCode.too_big,
+          resolveMessage(message ?? ctx!.messages.number.nonPositive, { value: value as number }),
+          { max: 0 },
+        );
       },
       (current) => {
         const ann = current as NumberAnnotations;
@@ -156,33 +186,40 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
     );
   }
 
-  multipleOf(
-    step: number,
-    message: MessageFn<{ step: number; value: number }> = (ctx) => _messages().number.multipleOf(ctx),
-  ): this {
+  multipleOf(step: number, message?: MessageFn<{ step: number; value: number }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if (Math.abs(Math.round((value as number) / step) - (value as number) / step) < 1e-9) return null;
 
-        return fail(ErrorCode.invalid_multiple_of, resolveMessage(message, { step, value: value as number }), { step });
+        return fail(
+          ErrorCode.invalid_multiple_of,
+          resolveMessage(message ?? ctx!.messages.number.multipleOf, { step, value: value as number }),
+          { step },
+        );
       },
       (ann) => ({ ...ann, multipleOf: step }),
     );
   }
 
-  safe(message: MessageFn<{ value: number }> = () => _messages().number.safe()): this {
-    return this._addConstraint((value, _ctx) => {
+  safe(message?: MessageFn<{ value: number }>): this {
+    return this._addConstraint((value, ctx) => {
       if (Number.isSafeInteger(value as number)) return null;
 
-      return fail(ErrorCode.invalid_safe, resolveMessage(message, { value: value as number }));
+      return fail(
+        ErrorCode.invalid_safe,
+        resolveMessage(message ?? ctx!.messages.number.safe, { value: value as number }),
+      );
     });
   }
 
-  finite(message: MessageFn<{ value: number }> = () => _messages().number.finite()): this {
-    return this._addConstraint((value, _ctx) => {
+  finite(message?: MessageFn<{ value: number }>): this {
+    return this._addConstraint((value, ctx) => {
       if (Number.isFinite(value as number)) return null;
 
-      return fail(ErrorCode.invalid_finite, resolveMessage(message, { value: value as number }));
+      return fail(
+        ErrorCode.invalid_finite,
+        resolveMessage(message ?? ctx!.messages.number.finite, { value: value as number }),
+      );
     });
   }
 
@@ -214,12 +251,6 @@ export class NumberSchema<Input = number> extends Schema<number, Input> {
       ...(ann.typeHint !== undefined ? { typeHint: ann.typeHint } : {}),
       kind: 'number',
     };
-  }
-
-  protected override _equalsImpl(other: AnySchema): boolean {
-    if (!(other instanceof NumberSchema)) return false;
-
-    return this._annotationsEqual(other);
   }
 
   static coerce(): NumberSchema<unknown> {

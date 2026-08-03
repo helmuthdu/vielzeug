@@ -7,7 +7,7 @@ describe('Spell adapter', () => {
   test('maps nested and form errors without transforming form values', async () => {
     const schema = s
       .object({ profile: s.object({ email: s.string().email() }) })
-      .validate((_value, context) => context.addIssue({ code: 'custom', message: 'Unavailable', path: [] }));
+      .check((_value, context) => context.addIssue({ code: 'custom', message: 'Unavailable', path: [] }));
     const form = createForm({
       initialValues: { profile: { email: 'invalid' } },
       validate: customValidator(schema),
@@ -39,11 +39,11 @@ describe('Spell adapter', () => {
 
   test('keeps the first duplicate message and ignores unsafe paths', async () => {
     const schema = s.object({
-      email: s.string().validate((_value, context) => {
+      email: s.string().check((_value, context) => {
         context.addIssue({ code: 'custom', message: 'First', path: [] });
         context.addIssue({ code: 'custom', message: 'Second', path: [] });
       }),
-      unsafe: s.string().validate((_value, context) => {
+      unsafe: s.string().check((_value, context) => {
         context.addIssue({ code: 'custom', message: 'Ignored', path: ['__proto__'] });
       }),
     });
@@ -63,7 +63,7 @@ describe('Spell adapter', () => {
     const pending = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const schema = s.object({ email: s.string().validate(async () => pending) });
+    const schema = s.object({ email: s.string().checkAsync(async () => pending) });
     const form = createForm({ initialValues: { email: '' }, validate: customValidator(schema) });
     const controller = new AbortController();
     const validation = form.validate(controller.signal);
@@ -124,7 +124,7 @@ describe('Spell adapter', () => {
       release = resolve;
     });
     const schema = s.object({
-      email: s.string().validate(async () => {
+      email: s.string().checkAsync(async () => {
         await pending;
         throw new Error('late failure');
       }),

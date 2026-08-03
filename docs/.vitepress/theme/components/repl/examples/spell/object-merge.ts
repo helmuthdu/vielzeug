@@ -30,14 +30,12 @@ const Merged = Strict.merge(Relaxed);
 // Extra keys are allowed because Relaxed is the right-hand schema
 console.log(Merged.safeParse({ a: 'hi', b: 1, extra: true }).success); // true
 
-// s.or() is a two-argument alias for s.union()
-const IdOrSlug = s.or(s.string().uuid(), s.string().slug());
+const IdOrSlug = s.union(s.string().uuid(), s.string().slug());
 console.log(IdOrSlug.safeParse('550e8400-e29b-41d4-a716-446655440000').success); // true
 console.log(IdOrSlug.safeParse('my-slug').success); // true
 console.log(IdOrSlug.safeParse(42).success); // false
 
-// s.and() is a two-argument alias for s.intersect()
-const NonEmptyString = s.and(s.string(), s.string().min(1));
+const NonEmptyString = s.intersect(s.string(), s.string().min(1));
 console.log(NonEmptyString.parse('hello')); // 'hello'
 `,
   name: 'Object Merge & Aliases',

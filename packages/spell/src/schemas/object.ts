@@ -7,8 +7,14 @@ import { UnionSchema } from './union';
 
 export type ObjectShape = Record<string, AnySchema>;
 export type InferObject<T extends ObjectShape> = { [K in keyof T]: InferOutput<T[K]> };
+export type InferObjectInput<T extends ObjectShape> = { [K in keyof T]: import('../core').InferInput<T[K]> };
 
-export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> {
+export class ObjectSchema<
+  T extends ObjectShape,
+  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
+    import('../core').InferSchemaMode<T[keyof T]>
+  >,
+> extends Schema<InferObject<T>, InferObjectInput<T>, Mode> {
   readonly shape: T;
   private readonly _isRelaxed: boolean;
 
@@ -18,7 +24,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
 
   constructor(shape: T, isRelaxed = false) {
     super();
-    this.shape = shape;
+    this.shape = Object.freeze(objectFromEntries(Object.entries(shape))) as T;
     this._isRelaxed = isRelaxed;
   }
 
@@ -172,11 +178,11 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     );
   }
 
-  override required(): Schema<InferObject<T>> {
+  override required(): Schema<InferObject<T>, InferObjectInput<T>, Mode> {
     return this._rebuildWith(
       objectFromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.required()])) as any,
       this._isRelaxed,
-    ) as unknown as Schema<InferObject<T>>;
+    ) as unknown as Schema<InferObject<T>, InferObjectInput<T>, Mode>;
   }
 
   extend<U extends ObjectShape>(extra: U): ObjectSchema<Omit<T, keyof U> & U> {
@@ -297,7 +303,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     const fields: Record<string, SchemaDescriptor> = {};
 
     for (const [key, schema] of Object.entries(this.shape)) {
-      defineOwnProperty(fields, key, schema.toDescriptor());
+      defineOwnProperty(fields, key, schema.definition());
     }
 
     return { ...this._describeBase(), fields, kind: 'object', strict: !this._isRelaxed };
@@ -316,23 +322,5 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
       objectFromEntries([...Object.entries(this.shape), ...Object.entries(other.shape)]) as any,
       other._isRelaxed,
     );
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    if (!(other instanceof ObjectSchema)) return false;
-
-    if (this._isRelaxed !== other._isRelaxed) return false;
-
-    const keys = Object.keys(this.shape);
-
-    if (keys.length !== Object.keys(other.shape).length) return false;
-
-    for (const k of keys) {
-      if (!Object.hasOwn(other.shape, k)) return false;
-
-      if (!this.shape[k].equals(other.shape[k])) return false;
-    }
-
-    return true;
   }
 }

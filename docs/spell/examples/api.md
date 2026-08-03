@@ -44,7 +44,7 @@ try {
 
   console.log(article.id);
 } catch (error) {
-  if (SpellValidationError.is(error)) {
+  if (error instanceof SpellValidationError) {
     console.log(error.flattenFirst());
   }
 }

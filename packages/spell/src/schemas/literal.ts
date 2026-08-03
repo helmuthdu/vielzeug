@@ -1,13 +1,21 @@
 import type { SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema } from '../core';
-import { _messages } from '../messages';
 
-export class LiteralSchema<T extends string | number | boolean | null | undefined> extends Schema<T> {
+export class LiteralSchema<
+  T extends string | number | boolean | null | undefined,
+  Mode extends import('../core').SchemaMode = 'sync',
+> extends Schema<T, T, Mode> {
   readonly value: T;
 
   protected override get _kind(): string {
     return 'literal';
+  }
+
+  override checkAsync(
+    fn: (value: T, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+  ): LiteralSchema<T, 'async'> {
+    return this._addCheck(fn, true) as unknown as LiteralSchema<T, 'async'>;
   }
 
   constructor(value: T) {
@@ -17,7 +25,7 @@ export class LiteralSchema<T extends string | number | boolean | null | undefine
         : [
             {
               code: ErrorCode.invalid_literal,
-              message: (ctx?.messages ?? _messages()).literal.expected({ expected: value }),
+              message: ctx!.messages.literal.expected({ expected: value }),
               params: { expected: value },
               path: [],
             },
@@ -34,11 +42,5 @@ export class LiteralSchema<T extends string | number | boolean | null | undefine
     if (visitor.literal) return visitor.literal(this);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    if (!(other instanceof LiteralSchema)) return false;
-
-    return this.value === other.value;
   }
 }

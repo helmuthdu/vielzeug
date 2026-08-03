@@ -48,8 +48,8 @@ describe('TupleSchema.rest()', () => {
     if (result.success) expect(result.data).toEqual(['hello', 1, 2]);
   });
 
-  test('parseAsync() runs async validate() on the rest schema (does not silently skip)', async () => {
-    const asyncPositive = s.number().validate(async (n) => n > 0 || 'must be positive');
+  test('parseAsync() runs async checkAsync() on the rest schema (does not silently skip)', async () => {
+    const asyncPositive = s.number().checkAsync(async (n) => n > 0 || 'must be positive');
     const schema = s.tuple([s.string()] as const).rest(asyncPositive);
 
     await expect(schema.safeParseAsync(['hello', 1, 2])).resolves.toMatchObject({ success: true });

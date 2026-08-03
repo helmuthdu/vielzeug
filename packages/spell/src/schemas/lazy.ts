@@ -2,21 +2,33 @@ import type { ParseContext, ParseValue, SchemaDescriptor, SchemaState } from '..
 
 import { Schema, SpellValidationError, _makeCtx } from '../core';
 
-export class LazySchema<T> extends Schema<T> {
-  private readonly _getter: () => Schema<T, any>;
-  private _resolved?: Schema<T, any>;
+export class LazySchema<T, Input = T, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
+  T,
+  Input,
+  Mode
+> {
+  private readonly _getter: () => Schema<T, Input, Mode>;
+  private _resolved?: Schema<T, Input, Mode>;
 
   protected override get _kind(): string {
     return 'lazy';
   }
 
-  constructor(getter: () => Schema<T, any>) {
+  override checkAsync(
+    fn: (value: T, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+  ): LazySchema<T, Input, 'async'> {
+    return this._addCheck(fn, true) as unknown as LazySchema<T, Input, 'async'>;
+  }
+
+  constructor(getter: () => Schema<T, Input, Mode>) {
     super();
     this._getter = getter;
   }
 
-  private _resolve(): Schema<T, any> {
-    return (this._resolved ??= this._getter());
+  private _resolve(): Schema<T, Input, Mode> {
+    const resolved = (this._resolved ??= this._getter());
+
+    return resolved;
   }
 
   protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
@@ -55,13 +67,6 @@ export class LazySchema<T> extends Schema<T> {
     if (visitor.lazy) return visitor.lazy(this);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    // Lazy schemas are equal only if they reference the same getter function.
-    if (!(other instanceof LazySchema)) return false;
-
-    return this._getter === other._getter;
   }
 
   protected override _construct(state: SchemaState<any>): this {

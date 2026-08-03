@@ -157,7 +157,7 @@ pnpm add @vielzeug/spell
 - Fluent schema API — `s.object()`, `s.string()`, `s.number()`, `s.array()`, and more
 - Precise input/output typing with `InferInput<T>` and `Infer<T>`
 - Async validation, custom refinements, and transforms
-- Comprehensive error handling with `errorsAt()` (14 KB min / 2.8 KB gz)
+- Comprehensive error handling with `messagesAt()` (14 KB min / 2.8 KB gz)
 
 [📖 Documentation](https://vielzeug.dev/spell/) • [Examples](https://vielzeug.dev/spell/examples)
 

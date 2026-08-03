@@ -66,8 +66,8 @@ describe('MapSchema', () => {
     expect(result.get('hello')).toBe(5);
   });
 
-  test('parseAsync() runs async validate() on the value schema (does not silently skip)', async () => {
-    const asyncPositive = s.number().validate(async (n) => n > 0 || 'must be positive');
+  test('parseAsync() runs async checkAsync() on the value schema (does not silently skip)', async () => {
+    const asyncPositive = s.number().checkAsync(async (n) => n > 0 || 'must be positive');
     const schema = s.map(s.string(), asyncPositive);
 
     await expect(schema.safeParseAsync(new Map([['a', 1]]))).resolves.toMatchObject({ success: true });

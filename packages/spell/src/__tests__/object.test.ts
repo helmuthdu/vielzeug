@@ -76,7 +76,7 @@ describe('s.object()', () => {
     });
 
     it('partial() preserves refinements', () => {
-      const base = User.validate((d) => d.name !== 'admin' || 'Reserved name');
+      const base = User.check((d) => d.name !== 'admin' || 'Reserved name');
 
       expect(() => base.partial().parse({ name: 'admin' })).toThrow('Reserved name');
     });
@@ -91,7 +91,7 @@ describe('s.object()', () => {
     });
 
     it('required() preserves refinements', () => {
-      const base = User.partial().validate((d) => d.name !== 'admin' || 'Reserved name');
+      const base = User.partial().check((d) => d.name !== 'admin' || 'Reserved name');
 
       expect(() => base.required().parse({ id: 1, name: 'admin' })).toThrow('Reserved name');
     });
@@ -116,7 +116,7 @@ describe('s.object()', () => {
     });
 
     it('preserves refinements', () => {
-      const refined = User.validate((d) => d.name !== 'admin' || 'Reserved name');
+      const refined = User.check((d) => d.name !== 'admin' || 'Reserved name');
 
       expect(() => refined.extend({ role: s.string() }).parse({ id: 1, name: 'admin', role: 'x' })).toThrow(
         'Reserved name',
@@ -146,7 +146,7 @@ describe('s.object()', () => {
     });
 
     it('pick() and omit() preserve refinements', () => {
-      const refined = Full.validate((d) => d.email.includes('@') || 'Invalid email format');
+      const refined = Full.check((d) => d.email.includes('@') || 'Invalid email format');
 
       expect(() => refined.pick('email').parse({ email: 'bad' })).toThrow('Invalid email format');
       expect(() => refined.omit('id').parse({ email: 'bad', name: 'Alice' })).toThrow('Invalid email format');
@@ -338,7 +338,7 @@ describe('ObjectSchema.merge()', () => {
   });
 
   it('merge() preserves refinements from the receiver', () => {
-    const a = s.object({ x: s.string() }).validate((d) => d.x !== 'admin' || 'Reserved name');
+    const a = s.object({ x: s.string() }).check((d) => d.x !== 'admin' || 'Reserved name');
     const b = s.object({ y: s.number() });
 
     expect(() => a.merge(b).parse({ x: 'admin', y: 1 })).toThrow('Reserved name');
@@ -453,7 +453,7 @@ describe('ObjectSchema.requiredFields() / optionalFields()', () => {
 
 describe('ObjectSchema shape-transform methods preserve metadata', () => {
   it('pick() preserves check() validators', () => {
-    const schema = s.object({ a: s.string(), b: s.number() }).validate(() => 'always fails');
+    const schema = s.object({ a: s.string(), b: s.number() }).check(() => 'always fails');
 
     expect(schema.pick('a').safeParse({ a: 'hello' }).success).toBe(false);
   });
@@ -480,8 +480,8 @@ describe('ObjectSchema shape-transform methods preserve metadata', () => {
 describe('ObjectSchema.parseAsync() concurrent field parsing', () => {
   it('parses all fields concurrently', async () => {
     const schema = s.object({
-      email: s.string().validate(async (v) => v.includes('@') || 'Invalid email'),
-      name: s.string().validate(async (v) => v.length > 0 || 'Required'),
+      email: s.string().checkAsync(async (v) => v.includes('@') || 'Invalid email'),
+      name: s.string().checkAsync(async (v) => v.length > 0 || 'Required'),
     });
 
     await expect(schema.parseAsync({ email: 'a@b.com', name: 'Alice' })).resolves.toEqual({
@@ -492,8 +492,8 @@ describe('ObjectSchema.parseAsync() concurrent field parsing', () => {
 
   it('collects errors from all failing fields concurrently', async () => {
     const schema = s.object({
-      a: s.string().validate(async (v) => v !== 'bad' || 'Bad A'),
-      b: s.number().validate(async (v) => v > 0 || 'Bad B'),
+      a: s.string().checkAsync(async (v) => v !== 'bad' || 'Bad A'),
+      b: s.number().checkAsync(async (v) => v > 0 || 'Bad B'),
     });
     const result = await schema.safeParseAsync({ a: 'bad', b: -1 });
 
@@ -521,7 +521,7 @@ describe('ObjectSchema.parseAsync() concurrent field parsing', () => {
   it('runs object-level validators after fields pass', async () => {
     const schema = s
       .object({ confirm: s.string(), pass: s.string() })
-      .validate(async (obj) => obj.pass === obj.confirm || 'Passwords must match');
+      .checkAsync(async (obj) => obj.pass === obj.confirm || 'Passwords must match');
 
     await expect(schema.parseAsync({ confirm: 'a', pass: 'b' })).rejects.toThrow('Passwords must match');
     await expect(schema.parseAsync({ confirm: 'x', pass: 'x' })).resolves.toEqual({ confirm: 'x', pass: 'x' });

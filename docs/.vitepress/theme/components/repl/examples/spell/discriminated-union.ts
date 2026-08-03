@@ -1,9 +1,9 @@
 export const discriminatedUnionExample = {
-  code: `// s.variant() validates a discriminated union — objects sharing a common tag field.
+  code: `// s.discriminatedUnion() validates a discriminated union — objects sharing a common tag field.
 // Spell automatically injects the discriminator literal into each branch.
 import { s } from '@vielzeug/spell'
 
-const Event = s.variant('type', {
+const Event = s.discriminatedUnion('type', {
   click: s.object({ x: s.number(), y: s.number() }),
   keydown: s.object({ key: s.string(), repeat: s.boolean() }),
   resize: s.object({ width: s.number(), height: s.number() }),

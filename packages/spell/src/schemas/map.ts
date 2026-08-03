@@ -1,17 +1,31 @@
-import type { Issue, MessageFn, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import type { AnySchema, InferOutput, Issue, MessageFn, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, fail, prependIssuePath, resolveMessage, Schema, SpellValidationError, _makeCtx } from '../core';
-import { _messages } from '../messages';
 
-export class MapSchema<K, V> extends Schema<Map<K, V>> {
-  readonly keySchema: Schema<K, any>;
-  readonly valueSchema: Schema<V, any>;
+export class MapSchema<
+  K extends AnySchema,
+  V extends AnySchema,
+  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
+    import('../core').InferSchemaMode<K | V>
+  >,
+> extends Schema<Map<InferOutput<K>, InferOutput<V>>, unknown, Mode> {
+  readonly keySchema: K;
+  readonly valueSchema: V;
 
   protected override get _kind(): string {
     return 'map';
   }
 
-  constructor(keySchema: Schema<K, any>, valueSchema: Schema<V, any>) {
+  override checkAsync(
+    fn: (
+      value: Map<InferOutput<K>, InferOutput<V>>,
+      ctx: import('../core').CheckContext,
+    ) => Promise<import('../core').ValidateResult>,
+  ): MapSchema<K, V, 'async'> {
+    return this._addCheck(fn, true) as unknown as MapSchema<K, V, 'async'>;
+  }
+
+  constructor(keySchema: K, valueSchema: V) {
     super();
     this.keySchema = keySchema;
     this.valueSchema = valueSchema;
@@ -26,7 +40,7 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
       };
     }
 
-    const out = new Map<K, V>();
+    const out = new Map<InferOutput<K>, InferOutput<V>>();
     const issues: Issue[] = [];
     let i = 0;
 
@@ -39,7 +53,7 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
       if (valResult.issues.length > 0) issues.push(...prependIssuePath(valResult.issues, i));
 
       if (keyResult.issues.length === 0 && valResult.issues.length === 0)
-        out.set(keyResult.data as K, valResult.data as V);
+        out.set(keyResult.data as InferOutput<K>, valResult.data as InferOutput<V>);
 
       i += 1;
     }
@@ -47,13 +61,13 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
     return { data: out, issues, typeOk: true };
   }
 
-  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<Map<K, V>> {
+  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<Map<InferOutput<K>, InferOutput<V>>> {
     const c = ctx ?? _makeCtx();
 
     return this._withCatchAsync(async () => {
       const prepared = this._prepareInput(value);
 
-      if (prepared.skip) return prepared.value as unknown as Map<K, V>;
+      if (prepared.skip) return prepared.value as unknown as Map<InferOutput<K>, InferOutput<V>>;
 
       const raw = prepared.value;
 
@@ -69,7 +83,7 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
       );
 
       const issues: Issue[] = [];
-      const out = new Map<K, V>();
+      const out = new Map<InferOutput<K>, InferOutput<V>>();
 
       for (let i = 0; i < settled.length; i++) {
         const [keyResult, valResult] = settled[i];
@@ -79,7 +93,7 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
         if (valResult.issues.length > 0) issues.push(...prependIssuePath(valResult.issues, i));
 
         if (keyResult.issues.length === 0 && valResult.issues.length === 0)
-          out.set(keyResult.data as K, valResult.data as V);
+          out.set(keyResult.data as InferOutput<K>, valResult.data as InferOutput<V>);
       }
 
       const validationIssues = await this._runValidatorsAsync(out, c);
@@ -87,65 +101,64 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
 
       if (allIssues.length > 0) throw new SpellValidationError(allIssues);
 
-      return this._runPostprocessors(out) as Map<K, V>;
+      return this._runPostprocessors(out) as Map<InferOutput<K>, InferOutput<V>>;
     });
   }
 
-  min(
-    size: number,
-    message: MessageFn<{ min: number; value: Map<unknown, unknown> }> = (ctx) => _messages().map.min(ctx),
-  ): this {
-    return this._addConstraint((value, _ctx) => {
+  min(size: number, message?: MessageFn<{ min: number; value: Map<unknown, unknown> }>): this {
+    return this._addConstraint((value, ctx) => {
       const typed = value as Map<unknown, unknown>;
 
       if (typed.size >= size) return null;
 
-      return fail(ErrorCode.too_small, resolveMessage(message, { min: size, value: typed }), { min: size });
+      return fail(ErrorCode.too_small, resolveMessage(message ?? ctx!.messages.map.min, { min: size, value: typed }), {
+        min: size,
+      });
     });
   }
 
-  max(
-    size: number,
-    message: MessageFn<{ max: number; value: Map<unknown, unknown> }> = (ctx) => _messages().map.max(ctx),
-  ): this {
-    return this._addConstraint((value, _ctx) => {
+  max(size: number, message?: MessageFn<{ max: number; value: Map<unknown, unknown> }>): this {
+    return this._addConstraint((value, ctx) => {
       const typed = value as Map<unknown, unknown>;
 
       if (typed.size <= size) return null;
 
-      return fail(ErrorCode.too_big, resolveMessage(message, { max: size, value: typed }), { max: size });
+      return fail(ErrorCode.too_big, resolveMessage(message ?? ctx!.messages.map.max, { max: size, value: typed }), {
+        max: size,
+      });
     });
   }
 
-  size(
-    exact: number,
-    message: MessageFn<{ exact: number; value: Map<unknown, unknown> }> = (ctx) => _messages().map.size(ctx),
-  ): this {
-    return this._addConstraint((value, _ctx) => {
+  size(exact: number, message?: MessageFn<{ exact: number; value: Map<unknown, unknown> }>): this {
+    return this._addConstraint((value, ctx) => {
       const typed = value as Map<unknown, unknown>;
 
       if (typed.size === exact) return null;
 
-      return fail(ErrorCode.invalid_length, resolveMessage(message, { exact, value: typed }), { exact });
+      return fail(
+        ErrorCode.invalid_length,
+        resolveMessage(message ?? ctx!.messages.map.size, { exact, value: typed }),
+        { exact },
+      );
     });
   }
 
-  nonEmpty(message: MessageFn<{ min: number }> = () => _messages().map.nonEmpty()): this {
-    return this._addConstraint((value, _ctx) => {
+  nonEmpty(message?: MessageFn<{ min: number }>): this {
+    return this._addConstraint((value, ctx) => {
       const typed = value as Map<unknown, unknown>;
 
       if (typed.size > 0) return null;
 
-      return fail(ErrorCode.too_small, resolveMessage(message, { min: 1 }), { min: 1 });
+      return fail(ErrorCode.too_small, resolveMessage(message ?? ctx!.messages.map.nonEmpty, { min: 1 }), { min: 1 });
     });
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return {
       ...this._describeBase(),
-      key: this.keySchema.toDescriptor(),
+      key: this.keySchema.definition(),
       kind: 'map',
-      value: this.valueSchema.toDescriptor(),
+      value: this.valueSchema.definition(),
     };
   }
 
@@ -156,11 +169,5 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
     if (visitor.map) return visitor.map(this, key, value);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    if (!(other instanceof MapSchema)) return false;
-
-    return this.keySchema.equals(other.keySchema) && this.valueSchema.equals(other.valueSchema);
   }
 }

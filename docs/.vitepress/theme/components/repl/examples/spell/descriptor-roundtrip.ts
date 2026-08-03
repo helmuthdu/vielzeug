@@ -1,26 +1,17 @@
 export const descriptorRoundtripExample = {
-  code: `// Export a schema as a portable descriptor, then convert it to JSON Schema.
-import { descriptorToJsonSchema, s } from '@vielzeug/spell'
+  code: `import { s } from '@vielzeug/spell'
+import { fromDefinition } from '@vielzeug/spell/json'
 
-const Product = s
-  .object({
-    price: s.number().positive().multipleOf(0.01),
-    sku: s.string().regex(/^sku-[0-9]{4}$/).label('SKU'),
-  })
-  .relaxed()
-  .label('Product payload')
+const Product = s.object({
+  id: s.string().uuid(),
+  name: s.string().min(1),
+  price: s.number().positive(),
+})
 
-// toDescriptor() returns a plain serialisable object describing the schema tree
-const descriptor = Product.toDescriptor()
-console.log('Kind:', descriptor.kind)
-console.log('Strict:', descriptor.strict)
-console.log('SKU description:', descriptor.fields.sku.description)
-console.log('Price multipleOf:', descriptor.fields.price.multipleOf)
+const definition = Product.definition()
+const jsonSchema = fromDefinition(definition)
 
-// descriptorToJsonSchema() converts the descriptor to a standard JSON Schema object
-const jsonSchema = descriptorToJsonSchema(descriptor)
-console.log('JSON Schema type:', jsonSchema.type)
-console.log('JSON Schema additionalProperties:', jsonSchema.additionalProperties)
-console.log('Required fields:', jsonSchema.required)`,
-  name: 'Descriptor & JSON Schema',
+console.log(definition.kind)
+console.log(jsonSchema)`,
+  name: 'Declarative Definition Export',
 };

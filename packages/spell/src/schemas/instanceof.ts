@@ -1,13 +1,18 @@
 import type { SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema } from '../core';
-import { _messages } from '../messages';
 
-export class InstanceOfSchema<T> extends Schema<T> {
+export class InstanceOfSchema<T, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<T, T, Mode> {
   readonly cls: new (...args: any[]) => T;
 
   protected override get _kind(): string {
     return 'instanceof';
+  }
+
+  override checkAsync(
+    fn: (value: T, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+  ): InstanceOfSchema<T, 'async'> {
+    return this._addCheck(fn, true) as unknown as InstanceOfSchema<T, 'async'>;
   }
 
   constructor(cls: new (...args: any[]) => T) {
@@ -17,7 +22,7 @@ export class InstanceOfSchema<T> extends Schema<T> {
         : [
             {
               code: ErrorCode.invalid_type,
-              message: (ctx?.messages ?? _messages()).instanceof.type({ className: cls.name }),
+              message: ctx!.messages.instanceof.type({ className: cls.name }),
               path: [],
             },
           ],
@@ -33,9 +38,5 @@ export class InstanceOfSchema<T> extends Schema<T> {
     if (visitor.instanceof) return visitor.instanceof(this);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    return other instanceof InstanceOfSchema && this.cls === other.cls;
   }
 }

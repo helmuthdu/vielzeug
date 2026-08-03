@@ -15,6 +15,18 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./json": {
+      "source": "./src/json.ts",
+      "types": "./dist/json.d.ts",
+      "import": "./dist/json.js",
+      "require": "./dist/json.cjs"
+    },
+    "./predicates": {
+      "source": "./src/predicates.ts",
+      "types": "./dist/predicates.d.ts",
+      "import": "./dist/predicates.js",
+      "require": "./dist/predicates.cjs"
     }
   },
   "scripts": {
@@ -25,6 +37,7 @@
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
     "test": "vitest",
+    "test:types": "tsc -p tsconfig.types.json",
     "build:bundle": "vite build --config vite.bundle.config.ts"
   },
   "publishConfig": {

@@ -1,7 +1,6 @@
-import type { Issue, MessageFn, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import type { AnySchema, InferOutput, Issue, MessageFn, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema, SpellValidationError, _makeCtx, fail, prependIssuePath, resolveMessage } from '../core';
-import { _messages } from '../messages';
 
 /* -------------------- Typed annotations -------------------- */
 
@@ -10,30 +9,39 @@ interface ArrayAnnotations extends Record<string, unknown> {
   minItems?: number;
 }
 
-export class ArraySchema<T> extends Schema<T[]> {
-  readonly itemSchema: Schema<T, any>;
+export class ArraySchema<
+  T extends AnySchema,
+  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<import('../core').InferSchemaMode<T>>,
+> extends Schema<InferOutput<T>[], unknown, Mode> {
+  readonly itemSchema: T;
 
   protected override get _kind(): string {
     return 'array';
   }
 
-  constructor(itemSchema: Schema<T, any>) {
+  override checkAsync(
+    fn: (value: InferOutput<T>[], ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+  ): ArraySchema<T, 'async'> {
+    return this._addCheck(fn, true) as unknown as ArraySchema<T, 'async'>;
+  }
+
+  constructor(itemSchema: T) {
     super();
     this.itemSchema = itemSchema;
   }
 
-  private _parseItemsSync(items: unknown[], ctx: ParseContext): { data: T[]; issues: Issue[] } {
+  private _parseItemsSync(items: unknown[], ctx: ParseContext): { data: InferOutput<T>[]; issues: Issue[] } {
     const issues: Issue[] = [];
-    const parsed: T[] = [];
+    const parsed: InferOutput<T>[] = [];
 
     for (let i = 0; i < items.length; i++) {
       const result = this.itemSchema._parseFullSync(items[i], ctx);
 
       if (result.issues.length === 0) {
-        parsed.push(result.data as T);
+        parsed.push(result.data as InferOutput<T>);
       } else {
         issues.push(...prependIssuePath(result.issues, i));
-        parsed.push(items[i] as T);
+        parsed.push(items[i] as InferOutput<T>);
       }
     }
 
@@ -50,13 +58,13 @@ export class ArraySchema<T> extends Schema<T[]> {
     return { data: items, issues, typeOk: true };
   }
 
-  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<T[]> {
+  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<InferOutput<T>[]> {
     const c = ctx ?? _makeCtx();
 
-    return this._withCatchAsync(async () => {
+    return this._withCatchAsync<InferOutput<T>[]>(async () => {
       const prepared = this._prepareInput(value);
 
-      if (prepared.skip) return prepared.value as unknown as T[];
+      if (prepared.skip) return prepared.value as unknown as InferOutput<T>[];
 
       const raw = prepared.value;
 
@@ -67,16 +75,16 @@ export class ArraySchema<T> extends Schema<T[]> {
       const settled = await Promise.all(raw.map((item) => this.itemSchema._parseFullAsync(item, c)));
 
       const issues: Issue[] = [];
-      const parsed: T[] = [];
+      const parsed: InferOutput<T>[] = [];
 
       for (let i = 0; i < settled.length; i++) {
         const result = settled[i];
 
         if (result.issues.length === 0) {
-          parsed.push(result.data as T);
+          parsed.push(result.data as InferOutput<T>);
         } else {
           issues.push(...prependIssuePath(result.issues, i));
-          parsed.push(raw[i] as T);
+          parsed.push(raw[i] as InferOutput<T>);
         }
       }
 
@@ -85,21 +93,22 @@ export class ArraySchema<T> extends Schema<T[]> {
 
       if (allIssues.length > 0) throw new SpellValidationError(allIssues);
 
-      return this._runPostprocessors(parsed) as T[];
+      return this._runPostprocessors(parsed) as InferOutput<T>[];
     });
   }
 
-  min(
-    length: number,
-    message: MessageFn<{ min: number; value: unknown[] }> = (ctx) => _messages().array.min(ctx),
-  ): this {
+  min(length: number, message?: MessageFn<{ min: number; value: unknown[] }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if ((value as unknown[]).length >= length) return null;
 
-        return fail(ErrorCode.too_small, resolveMessage(message, { min: length, value: value as unknown[] }), {
-          min: length,
-        });
+        return fail(
+          ErrorCode.too_small,
+          resolveMessage(message ?? ctx!.messages.array.min, { min: length, value: value as unknown[] }),
+          {
+            min: length,
+          },
+        );
       },
       (current) => {
         const ann = current as ArrayAnnotations;
@@ -112,17 +121,18 @@ export class ArraySchema<T> extends Schema<T[]> {
     );
   }
 
-  max(
-    length: number,
-    message: MessageFn<{ max: number; value: unknown[] }> = (ctx) => _messages().array.max(ctx),
-  ): this {
+  max(length: number, message?: MessageFn<{ max: number; value: unknown[] }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if ((value as unknown[]).length <= length) return null;
 
-        return fail(ErrorCode.too_big, resolveMessage(message, { max: length, value: value as unknown[] }), {
-          max: length,
-        });
+        return fail(
+          ErrorCode.too_big,
+          resolveMessage(message ?? ctx!.messages.array.max, { max: length, value: value as unknown[] }),
+          {
+            max: length,
+          },
+        );
       },
       (current) => {
         const ann = current as ArrayAnnotations;
@@ -135,22 +145,31 @@ export class ArraySchema<T> extends Schema<T[]> {
     );
   }
 
-  length(
-    exact: number,
-    message: MessageFn<{ exact: number; value: unknown[] }> = (ctx) => _messages().array.length(ctx),
-  ): this {
+  length(exact: number, message?: MessageFn<{ exact: number; value: unknown[] }>): this {
     return this._addConstraint(
-      (value, _ctx) => {
+      (value, ctx) => {
         if ((value as unknown[]).length === exact) return null;
 
-        return fail(ErrorCode.invalid_length, resolveMessage(message, { exact, value: value as unknown[] }), { exact });
+        return fail(
+          ErrorCode.invalid_length,
+          resolveMessage(message ?? ctx!.messages.array.length, { exact, value: value as unknown[] }),
+          { exact },
+        );
       },
       (ann) => ({ ...ann, maxItems: exact, minItems: exact }),
     );
   }
 
-  nonEmpty(message: MessageFn<{ min: number; value: unknown[] }> = () => _messages().array.nonEmpty()): this {
-    return this.min(1, message);
+  nonEmpty(message?: MessageFn<{ min: number; value: unknown[] }>): this {
+    return this._addConstraint((value, ctx) => {
+      const typed = value as unknown[];
+
+      return typed.length > 0
+        ? null
+        : fail(ErrorCode.too_small, resolveMessage(message ?? ctx!.messages.array.nonEmpty, { min: 1, value: typed }), {
+            min: 1,
+          });
+    });
   }
 
   /**
@@ -168,19 +187,19 @@ export class ArraySchema<T> extends Schema<T[]> {
    * s.array(s.object({ id: s.number() })).unique((a, b) => a.id === b.id)
    */
   unique(
-    equalsFnOrMessage?: ((a: T, b: T) => boolean) | MessageFn<{ value: unknown[] }>,
-    message: MessageFn<{ value: unknown[] }> = () => _messages().array.unique(),
+    equalsFnOrMessage?: ((a: InferOutput<T>, b: InferOutput<T>) => boolean) | MessageFn<{ value: unknown[] }>,
+    message?: MessageFn<{ value: unknown[] }>,
   ): this {
     const isCustomEqualsFn = typeof equalsFnOrMessage === 'function' && equalsFnOrMessage.length === 2;
-    const equalsFn = isCustomEqualsFn ? (equalsFnOrMessage as (a: T, b: T) => boolean) : null;
+    const equalsFn = isCustomEqualsFn ? (equalsFnOrMessage as (a: InferOutput<T>, b: InferOutput<T>) => boolean) : null;
     const resolvedMessage = isCustomEqualsFn
       ? message
       : typeof equalsFnOrMessage === 'function'
         ? (equalsFnOrMessage as MessageFn<{ value: unknown[] }>)
-        : () => _messages().array.unique();
+        : undefined;
 
-    return this._addConstraint((value, _ctx) => {
-      const typed = value as T[];
+    return this._addConstraint((value, ctx) => {
+      const typed = value as InferOutput<T>[];
       let isUnique: boolean;
 
       if (equalsFn) {
@@ -191,9 +210,13 @@ export class ArraySchema<T> extends Schema<T[]> {
 
       if (isUnique) return null;
 
-      return fail(ErrorCode.invalid_unique, resolveMessage(resolvedMessage, { value: typed as unknown[] }), {
-        unique: true,
-      });
+      return fail(
+        ErrorCode.invalid_unique,
+        resolveMessage(resolvedMessage ?? ctx!.messages.array.unique, { value: typed as unknown[] }),
+        {
+          unique: true,
+        },
+      );
     });
   }
 
@@ -204,7 +227,7 @@ export class ArraySchema<T> extends Schema<T[]> {
       ...this._describeBase(),
       ...(ann.maxItems !== undefined ? { maxItems: ann.maxItems } : {}),
       ...(ann.minItems !== undefined ? { minItems: ann.minItems } : {}),
-      items: this.itemSchema.toDescriptor(),
+      items: this.itemSchema.definition(),
       kind: 'array',
     };
   }
@@ -215,20 +238,5 @@ export class ArraySchema<T> extends Schema<T[]> {
     if (visitor.array) return visitor.array(this, item);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    if (!(other instanceof ArraySchema)) return false;
-
-    const o = other as ArraySchema<any>;
-
-    const annotations = this._annotations as ArrayAnnotations;
-    const otherAnnotations = other._annotations as ArrayAnnotations;
-
-    return (
-      this.itemSchema.equals(o.itemSchema as import('../core').AnySchema) &&
-      annotations.minItems === otherAnnotations.minItems &&
-      annotations.maxItems === otherAnnotations.maxItems
-    );
   }
 }

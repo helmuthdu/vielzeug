@@ -1,4 +1,4 @@
-import { type AnySchema, Schema } from './core';
+import { type AnySchema, type InferOutput, type InferSchemaMode, Schema } from './core';
 import { ArraySchema } from './schemas/array';
 import { BigIntSchema } from './schemas/bigint';
 import { BooleanSchema } from './schemas/boolean';
@@ -22,10 +22,8 @@ import { VariantSchema } from './schemas/variant';
 
 /* -------------------- Internal factory functions -------------------- */
 
-const sAnd = <A, B>(a: Schema<A, any>, b: Schema<B, any>): IntersectSchema<readonly [Schema<A, any>, Schema<B, any>]> =>
-  sIntersect(a, b);
 const sAny = (): Schema<any> => new Schema();
-const sArray = <T>(schema: Schema<T, any>): ArraySchema<T> => new ArraySchema(schema);
+const sArray = <T extends AnySchema>(schema: T): ArraySchema<T> => new ArraySchema(schema);
 const sBigint = (): BigIntSchema => new BigIntSchema();
 const sBoolean = (): BooleanSchema => new BooleanSchema();
 const sDate = (): DateSchema => new DateSchema();
@@ -35,18 +33,19 @@ const sIntersect = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema
   ...items: T
 ): IntersectSchema<NormalizeItems<T> & readonly AnySchema[]> =>
   new IntersectSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]);
-const sLazy = <T>(getter: () => Schema<T, any>): LazySchema<T> => new LazySchema(getter);
+const sLazy = <T extends AnySchema>(getter: () => T): LazySchema<InferOutput<T>, unknown, InferSchemaMode<T>> =>
+  new LazySchema(getter as unknown as () => Schema<InferOutput<T>, unknown, InferSchemaMode<T>>);
 const sLiteral = <T extends string | number | boolean | null | undefined>(value: T): LiteralSchema<T> =>
   new LiteralSchema(value);
-const sMap = <K, V>(keySchema: Schema<K, any>, valueSchema: Schema<V, any>): MapSchema<K, V> =>
+const sMap = <K extends AnySchema, V extends AnySchema>(keySchema: K, valueSchema: V): MapSchema<K, V> =>
   new MapSchema(keySchema, valueSchema);
 const sNever = (): NeverSchema => new NeverSchema();
 const sNull = (): LiteralSchema<null> => new LiteralSchema(null);
 const sNumber = (): NumberSchema => new NumberSchema();
 const sObject = <T extends ObjectShape>(shape: T): ObjectSchema<T> => new ObjectSchema(shape);
-const sRecord = <K extends string, V>(keySchema: Schema<K, any>, valueSchema: Schema<V, any>): RecordSchema<K, V> =>
+const sRecord = <K extends AnySchema, V extends AnySchema>(keySchema: K, valueSchema: V): RecordSchema<K, V> =>
   new RecordSchema(keySchema, valueSchema);
-const sSet = <T>(schema: Schema<T, any>): SetSchema<T> => new SetSchema(schema);
+const sSet = <T extends AnySchema>(schema: T): SetSchema<T> => new SetSchema(schema);
 const sString = (): StringSchema => new StringSchema();
 const sTuple = <const T extends TupleSchemas>(items: T): TupleSchema<T> => new TupleSchema(items);
 const sUndefined = (): LiteralSchema<undefined> => new LiteralSchema(undefined);
@@ -54,19 +53,17 @@ const sUnion = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>
   ...items: T
 ): UnionSchema<NormalizeItems<T> & readonly AnySchema[]> =>
   new UnionSchema(normalizeToSchemas(items) as NormalizeItems<T> & readonly AnySchema[]);
-const sOr = <A, B>(a: Schema<A, any>, b: Schema<B, any>): UnionSchema<readonly [Schema<A, any>, Schema<B, any>]> =>
-  sUnion(a, b);
 const sUnknown = (): Schema<unknown> => new Schema();
-const sVariant = <K extends string, M extends Record<string, ObjectSchema<any>>>(
+const sVariant = <K extends string, M extends Record<string, ObjectSchema<any, any>>>(
   discriminator: K,
   map: M,
 ): VariantSchema<K, M> => new VariantSchema(discriminator, map);
 const sCoerce = {
-  bigint: (): BigIntSchema => BigIntSchema.coerce(),
-  boolean: (): BooleanSchema => BooleanSchema.coerce(),
-  date: (): DateSchema => DateSchema.coerce(),
-  number: (): NumberSchema => NumberSchema.coerce(),
-  string: (): StringSchema => StringSchema.coerce(),
+  bigint: (): BigIntSchema<unknown> => BigIntSchema.coerce(),
+  boolean: (): BooleanSchema<unknown> => BooleanSchema.coerce(),
+  date: (): DateSchema<unknown> => DateSchema.coerce(),
+  number: (): NumberSchema<unknown> => NumberSchema.coerce(),
+  string: (): StringSchema<unknown> => StringSchema.coerce(),
 };
 
 /* -------------------- `s` namespace — the public API -------------------- */
@@ -81,13 +78,13 @@ const sCoerce = {
  * type User = Infer<typeof User>;
  */
 export const s = {
-  and: sAnd,
   any: sAny,
   array: sArray,
   bigint: sBigint,
   boolean: sBoolean,
   coerce: sCoerce,
   date: sDate,
+  discriminatedUnion: sVariant,
   enum: sEnum,
   instanceof: sInstanceof,
   intersect: sIntersect,
@@ -98,7 +95,6 @@ export const s = {
   null: sNull,
   number: sNumber,
   object: sObject,
-  or: sOr,
   record: sRecord,
   set: sSet,
   string: sString,
@@ -106,5 +102,4 @@ export const s = {
   undefined: sUndefined,
   union: sUnion,
   unknown: sUnknown,
-  variant: sVariant,
 };

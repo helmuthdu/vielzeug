@@ -1,4 +1,5 @@
 import { s } from '../index';
+import { fromDefinition } from '../json';
 
 describe('s.instanceof()', () => {
   it('accepts instances of the given class', () => {
@@ -15,28 +16,16 @@ describe('s.instanceof()', () => {
     expect(() => s.instanceof(Date).parse('not a date')).toThrow('Expected instance of Date');
   });
 
-  describe('equals()', () => {
-    it('two schemas wrapping the same class are equal', () => {
-      expect(s.instanceof(Date).equals(s.instanceof(Date))).toBe(true);
-    });
-
-    it('two schemas wrapping different classes are not equal', () => {
-      expect(s.instanceof(Date).equals(s.instanceof(RegExp))).toBe(false);
-    });
-  });
-
-  describe('toDescriptor()', () => {
+  describe('definition()', () => {
     it('includes the wrapped class name', () => {
-      expect(s.instanceof(Date).toDescriptor()).toMatchObject({ className: 'Date', kind: 'instanceof' });
-      expect(s.instanceof(RegExp).toDescriptor()).toMatchObject({ className: 'RegExp', kind: 'instanceof' });
+      expect(s.instanceof(Date).definition()).toMatchObject({ className: 'Date', kind: 'instanceof' });
+      expect(s.instanceof(RegExp).definition()).toMatchObject({ className: 'RegExp', kind: 'instanceof' });
     });
-  });
 
-  describe('toJsonSchema()', () => {
-    it('adds an explanatory $comment naming the class', () => {
-      const schema = s.instanceof(Date).toJsonSchema() as Record<string, unknown>;
+    it('converts through the JSON subpath', () => {
+      const jsonSchema = fromDefinition(s.instanceof(Date).definition());
 
-      expect(schema['$comment']).toBe('Instances of "Date" are not representable in JSON Schema.');
+      expect(jsonSchema['$comment']).toBe('Instances of "Date" are not representable in JSON Schema.');
     });
   });
 });

@@ -24,7 +24,7 @@ const result = Signup.safeParse({
 });
 
 if (!result.success) {
-  console.error(result.error.format());
+  console.error(result.error.issues);
 } else {
   console.log(result.data.email);
 }
@@ -117,29 +117,29 @@ Port.parse('not-a-number'); // 3000
 
 ## Custom Validation
 
-Use `validate()` for domain rules — both synchronous and asynchronous. A single method handles all cases.
+Use `check()` for synchronous domain rules and `checkAsync()` for asynchronous rules. Sync parsing rejects schemas with asynchronous checks.
 
 ```ts
 import { s } from '@vielzeug/spell';
 
 // Boolean shorthand: return false to fail with default message
-const EvenNumber = s.number().validate((n) => n % 2 === 0);
+const EvenNumber = s.number().check((n) => n % 2 === 0);
 
 // String shorthand: return the message as a string
 const Username = s
   .string()
   .min(3)
-  .validate((v) => !v.startsWith('_') || 'Cannot start with underscore');
+  .check((v) => !v.startsWith('_') || 'Cannot start with underscore');
 
 // Multiple issues via ctx.addIssue()
-const Signup = s.object({ confirm: s.string(), password: s.string() }).validate((v, ctx) => {
+const Signup = s.object({ confirm: s.string(), password: s.string() }).check((v, ctx) => {
   if (v.password !== v.confirm) {
     ctx.addIssue({ code: 'custom', message: 'Passwords must match', path: ['confirm'] });
   }
 });
 ```
 
-Async rules work in the same method. Spell awaits them in `parseAsync()`, including nested schemas (for example inside `s.variant(...)` branches). Async callbacks passed to `validate()` are still skipped in synchronous `parse()`.
+`checkAsync()` returns an async-only schema: TypeScript exposes `parseAsync()` and `safeParseAsync()` but not `parse()` or `safeParse()`. This mode propagates through nested arrays, objects, unions, intersections, tuples, maps, records, sets, lazy schemas, pipelines, and `s.discriminatedUnion(...)` branches. Sync parsing also fails at runtime instead of accepting an unchecked value.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -149,25 +149,22 @@ const takenEmails = new Set(['ada@example.com']);
 const AccountEmail = s
   .string()
   .email()
-  .validate(async (value, ctx) => {
+  .checkAsync(async (value, ctx) => {
     if (takenEmails.has(value)) {
       ctx.addIssue({ code: 'custom', message: 'Email is already taken', path: [] });
     }
   });
 
-// Must use parseAsync when any validate() callback is async
+// Async checks require parseAsync
 await AccountEmail.parseAsync('grace@example.com');
 ```
 
-Use `refine()` when you only need a boolean predicate and an optional message function.
+Use `check()` for predicate-only rules too. Return `true` on success or message on failure.
 
 ```ts
 import { s } from '@vielzeug/spell';
 
-const PositivePrice = s.number().refine(
-  (n) => n > 0,
-  () => 'Must be positive',
-);
+const PositivePrice = s.number().check((value) => value > 0 || 'Must be positive');
 PositivePrice.parse(9.99);
 ```
 
@@ -218,10 +215,11 @@ const Slug = s.string().trim().min(1).pipe(s.string().slug());
 
 ## Introspection, Round-Trips, and JSON Schema
 
-Use descriptors when schemas need to cross process boundaries or feed tooling.
+Use declarative definitions when schemas need to cross process boundaries or feed tooling.
 
 ```ts
-import { descriptorToJsonSchema, s } from '@vielzeug/spell';
+import { s } from '@vielzeug/spell';
+import { fromDefinition } from '@vielzeug/spell/json';
 
 const Product = s
   .object({
@@ -231,89 +229,38 @@ const Product = s
   })
   .label('Product');
 
-const descriptor = Product.toDescriptor();
-const jsonSchema = descriptorToJsonSchema(descriptor);
+const definition = Product.definition();
+const jsonSchema = fromDefinition(definition);
 
 Product.parse({ id: '550e8400-e29b-41d4-a716-446655440000', name: 'Keyboard', price: 129.99 });
 console.log(jsonSchema.title);
 ```
 
-Descriptors are serializable snapshots of the schema structure. Use `toDescriptor()` to produce one and `descriptorToJsonSchema()` to convert it to JSON Schema for external consumers.
+Definitions are frozen serializable snapshots of declarative schema structure. Use `definition()` and `fromDefinition()` for external tooling. Schemas with runtime checks, transforms, defaults, catches, or preprocessors intentionally have no definition.
 
 ## Messages
 
-Use `setMessages()` to replace the active validation message catalog globally. Each call replaces the current overrides — it does not accumulate.
+Spell has no mutable process-wide configuration. Build one parse context per request, locale, or form, then pass it explicitly.
 
 ```ts
-import { resetMessages, setMessages } from '@vielzeug/spell';
-
-setMessages({
-  string: {
-    email: 'Use a valid work email address',
-    min: ({ min }) => `Must be at least ${min} characters`,
-  },
-  number: {
-    min: ({ min }) => `Use a value of ${min} or greater`,
-  },
-});
-
-// Restore the built-in defaults when done
-resetMessages();
-```
-
-Use `setLogger()` to route or silence internal development warnings (e.g. conflicting `regex()` constraints).
-
-```ts
-import { setLogger } from '@vielzeug/spell';
-
-setLogger(null); // silence
-setLogger((msg) => myLogger.warn(msg)); // redirect
-```
-
-Use `createParseContext()` when you need request-scoped message overrides without mutating global state.
-
-```ts
-import { createParseContext, s } from '@vielzeug/spell';
+import { diagnostics, s } from '@vielzeug/spell';
 
 const User = s.object({ email: s.string().email() });
-
-User.safeParse(
-  { email: 'ada@example.com', extra: true },
-  createParseContext({ object: { invalidKeys: () => 'No unknown keys in this endpoint' } }),
-);
-```
-
-Use `withMessages()` / `withLogger()` to apply temporary global overrides inside a bounded sync or async callback.
-
-```ts
-import { s, withLogger, withMessages } from '@vielzeug/spell';
-
-const Email = s.string().email();
-
-await withMessages({ string: { email: () => 'Scoped email' } }, async () => {
-  Email.safeParse('bad'); // issue message uses "Scoped email"
+const german = diagnostics.createParseContext({
+  object: { invalidKeys: () => 'Keine unbekannten Felder erlaubt' },
 });
 
-withLogger((msg) => myLogger.warn(msg), () => {
-  s.string().regex(/^a$/).regex(/^b$/);
-});
+User.safeParse({ email: 'ada@example.com', extra: true }, german);
 ```
 
-To integrate with `@vielzeug/lingua`, call `setMessages()` from your locale change callback:
-
-```ts
-import { setMessages } from '@vielzeug/spell';
-
-// spellMessages maps locale keys to DeepPartial<Messages>
-i18n.subscribe(() => setMessages(spellMessages[i18n.locale]));
-```
+Internal development warnings always use `console.warn` in development builds. Route application diagnostics in application code instead of mutating library-wide logger state.
 
 ## Working with Validation Errors
 
 Use `SpellValidationError` helpers when you need UI-ready error structures.
 
 ```ts
-import { SpellValidationError, errorsAt, s } from '@vielzeug/spell';
+import { s, SpellValidationError } from '@vielzeug/spell';
 
 const User = s.object({
   email: s.string().email(),
@@ -324,9 +271,8 @@ const User = s.object({
 
 const result = User.safeParse({ email: 'nope', profile: { name: '' } });
 
-if (!result.success && SpellValidationError.is(result.error)) {
-  const formatted = result.error.format();
-  const profileErrors = errorsAt(formatted, 'profile', 'name');
+if (!result.success && result.error instanceof SpellValidationError) {
+  const profileErrors = result.error.messagesAt('profile', 'name');
   console.log(profileErrors);
 }
 ```
@@ -434,15 +380,15 @@ const courier = createCourier({ baseUrl: '/api' });
 const profile = Profile.parse(await courier.get('/profile'));
 ```
 
-Use Spell descriptors with `@vielzeug/codex` or other tooling when you need generated docs or external schema consumers.
+Use Spell definitions with `@vielzeug/codex` or other tooling when you need generated docs or external schema consumers.
 
 ## Best Practices
 
 - Keep schemas close to the boundary where unknown data enters your app.
-- Prefer tree-shakeable `sXxx` exports in libraries and the `s` namespace in app code.
+- Use `s` consistently for construction; use explicit `/json` and `/predicates` subpaths for tooling.
 - Use `.default(() => value)` for mutable defaults such as arrays, objects, `Map`, and `Set`.
 - Call `.required()` when you want to remove `undefined` but keep `null` semantics intact.
-- Use `validate()` with a `ctx` argument when you need `ctx.addIssue()`; use `refine()` for simple boolean predicates.
-- Switch to `parseAsync()` as soon as any `validate()` callback is async.
-- Call `resetMessages()` in test `afterEach()` when tests call `setMessages()` to prevent state leakage.
-- Use `toDescriptor()` for tooling and `descriptorToJsonSchema()` for external JSON Schema consumers.
+- Use `check()` with a `ctx` argument when you need `ctx.addIssue()`; return a message for simple predicate failures.
+- Use `checkAsync()` and `parseAsync()` for every asynchronous domain rule.
+- Build a parse context per request or test; never rely on mutable process-wide configuration.
+- Use `definition()` with `fromDefinition()` from `@vielzeug/spell/json` for external tooling.

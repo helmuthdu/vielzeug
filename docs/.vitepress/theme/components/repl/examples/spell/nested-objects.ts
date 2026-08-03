@@ -2,7 +2,7 @@ export const nestedObjectsExample = {
   code: `// Model an API response with a discriminator instead of a loose union.
 import { s } from '@vielzeug/spell'
 
-const SearchResponse = s.variant('status', {
+const SearchResponse = s.discriminatedUnion('status', {
   error: s.object({
     message: s.string().min(1),
     status: s.literal('error'),

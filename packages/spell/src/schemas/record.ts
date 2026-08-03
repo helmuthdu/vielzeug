@@ -1,18 +1,32 @@
-import type { Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema, SpellValidationError, _makeCtx } from '../core';
-import { _messages } from '../messages';
 import { isUnsafeObjectKey } from '../safe-object';
 
-export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
-  readonly keySchema: Schema<K, any>;
-  readonly valueSchema: Schema<V, any>;
+export class RecordSchema<
+  K extends AnySchema,
+  V extends AnySchema,
+  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
+    import('../core').InferSchemaMode<K | V>
+  >,
+> extends Schema<Record<InferOutput<K> & string, InferOutput<V>>, unknown, Mode> {
+  readonly keySchema: K;
+  readonly valueSchema: V;
 
   protected override get _kind(): string {
     return 'record';
   }
 
-  constructor(keySchema: Schema<K, any>, valueSchema: Schema<V, any>) {
+  override checkAsync(
+    fn: (
+      value: Record<InferOutput<K> & string, InferOutput<V>>,
+      ctx: import('../core').CheckContext,
+    ) => Promise<import('../core').ValidateResult>,
+  ): RecordSchema<K, V, 'async'> {
+    return this._addCheck(fn, true) as unknown as RecordSchema<K, V, 'async'>;
+  }
+
+  constructor(keySchema: K, valueSchema: V) {
     super();
     this.keySchema = keySchema;
     this.valueSchema = valueSchema;
@@ -80,13 +94,16 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
     return { data: output, issues, typeOk: true };
   }
 
-  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<Record<K, V>> {
+  override async parseAsync(
+    value: unknown,
+    ctx?: ParseContext,
+  ): Promise<Record<InferOutput<K> & string, InferOutput<V>>> {
     const c = ctx ?? _makeCtx();
 
     return this._withCatchAsync(async () => {
       const prepared = this._prepareInput(value);
 
-      if (prepared.skip) return prepared.value as unknown as Record<K, V>;
+      if (prepared.skip) return prepared.value as unknown as Record<InferOutput<K> & string, InferOutput<V>>;
 
       const guarded = this._guardRecordInput(prepared.value, c);
 
@@ -135,16 +152,16 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
 
       if (allIssues.length > 0) throw new SpellValidationError(allIssues);
 
-      return this._runPostprocessors(output) as Record<K, V>;
+      return this._runPostprocessors(output) as Record<InferOutput<K> & string, InferOutput<V>>;
     });
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return {
       ...this._describeBase(),
-      key: this.keySchema.toDescriptor(),
+      key: this.keySchema.definition(),
       kind: 'record',
-      value: this.valueSchema.toDescriptor(),
+      value: this.valueSchema.definition(),
     };
   }
 
@@ -155,11 +172,5 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
     if (visitor.record) return visitor.record(this, key, value);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    if (!(other instanceof RecordSchema)) return false;
-
-    return this.keySchema.equals(other.keySchema) && this.valueSchema.equals(other.valueSchema);
   }
 }

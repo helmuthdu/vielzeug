@@ -4,12 +4,12 @@
  * Findings addressed:
  *   [MEDIUM] Prototype mutation via __proto__ key in relaxed ObjectSchema and RecordSchema
  *   [MEDIUM] DoS via BigInt coercion with arbitrarily large digit strings
- *   [LOW]    setLogger() routes / silences internal warnings
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { descriptorToJsonSchema, resetMessages, s, setLogger, setMessages } from '../index';
+import { s } from '../index';
+import { fromDefinition } from '../json';
 
 // ---------------------------------------------------------------------------
 // Prototype mutation — relaxed ObjectSchema
@@ -129,7 +129,7 @@ describe('prototype mutation — descriptor-driven object schemas', () => {
   });
 
   it('serializes descriptor fields named __proto__ without mutating schema output objects', () => {
-    const jsonSchema = descriptorToJsonSchema(
+    const jsonSchema = fromDefinition(
       JSON.parse('{"kind":"object","strict":true,"fields":{"__proto__":{"kind":"string"}}}'),
     ) as Record<string, unknown>;
     const properties = jsonSchema.properties as Record<string, unknown>;
@@ -249,115 +249,5 @@ describe('BigInt coercion DoS guard', () => {
     expect(result.success).toBe(false);
 
     if (!result.success) expect(result.error.issues[0]!.code).toBe('invalid_type');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// setLogger() / setMessages() / resetMessages()
-// ---------------------------------------------------------------------------
-
-describe('setLogger() logger routing', () => {
-  afterEach(() => {
-    resetMessages();
-    setLogger(null);
-  });
-
-  it('routes internal warnings to the provided logger function', () => {
-    const captured: string[] = [];
-
-    setLogger((msg) => captured.push(msg));
-
-    try {
-      // Trigger the multiple-regex constraint warning
-      s.string().regex(/^a+$/).regex(/^b+$/);
-    } finally {
-      setLogger(null);
-    }
-
-    expect(captured).toHaveLength(1);
-    expect(captured[0]).toContain('Multiple .regex() constraints');
-  });
-
-  it('ignores unsafe message override keys without mutating global prototypes', () => {
-    const captured: string[] = [];
-
-    setLogger((msg) => captured.push(msg));
-    setMessages(JSON.parse('{"__proto__":{"polluted":true}}') as any);
-
-    try {
-      expect((Object.prototype as { polluted?: boolean }).polluted).toBeUndefined();
-      expect(s.string().email().safeParse('bad').success).toBe(false);
-    } finally {
-      resetMessages();
-      setLogger(null);
-    }
-
-    expect(captured).toHaveLength(1);
-    expect(captured[0]).toContain('Ignoring unsafe message override key');
-  });
-
-  it('ignores constructor and prototype message override keys without mutating global prototypes', () => {
-    const captured: string[] = [];
-
-    setLogger((msg) => captured.push(msg));
-    setMessages(JSON.parse('{"constructor":{"polluted":true},"prototype":{"polluted":true}}') as any);
-
-    try {
-      expect((Object.prototype as { polluted?: boolean }).polluted).toBeUndefined();
-
-      const result = s.string().email().safeParse('bad');
-
-      expect(result.success).toBe(false);
-
-      if (!result.success) expect(result.error.issues[0]!.message).toBe('Invalid email address');
-    } finally {
-      resetMessages();
-      setLogger(null);
-    }
-
-    expect(captured).toHaveLength(2);
-    expect(captured).toEqual(
-      expect.arrayContaining([expect.stringContaining('"constructor"'), expect.stringContaining('"prototype"')]),
-    );
-  });
-
-  it('setMessages() replaces messages each call (not additive)', () => {
-    setMessages({ string: { min: () => 'custom min' } });
-
-    try {
-      const minResult = s.string().min(2).safeParse('');
-
-      expect(minResult.success).toBe(false);
-
-      if (!minResult.success) expect(minResult.error.issues[0]!.message).toBe('custom min');
-    } finally {
-      resetMessages();
-    }
-  });
-
-  it('silences warnings when logger is null', () => {
-    const spy = vi.spyOn(console, 'warn');
-
-    setLogger(null);
-
-    try {
-      s.string().regex(/^a+$/).regex(/^b+$/);
-    } finally {
-      setLogger(null);
-    }
-
-    expect(spy).not.toHaveBeenCalled();
-    spy.mockRestore();
-  });
-
-  it('resetMessages() restores built-in messages', () => {
-    setMessages({ string: { email: () => 'custom email error' } });
-    resetMessages();
-
-    const result = s.string().email().safeParse('bad');
-
-    expect(result.success).toBe(false);
-
-    if (!result.success) expect(result.error.issues[0]!.message).toBe('Invalid email address');
   });
 });

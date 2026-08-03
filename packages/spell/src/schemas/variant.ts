@@ -2,36 +2,53 @@ import type { AnySchema, Issue, ParseContext, ParseValue, SchemaDescriptor } fro
 
 import { ErrorCode, Schema, SpellValidationError, _makeCtx } from '../core';
 import { SpellError } from '../errors';
-import { _messages } from '../messages';
 import { defineOwnProperty, objectFromEntries } from '../safe-object';
 import { LiteralSchema } from './literal';
 import { type InferObject, ObjectSchema, type ObjectShape } from './object';
 
-type VariantMap = Record<string, ObjectSchema<any>>;
+type VariantMap = Record<string, ObjectSchema<Record<string, AnySchema>, import('../core').SchemaMode>>;
 type InferVariantMap<K extends string, M extends VariantMap> = {
-  [Tag in keyof M & string]: M[Tag] extends ObjectSchema<infer S extends ObjectShape>
+  [Tag in keyof M & string]: M[Tag] extends { shape: infer S extends ObjectShape }
     ? InferObject<S> & { [P in K]: Tag }
     : never;
 }[keyof M & string];
 
-export class VariantSchema<K extends string, M extends VariantMap> extends Schema<InferVariantMap<K, M>> {
-  private readonly _map: Map<string, ObjectSchema<any>>;
+export class VariantSchema<
+  K extends string,
+  M extends VariantMap,
+  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
+    import('../core').InferSchemaMode<M[keyof M]>
+  >,
+> extends Schema<InferVariantMap<K, M>, unknown, Mode> {
+  private readonly _map: Map<string, VariantMap[string]>;
   private readonly _discriminator: K;
 
   protected override get _kind(): string {
     return 'variant';
   }
 
+  override checkAsync(
+    fn: (
+      value: InferVariantMap<K, M>,
+      ctx: import('../core').CheckContext,
+    ) => Promise<import('../core').ValidateResult>,
+  ): VariantSchema<K, M, 'async'> {
+    return this._addCheck(fn, true) as unknown as VariantSchema<K, M, 'async'>;
+  }
+
   constructor(discriminator: K, variantMap: M) {
-    const map = new Map<string, ObjectSchema<any>>();
+    const map = new Map<string, VariantMap[string]>();
 
     for (const [tag, schema] of Object.entries(variantMap)) {
       const discriminatorSchema = new LiteralSchema(tag);
       const existingDiscriminator = schema.shape[discriminator];
 
-      if (existingDiscriminator && !existingDiscriminator.equals(discriminatorSchema)) {
+      if (
+        existingDiscriminator &&
+        (!(existingDiscriminator instanceof LiteralSchema) || existingDiscriminator.value !== tag)
+      ) {
         throw new SpellError(
-          `s.variant(): branch "${tag}" defines a conflicting discriminator schema for "${discriminator}".`,
+          `s.discriminatedUnion(): branch "${tag}" defines a conflicting discriminator schema for "${discriminator}".`,
         );
       }
 
@@ -53,14 +70,14 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
   }
 
   /** Map from discriminator tag value to the extended ObjectSchema for that variant. */
-  get variantMap(): ReadonlyMap<string, ObjectSchema<any>> {
-    return this._map;
+  get variantMap(): ReadonlyMap<string, VariantMap[string]> {
+    return new Map(this._map);
   }
 
   private _resolveVariant(
     value: unknown,
     ctx: ParseContext,
-  ): { matched: ObjectSchema<any>; obj: Record<string, unknown> } | { issues: Issue[] } {
+  ): { matched: VariantMap[string]; obj: Record<string, unknown> } | { issues: Issue[] } {
     if (value == null || typeof value !== 'object' || Array.isArray(value)) {
       return {
         issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.variant.type(), path: [] }],
@@ -132,7 +149,7 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     const branches: Record<string, SchemaDescriptor> = {};
 
     for (const [key, schema] of this._map.entries()) {
-      defineOwnProperty(branches, key, schema.toDescriptor());
+      defineOwnProperty(branches, key, schema.definition());
     }
 
     return { ...this._describeBase(), branches, discriminator: this._discriminator, kind: 'variant' };
@@ -144,21 +161,5 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     if (visitor.variant) return visitor.variant(this, branches);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    if (!(other instanceof VariantSchema)) return false;
-
-    if (this._discriminator !== other._discriminator) return false;
-
-    if (this._map.size !== other._map.size) return false;
-
-    for (const [tag, schema] of this._map) {
-      const otherSchema = other._map.get(tag);
-
-      if (!otherSchema || !schema.equals(otherSchema)) return false;
-    }
-
-    return true;
   }
 }

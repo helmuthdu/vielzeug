@@ -1,7 +1,6 @@
 import type { AnySchema, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema, SpellValidationError, _makeCtx } from '../core';
-import { _messages } from '../messages';
 
 export type TupleSchemas = readonly [AnySchema, ...AnySchema[]];
 export type InferTuple<T extends TupleSchemas, R extends AnySchema | null = null> =
@@ -9,12 +8,24 @@ export type InferTuple<T extends TupleSchemas, R extends AnySchema | null = null
     ? readonly [...{ [K in keyof T]: T[K] extends Schema<infer V> ? V : never }, ...O[]]
     : { readonly [K in keyof T]: T[K] extends Schema<infer V> ? V : never };
 
-export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = null> extends Schema<InferTuple<T, R>> {
+export class TupleSchema<
+  T extends TupleSchemas,
+  R extends AnySchema | null = null,
+  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
+    import('../core').InferSchemaMode<T[number] | Exclude<R, null>>
+  >,
+> extends Schema<InferTuple<T, R>, unknown, Mode> {
   readonly items: T;
   readonly restSchema: R;
 
   protected override get _kind(): string {
     return 'tuple';
+  }
+
+  override checkAsync(
+    fn: (value: InferTuple<T, R>, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+  ): TupleSchema<T, R, 'async'> {
+    return this._addCheck(fn, true) as unknown as TupleSchema<T, R, 'async'>;
   }
 
   constructor(items: T, restSchema: R = null as R) {
@@ -23,7 +34,9 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
     this.restSchema = restSchema;
   }
 
-  rest<U>(schema: Schema<U>): TupleSchema<T, Schema<U>> {
+  rest<U extends AnySchema>(
+    schema: U,
+  ): TupleSchema<T, U, import('../core').MergeSchemaModes<Mode | import('../core').InferSchemaMode<U>>> {
     return this._copyStateTo(new TupleSchema(this.items, schema));
   }
 
@@ -172,9 +185,9 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return {
       ...this._describeBase(),
-      items: this.items.map((s) => s.toDescriptor()),
+      items: this.items.map((s) => s.definition()),
       kind: 'tuple',
-      rest: this.restSchema !== null ? this.restSchema.toDescriptor() : null,
+      rest: this.restSchema !== null ? this.restSchema.definition() : null,
     };
   }
 
@@ -185,24 +198,5 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
     if (visitor.tuple) return visitor.tuple(this, items, rest);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    if (!(other instanceof TupleSchema)) return false;
-
-    if (this.items.length !== other.items.length) return false;
-
-    for (let i = 0; i < this.items.length; i++) {
-      if (!this.items[i].equals(other.items[i])) return false;
-    }
-
-    const rs = this.restSchema;
-    const ors = other.restSchema;
-
-    if ((rs === null) !== (ors === null)) return false;
-
-    if (rs !== null && ors !== null && !rs.equals(ors)) return false;
-
-    return true;
   }
 }

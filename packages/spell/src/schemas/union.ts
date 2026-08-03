@@ -2,16 +2,30 @@ import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDes
 
 import { ErrorCode, Schema, SpellValidationError, _makeCtx } from '../core';
 
-export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOutput<T[number]>> {
+export class UnionSchema<
+  T extends readonly AnySchema[],
+  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
+    import('../core').InferSchemaMode<T[number]>
+  >,
+> extends Schema<InferOutput<T[number]>, unknown, Mode> {
   readonly schemas: T;
 
   protected override get _kind(): string {
     return 'union';
   }
 
+  override checkAsync(
+    fn: (
+      value: InferOutput<T[number]>,
+      ctx: import('../core').CheckContext,
+    ) => Promise<import('../core').ValidateResult>,
+  ): UnionSchema<T, 'async'> {
+    return this._addCheck(fn, true) as unknown as UnionSchema<T, 'async'>;
+  }
+
   constructor(schemas: T) {
     super();
-    this.schemas = schemas;
+    this.schemas = Object.freeze([...schemas]) as T;
   }
 
   protected override _parse(value: unknown, ctx: ParseContext): ParseValue | Promise<ParseValue> {
@@ -49,48 +63,36 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
 
       const v = prepared.value;
 
-      try {
-        const data = await Promise.any(
-          this.schemas.map((schema) =>
-            schema.safeParseAsync(v, c).then((result) => {
-              if (result.success) return result.data;
+      const branchErrors: Issue[][] = [];
 
-              throw result.error;
-            }),
-          ),
-        );
+      for (const schema of this.schemas) {
+        const result = await schema._parseFullAsync(v, c);
 
-        const validationIssues = await this._runValidatorsAsync(data, c);
-
-        if (validationIssues.length) throw new SpellValidationError(validationIssues);
-
-        return this._runPostprocessors(data) as InferOutput<T[number]>;
-      } catch (err) {
-        if (err instanceof AggregateError) {
-          const errors = err.errors as unknown[];
-          const nonValidation = errors.find((e) => !SpellValidationError.is(e));
-
-          if (nonValidation !== undefined) throw nonValidation;
-
-          const branchErrors = (errors as SpellValidationError[]).map((e) => e.issues);
-
-          throw new SpellValidationError([
-            {
-              code: ErrorCode.invalid_union,
-              message: c.messages.union.invalid(),
-              params: { errors: branchErrors },
-              path: [],
-            },
-          ]);
+        if (result.issues.length > 0) {
+          branchErrors.push(result.issues);
+          continue;
         }
 
-        throw err;
+        const validationIssues = await this._runValidatorsAsync(result.data, c);
+
+        if (validationIssues.length > 0) throw new SpellValidationError(validationIssues);
+
+        return this._runPostprocessors(result.data) as InferOutput<T[number]>;
       }
+
+      throw new SpellValidationError([
+        {
+          code: ErrorCode.invalid_union,
+          message: c.messages.union.invalid(),
+          params: { errors: branchErrors },
+          path: [],
+        },
+      ]);
     });
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
-    return { ...this._describeBase(), branches: this.schemas.map((s) => s.toDescriptor()), kind: 'union' };
+    return { ...this._describeBase(), branches: this.schemas.map((s) => s.definition()), kind: 'union' };
   }
 
   protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
@@ -99,13 +101,5 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
     if (visitor.union) return visitor.union(this, branches);
 
     return super._walk(visitor);
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    if (!(other instanceof UnionSchema)) return false;
-
-    if (this.schemas.length !== other.schemas.length) return false;
-
-    return this.schemas.every((s, i) => s.equals(other.schemas[i]));
   }
 }

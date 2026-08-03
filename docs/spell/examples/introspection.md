@@ -1,6 +1,6 @@
 ---
 title: 'Spell Examples — Schema Introspection and Round-Trips'
-description: 'Serialize spell schemas to descriptors, rebuild them, and export JSON Schema.'
+description: 'Export declarative spell definitions as JSON Schema.'
 ---
 
 ## Schema Introspection and Round-Trips
@@ -11,10 +11,11 @@ Tooling layers need a serializable schema format. Runtime schema instances canno
 
 ### Solution
 
-Use `toDescriptor()` as the canonical portable shape, then export to JSON Schema for external consumers.
+Use `definition()` as canonical portable shape, then export it through `fromDefinition()` from `@vielzeug/spell/json`.
 
 ```ts
-import { descriptorToJsonSchema, s } from '@vielzeug/spell';
+import { s } from '@vielzeug/spell';
+import { fromDefinition } from '@vielzeug/spell/json';
 
 const Invoice = s
   .object({
@@ -24,8 +25,8 @@ const Invoice = s
   })
   .label('Invoice');
 
-const descriptor = Invoice.toDescriptor();
-const jsonSchema = descriptorToJsonSchema(descriptor);
+const definition = Invoice.definition();
+const jsonSchema = fromDefinition(definition);
 
 console.log(jsonSchema.title); // 'Invoice'
 console.log(jsonSchema.properties?.id);
@@ -33,9 +34,9 @@ console.log(jsonSchema.properties?.id);
 
 ### Pitfalls
 
-- Descriptor round-trips preserve `description`, optionality, nullability, object strictness, and common string and number annotations emitted by built-in helpers.
-- Use `descriptorToJsonSchema()` for external consumers. Do not hand Spell-specific descriptors to tools that expect JSON Schema.
-- `variant`, `pipe`, `instanceof`, and `lazy` descriptors are one-way — they serialize to a descriptor but cannot be reconstructed from it.
+- Definitions preserve declarative structure such as descriptions, optionality, nullability, and built-in annotations.
+- Use `fromDefinition()` for external consumers. Do not hand Spell definitions to tools that expect JSON Schema.
+- Runtime checks, transforms, defaults, catches, and preprocessors intentionally have no definition.
 
 ### Related
 

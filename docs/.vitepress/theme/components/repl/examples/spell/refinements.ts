@@ -1,24 +1,24 @@
 export const refinementsExample = {
-  code: `// validate() and refine() — custom domain rules beyond built-in constraints
+  code: `// check() and checkAsync() — explicit custom domain rules
 import { s } from '@vielzeug/spell'
 
 const reserved = new Set(['admin', 'root'])
 
-// validate() accepts sync or async; return a string to fail with that message
-const Username = s.string().min(3).validate((value) =>
+// check() is synchronous; return a string to fail with that message
+const Username = s.string().min(3).check((value) =>
   !reserved.has(value) || value + ' is reserved'
 )
 
-// validate() with ctx for multiple issues or custom error codes
+// check() receives context for multiple issues or custom error codes
 const Signup = s.object({ password: s.string().min(8), confirm: s.string() })
-  .validate((v, ctx) => {
+  .check((v, ctx) => {
     if (v.password !== v.confirm)
       ctx.addIssue({ code: 'custom', message: 'Passwords must match', path: ['confirm'] })
   })
 
-// refine() is the predicate-only shorthand for boolean checks
+// check() also covers predicate-only domain rules
 const EvenPort = s.number().int().min(1).max(65535)
-  .refine((n) => n % 2 === 0, () => 'Port must be even')
+  .check((n) => n % 2 === 0 || 'Port must be even')
 
 for (const name of ['ad', 'admin', 'grace']) {
   const r = Username.safeParse(name)

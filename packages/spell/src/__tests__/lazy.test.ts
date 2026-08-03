@@ -54,7 +54,7 @@ describe('s.lazy()', () => {
   });
 
   it('parseAsync() propagates async inner schema checkAsync()', async () => {
-    const inner = s.string().validate(async (val, ctx) => {
+    const inner = s.string().checkAsync(async (val, ctx) => {
       if (val === 'banned') ctx.addIssue({ code: 'custom', message: 'Banned', path: [] });
     });
     const schema = s.lazy(() => inner);

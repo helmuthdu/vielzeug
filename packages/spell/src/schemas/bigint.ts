@@ -1,95 +1,118 @@
 import type { MessageFn, SchemaDescriptor } from '../core';
 
 import { ErrorCode, fail, resolveMessage, Schema } from '../core';
-import { _messages, _dev } from '../messages';
+import { _dev } from '../messages';
 
-export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
+export class BigIntSchema<Input = bigint, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
+  bigint,
+  Input,
+  Mode
+> {
   protected override get _kind(): string {
     return 'bigint';
   }
 
+  override checkAsync(
+    fn: (value: bigint, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+  ): BigIntSchema<Input, 'async'> {
+    return this._addCheck(fn, true) as unknown as BigIntSchema<Input, 'async'>;
+  }
+
   constructor() {
     super((value, ctx) =>
-      typeof value === 'bigint' ? null : fail(ErrorCode.invalid_type, (ctx?.messages ?? _messages()).bigint.type()),
+      typeof value === 'bigint' ? null : fail(ErrorCode.invalid_type, ctx!.messages.bigint.type()),
     );
   }
 
-  min(
-    minimum: bigint,
-    message: MessageFn<{ min: bigint; value: bigint }> = (ctx) => _messages().bigint.min(ctx),
-  ): this {
-    return this._addConstraint((value, _ctx) => {
+  min(minimum: bigint, message?: MessageFn<{ min: bigint; value: bigint }>): this {
+    return this._addConstraint((value, ctx) => {
       const typed = value as bigint;
 
       if (typed >= minimum) return null;
 
-      return fail(ErrorCode.too_small, resolveMessage(message, { min: minimum, value: typed }), { min: minimum });
+      return fail(
+        ErrorCode.too_small,
+        resolveMessage(message ?? ctx!.messages.bigint.min, { min: minimum, value: typed }),
+        { min: minimum },
+      );
     });
   }
 
-  max(
-    maximum: bigint,
-    message: MessageFn<{ max: bigint; value: bigint }> = (ctx) => _messages().bigint.max(ctx),
-  ): this {
-    return this._addConstraint((value, _ctx) => {
+  max(maximum: bigint, message?: MessageFn<{ max: bigint; value: bigint }>): this {
+    return this._addConstraint((value, ctx) => {
       const typed = value as bigint;
 
       if (typed <= maximum) return null;
 
-      return fail(ErrorCode.too_big, resolveMessage(message, { max: maximum, value: typed }), { max: maximum });
+      return fail(
+        ErrorCode.too_big,
+        resolveMessage(message ?? ctx!.messages.bigint.max, { max: maximum, value: typed }),
+        { max: maximum },
+      );
     });
   }
 
-  positive(message: MessageFn<{ value: bigint }> = () => _messages().bigint.positive()): this {
-    return this._addConstraint((value, _ctx) => {
+  positive(message?: MessageFn<{ value: bigint }>): this {
+    return this._addConstraint((value, ctx) => {
       const typed = value as bigint;
 
       if (typed > 0n) return null;
 
-      return fail(ErrorCode.too_small, resolveMessage(message, { value: typed }), { exclusive: true, min: 0n });
+      return fail(ErrorCode.too_small, resolveMessage(message ?? ctx!.messages.bigint.positive, { value: typed }), {
+        exclusive: true,
+        min: 0n,
+      });
     });
   }
 
-  negative(message: MessageFn<{ value: bigint }> = () => _messages().bigint.negative()): this {
-    return this._addConstraint((value, _ctx) => {
+  negative(message?: MessageFn<{ value: bigint }>): this {
+    return this._addConstraint((value, ctx) => {
       const typed = value as bigint;
 
       if (typed < 0n) return null;
 
-      return fail(ErrorCode.too_big, resolveMessage(message, { value: typed }), { exclusive: true, max: 0n });
+      return fail(ErrorCode.too_big, resolveMessage(message ?? ctx!.messages.bigint.negative, { value: typed }), {
+        exclusive: true,
+        max: 0n,
+      });
     });
   }
 
-  nonNegative(message: MessageFn<{ value: bigint }> = () => _messages().bigint.nonNegative()): this {
-    return this._addConstraint((value, _ctx) => {
+  nonNegative(message?: MessageFn<{ value: bigint }>): this {
+    return this._addConstraint((value, ctx) => {
       const typed = value as bigint;
 
       if (typed >= 0n) return null;
 
-      return fail(ErrorCode.too_small, resolveMessage(message, { value: typed }), { min: 0n });
+      return fail(ErrorCode.too_small, resolveMessage(message ?? ctx!.messages.bigint.nonNegative, { value: typed }), {
+        min: 0n,
+      });
     });
   }
 
-  nonPositive(message: MessageFn<{ value: bigint }> = () => _messages().bigint.nonPositive()): this {
-    return this._addConstraint((value, _ctx) => {
+  nonPositive(message?: MessageFn<{ value: bigint }>): this {
+    return this._addConstraint((value, ctx) => {
       const typed = value as bigint;
 
       if (typed <= 0n) return null;
 
-      return fail(ErrorCode.too_big, resolveMessage(message, { value: typed }), { max: 0n });
+      return fail(ErrorCode.too_big, resolveMessage(message ?? ctx!.messages.bigint.nonPositive, { value: typed }), {
+        max: 0n,
+      });
     });
   }
 
-  multipleOf(
-    step: bigint,
-    message: MessageFn<{ step: bigint; value: bigint }> = (ctx) => _messages().bigint.multipleOf(ctx),
-  ): this {
-    return this._addConstraint((value, _ctx) => {
+  multipleOf(step: bigint, message?: MessageFn<{ step: bigint; value: bigint }>): this {
+    return this._addConstraint((value, ctx) => {
       const typed = value as bigint;
 
       if (typed % step === 0n) return null;
 
-      return fail(ErrorCode.invalid_multiple_of, resolveMessage(message, { step, value: typed }), { step });
+      return fail(
+        ErrorCode.invalid_multiple_of,
+        resolveMessage(message ?? ctx!.messages.bigint.multipleOf, { step, value: typed }),
+        { step },
+      );
     });
   }
 
@@ -112,16 +135,12 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
   protected override _toDescriptorImpl(): SchemaDescriptor {
     if (this.state.validators.length > 0) {
       _dev(
-        'toDescriptor(): this bigint schema has constraints (e.g. min(), max(), positive()). ' +
-          'BigInt constraints are not serializable and will not appear in toDescriptor() output.',
+        'definition(): this bigint schema has constraints (e.g. min(), max(), positive()). ' +
+          'BigInt constraints are not serializable and will not appear in the definition.',
       );
     }
 
     return { ...this._describeBase(), kind: 'bigint' };
-  }
-
-  protected override _equalsImpl(other: import('../core').AnySchema): boolean {
-    return other instanceof BigIntSchema;
   }
 
   static coerce(): BigIntSchema<unknown> {

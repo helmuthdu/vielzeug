@@ -31,22 +31,22 @@ const PublishedArticle = s.object({
   title: s.string().min(3),
 });
 
-const Article = s.variant('kind', {
+const Article = s.discriminatedUnion('kind', {
   draft: DraftArticle,
   published: PublishedArticle,
 });
 
-const AuditedArticle = s.and(Article, Timestamped);
+const AuditedArticle = s.intersect(Article, Timestamped);
 const result = AuditedArticle.safeParse({ kind: 'published', title: 'Docs', createdAt: new Date() });
 
-if (!result.success && SpellValidationError.is(result.error)) {
+if (!result.success && result.error instanceof SpellValidationError) {
   console.log(result.error.bestMatch());
 }
 ```
 
 ### Pitfalls
 
-- Prefer `s.variant()` over `s.union()` when one field can discriminate the branches. Errors are smaller and branch selection is deterministic.
+- Prefer `s.discriminatedUnion()` over `s.union()` when one field can discriminate the branches. Errors are smaller and branch selection is deterministic.
 - Intersections merge outputs deeply. Keep overlapping property names compatible across both sides.
 - `bestMatch()` is useful for union failures because it surfaces the branch that got closest to passing.
 
