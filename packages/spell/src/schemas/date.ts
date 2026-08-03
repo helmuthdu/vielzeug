@@ -12,6 +12,7 @@ export class DateSchema<Input = Date, Mode extends import('../core').SchemaMode 
   }
 
   override checkAsync(
+    this: DateSchema<Input, 'sync'>,
     fn: (value: Date, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
   ): DateSchema<Input, 'async'> {
     return this._addCheck(fn, true) as unknown as DateSchema<Input, 'async'>;

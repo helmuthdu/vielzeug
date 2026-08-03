@@ -13,6 +13,7 @@ export class SetSchema<
   }
 
   override checkAsync(
+    this: SetSchema<T, 'sync'>,
     fn: (value: Set<InferOutput<T>>, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
   ): SetSchema<T, 'async'> {
     return this._addCheck(fn, true) as unknown as SetSchema<T, 'async'>;

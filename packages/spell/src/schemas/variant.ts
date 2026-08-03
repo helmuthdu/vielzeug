@@ -6,7 +6,7 @@ import { defineOwnProperty, objectFromEntries } from '../safe-object';
 import { LiteralSchema } from './literal';
 import { type InferObject, ObjectSchema, type ObjectShape } from './object';
 
-type VariantMap = Record<string, ObjectSchema<Record<string, AnySchema>, import('../core').SchemaMode>>;
+type VariantMap = Record<string, ObjectSchema<any, any>>;
 type InferVariantMap<K extends string, M extends VariantMap> = {
   [Tag in keyof M & string]: M[Tag] extends { shape: infer S extends ObjectShape }
     ? InferObject<S> & { [P in K]: Tag }
@@ -28,6 +28,7 @@ export class VariantSchema<
   }
 
   override checkAsync(
+    this: VariantSchema<K, M, 'sync'>,
     fn: (
       value: InferVariantMap<K, M>,
       ctx: import('../core').CheckContext,

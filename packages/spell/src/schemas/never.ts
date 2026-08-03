@@ -8,6 +8,7 @@ export class NeverSchema<Mode extends import('../core').SchemaMode = 'sync'> ext
   }
 
   override checkAsync(
+    this: NeverSchema<'sync'>,
     fn: (value: never, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
   ): NeverSchema<'async'> {
     return this._addCheck(fn, true) as unknown as NeverSchema<'async'>;

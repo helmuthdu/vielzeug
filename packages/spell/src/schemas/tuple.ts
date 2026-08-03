@@ -23,6 +23,7 @@ export class TupleSchema<
   }
 
   override checkAsync(
+    this: TupleSchema<T, R, 'sync'>,
     fn: (value: InferTuple<T, R>, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
   ): TupleSchema<T, R, 'async'> {
     return this._addCheck(fn, true) as unknown as TupleSchema<T, R, 'async'>;
@@ -37,7 +38,11 @@ export class TupleSchema<
   rest<U extends AnySchema>(
     schema: U,
   ): TupleSchema<T, U, import('../core').MergeSchemaModes<Mode | import('../core').InferSchemaMode<U>>> {
-    return this._copyStateTo(new TupleSchema(this.items, schema));
+    return this._copyStateTo(new TupleSchema(this.items, schema)) as unknown as TupleSchema<
+      T,
+      U,
+      import('../core').MergeSchemaModes<Mode | import('../core').InferSchemaMode<U>>
+    >;
   }
 
   private _guardTupleInput(

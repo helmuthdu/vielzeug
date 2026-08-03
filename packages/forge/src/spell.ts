@@ -1,4 +1,4 @@
-import { Schema, type Issue } from '@vielzeug/spell';
+import { Schema, type Issue, type SchemaMode } from '@vielzeug/spell';
 
 import type { FormErrors, FormValidator, ValidationErrors } from './types';
 
@@ -49,7 +49,7 @@ function prefixIssues(path: readonly (string | number)[], issues: readonly Issue
 
 /** Adapts a Spell Schema into Forge's full-form validator without transforming form values. */
 export function customValidator<TValues extends Record<string, unknown>>(
-  schema: Schema<unknown, TValues>,
+  schema: Schema<unknown, TValues, SchemaMode>,
 ): FormValidator<TValues> {
   return async (values, signal) => {
     const result = await abortable(schema.safeParseAsync(values), signal);

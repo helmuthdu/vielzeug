@@ -17,6 +17,7 @@ export class MapSchema<
   }
 
   override checkAsync(
+    this: MapSchema<K, V, 'sync'>,
     fn: (
       value: Map<InferOutput<K>, InferOutput<V>>,
       ctx: import('../core').CheckContext,

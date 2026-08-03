@@ -22,6 +22,13 @@ export class ObjectSchema<
     return 'object';
   }
 
+  override checkAsync(
+    this: ObjectSchema<T, 'sync'>,
+    fn: (value: InferObject<T>, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+  ): ObjectSchema<T, 'async'> {
+    return this._addCheck(fn, true) as unknown as ObjectSchema<T, 'async'>;
+  }
+
   constructor(shape: T, isRelaxed = false) {
     super();
     this.shape = Object.freeze(objectFromEntries(Object.entries(shape))) as T;
@@ -93,8 +100,11 @@ export class ObjectSchema<
     };
   }
 
-  private _rebuildWith<U extends ObjectShape>(shape: U, isRelaxed = this._isRelaxed): ObjectSchema<U> {
-    return this._copyStateTo(new ObjectSchema(shape, isRelaxed));
+  private _rebuildWith<U extends ObjectShape, NewMode extends import('../core').SchemaMode = Mode>(
+    shape: U,
+    isRelaxed = this._isRelaxed,
+  ): ObjectSchema<U, NewMode> {
+    return this._copyStateTo(new ObjectSchema(shape, isRelaxed)) as unknown as ObjectSchema<U, NewMode>;
   }
 
   protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
@@ -163,11 +173,17 @@ export class ObjectSchema<
     });
   }
 
-  partial(): ObjectSchema<{ [K in keyof T]: Schema<InferOutput<T[K]> | undefined> }>;
+  partial(): ObjectSchema<
+    { [K in keyof T]: Schema<InferOutput<T[K]> | undefined, InferOutput<T[K]> | undefined, Mode> },
+    Mode
+  >;
   partial<K extends keyof T>(
     ...keys: K[]
-  ): ObjectSchema<Omit<T, K> & { [P in K]: Schema<InferOutput<T[P]> | undefined> }>;
-  partial<K extends keyof T>(...keys: K[]): ObjectSchema<any> {
+  ): ObjectSchema<
+    Omit<T, K> & { [P in K]: Schema<InferOutput<T[P]> | undefined, InferOutput<T[P]> | undefined, Mode> },
+    Mode
+  >;
+  partial<K extends keyof T>(...keys: K[]): ObjectSchema<any, Mode> {
     const targetKeys = keys.length > 0 ? new Set(keys as string[]) : null;
 
     return this._rebuildWith(
@@ -178,27 +194,50 @@ export class ObjectSchema<
     );
   }
 
-  override required(): Schema<InferObject<T>, InferObjectInput<T>, Mode> {
+  override optional(): ObjectSchema<T, Mode> &
+    Schema<InferObject<T> | undefined, InferObjectInput<T> | undefined, Mode> {
+    return super.optional() as ObjectSchema<T, Mode> &
+      Schema<InferObject<T> | undefined, InferObjectInput<T> | undefined, Mode>;
+  }
+
+  override nullable(): ObjectSchema<T, Mode> & Schema<InferObject<T> | null, InferObjectInput<T> | null, Mode> {
+    return super.nullable() as ObjectSchema<T, Mode> & Schema<InferObject<T> | null, InferObjectInput<T> | null, Mode>;
+  }
+
+  override nullish(): ObjectSchema<T, Mode> &
+    Schema<InferObject<T> | null | undefined, InferObjectInput<T> | null | undefined, Mode> {
+    return super.nullish() as ObjectSchema<T, Mode> &
+      Schema<InferObject<T> | null | undefined, InferObjectInput<T> | null | undefined, Mode>;
+  }
+
+  override required(): ObjectSchema<T, Mode> &
+    Schema<Exclude<InferObject<T>, undefined>, Exclude<InferObjectInput<T>, undefined>, Mode> {
     return this._rebuildWith(
       objectFromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.required()])) as any,
       this._isRelaxed,
-    ) as unknown as Schema<InferObject<T>, InferObjectInput<T>, Mode>;
+    ) as ObjectSchema<T, Mode> &
+      Schema<Exclude<InferObject<T>, undefined>, Exclude<InferObjectInput<T>, undefined>, Mode>;
   }
 
-  extend<U extends ObjectShape>(extra: U): ObjectSchema<Omit<T, keyof U> & U> {
+  extend<U extends ObjectShape>(
+    extra: U,
+  ): ObjectSchema<
+    Omit<T, keyof U> & U,
+    import('../core').MergeSchemaModes<Mode | import('../core').InferSchemaMode<U[keyof U]>>
+  > {
     return this._rebuildWith(
       objectFromEntries([...Object.entries(this.shape), ...Object.entries(extra)]) as any,
       this._isRelaxed,
     );
   }
 
-  pick<K extends keyof T>(...keys: K[]): ObjectSchema<Pick<T, K>> {
+  pick<K extends keyof T>(...keys: K[]): ObjectSchema<Pick<T, K>, Mode> {
     const keySet = new Set(keys as string[]);
 
     return this._rebuildWith(objectFromEntries(Object.entries(this.shape).filter(([k]) => keySet.has(k))) as any);
   }
 
-  omit<K extends keyof T>(...keys: K[]): ObjectSchema<Omit<T, K>> {
+  omit<K extends keyof T>(...keys: K[]): ObjectSchema<Omit<T, K>, Mode> {
     const keySet = new Set(keys as string[]);
 
     return this._rebuildWith(objectFromEntries(Object.entries(this.shape).filter(([k]) => !keySet.has(k))) as any);
@@ -213,7 +252,7 @@ export class ObjectSchema<
    * const Config = s.object({ host: s.string().default('localhost'), port: s.number().default(3000) });
    * Config.defaults(); // { host: 'localhost', port: 3000 }
    */
-  defaults(): InferObject<T> {
+  defaults(this: ObjectSchema<T, 'sync'>): InferObject<T> {
     return this.parse({});
   }
 
@@ -227,7 +266,7 @@ export class ObjectSchema<
    * const Form = s.object({ name: s.string(), role: s.string().default('viewer') });
    * Form.partialDefaults(); // { role: 'viewer' }  — name is omitted
    */
-  partialDefaults(): Partial<InferObject<T>> {
+  partialDefaults(this: ObjectSchema<T, 'sync'>): Partial<InferObject<T>> {
     const result: Record<string, unknown> = {};
 
     for (const key of Object.keys(this.shape)) {
@@ -270,7 +309,7 @@ export class ObjectSchema<
    * Returns `ObjectSchema<T>` so fluent methods like `.pick()`, `.omit()`,
    * `.extend()`, and `.partial()` remain usable after calling `.relaxed()`.
    */
-  relaxed(): ObjectSchema<T> {
+  relaxed(): ObjectSchema<T, Mode> {
     return this._rebuildWith(this.shape, true);
   }
 
@@ -278,7 +317,7 @@ export class ObjectSchema<
    * Alias for the default strict mode — rejects unknown keys.
    * Useful after calling `.relaxed()` to return a new strict schema.
    */
-  strict(): ObjectSchema<T> {
+  strict(): ObjectSchema<T, Mode> {
     return this._rebuildWith(this.shape, false);
   }
 
@@ -317,7 +356,9 @@ export class ObjectSchema<
     return super._walk(visitor);
   }
 
-  merge<U extends ObjectShape>(other: ObjectSchema<U>): ObjectSchema<T & U> {
+  merge<U extends ObjectShape, OtherMode extends import('../core').SchemaMode>(
+    other: ObjectSchema<U, OtherMode>,
+  ): ObjectSchema<T & U, import('../core').MergeSchemaModes<Mode | OtherMode>> {
     return this._rebuildWith(
       objectFromEntries([...Object.entries(this.shape), ...Object.entries(other.shape)]) as any,
       other._isRelaxed,

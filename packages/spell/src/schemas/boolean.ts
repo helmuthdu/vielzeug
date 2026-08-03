@@ -12,6 +12,7 @@ export class BooleanSchema<Input = boolean, Mode extends import('../core').Schem
   }
 
   override checkAsync(
+    this: BooleanSchema<Input, 'sync'>,
     fn: (value: boolean, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
   ): BooleanSchema<Input, 'async'> {
     return this._addCheck(fn, true) as unknown as BooleanSchema<Input, 'async'>;

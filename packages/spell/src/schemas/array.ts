@@ -20,6 +20,7 @@ export class ArraySchema<
   }
 
   override checkAsync(
+    this: ArraySchema<T, 'sync'>,
     fn: (value: InferOutput<T>[], ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
   ): ArraySchema<T, 'async'> {
     return this._addCheck(fn, true) as unknown as ArraySchema<T, 'async'>;

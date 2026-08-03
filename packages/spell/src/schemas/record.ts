@@ -18,6 +18,7 @@ export class RecordSchema<
   }
 
   override checkAsync(
+    this: RecordSchema<K, V, 'sync'>,
     fn: (
       value: Record<InferOutput<K> & string, InferOutput<V>>,
       ctx: import('../core').CheckContext,

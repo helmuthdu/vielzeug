@@ -25,6 +25,7 @@ import {
   type SchemaDescriptor,
   type SchemaWalker,
   schemaInput,
+  schemaMode,
   schemaOutput,
   type ValidateFn,
   type ValidateResult,
@@ -51,6 +52,7 @@ export {
   type SchemaDefinition,
   type SchemaDescriptor,
   type SchemaWalker,
+  schemaMode,
   type ValidateFn,
   type ValidateResult,
 };
@@ -177,6 +179,7 @@ function normalizeValidateResult(result: ValidateResult, ctxIssues: Issue[], ctx
 
 export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 'sync'> {
   declare readonly [schemaInput]: Input;
+  declare readonly [schemaMode]: Mode;
   declare readonly [schemaOutput]: Output;
 
   protected state: SchemaState<Output>;
@@ -192,6 +195,7 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
 
   /* -------------------- Parse -------------------- */
 
+  parse(this: Schema<Output, Input, 'sync'>, value: unknown, ctx?: ParseContext): Output;
   parse(value: unknown, ctx?: ParseContext): Output {
     if (this.state.hasAsyncChecks) {
       throw new SpellValidationError([
@@ -228,9 +232,13 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
     });
   }
 
+  safeParse(this: Schema<Output, Input, 'sync'>, value: unknown, ctx?: ParseContext): ParseResult<Output>;
   safeParse(value: unknown, ctx?: ParseContext): ParseResult<Output> {
     try {
-      return { data: this.parse(value, ctx), success: true };
+      return {
+        data: (this.parse as unknown as (value: unknown, ctx?: ParseContext) => Output)(value, ctx),
+        success: true,
+      };
     } catch (error) {
       if (error instanceof SpellValidationError) return { error, success: false };
 
@@ -493,7 +501,7 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
   }
 
   is(value: unknown): value is Output {
-    return this.safeParse(value).success;
+    return (this.safeParse as unknown as (value: unknown) => ParseResult<Output>)(value).success;
   }
 
   assert(value: unknown, label?: string): asserts value is Output {
@@ -705,6 +713,7 @@ export class PipeSchema<
   }
 
   override checkAsync(
+    this: PipeSchema<To, From, 'sync'>,
     fn: (value: InferOutput<To>, ctx: CheckContext) => Promise<ValidateResult>,
   ): PipeSchema<To, From, 'async'> {
     return this._addCheck(fn, true) as unknown as PipeSchema<To, From, 'async'>;

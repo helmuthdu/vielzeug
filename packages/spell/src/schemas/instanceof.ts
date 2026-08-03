@@ -10,6 +10,7 @@ export class InstanceOfSchema<T, Mode extends import('../core').SchemaMode = 'sy
   }
 
   override checkAsync(
+    this: InstanceOfSchema<T, 'sync'>,
     fn: (value: T, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
   ): InstanceOfSchema<T, 'async'> {
     return this._addCheck(fn, true) as unknown as InstanceOfSchema<T, 'async'>;

@@ -13,6 +13,7 @@ export class BigIntSchema<Input = bigint, Mode extends import('../core').SchemaM
   }
 
   override checkAsync(
+    this: BigIntSchema<Input, 'sync'>,
     fn: (value: bigint, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
   ): BigIntSchema<Input, 'async'> {
     return this._addCheck(fn, true) as unknown as BigIntSchema<Input, 'async'>;

@@ -1,7 +1,15 @@
 import { fail, prependIssuePath } from './errors';
 import { createParseContext } from './messages';
 
-export { ErrorCode, PipeSchema, Schema, SpellDefinitionError, SpellError, SpellValidationError } from './core';
+export {
+  ErrorCode,
+  PipeSchema,
+  Schema,
+  SpellDefinitionError,
+  SpellError,
+  SpellValidationError,
+  schemaMode,
+} from './core';
 export type {
   AnySchema,
   CheckContext,

@@ -39,6 +39,7 @@ export class IntersectSchema<
   }
 
   override checkAsync(
+    this: IntersectSchema<T, 'sync'>,
     fn: (
       value: UnionToIntersection<InferOutput<T[number]>>,
       ctx: import('../core').CheckContext,

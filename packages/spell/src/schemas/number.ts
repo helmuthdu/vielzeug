@@ -23,6 +23,7 @@ export class NumberSchema<Input = number, Mode extends import('../core').SchemaM
   }
 
   override checkAsync(
+    this: NumberSchema<Input, 'sync'>,
     fn: (value: number, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
   ): NumberSchema<Input, 'async'> {
     return this._addCheck(fn, true) as unknown as NumberSchema<Input, 'async'>;

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "restrict synchronous parsing for asynchronous schemas",
+      "packageName": "@vielzeug/spell",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/spell"
+}

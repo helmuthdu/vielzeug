@@ -36,7 +36,7 @@
     "lint": "eslint src",
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
-    "test": "vitest",
+    "test": "pnpm test:types && vitest",
     "test:types": "tsc -p tsconfig.types.json",
     "build:bundle": "vite build --config vite.bundle.config.ts"
   },

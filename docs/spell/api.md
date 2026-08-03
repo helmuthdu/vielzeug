@@ -154,7 +154,12 @@ if (!result.success) {
 | Type | Purpose |
 | --- | --- |
 | `Infer<T>` / `InferOutput<T>` | Parsed output type |
-| `InferInput<T>` | Accepted input type |
+| `InferInput<T>` | Accepted input type, including async schemas |
+| `InferSchemaMode<T>` | `'sync'` or `'async'` parsing capability |
+| `SchemaMode` | Mode union: `'sync' | 'async'` |
+| `AnySchema` | Structural schema surface for composition and custom integrations |
+| `schemaMode` | Public symbol marking a schema's parsing capability |
+| `MergeSchemaModes<T>` | Produces `'async'` when any constituent mode is async |
 | `ParseResult<T>` | Tagged safe-parse result |
 | `Issue` | Validation issue union |
 | `CheckContext` / `ValidateResult` | Custom check callback contracts |

@@ -13,6 +13,7 @@ export class LiteralSchema<
   }
 
   override checkAsync(
+    this: LiteralSchema<T, 'sync'>,
     fn: (value: T, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
   ): LiteralSchema<T, 'async'> {
     return this._addCheck(fn, true) as unknown as LiteralSchema<T, 'async'>;

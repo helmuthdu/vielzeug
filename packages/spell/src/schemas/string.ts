@@ -51,6 +51,7 @@ export class StringSchema<Input = string, Mode extends import('../core').SchemaM
   }
 
   override checkAsync(
+    this: StringSchema<Input, 'sync'>,
     fn: (value: string, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
   ): StringSchema<Input, 'async'> {
     return this._addCheck(fn, true) as unknown as StringSchema<Input, 'async'>;

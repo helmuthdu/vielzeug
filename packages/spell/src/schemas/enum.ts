@@ -33,6 +33,7 @@ export class EnumSchema<T extends EnumValues, Mode extends import('../core').Sch
   }
 
   override checkAsync(
+    this: EnumSchema<T, 'sync'>,
     fn: (value: EnumType<T>, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
   ): EnumSchema<T, 'async'> {
     return this._addCheck(fn, true) as unknown as EnumSchema<T, 'async'>;

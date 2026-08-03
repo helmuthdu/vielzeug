@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "accept asynchronous Spell schemas in the validator adapter",
+      "packageName": "@vielzeug/forge",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/forge"
+}

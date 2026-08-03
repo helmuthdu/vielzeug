@@ -15,6 +15,7 @@ export class UnionSchema<
   }
 
   override checkAsync(
+    this: UnionSchema<T, 'sync'>,
     fn: (
       value: InferOutput<T[number]>,
       ctx: import('../core').CheckContext,

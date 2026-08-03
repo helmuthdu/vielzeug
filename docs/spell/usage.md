@@ -139,7 +139,7 @@ const Signup = s.object({ confirm: s.string(), password: s.string() }).check((v,
 });
 ```
 
-`checkAsync()` returns an async-only schema: TypeScript exposes `parseAsync()` and `safeParseAsync()` but not `parse()` or `safeParse()`. This mode propagates through nested arrays, objects, unions, intersections, tuples, maps, records, sets, lazy schemas, pipelines, and `s.discriminatedUnion(...)` branches. Sync parsing also fails at runtime instead of accepting an unchecked value.
+`checkAsync()` returns an async-only schema: TypeScript exposes `parseAsync()` and `safeParseAsync()` but not `parse()` or `safeParse()`. This mode survives fluent modifiers and propagates through nested arrays, objects, unions, intersections, tuples, maps, records, sets, lazy schemas, pipelines, and `s.discriminatedUnion(...)` branches. Sync parsing also fails at runtime instead of accepting an unchecked value.
 
 ```ts
 import { s } from '@vielzeug/spell';

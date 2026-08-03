@@ -15,6 +15,7 @@ export class LazySchema<T, Input = T, Mode extends import('../core').SchemaMode 
   }
 
   override checkAsync(
+    this: LazySchema<T, Input, 'sync'>,
     fn: (value: T, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
   ): LazySchema<T, Input, 'async'> {
     return this._addCheck(fn, true) as unknown as LazySchema<T, Input, 'async'>;
