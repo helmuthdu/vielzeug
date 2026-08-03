@@ -120,13 +120,8 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
     isDisposed = true;
     ac.abort();
     cancelTimer();
-    subscription.dispose();
+    subscription();
     unsubscribeMutations();
-    query.dispose();
-    committedQuery.dispose();
-    isSearching.dispose();
-    results.dispose();
-    indexVersion.dispose();
   }
 
   return {
@@ -185,5 +180,5 @@ export function createReactiveSearch<T>(
   });
   const state = createSearch(index, { debounce: options.debounce });
 
-  return { ...state, index };
+  return Object.assign(Object.create(state), { index }) as ReactiveSearch<T>;
 }

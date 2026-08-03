@@ -1,4 +1,4 @@
-import type { Computed, Signal } from '@vielzeug/ripple';
+import type { Readable, Signal } from '@vielzeug/ripple';
 
 /**
  * A single field to include in the index.
@@ -127,7 +127,7 @@ export type SearchState<T> = {
    * `true` during the debounce window — between when `query` changes and when `results` updates.
    * Always `false` when `debounce` is `0`.
    */
-  readonly isSearching: Computed<boolean>;
+  readonly isSearching: Readable<boolean>;
   /**
    * Writable signal holding the current search query.
    * Set `.value` to trigger a (debounced) search.
@@ -137,5 +137,5 @@ export type SearchState<T> = {
    * Read-only computed that holds the latest search results.
    * Updated after the debounce delay whenever `query` changes.
    */
-  readonly results: Computed<SearchResult<T>[]>;
+  readonly results: Readable<SearchResult<T>[]>;
 };

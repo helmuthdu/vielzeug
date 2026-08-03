@@ -13,7 +13,8 @@ import {
   useSlots,
   watchEffect,
 } from '@vielzeug/ore';
-import { computed, signal, watch as rippleWatch } from '@vielzeug/ripple';
+import { computed, signal } from '@vielzeug/ripple';
+import { watch as rippleWatch } from '@vielzeug/ripple/watch';
 
 import type { ComponentSize } from '../../types';
 

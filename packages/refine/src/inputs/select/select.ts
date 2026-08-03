@@ -1,6 +1,7 @@
 import { define, html, prop, bind, getHost, onCleanup, onMounted, useEmit, useSlots } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore';
-import { computed, effect, signal, watch } from '@vielzeug/ripple';
+import { computed, effect, signal } from '@vielzeug/ripple';
+import { watch } from '@vielzeug/ripple/watch';
 
 import type { OverlayOpenChangeDetail, OverlayOpenReason } from '../../core';
 import type { SelectableFieldProps } from '../../shared';

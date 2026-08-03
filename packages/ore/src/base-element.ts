@@ -1,4 +1,4 @@
-import { scope as _scope, type Scope, untrack } from '@vielzeug/ripple';
+import { createScope, type Scope, untrack } from '@vielzeug/ripple';
 
 import type { ComponentDefinition } from './component-types';
 
@@ -50,7 +50,7 @@ const createComponentState = (): ComponentState => ({
   generation: 0,
   mountCallbacks: [],
   phase: ComponentPhase.UNINITIALIZED,
-  scope: _scope(),
+  scope: createScope(),
   templateResult: null,
 });
 
@@ -144,7 +144,7 @@ export class BaseElement extends HTMLElement {
     this._component.formResetCallbacks = [];
     this._component.mountCallbacks = [];
     this._component.phase = ComponentPhase.UNINITIALIZED;
-    this._component.scope = _scope();
+    this._component.scope = createScope();
     this._component.templateResult = null;
   }
 
@@ -218,10 +218,14 @@ export class BaseElement extends HTMLElement {
 
     const host: Element | ShadowRoot = this.shadowRoot ?? this;
 
-    // Insert and wire the template in one step via the result's mount().
+    // Mounting can register component cleanup, so preserve a runtime context here too.
+    const context = createRuntimeContext(this);
+
     host.replaceChildren();
     this._component.scope.run(() => {
-      result.mount(host, null, onCleanup);
+      runWithContext(context, () => {
+        result.mount(host, null, onCleanup);
+      });
     });
   }
 

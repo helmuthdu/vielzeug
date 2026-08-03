@@ -5,7 +5,7 @@
   "files": [
     "dist"
   ],
-  "description": "Fine-grained reactive state — signals, computed values, effects, stores, and reactive scopes",
+  "description": "Fine-grained reactive runtime — signals, derived values, effects, scopes, and optional state tools",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,23 +16,23 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./devtools": {
-      "source": "./src/devtools.ts",
-      "types": "./dist/devtools.d.ts",
-      "import": "./dist/devtools.js",
-      "require": "./dist/devtools.cjs"
+    "./async": {
+      "source": "./src/async.ts",
+      "types": "./dist/async.d.ts",
+      "import": "./dist/async.js",
+      "require": "./dist/async.cjs"
     },
-    "./history": {
-      "source": "./src/history.ts",
-      "types": "./dist/history.d.ts",
-      "import": "./dist/history.js",
-      "require": "./dist/history.cjs"
+    "./store": {
+      "source": "./src/store.ts",
+      "types": "./dist/store.d.ts",
+      "import": "./dist/store.js",
+      "require": "./dist/store.cjs"
     },
-    "./ssr": {
-      "source": "./src/ssr/index.ts",
-      "types": "./dist/ssr/index.d.ts",
-      "import": "./dist/ssr/index.js",
-      "require": "./dist/ssr/index.cjs"
+    "./watch": {
+      "source": "./src/watch.ts",
+      "types": "./dist/watch.d.ts",
+      "import": "./dist/watch.js",
+      "require": "./dist/watch.cjs"
     }
   },
   "scripts": {

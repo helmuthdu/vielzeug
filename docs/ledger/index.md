@@ -31,7 +31,7 @@ Undo/redo is deceptively complex: you need to handle async side-effects, prevent
 
 **Use Ledger when** you need undo/redo for editors, design tools, form state, or any app with reversible mutations — especially with async side-effects like server persistence.
 
-**Consider a simpler approach when** you only need client-side state undo with a single synchronous mutation and no UI reactivity — `@vielzeug/ripple`'s `storeWithHistory` may be enough.
+**Consider a simpler approach when** you only need one synchronous client-side mutation and do not need command semantics, async sequencing, or reactive history state.
 
 </div>
 

@@ -1,4 +1,4 @@
-import { batch, readonly, signal } from '@vielzeug/ripple';
+import { batch, signal } from '@vielzeug/ripple';
 
 import type {
   DebugEvent,
@@ -611,13 +611,11 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
     queue.length = 0;
     stopInvokes();
     clearTimers();
-    state_.dispose();
-    context_.dispose();
   };
 
   return {
     can,
-    context: readonly(context_),
+    context: context_,
     get disposalSignal() {
       return disposeController.signal;
     },
@@ -629,7 +627,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
     getTrace,
     matches,
     send,
-    state: readonly(state_),
+    state: state_,
     subscribe,
     [Symbol.dispose]: dispose,
   };

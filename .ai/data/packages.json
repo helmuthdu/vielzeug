@@ -186,7 +186,7 @@
       "slug": "ripple",
       "name": "@vielzeug/ripple",
       "category": "State",
-      "description": "Reactive signals, computed, effects, stores",
+      "description": "Reactive runtime primitives: signals, derived values, effects, and scopes",
       "domOutput": false,
       "dependencies": [],
       "optionalPeers": []

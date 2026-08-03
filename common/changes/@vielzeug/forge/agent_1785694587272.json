@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: migrate form notifications to Ripple watch module",
+      "packageName": "@vielzeug/forge",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/forge"
+}

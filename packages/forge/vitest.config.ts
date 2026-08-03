@@ -8,10 +8,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@vielzeug/arsenal': path.resolve(__dirname, '../arsenal/src/index.ts'),
-      '@vielzeug/ripple': path.resolve(__dirname, '../ripple/src/index.ts'),
-    },
+    alias: [
+      { find: /^@vielzeug\/arsenal$/, replacement: path.resolve(__dirname, '../arsenal/src/index.ts') },
+      { find: /^@vielzeug\/ripple\/watch$/, replacement: path.resolve(__dirname, '../ripple/src/watch.ts') },
+      { find: /^@vielzeug\/ripple$/, replacement: path.resolve(__dirname, '../ripple/src/index.ts') },
+    ],
   },
   test: {
     environment: 'jsdom',

@@ -47,8 +47,6 @@ export function when(
     const ownedComputed = typeof condition === 'function' ? computed(condition as () => boolean) : null;
     const conditionSignal = ownedComputed ?? (condition as Readable<boolean>);
 
-    if (ownedComputed) registerCleanup(() => ownedComputed.dispose());
-
     const parent = anchor.parentNode;
 
     invariant(parent, NO_PARENT_MSG);

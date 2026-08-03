@@ -8,12 +8,9 @@ import { SourcererDisposedError, SourcererTimeoutError } from './errors';
  * that being the repo-wide convention for "reactive" packages. Tried it; reverted. Two concrete
  * problems, not just aesthetics:
  *
- * 1. `prefetchSource()`/`prefetchSourceAndKeep()` are explicitly documented for SSR, and every
- *    source factory routes through this file's `signal`-backed notify. Ripple's own scheduler
- *    warns that its module-level flush queue is shared across concurrent requests in Node.js
- *    unless the caller opts into `@vielzeug/ripple/ssr`'s per-request isolation — a real,
- *    unaddressed risk in exactly the code path meant to run on a server handling concurrent
- *    requests.
+ * 1. `prefetchSource()`/`prefetchSourceAndKeep()` are explicitly documented for SSR. Source
+ *    factories need only plain notification, so adding a reactive runtime per request would
+ *    impose ownership and scheduling concepts without improving this server-side code path.
  * 2. `subscribe()`'s public contract is "fire on every notify()", not per-field reactivity —
  *    ripple's dependency-tracking machinery (a real subscription object per `watch()` call)
  *    buys nothing over a bare `Set.add()` for that contract, since there's exactly one thing

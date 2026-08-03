@@ -1,4 +1,6 @@
-import { type Readable, signal, onCleanup } from '@vielzeug/ripple';
+import { type Readable, signal } from '@vielzeug/ripple';
+
+import { onCleanup } from '../runtime';
 
 /**
  * Observes an element's content-box size via `ResizeObserver`.

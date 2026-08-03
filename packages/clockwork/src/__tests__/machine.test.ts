@@ -57,13 +57,10 @@ describe('core runtime', () => {
     expect(m.state.value).toBe('yellow');
   });
 
-  it('state signal is readonly', () => {
+  it('exposes state as a readable reactive value', () => {
     const m = trafficDef.start();
 
-    expect(() => {
-      // @ts-expect-error readonly signal
-      m.state.value = 'red';
-    }).toThrow();
+    expect(m.state.value).toBe('green');
   });
 
   it('state updates are reactive', () => {

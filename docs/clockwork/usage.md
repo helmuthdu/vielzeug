@@ -780,36 +780,31 @@ onUnmounted(() => { unsub?.(); m?.dispose(); });
 
 ## Server-Side Rendering
 
-Clockwork's `state` and `context` are `@vielzeug/ripple` signals, so every machine shares ripple's module-level flush queue by default. That's fine for a single long-running Node process with one machine tree, but if you create machines **per incoming request** (e.g. an SSR handler that runs `createMachine(config).start()` on every request), concurrent requests can share scheduling state and interleave `batch()` flushes.
-
-Create one `@vielzeug/ripple` SSR provider at server bootstrap, then wrap each request in `runWithProvider()` to give it its own isolated scheduling context — clockwork needs no special import or configuration, it automatically picks up whatever provider is active for the duration of that call:
+Clockwork state is synchronous. Create and dispose each machine within request handling; no SSR-specific Ripple provider or global hook is required.
 
 ```ts
 // server bootstrap (once, at startup)
-import { createAsyncProvider } from '@vielzeug/ripple/ssr';
-
-const provider = createAsyncProvider();
+// Ripple runtime setup is not required for Clockwork SSR.
 ```
 
 ```ts
 // inside each request handler
-import { runWithProvider } from '@vielzeug/ripple/ssr';
 import { createMachine } from '@vielzeug/clockwork';
 import { trafficConfig } from './machine';
 
 async function handleRequest(req: Request): Promise<Response> {
-  return runWithProvider(provider, async () => {
-    const m = createMachine(trafficConfig).start();
+  const m = createMachine(trafficConfig).start();
 
+  try {
     // ...drive the machine and render...
-
-    m.dispose();
     return new Response(/* ... */);
-  });
+  } finally {
+    m.dispose();
+  }
 }
 ```
 
-`runWithProvider()` installs the tracking hook only for the duration of that call (and, for an async `fn`, until its returned promise settles) — there's no separate "install a persistent provider" step, and nothing to leak between requests. Single-page apps, static builds, and Node scripts that never run concurrent request handlers don't need this — the default (no provider installed) is correct there. See the `@vielzeug/ripple/ssr` entry in `@vielzeug/ripple`'s [API reference](/ripple/api#package-entry-point) for the full provider API.
+Dispose each request-scoped machine in `finally` so invokes and timers cannot outlive the request.
 
 ## Working with Other Vielzeug Libraries
 

@@ -1,41 +1,20 @@
 export const watchAndSubscribeExample = {
-  code: `import { computed, signal, store, watch } from '@vielzeug/ripple'
+  code: `import { createRipple } from '@vielzeug/ripple'
 
-const counter = signal(0)
+// Watch receives selected value transitions, not every graph update.
+const ripple = createRipple()
+const first = ripple.signal('Ada')
+const last = ripple.signal('Lovelace')
+const fullName = ripple.computed(() => first.value + ' ' + last.value)
 
-// watch: fires when the signal changes (not immediately)
-const sub = watch(counter, (next, prev) => {
-  console.log('Count:', prev, '→', next)
-})
+const stop = ripple.watch(fullName, (value, previous) => {
+  console.log({ previous, value })
+}, { immediate: true })
 
-counter.value = 1
-counter.value = 2
-counter.value = 3
+first.value = 'Grace'
+last.value = 'Hopper'
 
-sub.dispose()
-counter.value = 4 // No log — disposed
-
-// Store: watch a lens for a single field
-const cart = store({ items: 0, total: 0 })
-const itemsLens = cart.lens('items')
-
-const itemsSub = watch(itemsLens, (n) => console.log('Items changed:', n))
-
-cart.patch({ items: 2, total: 29.98 }) // fires (items changed)
-cart.patch({ total: 59.99 })           // does NOT fire (items unchanged)
-cart.patch({ items: 3 })               // fires
-
-itemsSub.dispose()
-
-// computed() combinator: derive a reactive value from a lens
-const totalLens = cart.lens('total')
-const totalLabel = computed(() => \`Total: $\${totalLens.value.toFixed(2)}\`)
-const labelSub = watch(totalLabel, (label) => console.log(label))
-
-cart.patch({ total: 89.99 }) // → 'Total: $89.99'
-
-labelSub.dispose()
-totalLens.dispose()
-totalLabel.dispose()`,
-  name: 'Watch, Lens & Map',
+stop.dispose()
+ripple.dispose()`,
+  name: 'Watch Selected Value',
 };

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: align Ripple adapter with function unsubscription",
+      "packageName": "@vielzeug/flux",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/flux"
+}

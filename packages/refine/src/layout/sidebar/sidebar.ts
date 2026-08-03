@@ -12,7 +12,8 @@ import {
   useSlots,
 } from '@vielzeug/ore';
 import { resizeObserver } from '@vielzeug/ore';
-import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
+import { computed, type Readable, signal } from '@vielzeug/ripple';
+import { watch } from '@vielzeug/ripple/watch';
 
 import '../../content/icon/icon';
 import { coarsePointerMixin, reducedMotionMixin } from '../../styles';

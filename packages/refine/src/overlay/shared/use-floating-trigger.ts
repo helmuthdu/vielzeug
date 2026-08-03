@@ -1,7 +1,8 @@
 import type { Placement } from '@vielzeug/orbit';
 
 import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
-import { type Readable, type Signal, signal, watch } from '@vielzeug/ripple';
+import { type Readable, type Signal, signal } from '@vielzeug/ripple';
+import { watch } from '@vielzeug/ripple/watch';
 
 import { lifecycleSignal, type DialogCloseReason, type OverlayOpenReason } from '../../core';
 import { createOutsidePointerDismissal } from '../../core/overlay';

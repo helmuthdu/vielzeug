@@ -1,102 +1,63 @@
 # @vielzeug/ripple
 
-> Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
-
-[![npm version](https://img.shields.io/npm/v/@vielzeug/ripple)](https://www.npmjs.com/package/@vielzeug/ripple) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<details>
-<summary>Quick Reference</summary>
-
-**Package:** `@vielzeug/ripple` &nbsp;·&nbsp; **Category:** State
-
-**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `resource`, `watch`, `batch`, `store`, `untrack`, `scope`, `onCleanup`, `readonly`, `isSignal`, `isComputed`, `isStore`
-
-**When to use:** Fine-grained reactivity without a framework. Powers Ore templates. Works in any TS/JS environment including Node, Deno, and SSR.
-
-**Related:** [@vielzeug/ore](https://vielzeug.dev/ore/) · [@vielzeug/forge](https://vielzeug.dev/forge/) · [@vielzeug/herald](https://vielzeug.dev/herald/)
-
-</details>
-
-`@vielzeug/ripple` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+Framework-agnostic reactive graphs. Zero dependencies. ESM and CJS.
 
 ## Installation
 
 ```sh
-# pnpm
 pnpm add @vielzeug/ripple
-# npm
-npm install @vielzeug/ripple
-# yarn
-yarn add @vielzeug/ripple
 ```
 
-## Sub-paths
-
-| Import                      | Purpose                                                                  |
-| --------------------------- | ------------------------------------------------------------------------ |
-| `@vielzeug/ripple`          | Core primitives and types                                                |
-| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect`, `getDevToolsHook` — dev-only, tree-shaken from production |
-| `@vielzeug/ripple/history`  | `storeWithHistory`, `RippleInvalidHistoryError` — snapshot-based store undo/redo, tree-shaken unless imported |
-| `@vielzeug/ripple/ssr`      | Node-only SSR tracking isolation: `createAsyncProvider()`, `runWithProvider(provider, fn)`. Do not import in browser builds. |
-
-## Quick Start
+## Reactive graph
 
 ```ts
-import { signal, computed, effect, store, watch, batch } from '@vielzeug/ripple';
+import { createRipple } from '@vielzeug/ripple';
 
-// Signals
-const count = signal(0);
-const doubled = computed(() => count.value * 2); // Computed<number>
-
-const sub = effect(() => {
-  console.log('doubled:', doubled.value); // re-runs when count changes
+const ripple = createRipple({
+  onError(error, context) {
+    console.error(context.kind, error);
+  },
 });
 
-count.value = 5; // → logs "doubled: 10"
-sub.dispose();
-doubled.dispose();
+const count = ripple.signal(0);
+const doubled = ripple.computed(() => count.value * 2);
+const stop = ripple.effect(() => console.log(doubled.value));
 
-// Stores with typed lenses
-const cart = store({ items: 0, label: 'empty' });
-const items = cart.lens('items'); // Signal<number> — cached, path-scoped
+ripple.batch(() => {
+  count.value = 1;
+  count.value = 2;
+});
 
-items.value = 3;
-console.log(cart.value); // { items: 3, label: 'empty' }
-
-cart.replace((s) => ({ ...s, label: 'checkout' })); // replace entire state via fn
-cart.reset();
-
-// Effect options — scheduler, name
-const stop = effect(() => console.log('items:', items.value), { scheduler: 'microtask', name: 'cart-logger' });
 stop.dispose();
+ripple.dispose();
+```
 
-// Async resource — tracks deps and re-runs on change
-import { resource } from '@vielzeug/ripple';
+Use default exports (`signal`, `computed`, `effect`, `batch`) only when application has one graph for full lifetime.
 
-const userId = signal('u1');
-const userState = resource(async (signal) => {
-  const id = userId.value; // tracked dep
-  return fetch(`/users/${id}`, { signal }).then((r) => r.json());
-});
-// userState.value → { status: 'loading' | 'ready' | 'error', data, error }
+## Bound helpers
 
-// Store with undo/redo history — dedicated sub-path, tree-shaken unless imported
-import { storeWithHistory } from '@vielzeug/ripple/history';
+Every `Ripple` instance provides bound helpers:
 
-const editor = storeWithHistory({ text: '' }, { maxHistory: 50 });
-editor.patch({ text: 'hello' });
-editor.patch({ text: 'hello world' });
-editor.undo(); // back to 'hello'
-editor.redo(); // forward to 'hello world'
+```ts
+const user = ripple.resource(() => userId.value, loadUser);
+const cart = ripple.createStore({ items: 0 });
+const stop = ripple.watch(() => cart.value.items, renderItems);
+```
+
+Nested effects and resources created inside an effect automatically dispose before parent effect reruns:
+
+```ts
+ripple.effect(() => {
+  ripple.effect(() => render())
+})
 ```
 
 ## Documentation
 
 - [Overview](https://vielzeug.dev/ripple/)
-- [Usage Guide](https://vielzeug.dev/ripple/usage)
-- [API Reference](https://vielzeug.dev/ripple/api)
-- [Examples](https://vielzeug.dev/ripple/examples)
+- [Usage guide](https://vielzeug.dev/ripple/usage)
+- [API reference](https://vielzeug.dev/ripple/api)
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © Helmuth Saatkamp

@@ -1,32 +1,15 @@
-// ── RippleError ─────────────────────────────────────────────────────────────
-
-/** Base class for all ripple errors. Use `instanceof RippleError` to catch any ripple-originated error. */
 export class RippleError extends Error {
-  constructor(message: string, opts?: ErrorOptions) {
-    super(message, opts);
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
 
-  static is(err: unknown): err is RippleError {
-    return err instanceof RippleError;
+  static is(error: unknown): error is RippleError {
+    return error instanceof RippleError;
   }
 }
 
-/** Thrown when a computed value reads itself, creating a circular dependency. */
 export class RippleComputedCycleError extends RippleError {}
-
-/** Thrown when a method is called on a scope that has already been disposed. */
 export class RippleDisposedScopeError extends RippleError {}
-
-/** Thrown when an effect or flush loop exceeds the maximum iteration count. */
 export class RippleInfiniteLoopError extends RippleError {}
-
-/** Thrown when `onCleanup()` is called outside an active effect or scope. */
-export class RippleInvalidCleanupError extends RippleError {}
-
-/** Thrown when a store is created or mutated with an invalid value or path. */
-export class RippleInvalidStoreError extends RippleError {}
-
-/** Thrown when `storeWithHistory()` is given an invalid `maxHistory` option. */
-export class RippleInvalidHistoryError extends RippleError {}

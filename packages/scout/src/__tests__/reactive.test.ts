@@ -172,14 +172,12 @@ describe('createSearch — clear()', () => {
 });
 
 describe('createSearch — dispose', () => {
-  test('dispose() marks signals as disposed', () => {
+  test('dispose() stops internal subscriptions', () => {
     const search = makeSearch(0);
 
     search.dispose();
 
-    expect(search.query.disposed).toBe(true);
-    expect(search.isSearching.disposed).toBe(true);
-    expect(search.results.disposed).toBe(true);
+    expect(search.disposed).toBe(true);
   });
 
   test('[Symbol.dispose]() delegates to dispose()', () => {
@@ -187,7 +185,7 @@ describe('createSearch — dispose', () => {
 
     search[Symbol.dispose]();
 
-    expect(search.query.disposed).toBe(true);
+    expect(search.disposed).toBe(true);
   });
 
   test('dispose() is safe to call multiple times', () => {
@@ -326,7 +324,7 @@ describe('createReactiveSearch', () => {
 
     search.dispose();
 
-    expect(search.query.disposed).toBe(true);
+    expect(search.disposed).toBe(true);
   });
 
   test('respects limit option', () => {

@@ -104,7 +104,6 @@ export function createChartBase(
     dimensions,
     dispose() {
       stopObserving();
-      dimensions.dispose();
       svg.remove();
     },
     svg,

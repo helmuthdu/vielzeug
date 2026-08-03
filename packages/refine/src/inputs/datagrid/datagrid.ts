@@ -1,7 +1,8 @@
 import { debounce } from '@vielzeug/arsenal';
 import { define, html, prop, getHost, onCleanup, onMounted, useEmit, useSlots } from '@vielzeug/ore';
 import { unsafeHtml } from '@vielzeug/ore';
-import { computed, signal, watch } from '@vielzeug/ripple';
+import { computed, signal } from '@vielzeug/ripple';
+import { watch } from '@vielzeug/ripple/watch';
 
 import { warn } from '../../_dev';
 import '../../content/icon/icon';

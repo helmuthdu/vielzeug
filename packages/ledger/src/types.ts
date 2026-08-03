@@ -1,4 +1,4 @@
-import type { Computed } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 export interface Command<TData = unknown> {
   data?: TData;
@@ -24,12 +24,12 @@ export interface LedgerOptions<TData = unknown> {
 }
 
 export interface Ledger<TData = unknown> {
-  readonly canRedo: Computed<boolean>;
-  readonly canUndo: Computed<boolean>;
-  readonly historySize: Computed<number>;
-  readonly historySnapshot: Computed<readonly CommandMeta<TData>[]>;
-  readonly isProcessing: Computed<boolean>;
-  readonly pendingCount: Computed<number>;
+  readonly canRedo: Readable<boolean>;
+  readonly canUndo: Readable<boolean>;
+  readonly historySize: Readable<number>;
+  readonly historySnapshot: Readable<readonly CommandMeta<TData>[]>;
+  readonly isProcessing: Readable<boolean>;
+  readonly pendingCount: Readable<number>;
 
   clear(): Promise<void>;
   readonly disposalSignal: AbortSignal;

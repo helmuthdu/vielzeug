@@ -31,7 +31,6 @@ export function unsafeHtml(value: (() => string) | string | Signal<string> | Rea
     const c = computed(value);
 
     return createDirectiveResult((anchor, registerCleanup) => {
-      registerCleanup(() => c.dispose());
       unsafeHtml(c).mount(anchor, registerCleanup);
     });
   }

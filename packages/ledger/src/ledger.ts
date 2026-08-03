@@ -64,19 +64,6 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
     { name: 'ledger:historySnapshot' },
   );
 
-  const disposables = [
-    undoStack,
-    redoStack,
-    pending,
-    processing,
-    canUndo,
-    canRedo,
-    historySize,
-    isProcessing,
-    pendingCount,
-    historySnapshot,
-  ];
-
   let isDisposed = false;
   let queue = Promise.resolve();
 
@@ -191,8 +178,6 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
 
     undoStack.value = [];
     redoStack.value = [];
-
-    for (const d of disposables) d.dispose();
   }
 
   return {

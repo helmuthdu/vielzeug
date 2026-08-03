@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: redesign reactive runtime and public API",
+      "packageName": "@vielzeug/ripple",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

@@ -1,43 +1,11 @@
 ---
-title: Ripple — Reactive signals and state management
-description: Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
+title: Ripple — Reactive graphs
+description: Framework-agnostic signals, derived values, effects, scopes, async resources, and immutable state.
 package: ripple
 category: state
-keywords:
-  [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens, async, history]
-related: [ore, forge, herald]
-exports:
-  [
-    signal,
-    computed,
-    effect,
-    effectAsync,
-    resource,
-    watch,
-    batch,
-    store,
-    storeWithHistory,
-    untrack,
-    scope,
-    onCleanup,
-    readonly,
-    isSignal,
-    isComputed,
-    isStore,
-    RippleError,
-    RippleComputedCycleError,
-    RippleDisposedScopeError,
-    RippleInfiniteLoopError,
-    RippleInvalidCleanupError,
-    RippleInvalidStoreError,
-    RippleInvalidHistoryError,
-    ResourceOptions,
-    ResourceState,
-    HistoryEntry,
-    EffectHandle,
-    PathValue,
-    LensPath,
-  ]
+keywords: [reactive, signals, computed, effects, graph, scope, batch, async]
+related: [ore, clockwork, ledger]
+exports: [createRipple, signal, computed, effect, batch, createScope, createStore, resource, untrack, watch, isReactive]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -47,46 +15,44 @@ environments: [browser, node, ssr, deno]
 
 ## Why Ripple?
 
-Plain variables don't notify anything when they change. Framework-specific stores add boilerplate and coupling.
+Hand-rolled reactive state spreads subscription, cleanup, and derived-value rules across application code. Ripple gives you one graph boundary with explicit disposal and fine-grained dependencies while keeping rendering and routing outside the runtime.
 
 ```ts
-// Before — manual notification
+// Before
 let count = 0;
-const listeners: Array<() => void> = [];
-function setCount(n: number) {
-  count = n;
-  listeners.forEach((fn) => fn());
+const listeners = new Set<() => void>();
+
+function setCount(next: number) {
+  count = next;
+  for (const listener of listeners) listener();
 }
 
-// After — Ripple signals
-import { signal, effect } from '@vielzeug/ripple';
-const count = signal(0);
-effect(() => console.log(count.value)); // auto-tracks dependencies
-count.value = 1; // notifies automatically
+// After
+import { createRipple } from '@vielzeug/ripple';
+
+const ripple = createRipple();
+const count = ripple.signal(0);
+const doubled = ripple.computed(() => count.value * 2);
+const stop = ripple.effect(() => console.log(doubled.value));
+
+count.value = 1;
+stop.dispose();
+ripple.dispose();
 ```
 
-| Feature                      | Ripple                                                            | Zustand                                              | Jotai                                              | Nanostores                                        |
-| ---------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------- |
-| Bundle size                  | <PackageInfo package="ripple" type="size" />                      | ~3.5 kB                                              | ~7 kB                                              | ~2 kB                                             |
-| Zero dependencies            | <ore-icon name="check" size="16"></ore-icon>                        | <ore-icon name="x" size="16"></ore-icon>               | <ore-icon name="x" size="16"></ore-icon>             | <ore-icon name="check" size="16"></ore-icon>        |
-| Framework-agnostic           | <ore-icon name="check" size="16"></ore-icon>                        | <ore-icon name="check" size="16"></ore-icon>           | React-first                                        | <ore-icon name="check" size="16"></ore-icon>        |
-| Fine-grained reactivity      | <ore-icon name="check" size="16"></ore-icon> (per-property)         | <ore-icon name="x" size="16"></ore-icon> (whole store) | <ore-icon name="check" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon> (atom) |
-| Structured object stores     | <ore-icon name="check" size="16"></ore-icon> (`store`, `lens`)      | <ore-icon name="check" size="16"></ore-icon>           | Manual atoms                                       | <ore-icon name="x" size="16"></ore-icon>            |
-| Async computed               | <ore-icon name="check" size="16"></ore-icon> (`resource`)           | Manual                                               | <ore-icon name="check" size="16"></ore-icon>         | <ore-icon name="x" size="16"></ore-icon>            |
-| Undo / redo history          | <ore-icon name="check" size="16"></ore-icon> (`storeWithHistory`)   | Manual                                               | <ore-icon name="x" size="16"></ore-icon>             | <ore-icon name="x" size="16"></ore-icon>            |
-| Computed signals             | <ore-icon name="check" size="16"></ore-icon> (lazy, glitch-free)    | Selectors                                            | <ore-icon name="check" size="16"></ore-icon> (atoms) | <ore-icon name="check" size="16"></ore-icon>        |
-| Batched writes               | <ore-icon name="check" size="16"></ore-icon> (`batch`)              | <ore-icon name="check" size="16"></ore-icon>           | <ore-icon name="check" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon>        |
-| Explicit cleanup / scopes    | <ore-icon name="check" size="16"></ore-icon> (`scope`, `onCleanup`) | <ore-icon name="x" size="16"></ore-icon>               | <ore-icon name="x" size="16"></ore-icon>             | <ore-icon name="x" size="16"></ore-icon>            |
-| SSR support                  | <ore-icon name="check" size="16"></ore-icon>                        | <ore-icon name="check" size="16"></ore-icon>           | <ore-icon name="check" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon>        |
-| TypeScript — strict generics | <ore-icon name="check" size="16"></ore-icon>                        | <ore-icon name="check" size="16"></ore-icon>           | <ore-icon name="check" size="16"></ore-icon>         | Partial                                           |
-| React Suspense               | <ore-icon name="x" size="16"></ore-icon>                            | <ore-icon name="x" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon>         | <ore-icon name="x" size="16"></ore-icon>            |
-| Redux DevTools               | <ore-icon name="x" size="16"></ore-icon>                            | <ore-icon name="check" size="16"></ore-icon>           | <ore-icon name="x" size="16"></ore-icon>             | <ore-icon name="x" size="16"></ore-icon>            |
+| Feature | Ripple | Zustand | Jotai |
+| --- | --- | --- | --- |
+| Bundle size | <PackageInfo package="ripple" type="size" /> | ~3.5 kB | ~7 kB |
+| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Framework-agnostic | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | React-first |
+| Explicit graph lifetime | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Fine-grained derived values | <ore-icon name="check" size="16"></ore-icon> | Selectors | Atoms |
 
 <div class="decision-callout">
 
-**Use Ripple when** you need fine-grained, per-property reactivity without framework lock-in — especially for web components, vanilla JS apps, or any environment where you want zero runtime dependencies and explicit lifecycle control.
+**Use Ripple when** you need framework-independent state with explicit graph lifetime and small composable primitives.
 
-**Consider alternatives when** you are React-only and need Suspense or React Query integration (Jotai), need Redux DevTools out of the box (Zustand), or need a minimal atom store with no extra features (Nanostores).
+**Consider a framework store when** component bindings, server cache, or framework-specific tooling matter more than portable reactive state.
 
 </div>
 
@@ -110,105 +76,40 @@ yarn add @vielzeug/ripple
 
 ## Quick Start
 
-```ts
-import { signal, computed, effect, watch, batch } from '@vielzeug/ripple';
-
-const count = signal(0);
-const doubled = computed(() => count.value * 2); // Computed<number>
-
-// Side-effect: runs immediately and re-runs on change
-const sub = effect(() => {
-  console.log('doubled:', doubled.value);
-});
-
-count.value = 5; // → logs "doubled: 10"
-
-// Explicit subscription — only fires on change, not immediately
-const stopWatch = watch(count, (next, prev) => {
-  console.log(prev, '→', next);
-});
-
-batch(() => {
-  count.value = 10;
-  count.value = 20; // one notification fires with the final value
-});
-
-sub.dispose();
-stopWatch.dispose();
-doubled.dispose();
-```
+Create one graph, derive a value, observe it, then dispose resources when the graph lifetime ends.
 
 ```ts
-import { store, watch, batch, computed } from '@vielzeug/ripple';
+import { createRipple } from '@vielzeug/ripple';
 
-const counter = store({ count: 0, label: 'counter' });
+const ripple = createRipple();
+const count = ripple.signal(0);
+const doubled = ripple.computed(() => count.value * 2);
+const stop = ripple.effect(() => console.log(doubled.value));
 
-// Read
-console.log(counter.value.count); // 0
-
-// Watch a typed lens — only fires when that path changes
-const countLens = counter.lens('count'); // Signal<number>
-const stopWatch = watch(countLens, (next, prev) => {
-  console.log('count:', prev, '→', next);
+ripple.batch(() => {
+  count.value = 1;
+  count.value = 2;
 });
 
-// Derived slice
-const label = computed(() => counter.value.label); // Computed<string>
-
-// Mutations
-counter.patch({ count: 1 }); // shallow merge
-counter.replace((s) => ({ ...s, count: s.count + 1 })); // replace via fn
-countLens.value = 10; // write directly through the lens
-
-batch(() => {
-  counter.patch({ count: 5 });
-  counter.patch({ label: 'done' });
-});
-
-counter.reset();
-stopWatch.dispose();
-label.dispose();
+stop.dispose();
+ripple.dispose();
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- **`signal(value, options?)`** — reactive atom; read `.value`, write `.value = next`; equality check prevents notification when value is unchanged
-- **`computed(fn, options?)`** — lazy derived signal; glitch-free; auto-tracks dependencies read inside `fn`
-- **`effect(fn, options?)`** — side-effect that re-runs when dependencies change; returns `EffectHandle` with `getDependencies()`; options: `scheduler` (`'sync'` | `'microtask'`), `name`
-- **`effectAsync(fn, options?)`** — async side-effect with an `AbortSignal` that fires on re-run or dispose; returns `AsyncSubscription` with `[Symbol.asyncDispose]`
-- **`resource(factory, options?)`** — reactive async data source; emits a `ResourceState<T>` discriminated union (`loading` / `ready` / `error`); factory receives an `AbortSignal` that fires on re-run or dispose
-- **`watch(source, cb, options?)`** — explicit subscription that fires only when the value changes; returns a `Subscription`
-- **`batch(fn)`** — flush all notifications once after bulk updates
-- **`untrack(fn)`** — read signals inside an effect without creating subscriptions
-- **`onCleanup(fn)`** — register teardown from inside an effect or `scope` without using the return value
-- **`scope(setup?)`** — isolated cleanup context; collect teardown via `onCleanup` inside `scope.run(fn)`; release with `scope.dispose()`
-- **`readonly(source)`** — wraps any signal as `Readable<T>` — read-only at the type level; no `dispose()` (caller retains ownership)
-- **`debugEffect(fn, options?)`** — like `effect()`, but logs reactive deps on every run; import from `@vielzeug/ripple/devtools` — tree-shaken from production bundles
-- **`isSignal(v)`**, **`isComputed(v)`**, **`isStore(v)`** — type guards using an internal symbol marker
-- **`store(init, options?)`** — structured reactive object container
-- **`.patch(partial)`** — shallow-merge a `Partial<T>` into state
-- **`.replace(fn)`** — derive next state from current via a function; same-reference return is a no-op
-- **`.reset()`** — restore the initial state baseline
-- **`.lens<P>(path)`** — cached writable `Signal` for a property or dot-path, checked against `LensPath<T>` at compile time; writes produce an immutable copy
-- **`storeWithHistory(storeOrInit, options?)`** — store with explicit snapshot history; accepts an existing `Store<T>` (not owned) or a plain object; call `.push()` / `.pushNamed(label)` to save checkpoints; `undo()`, `redo()`, `historyAt(i)` returns `HistoryEntry<T>`; reactive `canUndo` / `canRedo`; import via `@vielzeug/ripple/history`
-- **`disposalSignal`** — every disposable value (`Signal`, `Computed`, `Store`, `Resource`, `EffectHandle`, `AsyncSubscription`, `Scope`) exposes an `AbortSignal` aborted on `dispose()` — tie an external resource's lifetime to it instead of tracking your own boolean
-- **Deep-frozen store state** — every value that enters a store (initial state, `patch()`, `replace()`, `reset()`, lens writes) is deep-cloned and deep-frozen; nested mutation throws a `TypeError`, not just top-level
-- **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot
-- **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations default)
-- **Automatic computed disposal** — `computed()` created inside `effect()` auto-disposes with the effect
+- `createRipple()` creates an isolated graph and lifetime boundary.
+- `signal()` stores writable values with configurable equality.
+- `computed()` derives lazy read-only values.
+- `effect()` reacts to dependency changes with cleanup support.
+- `batch()` coalesces synchronous writes and notifications.
+- `createScope()` groups owned reactive work.
+- `watch()` observes one selected source transition.
+- `resource()` loads async values with stale-work cancellation.
+- `createStore()` wraps explicit value replacement and updater functions.
 
 </div>
-
-## Sub-paths
-
-| Import                      | Purpose                                                                                                  |
-| --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `@vielzeug/ripple`          | All exports and types                                                                                    |
-| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect`, `getDevToolsHook` — DevTools hook and reactive source tracing (dev-only, tree-shaken) |
-| `@vielzeug/ripple/history`  | `storeWithHistory`, `RippleInvalidHistoryError` — snapshot-based undo/redo, tree-shaken unless imported   |
-| `@vielzeug/ripple/ssr`      | Node-only SSR tracking isolation: `createAsyncProvider`, `runWithProvider`.                                |
 
 ## Documentation
 
@@ -224,10 +125,10 @@ label.dispose();
 
 <div class="see-also">
 
-- [Ore](/ore/) — web-component authoring framework built on ripple
-- [Forge](/forge/) — typed form state that uses signals for field reactivity and submission tracking
-- [Herald](/herald/) — typed event bus; use alongside ripple for cross-module messaging without shared signals
+- [Ore](/ore/) — uses Ripple signals and effects for web-component reactivity.
+- [Clockwork](/clockwork/) — exposes machine state through reactive Ripple values.
+- [Ledger](/ledger/) — adds command-based undo and redo beside Ripple state.
 
 </div>
 
-<!-- markdownlint-enable MD025 MD033 MD060 -->
+<!-- markdownlint-enable -->

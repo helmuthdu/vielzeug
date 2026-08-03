@@ -3,11 +3,11 @@
  * without rendering a full component template.
  */
 
-import { onCleanup as _onCleanup, scope as _scope } from '@vielzeug/ripple';
+import { createScope } from '@vielzeug/ripple';
 
 import { OreLifecycleError, reportRuntimeError } from '../errors';
 import { createProps, type InferProps, type PropInputDefs } from '../props';
-import { createRuntimeContext, runWithContext } from '../runtime';
+import { createRuntimeContext, onCleanup, runWithContext } from '../runtime';
 import { flush } from './flush';
 
 export interface HookFixture<T> {
@@ -60,7 +60,7 @@ export async function renderHook<D extends PropInputDefs, T>(
   const propDefs = hasPropDefs ? (setupOrDefs as D) : undefined;
   const setup = hasPropDefs ? maybeSetup! : (setupOrDefs as (_props: Record<never, never>) => T);
 
-  const hostScope = _scope();
+  const hostScope = createScope();
   // Minimal host element so getHost() works inside setup
   const hostEl = document.createElement('div');
 
@@ -91,7 +91,7 @@ export async function renderHook<D extends PropInputDefs, T>(
           runWithContext(ctx, () => {
             const cleanup = cb();
 
-            if (typeof cleanup === 'function') _onCleanup(cleanup);
+            if (typeof cleanup === 'function') onCleanup(cleanup);
           });
         });
       } catch (error) {

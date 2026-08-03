@@ -1,6 +1,7 @@
 import { define, html, prop, bind, getHost, onCleanup, onMounted, useEmit } from '@vielzeug/ore';
 import { useField } from '@vielzeug/ore';
-import { computed, signal, watch } from '@vielzeug/ripple';
+import { computed, signal } from '@vielzeug/ripple';
+import { watch } from '@vielzeug/ripple/watch';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: align component lifecycle with Ripple scopes",
+      "packageName": "@vielzeug/ore",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

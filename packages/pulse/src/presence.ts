@@ -96,7 +96,6 @@ export function createPresence<T>(
       unsubs.length = 0;
       joinHandlers.clear();
       leaveHandlers.clear();
-      members.dispose();
       onDispose?.();
     },
 

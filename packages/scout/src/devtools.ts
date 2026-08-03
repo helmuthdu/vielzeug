@@ -52,6 +52,6 @@ export function debugSearch<T>(search: SearchState<T>): () => void {
   ];
 
   return () => {
-    for (const subscription of subscriptions) subscription.dispose();
+    for (const unsubscribe of subscriptions) unsubscribe();
   };
 }

@@ -1,4 +1,14 @@
-import { batch, computed, effect as rawEffect, type Readable, signal, type Signal, untrack } from '@vielzeug/ripple';
+import {
+  batch,
+  computed,
+  createScope,
+  effect as rawEffect,
+  type Readable,
+  type Scope,
+  signal,
+  type Signal,
+  untrack,
+} from '@vielzeug/ripple';
 
 import { invariant, OreApiError, ORE_ERRORS, OreLifecycleError, reportRuntimeError } from '../errors';
 import { createDirectiveResult, type DirectiveResult, type HTMLResult } from '../template/result';
@@ -15,6 +25,7 @@ type ItemEntry<T> = {
   /** The key used to identify this entry. */
   key: string;
   nodes: Node[];
+  scope: Scope;
 };
 
 // ─── Item lifecycle ───────────────────────────────────────────────────────────
@@ -28,15 +39,21 @@ const createItem = <T>(
 ): ItemEntry<T> => {
   const dataSignal: Signal<T> = signal(item);
   const indexSignal: Signal<number> = signal(index);
-
-  const result = render(dataSignal, indexSignal);
+  const scope = createScope();
   const cleanups: (() => void)[] = [];
-  const nodes = result.mount(parent, insertBefore, (fn) => cleanups.push(fn));
+  let nodes: Node[] = [];
 
-  return { cleanups, data: dataSignal, index: indexSignal, key: '', nodes };
+  scope.run(() => {
+    const result = render(dataSignal, indexSignal);
+
+    nodes = result.mount(parent, insertBefore, (fn) => cleanups.push(fn));
+  });
+
+  return { cleanups, data: dataSignal, index: indexSignal, key: '', nodes, scope };
 };
 
 const removeItem = <T>(entry: ItemEntry<T>): void => {
+  entry.scope.dispose();
   runAll(entry.cleanups);
   removeNodes(entry.nodes);
 };

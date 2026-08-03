@@ -24,7 +24,7 @@ export function fromSignal<T>(source: Readable<T>): Flux<T> {
       observer.next(source.value);
     });
 
-    return () => subscription.dispose();
+    return subscription;
   });
 }
 

@@ -1,37 +1,22 @@
 export const scopeExample = {
-  code: `import { signal, effect, scope, onCleanup } from '@vielzeug/ripple'
+  code: `import { createRipple } from '@vielzeug/ripple'
 
-// scope() groups teardown without tying it to an effect
-const s = scope()
+// Nested work automatically belongs to parent effect run.
+const ripple = createRipple()
+const enabled = ripple.signal(true)
+const count = ripple.signal(0)
 
-let timer = 0
-s.run(() => {
-  const id = setInterval(() => {
-    timer++
-    console.log('tick', timer)
-  }, 100)
-  onCleanup(() => {
-    clearInterval(id)
-    console.log('interval cleared')
-  })
+const stop = ripple.effect(() => {
+  if (!enabled.value) return
 
-  const count = signal(0)
-  const sub = effect(() => console.log('count via scope:', count.value))
-  onCleanup(() => sub.dispose())
-
-  count.value = 1
-  count.value = 2
+  ripple.effect(() => console.log('nested count:', count.value))
 })
 
-// scope.run() can be called multiple times to add more cleanups
-s.run(() => {
-  onCleanup(() => console.log('second cleanup registered'))
-})
+count.value = 1
+enabled.value = false
+count.value = 2
 
-// All cleanups run in LIFO order on dispose()
-setTimeout(() => {
-  console.log('disposing scope...')
-  s.dispose()
-}, 350)`,
-  name: 'Scope & onCleanup',
+stop.dispose()
+ripple.dispose()`,
+  name: 'Nested Effect Ownership',
 };

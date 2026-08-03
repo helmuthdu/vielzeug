@@ -1,1052 +1,238 @@
 ---
 title: Ripple — Usage Guide
-description: Concepts, patterns, and best practices for @vielzeug/ripple — signals, effects, computed, and stores.
+description: Build reactive state with one explicit graph boundary.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
+Use top-level functions when one application-lifetime graph is sufficient. Read a signal inside an effect to make that read reactive.
+
 ```ts
-import { signal, computed, effect } from '@vielzeug/ripple';
+import { computed, effect, signal } from '@vielzeug/ripple';
 
 const count = signal(0);
-const doubled = computed(() => count.value * 2);
+const label = computed(() => `Count: ${count.value}`);
+const stop = effect(() => console.log(label.value));
 
-const sub = effect(() => {
-  console.log('doubled:', doubled.value);
+count.value = 1;
+stop.dispose();
+```
+
+## Isolated Graphs
+
+Use `createRipple()` for tests, SSR requests, embedded applications, or independently disposable features. Never mix reactive values from separate graphs.
+
+```ts
+import { createRipple } from '@vielzeug/ripple';
+
+const ripple = createRipple({
+  onError(error, context) {
+    console.log(context.kind, error);
+  },
 });
-// → logs "doubled: 0" immediately
 
-count.value = 5; // → logs "doubled: 10"
+const count = ripple.signal(0);
+const stop = ripple.effect(() => console.log(count.value));
 
-sub.dispose();
-doubled.dispose();
+stop.dispose();
+ripple.dispose();
 ```
 
-## Signals
+## Derived Values and Batches
 
-A **signal** is the fundamental reactive primitive. It holds a single value and
-notifies dependents when that value changes.
-
-### Creating a Signal
+Use `computed()` for pure derivation. Use `untrack()` when a current read must not become an effect dependency. Use `batch()` for related synchronous writes.
 
 ```ts
-const count = signal(0);
-const name = signal('Alice');
-const items = signal<string[]>([]);
+const first = ripple.signal('Ada');
+const last = ripple.signal('Lovelace');
+const locale = ripple.signal('en-US');
+const name = ripple.computed(() => `${first.value} ${last.value}`);
+
+ripple.effect(() => {
+  console.log({ locale: ripple.untrack(() => locale.value), name: name.value });
+});
+
+ripple.batch(() => {
+  first.value = 'Grace';
+  last.value = 'Hopper';
+});
 ```
 
-### Reading and Writing
+## Ownership with Scopes
+
+Create a scope when a group of effects or derived values shares one lifetime. Dispose the scope when its feature ends.
 
 ```ts
-count.value; // read — tracked inside effect/computed
-count.value = 42; // write — notifies all dependents
-count.peek(); // read without registering a subscription
-untrack(() => count.value); // equivalent escape hatch for arbitrary reads
-```
+const scope = ripple.createScope('panel');
+const count = ripple.signal(0);
 
-### External Store Interop
-
-Every signal exposes a small external-store interface:
-
-```ts
-const unsubscribe = count.subscribe(() => {
-  console.log('changed:', count.value);
+scope.run(() => {
+  ripple.effect(() => console.log(`Panel count: ${count.value}`));
 });
 
 count.value = 1;
-unsubscribe();
+scope.dispose();
 ```
 
-`subscribe()` does not fire immediately on subscription. It only fires after the value changes, which matches React's `useSyncExternalStore()` contract.
+## Watch Selected Values
 
-## Effects
-
-`effect()` runs a function immediately and re-runs it whenever any signal read
-inside it changes. Returns a `Subscription` handle.
+Use `watch()` for one selected output. Use `effect()` when every reactive read in the callback should be a dependency.
 
 ```ts
-const count = signal(0);
-
-const sub = effect(() => {
-  console.log('count is:', count.value);
-});
-// → logs "count is: 0" immediately
-
-count.value = 1; // → logs "count is: 1"
-count.value = 2; // → logs "count is: 2"
-
-sub.dispose(); // dispose — no more runs
-// or: using sub = effect(...) — TC39 using declaration
-```
-
-### Effect Cleanup
-
-Return a cleanup function from the effect callback; it runs before the next
-re-execution and when the effect is disposed:
-
-```ts
-const sub = effect(() => {
-  const id = setInterval(() => console.log('tick'), 1000);
-  return () => clearInterval(id); // cleanup on next run or dispose
-});
-```
-
-### `onCleanup`
-
-Register teardown from inside nested helpers without using the return value:
-
-```ts
-function useInterval(ms: number) {
-  const id = setInterval(() => console.log('tick'), ms);
-  onCleanup(() => clearInterval(id)); // registers cleanup in the current effect
-}
-
-const sub = effect(() => {
-  useInterval(1000); // cleanup registered automatically
-});
-```
-
-Ripple includes a built-in loop guard (100 iterations by default) to protect against accidental self-triggering effect cycles.
-
-### Effect Options
-
-`effect()` accepts an optional `EffectOptions` object to control scheduling, debugging, and loop protection:
-
-```ts
-import { effect } from '@vielzeug/ripple';
-
-// Named effect — name appears in RippleError messages for easier debugging
-const sub = effect(() => console.log('count:', count.value), { name: 'count-logger' });
-
-// Microtask scheduler — re-runs are deferred and coalesce within the same task
-effect(() => (document.title = count.value.toString()), { scheduler: 'microtask' });
-
-```
-
-| Option      | Type              | Default  | Description               |
-| ----------- | ----------------- | -------- | ------------------------- |
-| `scheduler` | `EffectScheduler` | `'sync'` | `'sync'` or `'microtask'` |
-| `name`      | `string`          | —        | Shown in error messages   |
-
-For debugging which deps trigger re-runs, use `debugEffect()` instead of `effect()` — see [debugEffect](#debugeffect) below.
-
-### `untrack`
-
-Reads signals inside an effect without creating reactive subscriptions:
-
-```ts
-const a = signal(1);
-const b = signal(2);
-
-effect(() => {
-  // only subscribed to `a`; changes to `b` will not re-run this effect
-  const sum = a.value + untrack(() => b.value);
-  console.log('sum:', sum);
-});
-```
-
-## Computed
-
-`computed()` creates a derived read-only signal whose value is automatically
-recomputed when its dependencies change.
-
-```ts
-const count = signal(3);
-const doubled = computed(() => count.value * 2);
-
-console.log(doubled.value); // 6
-count.value = 10;
-console.log(doubled.value); // 20
-```
-
-Call `.dispose()` when the computed is no longer needed to detach it from its
-dependencies and stop recomputation:
-
-```ts
-doubled.dispose();
-// or: using doubled = computed(...) — TC39 using declaration
-```
-
-### Automatic Disposal Inside Effects
-
-When `computed()` is called inside an `effect()`, the computed signal is automatically disposed when the effect cleans up. This prevents memory leaks from derived computations that only exist within the effect scope:
-
-```ts
-effect(() => {
-  // This computed is automatically disposed when the effect is disposed
-  const derived = computed(() => expensiveCalc(source.value));
-  doSomething(derived.value);
-});
-```
-
-This behavior is an ergonomic convenience and works because `computed()` detects the active effect scope and registers itself for automatic cleanup.
-
-### `peek`
-
-Computed signals also support `.peek()` for non-tracked reads:
-
-```ts
-const total = computed(() => subtotal.value + tax.value);
-
-effect(() => {
-  console.log('tracked total', total.value);
-});
-
-const snapshot = total.peek();
-```
-
-### Chaining Computeds
-
-```ts
-const a = signal(2);
-const b = computed(() => a.value * 3); // 6
-const c = computed(() => b.value + 1); // 7
-
-a.value = 4;
-console.log(c.value); // 13
-```
-
-## `watch` (Signals)
-
-`watch()` is an explicit subscription that fires only when the signal's value
-changes — it does **not** run immediately like `effect()`. Returns a `Subscription`.
-
-```ts
-const count = signal(0);
-
-const sub = watch(count, (next, prev) => {
-  console.log(prev, '→', next);
-});
-
-count.value = 1; // → logs "0 → 1"
-sub.dispose();
-```
-
-### Options
-
-```ts
-// Fire once immediately on subscription
-watch(count, (v) => console.log(v), { immediate: true });
-
-// Auto-dispose after the first change — one-shot listener
-watch(status, (v) => onFirstChange(v), { once: true });
-
-// Custom equality — suppress callback when result is considered equal
-watch(list, (v) => renderList(v), { equals: (a, b) => a.length === b.length });
-```
-
-### Watching a Slice
-
-Use a lens or a `computed()` to watch a derived slice:
-
-```ts
-// Lens — fine-grained subscription to one field
-const userStore = store({ name: 'Alice', role: 'user' });
-watch(userStore.lens('name'), (name, prevName) => {
-  console.log('name:', prevName, '→', name);
-});
-
-// computed() — arbitrary derived slice
-const nameSignal = computed(() => userStore.value.name);
-watch(nameSignal, (name, prev) => console.log('name:', prev, '→', name));
-nameSignal.dispose();
-```
-
-### Watching Multiple Sources
-
-Pass a function instead of a single `Readable<T>` to track every signal it reads — no intermediate `computed()` node needed:
-
-```ts
-const firstName = signal('Ada');
-const lastName = signal('Lovelace');
-
-const sub = watch(
-  () => `${firstName.value} ${lastName.value}`,
-  (fullName, prev) => console.log(`${prev} → ${fullName}`),
+const stopWatch = ripple.watch(
+  () => `${first.value} ${last.value}`,
+  (value, previous) => console.log({ previous, value }),
+  { immediate: true },
 );
 
-lastName.value = 'King'; // → "Ada Lovelace → Ada King"
-sub.dispose();
+stopWatch.dispose();
 ```
 
-## `batch` (Signals)
+## Async Data
 
-`batch()` defers all signal notifications until the callback returns, then
-flushes once. Nested batches coalesce into the outermost.
-
-```ts
-const a = signal(0);
-const b = signal(0);
-
-let fires = 0;
-effect(() => {
-  a.value;
-  b.value;
-  fires++;
-});
-// fires is 1 (initial run)
-
-batch(() => {
-  a.value = 1;
-  b.value = 2;
-});
-// fires is 2 (one flush for both)
-```
-
-If the callback throws, the pending flush queue is discarded (not flushed) — writes
-made before the throw are not rolled back, but no effect observes them. The original
-error propagates as-is.
-
-## `scope`
-
-`scope()` creates an isolated cleanup context that is not tied to any reactive effect. Use it when you want to collect teardown callbacks and release them all at once — without needing an effect or a component lifecycle hook.
-
-::: tip disposalSignal
-Every disposable ripple value — `signal()`, `computed()`, `store()`, `resource()`, `effect()`, `effectAsync()`, and `scope()` — exposes a `disposalSignal: AbortSignal` that fires when `dispose()` is called. Tie an external resource's lifetime to it instead of tracking your own boolean flag:
+`resource()` captures source dependencies synchronously and passes a cancellation signal to the loader.
 
 ```ts
-const s = signal(0);
+const userId = ripple.signal('42');
+const user = ripple.resource(
+  () => userId.value,
+  async (id, { signal }) => {
+    const response = await fetch(`/users/${id}`, { signal });
+    if (!response.ok) throw new Error(`Request failed: ${response.status}`);
 
-document.addEventListener('click', handler, { signal: s.disposalSignal });
-```
-
-:::
-
-Pass an optional `setup` function to register cleanups inline at construction time. This is equivalent to calling `scope.run(setup)` immediately after creation:
-
-```ts
-import { scope, onCleanup } from '@vielzeug/ripple';
-
-// Shorthand — setup runs immediately:
-const s = scope(() => {
-  const id = setInterval(() => tick(), 1000);
-  onCleanup(() => clearInterval(id));
-
-  const ws = new WebSocket('wss://example.com');
-  onCleanup(() => ws.close());
-});
-
-// Later — tears down all cleanups in LIFO order:
-s.dispose();
-```
-
-`scope.run()` can also be called multiple times to incrementally register cleanups into the same scope. The `using` declaration auto-disposes at block end:
-
-```ts
-{
-  using s = scope();
-  s.run(() => {
-    onCleanup(() => console.log('cleaned up'));
-  });
-} // ← scope.dispose() called here automatically
-```
-
-**Inside ore components**, `scope()` is available via `@vielzeug/ore` and is useful for managing sub-scoped cleanup (e.g., an animation controller or WebSocket owned by one part of a component):
-
-```ts
-import { scope, onCleanup, effect } from '@vielzeug/ore';
-
-define('my-component', {
-  setup() {
-    const animScope = scope();
-    onCleanup(() => animScope.dispose()); // tie sub-scope to component lifetime
-
-    onMounted(() => {
-      animScope.run(() => {
-        const raf = requestAnimationFrame(animate);
-        onCleanup(() => cancelAnimationFrame(raf));
-      });
-    });
-
-    return () => html`...`;
+    return response.json() as Promise<{ id: string; name: string }>;
   },
-});
-```
+);
 
-## `debugEffect`
-
-`debugEffect(fn, options?)` is identical to `effect()` but logs the reactive sources that changed before each re-run. Use it as a drop-in replacement for debugging unexpected re-renders.
-
-```ts
-import { debugEffect } from '@vielzeug/ripple/devtools';
-
-const stop = debugEffect(() => renderUser(userId.value, name.value), { name: 'renderUser' });
-
-// Console output on re-run:
-// [ripple:trace] "renderUser" re-running — changed sources:
-//   userId (v1 -> v2)
-```
-
-## Async Computed
-
-`resource(factory, options?)` tracks reactive dependencies inside an async factory and re-runs when they change. The factory receives an `AbortSignal` that fires when the factory is superseded or disposed.
-
-The returned `Resource<T>` emits a single discriminated union:
-
-- `{ status: 'loading', data: T | undefined }` — initial state or while re-running
-- `{ status: 'ready', data: T }` — last successful result
-- `{ status: 'error', data: T | undefined, error: unknown }` — last thrown error
-
-```ts
-import { signal, effect, resource } from '@vielzeug/ripple';
-
-const userId = signal('u1');
-
-const user = resource(async (abortSignal) => {
-  const id = userId.value; // tracked dep — must be read synchronously
-  const res = await fetch(`/users/${id}`, { signal: abortSignal });
-  if (!res.ok) throw new Error('Not found');
-  return res.json() as Promise<User>;
-});
-
-effect(() => {
-  const s = user.value; // ResourceState<User>
-  if (s.status === 'loading') return showSpinner();
-  if (s.status === 'error')   return showError(s.error);
-  renderUser(s.data); // narrowed to User
-});
-
-userId.value = 'u2'; // aborts the in-flight fetch, re-runs factory
-user.refresh(); // force a re-fetch for the current userId — e.g. a "retry" button
+if (user.value.status === 'success') console.log(user.value.value.name);
 user.dispose();
 ```
 
-::: tip deps must be read synchronously
-`resource` tracks dependencies the same way `computed` does: only reads that happen **synchronously**, before the first `await`, are tracked. Reads inside `await` expressions are NOT tracked.
-:::
+## Object State
 
-::: tip manual refresh
-Call `.refresh()` to force the factory to re-run immediately, aborting any in-flight run — even if no tracked dependency changed. This is the idiomatic way to implement a "retry" button after an error, or a manual "refetch" action.
-:::
-
-Like `computed()`, a `resource()` created inside an active `effect()` or `scope.run()` context is automatically registered for cleanup and disposed with that context:
+`createStore()` holds one value and exposes `set()` and `update()`. Return replacement objects from `update()` when object consumers depend on immutable updates.
 
 ```ts
-effect(() => {
-  // Automatically disposed when the effect re-runs or is disposed
-  const user = resource(() => fetchUser(userId.value));
-  render(user.value);
-});
-```
+const cart = ripple.createStore({ items: 0, label: 'empty' });
+const items = ripple.computed(() => cart.value.items);
 
-## Store History / Time-Travel
+cart.update((state) => ({ ...state, items: state.items + 1 }));
+cart.set({ items: 3, label: 'ready' });
 
-`storeWithHistory(initial, options?)` wraps a store with snapshot-based undo/redo. Mutations do **not** automatically push snapshots — call `.push()` (or `.pushNamed(label)`) explicitly after each logical change. History navigation with `undo()` and `redo()` never re-runs logic — it replays snapshots directly.
-
-```ts
-import { storeWithHistory } from '@vielzeug/ripple/history';
-
-const editor = storeWithHistory({ text: '', cursor: 0 }, { maxHistory: 100 });
-
-editor.patch({ text: 'hello', cursor: 5 });
-editor.push(); // checkpoint 1
-
-editor.patch({ text: 'hello world', cursor: 11 });
-editor.push(); // checkpoint 2
-
-console.log(editor.historyLength); // 3  (initial + 2 explicit pushes)
-console.log(editor.historyAt(0).state); // { text: '', cursor: 0 }
-
-editor.undo();
-console.log(editor.peek().text); // 'hello'
-
-editor.redo();
-console.log(editor.peek().text); // 'hello world'
-```
-
-`canUndo` and `canRedo` are reactive boolean properties — read them inside `effect()` or `computed()` and they will re-run automatically when the history cursor moves:
-
-```ts
-effect(() => {
-  undoButton.disabled = !editor.canUndo;
-  redoButton.disabled = !editor.canRedo;
-});
-```
-
-`StoreWithHistory<T>` extends `Store<T>` directly — all methods (`patch`, `replace`, `reset`, `lens`) are available on the adapter itself. The `.store` accessor is an escape hatch for adapters that need direct `Store<T>` access.
-
-Call `dispose()` when the store is no longer needed to release the internal reactive cursor signal:
-
-```ts
-const s = storeWithHistory({ count: 0 });
-// ... use s
-s.dispose();
-```
-
-::: tip historyAt() after eviction
-Once the buffer reaches `maxHistory`, the oldest snapshot is evicted on each new write. `historyAt(0)` always returns the oldest _remaining_ snapshot — it is not guaranteed to be the initial state once eviction has occurred.
-:::
-
-## Stores
-
-A `Store<T>` adds structured state helpers on top of a `.value` getter. Every signal primitive (`computed`, `effect`, `watch`, `batch`, `untrack`) works on stores directly.
-
-### Creating a Store
-
-```ts
-import { store } from '@vielzeug/ripple';
-
-const s = store({ count: 0, user: null as User | null });
-```
-
-### Reading State
-
-```ts
-const state = s.value; // { count: 0, user: null }
-const count = s.value.count; // 0
-```
-
-`.value` is a synchronous getter — no method call needed.
-
-### Writing State
-
-#### Partial Patch
-
-Shallow-merges the patch into the current state:
-
-```ts
-s.patch({ count: 1 });
-// Equivalent to: { ...current, count: 1 }
-```
-
-#### Updater Function
-
-Receives a plain shallow copy of the current state; return value replaces it. The argument is a regular object — you can mutate it freely inside the callback:
-
-```ts
-s.replace((current) => ({ ...current, count: current.count + 1 }));
-```
-
-`replace()` is a no-op when `fn` returns the same object reference it received.
-
-::: tip patch() and replace() are atomic
-Every key is validated (including the prototype-pollution guard against `__proto__`,
-`constructor`, and `prototype`) before any key is applied. If any key is rejected, the
-call throws `RippleInvalidStoreError` and **none** of the keys are applied — no partial
-writes, no stray un-notified state changes.
-:::
-
-::: tip replace() can remove keys
-A key present in the current state but **omitted** from the object `fn` returns is
-actually removed — not set to `undefined`:
-
-```ts
-const s = store<{ count: number; note?: string }>({ count: 0, note: 'draft' });
-
-s.replace((state) => {
-  const { note, ...rest } = state; // drop `note` entirely
-  return rest;
-});
-
-Object.hasOwn(s.value, 'note'); // false
-```
-:::
-
-### Resetting State
-
-```ts
-// Restore to the state passed to store()
-s.reset();
-```
-
-`reset()` triggers a notification if the state actually changes. The initial state
-is defensively copied at construction time — external mutations to the original
-object cannot corrupt `reset()`. Any key added after construction (e.g. via `.replace()`)
-and absent from the original `initial` state is removed on reset, same as `.replace()`.
-
-### Derived Slices
-
-### Via `computed()`
-
-Use `computed()` to derive a signal from a slice of the store's state:
-
-```ts
-const countSignal = computed(() => s.value.count);
-console.log(countSignal.value); // 0
-
-// Compose with watch() to react to slice changes only
-const sub = watch(countSignal, (count, prev) => {
-  console.log('count changed:', prev, '→', count);
-});
-
-// Clean up when done
-sub.dispose();
-countSignal.dispose();
-```
-
-Pass a custom `equals` option for arrays and objects to avoid re-rendering when contents haven't changed:
-
-```ts
-const items = computed(() => s.value.items, { equals: (a, b) => a.length === b.length });
-```
-
-### Via `store.lens()`
-
-`store.lens(path)` returns a writable `Signal` scoped to a specific property or dot-path. Lenses are cached per path and produce immutable copies on write:
-
-```ts
-const settings = store({
-  user: { name: 'Alice', address: { city: 'Berlin' } },
-  theme: 'light' as 'light' | 'dark',
-});
-
-// Top-level lens
-const theme = settings.lens('theme'); // Signal<'light' | 'dark'>
-theme.value = 'dark';
-
-// Nested dot-path lens
-const city = settings.lens('user.address.city'); // Signal<string>
-city.value = 'Hamburg';
-
-console.log(settings.value.theme); // 'dark'
-console.log(settings.value.user.address.city); // 'Hamburg'
-
-// Watch a single field
-watch(theme, (next, prev) => console.log(prev, '→', next));
-
-// Write directly
-theme.value = theme.value === 'light' ? 'dark' : 'light';
-```
-
-Lenses are cached: `settings.lens('theme')` called twice returns the same `Signal`. Disposing a lens removes it from the cache — the next call to `settings.lens('theme')` creates a fresh instance.
-
-::: tip Compile-time path checking
-`path` is constrained by `LensPath<T>` — `settings.lens('user.nam')` (a typo) is a TypeScript error at the call site, not just a runtime `RippleInvalidStoreError`.
-:::
-
-::: warning Path constraints
-Every intermediate segment of the path must resolve to a non-null object. Writing through `settings.lens('user.address.city')` will throw `RippleInvalidStoreError` if `settings.value.user` or `settings.value.user.address` is `null` or not an object.
-
-Paths are also capped at **32 segments**. Paths exceeding this limit throw `RippleInvalidStoreError` with a descriptive message.
-:::
-
-### Watching State
-
-#### Full-State Watch
-
-```ts
-// Does not fire immediately — use { immediate: true } to opt in
-const sub = watch(s, (curr, prev) => {
-  console.log('state changed', curr);
-});
-
-sub.dispose(); // stop receiving updates
-```
-
-When `immediate: true`, the listener fires once synchronously on subscription with both `curr` and `prev` set to the current value:
-
-```ts
-watch(
-  s,
-  (curr, prev) => {
-    console.log('initial or changed:', curr.count);
-  },
-  { immediate: true },
-);
-```
-
-To auto-stop after the first change, dispose manually inside the callback:
-
-```ts
-const stop = watch(s, (curr) => {
-  console.log('first change:', curr);
-  stop.dispose();
-});
-```
-
-#### Slice Watch
-
-Use a getter source to watch a slice — only fires when the derived value changes:
-
-```ts
-// Only fires when `count` changes — unrelated state changes are ignored
-watch(
-  () => s.value.count,
-  (count, prev) => console.log('count changed to', count),
-);
-
-// With computed() for a reusable or shareable slice signal
-const countSignal = computed(() => s.value.count);
-watch(countSignal, (count, prev) => console.log('count changed to', count), {
-  equals: (a, b) => a === b,
-});
-```
-
-### Batching Store Mutations
-
-`batch()` groups multiple writes into a single notification:
-
-```ts
-import { batch } from '@vielzeug/ripple';
-
-const result = batch(() => {
-  s.patch({ firstName: 'Alice' });
-  s.patch({ lastName: 'Smith' });
-  s.patch({ age: 30 });
-  return 'profile updated';
-});
-// One notification for all three patch() calls
-// result === 'profile updated'
-```
-
-Nested `batch()` calls merge into the outermost — only one notification fires when the outermost batch completes.
-
-### Narrowing to Read-Only
-
-To expose a store at API boundaries where consumers should observe but not mutate, wrap it with `readonly()`:
-
-```ts
-import { readonly, store } from '@vielzeug/ripple';
-import type { Readable } from '@vielzeug/ripple';
-
-type CounterService = {
-  state: Readable<{ count: number }>;
-  increment(): void;
-  decrement(): void;
-};
-
-function createCounterService(): CounterService {
-  const s = store({ count: 0 });
-
-  return {
-    state: readonly(s),
-    increment() {
-      s.replace((st) => ({ count: st.count + 1 }));
-    },
-    decrement() {
-      s.replace((st) => ({ count: st.count - 1 }));
-    },
-  };
-}
-
-const counter = createCounterService();
-counter.state.value.count; // readable
-// counter.state.value = ...; // TS compile error — read-only
-```
-
-## Signal Combinators
-
-Use `computed()` to project a reactive source into a derived value:
-
-```ts
-import { signal, computed } from '@vielzeug/ripple';
-
-const count = signal(3);
-const doubled = computed(() => count.value * 2); // Computed<number>
-console.log(doubled.value); // 6
-
-count.value = 5;
-console.log(doubled.value); // 10
-
-doubled.dispose();
-```
-
-For a named projection, pass `options.name`:
-
-```ts
-const doubled = computed(() => count.value * 2, { name: 'doubled' });
-```
-
-## `Symbol.dispose` / `using` Declarations
-
-All `Subscription`, `Computed`, and `Scope` handles implement `[Symbol.dispose]`, enabling the TC39 [explicit resource management](https://github.com/tc39/proposal-explicit-resource-management) syntax:
-
-```ts
-{
-  using sub = effect(() => console.log(count.value));
-  using doubled = computed(() => count.value * 2);
-  // both are automatically disposed when the block exits
-}
-```
-
-`AsyncSubscription` (returned by `effectAsync()`) also implements `[Symbol.asyncDispose]`, enabling `await using`:
-
-```ts
-{
-  await using stop = effectAsync(async (signal) => {
-    await fetchData(signal);
-  });
-  // stop[Symbol.asyncDispose]() is called automatically — awaits the in-flight run
-}
+console.log(items.value);
 ```
 
 ## Testing
 
-Ripple stores are plain objects — no special test utilities needed. Create a
-fresh store in `beforeEach` and dispose any active effects in `afterEach`.
+Create an isolated graph per test. Disposal prevents effects and resource work from leaking into later tests.
 
 ```ts
-import { store, watch } from '@vielzeug/ripple';
-import type { Store } from '@vielzeug/ripple';
+import { expect, test } from 'vitest';
+import { createRipple } from '@vielzeug/ripple';
 
-describe('counter', () => {
-  let s: Store<{ count: number }>;
+test('derives a doubled count', () => {
+  const ripple = createRipple();
+  const count = ripple.signal(2);
+  const doubled = ripple.computed(() => count.value * 2);
 
-  beforeEach(() => {
-    s = store({ count: 0 });
-  });
-
-  it('patches count', () => {
-    s.patch({ count: 1 });
-    expect(s.value.count).toBe(1);
-  });
-
-  it('notifies watcher on change', () => {
-    const listener = vi.fn();
-    const sub = watch(s, listener);
-    s.patch({ count: 5 });
-    // notifications are synchronous — no await needed
-    expect(listener).toHaveBeenCalledWith({ count: 5 }, { count: 0 });
-    sub.dispose();
-  });
+  expect(doubled.value).toBe(4);
+  ripple.dispose();
 });
 ```
-
-For isolated signal tests, create signals in the test scope — they are
-garbage-collected unless an active `effect()` holds a reference:
-
-```ts
-it('computed updates reactively', () => {
-  const n = signal(2);
-  const sq = computed(() => n.value ** 2);
-  expect(sq.value).toBe(4);
-  n.value = 3;
-  expect(sq.value).toBe(9);
-  sq.dispose();
-});
-```
-
-## DevTools
-
-Import `installDevTools` from the dedicated sub-path. This keeps DevTools code out of production bundles when unused.
-
-```ts
-import { installDevTools } from '@vielzeug/ripple/devtools';
-
-installDevTools({
-  write({ name, oldValue, newValue }) {
-    console.log(`[write] ${name ?? '(unnamed)'}: ${String(oldValue)} → ${String(newValue)}`);
-  },
-  run({ name }) {
-    performance.mark(`effect:${name ?? 'anon'}`);
-  },
-  dispose({ kind, name }) {
-    console.log(`[dispose] ${kind} "${name ?? '(unnamed)'}"`);
-  },
-  compute({ name }) {
-    console.log(`[compute] ${name ?? '(unnamed)'}`);
-  },
-  mutate({ kind, name, path }) {
-    const target = path ? `${name ?? '(unnamed)'}[${path}]` : (name ?? '(unnamed)');
-    console.log(`[mutate] store ${target} — ${kind}`);
-  },
-});
-
-// Uninstall when no longer needed:
-installDevTools(null);
-```
-
-All hook methods are optional. The hook is stored in a module-level variable (not `globalThis`); `globalThis.__RIPPLE_DEVTOOLS__` is kept in sync as a mirror for browser-extension tools.
 
 ## Framework Integration
 
+Use signals and effects with any renderer. Dispose component-owned effects when the component unmounts.
+
 ::: code-group
 
-```tsx [React]
-import { useSyncExternalStore } from 'react';
-import { signal, computed, effect, type Readable } from '@vielzeug/ripple';
+```ts [React]
+import { useEffect, useState } from 'react';
+import { createRipple } from '@vielzeug/ripple';
 
-// Generic hook — works with any signal or computed
-function useSignalValue<T>(source: Readable<T>): T {
-  return useSyncExternalStore(source.subscribe, () => source.value);
-}
+const ripple = createRipple();
+const count = ripple.signal(0);
 
-// Usage in a component
-const count = signal(0);
-const doubled = computed(() => count.value * 2);
+export function Counter() {
+  const [, rerender] = useState(0);
 
-function Counter() {
-  const value = useSignalValue(count);
-  const doubledValue = useSignalValue(doubled);
+  useEffect(() => {
+    const stop = ripple.effect(() => {
+      void count.value;
+      rerender((revision) => revision + 1);
+    });
 
-  return (
-    <div>
-      <p>
-        {value} × 2 = {doubledValue}
-      </p>
-      <button onClick={() => count.value++}>Increment</button>
-    </div>
-  );
+    return () => stop.dispose();
+  }, []);
+
+  return <button onClick={() => (count.value += 1)}>{count.value}</button>;
 }
 ```
 
 ```ts [Vue 3]
-import { customRef, onScopeDispose } from 'vue';
-import { signal, computed, watch, type Readable, type Signal } from '@vielzeug/ripple';
+import { onUnmounted, ref } from 'vue';
+import { createRipple } from '@vielzeug/ripple';
 
-// Composable for read/write signals
-function useSignal<T>(source: Signal<T>) {
-  return customRef<T>((track, trigger) => ({
-    get() {
-      track();
-      return source.value;
-    },
-    set(value) {
-      source.value = value;
-      trigger();
-    },
-  }));
-}
+const ripple = createRipple();
+const count = ripple.signal(0);
+const revision = ref(0);
+const stop = ripple.effect(() => {
+  void count.value;
+  revision.value++;
+});
 
-// Composable for read-only signals and computeds
-function useSignalValue<T>(source: Readable<T>) {
-  const stop = watch(source, () => {}, { immediate: true });
-  onScopeDispose(() => stop.dispose());
-  return customRef<T>((track) => ({
-    get() {
-      track();
-      return source.value;
-    },
-    set(value) {
-      void value;
-    },
-  }));
-}
+onUnmounted(() => stop.dispose());
 ```
 
-```svelte [Svelte]
+```ts [Svelte]
 <script lang="ts">
-  import { signal, computed } from '@vielzeug/ripple';
-  import type { Readable } from '@vielzeug/ripple';
+  import { onDestroy } from 'svelte';
+  import { createRipple } from '@vielzeug/ripple';
 
-  // Manual Svelte store adapter — calls run() immediately, then on each change
-  function toSvelteStore<T>(source: Readable<T>) {
-    return {
-      subscribe(run: (value: T) => void) {
-        run(source.value); // Svelte contract: fire immediately with current value
-        const sub = source.subscribe(() => run(source.value));
-        return () => sub.dispose();
-      },
-    };
-  }
+  const ripple = createRipple();
+  const count = ripple.signal(0);
+  let revision = 0;
+  const stop = ripple.effect(() => {
+    void count.value;
+    revision++;
+  });
 
-  const count = signal(0);
-  const doubled = computed(() => count.value * 2);
-
-  const countStore = toSvelteStore(count);
-  const doubledStore = toSvelteStore(doubled);
-  // Use $countStore and $doubledStore in the template
+  onDestroy(() => stop.dispose());
 </script>
 
-<p>{$countStore} × 2 = {$doubledStore}</p>
-<button on:click={() => count.value++}>Increment</button>
+<button on:click={() => (count.value += 1)}>{count.value}</button>
 ```
 
 :::
 
 ## Working with Other Vielzeug Libraries
 
-### With Sourcerer
-
-Use Ripple signals for local UI intent and Sourcerer for remote/list data orchestration.
+Ore uses Ripple for component reactivity. Clockwork exposes machine state through reactive values. Ledger adds undo/redo commands around state changes without replacing the graph.
 
 ```ts
-import { signal } from '@vielzeug/ripple';
-import { createRemoteSource } from '@vielzeug/sourcerer';
+import { createRipple } from '@vielzeug/ripple';
+import { createMachine } from '@vielzeug/clockwork';
 
-const search = signal('');
-const source = createRemoteSource({
-  fetch: ({ page }) => api.items.list({ page, search: search.value }),
-});
+const ripple = createRipple();
+const machine = createMachine({
+  initial: 'idle',
+  states: { active: {}, idle: {} },
+}).start();
 
-search.subscribe(() => {
-  source.page(1);
-  void source.refresh();
-});
+const status = ripple.computed(() => machine.state.value);
+console.log(status.value);
+ripple.dispose();
 ```
 
 ## Best Practices
 
-### 1. Signals for Primitive Values, Stores for Objects
-
-```ts
-// <ore-icon name="check" size="16"></ore-icon> signal for a single scalar
-const isOpen = signal(false);
-
-// <ore-icon name="check" size="16"></ore-icon> store for structured objects
-const user = store({ id: '', name: '', role: 'guest' });
-
-// <ore-icon name="x" size="16"></ore-icon> store for a simple boolean — overcomplicated
-const isOpen = store({ value: false });
-```
-
-### 2. Computed for Derived Values
-
-```ts
-// <ore-icon name="check" size="16"></ore-icon> computed instead of duplicating logic in effects
-const fullName = computed(() => `${firstName.value} ${lastName.value}`);
-
-// <ore-icon name="x" size="16"></ore-icon> avoid manually syncing derived state in an effect
-const fullNameState = signal('');
-effect(() => {
-  fullNameState.value = `${firstName.value} ${lastName.value}`;
-});
-```
-
-### 3. Watch Slices with Getter Sources or `computed()`
-
-Both approaches work; choose based on reuse needs:
-
-```ts
-// <ore-icon name="check" size="16"></ore-icon> getter source — simple for one-off watches
-watch(
-  () => userStore.value.count,
-  (count) => console.log('count:', count),
-);
-
-// <ore-icon name="check" size="16"></ore-icon> composed with computed() — better for shared/complex selections
-const countSignal = computed(() => userStore.value.count);
-watch(countSignal, (count) => console.log('count:', count));
-countSignal.dispose();
-```
-
-### 4. Batch Multiple Updates
-
-```ts
-// <ore-icon name="check" size="16"></ore-icon> one notification instead of two
-batch(() => {
-  x.value = 1;
-  y.value = 2;
-});
-```
-
-### 5. Use Direct Assignment on Signals; `.replace()` on Stores
-
-```ts
-// <ore-icon name="check" size="16"></ore-icon> signals: read-modify-write in one line
-count.value = count.value + 1;
-
-// <ore-icon name="check" size="16"></ore-icon> stores: replace via function
-cart.replace((s) => ({ ...s, items: [...s.items, newItem] }));
-```
-
-### 6. Dispose Effects and Computeds When No Longer Needed
-
-```ts
-const sub = effect(() => (document.title = `Count: ${count.value}`));
-
-// when component unmounts:
-sub.dispose();
-```
-
-### 7. Use `untrack` to Break Unwanted Dependencies
-
-```ts
-effect(() => {
-  const id = userId.value; // tracked
-  const name = untrack(() => users.value[id]); // NOT tracked — avoids re-run on users change
-  render(id, name);
-});
-```
+- Create one graph per ownership boundary.
+- Keep computed callbacks pure.
+- Return cleanup from effects.
+- Dispose request, test, and feature graphs.
+- Batch related synchronous writes.
+- Use `watch()` only for selected source transitions.
+- Read dependencies in a resource source, not its loader.
+- Route background failures through `onError`.

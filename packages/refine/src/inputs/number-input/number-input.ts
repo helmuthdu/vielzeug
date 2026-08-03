@@ -1,6 +1,7 @@
 import { clamp } from '@vielzeug/arsenal';
 import { define, html, prop, ref, bind, getHost, onElement, watchEffect } from '@vielzeug/ore';
-import { computed, signal, watch as rippleWatch } from '@vielzeug/ripple';
+import { computed, signal } from '@vielzeug/ripple';
+import { watch as rippleWatch } from '@vielzeug/ripple/watch';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 

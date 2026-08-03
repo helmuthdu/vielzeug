@@ -1,36 +1,22 @@
 export const effectOptionsExample = {
-  code: `import { signal, effect, batch } from '@vielzeug/ripple'
+  code: `import { createRipple } from '@vielzeug/ripple'
 
-const count = signal(0)
-
-// scheduler: 'microtask' — re-runs coalesce and fire after the current task
-const stop = effect(
-  () => console.log('[microtask] count:', count.value),
-  { scheduler: 'microtask', name: 'count-logger' },
+// Microtask effects coalesce writes until current task ends.
+const ripple = createRipple()
+const count = ripple.signal(0)
+const stop = ripple.effect(
+  () => console.log('count:', count.value),
+  { name: 'count logger', scheduler: 'microtask' },
 )
 
 count.value = 1
 count.value = 2
 count.value = 3
-// All three writes queue one microtask re-run → logs "count: 3"
+console.log('writes complete')
 
-// With sync scheduler (default), every write triggers immediately
-const stopSync = effect(
-  () => console.log('[sync] count:', count.value),
-  { scheduler: 'sync' },
-)
-
-count.value = 4  // → logs "[sync] count: 4" immediately
-count.value = 5  // → logs "[sync] count: 5" immediately
-
-// batch() still coalesces sync effects
-batch(() => {
-  count.value = 10
-  count.value = 20
-})
-// → logs "[sync] count: 20" once
-
-stopSync.dispose()
-stop.dispose()`,
-  name: 'Effect Options — scheduler',
+queueMicrotask(() => {
+  stop.dispose()
+  ripple.dispose()
+})`,
+  name: 'Microtask Effect',
 };

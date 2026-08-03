@@ -524,8 +524,6 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       presenceCache.clear();
       pendingJoins.clear();
       pendingLeaves.clear();
-      status.dispose();
-      rooms.dispose();
       listeners.clear();
       disposalCtrl.abort();
     },

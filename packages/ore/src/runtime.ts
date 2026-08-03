@@ -10,13 +10,7 @@
  * top-level `setup()` body) call `onMounted`/`onCleanup`/`bind`/... directly,
  * with no context object to thread through every layer of a composable.
  */
-import {
-  type CleanupFn,
-  effect as _effect,
-  type EffectCallback,
-  onCleanup as _onCleanup,
-  type Readable,
-} from '@vielzeug/ripple';
+import { type Cleanup, effect as _effect, type Readable } from '@vielzeug/ripple';
 
 import { OreApiError, ORE_ERRORS } from './errors';
 import { listen as listenInternal } from './utils/dom';
@@ -25,7 +19,7 @@ import { listen as listenInternal } from './utils/dom';
 // A single context object carries both the host element and mount callbacks,
 // eliminating two parallel globals that were always set together.
 
-export type OnMountedCallback = () => CleanupFn | void;
+export type OnMountedCallback = () => Cleanup | void;
 export type OnFormResetCallback = () => void;
 
 export type RuntimeContext = {
@@ -115,19 +109,18 @@ export const requireSetupContext = (api: string): RuntimeContext => {
  */
 export const getHost = (): HTMLElement => requireSetupContext('getHost').element;
 
-export const tryRegisterCleanup = (fn: CleanupFn): boolean => {
+export const tryRegisterCleanup = (fn: Cleanup): boolean => {
   if (!currentContext) return false;
 
-  _onCleanup(fn);
+  _effect(() => fn);
 
   return true;
 };
 
-/**
- * Register a cleanup function to run on component disconnect.
- * Must be called synchronously during component setup or inside scope.run().
- */
-export const onCleanup = _onCleanup;
+/** Registers cleanup work for component disconnect. */
+export const onCleanup = (fn: Cleanup): void => {
+  if (!tryRegisterCleanup(fn)) throw new OreApiError(`onCleanup: ${ORE_ERRORS.lifecycleOutsideSetup}`);
+};
 
 /**
  * Register work to run after the component template mounts to the DOM.
@@ -156,7 +149,7 @@ export const onFormReset = (fn: OnFormResetCallback): void => {
  * `watch(source, callback)`, which has different semantics (explicit source,
  * old/new value pair) — the two are commonly imported in the same file.
  */
-export const watchEffect = (fn: EffectCallback): (() => void) => {
+export const watchEffect = (fn: () => Cleanup | void): (() => void) => {
   const sub = _effect(fn);
   const stop = (): void => sub.dispose();
 
@@ -196,7 +189,7 @@ export function onEvent(
  */
 export const onElement = <T extends HTMLElement>(
   ref: Readable<T | null>,
-  callback: (el: T) => CleanupFn | undefined | void,
+  callback: (el: T) => Cleanup | undefined | void,
 ): (() => void) => {
   return watchEffect(() => {
     const el = ref.value;

@@ -203,8 +203,7 @@ describe('createLedger', () => {
 
     await ledger.do({ execute: vi.fn(), rollback: vi.fn() });
     ledger[Symbol.dispose]();
-    expect(ledger.canUndo.disposed).toBe(true);
-    expect(ledger.historySize.disposed).toBe(true);
+    expect(ledger.disposed).toBe(true);
   });
 
   it('redo() execute failure — entry stays on redo stack', async () => {

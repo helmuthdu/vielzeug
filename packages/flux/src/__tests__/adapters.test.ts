@@ -15,9 +15,9 @@ describe('fromSignal()', () => {
     const sig = signal(42);
     const received: number[] = [];
 
-    fromSignal(sig).subscribe((v) => received.push(v));
-    sig.dispose();
+    const unsubscribe = fromSignal(sig).subscribe((v) => received.push(v));
 
+    unsubscribe();
     expect(received[0]).toBe(42);
   });
 
@@ -29,7 +29,6 @@ describe('fromSignal()', () => {
     sig.value = 1;
     sig.value = 2;
     unsub();
-    sig.dispose();
 
     expect(received).toEqual([0, 1, 2]);
   });

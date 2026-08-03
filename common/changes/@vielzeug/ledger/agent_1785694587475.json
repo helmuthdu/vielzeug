@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: expose ledger reactive state as Readable values",
+      "packageName": "@vielzeug/ledger",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ledger"
+}

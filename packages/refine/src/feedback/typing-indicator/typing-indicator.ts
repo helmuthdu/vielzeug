@@ -1,5 +1,5 @@
 import { define, html, prop } from '@vielzeug/ore';
-import { watch } from '@vielzeug/ripple';
+import { watch } from '@vielzeug/ripple/watch';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 

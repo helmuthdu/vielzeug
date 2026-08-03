@@ -1,34 +1,25 @@
 export const batchUntrackExample = {
-  code: `import { signal, effect, batch, untrack } from '@vielzeug/ripple'
+  code: `import { createRipple } from '@vielzeug/ripple'
 
-const a = signal(1)
-const b = signal(2)
+// Batch coalesces updates; untrack reads current state without subscribing.
+const ripple = createRipple()
+const first = ripple.signal('Ada')
+const last = ripple.signal('Lovelace')
+const locale = ripple.signal('en-US')
 
-let effectRuns = 0
-effect(() => {
-  // Reading a and b makes them dependencies
-  const sum = a.value + b.value
-  effectRuns++
-  console.log(\`Effect run #\${effectRuns}: sum = \${sum}\`)
+const stop = ripple.effect(() => {
+  const name = first.value + ' ' + last.value
+  const currentLocale = ripple.untrack(() => locale.value)
+  console.log({ name, currentLocale })
 })
 
-// Without batch: each write triggers the effect
-a.value = 10  // run #2
-b.value = 20  // run #3
-
-// Batch: flush only once after the block
-batch(() => {
-  a.value = 100
-  b.value = 200
-})  // run #4 (single run for both updates)
-
-// untrack: read without registering dependency
-effect(() => {
-  const tracked = a.value        // tracked
-  const peeked = untrack(() => b.value)  // NOT tracked
-  console.log('peeked b:', peeked)
+ripple.batch(() => {
+  first.value = 'Grace'
+  last.value = 'Hopper'
 })
+locale.value = 'de-DE'
 
-b.value = 999  // won't re-run the untrack effect`,
+stop.dispose()
+ripple.dispose()`,
   name: 'Batch & Untrack',
 };

@@ -1,4 +1,5 @@
-import { batch as rippleBatch, signal, watch, type Signal } from '@vielzeug/ripple';
+import { batch as rippleBatch, signal, type Signal } from '@vielzeug/ripple';
+import { watch } from '@vielzeug/ripple/watch';
 
 import type { FieldState, FormState, SubscribeOptions, Unsubscribe } from '../types';
 

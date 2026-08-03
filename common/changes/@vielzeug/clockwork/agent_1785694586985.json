@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: align reactive machine state with Ripple runtime",
+      "packageName": "@vielzeug/clockwork",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/clockwork"
+}

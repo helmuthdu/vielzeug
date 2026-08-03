@@ -1,7 +1,8 @@
 import '../alert/alert';
 import { uuid } from '@vielzeug/arsenal';
 import { define, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
-import { computed, signal, watch } from '@vielzeug/ripple';
+import { computed, signal } from '@vielzeug/ripple';
+import { watch } from '@vielzeug/ripple/watch';
 
 import type { SwipeControl } from '../../core';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
@@ -356,11 +357,19 @@ define<OreToastProps>(TOAST_TAG, {
       store?.finalize(id);
     };
 
-    const createToastSwipe = (id: string): SwipeControl =>
-      createSwipeControl({
+    const createToastSwipe = (id: string): SwipeControl => {
+      const isDismissible = (): boolean => entries.value.find((entry) => entry.id === id)?.dismissible ?? true;
+
+      return createSwipeControl({
         axis: () => 'x',
         captureTarget: () => null,
-        disabled: computed(() => !(entries.value.find((entry) => entry.id === id)?.dismissible ?? true)),
+        disabled: {
+          peek: () => !isDismissible(),
+          subscribe: (listener) => entries.subscribe(listener),
+          get value() {
+            return !isDismissible();
+          },
+        },
         onCancel: ({ event }) => {
           const inner = getInner(event);
 
@@ -424,6 +433,7 @@ define<OreToastProps>(TOAST_TAG, {
           inner.style.opacity = '';
         },
       });
+    };
 
     const beginExit = (id: string): void => {
       if (!store || exiting.has(id) || swiping.has(id)) return;

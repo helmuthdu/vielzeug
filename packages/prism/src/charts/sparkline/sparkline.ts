@@ -1,4 +1,4 @@
-import { effect, isReactive, scope } from '@vielzeug/ripple';
+import { createScope, effect, isReactive } from '@vielzeug/ripple';
 
 import type { Point } from '../../svg/path';
 import type { ChartHandle, SparklineConfig, StackSegment } from '../../types';
@@ -283,7 +283,9 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
 
   const ac = new AbortController();
 
-  const s = scope(() => {
+  const scope = createScope();
+
+  scope.run(() => {
     effect(
       () => {
         renderAll();
@@ -305,7 +307,7 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
       isDisposed = true;
       ac.abort();
       cleanupInteraction?.();
-      s.dispose();
+      scope.dispose();
       base.dispose();
     },
 

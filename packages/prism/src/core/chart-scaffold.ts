@@ -1,6 +1,6 @@
 import type { Readable } from '@vielzeug/ripple';
 
-import { effect, scope } from '@vielzeug/ripple';
+import { createScope, effect } from '@vielzeug/ripple';
 
 import type { CrosshairState } from '../interaction/crosshair';
 import type { LegendState } from '../interaction/legend';
@@ -92,7 +92,9 @@ function runScaffold<TCtx>(
   let disposed = false;
   const events = makeEventManager(base.svg);
 
-  const s = scope(() => {
+  const scope = createScope();
+
+  scope.run(() => {
     effect(
       () => {
         if (disposed) return;
@@ -145,7 +147,7 @@ function runScaffold<TCtx>(
 
       tooltip?.dispose();
       legend?.dispose();
-      s.dispose();
+      scope.dispose();
       base.dispose();
     },
 

@@ -26,7 +26,7 @@ Human-readable package catalogue derived from `.ai/data/packages.json`.
 | `@vielzeug/prism` | Charts | yes | Reactive SVG charting library — line, bar, area, pie, sparkline | `orbit`, `ripple` | — | — |
 | `@vielzeug/pulse` | WebSockets | no | Typed WebSocket client with channels, rooms, presence, reconnect | `ripple` | — | — |
 | `@vielzeug/refine` | UI | yes | Accessible, themeable web components built on ore | `arsenal`, `assay`, `dnd`, `keymap`, `orbit`, `ore`, `ripple`, `tempo` | — | `pnpm --filter @vielzeug/refine test` |
-| `@vielzeug/ripple` | State | no | Reactive signals, computed, effects, stores | — | — | — |
+| `@vielzeug/ripple` | State | no | Reactive runtime primitives: signals, derived values, effects, and scopes | — | — | — |
 | `@vielzeug/rune` | Logging | no | Structured scoped logger with remote transport | — | — | — |
 | `@vielzeug/sandbox` | AI | no | Sandboxed iframe runtime with typed postMessage state bridge | — | — | — |
 | `@vielzeug/scout` | Utilities | no | Trigram fuzzy-search index with highlighting and reactive layer | `ripple` | — | — |
