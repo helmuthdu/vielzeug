@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/flux",
   "version": "1.0.8",
-  "description": "Composable stream primitive with hot/cold semantics, backpressure, and ecosystem adapters",
+  "description": "Minimal push streams with explicit ownership, buffering, and ecosystem adapters",
   "type": "module",
   "files": [
     "dist"
@@ -15,16 +15,53 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./async": {
+      "source": "./src/async.ts",
+      "types": "./dist/async.d.ts",
+      "import": "./dist/async.js",
+      "require": "./dist/async.cjs"
+    },
+    "./courier": {
+      "source": "./src/courier.ts",
+      "types": "./dist/courier.d.ts",
+      "import": "./dist/courier.js",
+      "require": "./dist/courier.cjs"
+    },
+    "./herald": {
+      "source": "./src/herald.ts",
+      "types": "./dist/herald.d.ts",
+      "import": "./dist/herald.js",
+      "require": "./dist/herald.cjs"
+    },
+    "./pulse": {
+      "source": "./src/pulse.ts",
+      "types": "./dist/pulse.d.ts",
+      "import": "./dist/pulse.js",
+      "require": "./dist/pulse.cjs"
+    },
+    "./ripple": {
+      "source": "./src/ripple.ts",
+      "types": "./dist/ripple.d.ts",
+      "import": "./dist/ripple.js",
+      "require": "./dist/ripple.cjs"
+    },
+    "./subjects": {
+      "source": "./src/subjects.ts",
+      "types": "./dist/subjects.d.ts",
+      "import": "./dist/subjects.js",
+      "require": "./dist/subjects.cjs"
     }
   },
   "scripts": {
-    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types && pnpm run verify:exports",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
     "prepublishOnly": "pnpm run build",
-    "test": "vitest"
+    "test": "vitest",
+    "verify:exports": "node scripts/verify-exports.mjs && node scripts/verify-package-exports.mjs"
   },
   "publishConfig": {
     "access": "public",
@@ -33,13 +70,11 @@
   "engines": {
     "node": ">=22"
   },
-  "dependencies": {
-    "@vielzeug/ripple": "workspace:*"
-  },
   "peerDependencies": {
     "@vielzeug/courier": "workspace:*",
     "@vielzeug/herald": "workspace:*",
-    "@vielzeug/pulse": "workspace:*"
+    "@vielzeug/pulse": "workspace:*",
+    "@vielzeug/ripple": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@vielzeug/courier": {
@@ -50,6 +85,9 @@
     },
     "@vielzeug/pulse": {
       "optional": true
+    },
+    "@vielzeug/ripple": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -57,6 +95,7 @@
     "@vielzeug/courier": "workspace:*",
     "@vielzeug/herald": "workspace:*",
     "@vielzeug/pulse": "workspace:*",
+    "@vielzeug/ripple": "workspace:*",
     "typescript": "^6.0.3",
     "vite": "^8.1.3",
     "vitest": "^4.1.10"

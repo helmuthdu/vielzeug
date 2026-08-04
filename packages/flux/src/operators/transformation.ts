@@ -1,350 +1,241 @@
-import type { Flux, Operator, Unsubscribe } from '../types';
+import type { Operator, Stream, Subscription } from '../types';
 
-import { warn } from '../_dev';
-import { clampPositiveInt } from '../_numeric';
-import { guard } from '../_safe';
-import { flux } from '../core';
+import { link } from '../_link';
+import { tryCall } from '../_safe';
+import { stream } from '../core';
 
-/** Transform each emitted value through `fn`. */
-export function map<A, B>(fn: (value: A) => B): Operator<A, B> {
+export type ConcatMapOptions = {
+  capacity: number;
+};
+
+export function map<A, B>(project: (value: A) => B): Operator<A, B> {
   return (source) =>
-    flux<B>((observer) =>
-      source.subscribe({
-        complete: observer.complete,
-        error: observer.error,
-        next(v) {
-          guard(() => observer.next(fn(v)), observer.error);
-        },
-      }),
+    stream(
+      (sink, signal) =>
+        link(
+          source,
+          {
+            complete: sink.complete,
+            error: sink.error,
+            next(value) {
+              tryCall(() => sink.next(project(value)), sink.error);
+            },
+          },
+          signal,
+        ).unsubscribe,
     );
 }
 
-/** Emit only values for which `predicate` returns `true`. */
 export function filter<T>(predicate: (value: T) => boolean): Operator<T, T> {
   return (source) =>
-    flux<T>((observer) =>
-      source.subscribe({
-        complete: observer.complete,
-        error: observer.error,
-        next(v) {
-          guard(() => {
-            if (predicate(v)) observer.next(v);
-          }, observer.error);
-        },
-      }),
+    stream(
+      (sink, signal) =>
+        link(
+          source,
+          {
+            complete: sink.complete,
+            error: sink.error,
+            next(value) {
+              tryCall(() => {
+                if (predicate(value)) sink.next(value);
+              }, sink.error);
+            },
+          },
+          signal,
+        ).unsubscribe,
     );
 }
 
-/**
- * Accumulate state with a reducer. Emits the accumulated value after each source emission.
- *
- * @example
- * of(1, 2, 3).pipe(scan((acc, n) => acc + n, 0)); // emits 1, 3, 6
- */
-export function scan<T, A>(reducer: (acc: A, value: T) => A, seed: A): Operator<T, A> {
+export function scan<T, A>(reducer: (state: A, value: T) => A, initial: A): Operator<T, A> {
   return (source) =>
-    flux<A>((observer) => {
-      let acc = seed;
+    stream((sink, signal) => {
+      let state = initial;
 
-      return source.subscribe({
-        complete: observer.complete,
-        error: observer.error,
-        next(v) {
-          guard(() => {
-            acc = reducer(acc, v);
-            observer.next(acc);
-          }, observer.error);
+      return link(
+        source,
+        {
+          complete: sink.complete,
+          error: sink.error,
+          next(value) {
+            tryCall(() => {
+              state = reducer(state, value);
+              sink.next(state);
+            }, sink.error);
+          },
         },
-      });
+        signal,
+      ).unsubscribe;
     });
 }
 
-/**
- * Map each source value to an inner `Flux`, cancelling the previous inner on each new emission.
- * Useful for search-as-you-type, navigation, etc.
- */
-export function switchMap<A, B>(fn: (value: A) => Flux<B>): Operator<A, B> {
+export function switchMap<A, B>(project: (value: A) => Stream<B>): Operator<A, B> {
   return (source) =>
-    flux<B>((observer) => {
-      let innerUnsub: Unsubscribe | undefined;
-      let outerDone = false;
+    stream((sink, signal) => {
+      let outerComplete = false;
+      let inner: Subscription | undefined;
 
-      const checkDone = (): void => {
-        if (outerDone && !innerUnsub) observer.complete?.();
+      const finish = (): void => {
+        if (outerComplete && !inner) sink.complete();
       };
 
-      const outerUnsub = source.subscribe({
-        complete() {
-          outerDone = true;
-          checkDone();
+      const outer = link(
+        source,
+        {
+          complete() {
+            outerComplete = true;
+            finish();
+          },
+          error: sink.error,
+          next(value) {
+            inner?.unsubscribe();
+            inner = undefined;
+
+            tryCall(() => {
+              const subscription = link(
+                project(value),
+                {
+                  complete() {
+                    inner = undefined;
+                    finish();
+                  },
+                  error: sink.error,
+                  next: sink.next,
+                },
+                signal,
+              );
+
+              inner = subscription.closed ? undefined : subscription;
+            }, sink.error);
+          },
         },
-        error: observer.error,
-        next(v) {
-          guard(() => {
-            innerUnsub?.();
-            innerUnsub = fn(v).subscribe({
-              complete() {
-                innerUnsub = undefined;
-                checkDone();
-              },
-              error: observer.error,
-              next: observer.next,
-            });
-          }, observer.error);
-        },
-      });
+        signal,
+      );
 
       return () => {
-        outerUnsub();
-        innerUnsub?.();
+        outer.unsubscribe();
+        inner?.unsubscribe();
       };
     });
 }
 
-/**
- * Map each source value to an inner `Flux`, merging all inner streams concurrently.
- * All inner subscriptions run simultaneously.
- */
-export function flatMap<A, B>(fn: (value: A) => Flux<B>): Operator<A, B> {
+export function mergeMap<A, B>(project: (value: A) => Stream<B>): Operator<A, B> {
   return (source) =>
-    flux<B>((observer) => {
-      let outerDone = false;
-      let activeInner = 0;
-      const innerUnsubs = new Set<Unsubscribe>();
+    stream((sink, signal) => {
+      let outerComplete = false;
+      const inners = new Set<Subscription>();
 
-      const checkDone = (): void => {
-        if (outerDone && activeInner === 0) observer.complete?.();
+      const finish = (): void => {
+        if (outerComplete && inners.size === 0) sink.complete();
       };
 
-      const outerUnsub = source.subscribe({
-        complete() {
-          outerDone = true;
-          checkDone();
+      const outer = link(
+        source,
+        {
+          complete() {
+            outerComplete = true;
+            finish();
+          },
+          error: sink.error,
+          next(value) {
+            tryCall(() => {
+              const innerRef: { current?: Subscription } = {};
+
+              innerRef.current = link(
+                project(value),
+                {
+                  complete() {
+                    if (innerRef.current) inners.delete(innerRef.current);
+
+                    finish();
+                  },
+                  error: sink.error,
+                  next: sink.next,
+                },
+                signal,
+              );
+
+              if (!innerRef.current.closed) inners.add(innerRef.current);
+            }, sink.error);
+          },
         },
-        error: observer.error,
-        next(v) {
-          guard(() => {
-            activeInner++;
-
-            let syncDone = false;
-            // Init to NOOP to avoid TDZ if complete fires synchronously during subscribe().
-            let unsub: Unsubscribe = () => {};
-
-            const sub = fn(v).subscribe({
-              complete() {
-                syncDone = true;
-                activeInner--;
-                innerUnsubs.delete(unsub);
-                checkDone();
-              },
-              error: observer.error,
-              next: observer.next,
-            });
-
-            unsub = sub;
-
-            if (!syncDone) innerUnsubs.add(unsub);
-          }, observer.error);
-        },
-      });
+        signal,
+      );
 
       return () => {
-        outerUnsub();
-        for (const u of innerUnsubs) u();
+        outer.unsubscribe();
+        for (const inner of inners) inner.unsubscribe();
       };
     });
 }
 
-/**
- * Map each source value to an inner `Flux`, subscribing to each one only after
- * the previous inner completes (sequential, queued).
- * Pass `maxBuffer` to cap queued items; excess items are dropped silently.
- */
-export function concatMap<A, B>(fn: (value: A) => Flux<B>, maxBuffer = Infinity): Operator<A, B> {
+export function concatMap<A, B>(project: (value: A) => Stream<B>, options: ConcatMapOptions): Operator<A, B> {
+  if (!Number.isInteger(options.capacity) || options.capacity < 1) {
+    throw new RangeError('concatMap capacity must be a positive integer');
+  }
+
   return (source) =>
-    flux<B>((observer) => {
-      let outerDone = false;
+    stream((sink, signal) => {
       const queue: A[] = [];
-      let processing = false;
-      let currentUnsub: Unsubscribe | undefined;
+      let outerComplete = false;
+      let inner: Subscription | undefined;
+      const outerRef: { current?: Subscription } = {};
 
-      function processNext(): void {
-        if (queue.length === 0) {
-          processing = false;
-
-          if (outerDone) observer.complete?.();
+      const next = (): void => {
+        if (inner || queue.length === 0) {
+          if (outerComplete && !inner && queue.length === 0) sink.complete();
 
           return;
         }
 
-        processing = true;
+        const value = queue.shift()!;
 
-        const item = queue.shift()!;
-
-        guard(() => {
-          currentUnsub = fn(item).subscribe({
-            complete() {
-              currentUnsub = undefined;
-
-              processNext();
+        tryCall(() => {
+          const subscription = link(
+            project(value),
+            {
+              complete() {
+                inner = undefined;
+                next();
+              },
+              error: sink.error,
+              next: sink.next,
             },
-            error: observer.error,
-            next: observer.next,
-          });
-        }, observer.error);
-      }
+            signal,
+          );
 
-      const outerUnsub = source.subscribe({
-        complete() {
-          outerDone = true;
+          inner = subscription.closed ? undefined : subscription;
 
-          if (!processing) observer.complete?.();
+          if (!inner) next();
+        }, sink.error);
+      };
+
+      outerRef.current = link(
+        source,
+        {
+          complete() {
+            outerComplete = true;
+            next();
+          },
+          error: sink.error,
+          next(value) {
+            if (queue.length === options.capacity) {
+              outerRef.current?.unsubscribe();
+              sink.error(new RangeError('concatMap buffer capacity exceeded'));
+
+              return;
+            }
+
+            queue.push(value);
+            next();
+          },
         },
-        error: observer.error,
-        next(v) {
-          if (queue.length < maxBuffer) {
-            queue.push(v);
-
-            if (!processing) processNext();
-          }
-        },
-      });
+        signal,
+      );
 
       return () => {
-        outerUnsub();
-        currentUnsub?.();
+        outerRef.current?.unsubscribe();
+        inner?.unsubscribe();
         queue.length = 0;
       };
-    });
-}
-
-/**
- * Suppress consecutive duplicate values.
- * Uses `Object.is` by default; provide a custom `comparator` for deep equality.
- *
- * @example
- * of(1, 1, 2, 2, 3).pipe(distinctUntilChanged()); // emits 1, 2, 3
- */
-export function distinctUntilChanged<T>(comparator?: (a: T, b: T) => boolean): Operator<T, T> {
-  const eq = comparator ?? Object.is;
-
-  return (source) =>
-    flux<T>((observer) => {
-      let hasPrev = false;
-      let prev: T;
-
-      return source.subscribe({
-        complete: observer.complete,
-        error: observer.error,
-        next(v) {
-          guard(() => {
-            if (!hasPrev || !eq(prev, v)) {
-              hasPrev = true;
-              prev = v;
-              observer.next(v);
-            }
-          }, observer.error);
-        },
-      });
-    });
-}
-
-/**
- * Prepend one or more static values before the source's first emission.
- *
- * @example
- * of(2, 3).pipe(startWith(0, 1)).subscribe(console.log); // 0, 1, 2, 3
- */
-export function startWith<T>(...values: T[]): Operator<T, T> {
-  return (source) =>
-    flux<T>((observer) => {
-      for (const v of values) observer.next(v);
-
-      return source.subscribe(observer);
-    });
-}
-
-/**
- * Collect source emissions into fixed-size arrays, emitting each batch when full.
- * A partial batch at the end of the source is flushed on completion.
- *
- * @param size - Number of emissions per batch.
- * @param every - Start a new batch every `every` emissions (default: `size`, non-overlapping).
- *
- * @example
- * of(1, 2, 3, 4, 5, 6).pipe(bufferCount(2)).subscribe(console.log);
- * // [1, 2], [3, 4], [5, 6]
- */
-export function bufferCount<T>(size: number, every?: number): Operator<T, T[]> {
-  const { clamped: sizeClamped, value: safeSize } = clampPositiveInt(size);
-  const { clamped: everyClamped, value: step } = clampPositiveInt(every ?? safeSize);
-
-  if (sizeClamped) {
-    warn(`bufferCount: size must be a finite integer >= 1, got ${size} — clamped to ${safeSize}`);
-  }
-
-  if (every !== undefined && everyClamped) {
-    warn(`bufferCount: every must be a finite integer >= 1, got ${every} — clamped to ${step}`);
-  }
-
-  return (source) =>
-    flux<T[]>((observer) => {
-      const buffers: T[][] = [];
-      let count = 0;
-
-      return source.subscribe({
-        complete() {
-          for (const buf of buffers) {
-            if (buf.length > 0) observer.next(buf);
-          }
-
-          observer.complete?.();
-        },
-        error: observer.error,
-        next(v) {
-          if (count % step === 0) buffers.push([]);
-
-          for (const buf of buffers) buf.push(v);
-
-          let i = 0;
-
-          while (i < buffers.length) {
-            if (buffers[i]!.length >= safeSize) {
-              observer.next(buffers[i]!);
-              buffers.splice(i, 1);
-            } else {
-              i++;
-            }
-          }
-
-          count++;
-        },
-      });
-    });
-}
-
-/**
- * Emit the previous and current value as a `[prev, curr]` tuple.
- * No emission occurs until the second source value arrives.
- *
- * @example
- * of(1, 2, 3).pipe(pairwise()).subscribe(console.log); // [1, 2], [2, 3]
- */
-export function pairwise<T>(): Operator<T, [T, T]> {
-  return (source) =>
-    flux<[T, T]>((observer) => {
-      let hasPrev = false;
-      let prev: T;
-
-      return source.subscribe({
-        complete: observer.complete,
-        error: observer.error,
-        next(v) {
-          if (hasPrev) observer.next([prev, v]);
-
-          hasPrev = true;
-          prev = v;
-        },
-      });
     });
 }

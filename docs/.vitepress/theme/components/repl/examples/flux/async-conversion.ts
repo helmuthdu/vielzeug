@@ -1,31 +1,20 @@
 export const asyncConversionExample = {
-  code: `import { of, from, toArray, toPromise } from '@vielzeug/flux'
+  code: `// Consume a push stream with an explicit bounded async queue.
+import { of, toAsyncIterable } from '@vielzeug/flux'
 
-// toArray — collect all emissions into a Promise<T[]>
-toArray(of(1, 2, 3, 4, 5)).then((all) => {
-  console.log('toArray:', all)   // toArray: [1,2,3,4,5]
-})
+async function run() {
+  const values = toAsyncIterable(of(1, 2, 3), {
+    capacity: 3,
+    overflow: 'error',
+  })
 
-// toPromise — resolve with the last emitted value
-toPromise(of(10, 20, 30)).then((last) => {
-  console.log('toPromise:', last)  // toPromise: 30
-})
+  for await (const value of values) {
+    console.log('value:', value)
+  }
 
-// from — convert an async iterable to a Flux
-async function* gen() {
-  yield 'a'
-  yield 'b'
-  yield 'c'
+  console.log('iterator complete')
 }
 
-toArray(from(gen())).then((items) => {
-  console.log('async gen:', items)  // async gen: ['a','b','c']
-})
-
-// from — convert a Promise
-from(Promise.resolve('resolved')).subscribe({
-  next(v)    { console.log('from promise:', v) },   // from promise: resolved
-  complete() { console.log('done') },
-})`,
+void run()`,
   name: 'Async Conversion',
 };

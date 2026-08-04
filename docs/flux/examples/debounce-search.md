@@ -1,70 +1,46 @@
 ---
 title: 'Flux Examples — Debounced Search Input'
-description: 'Debounced search input example for @vielzeug/flux.'
+description: 'Debounce input events and retain only latest search result stream.'
 ---
 
 ## Debounced Search Input
 
 ### Problem
 
-Triggering a fetch on every keystroke floods the server and makes the UI feel unresponsive. You need to wait until the user pauses typing before firing the search, and cancel any in-flight request if a new one starts.
+Input events can outpace remote search. Earlier responses must not replace results for later input.
 
 ### Solution
 
-Use `fromEvent()` to capture input events, `debounce()` to suppress rapid keystrokes, and `switchMap()` to cancel previous in-flight fetches.
+Map input events to query text, debounce them, then switch to latest request stream.
 
 ```ts
-import { fromEvent, debounce, switchMap, map, from } from '@vielzeug/flux';
+import { debounce, from, fromEvent, map, pipe, switchMap } from '@vielzeug/flux';
 
 const input = document.querySelector<HTMLInputElement>('#search')!;
-const results = document.querySelector<HTMLUListElement>('#results')!;
 
-async function fetchResults(query: string): Promise<string[]> {
-  const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-  return res.json() as Promise<string[]>;
-}
+const results = pipe(
+  fromEvent<InputEvent>(input, 'input'),
+  map((event) => (event.target as HTMLInputElement).value.trim()),
+  debounce({ for: 300 }),
+  switchMap((query) => from(fetch(`/api/search?q=${encodeURIComponent(query)}`).then((response) => response.json()))),
+);
 
-const unsub = fromEvent<InputEvent>(input, 'input')
-  .pipe(
-    map((e) => (e.target as HTMLInputElement).value.trim()),
-    debounce(300),                          // wait 300ms after last keystroke
-    switchMap((query) => from(fetchResults(query))), // cancel previous fetch
-  )
-  .subscribe({
-    next(items) {
-      results.innerHTML = items.map((i) => `<li>${i}</li>`).join('');
-    },
-    error(err) {
-      console.error('search failed', err);
-    },
-  });
+const subscription = results.subscribe({
+  error: console.error,
+  next: console.log,
+});
 
-// Call unsub() to tear down when the component unmounts
-```
-
-#### With minimum query length
-
-```ts
-import { filter } from '@vielzeug/flux';
-
-fromEvent<InputEvent>(input, 'input')
-  .pipe(
-    map((e) => (e.target as HTMLInputElement).value.trim()),
-    filter((q) => q.length >= 2), // skip very short queries
-    debounce(300),
-    switchMap((q) => from(fetchResults(q))),
-  )
-  .subscribe({ next: renderResults, error: console.error });
+subscription.unsubscribe();
 ```
 
 ### Pitfalls
 
-- `debounce` drops the pending value when the source completes — wrap in `takeUntil` if you need to flush on unmount.
-- `switchMap` cancels the previous `from(fetch(...))` subscription, but the underlying `fetch()` Promise itself is not aborted. Pass an `AbortSignal` into `fetch` and wire it to `takeUntil` inside the inner stream if you need true request cancellation.
-- Mapping the event to its `value` **before** `debounce` ensures you read the current input value, not a stale captured event object.
+- `switchMap()` stops Flux delivery from earlier requests; `fetch()` itself needs its own `AbortSignal` for network cancellation.
+- Map event values before debounce; events are transient objects.
+- Handle `error` because rejected fetch promises terminate stream.
 
 ### Related
 
-- [Combining Streams with combineLatest](./combine-streams.md)
-- [API: `debounce()`](../api.md#debounce)
+- [Combining Streams](./combine-streams.md)
+- [Signal Integration](./signal-integration.md)
 - [API: `switchMap()`](../api.md#switchmap)

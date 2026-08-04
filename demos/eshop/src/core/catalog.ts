@@ -1,6 +1,7 @@
 import type { AsyncState } from '@vielzeug/courier';
 
-import { fromQuery, toSignal } from '@vielzeug/flux';
+import { fromQuery } from '@vielzeug/flux/courier';
+import { toSignal } from '@vielzeug/flux/ripple';
 import { computed } from '@vielzeug/ripple';
 
 import type { Model } from './types';

@@ -1,351 +1,169 @@
 import { signal } from '@vielzeug/ripple';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { fromQuery, fromSse } from '../adapters/courier';
 import { fromBus, toBus } from '../adapters/herald';
 import { fromPresence, fromPulse } from '../adapters/pulse';
 import { fromSignal, toSignal } from '../adapters/ripple';
-import { toArray } from '../operators/utility';
-import { createSubject } from '../subject';
+import { stream } from '../core';
+import { of } from '../operators/creation';
+import { pipe } from '../pipe';
 
-// ── Ripple adapter ──────────────────────────────────────────────────────────
-
-describe('fromSignal()', () => {
-  it('emits current value immediately on subscribe', () => {
-    const sig = signal(42);
+describe('ripple adapter', () => {
+  it('bridges signals in both directions', () => {
+    const source = signal(0);
     const received: number[] = [];
+    const subscription = fromSignal(source).subscribe((value) => received.push(value));
 
-    const unsubscribe = fromSignal(sig).subscribe((v) => received.push(v));
+    source.value = 1;
+    subscription.unsubscribe();
 
-    unsubscribe();
-    expect(received[0]).toBe(42);
+    const target = toSignal(fromSignal(source), { initial: -1 });
+
+    source.value = 2;
+    target.dispose();
+
+    expect(received).toEqual([0, 1]);
+    expect(target.value).toBe(2);
   });
 
-  it('emits on every signal change', () => {
-    const sig = signal(0);
-    const received: number[] = [];
-    const unsub = fromSignal(sig).subscribe((v) => received.push(v));
+  it('disposes binding when source completes', () => {
+    const binding = toSignal(of(42), { initial: 0 });
 
-    sig.value = 1;
-    sig.value = 2;
-    unsub();
-
-    expect(received).toEqual([0, 1, 2]);
-  });
-});
-
-describe('toSignal()', () => {
-  it('reflects source emissions as signal value', () => {
-    const source = createSubject<number>();
-    const sig = toSignal(source, { initial: 0 });
-
-    source.emit(10);
-    source.emit(20);
-    sig.dispose();
-    source.dispose();
-
-    expect(sig.value).toBe(20);
+    expect(binding.value).toBe(42);
+    expect(binding.disposed).toBe(true);
+    expect(binding.disposalSignal.aborted).toBe(true);
   });
 
-  it('stops updating signal when AbortSignal aborts', () => {
-    const source = createSubject<number>();
-    const ac = new AbortController();
-    const sig = toSignal(source, { initial: 0, signal: ac.signal });
+  it('disposes binding when source errors', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const binding = toSignal(
+      stream<number>((sink) => sink.error(new Error('offline'))),
+      { initial: 0 },
+    );
 
-    source.emit(5);
-    ac.abort();
-    source.emit(99);
-
-    expect(sig.value).toBe(5);
-    source.dispose();
-    sig.dispose();
+    expect(binding.value).toBe(0);
+    expect(binding.disposed).toBe(true);
+    expect(binding.disposalSignal.aborted).toBe(true);
+    error.mockRestore();
   });
 
-  it('stops updating signal after sig.dispose()', () => {
-    const source = createSubject<number>();
-    const sig = toSignal(source, { initial: 0 });
+  it('disposes binding when external signal aborts', () => {
+    const controller = new AbortController();
+    const binding = toSignal(
+      stream(() => {}),
+      { initial: 0, signal: controller.signal },
+    );
 
-    source.emit(7);
-    sig.dispose();
-    source.emit(99);
+    controller.abort();
 
-    expect(sig.value).toBe(7);
-    source.dispose();
-  });
-
-  it('does not update signal when signal option is already aborted', () => {
-    const source = createSubject<number>();
-    const ac = new AbortController();
-
-    ac.abort();
-
-    const sig = toSignal(source, { initial: 42, signal: ac.signal });
-
-    source.emit(99);
-
-    expect(sig.value).toBe(42);
-    source.dispose();
-    sig.dispose();
-  });
-
-  it('exposes disposed and disposalSignal properties', () => {
-    const source = createSubject<number>();
-    const sig = toSignal(source, { initial: 0 });
-
-    expect(sig.disposed).toBe(false);
-    expect(sig.disposalSignal.aborted).toBe(false);
-    sig.dispose();
-    expect(sig.disposed).toBe(true);
-    expect(sig.disposalSignal.aborted).toBe(true);
-    source.dispose();
-  });
-
-  it('dispose() is idempotent', () => {
-    const source = createSubject<number>();
-    const sig = toSignal(source, { initial: 0 });
-
-    sig.dispose();
-    sig.dispose();
-    expect(sig.disposed).toBe(true);
-    source.dispose();
-  });
-
-  it('[Symbol.dispose] delegates to dispose()', () => {
-    const source = createSubject<number>();
-    const sig = toSignal(source, { initial: 0 });
-
-    sig[Symbol.dispose]();
-    expect(sig.disposed).toBe(true);
-    source.dispose();
-  });
-
-  it('exposes underlying signal via .signal property', () => {
-    const source = createSubject<number>();
-    const binding = toSignal(source, { initial: 0 });
-
-    source.emit(5);
-    expect(binding.signal.value).toBe(5);
-    binding.dispose();
-    source.dispose();
+    expect(binding.disposed).toBe(true);
+    expect(binding.disposalSignal.aborted).toBe(true);
   });
 });
 
-// ── Herald adapter ──────────────────────────────────────────────────────────
+describe('courier adapter', () => {
+  it('reads snapshots and stream event payloads', async () => {
+    let listener: (() => void) | undefined;
+    const query = {
+      getSnapshot: () => 1,
+      subscribe(callback: () => void) {
+        listener = callback;
 
-type TestBusMap = { 'test:event': string };
-
-function makeMockBus(): {
-  bus: import('@vielzeug/herald').Bus<TestBusMap>;
-  fire(event: 'test:event', payload: string): void;
-} {
-  const listeners = new Map<string, Set<(payload: string) => void>>();
-
-  const bus = {
-    emit(event: string, payload: string) {
-      listeners.get(event)?.forEach((fn) => fn(payload));
-    },
-    on(event: string, handler: (payload: string) => void) {
-      if (!listeners.has(event)) listeners.set(event, new Set());
-
-      listeners.get(event)!.add(handler);
-
-      return () => listeners.get(event)?.delete(handler);
-    },
-  } as unknown as import('@vielzeug/herald').Bus<TestBusMap>;
-
-  return {
-    bus,
-    fire(event, payload) {
-      (bus as unknown as { emit(e: string, p: string): void }).emit(event, payload);
-    },
-  };
-}
-
-describe('fromBus()', () => {
-  it('emits each time the bus fires the event', () => {
-    const { bus, fire } = makeMockBus();
-    const received: string[] = [];
-
-    const unsub = fromBus(bus, 'test:event').subscribe((v) => received.push(v));
-
-    fire('test:event', 'hello');
-    fire('test:event', 'world');
-    unsub();
-    fire('test:event', 'after');
-
-    expect(received).toEqual(['hello', 'world']);
-  });
-});
-
-describe('toBus()', () => {
-  it('forwards source emissions to the bus and passes values through', () => {
-    const { bus } = makeMockBus();
-    const received: string[] = [];
-    const forwarded: string[] = [];
-
-    fromBus(bus, 'test:event').subscribe((v) => forwarded.push(v));
-
-    const source = createSubject<string>();
-
-    source.pipe(toBus(bus, 'test:event')).subscribe((v) => received.push(v));
-
-    source.emit('ping');
-    source.dispose();
-
-    expect(received).toEqual(['ping']);
-    expect(forwarded).toEqual(['ping']);
-  });
-});
-
-// ── Pulse adapter ───────────────────────────────────────────────────────────
-
-type TestPulseMap = { 'chat:message': string };
-
-function makeMockPulse(): {
-  fire(event: 'chat:message', payload: string): void;
-  pulse: import('@vielzeug/pulse').Pulse<TestPulseMap>;
-} {
-  const listeners = new Map<string, Set<(payload: string) => void>>();
-
-  const pulse = {
-    on(event: string, handler: (payload: string) => void) {
-      if (!listeners.has(event)) listeners.set(event, new Set());
-
-      listeners.get(event)!.add(handler);
-
-      return () => listeners.get(event)?.delete(handler);
-    },
-  } as unknown as import('@vielzeug/pulse').Pulse<TestPulseMap>;
-
-  return {
-    fire(event, payload) {
-      listeners.get(event)?.forEach((fn) => fn(payload));
-    },
-    pulse,
-  };
-}
-
-describe('fromPulse()', () => {
-  it('emits each time the pulse fires the event', () => {
-    const { fire, pulse } = makeMockPulse();
-    const received: string[] = [];
-
-    const unsub = fromPulse(pulse, 'chat:message').subscribe((v) => received.push(v));
-
-    fire('chat:message', 'hi');
-    fire('chat:message', 'there');
-    unsub();
-    fire('chat:message', 'gone');
-
-    expect(received).toEqual(['hi', 'there']);
-  });
-});
-
-describe('fromPresence()', () => {
-  it('emits current state then updates on join/leave', () => {
-    const members = new Map<string, string>([['a', 'Alice']]);
-    const joinListeners = new Set<() => void>();
-    const leaveListeners = new Set<() => void>();
-
-    const presence = {
-      onJoin(fn: () => void) {
-        joinListeners.add(fn);
-
-        return () => joinListeners.delete(fn);
-      },
-      onLeave(fn: () => void) {
-        leaveListeners.add(fn);
-
-        return () => leaveListeners.delete(fn);
-      },
-      state: {
-        get value() {
-          return members as ReadonlyMap<string, string>;
-        },
-      },
-    } as unknown as import('@vielzeug/pulse').PresenceChannel<string>;
-
-    const snapshots: string[][] = [];
-    const unsub = fromPresence(presence).subscribe((m) => {
-      snapshots.push([...m.keys()]);
-    });
-
-    members.set('b', 'Bob');
-    joinListeners.forEach((fn) => fn());
-    members.delete('a');
-    leaveListeners.forEach((fn) => fn());
-    unsub();
-
-    expect(snapshots).toEqual([['a'], ['a', 'b'], ['b']]);
-  });
-});
-
-// ── Courier adapter ─────────────────────────────────────────────────────────
-
-describe('fromSse()', () => {
-  it('emits selected events from an AsyncIterable', async () => {
-    async function* source() {
-      yield { data: 'ignored', event: 'ping' };
-      yield { data: 'event-1', event: 'message' };
-      yield { data: 'event-2', event: 'message' };
-    }
-
-    const received: string[] = [];
-    const completed = new Promise<void>((resolve) => {
-      fromSse(source(), 'message').subscribe({ complete: resolve, next: (value) => received.push(value) });
-    });
-
-    await completed;
-
-    expect(received).toEqual(['event-1', 'event-2']);
-  });
-
-  it('returns the source iterator immediately on unsubscribe', () => {
-    const returned = vi.fn(async () => ({ done: true, value: undefined }));
-    const source: AsyncIterable<{ data: string; event: string }> = {
-      [Symbol.asyncIterator]() {
-        return {
-          next: () => new Promise<IteratorResult<{ data: string; event: string }>>(() => {}),
-          return: returned,
+        return () => {
+          listener = undefined;
         };
       },
     };
+    const values: number[] = [];
+    const subscription = fromQuery(query).subscribe((value) => values.push(value));
 
-    const unsubscribe = fromSse(source, 'message').subscribe(() => {});
+    listener?.();
+    subscription.unsubscribe();
 
-    unsubscribe();
+    async function* events() {
+      yield { data: 'skip', event: 'other' };
+      yield { data: 'keep', event: 'message' };
+    }
 
-    expect(returned).toHaveBeenCalledOnce();
+    const eventValues: string[] = [];
+
+    await new Promise<void>((resolve) => {
+      fromSse(events(), 'message').subscribe({
+        complete: resolve,
+        next: (value) => eventValues.push(value),
+      });
+    });
+
+    expect(values).toEqual([1, 1]);
+    expect(eventValues).toEqual(['keep']);
   });
 });
 
-describe('fromQuery()', () => {
-  it('emits current state then on every change', () => {
-    let storeValue = 1;
-    const changeListeners = new Set<() => void>();
-
-    const query = {
-      getSnapshot() {
-        return storeValue;
+describe('herald and pulse adapters', () => {
+  it('subscribes and forwards typed event sources', () => {
+    const handlers = new Set<(value: string) => void>();
+    const bus = {
+      emit(_event: string, value: string) {
+        handlers.forEach((handler) => handler(value));
       },
-      subscribe(fn: () => void) {
-        changeListeners.add(fn);
+      on(_event: string, handler: (value: string) => void) {
+        handlers.add(handler);
 
-        return () => changeListeners.delete(fn);
+        return () => handlers.delete(handler);
       },
-    };
+    } as unknown as import('@vielzeug/herald').Bus<{ event: string }>;
+    const received: string[] = [];
 
-    const received: number[] = [];
-    const unsub = fromQuery(query).subscribe((v) => received.push(v));
+    fromBus(bus, 'event').subscribe((value) => received.push(value));
+    pipe(of('forwarded'), toBus(bus, 'event')).subscribe(() => {});
+    bus.emit('event', 'hello');
 
-    storeValue = 2;
-    changeListeners.forEach((fn) => fn());
-    storeValue = 3;
-    changeListeners.forEach((fn) => fn());
-    unsub();
-    storeValue = 4;
-    changeListeners.forEach((fn) => fn());
+    const pulse = {
+      on: (_event: string, handler: (value: string) => void) => {
+        handlers.add(handler);
 
-    expect(received).toEqual([1, 2, 3]);
+        return () => handlers.delete(handler);
+      },
+    } as unknown as import('@vielzeug/pulse').Pulse<{ event: string }>;
+
+    fromPulse(pulse, 'event').subscribe((value) => received.push(value));
+    handlers.forEach((handler) => handler('pulse'));
+
+    expect(received).toContain('forwarded');
+    expect(received).toContain('hello');
+    expect(received).toContain('pulse');
+  });
+
+  it('emits current and changed presence state', () => {
+    const members = new Map([['first', 'Ada']]);
+    let joined: () => void = () => {};
+    let left: () => void = () => {};
+    const presence = {
+      onJoin(callback: () => void) {
+        joined = callback;
+
+        return () => {};
+      },
+      onLeave(callback: () => void) {
+        left = callback;
+
+        return () => {};
+      },
+      state: {
+        get value() {
+          return members;
+        },
+      },
+    } as unknown as import('@vielzeug/pulse').PresenceChannel<string>;
+    const values: number[] = [];
+
+    fromPresence(presence).subscribe((value) => values.push(value.size));
+    members.set('second', 'Bea');
+    joined();
+    members.delete('first');
+    left();
+
+    expect(values).toEqual([1, 2, 1]);
   });
 });

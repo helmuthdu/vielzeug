@@ -1,4 +1,5 @@
-import { flux, toSignal } from '@vielzeug/flux';
+import { stream } from '@vielzeug/flux';
+import { toSignal } from '@vielzeug/flux/ripple';
 import { createI18n } from '@vielzeug/lingua';
 import { computed } from '@vielzeug/ripple';
 
@@ -203,7 +204,7 @@ export function setLocale(locale: 'de' | 'en'): void {
 // realtime.ts's presenceSignal) ────────────────────────────────────────────────
 
 const localeBinding = toSignal(
-  flux<'de' | 'en'>((observer) => {
+  stream<'de' | 'en'>((observer) => {
     observer.next(i18n.locale as 'de' | 'en');
 
     return i18n.subscribe(() => observer.next(i18n.locale as 'de' | 'en'));

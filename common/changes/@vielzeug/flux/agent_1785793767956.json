@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: redesign streams around returned teardowns, pipe(), explicit buffers, channels, adapter subpaths, and terminal consumer names",
+      "packageName": "@vielzeug/flux",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/flux"
+}

@@ -227,7 +227,7 @@ separate from the UI framework. Unsubscribing from `fromSse()` calls the underly
 which closes Courier's stream request immediately.
 
 ```ts
-import { fromQuery, fromSse } from '@vielzeug/flux';
+import { fromQuery, fromSse } from '@vielzeug/flux/courier';
 import { createCourier } from '@vielzeug/courier';
 
 type Notification = { text: string };
@@ -240,11 +240,11 @@ const profile = courier.queries.create({
 const profile$ = fromQuery(profile);
 const notifications$ = fromSse(courier.events<Notification>('/events'), 'message');
 
-const stopProfile = profile$.subscribe((state) => console.log(state.status));
-const stopNotifications = notifications$.subscribe((notification) => console.log(notification.text));
+const profileSubscription = profile$.subscribe((state) => console.log(state.status));
+const notificationSubscription = notifications$.subscribe((notification) => console.log(notification.text));
 
-stopNotifications(); // Calls iterator.return() and aborts the SSE request.
-stopProfile();
+notificationSubscription.unsubscribe(); // Calls iterator.return() and aborts the SSE request.
+profileSubscription.unsubscribe();
 ```
 
 ### Ripple

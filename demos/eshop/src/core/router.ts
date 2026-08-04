@@ -1,6 +1,7 @@
 import type { RouteParams } from '@vielzeug/wayfinder';
 
-import { flux, toSignal } from '@vielzeug/flux';
+import { stream } from '@vielzeug/flux';
+import { toSignal } from '@vielzeug/flux/ripple';
 import { computed } from '@vielzeug/ripple';
 import { createBrowserHistory, createRouter } from '@vielzeug/wayfinder';
 
@@ -45,7 +46,7 @@ function currentSnapshot() {
 }
 
 const routeBinding = toSignal(
-  flux<ReturnType<typeof currentSnapshot>>((observer) => {
+  stream<ReturnType<typeof currentSnapshot>>((observer) => {
     observer.next(currentSnapshot());
 
     return router.subscribe((state) => observer.next(state));

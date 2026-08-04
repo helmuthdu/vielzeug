@@ -1,13 +1,16 @@
-import type { Scheduler } from './types';
+export type Scheduler = {
+  delay(callback: () => void, milliseconds: number): () => void;
+  repeat(callback: () => void, milliseconds: number): () => void;
+};
 
-export const DEFAULT_SCHEDULER: Scheduler = {
-  delay(fn, ms) {
-    const id = setTimeout(fn, ms);
+export const defaultScheduler: Scheduler = {
+  delay(callback, milliseconds) {
+    const id = setTimeout(callback, milliseconds);
 
     return () => clearTimeout(id);
   },
-  repeat(fn, ms) {
-    const id = setInterval(fn, ms);
+  repeat(callback, milliseconds) {
+    const id = setInterval(callback, milliseconds);
 
     return () => clearInterval(id);
   },

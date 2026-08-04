@@ -1,182 +1,149 @@
-import type { Flux, Scheduler } from '../types';
+import type { Stream } from '../types';
 
-import { DEFAULT_SCHEDULER } from '../_scheduler';
-import { flux } from '../core';
+import { defaultScheduler } from '../_scheduler';
+import { stream } from '../core';
 
-/**
- * Creates a `Flux` that emits each argument in order, then completes.
- *
- * @example
- * of(1, 2, 3).subscribe(console.log); // 1, 2, 3
- */
-export function of<T>(...values: T[]): Flux<T> {
-  return flux<T>((observer) => {
-    for (const v of values) {
-      observer.next(v);
-    }
+export type IntervalOptions = {
+  every: number;
+};
 
-    observer.complete?.();
+export type TimerOptions = {
+  delay: number;
+  interval?: number;
+};
+
+function assertDuration(milliseconds: number, name: string): void {
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) {
+    throw new RangeError(`${name} must be a finite number greater than or equal to zero`);
+  }
+}
+
+export function of<T>(...values: T[]): Stream<T> {
+  return stream((sink) => {
+    for (const value of values) sink.next(value);
+    sink.complete();
   });
 }
 
-/**
- * Converts an `Iterable`, `AsyncIterable`, or `Promise` into a `Flux`.
- *
- * @example
- * from([1, 2, 3]).subscribe(console.log);
- * from(fetch('/api/data').then((r) => r.json())).subscribe(console.log);
- */
-export function from<T>(source: AsyncIterable<T> | Iterable<T> | Promise<T>): Flux<T> {
-  if (source instanceof Promise) {
-    return flux<T>((observer) => {
-      let cancelled = false;
+export function from<T>(source: AsyncIterable<T> | Iterable<T> | Promise<T>): Stream<T> {
+  if (Symbol.asyncIterator in Object(source)) {
+    return stream((sink, signal) => {
+      const iterator = (source as AsyncIterable<T>)[Symbol.asyncIterator]();
 
-      source
-        .then((v) => {
-          if (!cancelled) {
-            observer.next(v);
-            observer.complete?.();
-          }
-        })
-        .catch((err) => {
-          if (!cancelled) observer.error?.(err);
-        });
-
-      return () => {
-        cancelled = true;
-      };
-    });
-  }
-
-  if (Symbol.asyncIterator in source) {
-    const asyncSrc = source as AsyncIterable<T>;
-
-    return flux<T>((observer) => {
-      let cancelled = false;
-      const iter = asyncSrc[Symbol.asyncIterator]();
-
-      (async () => {
+      void (async () => {
         try {
-          while (true) {
-            const { done, value } = await iter.next();
+          while (!signal.aborted) {
+            const result = await iterator.next();
 
-            if (cancelled || done) break;
+            if (result.done) {
+              sink.complete();
 
-            observer.next(value);
+              return;
+            }
+
+            sink.next(result.value);
           }
-
-          if (!cancelled) observer.complete?.();
-        } catch (err) {
-          if (!cancelled) observer.error?.(err);
+        } catch (reason) {
+          if (!signal.aborted) sink.error(reason);
         }
       })();
 
       return () => {
-        cancelled = true;
-        iter.return?.();
+        void iterator.return?.();
       };
     });
   }
 
-  const iterSrc = source as Iterable<T>;
+  if (typeof (source as Promise<T>).then === 'function') {
+    return stream((sink, signal) => {
+      void (source as Promise<T>).then(
+        (value) => {
+          if (!signal.aborted) {
+            sink.next(value);
+            sink.complete();
+          }
+        },
+        (reason: unknown) => {
+          if (!signal.aborted) sink.error(reason);
+        },
+      );
+    });
+  }
 
-  return flux<T>((observer) => {
+  return stream((sink, signal) => {
+    const iterator = (source as Iterable<T>)[Symbol.iterator]();
+
     try {
-      for (const v of iterSrc) {
-        observer.next(v);
-      }
+      while (!signal.aborted) {
+        const result = iterator.next();
 
-      observer.complete?.();
-    } catch (err) {
-      observer.error?.(err);
+        if (result.done) {
+          sink.complete();
+
+          return;
+        }
+
+        sink.next(result.value);
+      }
+    } catch (reason) {
+      sink.error(reason);
     }
-  });
-}
-
-/**
- * Emits an incrementing integer (starting at 0) every `ms` milliseconds.
- *
- * @example
- * const ticks = interval(1000); // 0, 1, 2, ... every second
- */
-export function interval(ms: number, scheduler: Scheduler = DEFAULT_SCHEDULER): Flux<number> {
-  return flux<number>((observer) => {
-    let i = 0;
-
-    return scheduler.repeat(() => observer.next(i++), ms);
-  });
-}
-
-/**
- * After an initial `delay` ms, emits `0`, then (if `intervalMs` is provided)
- * emits incrementing values every `intervalMs` ms.
- *
- * @example
- * timer(1000).subscribe(console.log);          // emits 0 after 1s, then completes
- * timer(1000, 500).subscribe(console.log);     // emits 0 after 1s, then 1, 2, 3... every 500ms
- */
-export function timer(delay: number, intervalMs?: number, scheduler: Scheduler = DEFAULT_SCHEDULER): Flux<number> {
-  return flux<number>((observer) => {
-    let count = 0;
-    let cancelRepeat: (() => void) | undefined;
-
-    const cancelDelay = scheduler.delay(() => {
-      observer.next(count++);
-
-      if (intervalMs !== undefined) {
-        cancelRepeat = scheduler.repeat(() => observer.next(count++), intervalMs);
-      } else {
-        observer.complete?.();
-      }
-    }, delay);
 
     return () => {
-      cancelDelay();
-      cancelRepeat?.();
+      iterator.return?.();
     };
   });
 }
 
-/** A `Flux` that completes immediately without emitting any values. */
-export function empty<T = never>(): Flux<T> {
-  return flux<T>((observer) => {
-    observer.complete?.();
-  });
-}
-
-/** A `Flux` that never emits, errors, or completes. */
-export function never<T = never>(): Flux<T> {
-  return flux<T>(() => {});
-}
-
-/** A `Flux` that immediately errors with the given value. */
-export function throwError<T = never>(errorFactory: (() => unknown) | unknown): Flux<T> {
-  return flux<T>((observer) => {
-    const err = typeof errorFactory === 'function' ? (errorFactory as () => unknown)() : errorFactory;
-
-    observer.error?.(err);
-  });
-}
-
-/**
- * Creates a `Flux` from a DOM `EventTarget` or Node.js `EventEmitter`-like
- * object, emitting each time the named event fires.
- *
- * @example
- * fromEvent(document, 'click').subscribe((e) => console.log(e));
- */
 export function fromEvent<T = Event>(
   target: {
     addEventListener(type: string, listener: (event: T) => void): void;
     removeEventListener(type: string, listener: (event: T) => void): void;
   },
-  eventName: string,
-): Flux<T> {
-  return flux<T>((observer) => {
-    const handler = (event: T): void => observer.next(event);
+  type: string,
+): Stream<T> {
+  return stream((sink) => {
+    const listener = (event: T): void => sink.next(event);
 
-    target.addEventListener(eventName, handler);
+    target.addEventListener(type, listener);
 
-    return () => target.removeEventListener(eventName, handler);
+    return () => target.removeEventListener(type, listener);
+  });
+}
+
+export function interval(options: IntervalOptions): Stream<number> {
+  assertDuration(options.every, 'Interval duration');
+
+  return stream((sink) => {
+    let index = 0;
+
+    return defaultScheduler.repeat(() => sink.next(index++), options.every);
+  });
+}
+
+export function timer(options: TimerOptions): Stream<number> {
+  assertDuration(options.delay, 'Timer delay');
+
+  if (options.interval !== undefined) assertDuration(options.interval, 'Timer interval');
+
+  return stream((sink) => {
+    let index = 0;
+    let cancelInterval: (() => void) | undefined;
+    const cancelDelay = defaultScheduler.delay(() => {
+      sink.next(index++);
+
+      if (options.interval === undefined) {
+        sink.complete();
+
+        return;
+      }
+
+      cancelInterval = defaultScheduler.repeat(() => sink.next(index++), options.interval);
+    }, options.delay);
+
+    return () => {
+      cancelDelay();
+      cancelInterval?.();
+    };
   });
 }

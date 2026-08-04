@@ -1,107 +1,111 @@
-import type { Observer, Unsubscribe } from './types';
+import type { AsyncIterableOptions, Observer, Stream } from './types';
 
-import { warn } from './_dev';
+type Pending<T> = {
+  reject(reason: unknown): void;
+  resolve(result: IteratorResult<T>): void;
+};
 
-type QueueItem<T> = IteratorResult<T> | { readonly __err: unknown };
+type IteratorState<T> =
+  { kind: 'complete' | 'open'; queue: T[] } | { kind: 'error'; queue: T[]; reason: unknown } | { kind: 'returned' };
 
-/**
- * Upper bound on the internal buffer before values are dropped (oldest first).
- * Protects against unbounded memory growth when a producer emits faster than the
- * `for await` consumer drains the iterator.
- */
-const MAX_QUEUE_SIZE = 10_000;
+function assertOptions(options: AsyncIterableOptions): void {
+  if (!Number.isInteger(options.capacity) || options.capacity < 1) {
+    throw new RangeError('Async iterable capacity must be a positive integer');
+  }
+}
 
-/**
- * Creates an `AsyncIterator<T>` backed by a subscribe function.
- * Buffers incoming values until consumed; cancels the subscription on `return()`.
- * Drops the oldest buffered value (with a one-time dev warning) if the buffer exceeds
- * `MAX_QUEUE_SIZE` — see `MAX_QUEUE_SIZE`.
- * @internal
- */
-export function makeAsyncIterator<T>(subscribe: (observer: Observer<T>) => Unsubscribe): AsyncIterableIterator<T> {
-  const queue: QueueItem<T>[] = [];
-  const pending: Array<{
-    reject: (e: unknown) => void;
-    resolve: (r: IteratorResult<T>) => void;
-  }> = [];
-  let done = false;
-  let warnedOverflow = false;
+/** Async iteration requires explicit queue policy because streams are push based. */
+export function toIterator<T>(source: Stream<T>, options: AsyncIterableOptions): AsyncIterableIterator<T> {
+  assertOptions(options);
 
-  const DONE_RESULT: IteratorResult<T> = { done: true, value: undefined as T };
+  const controller = new AbortController();
+  const pending: Pending<T>[] = [];
+  let state: IteratorState<T> = { kind: 'open', queue: [] };
 
-  const unsub = subscribe({
-    complete() {
-      done = true;
-      drainPending();
-    },
-    error(err) {
-      done = true;
+  const detach = (): void => options.signal?.removeEventListener('abort', stop);
 
-      if (pending.length > 0) {
-        pending.shift()!.reject(err);
-        drainPending();
-      } else {
-        queue.push({ __err: err });
-      }
-    },
-    next(v) {
-      const item: IteratorResult<T> = { done: false, value: v };
+  const resolveDone = (): void => {
+    while (pending.length > 0) pending.shift()!.resolve({ done: true, value: undefined as T });
+  };
 
-      if (pending.length > 0) {
-        pending.shift()!.resolve(item);
+  const complete = (): void => {
+    if (state.kind !== 'open') return;
+
+    state.kind = 'complete';
+    detach();
+    resolveDone();
+  };
+
+  const fail = (reason: unknown): void => {
+    if (state.kind !== 'open') return;
+
+    state = { kind: 'error', queue: state.queue, reason };
+    controller.abort();
+    detach();
+
+    while (pending.length > 0) pending.shift()!.reject(reason);
+  };
+
+  const stop = (): void => {
+    controller.abort();
+    detach();
+    state = { kind: 'returned' };
+    resolveDone();
+  };
+
+  const observer: Observer<T> = {
+    complete,
+    error: fail,
+    next(value) {
+      if (state.kind !== 'open') return;
+
+      const waiter = pending.shift();
+
+      if (waiter) {
+        waiter.resolve({ done: false, value });
 
         return;
       }
 
-      if (queue.length >= MAX_QUEUE_SIZE) {
-        queue.shift();
+      if (state.queue.length < options.capacity) {
+        state.queue.push(value);
 
-        if (!warnedOverflow) {
-          warnedOverflow = true;
-          warn(
-            `async iterator buffer exceeded ${MAX_QUEUE_SIZE} queued values — dropping the oldest. ` +
-              'The consumer is falling behind the producer; throttle the source or drain the iterator faster.',
-          );
-        }
+        return;
       }
 
-      queue.push(item);
+      if (options.overflow === 'drop-oldest') {
+        state.queue.shift();
+        state.queue.push(value);
+      } else if (options.overflow === 'error') {
+        fail(new RangeError('Async iterable buffer capacity exceeded'));
+      }
     },
-  });
+  };
 
-  function drainPending(): void {
-    while (pending.length > 0) {
-      pending.shift()!.resolve(DONE_RESULT);
-    }
-  }
+  if (options.signal?.aborted) stop();
+  else options.signal?.addEventListener('abort', stop, { once: true });
 
-  const iterator = {
+  source.subscribe(observer, { signal: controller.signal });
+
+  return {
     next(): Promise<IteratorResult<T>> {
-      if (queue.length > 0) {
-        const item = queue.shift()!;
+      if (state.kind === 'returned') return Promise.resolve({ done: true, value: undefined as T });
 
-        if ('__err' in item) return Promise.reject((item as { __err: unknown }).__err);
+      if (state.queue.length > 0) return Promise.resolve({ done: false, value: state.queue.shift()! });
 
-        return Promise.resolve(item as IteratorResult<T>);
-      }
+      if (state.kind === 'error') return Promise.reject(state.reason);
 
-      if (done) return Promise.resolve(DONE_RESULT);
+      if (state.kind === 'complete') return Promise.resolve({ done: true, value: undefined as T });
 
       return new Promise<IteratorResult<T>>((resolve, reject) => pending.push({ reject, resolve }));
     },
     return(): Promise<IteratorResult<T>> {
-      if (!done) {
-        unsub();
-        done = true;
-        drainPending();
-      }
+      stop();
 
-      return Promise.resolve(DONE_RESULT);
+      return Promise.resolve({ done: true, value: undefined as T });
     },
     [Symbol.asyncIterator](): AsyncIterableIterator<T> {
-      return iterator;
+      return this;
     },
   };
-
-  return iterator;
 }

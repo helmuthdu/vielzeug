@@ -1,474 +1,200 @@
-import type { Flux, Operator, Scheduler, Unsubscribe } from '../types';
+import type { Operator, Stream, Subscription } from '../types';
 
-import { error, warn } from '../_dev';
-import { clampPositiveInt } from '../_numeric';
-import { guard } from '../_safe';
-import { DEFAULT_SCHEDULER } from '../_scheduler';
-import { flux } from '../core';
-import { FluxTimeoutError } from '../errors';
+import { link } from '../_link';
+import { tryCall } from '../_safe';
+import { defaultScheduler } from '../_scheduler';
+import { stream } from '../core';
 
-type SharedEntry<T> = { complete?: () => void; error?: (e: unknown) => void; next: (v: T) => void };
+export type RetryOptions = {
+  attempts: number;
+  delay?: number | ((attempt: number) => number);
+};
 
-function makeMulticast<T>(source: Flux<T>, maxBuffer: number): Flux<T> {
-  const subscribers = new Set<SharedEntry<T>>();
-  const buffer: T[] = [];
-  let sourceUnsub: Unsubscribe | undefined;
-  let sourceDone = false;
-  let sourceError: unknown;
-  let hasError = false;
+export type ToArrayOptions = {
+  maxItems: number;
+  signal?: AbortSignal;
+};
 
-  return flux<T>((observer) => {
-    if (hasError) {
-      observer.error?.(sourceError);
+export type ValueOptions = {
+  signal?: AbortSignal;
+};
 
-      return;
-    }
-
-    for (const v of buffer) observer.next(v);
-
-    if (sourceDone) {
-      observer.complete?.();
-
-      return;
-    }
-
-    const entry: SharedEntry<T> = {
-      complete: observer.complete,
-      error: observer.error,
-      next: observer.next,
-    };
-
-    subscribers.add(entry);
-
-    if (subscribers.size === 1) {
-      sourceUnsub = source.subscribe({
-        complete() {
-          sourceDone = true;
-          for (const s of [...subscribers]) s.complete?.();
-          subscribers.clear();
-        },
-        error(err) {
-          hasError = true;
-          sourceError = err;
-          for (const s of [...subscribers]) s.error?.(err);
-          subscribers.clear();
-        },
-        next(v) {
-          if (maxBuffer > 0) {
-            if (buffer.length >= maxBuffer) buffer.shift();
-
-            buffer.push(v);
-          }
-
-          for (const s of [...subscribers]) s.next(v);
-        },
-      });
-    }
-
-    return () => {
-      subscribers.delete(entry);
-
-      if (subscribers.size === 0) {
-        sourceUnsub?.();
-        sourceUnsub = undefined;
-      }
-    };
-  });
+function abortError(): DOMException {
+  return new DOMException('Stream consumption aborted', 'AbortError');
 }
 
-/**
- * Multicast a cold `Flux` to multiple subscribers. The first subscriber starts
- * the source; the last to unsubscribe stops it.
- *
- * @example
- * const hot$ = cold$.pipe(share()); // one source, many subscribers
- */
-export function share<T>(): Operator<T, T> {
-  return (source) => makeMulticast(source, 0);
-}
-
-/**
- * Multicast a cold `Flux` and replay the last `bufferSize` values (default: 1)
- * to any new subscriber.
- *
- * @example
- * const hot$ = cold$.pipe(shareReplay(1)); // last value replayed to late subs
- */
-export function shareReplay<T>(bufferSize = 1): Operator<T, T> {
-  const { clamped, value: safeSize } = clampPositiveInt(bufferSize);
-
-  if (clamped) {
-    warn(`shareReplay: bufferSize must be a finite integer >= 1, got ${bufferSize} — clamped to ${safeSize}`);
+export function retry<T>(options: RetryOptions): Operator<T, T> {
+  if (!Number.isInteger(options.attempts) || options.attempts < 0) {
+    throw new RangeError('retry attempts must be a non-negative integer');
   }
 
-  return (source) => makeMulticast(source, safeSize);
-}
-
-/** Run a side effect on each emission without modifying the value. */
-export function tap<T>(fn: (value: T) => void): Operator<T, T> {
   return (source) =>
-    flux<T>((observer) =>
-      source.subscribe({
-        complete: observer.complete,
-        error: observer.error,
-        next(v) {
-          guard(() => {
-            fn(v);
-            observer.next(v);
-          }, observer.error);
-        },
-      }),
-    );
-}
-
-/** Delay each emission by `ms` milliseconds. Pass a custom `scheduler` to control time in tests. */
-export function delay<T>(ms: number, scheduler: Scheduler = DEFAULT_SCHEDULER): Operator<T, T> {
-  return (source) =>
-    flux<T>((observer) => {
-      const cancels: Array<() => void> = [];
-
-      const unsub = source.subscribe({
-        complete() {
-          cancels.push(scheduler.delay(() => observer.complete?.(), ms));
-        },
-        error: observer.error,
-        next(v) {
-          cancels.push(scheduler.delay(() => observer.next(v), ms));
-        },
-      });
-
-      return () => {
-        unsub();
-        for (const cancel of cancels) cancel();
-      };
-    });
-}
-
-/**
- * Error if no value is emitted within `ms` milliseconds since the last emission
- * (or since subscription, for the first value). The timer resets on each emission —
- * this is an inactivity timeout, not a time-to-first-value or total-duration timeout.
- * Pass a custom `scheduler` to control time in tests.
- *
- * @example
- * source$.pipe(timeout(5000)); // throws FluxTimeoutError after 5s of silence
- */
-export function timeout<T>(ms: number, scheduler: Scheduler = DEFAULT_SCHEDULER): Operator<T, T> {
-  return (source) =>
-    flux<T>((observer) => {
-      let cancelTimer!: () => void;
-
-      const startTimer = (): void => {
-        cancelTimer = scheduler.delay(() => {
-          observer.error?.(new FluxTimeoutError(ms));
-        }, ms);
-      };
-
-      startTimer();
-
-      const unsub = source.subscribe({
-        complete() {
-          cancelTimer();
-          observer.complete?.();
-        },
-        error(err) {
-          cancelTimer();
-          observer.error?.(err);
-        },
-        next(v) {
-          cancelTimer();
-          startTimer();
-          observer.next(v);
-        },
-      });
-
-      return () => {
-        cancelTimer();
-        unsub();
-      };
-    });
-}
-
-/**
- * Recover from an error by returning a new `Flux` to continue with.
- *
- * @example
- * source$.pipe(catchError((err) => of('fallback')));
- */
-export function catchError<T>(handler: (err: unknown) => Flux<T>): Operator<T, T> {
-  return (source) =>
-    flux<T>((observer) => {
-      let fallbackUnsub: Unsubscribe | undefined;
-
-      const sourceUnsub = source.subscribe({
-        complete: observer.complete,
-        error(err) {
-          guard(() => {
-            fallbackUnsub = handler(err).subscribe({
-              complete: observer.complete,
-              error: observer.error,
-              next: observer.next,
-            });
-          }, observer.error);
-        },
-        next: observer.next,
-      });
-
-      return () => {
-        sourceUnsub();
-        fallbackUnsub?.();
-      };
-    });
-}
-
-/**
- * Re-subscribe to the source up to `count` times on error.
- * Pass `delayMs` as a fixed number or `(attempt) => number` function for backoff.
- * Pass a custom `scheduler` to control time in tests.
- *
- * @example
- * fetchStream$.pipe(retry(3));
- * fetchStream$.pipe(retry(3, (n) => Math.min(1000 * 2 ** n, 30_000))); // exponential backoff
- */
-export function retry<T>(
-  count: number,
-  delayMs?: number | ((attempt: number) => number),
-  scheduler: Scheduler = DEFAULT_SCHEDULER,
-): Operator<T, T> {
-  return (source) =>
-    flux<T>((observer) => {
+    stream((sink, signal) => {
       let attempts = 0;
-      let currentUnsub: Unsubscribe | undefined;
+      let current: Subscription | undefined;
       let cancelDelay: (() => void) | undefined;
 
-      function attempt(): void {
-        currentUnsub = source.subscribe({
-          complete: observer.complete,
-          error(err) {
-            if (attempts < count) {
-              const n = attempts++;
+      const start = (): void => {
+        if (signal.aborted) return;
 
-              if (delayMs !== undefined) {
-                guard(() => {
-                  const ms = typeof delayMs === 'function' ? delayMs(n) : delayMs;
+        const subscription = link(
+          source,
+          {
+            complete: sink.complete,
+            error(reason) {
+              if (attempts === options.attempts) {
+                sink.error(reason);
 
-                  cancelDelay = scheduler.delay(attempt, Math.max(0, ms));
-                }, observer.error);
-              } else {
-                attempt();
+                return;
               }
-            } else {
-              observer.error?.(err);
-            }
-          },
-          next: observer.next,
-        });
-      }
 
-      attempt();
+              const attempt = attempts++;
+              let delay: number | undefined;
+
+              tryCall(() => {
+                delay = typeof options.delay === 'function' ? options.delay(attempt) : options.delay;
+              }, sink.error);
+
+              if (signal.aborted) return;
+
+              if (delay !== undefined && (!Number.isFinite(delay) || delay < 0)) {
+                sink.error(new RangeError('retry delay must be a finite number greater than or equal to zero'));
+
+                return;
+              }
+
+              if (delay === undefined || delay === 0) {
+                queueMicrotask(start);
+              } else {
+                cancelDelay = defaultScheduler.delay(start, delay);
+              }
+            },
+            next: sink.next,
+          },
+          signal,
+        );
+
+        if (!subscription.closed) current = subscription;
+      };
+
+      start();
 
       return () => {
         cancelDelay?.();
-        currentUnsub?.();
+        current?.unsubscribe();
       };
     });
 }
 
-/**
- * Run `fn` when the stream ends — whether by completion, error, or unsubscription.
- *
- * @example
- * source$.pipe(finalize(() => console.log('stream ended')));
- */
-export function finalize<T>(fn: () => void): Operator<T, T> {
-  return (source) =>
-    flux<T>((observer) => {
-      let called = false;
+export function first<T>(source: Stream<T>, options?: ValueOptions): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const controller = new AbortController();
+    const abort = (): void => {
+      controller.abort();
+      reject(abortError());
+    };
 
-      const call = (): void => {
-        if (called) return;
+    if (options?.signal?.aborted) {
+      abort();
 
-        called = true;
+      return;
+    }
 
-        try {
-          fn();
-        } catch (err) {
-          error('finalize: cleanup callback threw', err);
-        }
-      };
-
-      const unsub = source.subscribe({
-        complete() {
-          call();
-          observer.complete?.();
+    options?.signal?.addEventListener('abort', abort, { once: true });
+    link(
+      source,
+      {
+        error(reason) {
+          options?.signal?.removeEventListener('abort', abort);
+          reject(reason);
         },
-        error(err) {
-          call();
-          observer.error?.(err);
+        next(value) {
+          options?.signal?.removeEventListener('abort', abort);
+          controller.abort();
+          resolve(value);
         },
-        next: observer.next,
-      });
-
-      return () => {
-        call();
-        unsub();
-      };
-    });
+      },
+      controller.signal,
+    );
+  });
 }
 
-/** Reject value used when `signal` aborts a pending `toPromise()`/`toArray()`. */
-function abortError(signal: AbortSignal): unknown {
-  return signal.reason ?? new DOMException('Aborted', 'AbortError');
-}
-
-/**
- * Convert a `Flux` to a `Promise` that resolves with the last emitted value
- * when the source completes, or rejects on error.
- * Pass `signal` to unsubscribe and reject early if the caller loses interest
- * before the source completes (e.g. a component unmounting).
- *
- * @example
- * const result = await toPromise(source$);
- * const cancellable = await toPromise(source$, controller.signal);
- */
-export function toPromise<T>(source: Flux<T>, signal?: AbortSignal): Promise<T | undefined> {
+export function last<T>(source: Stream<T>, options?: ValueOptions): Promise<T | undefined> {
   return new Promise<T | undefined>((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(abortError(signal));
+    const abort = (): void => reject(abortError());
+    let latest: T | undefined;
+
+    if (options?.signal?.aborted) {
+      abort();
 
       return;
     }
 
-    let last: T | undefined;
-    let unsub: Unsubscribe = () => {};
-
-    const onAbort = (): void => {
-      unsub();
-      reject(abortError(signal!));
-    };
-
-    // Add the listener before subscribing — the source may complete/error synchronously
-    // during subscribe(), and the complete/error handlers below need it already registered
-    // to remove it (otherwise it leaks on `signal` until the signal itself is GC'd).
-    signal?.addEventListener('abort', onAbort, { once: true });
-
-    unsub = source.subscribe({
-      complete() {
-        signal?.removeEventListener('abort', onAbort);
-        resolve(last);
+    options?.signal?.addEventListener('abort', abort, { once: true });
+    link(
+      source,
+      {
+        complete() {
+          options?.signal?.removeEventListener('abort', abort);
+          resolve(latest);
+        },
+        error(reason) {
+          options?.signal?.removeEventListener('abort', abort);
+          reject(reason);
+        },
+        next(value) {
+          latest = value;
+        },
       },
-      error(err) {
-        signal?.removeEventListener('abort', onAbort);
-        reject(err);
-      },
-      next(v) {
-        last = v;
-      },
-    });
+      options?.signal ?? new AbortController().signal,
+    );
   });
 }
 
-/**
- * Collect all emitted values into an array resolved when the source completes.
- * Pass `signal` to stop early and resolve with the values collected so far
- * (rather than reject) if the caller loses interest before completion.
- *
- * @example
- * const all = await toArray(of(1, 2, 3));
- * const partial = await toArray(source$, controller.signal);
- */
-export function toArray<T>(source: Flux<T>, signal?: AbortSignal): Promise<T[]> {
+export function toArray<T>(source: Stream<T>, options: ToArrayOptions): Promise<T[]> {
+  if (!Number.isInteger(options.maxItems) || options.maxItems < 0) {
+    throw new RangeError('toArray maxItems must be a non-negative integer');
+  }
+
   return new Promise<T[]>((resolve, reject) => {
-    const results: T[] = [];
+    const controller = new AbortController();
+    const values: T[] = [];
+    const abort = (): void => {
+      controller.abort();
+      reject(abortError());
+    };
 
-    if (signal?.aborted) {
-      resolve(results);
+    if (options.signal?.aborted) {
+      abort();
 
       return;
     }
 
-    let unsub: Unsubscribe = () => {};
+    options.signal?.addEventListener('abort', abort, { once: true });
+    link(
+      source,
+      {
+        complete() {
+          options.signal?.removeEventListener('abort', abort);
+          resolve(values);
+        },
+        error(reason) {
+          options.signal?.removeEventListener('abort', abort);
+          reject(reason);
+        },
+        next(value) {
+          if (values.length === options.maxItems) {
+            options.signal?.removeEventListener('abort', abort);
+            controller.abort();
+            reject(new RangeError('toArray maxItems exceeded'));
 
-    const onAbort = (): void => {
-      unsub();
-      resolve(results);
-    };
+            return;
+          }
 
-    // See toPromise() above for why the listener is added before subscribing.
-    signal?.addEventListener('abort', onAbort, { once: true });
-
-    unsub = source.subscribe({
-      complete() {
-        signal?.removeEventListener('abort', onAbort);
-        resolve(results);
+          values.push(value);
+        },
       },
-      error(err) {
-        signal?.removeEventListener('abort', onAbort);
-        reject(err);
-      },
-      next(v) {
-        results.push(v);
-      },
-    });
+      controller.signal,
+    );
   });
-}
-
-/**
- * Compose multiple operators into a single reusable operator.
- * Provides full type safety at any pipeline depth — use instead of
- * `pipe()` overloads when chaining more than 4 operators.
- *
- * @example
- * const pipeline = flow(
- *   filter((n) => n % 2 === 0),
- *   map((n) => n * 10),
- *   take(5),
- * );
- * source$.pipe(pipeline).subscribe(console.log);
- */
-export function flow<A, B>(op1: Operator<A, B>): Operator<A, B>;
-export function flow<A, B, C>(op1: Operator<A, B>, op2: Operator<B, C>): Operator<A, C>;
-export function flow<A, B, C, D>(op1: Operator<A, B>, op2: Operator<B, C>, op3: Operator<C, D>): Operator<A, D>;
-export function flow<A, B, C, D, E>(
-  op1: Operator<A, B>,
-  op2: Operator<B, C>,
-  op3: Operator<C, D>,
-  op4: Operator<D, E>,
-): Operator<A, E>;
-export function flow<A, B, C, D, E, F>(
-  op1: Operator<A, B>,
-  op2: Operator<B, C>,
-  op3: Operator<C, D>,
-  op4: Operator<D, E>,
-  op5: Operator<E, F>,
-): Operator<A, F>;
-export function flow<A, B, C, D, E, F, G>(
-  op1: Operator<A, B>,
-  op2: Operator<B, C>,
-  op3: Operator<C, D>,
-  op4: Operator<D, E>,
-  op5: Operator<E, F>,
-  op6: Operator<F, G>,
-): Operator<A, G>;
-export function flow<A, B, C, D, E, F, G, H>(
-  op1: Operator<A, B>,
-  op2: Operator<B, C>,
-  op3: Operator<C, D>,
-  op4: Operator<D, E>,
-  op5: Operator<E, F>,
-  op6: Operator<F, G>,
-  op7: Operator<G, H>,
-): Operator<A, H>;
-export function flow<A, B, C, D, E, F, G, H, I>(
-  op1: Operator<A, B>,
-  op2: Operator<B, C>,
-  op3: Operator<C, D>,
-  op4: Operator<D, E>,
-  op5: Operator<E, F>,
-  op6: Operator<F, G>,
-  op7: Operator<G, H>,
-  op8: Operator<H, I>,
-): Operator<A, I>;
-export function flow(...ops: Operator[]): Operator {
-  return (source: Flux<unknown>) => ops.reduce((f: Flux<unknown>, op) => op(f), source);
 }

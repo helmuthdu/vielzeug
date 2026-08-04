@@ -1,4 +1,5 @@
-import { fromPresence, toSignal } from '@vielzeug/flux';
+import { fromPresence } from '@vielzeug/flux/pulse';
+import { toSignal } from '@vielzeug/flux/ripple';
 import { createPulse } from '@vielzeug/pulse';
 import { computed } from '@vielzeug/ripple';
 

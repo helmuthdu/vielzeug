@@ -240,22 +240,22 @@ console.log(auth.state.value); // 'active'
 
 ### Flux
 
-Composable streams with hot/cold semantics, backpressure, and adapters for every Vielzeug primitive.
+Composable push streams with explicit buffering and adapters for Vielzeug primitives.
 
 ```typescript
-import { flux, filter, debounce, map, createSubject } from '@vielzeug/flux';
+import { debounce, filter, map, pipe } from '@vielzeug/flux';
+import { createChannel } from '@vielzeug/flux/subjects';
 
-const subject = createSubject<string>();
+const subject = createChannel<string>();
 
-flux(subject)
-  .pipe(
-    filter((q) => q.length > 1),
-    debounce(300),
-    map((q) => q.toLowerCase().trim()),
-  )
-  .subscribe(console.log);
+pipe(
+  subject.stream,
+  filter((query) => query.length > 1),
+  debounce({ for: 300 }),
+  map((query) => query.toLowerCase().trim()),
+).subscribe(console.log);
 
-subject.next('hello'); // after 300 ms: 'hello'
+subject.send('hello'); // after 300 ms: hello
 ```
 
 [Flux docs →](/flux/)

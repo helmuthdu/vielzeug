@@ -235,11 +235,12 @@ export function translatorStore(i18n: I18n) {
 Bridge Lingua subscriptions into Ripple through Flux when templates need reactive locale reads.
 
 ```ts
-import { flux, toSignal } from '@vielzeug/flux';
+import { stream } from '@vielzeug/flux';
+import { toSignal } from '@vielzeug/flux/ripple';
 import { computed } from '@vielzeug/ripple';
 
 const localeBinding = toSignal(
-  flux<string>((observer) => {
+  stream<string>((observer) => {
     observer.next(i18n.locale);
 
     return i18n.subscribe(({ locale }) => observer.next(locale));

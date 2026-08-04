@@ -86,10 +86,10 @@
       "slug": "flux",
       "name": "@vielzeug/flux",
       "category": "Streams",
-      "description": "Composable stream primitives with hot/cold semantics and operators",
+      "description": "Minimal push streams with explicit ownership, buffering, and ecosystem adapters",
       "domOutput": false,
-      "dependencies": ["ripple"],
-      "optionalPeers": ["courier", "herald", "pulse"]
+      "dependencies": [],
+      "optionalPeers": ["courier", "herald", "pulse", "ripple"]
     },
     {
       "slug": "forge",

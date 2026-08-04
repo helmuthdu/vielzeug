@@ -15,7 +15,7 @@ Human-readable package catalogue derived from `.ai/data/packages.json`.
 | `@vielzeug/courier` | HTTP | no | Typed HTTP client with caching and mutations | `arsenal` | — | — |
 | `@vielzeug/dnd` | UI | no | Drag-and-drop — drop zones and sortable lists | — | — | — |
 | `@vielzeug/familiar` | Workers | no | Web Worker pool with tasks, timeouts, cancellation | `arsenal` | — | — |
-| `@vielzeug/flux` | Streams | no | Composable stream primitives with hot/cold semantics and operators | `ripple` | `courier`, `herald`, `pulse` | — |
+| `@vielzeug/flux` | Streams | no | Minimal push streams with explicit ownership, buffering, and ecosystem adapters | — | `courier`, `herald`, `pulse`, `ripple` | — |
 | `@vielzeug/forge` | Forms | no | Typed form state, validation, submission | `arsenal` | `spell`, `vault` | — |
 | `@vielzeug/herald` | Events | no | Typed event bus, pub/sub, async streams | — | — | — |
 | `@vielzeug/keymap` | Input | no | Headless keyboard shortcut manager with chord sequences | — | — | — |

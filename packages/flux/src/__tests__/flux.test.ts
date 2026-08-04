@@ -1,316 +1,139 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { flux } from '../core';
-import { of } from '../operators/creation';
+import { map, pipe, stream } from '../index';
 
-describe('flux() — core factory', () => {
-  it('emits values via observer.next', () => {
-    const received: number[] = [];
-    const f = flux<number>((obs) => {
-      obs.next(1);
-      obs.next(2);
-      obs.next(3);
+describe('stream()', () => {
+  it('runs producer for each independent subscription', () => {
+    let runs = 0;
+    const values: number[] = [];
+    const source = stream<number>((sink) => {
+      runs++;
+      sink.next(runs);
+      sink.complete();
     });
 
-    f.subscribe((n) => received.push(n));
-    expect(received).toEqual([1, 2, 3]);
+    source.subscribe((value) => values.push(value));
+    source.subscribe((value) => values.push(value));
+
+    expect(values).toEqual([1, 2]);
   });
 
-  it('accepts a plain function as subscriber', () => {
-    const received: number[] = [];
-    const f = flux<number>((obs) => {
-      obs.next(42);
+  it('owns cancellation on a subscription, not on its stream', () => {
+    const teardown = vi.fn();
+    let send!: (value: number) => void;
+    const source = stream<number>((sink) => {
+      send = sink.next;
+
+      return teardown;
+    });
+    const first: number[] = [];
+    const second: number[] = [];
+
+    const subscription = source.subscribe((value) => first.push(value));
+
+    source.subscribe((value) => second.push(value));
+    subscription.unsubscribe();
+    send(1);
+
+    expect(subscription.closed).toBe(true);
+    expect(first).toEqual([]);
+    expect(second).toEqual([1]);
+    expect(teardown).toHaveBeenCalledOnce();
+  });
+
+  it('runs returned teardown after synchronous completion', () => {
+    const teardown = vi.fn();
+    const source = stream((sink) => {
+      sink.complete();
+
+      return teardown;
     });
 
-    f.subscribe((n) => received.push(n));
-    expect(received).toEqual([42]);
+    source.subscribe(() => {});
+
+    expect(teardown).toHaveBeenCalledOnce();
   });
 
-  it('calls cleanup when unsubscribed', () => {
-    const cleanup = vi.fn();
-    const f = flux<number>(() => cleanup);
+  it('uses AbortSignal to close a subscription', () => {
+    const controller = new AbortController();
+    const teardown = vi.fn();
+    const source = stream(() => teardown);
+    const subscription = source.subscribe(() => {}, { signal: controller.signal });
 
-    const unsub = f.subscribe(() => {});
+    controller.abort();
 
-    unsub();
-    expect(cleanup).toHaveBeenCalledOnce();
+    expect(subscription.closed).toBe(true);
+    expect(teardown).toHaveBeenCalledOnce();
   });
 
-  it('cleanup is not called twice on double unsubscribe', () => {
-    const cleanup = vi.fn();
-    const f = flux<number>(() => cleanup);
-    const unsub = f.subscribe(() => {});
-
-    unsub();
-    unsub();
-    expect(cleanup).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls complete callback', () => {
-    const complete = vi.fn();
-    const f = flux<number>((obs) => {
-      obs.complete?.();
-    });
-
-    f.subscribe({ complete, next: () => {} });
-    expect(complete).toHaveBeenCalledOnce();
-  });
-
-  it('calls error callback', () => {
+  it('forwards producer throws to observer.error', () => {
     const error = vi.fn();
-    const f = flux<number>((obs) => {
-      obs.error?.(new Error('boom'));
+    const source = stream<number>(() => {
+      throw new Error('broken producer');
     });
 
-    f.subscribe({ error, next: () => {} });
-    expect(error).toHaveBeenCalledWith(expect.any(Error));
+    source.subscribe({ error, next: () => {} });
+
+    expect(error).toHaveBeenCalledWith(expect.objectContaining({ message: 'broken producer' }));
   });
 
-  it('does not emit after unsubscribe', () => {
-    const received: number[] = [];
-    let emit!: (n: number) => void;
-    const f = flux<number>((obs) => {
-      emit = obs.next.bind(obs);
-    });
-    const unsub = f.subscribe((n) => received.push(n));
+  it('reports unhandled stream errors through platform reporting', () => {
+    const original = (globalThis as { reportError?: (reason: unknown) => void }).reportError;
+    const reportError = vi.fn();
 
-    emit(1);
-    unsub();
-    emit(2);
-    expect(received).toEqual([1]);
-  });
+    Object.defineProperty(globalThis, 'reportError', { configurable: true, value: reportError });
 
-  it('each subscribe() starts a new producer (cold)', () => {
-    let calls = 0;
-    const f = flux<number>(() => {
-      calls++;
-    });
+    try {
+      stream<number>((sink) => sink.error(new Error('unhandled'))).subscribe(() => {});
 
-    f.subscribe(() => {});
-    f.subscribe(() => {});
-    expect(calls).toBe(2);
-  });
-
-  it('dispose() stops all active subscriptions', () => {
-    const received: number[] = [];
-    let emit!: (n: number) => void;
-    const f = flux<number>((obs) => {
-      emit = obs.next.bind(obs);
-    });
-
-    f.subscribe((n) => received.push(n));
-    emit(1);
-    f.dispose();
-    emit(2);
-    expect(received).toEqual([1]);
-    expect(f.disposed).toBe(true);
-  });
-
-  it('dispose() is idempotent', () => {
-    const f = flux<number>(() => {});
-
-    f.dispose();
-    f.dispose();
-    expect(f.disposed).toBe(true);
-  });
-
-  it('[Symbol.dispose] delegates to dispose()', () => {
-    const f = flux<number>(() => {});
-
-    f[Symbol.dispose]();
-    expect(f.disposed).toBe(true);
-  });
-
-  it('disposalSignal aborts when disposed', () => {
-    const f = flux<number>(() => {});
-
-    expect(f.disposalSignal.aborted).toBe(false);
-    f.dispose();
-    expect(f.disposalSignal.aborted).toBe(true);
-  });
-
-  it('subscribe() on disposed flux calls complete immediately and returns no-op', () => {
-    const complete = vi.fn();
-    const f = flux<number>(() => {});
-
-    f.dispose();
-
-    const unsub = f.subscribe({ complete, next: () => {} });
-
-    expect(complete).toHaveBeenCalledOnce();
-    expect(() => unsub()).not.toThrow();
-  });
-
-  it('dispose() sends complete notification to all active subscribers', () => {
-    const complete = vi.fn();
-    const f = flux<number>(() => {});
-
-    f.subscribe({ complete, next: () => {} });
-    f.dispose();
-    expect(complete).toHaveBeenCalledOnce();
-  });
-
-  it('dispose() sends complete to multiple active subscribers', () => {
-    const c1 = vi.fn();
-    const c2 = vi.fn();
-    const f = flux<number>(() => {});
-
-    f.subscribe({ complete: c1, next: () => {} });
-    f.subscribe({ complete: c2, next: () => {} });
-    f.dispose();
-    expect(c1).toHaveBeenCalledOnce();
-    expect(c2).toHaveBeenCalledOnce();
-  });
-
-  it('subscribe() with AbortSignal unsubscribes when signal aborts', () => {
-    const received: number[] = [];
-    let emit!: (n: number) => void;
-    const f = flux<number>((obs) => {
-      emit = obs.next.bind(obs);
-    });
-    const ac = new AbortController();
-
-    f.subscribe((n) => received.push(n), ac.signal);
-    emit(1);
-    ac.abort();
-    emit(2);
-    expect(received).toEqual([1]);
-    f.dispose();
-  });
-
-  it('subscribe() with pre-aborted AbortSignal calls complete immediately', () => {
-    const complete = vi.fn();
-    const f = flux<number>(() => {});
-    const ac = new AbortController();
-
-    ac.abort();
-    f.subscribe({ complete, next: () => {} }, ac.signal);
-    expect(complete).toHaveBeenCalledOnce();
-    f.dispose();
-  });
-
-  it('pipe() chains operators', () => {
-    const received: number[] = [];
-    const double = (source: ReturnType<typeof flux<number>>) =>
-      flux<number>((obs) => source.subscribe((n) => obs.next(n * 2)));
-
-    flux<number>((obs) => {
-      obs.next(5);
-    })
-      .pipe(double)
-      .subscribe((n) => received.push(n));
-
-    expect(received).toEqual([10]);
-  });
-
-  it('producer error is forwarded to observer.error', () => {
-    const onErr = vi.fn();
-    const f = flux<number>((obs) => {
-      obs.error?.(new Error('test'));
-    });
-
-    f.subscribe({ error: onErr, next: () => {} });
-    expect(onErr).toHaveBeenCalledWith(expect.any(Error));
-  });
-
-  it('producer throw is forwarded to observer.error', () => {
-    const onErr = vi.fn();
-    const f = flux<number>(() => {
-      throw new Error('thrown');
-    });
-
-    f.subscribe({ error: onErr, next: () => {} });
-    expect(onErr).toHaveBeenCalledWith(expect.any(Error));
-  });
-
-  it('[Symbol.dispose] is safe when destructured (no fragile this)', () => {
-    const f = flux<number>(() => {});
-    const { [Symbol.dispose]: disposeFn } = f;
-
-    disposeFn();
-    expect(f.disposed).toBe(true);
-  });
-
-  it('[Symbol.asyncIterator] yields emitted values', async () => {
-    const received: number[] = [];
-
-    for await (const v of of(1, 2, 3)) {
-      received.push(v);
+      expect(reportError).toHaveBeenCalledWith(expect.objectContaining({ message: 'unhandled' }));
+    } finally {
+      if (original) Object.defineProperty(globalThis, 'reportError', { configurable: true, value: original });
+      else Reflect.deleteProperty(globalThis, 'reportError');
     }
-
-    expect(received).toEqual([1, 2, 3]);
   });
 
-  it('[Symbol.asyncIterator] stops on early break (calls return)', async () => {
-    const received: number[] = [];
+  it('reports observer callback errors and closes subscription', () => {
+    const original = (globalThis as { reportError?: (reason: unknown) => void }).reportError;
+    const reportError = vi.fn();
+    const teardown = vi.fn();
 
-    for await (const v of of(1, 2, 3, 4, 5)) {
-      received.push(v);
+    Object.defineProperty(globalThis, 'reportError', { configurable: true, value: reportError });
 
-      if (v === 3) break;
+    try {
+      const subscription = stream<number>((sink) => {
+        sink.next(1);
+
+        return teardown;
+      }).subscribe(() => {
+        throw new Error('observer failed');
+      });
+
+      expect(subscription.closed).toBe(true);
+      expect(teardown).toHaveBeenCalledOnce();
+      expect(reportError).toHaveBeenCalledWith(expect.objectContaining({ message: 'observer failed' }));
+    } finally {
+      if (original) Object.defineProperty(globalThis, 'reportError', { configurable: true, value: original });
+      else Reflect.deleteProperty(globalThis, 'reportError');
     }
-
-    expect(received).toEqual([1, 2, 3]);
   });
 
-  it('[Symbol.asyncIterator] early break unsubscribes from source', async () => {
-    let emitFn!: (n: number) => void;
-    const source = flux<number>((obs) => {
-      emitFn = obs.next.bind(obs);
-    });
-    const iter = source[Symbol.asyncIterator]();
+  it('keeps exact output type through variadic pipe()', () => {
+    const values: number[] = [];
+    const source = pipe(
+      stream<number>((sink) => {
+        sink.next(2);
+        sink.complete();
+      }),
+      map((value) => value * 2),
+      map((value) => value.toString()),
+      map((value) => value.length),
+      map((value) => value + 1),
+      map((value) => value * 3),
+    );
 
-    emitFn(10);
-    emitFn(20);
+    source.subscribe((value) => values.push(value));
 
-    const r1 = await iter.next();
-    const r2 = await iter.next();
-
-    await iter.return!();
-
-    expect(r1).toEqual({ done: false, value: 10 });
-    expect(r2).toEqual({ done: false, value: 20 });
-  });
-
-  it('[Symbol.asyncIterator] propagates errors', async () => {
-    const source = flux<number>((obs) => {
-      obs.error?.(new Error('iter-err'));
-    });
-
-    await expect(async () => {
-      for await (const _ of source) {
-        /* empty */
-      }
-    }).rejects.toThrow('iter-err');
-  });
-
-  it('[Symbol.asyncIterator] returns an iterable iterator (for await on iterator directly)', async () => {
-    const iter = of(10, 20, 30)[Symbol.asyncIterator]();
-    const received: number[] = [];
-
-    for await (const v of iter) {
-      received.push(v);
-    }
-
-    expect(received).toEqual([10, 20, 30]);
-  });
-
-  it('[Symbol.asyncIterator] drops the oldest buffered value with one console.warn once capacity is exceeded', async () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const OVERFLOW = 5;
-    const source = flux<number>((obs) => {
-      for (let i = 0; i < 10_000 + OVERFLOW; i++) obs.next(i);
-
-      obs.complete?.();
-    });
-
-    const iter = source[Symbol.asyncIterator]();
-    const first = await iter.next();
-
-    expect(first).toEqual({ done: false, value: OVERFLOW }); // oldest 5 (0..4) dropped to stay at the 10_000 cap
-    expect(spy).toHaveBeenCalledOnce();
-    expect(spy.mock.calls[0]?.[0]).toContain('[@vielzeug/flux]');
-
-    spy.mockRestore();
+    expect(values).toEqual([6]);
   });
 });

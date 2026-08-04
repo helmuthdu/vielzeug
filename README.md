@@ -107,7 +107,7 @@ pnpm add @vielzeug/clockwork
 
 ### [@vielzeug/flux](packages/flux) – Reactive Streams
 
-Composable, cold-by-default reactive streams with a full operator library and ecosystem adapters.
+Minimal push streams with subscription-owned cancellation, explicit buffering, and ecosystem adapters.
 
 ```bash
 pnpm add @vielzeug/flux
@@ -115,11 +115,11 @@ pnpm add @vielzeug/flux
 
 **Key Features:**
 
-- `flux()` factory for cold, pipeable, disposable streams
-- Subjects: `createSubject()` and `createBehaviorSubject()` for hot multicast sources
-- 40+ operators — creation, transformation, filtering, combination, and utility
-- Ecosystem adapters: Ripple signals, Herald bus, Pulse WebSocket, Courier SSE/queries
-- Zero external dependencies (adapters use optional `@vielzeug` peer deps)
+- `stream()` factory for cold, reusable, pipeable streams
+- `Subscription` owns cancellation; streams have no global lifecycle
+- `createChannel()` for bounded-replay hot multicast state
+- Explicit async-buffer capacity and overflow policy
+- Ecosystem adapters on dedicated Ripple, Herald, Pulse, and Courier subpaths
 
 [📖 Documentation](https://vielzeug.dev/flux/) • [Examples](https://vielzeug.dev/flux/examples)
 

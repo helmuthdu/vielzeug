@@ -8,7 +8,8 @@ import type { AsyncState } from '@vielzeug/courier';
  * signal every view below can read. `userInitials()`/`userMap` are exported from here too so the
  * lookup logic exists in exactly one place instead of being copy-pasted per view.
  */
-import { fromQuery, toSignal } from '@vielzeug/flux';
+import { fromQuery } from '@vielzeug/flux/courier';
+import { toSignal } from '@vielzeug/flux/ripple';
 import { computed } from '@vielzeug/ripple';
 
 import type { User } from './types';

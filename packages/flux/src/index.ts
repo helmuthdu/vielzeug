@@ -1,39 +1,25 @@
-export { fromQuery, fromSse } from './adapters/courier';
-export { fromBus, toBus } from './adapters/herald';
-export { fromPresence, fromPulse } from './adapters/pulse';
-export { fromSignal, toSignal } from './adapters/ripple';
-export type { SignalBinding, ToSignalOptions } from './adapters/ripple';
-export { DEFAULT_SCHEDULER } from './_scheduler';
-export { flux } from './core';
+export { toAsyncIterable } from './async';
+export { stream } from './core';
 export { FluxError, FluxTimeoutError } from './errors';
-export { combineLatest, concat, forkJoin, merge, race, withLatestFrom, zip } from './operators/combination';
-export { empty, from, fromEvent, interval, never, of, throwError, timer } from './operators/creation';
-export { debounce, first, last, sample, skip, take, takeUntil, takeWhile, throttle } from './operators/filtering';
-export {
-  bufferCount,
-  concatMap,
-  distinctUntilChanged,
-  filter,
-  flatMap,
-  map,
-  pairwise,
-  scan,
-  startWith,
-  switchMap,
-} from './operators/transformation';
-export {
-  catchError,
-  delay,
-  finalize,
-  flow,
-  retry,
-  share,
-  shareReplay,
-  tap,
-  timeout,
-  toArray,
-  toPromise,
-} from './operators/utility';
-export { createBehaviorSubject, createReplaySubject, createSubject } from './subject';
-export type { BehaviorSubject, ReplaySubject, Subject } from './subject';
-export type { Flux, Observer, Operator, Producer, Scheduler, Unsubscribe } from './types';
+export { combineLatest, concat, merge } from './operators/combination';
+export { from, fromEvent, interval, of, timer } from './operators/creation';
+export type { IntervalOptions, TimerOptions } from './operators/creation';
+export { debounce, take, takeUntil, timeout } from './operators/filtering';
+export type { DebounceOptions, TimeoutOptions } from './operators/filtering';
+export { concatMap, filter, map, mergeMap, scan, switchMap } from './operators/transformation';
+export type { ConcatMapOptions } from './operators/transformation';
+export { first, last, retry, toArray } from './operators/utility';
+export type { RetryOptions, ToArrayOptions, ValueOptions } from './operators/utility';
+export { pipe } from './pipe';
+export type {
+  AsyncIterableOptions,
+  Observer,
+  Operator,
+  OverflowPolicy,
+  Producer,
+  Sink,
+  Stream,
+  SubscribeOptions,
+  Subscription,
+  Teardown,
+} from './types';

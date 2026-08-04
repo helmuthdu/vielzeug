@@ -1,279 +1,188 @@
-import type { Flux, Operator, Scheduler, Unsubscribe } from '../types';
+import type { Operator, Stream, Subscription } from '../types';
 
-import { guard } from '../_safe';
-import { DEFAULT_SCHEDULER } from '../_scheduler';
-import { flux } from '../core';
+import { link } from '../_link';
+import { defaultScheduler } from '../_scheduler';
+import { stream } from '../core';
+import { FluxTimeoutError } from '../errors';
 
-/**
- * Emit only the first `count` values, then complete.
- *
- * @example
- * interval(100).pipe(take(3)); // emits 0, 1, 2 then completes
- */
+export type DebounceOptions = {
+  for: number;
+};
+
+export type TimeoutOptions = {
+  after: number;
+};
+
+function assertDuration(milliseconds: number, name: string): void {
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) {
+    throw new RangeError(`${name} must be a finite number greater than or equal to zero`);
+  }
+}
+
 export function take<T>(count: number): Operator<T, T> {
+  if (!Number.isInteger(count) || count < 0) {
+    throw new RangeError('take count must be a non-negative integer');
+  }
+
   return (source) =>
-    flux<T>((observer) => {
-      if (count <= 0) {
-        observer.complete?.();
+    stream((sink, signal) => {
+      if (count === 0) {
+        sink.complete();
 
         return;
       }
 
       let seen = 0;
-      let unsub: Unsubscribe = () => {};
+      const subscriptionRef: { current?: Subscription } = {};
 
-      unsub = source.subscribe({
-        complete: observer.complete,
-        error: observer.error,
-        next(v) {
-          observer.next(v);
-          seen++;
+      subscriptionRef.current = link(
+        source,
+        {
+          complete: sink.complete,
+          error: sink.error,
+          next(value) {
+            sink.next(value);
+            seen++;
 
-          if (seen >= count) {
-            observer.complete?.();
-            unsub();
-          }
+            if (seen === count) {
+              sink.complete();
+              subscriptionRef.current?.unsubscribe();
+            }
+          },
         },
-      });
+        signal,
+      );
 
-      return unsub;
+      return () => subscriptionRef.current?.unsubscribe();
     });
 }
 
-/** Skip the first `count` values, then emit the rest. */
-export function skip<T>(count: number): Operator<T, T> {
+export function takeUntil<T>(notifier: AbortSignal | Stream<unknown>): Operator<T, T> {
   return (source) =>
-    flux<T>((observer) => {
-      let skipped = 0;
+    stream((sink, signal) => {
+      let sourceSubscription: Subscription | undefined;
+      let notifierSubscription: Subscription | undefined;
+      let removeNotifier = (): void => {};
 
-      return source.subscribe({
-        complete: observer.complete,
-        error: observer.error,
-        next(v) {
-          if (skipped < count) {
-            skipped++;
-          } else {
-            observer.next(v);
-          }
-        },
-      });
-    });
-}
-
-/**
- * Complete when either `notifier` emits its first value or an `AbortSignal` aborts.
- *
- * @example
- * source$.pipe(takeUntil(stop$));
- * source$.pipe(takeUntil(abortController.signal));
- */
-export function takeUntil<T>(notifier: AbortSignal | Flux<unknown>): Operator<T, T> {
-  return (source) =>
-    flux<T>((observer) => {
-      let done = false;
-
-      const finish = (): void => {
-        if (done) return;
-
-        done = true;
-        observer.complete?.();
-        notifierUnsub();
-        sourceUnsub?.();
+      const complete = (): void => {
+        sourceSubscription?.unsubscribe();
+        notifierSubscription?.unsubscribe();
+        sink.complete();
       };
-
-      let notifierUnsub: () => void;
 
       if (notifier instanceof AbortSignal) {
         if (notifier.aborted) {
-          observer.complete?.();
+          sink.complete();
 
           return;
         }
 
-        notifier.addEventListener('abort', finish, { once: true });
-        notifierUnsub = () => notifier.removeEventListener('abort', finish);
+        notifier.addEventListener('abort', complete, { once: true });
+        removeNotifier = (): void => notifier.removeEventListener('abort', complete);
       } else {
-        notifierUnsub = notifier.subscribe({ next: finish });
+        notifierSubscription = link(notifier, { error: sink.error, next: complete }, signal);
       }
 
-      const sourceUnsub = source.subscribe({
-        complete() {
-          done = true;
-          notifierUnsub();
-          observer.complete?.();
-        },
-        error(err) {
-          done = true;
-          notifierUnsub();
-          observer.error?.(err);
-        },
-        next: observer.next,
-      });
+      if (!signal.aborted) {
+        sourceSubscription = link(
+          source,
+          {
+            complete: sink.complete,
+            error: sink.error,
+            next: sink.next,
+          },
+          signal,
+        );
+      }
 
       return () => {
-        notifierUnsub();
-        sourceUnsub();
+        removeNotifier();
+        sourceSubscription?.unsubscribe();
+        notifierSubscription?.unsubscribe();
       };
     });
 }
 
-/**
- * Emit values while `predicate` is truthy. Complete when it returns `false`.
- *
- * @example
- * of(1, 2, 3, 4).pipe(takeWhile((n) => n < 3)); // emits 1, 2
- */
-export function takeWhile<T>(predicate: (value: T) => boolean): Operator<T, T> {
+export function debounce<T>(options: DebounceOptions): Operator<T, T> {
+  assertDuration(options.for, 'Debounce duration');
+
   return (source) =>
-    flux<T>((observer) => {
-      let unsub: Unsubscribe = () => {};
+    stream((sink, signal) => {
+      let cancel: (() => void) | undefined;
+      let pending: T | undefined;
+      let hasPending = false;
 
-      unsub = source.subscribe({
-        complete: observer.complete,
-        error: observer.error,
-        next(v) {
-          guard(() => {
-            if (predicate(v)) {
-              observer.next(v);
-            } else {
-              observer.complete?.();
-              unsub();
-            }
-          }, observer.error);
-        },
-      });
+      const flush = (): void => {
+        cancel = undefined;
 
-      return unsub;
-    });
-}
+        if (!hasPending) return;
 
-/**
- * Emit the last value after `ms` milliseconds of silence.
- * Resets the timer on every source emission.
- *
- * **Note:** if the source completes while a value is pending (timer not yet fired),
- * the pending value is dropped. Only the completion signal is forwarded.
- *
- * @example
- * fromEvent(input, 'input').pipe(debounce(300)); // wait 300ms after last keystroke
- */
-export function debounce<T>(ms: number, scheduler: Scheduler = DEFAULT_SCHEDULER): Operator<T, T> {
-  return (source) =>
-    flux<T>((observer) => {
-      let cancelTimer: (() => void) | undefined;
+        hasPending = false;
+        sink.next(pending as T);
+      };
 
-      const unsub = source.subscribe({
-        complete() {
-          cancelTimer?.();
-          observer.complete?.();
+      const subscription = link(
+        source,
+        {
+          complete() {
+            cancel?.();
+            flush();
+            sink.complete();
+          },
+          error: sink.error,
+          next(value) {
+            pending = value;
+            hasPending = true;
+            cancel?.();
+            cancel = defaultScheduler.delay(flush, options.for);
+          },
         },
-        error(err) {
-          cancelTimer?.();
-          observer.error?.(err);
-        },
-        next(v) {
-          cancelTimer?.();
-          cancelTimer = scheduler.delay(() => observer.next(v), ms);
-        },
-      });
+        signal,
+      );
 
       return () => {
-        cancelTimer?.();
-        unsub();
+        cancel?.();
+        subscription.unsubscribe();
       };
     });
 }
 
-/**
- * Emit at most once per `ms` milliseconds. Leading edge by default.
- * Pass a custom `clock` function (default: `Date.now`) to control time in tests.
- *
- * @example
- * fromEvent(window, 'scroll').pipe(throttle(100));
- */
-export function throttle<T>(ms: number, clock: () => number = Date.now): Operator<T, T> {
+export function timeout<T>(options: TimeoutOptions): Operator<T, T> {
+  assertDuration(options.after, 'Timeout duration');
+
   return (source) =>
-    flux<T>((observer) => {
-      let lastEmit = -Infinity;
+    stream((sink, signal) => {
+      let cancel: () => void;
 
-      return source.subscribe({
-        complete: observer.complete,
-        error: observer.error,
-        next(v) {
-          const now = clock();
+      const start = (): void => {
+        cancel = defaultScheduler.delay(() => sink.error(new FluxTimeoutError(options.after)), options.after);
+      };
 
-          if (now - lastEmit >= ms) {
-            lastEmit = now;
-            observer.next(v);
-          }
+      start();
+
+      const subscription = link(
+        source,
+        {
+          complete() {
+            cancel();
+            sink.complete();
+          },
+          error(reason) {
+            cancel();
+            sink.error(reason);
+          },
+          next(value) {
+            cancel();
+            start();
+            sink.next(value);
+          },
         },
-      });
-    });
-}
-
-/**
- * When `notifier` emits, emit the latest value from `source` (if any).
- * Useful for polling-like patterns.
- *
- * @example
- * source$.pipe(sample(interval(1000))); // emit latest value every 1s
- */
-export function sample<T>(notifier: Flux<unknown>): Operator<T, T> {
-  return (source) =>
-    flux<T>((observer) => {
-      let latest: T;
-      let hasValue = false;
-
-      const sourceUnsub = source.subscribe({
-        complete: observer.complete,
-        error: observer.error,
-        next(v) {
-          latest = v;
-          hasValue = true;
-        },
-      });
-
-      const notifierUnsub = notifier.subscribe({
-        next() {
-          if (hasValue) observer.next(latest);
-        },
-      });
+        signal,
+      );
 
       return () => {
-        sourceUnsub();
-        notifierUnsub();
+        cancel();
+        subscription.unsubscribe();
       };
-    });
-}
-
-/** Emit only the first value, then complete. Equivalent to `take(1)`. */
-export function first<T>(): Operator<T, T> {
-  return take(1);
-}
-
-/**
- * Emit only the last value, collected when source completes.
- *
- * @example
- * of(1, 2, 3).pipe(last()); // emits 3
- */
-export function last<T>(): Operator<T, T> {
-  return (source) =>
-    flux<T>((observer) => {
-      let latest: T;
-      let hasValue = false;
-
-      return source.subscribe({
-        complete() {
-          if (hasValue) observer.next(latest);
-
-          observer.complete?.();
-        },
-        error: observer.error,
-        next(v) {
-          latest = v;
-          hasValue = true;
-        },
-      });
     });
 }

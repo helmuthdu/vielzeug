@@ -1,6 +1,6 @@
 # @vielzeug/flux
 
-Composable stream primitive with hot/cold semantics, backpressure, and adapters for the vielzeug ecosystem.
+Minimal push streams for TypeScript. Streams are reusable; subscriptions own cancellation; async buffering is explicit. Provide an `error` observer when caller owns recovery.
 
 ## Install
 
@@ -11,38 +11,35 @@ pnpm add @vielzeug/flux
 ## Usage
 
 ```ts
-import { flux, merge, fromBus, fromSignal, debounce, toSignal } from '@vielzeug/flux';
+import { toArray, interval, map, pipe, take } from '@vielzeug/flux';
 
-// Cold stream — each subscriber gets its own producer
-const count$ = flux<number>((observer) => {
-  let i = 0;
-  const id = setInterval(() => observer.next(i++), 1000);
-  return () => clearInterval(id);
-});
-
-// Compose with operators
-const even$ = count$.pipe(
-  filter((n) => n % 2 === 0),
-  map((n) => n * 2),
+const values = pipe(
+  interval({ every: 100 }),
+  map((value) => value * 2),
+  take(3),
 );
 
-// Bridge to ripple signal
-const latest = toSignal(even$, { initial: 0 });
+console.log(await toArray(values, { maxItems: 3 })); // [0, 2, 4]
+```
 
-// Merge ecosystem sources
-const messages = toSignal(
-  merge(fromPulse(pulse, 'chat:message'), fromBus(localBus, 'draft')).pipe(debounce(100)),
-  { initial: [] },
-);
+## Channels
+
+```ts
+import { createChannel } from '@vielzeug/flux/subjects';
+
+const events = createChannel<string>({ replay: 1 });
+events.stream.subscribe(console.log);
+events.send('connected');
+events.dispose();
 ```
 
 ## Adapters
 
 ```ts
-import { fromSignal, toSignal } from '@vielzeug/flux';   // ripple
-import { fromBus, toBus } from '@vielzeug/flux';          // herald
-import { fromPulse, fromPresence } from '@vielzeug/flux'; // pulse
-import { fromSse, fromQuery } from '@vielzeug/flux'; // courier
+import { fromQuery } from '@vielzeug/flux/courier';
+import { fromBus } from '@vielzeug/flux/herald';
+import { fromPresence } from '@vielzeug/flux/pulse';
+import { fromSignal, toSignal } from '@vielzeug/flux/ripple';
 ```
 
 ## License
