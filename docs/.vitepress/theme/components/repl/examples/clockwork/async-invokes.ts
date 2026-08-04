@@ -1,8 +1,8 @@
 export const asyncInvokesExample = {
-  code: `import { createMachine } from '@vielzeug/clockwork'
+  code: `import { defineMachine } from '@vielzeug/clockwork'
 
 // Invokes get an AbortSignal and send regular events when settled.
-const machine = createMachine({
+const machine = defineMachine()({
   context: { error: '', user: null },
   initial: 'idle',
   states: {
@@ -31,7 +31,7 @@ const machine = createMachine({
 
 const actor = machine.createActor()
 actor.send({ type: 'FETCH' })
-console.log('Loading:', actor.snapshot.value)
-setTimeout(() => console.log('Resolved:', actor.snapshot.value), 400)`,
+console.log('Loading:', actor.snapshot)
+setTimeout(() => console.log('Resolved:', actor.snapshot), 400)`,
   name: 'Async Invokes',
 };

@@ -1,179 +1,59 @@
 ---
 title: 'Clockwork Examples — Fetch with Retry'
-description: 'Data fetching with automatic retry logic using @vielzeug/clockwork.'
+description: 'Limit retries with context, guards, an invoke, and delayed transitions.'
 ---
 
 ## Fetch with Retry
 
 ### Problem
 
-Network requests fail unpredictably. Retrying manually in every component leads to duplicate logic and inconsistent retry strategies. Guard conditions provide a natural way to limit retry attempts and escalate to an error state after exhausting retries.
+A failed request should retry after a delay but stop after a fixed number of attempts.
 
 ### Solution
 
-Track retry count in context, use guard conditions to allow retries only if count < limit, and transition to error state when retries are exhausted.
+Keep the counter in context and guard both the delayed and manual retry transitions.
 
 ```ts
-import { createMachine } from '@vielzeug/clockwork';
+import { defineMachine } from '@vielzeug/clockwork';
 
-type FetchContext = {
-  data: string;
-  error: string;
-  retries: number;
-};
+type Event = { type: 'FETCH' } | { type: 'RETRY' } | { message: string; type: 'FAILED' } | { data: string; type: 'DONE' };
 
-type FetchEvent =
-  | { type: 'FETCH' }
-  | { type: 'SUCCESS'; data: string }
-  | { type: 'FAILURE'; error: string }
-  | { type: 'RETRY' }
-  | { type: 'GIVE_UP' };
-
-const fetchMachine = createMachine({
+const request = defineMachine<{ attempts: number; data: string; error: string }, Event>()({
+  context: { attempts: 0, data: '', error: '' },
   initial: 'idle',
-  context: { data: '', error: '', retries: 0 },
   states: {
-    idle: {
-      on: {
-        FETCH: [
-          {
-            target: 'loading',
-            actions: [
-              ({ context }) => {
-                context.retries = 0;
-                context.error = '';
-              },
-            ],
-          },
-        ],
-      },
-    },
+    idle: { on: { FETCH: { reduce: () => ({ attempts: 1, data: '', error: '' }), target: 'loading' } } },
     loading: {
-      invoke: [
-        {
-          src: async () =>
-            fetch('/api/data', { signal: AbortSignal.timeout(5000) }).then((r) => {
-              if (!r.ok) throw new Error(`HTTP ${r.status}`);
-              return r.text();
-            }),
-          onDone: (data) => ({ type: 'SUCCESS', data }),
-          onError: (error) => ({ type: 'FAILURE', error: String(error) }),
-        },
-      ],
+      invoke: [{
+        src: async ({ signal }) => fetch('/api/data', { signal }).then((response) => response.text()),
+        onDone: ({ result }) => ({ data: result as string, type: 'DONE' }),
+        onError: ({ error }) => ({ message: String(error), type: 'FAILED' }),
+      }],
       on: {
-        SUCCESS: [
-          {
-            target: 'success',
-            actions: [
-              ({ context, event }) => {
-                context.data = event.data;
-              },
-            ],
-          },
-        ],
-        FAILURE: [
-          {
-            target: 'failed',
-            actions: [
-              ({ context, event }) => {
-                context.error = event.error;
-                context.retries += 1;
-              },
-            ],
-          },
-        ],
-      },
-    },
-    success: {
-      on: {
-        FETCH: [
-          {
-            target: 'loading',
-            actions: [
-              ({ context }) => {
-                context.retries = 0;
-                context.error = '';
-              },
-            ],
-          },
-        ],
+        DONE: { reduce: ({ context, event }) => ({ ...context, data: event.data }), target: 'success' },
+        FAILED: { reduce: ({ context, event }) => ({ ...context, error: event.message }), target: 'failed' },
       },
     },
     failed: {
-      on: {
-        RETRY: [
-          {
-            guard: ({ context }) => context.retries < 3,
-            target: 'loading',
-          },
-        ],
-        GIVE_UP: [{ target: 'error' }],
-      },
+      after: [{ delay: 1_000, guard: ({ context }) => context.attempts < 3, reduce: ({ context }) => ({ ...context, attempts: context.attempts + 1 }), target: 'loading' }],
+      on: { RETRY: { guard: ({ context }) => context.attempts < 3, reduce: ({ context }) => ({ ...context, attempts: context.attempts + 1 }), target: 'loading' } },
     },
-    error: {
-      on: {
-        FETCH: [
-          {
-            target: 'loading',
-            actions: [
-              ({ context }) => {
-                context.retries = 0;
-                context.error = '';
-              },
-            ],
-          },
-        ],
-      },
-    },
+    success: { on: { FETCH: { reduce: () => ({ attempts: 1, data: '', error: '' }), target: 'loading' } } },
   },
-}).start();
+});
 
-const fetcher = fetchMachine;
-
-fetcher.send({ type: 'FETCH' }); // state: 'loading'
-
-// Simulate fetch failure
-setTimeout(() => {
-  // After 5s timeout: state → 'failed', retries: 1
-  if (fetcher.state.value === 'failed') {
-    fetcher.send({ type: 'RETRY' }); // state: 'loading' (retry 1)
-  }
-}, 5100);
-
-// After second retry fails (5s later)
-setTimeout(() => {
-  if (fetcher.state.value === 'failed') {
-    fetcher.send({ type: 'RETRY' }); // state: 'loading' (retry 2)
-  }
-}, 10100);
-
-// After third retry fails (5s later)
-setTimeout(() => {
-  if (fetcher.state.value === 'failed') {
-    fetcher.send({ type: 'RETRY' }); // state: 'loading' (retry 3)
-  }
-}, 15100);
-
-// After all retries exhausted
-setTimeout(() => {
-  if (fetcher.state.value === 'failed' && fetcher.context.value.retries >= 3) {
-    fetcher.send({ type: 'GIVE_UP' }); // state: 'error'
-  }
-}, 20100);
-
-// Once in error state, can only retry by starting fresh
-fetcher.send({ type: 'FETCH' }); // state: 'loading', retries reset to 0
+const actor = request.createActor();
+actor.subscribe((snapshot) => console.log(snapshot.state, snapshot.context.attempts));
+actor.send({ type: 'FETCH' });
 ```
 
 ### Pitfalls
 
-- **Guard condition doesn't retry automatically** — Reaching the failed state doesn't automatically retry. UI must detect `state.value === 'failed'` and call `send({ type: 'RETRY' })`, or use a timer to auto-retry.
-- **Retry count increments but isn't reset on success** — If a retry succeeds, make sure to reset retries to 0 when restarting a fetch. The example above does this in the FETCH action.
-- **AbortSignal.timeout doesn't exist in older Node versions** — Use AbortSignal.timeout() only in Node 18+ or modern browsers. For older environments, wrap fetch in a Promise.race() with a manual timeout.
-- **Silent guard failure blocks retry indefinitely** — If the guard fails (retries >= 3), sending RETRY does nothing. No error is thrown. Always provide a GIVE_UP action or automatic transition to error state.
+- An `after` guard that fails leaves the actor in the current state.
+- Count attempts at retry entry, not only when a request fails.
 
 ### Related
 
-- [Form with Validation](./form-validation.md) — Guard conditions for input validation
-- [Courier documentation](/courier/) — HTTP client with built-in caching and mutations
-- [Arsenal documentation](/arsenal/) — Utility functions for async operations
+- [Data Fetching with Error Recovery](./data-fetching.md)
+- [Auto-Dismiss Notification](./auto-dismiss-notification.md)
+- [API Reference](../api.md)

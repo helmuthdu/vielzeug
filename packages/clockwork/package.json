@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/clockwork",
   "version": "1.1.2",
-  "description": "Zero-dependency typed finite state machine — guards, async invokes, nested states, and signal integration",
+  "description": "Framework-neutral typed finite state machines with pure transitions and actors",
   "type": "module",
   "files": [
     "dist"
@@ -38,9 +38,6 @@
   },
   "engines": {
     "node": ">=22"
-  },
-  "dependencies": {
-    "@vielzeug/ripple": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.1.0",

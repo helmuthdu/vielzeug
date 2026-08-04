@@ -1,22 +1,11 @@
 ---
-title: Clockwork — Typed finite state machine for TypeScript
-description: Zero-dependency typed FSM with async invokes, delayed transitions, hierarchical states, middleware, reactive state, persistence, tracing, and full TypeScript support.
+title: Clockwork — Typed finite state machines for TypeScript
+description: Framework-neutral typed state machines with pure transitions, actor-owned runtime work, timers, invokes, and explicit effects.
 package: clockwork
 category: state
-keywords:
-  [state-machine, finite-state, reactive, typed, async-tasks, persistence, debugging, hierarchical, interceptors]
-related: [ripple, herald, ward]
-exports:
-  [
-    createMachine,
-    ClockworkError,
-    SendResult,
-    InterceptorFn,
-    InvokeArgs,
-    AfterEvent,
-    AfterActionFn,
-    TransitionInput,
-  ]
+keywords: [state-machine, finite-state, typed, actor, async-tasks]
+related: [herald, ripple, ward]
+exports: [defineMachine, ClockworkError, Machine, Actor, MachineConfig, MachineSnapshot, TransitionResult]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -26,51 +15,50 @@ environments: [browser, node, ssr, deno]
 
 ## Why Clockwork?
 
-Manual state management leads to invalid state combinations, unreachable code paths, and complex conditional logic. FSMs eliminate these bugs by making state transitions explicit and exhaustive.
+Application workflows often mix state changes with timers, requests, rendering, and cleanup. Clockwork keeps transition logic pure while each disposable actor owns runtime work. You can test state decisions without starting effects or invokes.
 
 ```ts
-// Before — manual state management
-type LoaderState = {
-  data?: string;
-  error?: Error;
-  isRetrying?: boolean;
-  status: 'error' | 'idle' | 'loading' | 'success';
-};
-// Multiple invalid state combinations are possible.
+import { defineMachine } from '@vielzeug/clockwork';
 
-// After — FSM enforces valid state combinations
-import { createMachine } from '@vielzeug/clockwork';
-type Event = { type: 'FETCH' } | { type: 'DONE'; data: string } | { type: 'FAIL'; error: Error };
+// Before
+if (status === 'idle') status = 'loading';
+fetchItems().then((items) => {
+  status = 'ready';
+  data = items;
+});
 
-const loader = createMachine({
-  context: { data: '' as string, error: undefined as Error | undefined },
+// After
+type Event = { type: 'FETCH' } | { items: string[]; type: 'DONE' };
+const machine = defineMachine<{ items: string[] }, Event>()({
+  context: { items: [] },
   initial: 'idle',
   states: {
-    error: { on: { FETCH: { target: 'loading' } } },
     idle: { on: { FETCH: { target: 'loading' } } },
-    loading: { on: { DONE: { target: 'success' }, FAIL: { target: 'error' } } },
-    success: { on: { FETCH: { target: 'loading' } } },
+    loading: {
+      invoke: [{
+        src: ({ signal }) => fetch('/api/items', { signal }).then((response) => response.json() as Promise<string[]>),
+        onDone: ({ result }) => ({ items: result, type: 'DONE' }),
+      }],
+      on: { DONE: { reduce: ({ event }) => ({ items: event.items }), target: 'ready' } },
+    },
+    ready: {},
   },
-}).start();
-// Now success && error is impossible. State is always valid.
+});
 ```
 
-| Feature                    | Clockwork                                                             | xstate                                                      | zustand                                           |
-| -------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------- |
-| Bundle size                | <PackageInfo package="clockwork" type="size" />                       | ~15 KB                                                      | ~2 KB                                             |
-| Zero dependencies          | <ore-icon name="check" size="16"></ore-icon>                            | <ore-icon name="x" size="16"></ore-icon> 5+ deps              | <ore-icon name="check" size="16"></ore-icon>        |
-| Typed discriminated events | <ore-icon name="check" size="16"></ore-icon>                            | <ore-icon name="triangle-alert" size="16"></ore-icon> Partial | <ore-icon name="x" size="16"></ore-icon>            |
-| Reactive signals           | <ore-icon name="check" size="16"></ore-icon> Native                     | <ore-icon name="x" size="16"></ore-icon> Observer pattern     | <ore-icon name="check" size="16"></ore-icon> Native |
-| Persistence adapter        | <ore-icon name="check" size="16"></ore-icon> Pluggable                  | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="check" size="16"></ore-icon>        |
-| Hierarchical states        | <ore-icon name="check" size="16"></ore-icon> Compound + leaf resolution | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="x" size="16"></ore-icon>            |
-| Interceptor pipeline       | <ore-icon name="check" size="16"></ore-icon> Pure functions             | <ore-icon name="x" size="16"></ore-icon>                      | <ore-icon name="check" size="16"></ore-icon>        |
-| Context isolation          | <ore-icon name="check" size="16"></ore-icon> Cloned on every transition | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="x" size="16"></ore-icon>            |
+| Feature | Clockwork | XState | Zustand |
+| --- | --- | --- | --- |
+| Bundle size | <PackageInfo package="clockwork" type="size" /> | Larger actor/statechart runtime | Smaller store runtime |
+| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Pure transition API | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> Statechart-focused | <ore-icon name="x" size="16"></ore-icon> |
+| Owned cancellation | <ore-icon name="check" size="16"></ore-icon> Actor disposal | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Framework coupling | <ore-icon name="check" size="16"></ore-icon> None | <ore-icon name="check" size="16"></ore-icon> None | <ore-icon name="check" size="16"></ore-icon> None |
 
 <div class="decision-callout">
 
-**Use Clockwork when** you need predictable state machines with strict type safety, reactive integrations, and a minimal footprint in applications where state is defined upfront.
+**Use Clockwork when** your feature has explicit workflow states, cancellable work, or effects that must run after a state commit.
 
-**Consider xstate when** you need visual state machine tooling or already have a large bundle budget.
+**Consider XState when** you need statecharts, visual tooling, or its broader actor ecosystem.
 
 </div>
 
@@ -94,77 +82,46 @@ yarn add @vielzeug/clockwork
 
 ## Quick Start
 
+Define the context and event union, create an actor, observe its snapshot, then dispose it when its owner ends.
+
 ```ts
-import { createMachine } from '@vielzeug/clockwork';
+import { defineMachine } from '@vielzeug/clockwork';
 
-type Event = { type: 'START' } | { type: 'COMPLETE'; result: string };
+type Event = { type: 'DEC' } | { type: 'INC' };
 
-const m = createMachine({
+const counter = defineMachine<{ count: number }, Event>()({
   context: { count: 0 },
   initial: 'idle',
   states: {
-    active: {
+    idle: {
       on: {
-        COMPLETE: {
-          actions: [
-            ({ context, event }) => {
-              context.count = event.result.length;
-            },
-          ],
-          target: 'idle',
-        },
+        DEC: { reduce: ({ context }) => ({ count: context.count - 1 }), target: 'idle' },
+        INC: { reduce: ({ context }) => ({ count: context.count + 1 }), target: 'idle' },
       },
     },
-    idle: {
-      on: { START: { target: 'active' } },
-    },
   },
-}).start();
+});
 
-console.log(m.state.value); // 'idle'
-console.log(m.context.value.count); // 0
-
-console.log(m.send({ type: 'START' }).status); // 'transitioned'
-console.log(m.send({ type: 'COMPLETE', result: 'hello' }).status); // 'transitioned'
-
-console.log(m.state.value); // 'idle'
-console.log(m.context.value.count); // 5
+using actor = counter.createActor();
+actor.subscribe((snapshot) => console.log(snapshot));
+actor.send({ type: 'INC' });
+// { context: { count: 1 }, state: 'idle' }
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- **`createMachine()`** — Validate config; returns a reusable `MachineDefinition` handle
-- **`.start(options?)`** — Spawn independent running instances from a definition
-- **`.resolve(input, options?)`** — Pure transition resolver for testing (no side effects)
-- **Shorthand transitions** — Single transition or array, your choice
-- **Typed events** — Discriminated unions with TypeScript inference
-- **`SendResult`** — `send()` returns `{ status }` where `status` is `'transitioned'` | `'queued'` | `'rejected'`
-- **Reactive state** — State and context are `@vielzeug/ripple` signals
-- **Async invokes** — Native Promise support; `onDone`/`onError` receive `(result, context)`
-- **Delayed transitions** — Timer-based `after` with guards and actions
-- **Hierarchical states** — Compound states with automatic leaf resolution
-- **Interceptors** — Pure event interceptors — return event or `null` to block
-- **Persistence** — Snapshot save/load adapter
-- **Tracing** — Ring buffer; auto-enabled (50 entries) when `onDebug` is set
-- **Debug events** — Unified discriminated union `onDebug` callback; use `debugMachine()` from `@vielzeug/clockwork/devtools` for pre-wired console logging
-- **Event queue** — FIFO processing with configurable infinite-loop guard
-- **Context isolation** — Cloned draft before every commit; machine is unchanged on validation failure
-- **Subscribe** — Change-detection subscription without direct ripple dependency
+- **`defineMachine()`** — validates and compiles one flat machine definition.
+- **`machine.transition()`** — evaluates a transition without actor runtime work.
+- **`machine.createActor()`** — creates isolated, disposable runtime ownership.
+- **`reduce`** — returns a replacement context from a transition.
+- **`effects`** — run only after the actor commits and notifies subscribers.
+- **`invoke`** — runs cancellable asynchronous work on state entry.
+- **`after`** — schedules cancellable delayed transitions.
+- **`actor.snapshot`** — exposes the current readonly state/context value.
 
 </div>
-
-::: tip Running on the server
-Creating machines per-request in an SSR handler? See [Server-Side Rendering](./usage.md#server-side-rendering) for the one-time setup that keeps concurrent requests isolated.
-:::
-
-## Sub-paths
-
-| Import                         | Purpose                                                 |
-| ------------------------------ | ------------------------------------------------------- |
-| `@vielzeug/clockwork`          | All exports and types                                   |
-| `@vielzeug/clockwork/devtools` | `debugMachine` — pre-wired console logging (dev only) |
 
 ## Documentation
 
@@ -180,10 +137,9 @@ Creating machines per-request in an SSR handler? See [Server-Side Rendering](./u
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — Reactive signals and effects; core reactivity layer for Clockwork
-- [Herald](/herald/) — Typed event bus; complementary for event-driven architectures
-- [Ward](/ward/) — RBAC engine; use alongside Clockwork for state-dependent permissions
-- [Forge](/forge/) — Form state management; integrates with Clockwork for multi-step workflows
+- [Herald](/herald/) — publish events between independent actors without coupling machine definitions.
+- [Ripple](/ripple/) — bridge actor snapshots into a reactive graph when you need fine-grained rendering.
+- [Ward](/ward/) — call authorization predicates from transition guards.
 
 </div>
 

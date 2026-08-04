@@ -1,88 +1,64 @@
 ---
 title: 'Clockwork Examples — Data Fetching with Error Recovery'
-description: Data fetching with error recovery example for @vielzeug/clockwork.
+description: 'Map an abortable invoke into success and failure transitions.'
 ---
 
 ## Data Fetching with Error Recovery
 
 ### Problem
 
-You need to fetch remote data, show loading state while the request is in flight, handle failures with a retry path, and automatically cancel in-flight requests when the state changes.
+A request must show loading state, commit data on success, and offer a retry after failure.
 
 ### Solution
 
-Use an `invoke` array in the `loading` state. The runtime passes an `AbortSignal` to `src` and cancels it when the state is exited, preventing stale responses from updating context.
+Invoke the request in `loading`, then convert its settlement into events handled by the state map.
 
 ```ts
-import { createMachine } from '@vielzeug/clockwork';
+import { defineMachine } from '@vielzeug/clockwork';
 
-type State = 'error' | 'idle' | 'loading';
-type Context = { data: string[]; error: string };
 type Event =
   | { type: 'FETCH' }
-  | { type: 'RETRY' }
   | { items: string[]; type: 'SUCCESS' }
-  | { message: string; type: 'FAILURE' };
+  | { message: string; type: 'FAILURE' }
+  | { type: 'RETRY' };
 
-const fetcher = createMachine({
-  context: { data: [], error: '' },
+const fetcher = defineMachine<{ error: string; items: string[] }, Event>()({
+  context: { error: '', items: [] },
   initial: 'idle',
   states: {
-    error: {
-      on: { RETRY: { target: 'loading' } },
-    },
-    idle: {
-      on: { FETCH: { target: 'loading' } },
-    },
+    idle: { on: { FETCH: { target: 'loading' } } },
     loading: {
-      invoke: [
-        {
-          onDone: (items, _ctx) => ({ items: items as string[], type: 'SUCCESS' }),
-          onError: (err, _ctx) => ({ message: String(err), type: 'FAILURE' }),
-          src: async ({ signal }) => {
-            const res = await fetch('/api/items', { signal });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            return res.json();
-          },
+      invoke: [{
+        src: async ({ signal }) => {
+          const response = await fetch('/api/items', { signal });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return response.json() as Promise<string[]>;
         },
-      ],
+        onDone: ({ result }) => ({ items: result as string[], type: 'SUCCESS' }),
+        onError: ({ error }) => ({ message: String(error), type: 'FAILURE' }),
+      }],
       on: {
-        FAILURE: {
-          actions: [
-            ({ context, event }) => {
-              context.error = event.message;
-            },
-          ],
-          target: 'error',
-        },
-        SUCCESS: {
-          actions: [
-            ({ context, event }) => {
-              context.data = event.items;
-              context.error = '';
-            },
-          ],
-          target: 'idle',
-        },
+        FAILURE: { reduce: ({ event }) => ({ error: event.message, items: [] }), target: 'error' },
+        SUCCESS: { reduce: ({ event }) => ({ error: '', items: event.items }), target: 'ready' },
       },
     },
+    ready: { on: { FETCH: { target: 'loading' } } },
+    error: { on: { RETRY: { target: 'loading' } } },
   },
-}).start();
+});
 
-fetcher.send({ type: 'FETCH' }); // enters loading, invoke starts
-// The AbortSignal is cancelled automatically if the state exits before the response arrives
+const actor = fetcher.createActor();
+actor.subscribe((snapshot) => console.log(snapshot.state, snapshot.context));
+actor.send({ type: 'FETCH' });
 ```
 
 ### Pitfalls
 
-- **`onDone` receives the raw resolved value.** The return type of `src` is `Promise<unknown>`, so cast the result inside `onDone` before building the event object.
-- **`FAILURE` and `SUCCESS` events must be defined in `on`.** If they are missing, the dispatched event is silently ignored, leaving the machine stuck in `loading`.
-- **Multiple invokes race.** If you add more than one entry to the `invoke` array, all start concurrently and whichever resolves first dispatches. Use a single invoke unless you intentionally want a race.
-- **`signal` is only valid inside `src`.** Do not pass it to `onDone` or `onError` — those only receive the result/error.
-- **Context in `onDone`/`onError` args is captured at invoke start.** This prevents stale-context bugs when the machine transitions between invoke creation and resolution.
+- Check `response.ok`; `fetch()` resolves for HTTP error responses.
+- Dispose the actor when the request owner unmounts to abort active work.
 
 ### Related
 
-- [Auth Flow with Guards](./auth-flow.md) — Async invoke with guard-controlled retry
-- [Persisted Wizard](./persisted-wizard.md) — Persisting context across sessions
-- [API Reference — `InvokeDef`](/clockwork/api#invokedefctx-ev)
+- [Fetch with Retry](./fetch-retry.md)
+- [Auto-Dismiss Notification](./auto-dismiss-notification.md)
+- [API Reference](../api.md)

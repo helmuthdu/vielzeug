@@ -1,198 +1,255 @@
-import type { MachineConfig, MachineEvent, StateNode, TransitionDef } from './types.js';
+import type { After, Effect, Invoke, MachineConfig, MachineEvent, Transition } from './types.js';
 
-import {
-  ClockworkInvalidAfterDelayError,
-  ClockworkInvalidInitialStateError,
-  ClockworkInvalidTransitionArrayError,
-  ClockworkMissingCompoundInitialError,
-  ClockworkUnknownTargetError,
-} from './errors.js';
+import { ClockworkError } from './errors.js';
 
-// ── Key safety ────────────────────────────────────────────────────────────────
-
-/**
- * Own-property-only lookup — state paths and event types ultimately come from strings
- * (persisted snapshots, event payloads) that may not be developer-authored. A plain
- * `obj[key]` or `key in obj` resolves inherited `Object.prototype` members (`__proto__`,
- * `constructor`, `toString`, …), which can turn an "unknown state/event" into a crash or
- * a silently-accepted bogus value instead of the intended "not found". Treat any such key
- * as absent instead.
- */
-const getOwn = <T>(obj: Record<string, T> | undefined, key: string): T | undefined =>
-  obj && Object.hasOwn(obj, key) ? obj[key] : undefined;
-
-// ── Hierarchy helpers (internal — not re-exported from index) ─────────────────
-
-/**
- * Resolves a target state to its deepest initial leaf.
- * For compound states (those with `states` + `initial`), recursively descends.
- */
-export const resolveLeaf = <Ctx extends object, Ev extends MachineEvent>(
-  topLevelStates: Record<string, StateNode<string, Ctx, Ev>>,
-  target: string,
-): string => {
-  const segments = target.split('.');
-  let node = getOwn(topLevelStates, segments[0]);
-
-  if (!node) return target;
-
-  for (let i = 1; i < segments.length; i++) {
-    node = getOwn(node.states, segments[i]);
-
-    if (!node) return target;
-  }
-
-  let path = target;
-
-  while (node?.states && node.initial) {
-    path = `${path}.${node.initial}`;
-    node = getOwn(node.states, node.initial);
-  }
-
-  return path;
+export type CompiledAfter<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
+  readonly definition: After<State, Context, Event>;
+  readonly id: number;
 };
 
-/**
- * Returns the node at a given dot-path.
- */
-export const getNodeAtPath = <Ctx extends object, Ev extends MachineEvent>(
-  topLevelStates: Record<string, StateNode<string, Ctx, Ev>>,
-  path: string,
-): StateNode<string, Ctx, Ev> | undefined => {
-  const segments = path.split('.');
-  let node = getOwn(topLevelStates, segments[0]);
-
-  for (let i = 1; i < segments.length; i++) {
-    if (!node?.states) return undefined;
-
-    node = getOwn(node.states, segments[i]);
-  }
-
-  return node;
+export type CompiledState<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
+  readonly after: readonly CompiledAfter<State, Context, Event>[];
+  readonly entry: readonly Effect<Context, Event>[];
+  readonly exit: readonly Effect<Context, Event>[];
+  readonly invoke: readonly Invoke<Context, Event>[];
+  readonly on: ReadonlyMap<string, readonly Transition<State, Context, Event>[]>;
 };
 
-/**
- * Returns ancestor paths from root to leaf (inclusive), e.g. ['a', 'a.b', 'a.b.c']
- */
-export const getAncestorPaths = (path: string): string[] => {
-  const segments = path.split('.');
-  const paths: string[] = [];
-
-  for (let i = 1; i <= segments.length; i++) {
-    paths.push(segments.slice(0, i).join('.'));
-  }
-
-  return paths;
+export type CompiledMachine<
+  State extends string,
+  Context extends Record<string, unknown>,
+  Event extends MachineEvent,
+> = {
+  readonly context: Context;
+  readonly initial: State;
+  readonly states: ReadonlyMap<State, CompiledState<State, Context, Event>>;
 };
 
-// ── Validation ───────────────────────────────────────────────────────────────
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
-const validateNode = <State extends string, Ctx extends object, Ev extends MachineEvent>(
-  node: StateNode<string, Ctx, Ev>,
-  path: string,
-  allTopLevel: Record<string, StateNode<State, Ctx, Ev>>,
-): void => {
-  if (node.states && !node.initial) {
-    throw new ClockworkMissingCompoundInitialError(`compound state "${path}" must have an "initial" property`, path);
-  }
+const isContextRecord = (value: unknown): value is Record<string, unknown> => {
+  if (!isRecord(value) || Array.isArray(value)) return false;
 
-  if (node.initial && node.states && !Object.hasOwn(node.states, node.initial)) {
-    throw new ClockworkInvalidInitialStateError(
-      `compound state "${path}" initial "${node.initial}" not found in substates`,
-      path,
-      node.initial,
-    );
-  }
+  const prototype = Object.getPrototypeOf(value);
 
-  for (const [eventType, input] of Object.entries(node.on ?? {})) {
-    const defs = Array.isArray(input) ? input : [input];
+  return prototype === null || prototype === Object.prototype;
+};
 
-    if (defs.length === 0) {
-      throw new ClockworkInvalidTransitionArrayError(
-        `state "${path}" event "${eventType}" must be a non-empty transition or transition array`,
-        path,
-        eventType,
-      );
+const fail = (code: ClockworkError['code'], message: string, details: Record<string, unknown>): never => {
+  throw new ClockworkError(code, message, details);
+};
+
+const array = (value: unknown, message: string, details: Record<string, unknown>): readonly unknown[] => {
+  if (!Array.isArray(value)) fail('INVALID_DEFINITION', message, details);
+
+  return value as readonly unknown[];
+};
+
+const functions = <Value>(
+  value: unknown,
+  phase: 'effects' | 'entry' | 'exit',
+  details: Record<string, unknown>,
+): readonly Value[] => {
+  const values = array(value, `${phase} must be an array`, { ...details, phase });
+
+  return values.map((candidate, index) => {
+    if (typeof candidate !== 'function') {
+      fail('INVALID_EFFECT', `${phase} entry at index ${index} must be a function`, { ...details, index, phase });
     }
 
-    for (const tr of defs as Array<TransitionDef<State, Ctx, Ev>>) {
-      const targetRoot = tr.target.split('.')[0];
+    return candidate as Value;
+  });
+};
 
-      if (!Object.hasOwn(allTopLevel, targetRoot)) {
-        throw new ClockworkUnknownTargetError(
-          `state "${path}" event "${eventType}" targets unknown state "${tr.target}"`,
-          path,
-          tr.target,
-          eventType,
-        );
+const validateTarget = <State extends string>(
+  states: ReadonlyMap<State, unknown>,
+  target: unknown,
+  details: Record<string, unknown>,
+): State => {
+  if (typeof target !== 'string' || !states.has(target as State)) {
+    return fail('UNKNOWN_TARGET', `target "${String(target)}" is not a declared state`, { ...details, target });
+  }
+
+  return target as State;
+};
+
+const compileTransition = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
+  input: unknown,
+  states: ReadonlyMap<State, unknown>,
+  details: Record<string, unknown>,
+): Transition<State, Context, Event> => {
+  const transition = isRecord(input) ? input : fail('INVALID_TRANSITION', 'a transition must be an object', details);
+  const target = validateTarget(states, transition.target, details);
+
+  if (transition.guard !== undefined && typeof transition.guard !== 'function') {
+    fail('INVALID_TRANSITION', 'transition guard must be a function', { ...details, phase: 'guard' });
+  }
+
+  if (transition.reduce !== undefined && typeof transition.reduce !== 'function') {
+    fail('INVALID_TRANSITION', 'transition reducer must be a function', { ...details, phase: 'reduce' });
+  }
+
+  return {
+    effects:
+      transition.effects === undefined
+        ? undefined
+        : functions<Effect<Context, Event>>(transition.effects, 'effects', details),
+    guard: transition.guard as Transition<State, Context, Event>['guard'],
+    reduce: transition.reduce as Transition<State, Context, Event>['reduce'],
+    target,
+  };
+};
+
+const compileTransitions = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
+  input: unknown,
+  states: ReadonlyMap<State, unknown>,
+  details: Record<string, unknown>,
+): readonly Transition<State, Context, Event>[] => {
+  const values = Array.isArray(input) ? input : [input];
+
+  if (values.length === 0) fail('INVALID_TRANSITION', 'a transition array must not be empty', details);
+
+  return values.map((value, transitionIndex) =>
+    compileTransition<State, Context, Event>(value, states, { ...details, transitionIndex }),
+  );
+};
+
+const compileAfter = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
+  input: unknown,
+  states: ReadonlyMap<State, unknown>,
+  id: number,
+  index: number,
+  state: State,
+): CompiledAfter<State, Context, Event> => {
+  const after = isRecord(input)
+    ? input
+    : fail('INVALID_TRANSITION', `state "${state}" after entries must be objects`, { index, state });
+  const delay = after.delay;
+
+  if (typeof delay !== 'number' || !Number.isFinite(delay) || delay < 0) {
+    fail('INVALID_AFTER_DELAY', `state "${state}" after delay must be a finite number greater than or equal to 0`, {
+      delay,
+      index,
+      state,
+    });
+  }
+
+  const details = { delay, index, state };
+
+  if (after.guard !== undefined && typeof after.guard !== 'function') {
+    fail('INVALID_TRANSITION', 'after guard must be a function', { ...details, phase: 'guard' });
+  }
+
+  if (after.reduce !== undefined && typeof after.reduce !== 'function') {
+    fail('INVALID_TRANSITION', 'after reducer must be a function', { ...details, phase: 'reduce' });
+  }
+
+  return {
+    definition: {
+      delay: delay as number,
+      effects:
+        after.effects === undefined ? undefined : functions<Effect<Context, Event>>(after.effects, 'effects', details),
+      guard: after.guard as After<State, Context, Event>['guard'],
+      reduce: after.reduce as After<State, Context, Event>['reduce'],
+      target: validateTarget(states, after.target, details),
+    },
+    id,
+  };
+};
+
+const compileInvokes = <Context extends Record<string, unknown>, Event extends MachineEvent>(
+  value: unknown,
+  state: string,
+): readonly Invoke<Context, Event>[] =>
+  array(value, `state "${state}" invoke must be an array`, { state }).map((value, index) => {
+    const candidate = isRecord(value)
+      ? value
+      : fail('INVALID_INVOKE', 'invoke entry must be an object', { index, state });
+
+    if (typeof candidate.src !== 'function') {
+      fail('INVALID_INVOKE', 'invoke src must be a function', { index, phase: 'src', state });
+    }
+
+    if (candidate.onDone !== undefined && typeof candidate.onDone !== 'function') {
+      fail('INVALID_INVOKE', 'invoke onDone must be a function', { index, phase: 'onDone', state });
+    }
+
+    if (candidate.onError !== undefined && typeof candidate.onError !== 'function') {
+      fail('INVALID_INVOKE', 'invoke onError must be a function', { index, phase: 'onError', state });
+    }
+
+    return candidate as unknown as Invoke<Context, Event>;
+  });
+
+/** Validates and structurally compiles a flat machine definition once. */
+export const compileDefinition = <
+  State extends string,
+  Context extends Record<string, unknown>,
+  Event extends MachineEvent,
+>(
+  definition: MachineConfig<State, Context, Event>,
+): CompiledMachine<State, Context, Event> => {
+  const raw = definition as unknown;
+  const machine = isRecord(raw) ? raw : fail('INVALID_DEFINITION', 'machine definition must be an object', {});
+  const rawStates = isRecord(machine.states)
+    ? machine.states
+    : fail('INVALID_DEFINITION', 'machine states must be an object', {});
+  const rawStateEntries = Object.entries(rawStates) as [State, unknown][];
+  const rawStateMap = new Map<State, unknown>(rawStateEntries);
+
+  if (typeof machine.initial !== 'string' || !rawStateMap.has(machine.initial as State)) {
+    fail('INVALID_INITIAL_STATE', `initial state "${String(machine.initial)}" is not declared`, {
+      initial: machine.initial,
+    });
+  }
+
+  if (machine.context !== undefined && !isContextRecord(machine.context)) {
+    fail('INVALID_CONTEXT', 'machine context must be a non-array object record', {});
+  }
+
+  const states = new Map<State, CompiledState<State, Context, Event>>();
+  let afterId = 0;
+
+  for (const [state, rawNodeValue] of rawStateEntries) {
+    const rawNode = isRecord(rawNodeValue)
+      ? rawNodeValue
+      : fail('INVALID_DEFINITION', `state "${state}" must be an object`, { state });
+
+    if ('states' in rawNode || 'initial' in rawNode) {
+      fail('INVALID_DEFINITION', `state "${state}" must be flat and cannot declare child states`, { state });
+    }
+
+    const on = new Map<string, readonly Transition<State, Context, Event>[]>();
+
+    if (rawNode.on !== undefined) {
+      const rawOn = isRecord(rawNode.on)
+        ? rawNode.on
+        : fail('INVALID_TRANSITION', `state "${state}" on must be an object`, { state });
+
+      for (const [type, transition] of Object.entries(rawOn)) {
+        on.set(type, compileTransitions<State, Context, Event>(transition, rawStateMap, { state, type }));
       }
-
-      if (tr.target.includes('.') && !getNodeAtPath(allTopLevel, tr.target)) {
-        throw new ClockworkUnknownTargetError(
-          `state "${path}" event "${eventType}" targets unknown nested state "${tr.target}"`,
-          path,
-          tr.target,
-          eventType,
-        );
-      }
-    }
-  }
-
-  // Validate empty invoke array (D1)
-  if (node.invoke !== undefined && node.invoke.length === 0) {
-    throw new ClockworkInvalidTransitionArrayError(`state "${path}" invoke must be a non-empty array`, path);
-  }
-
-  // Validate after targets and delays
-  for (const afterDef of node.after ?? []) {
-    if (!Number.isFinite(afterDef.delay) || afterDef.delay < 0) {
-      throw new ClockworkInvalidAfterDelayError(
-        `state "${path}" after delay must be a finite number >= 0, got ${afterDef.delay}`,
-        path,
-        afterDef.delay,
-      );
     }
 
-    const targetRoot = afterDef.target.split('.')[0];
+    const after =
+      rawNode.after === undefined
+        ? []
+        : array(rawNode.after, `state "${state}" after must be an array`, { state }).map((entry, index) =>
+            compileAfter<State, Context, Event>(entry, rawStateMap, afterId++, index, state),
+          );
 
-    if (!Object.hasOwn(allTopLevel, targetRoot)) {
-      throw new ClockworkUnknownTargetError(
-        `state "${path}" after[${afterDef.delay}ms] targets unknown state "${afterDef.target}"`,
-        path,
-        afterDef.target,
-      );
-    }
-
-    if (afterDef.target.includes('.') && !getNodeAtPath(allTopLevel, afterDef.target)) {
-      throw new ClockworkUnknownTargetError(
-        `state "${path}" after[${afterDef.delay}ms] targets unknown nested state "${afterDef.target}"`,
-        path,
-        afterDef.target,
-      );
-    }
+    states.set(state, {
+      after,
+      entry: rawNode.entry === undefined ? [] : functions<Effect<Context, Event>>(rawNode.entry, 'entry', { state }),
+      exit: rawNode.exit === undefined ? [] : functions<Effect<Context, Event>>(rawNode.exit, 'exit', { state }),
+      invoke: rawNode.invoke === undefined ? [] : compileInvokes<Context, Event>(rawNode.invoke, state),
+      on,
+    });
   }
 
-  if (node.states) {
-    for (const [name, child] of Object.entries(node.states)) {
-      validateNode(child, `${path}.${name}`, allTopLevel);
-    }
-  }
-};
-
-export const validateDefinition = <State extends string, Ctx extends object, Ev extends MachineEvent>(
-  definition: MachineConfig<State, Ctx, Ev>,
-): void => {
-  const { states } = definition;
-
-  if (!Object.hasOwn(states, definition.initial)) {
-    throw new ClockworkInvalidInitialStateError(
-      `initial state "${definition.initial}" not found in states`,
-      '',
-      definition.initial,
-    );
-  }
-
-  for (const [stateName, node] of Object.entries(states) as Array<[string, StateNode<State, Ctx, Ev>]>) {
-    validateNode(node, stateName, states);
-  }
+  return {
+    context: (machine.context ?? {}) as Context,
+    initial: machine.initial as State,
+    states,
+  };
 };

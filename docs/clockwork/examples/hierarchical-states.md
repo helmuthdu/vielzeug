@@ -1,80 +1,50 @@
 ---
-title: Hierarchical States
-description: Use compound states with automatic leaf resolution.
+title: 'Clockwork Examples — Model Nested Workflows with Flat States'
+description: 'Represent nested workflow phases with explicit flat state names.'
 ---
 
-## Hierarchical States
+## Model Nested Workflows with Flat States
 
 ### Problem
 
-Related states share common transitions and data but differ in their sub-behaviour. Flattening them into sibling states leads to duplicated event handlers and state explosion.
+You need distinct editing phases without nested states or parent event bubbling.
 
 ### Solution
 
-Use compound states to group related substates. Entering a compound state automatically resolves to its `initial` child. Shared transitions on the parent apply to all substates:
+Name every phase as a flat state and make shared transitions explicit.
 
 ```ts
-import { createMachine } from '@vielzeug/clockwork';
+import { defineMachine } from '@vielzeug/clockwork';
 
 type Event = { type: 'CANCEL' } | { type: 'EDIT' } | { type: 'SAVE' } | { type: 'SAVED' };
 
-type Context = { draft: string };
-
-const editor = createMachine({
-  context: { draft: '' },
+const editor = defineMachine<Record<string, never>, Event>()({
   initial: 'idle',
   states: {
-    idle: {
-      on: { EDIT: { target: 'editing' } },
+    idle: { on: { EDIT: { target: 'editingDraft' } } },
+    editingDraft: {
+      on: { CANCEL: { target: 'idle' }, SAVE: { target: 'editingSaving' } },
     },
-    editing: {
-      initial: 'draft',
-      states: {
-        draft: {
-          on: {
-            CANCEL: { target: 'idle' },
-            SAVE: { target: 'editing.saving' },
-          },
-        },
-        saving: {
-          invoke: [
-            {
-              src: async ({ context, signal }) => {
-                await fetch('/api/save', { body: context.draft, method: 'POST', signal });
-              },
-              onDone: () => ({ type: 'SAVED' }),
-              onError: () => ({ type: 'CANCEL' }),
-            },
-          ],
-          on: {
-            SAVED: { target: 'idle' },
-            CANCEL: { target: 'editing.draft' },
-          },
-        },
-      },
+    editingSaving: {
+      on: { CANCEL: { target: 'editingDraft' }, SAVED: { target: 'idle' } },
     },
   },
-}).start();
+});
 
-const m = editor;
-
-console.log(m.state.value); // 'idle'
-
-m.send({ type: 'EDIT' });
-console.log(m.state.value); // 'editing.draft' (auto-resolved to initial leaf)
-
-m.matches('editing'); // true — ancestor match
-m.matches('editing.draft'); // true — exact match
-
-m[Symbol.dispose]();
+const actor = editor.createActor();
+actor.send({ type: 'EDIT' });
+actor.send({ type: 'SAVE' });
+console.log(actor.snapshot.state); // 'editingSaving'
+actor.dispose();
 ```
 
 ### Pitfalls
 
-- **`matches('parent')` returns `true` for any child state** — use `state.value` for exact matching, `matches()` for ancestor checks.
-- **Transitions on a compound state apply to all children** — if you add a transition on the parent, every substate will handle that event. Use child-level `on` to restrict scope.
+- Clockwork state nodes cannot contain child states.
+- Model independent concerns with separate actors rather than a hierarchy runtime.
 
 ### Related
 
-- [Clockwork Examples](/clockwork/examples.md)
-- [Unit Testing with `.resolve()`](./unit-testing.md)
+- [Multi-Step Wizard with Routing](./wizard-with-routing.md)
+- [Multi-Machine Coordination](./multi-machine-coordination.md)
+- [API Reference](../api.md)

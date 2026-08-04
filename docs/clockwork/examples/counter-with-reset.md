@@ -1,73 +1,53 @@
 ---
 title: 'Clockwork Examples — Counter with Reset'
-description: Counter with Reset example for @vielzeug/clockwork.
+description: 'Update replacement context through self-transitions.'
 ---
 
 ## Counter with Reset
 
 ### Problem
 
-You need a counter that tracks a numeric value and can be incremented, decremented, or reset to zero. This is the simplest Machine pattern for context mutation via actions.
+You need to update a value without changing the workflow state.
 
 ### Solution
 
-Use a single `idle` state with self-transitions that apply actions to mutate context. Self-transitions re-enter the same state, fire actions, and update context atomically.
+Use self-transitions and return a replacement context from every reducer.
 
 ```ts
-import { createMachine } from '@vielzeug/clockwork';
+import { defineMachine } from '@vielzeug/clockwork';
 
 type Event = { type: 'DEC' } | { type: 'INC' } | { type: 'RESET' };
 
-const m = createMachine({
+const counter = defineMachine<{ count: number }, Event>()({
   context: { count: 0 },
   initial: 'idle',
   states: {
     idle: {
       on: {
-        DEC: {
-          actions: [
-            ({ context }) => {
-              context.count -= 1;
-            },
-          ],
-          target: 'idle',
-        },
-        INC: {
-          actions: [
-            ({ context }) => {
-              context.count += 1;
-            },
-          ],
-          target: 'idle',
-        },
-        RESET: {
-          actions: [
-            ({ context }) => {
-              context.count = 0;
-            },
-          ],
-          target: 'idle',
-        },
+        DEC: { reduce: ({ context }) => ({ count: context.count - 1 }), target: 'idle' },
+        INC: { reduce: ({ context }) => ({ count: context.count + 1 }), target: 'idle' },
+        RESET: { reduce: () => ({ count: 0 }), target: 'idle' },
       },
     },
   },
-}).start();
+});
 
-console.log(m.send({ type: 'INC' }).status); // 'transitioned'
-console.log(m.send({ type: 'INC' }).status); // 'transitioned'
-console.log(m.context.value.count); // 2
-m.send({ type: 'RESET' });
-console.log(m.context.value.count); // 0
+const actor = counter.createActor();
+actor.send({ type: 'INC' });
+actor.send({ type: 'INC' });
+console.log(actor.snapshot.context.count); // 2
+actor.send({ type: 'RESET' });
+console.log(actor.snapshot.context.count); // 0
+actor.dispose();
 ```
 
 ### Pitfalls
 
-- **Actions receive a cloned draft.** Mutate `context` directly inside action functions — this is the intended pattern.
-- **Self-transitions run exit/entry actions.** If you add `entry` or `exit` to `idle`, they fire on every self-transition, not just on first entry. Use transition `actions` for per-event mutations.
-- **For nested objects, mutate in place or spread explicitly.** `context.nested.key = value` works. If replacing the whole nested object, assign it: `context.nested = { ...context.nested, key: value }`.
+- Do not mutate `context`; return the complete next context.
+- A self-transition still runs its exit, transition, and entry effects.
 
 ### Related
 
-- [Data Fetching with Error Recovery](./data-fetching.md) — Using actions inside async invoke results
-- [Auth Flow with Guards](./auth-flow.md) — Combining actions with guards
-- [API Reference — `ActionFn`](/clockwork/api#actionfnctx-ev)
+- [Form Validation](./form-validation.md)
+- [Pure Transition Testing](./unit-testing.md)
+- [API Reference](../api.md)

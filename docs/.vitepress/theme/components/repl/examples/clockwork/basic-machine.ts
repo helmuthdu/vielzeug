@@ -1,8 +1,8 @@
 export const basicMachineExample = {
-  code: `import { createMachine } from '@vielzeug/clockwork'
+  code: `import { defineMachine } from '@vielzeug/clockwork'
 
 // Compile one machine, then create an independent actor.
-const machine = createMachine({
+const machine = defineMachine()({
   context: { cycles: 0 },
   initial: 'red',
   states: {
@@ -20,11 +20,11 @@ const machine = createMachine({
 })
 
 const actor = machine.createActor()
-console.log('Initial:', actor.snapshot.value)
+console.log('Initial:', actor.snapshot)
 actor.send({ type: 'NEXT' })
 actor.send({ type: 'NEXT' })
 actor.send({ type: 'NEXT' })
-console.log('After cycle:', actor.snapshot.value)
+console.log('After cycle:', actor.snapshot)
 console.log('Can continue?', actor.can({ type: 'NEXT' }))`,
   name: 'Basic State Machine',
 };

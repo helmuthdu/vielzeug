@@ -1,73 +1,55 @@
 ---
 title: 'Clockwork Examples — Debugging Transitions'
-description: Debugging transitions example for @vielzeug/clockwork.
+description: 'Observe committed actor snapshots and keep application history without core tracing.'
 ---
 
 ## Debugging Transitions
 
 ### Problem
 
-You need visibility into which guards pass or fail, when invokes start and abort, and a history of recent transitions to diagnose unexpected machine behaviour during development.
+You need development-time visibility into committed snapshots and state history.
 
 ### Solution
 
-Pass `onDebug` and `traceLimit` to `createMachine().start()`. The `onDebug` callback receives a discriminated union of all debug events — pattern-match on `type` to handle specific cases.
+Attach `debugActor()` to an actor and subscribe at the application boundary for history. The devtool receives snapshots only.
 
 ```ts
-import { createMachine } from '@vielzeug/clockwork';
-import { config } from './machine'; // your machine config object
+import { defineMachine } from '@vielzeug/clockwork';
+import { debugActor } from '@vielzeug/clockwork/devtools';
 
-const m = createMachine(config).start({
-  onDebug: (event) => {
-    switch (event.type) {
-      case 'guard':
-        console.debug(`[guard] ${event.from} → ${event.target}: ${event.passed ? 'pass' : 'fail'}`);
-        break;
-      case 'transition':
-        console.info(`[transition] ${event.from} → ${event.to} via ${event.event.type}`);
-        break;
-      case 'transition-skipped':
-        console.debug(`[skip] ${event.event.type} in ${event.from}`);
-        break;
-      case 'invoke-start':
-        console.debug(`[invoke #${event.invokeId}] started in ${event.state}`);
-        break;
-      case 'invoke-done':
-        console.debug(`[invoke #${event.invokeId}] done`);
-        break;
-      case 'invoke-error':
-        console.error(`[invoke #${event.invokeId}] error`, event.error);
-        break;
-      case 'invoke-abort':
-        console.debug(`[invoke #${event.invokeId}] aborted in ${event.state}`);
-        break;
-    }
+type Event = { type: 'SUBMIT' } | { type: 'PAY' };
+const machine = defineMachine<Record<string, never>, Event>()({
+  initial: 'pending',
+  states: {
+    pending: { on: { SUBMIT: { target: 'confirmed' } } },
+    confirmed: { on: { PAY: { target: 'paid' } } },
+    paid: {},
   },
-  traceLimit: 200,
 });
 
-// Read the trace ring buffer at any time
-const trace = m.getTrace();
-console.table(
-  trace.map(({ event, from, timestamp, to }) => ({
-    event: event.type,
-    from,
-    ms: timestamp,
-    to,
-  })),
-);
+const actor = machine.createActor();
+const history: string[] = [];
+const stopDebugging = debugActor(actor);
+const stop = actor.subscribe((snapshot) => history.push(snapshot.state));
+
+actor.send({ type: 'SUBMIT' });
+actor.send({ type: 'PAY' });
+console.log(actor.snapshot.state); // 'paid'
+console.log(history); // ['confirmed', 'paid']
+
+stopDebugging();
+stop();
+actor.dispose();
 ```
 
 ### Pitfalls
 
-- **`can()` does not fire debug events.** Guard evaluation in `can()` is silent. Use `can()` freely for UI-driven enablement without adding debug noise.
-- **Auto-enabled tracing.** When `onDebug` is set, a 50-entry trace buffer is enabled automatically. Set `traceLimit: 0` to opt out explicitly.
-- **Trace is a ring buffer.** Once the ring is full, new entries overwrite the oldest. Set `traceLimit` large enough to cover the transition sequences you need to inspect.
-- **`getTrace()` returns cloned entries.** Mutating the returned array or entries does not affect the internal buffer.
-- **Remove debug hooks in production.** `onDebug` adds per-`send()` overhead. Either omit it or gate behind `import.meta.env.DEV`. Use `debugMachine` from `@vielzeug/clockwork/devtools` for zero-effort development logging.
+- Import `debugActor` from `@vielzeug/clockwork/devtools`, not the package root.
+- `debugActor` observes snapshots only; keep send and error diagnostics at your application boundary.
+- Clockwork has no built-in trace buffer; keep history in your tooling boundary.
 
 ### Related
 
-- [Unit Testing with `.resolve()`](./unit-testing.md) — Pure guard testing without a live machine
-- [API Reference — `DebugEvent`](/clockwork/api#debugeventstate-ctx-ev)
-- [API Reference — `MachineInstance`](/clockwork/api#machineinstancestate-ctx-ev)
+- [Pure Transition Testing](./unit-testing.md)
+- [Media Player](./media-player.md)
+- [API Reference](../api.md)

@@ -1,756 +1,428 @@
 ---
 title: Clockwork — API Reference
-description: Complete API reference for Clockwork.
+description: Reference for Clockwork machine definitions, actors, devtools, and types.
 ---
 
 [[toc]]
 
 ## API Overview
 
-| Symbol             | Purpose                                              | Execution mode | Common gotcha                                                    |
-| ------------------ | ---------------------------------------------------- | -------------- | ---------------------------------------------------------------- |
-| `createMachine()`  | Validate config; returns definition handle           | Sync           | Throws `ClockworkError` on invalid config — check at startup     |
-| `.start()`         | Start a running machine instance from a definition   | Sync           | Call `.start(options?)` on the returned `MachineDefinition`      |
-| `.resolve()`       | Pure transition resolver for testing (no side effects) | Sync         | Does not fire debug hooks; pass `onGuard` via `options` object   |
-| `ClockworkError`   | Base class for all validation failures               | —              | Use `instanceof <SpecificError>` or `ClockworkError.is()`         |
+| Symbol | Purpose | Execution mode | Common gotcha |
+| --- | --- | --- | --- |
+| `defineMachine()` | Compile a typed flat machine definition | Sync | Call the generic factory before supplying the definition |
+| `Machine.transition()` | Resolve a pure next snapshot | Sync | Does not run effects, invokes, or timers |
+| `Machine.createActor()` | Create a runtime owner | Sync | Fresh and restored actors have different entry behavior |
+| `Actor.send()` | Dispatch an event | Sync | Returns `void`; re-entrant events queue internally |
+| `debugActor()` | Observe committed snapshots | Sync | Observes only; it does not trace sends or errors |
+| `ClockworkError` | Report definition and snapshot validation failures | Sync | Use `code`, not message text |
 
 ## Package Entry Points
 
-| Import                         | Purpose                                  |
-| ------------------------------ | ---------------------------------------- |
-| `@vielzeug/clockwork`          | All exports and types                    |
-| `@vielzeug/clockwork/devtools` | `debugMachine` — debug wrapper (dev only) |
+| Import | Purpose |
+| --- | --- |
+| `@vielzeug/clockwork` | Machine compiler, actor runtime, errors, and types |
+| `@vielzeug/clockwork/devtools` | Opt-in snapshot observation through `debugActor()` |
 
-## `createMachine()`
+## Core Functions
 
-Validates a machine configuration and returns a reusable `MachineDefinition` handle. Throws a `ClockworkError` subclass synchronously if validation fails.
-
-Use `createMachine(config).start()` for the common one-shot case, or hold the definition to start multiple instances or call `.resolve()` in tests.
+### `defineMachine()`
 
 ```ts
-function createMachine<State extends string, Ctx extends object, Ev extends MachineEvent>(
-  config: MachineConfig<State, Ctx, Ev>,
-): MachineDefinition<State, Ctx, Ev>;
+function defineMachine<
+  Context extends Record<string, unknown> = Record<string, never>,
+  Event extends MachineEvent = MachineEvent,
+>(): <State extends string>(definition: MachineConfig<State, Context, Event>) => Machine<State, Context, Event>;
 ```
 
-**Validates at call time:**
+Returns a factory that validates and compiles a typed flat machine definition. Context must be a non-array record. Omit `context` only when the context type has no keys.
 
-- `initial` state exists in `states`
-- All transition `target` values exist in `states` — full nested paths (e.g. `loading.fetching`) are validated, not just the root segment
-- Transition arrays are non-empty
-- Compound states have `initial` pointing to a valid child
-- `after` delays are finite numbers (`>= 0`; `NaN` and `Infinity` are rejected)
-- `invoke` arrays are non-empty
-
-**Returns:** `MachineDefinition<State, Ctx, Ev>` — see [MachineDefinition](#machinedefinition).
+**Returns:** A definition function that returns `Machine`.
 
 **Example:**
 
 ```ts
-// One-shot — validate + start immediately:
-const m = createMachine({
-  context: { count: 0 },
+import { defineMachine } from '@vielzeug/clockwork';
+
+type Event = { type: 'START' };
+
+const machine = defineMachine<Record<string, never>, Event>()({
   initial: 'idle',
-  states: {
-    active: { on: { STOP: { target: 'idle' } } },
-    idle: { on: { GO: { target: 'active' } } },
-  },
-}).start({
-  onDebug: ({ type, ...rest }) => console.log(type, rest),
+  states: { idle: { on: { START: { target: 'running' } } }, running: {} },
 });
-
-// Reusable definition — start multiple instances:
-const counterDef = createMachine({
-  context: { count: 0 },
-  initial: 'idle',
-  states: { idle: { on: { INC: { actions: [({ context }) => { context.count++ }], target: 'idle' } } } },
-});
-
-const m1 = counterDef.start();
-const m2 = counterDef.start({ snapshot: { context: { count: 10 }, state: 'idle' } });
-
-// Test transitions without a running machine:
-counterDef.resolve({ context: { count: 0 }, event: { type: 'INC' }, state: 'idle' });
 ```
+
+Throws `ClockworkError` when a definition has an invalid context, initial state, target, transition, effect, invoke, or timer delay.
+
+---
+
+### `debugActor()`
+
+```ts
+function debugActor<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
+  actor: Actor<State, Context, Event>,
+  options?: DebugActorOptions<State, Context>,
+): () => void;
+```
+
+Subscribes to committed actor snapshots and logs each one with `console.debug` by default. It does not modify actor behavior and does not observe dispatched events or runtime errors.
+
+**Returns:** An unsubscribe cleanup function.
+
+**Example:**
+
+```ts
+import { defineMachine } from '@vielzeug/clockwork';
+import { debugActor } from '@vielzeug/clockwork/devtools';
+
+const machine = defineMachine<Record<string, never>, { type: 'NEXT' }>()({
+  initial: 'idle',
+  states: { idle: { on: { NEXT: { target: 'idle' } } } },
+});
+
+const actor = machine.createActor();
+const stopDebugging = debugActor(actor);
+actor.send({ type: 'NEXT' });
+stopDebugging();
+actor.dispose();
+```
+
+## Machine Methods
+
+### `machine.transition()`
+
+```ts
+transition(
+  snapshot: MachineSnapshot<State, Context>,
+  event: Event,
+): TransitionResult<State, Context>;
+```
+
+Resolves a snapshot for one user event without actor runtime work.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `snapshot` | `MachineSnapshot<State, Context>` | Input state and context |
+| `event` | `Event` | User event to evaluate |
+
+**Returns:** A `TransitionResult` with `transition` or `ignored` type.
+
+**Example:**
+
+```ts
+const result = machine.transition(machine.initialSnapshot, { type: 'START' });
+```
+
+---
+
+### `machine.can()`
+
+```ts
+can(snapshot: MachineSnapshot<State, Context>, event: Event): boolean;
+```
+
+Returns whether a transition exists and its guard passes.
+
+**Returns:** `true` when the supplied snapshot accepts the event.
+
+---
+
+### `machine.createActor()`
+
+```ts
+createActor(options?: ActorOptions<State, Context, Event>): Actor<State, Context, Event>;
+```
+
+Creates an independent actor for event dispatch, timers, invokes, effects, subscriptions, and disposal. A fresh actor starts the initial state's entry effects and resources. An actor restored with `options.snapshot` starts only the restored state's resources: invokes and timers, not entry effects.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `options.snapshot` | `MachineSnapshot<State, Context>` | Optional restored actor snapshot |
+| `options.maxTransitions` | `number` | Positive queued-transition limit for one synchronous flush |
+| `options.onError` | `(error, context) => 'continue' \| 'dispose'` | Explicit disposition for runtime failures |
+
+**Returns:** Disposable `Actor`.
+
+**Example:**
+
+```ts
+const actor = machine.createActor({
+  onError(error, { phase, state }) {
+    console.error(phase, state, error);
+    return 'continue';
+  },
+  snapshot: { context: {}, state: 'idle' },
+});
+```
+
+## Actor Methods
+
+### `actor.send()`
+
+```ts
+send(event: Event): void;
+```
+
+Dispatches a user event to the current actor state. Events sent while the actor is processing queue and flush synchronously; sends to a disposed actor are ignored. Use `actor.snapshot` after sending to read the current snapshot.
+
+**Returns:** Nothing.
+
+---
+
+### `actor.can()`
+
+```ts
+can(event: Event): boolean;
+```
+
+Returns whether the current actor snapshot accepts an event. Returns `false` after disposal.
+
+**Returns:** Boolean transition availability.
+
+---
+
+### `actor.subscribe()`
+
+```ts
+subscribe(listener: (snapshot: MachineSnapshot<State, Context>) => void): () => void;
+```
+
+Registers a listener for committed snapshots. The listener does not run immediately.
+
+**Returns:** An unsubscribe function.
+
+---
+
+### `actor.dispose()`
+
+```ts
+dispose(): void;
+[Symbol.dispose](): void;
+```
+
+Cancels timers and invokes, clears queued events and listeners, and aborts `disposalSignal`.
+
+**Returns:** Nothing. Idempotent.
 
 ## Types
 
 ### `MachineEvent`
 
-Base constraint for all event types.
-
 ```ts
-type MachineEvent = { type: string };
+type MachineEvent = { readonly type: string };
 ```
 
-Define events as discriminated unions for full TypeScript inference:
+Base constraint for event unions.
+
+### `EventType<Event>` and `EventByType<Event, Type>`
 
 ```ts
-type AppEvent = { type: 'FETCH' } | { type: 'DONE'; data: string } | { type: 'FAIL'; error: Error };
+type EventType<Event extends MachineEvent> = Event['type'] & string;
+
+type EventByType<Event extends MachineEvent, Type extends EventType<Event>> =
+  Extract<Event, { type: Type }>;
 ```
 
----
+Extract event type names and a matching event from an event union.
 
-### `EventType<Ev>`
-
-Extracts the union of all event type strings.
+### `MachineSnapshot<State, Context>`
 
 ```ts
-type EventType<Ev extends MachineEvent> = Ev['type'] & string;
-
-type MyEvent = { type: 'A' } | { type: 'B' };
-type Types = EventType<MyEvent>; // 'A' | 'B'
-```
-
----
-
-### `EventByType<Ev, Type>`
-
-Narrows the event union to a specific type. Useful for accessing typed payloads inside generic helpers.
-
-```ts
-type EventByType<Ev extends MachineEvent, Type extends EventType<Ev>> = Extract<Ev, { type: Type }>;
-
-type SetEvent = EventByType<AppEvent, 'DONE'>; // { type: 'DONE'; data: string }
-```
-
----
-
-### `LifecycleEvent`
-
-Internal synthetic events dispatched by the runtime. Received by `entry`, `exit`, and invoke `src` on state entry.
-
-```ts
-type LifecycleEvent =
-  | { readonly type: '$init' }
-  | { readonly type: '$hydrate' }
-  | { readonly delay: number; readonly type: '$after' };
-```
-
----
-
-### `ActionArgs<Ctx, Ev>`
-
-Arguments passed to action functions.
-
-```ts
-type ActionArgs<Ctx extends object, Ev extends MachineEvent = MachineEvent> = {
-  context: Ctx; // mutable context draft
-  readonly event: Ev; // triggering event (readonly)
-};
-```
-
----
-
-### `ActionFn<Ctx, Ev>`
-
-A function that mutates context during a transition.
-
-```ts
-type ActionFn<Ctx extends object, Ev extends MachineEvent = MachineEvent> = (args: ActionArgs<Ctx, Ev>) => void;
-```
-
----
-
-### `GuardFn<Ctx, Ev>`
-
-A predicate that decides whether a transition is taken. Context is **readonly** — mutating it inside a guard corrupts live state.
-
-```ts
-type GuardFn<Ctx extends object, Ev extends MachineEvent = MachineEvent> = (args: {
-  readonly context: Readonly<Ctx>;
-  readonly event: Readonly<Ev>;
-}) => boolean;
-```
-
----
-
-### `LifecycleFn<Ctx, Ev>`
-
-Function type for `entry` and `exit` hooks. Receives context and an event that may be a user event or a lifecycle event (`$init`, `$hydrate`, `$after`).
-
-```ts
-type LifecycleFn<Ctx extends object, Ev extends MachineEvent = MachineEvent> = (args: {
-  context: Ctx;
-  readonly event: Ev | LifecycleEvent;
-}) => void;
-```
-
----
-
-### `TransitionDef<State, Ctx, Ev, Type>`
-
-A single transition configuration.
-
-```ts
-type TransitionDef<
-  State extends string,
-  Ctx extends object,
-  Ev extends MachineEvent,
-  Type extends EventType<Ev> = EventType<Ev>,
-> = {
-  actions?: Array<ActionFn<Ctx, EventByType<Ev, Type>>>;
-  guard?: GuardFn<Ctx, EventByType<Ev, Type>>;
-  target: State;
-};
-```
-
----
-
-### `AfterEvent`
-
-The synthetic event dispatched to `after` action functions. Part of `LifecycleEvent`.
-
-```ts
-type AfterEvent = { readonly delay: number; readonly type: '$after' };
-```
-
-`delay` reflects the configured delay in milliseconds.
-
----
-
-### `AfterActionFn<Ctx>`
-
-Convenience alias for action functions used in `after` delayed transitions.
-
-```ts
-type AfterActionFn<Ctx extends object> = ActionFn<Ctx, AfterEvent>;
-```
-
-Use this when extracting after-actions into named functions:
-
-```ts
-import type { AfterActionFn } from '@vielzeug/clockwork';
-
-const logTimeout: AfterActionFn<{ attempts: number }> = ({ context, event }) => {
-  console.log(`Timed out after ${event.delay}ms, attempts: ${context.attempts}`);
-};
-```
-
----
-
-### `AfterDef<State, Ctx>`
-
-Configuration for a delayed (timer-based) transition.
-
-```ts
-type AfterDef<State extends string, Ctx extends object> = {
-  actions?: Array<AfterActionFn<Ctx>>;
-  delay: number; // milliseconds, must be a finite number >= 0
-  guard?: GuardFn<Ctx, AfterEvent>;
-  target: State;
-};
-```
-
-The `guard` receives `{ readonly context: Readonly<Ctx>; readonly event: Readonly<AfterEvent> }` — same signature as all other guards.
-
-After-timers are automatically cleared when the owning state is exited.
-
----
-
-### `StateNode<State, Ctx, Ev>`
-
-Configuration for a single state.
-
-```ts
-type StateNode<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-  after?: Array<AfterDef<State, Ctx>>;
-  entry?: LifecycleFn<Ctx, Ev>;
-  exit?: LifecycleFn<Ctx, Ev>;
-  initial?: string; // required for compound states
-  invoke?: Array<InvokeDef<Ctx, Ev>>;
-  on?: Partial<{ [Type in EventType<Ev>]: TransitionInput<State, Ctx, Ev, Type> }>;
-  states?: Record<string, StateNode<string, Ctx, Ev>>; // nested substates
-};
-```
-
-When `states` is provided, `initial` must point to one of its keys (validated at definition time).
-
----
-
-### `MachineConfig<State, Ctx, Ev>`
-
-The configuration object passed to `machine()` or `define()`.
-
-```ts
-type MachineConfig<State extends string, Ctx extends object, Ev extends MachineEvent> = ContextField<Ctx> & {
-  initial: State;
-  states: Record<State, StateNode<State, Ctx, Ev>>;
-  validateContext?: ContextValidator<Ctx>;
-};
-```
-
-`context` is **required** when `Ctx` has properties. It is optional (and can be omitted) when `Ctx` is `Record<string, never>`.
-
----
-
-### `ContextValidator<Ctx>`
-
-A function used for `validateContext`.
-
-- Return `true` for valid context.
-- Return a non-empty string describing the failure (surfaced as `ClockworkInvalidValidateContextError.reason`).
-
-```ts
-type ContextValidator<Ctx extends object> = (context: Ctx) => string | true;
-```
-
----
-
-### `TransitionInput<State, Ctx, Ev, Type>`
-
-A single transition or an array of conditional alternatives, as used in the `on` map.
-
-```ts
-type TransitionInput<
-  State extends string,
-  Ctx extends object,
-  Ev extends MachineEvent,
-  Type extends EventType<Ev> = EventType<Ev>,
-> = TransitionDef<State, Ctx, Ev, Type> | Array<TransitionDef<State, Ctx, Ev, Type>>;
-```
-
-Use `TransitionInput` to type the value of an `on` entry when extracting transitions into named variables:
-
-```ts
-import type { TransitionInput } from '@vielzeug/clockwork';
-
-const onFetch: TransitionInput<State, Ctx, Ev, 'FETCH'> = [
-  { guard: ({ context }) => context.authorized, target: 'loading' },
-  { target: 'denied' },
-];
-```
-
----
-
-### `InterpretOptions<State, Ctx, Ev>`
-
-Options passed to `machine()` or `define().start()`.
-
-```ts
-type InterpretOptions<State extends string, Ctx extends object, Ev extends MachineEvent> = {
-  clone?: <T>(value: T) => T;
-  interceptors?: Array<InterceptorFn<State, Ctx, Ev>>;
-  maxTransitionsPerFlush?: number;
-  onDebug?: (event: DebugEvent<State, Ctx, Ev>) => void;
-  persistence?: PersistenceAdapter<State, Ctx>;
-  snapshot?: MachineSnapshot<State, Ctx>;
-  validateHydratedContext?: boolean;
-  traceLimit?: number;
-};
-```
-
-| Option                   | Default           | Description                                                                                                                                                     |
-| ------------------------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `clone`                  | `structuredClone` | Context clone function. Must return a structurally equivalent object. The caller is responsible for ensuring a safe prototype when providing a custom function. |
-| `interceptors`           | `[]`              | Pure event interceptors, run left-to-right. Return `null` to block.                                                                                             |
-| `maxTransitionsPerFlush` | `1000`            | Maximum transitions processed per flush before throwing loop-guard error                                                                                        |
-| `onDebug`                | `undefined`       | Callback for all debug events (guards, transitions, invokes, skips). Auto-enables a 50-entry trace buffer unless `traceLimit` is set.                           |
-| `persistence`            | `undefined`       | Save/load adapter for snapshot persistence                                                                                                                      |
-| `snapshot`               | `undefined`       | Snapshot to hydrate from on startup (takes priority over persistence)                                                                                           |
-| `validateHydratedContext`| `false`           | When `true`, runs `validateContext` against hydrated context during startup; when `false`, hydrated context is trusted and only validated on transitions.         |
-| `traceLimit`             | auto (`50`/`0`)   | Ring buffer capacity for `getTrace()`. Defaults to `50` when `onDebug` is set; `0` (disabled) otherwise. Set explicitly to override.                            |
-
----
-
-### `DebugEvent<State, Ctx, Ev>`
-
-Discriminated union of debug events passed to `onDebug`.
-
-```ts
-type DebugEvent<State, Ctx, Ev> =
-  | { type: 'guard'; context: Readonly<Ctx>; event: Ev; from: State; passed: boolean; target: State }
-  | { type: 'transition'; event: Ev | LifecycleEvent; from: State; to: State }
-  | { type: 'transition-skipped'; event: Ev; from: State }
-  | { type: 'invoke-start'; context: Readonly<Ctx>; event: Ev | LifecycleEvent; invokeId: string; state: State }
-  | {
-      type: 'invoke-done';
-      context: Readonly<Ctx>;
-      event: Ev | LifecycleEvent;
-      invokeId: string;
-      result: unknown;
-      state: State;
-    }
-  | {
-      type: 'invoke-error';
-      context: Readonly<Ctx>;
-      error: unknown;
-      event: Ev | LifecycleEvent;
-      invokeId: string;
-      state: State;
-    }
-  | { type: 'invoke-abort'; context: Readonly<Ctx>; event: Ev | LifecycleEvent; invokeId: string; state: State };
-```
-
-| Type                 | Fires when                                                     |
-| -------------------- | -------------------------------------------------------------- |
-| `guard`              | A guard is evaluated — fires for both passed and failed guards |
-| `transition`         | A transition is committed (after entry/exit actions)           |
-| `transition-skipped` | An event has no matching transition (or all guards failed)     |
-| `invoke-start`       | An async invoke task starts                                    |
-| `invoke-done`        | An invoke task resolves successfully                           |
-| `invoke-error`       | An invoke task rejects                                         |
-| `invoke-abort`       | An invoke task is cancelled because the state was exited       |
-
----
-
-### `SendResult`
-
-Result object returned by `send()`.
-
-```ts
-type SendResult = {
-  readonly status: 'queued' | 'rejected' | 'transitioned';
-};
-```
-
-| `status` value | Meaning                                                                                                     |
-| -------------- | ----------------------------------------------------------------------------------------------------------- |
-| `transitioned` | A transition occurred synchronously                                                                         |
-| `queued`       | Called re-entrantly (e.g. from inside an action); the event is queued for the next drain                    |
-| `rejected`     | No matching transition, a guard failed, an interceptor blocked it, or the machine is disposed (dev warning) |
-
----
-
-### `InterceptorFn<State, Ctx, Ev>`
-
-Pure event interceptor. Return the event (possibly transformed) to allow it, or `null` to block it. Runs left-to-right; first `null` stops the chain.
-
-```ts
-type InterceptorFn<State extends string, Ctx extends object, Ev extends MachineEvent> = (
-  event: Ev,
-  snapshot: { readonly context: Readonly<Ctx>; readonly state: State },
-) => Ev | null;
-```
-
-**Example — logging and blocking:**
-
-```ts
-const rateLimiter: InterceptorFn<State, Ctx, Ev> = (event, snap) => {
-  if (snap.context.rateLimited) return null; // block
-  return event; // allow
-};
-
-const m = createMachine(config).start({ interceptors: [rateLimiter] });
-```
-
----
-
-### `MachineInstance<State, Ctx, Ev>`
-
-The live machine object returned by `createMachine().start()`.
-
-```ts
-interface MachineInstance<State extends string, Ctx extends object, Ev extends MachineEvent> {
-  readonly context: Readable<Ctx>;
-  readonly disposalSignal: AbortSignal;
-  readonly disposed: boolean;
-  readonly state: Readable<State>;
-  can(event: Ev): boolean;
-  dispose(): void;
-  getSnapshot(): MachineSnapshot<State, Ctx>;
-  getTrace(): readonly TransitionTraceEntry<State, Ev>[];
-  matches(...states: string[]): boolean;
-  send(event: Ev): SendResult;
-  subscribe(fn: (snapshot: MachineSnapshot<State, Ctx>) => void): () => void;
-  [Symbol.dispose](): void;
-}
-```
-
-**Properties:**
-
-| Property         | Type                    | Description                                                                        |
-| ---------------- | ----------------------- | ---------------------------------------------------------------------------------- |
-| `state`          | `Readable<State>` | Current state — reactive; read inside `effect()` to subscribe                      |
-| `context`        | `Readable<Ctx>`   | Current context — reactive                                                         |
-| `disposed`       | `boolean`               | `true` after `dispose()` has been called                                           |
-| `disposalSignal` | `AbortSignal`           | Aborted when the machine is disposed. Use to tie external lifetimes to the machine |
-
-**Methods:**
-
-| Method               | Returns                  | Description                                                                                                                                                                                               |
-| -------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `can(event)`         | `boolean`                | `true` if a valid transition exists for the event in the current state. Evaluates guards but fires no side effects or debug hooks. Returns `false` when disposed.                                         |
-| `getSnapshot()`      | `MachineSnapshot<...>`   | Deep-cloned, frozen snapshot of current state and context. The outer snapshot object is frozen — reassigning `snap.state` throws in strict mode.                                                          |
-| `getTrace()`         | `TransitionTraceEntry[]` | Recent transitions in chronological order (oldest to newest). Returns cloned entries. Empty array when tracing is disabled.                                                                               |
-| `matches(...states)` | `boolean`                | `true` if the current state is one of the given values or a descendant of any (e.g. `matches('loading')` matches `'loading.pending'`). Returns `false` when disposed.                                     |
-| `dispose()`          | `void`                   | Aborts active invokes, clears after-timers, and disposes reactive signals. Idempotent. Does **not** clear persisted state. Equivalent to `using m = createMachine(config).start()`.                       |
-| `send(event)`        | `SendResult`             | Dispatches the event. Returns a `SendResult` with `.status`: `'transitioned'`, `'queued'`, or `'rejected'` (also when the machine is already disposed).                                                     |
-| `subscribe(fn)`      | `() => void`             | Subscribes to state/context changes. Returns an unsubscribe function. Fires only when state or context changes — **not** on the initial value. Callback receives an isolated snapshot (`context` is cloned). Use `getSnapshot()` to read the current state immediately. |
-| `[Symbol.dispose]()` | `void`                   | Delegates to `dispose()`. Enables `using` declarations.                                                                                                                                                   |
-
----
-
-### `MachineDefinition<State, Ctx, Ev>`
-
-Handle returned by `createMachine()`. Holds the validated config and exposes two methods.
-
-```ts
-interface MachineDefinition<State extends string, Ctx extends object, Ev extends MachineEvent> {
-  resolve(
-    input: { context: Readonly<Ctx>; event: Ev; state: State },
-    options?: {
-      onGuard?: (info: { context: Readonly<Ctx>; event: Ev; from: State; passed: boolean; target: State }) => void;
-    },
-  ): TransitionDef<State, Ctx, Ev> | undefined;
-  start(options?: InterpretOptions<State, Ctx, Ev>): MachineInstance<State, Ctx, Ev>;
-}
-```
-
-| Method      | Description                                                                                                                                                                                                          |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `start()`   | Creates a new running machine instance. Pass `options` to customise debug, snapshot, etc.                                                                                                                            |
-| `resolve()` | Pure — resolves which transition would be taken for a given state, context, and event. Runs guards but fires no side effects or debug hooks. Pass `options.onGuard` to observe each guard evaluation (pass or fail). |
-
----
-
-### `MachineSnapshot<State, Ctx>`
-
-Frozen snapshot of state and context.
-
-```ts
-type MachineSnapshot<State extends string, Ctx extends object> = {
-  readonly context: Readonly<Ctx>;
+type MachineSnapshot<State extends string, Context extends Record<string, unknown>> = {
+  readonly context: Readonly<Context>;
   readonly state: State;
 };
 ```
 
----
+The plain readonly snapshot value used by machines and actors. Readonly is a TypeScript contract; Clockwork does not copy or freeze snapshots at runtime.
 
-### `PersistenceAdapter<State, Ctx>`
-
-Pluggable adapter for snapshot persistence.
+### `Guard<Context, Event>` and `Reducer<Context, Event>`
 
 ```ts
-type PersistenceAdapter<State extends string, Ctx extends object> = {
-  load: () => MachineSnapshot<State, Ctx> | undefined;
-  save: (snapshot: MachineSnapshot<State, Ctx>) => void;
-};
+type Guard<Context extends Record<string, unknown>, Event> = (args: {
+  readonly context: Readonly<Context>;
+  readonly event: Event;
+}) => boolean;
+
+type Reducer<Context extends Record<string, unknown>, Event> = (args: {
+  readonly context: Readonly<Context>;
+  readonly event: Event;
+}) => Context;
 ```
 
-`save` is called after every committed transition. `load` is called once during startup if no `snapshot` option is provided. Hydrated context is not validated at startup unless `validateHydratedContext: true` is set.
+A guard selects a transition. A reducer returns replacement context, which must be a non-array record.
 
----
-
-### `InvokeArgs<Ctx, Ev>`
-
-Arguments passed to the invoke `src` function.
+### `EffectArgs<Context, Event>` and `Effect<Context, Event>`
 
 ```ts
-type InvokeArgs<Ctx extends object, Ev extends MachineEvent> = {
-  readonly context: Readonly<Ctx>;
-  readonly entryEvent: Ev | LifecycleEvent;
+type EffectArgs<Context extends Record<string, unknown>, Event extends MachineEvent> = {
+  readonly context: Readonly<Context>;
+  readonly event: Event | undefined;
+  readonly send: (event: Event) => void;
   readonly signal: AbortSignal;
 };
+
+type Effect<Context extends Record<string, unknown>, Event extends MachineEvent> =
+  (args: EffectArgs<Context, Event>) => void;
 ```
 
-`signal` is aborted automatically when the state is exited. `context` is captured at invoke creation time.
+Post-commit effects receive `undefined` for initial entry and actor timer transitions. They cannot update machine context directly.
 
----
-
-### `InvokeDef<Ctx, Ev>`
-
-Configuration for an async task in a state.
+### `Transition<State, Context, Event, Type>` and `TransitionInput`
 
 ```ts
-type InvokeDef<Ctx extends object, Ev extends MachineEvent, Result = unknown> = {
-  id?: string;
-  onDone?: (result: Result, context: Readonly<Ctx>) => Ev;
-  onError?: (error: unknown, context: Readonly<Ctx>) => Ev;
-  src: (args: InvokeArgs<Ctx, Ev>) => Promise<Result>;
+type Transition<
+  State extends string,
+  Context extends Record<string, unknown>,
+  Event extends MachineEvent,
+  Type extends EventType<Event> = EventType<Event>,
+> = {
+  readonly effects?: readonly Effect<Context, Event>[];
+  readonly guard?: Guard<Context, EventByType<Event, Type>>;
+  readonly reduce?: Reducer<Context, EventByType<Event, Type>>;
+  readonly target: State;
+};
+
+type TransitionInput<
+  State extends string,
+  Context extends Record<string, unknown>,
+  Event extends MachineEvent,
+  Type extends EventType<Event> = EventType<Event>,
+> = Transition<State, Context, Event, Type> | readonly Transition<State, Context, Event, Type>[];
+```
+
+An ordered transition array selects the first guard that passes.
+
+### `After<State, Context, Event>`
+
+```ts
+type After<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
+  readonly delay: number;
+  readonly effects?: readonly Effect<Context, Event>[];
+  readonly guard?: Guard<Context, Event | undefined>;
+  readonly reduce?: Reducer<Context, Event | undefined>;
+  readonly target: State;
 };
 ```
 
-| Field     | Description                                                                                          |
-| --------- | ---------------------------------------------------------------------------------------------------- |
-| `id`      | Optional label surfaced as `invokeId` in `DebugEvent`. Defaults to an auto-incremented string.       |
-| `onDone`  | Called with the resolved value and the **context at invoke start**. Returns the event to dispatch.   |
-| `onError` | Called with the rejection reason and the **context at invoke start**. Returns the event to dispatch. |
-| `src`     | The async task factory. Receives `InvokeArgs` — use `signal` for cooperative cancellation.           |
+A delayed state transition. Its guard and reducer receive `event: undefined`.
 
----
-
-### `TransitionTraceEntry<State, Ev>`
-
-A single entry in the transition trace ring buffer.
+### `InvokeArgs<Context, Event>` and `Invoke<Context, Event, Result>`
 
 ```ts
-type TransitionTraceEntry<State extends string, Ev extends MachineEvent> = {
-  readonly event: Ev | LifecycleEvent;
-  readonly from: State;
-  readonly timestamp: number; // Date.now() at commit time
-  readonly to: State;
+type InvokeArgs<Context extends Record<string, unknown>, Event extends MachineEvent> = {
+  readonly context: Readonly<Context>;
+  readonly event: Event | undefined;
+  readonly signal: AbortSignal;
+};
+
+type Invoke<Context extends Record<string, unknown>, Event extends MachineEvent, Result = unknown> = {
+  readonly onDone?: (args: { readonly context: Readonly<Context>; readonly result: Result }) => Event;
+  readonly onError?: (args: { readonly context: Readonly<Context>; readonly error: unknown }) => Event;
+  readonly src: (args: InvokeArgs<Context, Event>) => Promise<Result> | Result;
 };
 ```
 
-## Schema Helpers
+An actor-owned task started on state entry. `event` is the triggering event or `undefined` for initial or restored resources.
 
-These utilities bundle the three generics (`State`, `Ctx`, `Ev`) into a single opaque type so you can annotate actions, guards, and options without repeating the full signature everywhere.
-
-### `MachineSchema<State, Ctx, Ev>`
-
-Opaque bundle that captures all three generics. Pass it to the `MachineType*` aliases below.
+### `StateNode<State, Context, Event>` and `MachineConfig<State, Context, Event>`
 
 ```ts
-type MachineSchema<S extends string, C extends object, E extends MachineEvent> = {
-  readonly _s: S;
-  readonly _c: C;
-  readonly _e: E;
+type StateNode<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
+  readonly after?: readonly After<State, Context, Event>[];
+  readonly entry?: readonly Effect<Context, Event>[];
+  readonly exit?: readonly Effect<Context, Event>[];
+  readonly invoke?: readonly Invoke<Context, Event>[];
+  readonly on?: Partial<{ [Type in EventType<Event>]: TransitionInput<State, Context, Event, Type> }>;
+};
+
+type MachineConfig<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> =
+  (keyof Context extends never ? { readonly context?: Context } : { readonly context: Context }) & {
+    readonly initial: State;
+    readonly states: Record<State, StateNode<State, Context, Event>>;
+  };
+```
+
+A flat machine definition. State nodes cannot contain child states.
+
+### `TransitionResult<State, Context>`
+
+```ts
+type TransitionResult<State extends string, Context extends Record<string, unknown>> = {
+  readonly snapshot: MachineSnapshot<State, Context>;
+  readonly type: 'ignored' | 'transition';
 };
 ```
 
-```ts
-type Auth = MachineSchema<'idle' | 'loading', { user: User | null }, AuthEvent>;
-```
+Result of a pure user-event transition. It contains no effect plan.
 
----
-
-### `MachineAction<T, E?>`
-
-Convenience alias for `ActionFn` parameterised by a schema.
+### `ActorErrorContext<State, Event>`, `ActorErrorDisposition`, and `ActorOptions<State, Context, Event>`
 
 ```ts
-type MachineAction<T extends MachineSchema<any, any, any>, E extends T['_e'] = T['_e']> = ActionFn<T['_c'], E>;
-```
+type ActorErrorContext<State extends string, Event extends MachineEvent> = {
+  readonly event?: Event;
+  readonly phase: 'effect' | 'invoke' | 'subscriber' | 'transition';
+  readonly state: State;
+};
 
-```ts
-type Auth = MachineSchema<'idle' | 'loading', { user: User | null }, AuthEvent>;
+type ActorErrorDisposition = 'continue' | 'dispose';
 
-const setUser: MachineAction<Auth, { type: 'DONE'; user: User }> = ({ context, event }) => {
-  context.user = event.user;
+type ActorOptions<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
+  readonly maxTransitions?: number;
+  readonly onError?: (error: unknown, context: ActorErrorContext<State, Event>) => ActorErrorDisposition;
+  readonly snapshot?: MachineSnapshot<State, Context>;
 };
 ```
 
----
+`onError` must explicitly return `'continue'` to keep the actor alive or `'dispose'` to end it. Without an error handler, Clockwork disposes the actor silently.
 
-### `MachineGuard<T, E?>`
-
-Convenience alias for `GuardFn` parameterised by a schema.
+### `Actor<State, Context, Event>`
 
 ```ts
-type MachineGuard<T extends MachineSchema<any, any, any>, E extends T['_e'] = T['_e']> = GuardFn<T['_c'], E>;
+type Actor<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
+  [Symbol.dispose](): void;
+  can(event: Event): boolean;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
+  send(event: Event): void;
+  readonly snapshot: MachineSnapshot<State, Context>;
+  subscribe(listener: (snapshot: MachineSnapshot<State, Context>) => void): () => void;
+};
 ```
 
----
+An actor's `snapshot` is the current plain readonly snapshot.
 
-### `MachineTypeConfig<T>`
-
-Resolves to `MachineConfig<State, Ctx, Ev>` for a given schema. Use for typed config objects.
+### `Machine<State, Context, Event>`
 
 ```ts
-type MachineTypeConfig<T extends MachineSchema<any, any, any>> = MachineConfig<T['_s'], T['_c'], T['_e']>;
+type Machine<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
+  can(snapshot: MachineSnapshot<State, Context>, event: Event): boolean;
+  createActor(options?: ActorOptions<State, Context, Event>): Actor<State, Context, Event>;
+  readonly initialSnapshot: MachineSnapshot<State, Context>;
+  transition(snapshot: MachineSnapshot<State, Context>, event: Event): TransitionResult<State, Context>;
+};
 ```
 
----
+A compiled, reusable machine. Its transition lookup is map-based, so unknown or poison event names such as `__proto__` are safely ignored when no transition exists.
 
-### `MachineTypeDefinition<T>`
-
-Resolves to `MachineDefinition<State, Ctx, Ev>` for a given schema.
+### `DebugActorOptions<State, Context>`
 
 ```ts
-type MachineTypeDefinition<T extends MachineSchema<any, any, any>> = MachineDefinition<T['_s'], T['_c'], T['_e']>;
+type DebugActorOptions<State extends string, Context extends Record<string, unknown>> = {
+  readonly logger?: (snapshot: MachineSnapshot<State, Context>) => void;
+};
 ```
 
----
-
-### `MachineTypeInstance<T>`
-
-Resolves to `MachineInstance<State, Ctx, Ev>` for a given schema.
-
-```ts
-type MachineTypeInstance<T extends MachineSchema<any, any, any>> = MachineInstance<T['_s'], T['_c'], T['_e']>;
-```
-
----
-
-### `MachineTypeOptions<T>`
-
-Resolves to `InterpretOptions<State, Ctx, Ev>` for a given schema.
-
-```ts
-type MachineTypeOptions<T extends MachineSchema<any, any, any>> = InterpretOptions<T['_s'], T['_c'], T['_e']>;
-```
-
----
+Optional logger for `debugActor()`. Logger failures are ignored so observation cannot affect the actor's error policy.
 
 ## Errors
 
 ### `ClockworkError`
 
-Base class for every error `clockwork` throws. Use `instanceof ClockworkError` (or the static `ClockworkError.is()`) to catch any clockwork-originated error, or `instanceof <SpecificError>` to handle one failure mode precisely.
+`ClockworkError` reports invalid definitions, contexts, snapshots, and actor transition limits. It has `code`, `details`, and standard `Error` fields. Use `ClockworkError.is(error)` to narrow an unknown error.
 
 ```ts
-class ClockworkError extends Error {
-  static is(err: unknown): err is ClockworkError;
+if (ClockworkError.is(error)) {
+  console.error(error.code, error.details);
 }
-```
-
-`ClockworkError.is()` is a type-safe static predicate — prefer it over `instanceof ClockworkError` in catch blocks that may receive unknown values:
-
-```ts
-import { ClockworkError } from '@vielzeug/clockwork';
-
-try {
-  createMachine(config);
-} catch (err) {
-  if (ClockworkError.is(err)) {
-    console.error(err.name, err.message);
-  }
-}
-```
-
-Each subclass carries typed fields describing the failure — narrow with `instanceof` to access them:
-
-| Subclass                                 | Thrown when                                                                                                                                  | Fields                                     |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| `ClockworkInvalidAfterDelayError`         | An `after` delay is negative, `NaN`, or non-finite (`Infinity`)                                                                                | `path`, `delay`                            |
-| `ClockworkInvalidInitialStateError`       | `initial` does not exist in `states` (top-level or compound)                                                                                   | `path`, `initial`                          |
-| `ClockworkInvalidMaxTransitionsError`     | `maxTransitionsPerFlush` is less than 1                                                                                                         | `maxTransitionsPerFlush`                   |
-| `ClockworkInvalidSnapshotStateError`      | Hydrated snapshot refers to an unknown state                                                                                                    | `state`                                    |
-| `ClockworkInvalidTransitionArrayError`    | A transition array is empty, or an `invoke` array is empty                                                                                      | `path`, `eventType?`                       |
-| `ClockworkInvalidValidateContextError`    | Context fails `validateContext`                                                                                                                 | `phase` (`'init' \| 'transition'`), `reason` |
-| `ClockworkMissingCompoundInitialError`    | A compound state (has `states`) is missing `initial`                                                                                            | `path`                                     |
-| `ClockworkTransitionLoopGuardError`       | `maxTransitionsPerFlush` exceeded in one flush                                                                                                  | `maxTransitionsPerFlush`                   |
-| `ClockworkUnknownTargetError`             | A transition or `after` `target` does not exist in `states` — thrown for both unknown root states and unknown nested paths (e.g. `loading.nonexistent`) | `path`, `target`, `eventType?`             |
-
-```ts
-import { ClockworkError, ClockworkInvalidSnapshotStateError } from '@vielzeug/clockwork';
-
-try {
-  const m = createMachine(config).start({ snapshot: corruptedSnapshot });
-} catch (err) {
-  if (err instanceof ClockworkInvalidSnapshotStateError) {
-    // discard snapshot and start fresh — err.state names the invalid state
-    console.warn(`discarding snapshot: unknown state "${err.state}"`);
-  } else if (ClockworkError.is(err)) {
-    throw err; // some other clockwork validation failure
-  }
-}
-```
-
-## Signals and Reactivity
-
-`state` and `context` are `Reactive` values from `@vielzeug/ripple`. Use `effect()` to react to changes:
-
-```ts
-import { effect } from '@vielzeug/ripple';
-import { createMachine } from '@vielzeug/clockwork';
-
-const m = createMachine(config).start();
-
-effect(() => {
-  document.title = `Status: ${m.state.value}`;
-});
-
-m.send({ type: 'GO' }); // triggers the effect synchronously
-```
-
-Both signals update atomically inside a `batch()` — an effect reading both `state` and `context` will always see a consistent snapshot.
-
-For code that should not depend on `@vielzeug/ripple` directly, use `subscribe()`:
-
-```ts
-const unsub = m.subscribe(({ state, context }) => {
-  console.log(state, context);
-});
 ```

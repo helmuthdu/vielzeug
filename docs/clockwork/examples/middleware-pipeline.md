@@ -1,71 +1,56 @@
 ---
-title: Interceptor Pipeline
-description: Intercept and transform events with pure interceptor functions.
+title: 'Clockwork Examples — Event Boundaries'
+description: 'Validate and authorize input before sending domain events to an actor.'
 ---
 
-## Interceptor Pipeline
+## Event Boundaries
 
 ### Problem
 
-You need to intercept machine events for cross-cutting concerns — logging, analytics, authorization — without polluting state transition logic.
+External input needs logging and authorization, but Clockwork has no interceptor pipeline.
 
 ### Solution
 
-Pass an `interceptors` array to `createMachine().start()`. Each interceptor is a pure function `(event, snapshot) => Ev | null`. Return the event (or a transformed event) to allow it; return `null` to block the chain:
+Perform transport validation and authorization at the input boundary, then send accepted events to the actor.
 
 ```ts
-import { createMachine, type InterceptorFn } from '@vielzeug/clockwork';
+import { defineMachine } from '@vielzeug/clockwork';
 
-type Event = { type: 'ADMIN_ACTION' } | { type: 'GO' } | { type: 'STOP' };
-type Context = { isAdmin: boolean };
-type State = 'active' | 'idle';
-
-// Logging interceptor — observes all events, passes them through
-const logger: InterceptorFn<State, Context, Event> = (event, snapshot) => {
-  console.log(`[${snapshot.state}] ${event.type}`);
-  return event; // must return the event to allow it
-};
-
-// Authorization interceptor — blocks events based on context
-const authGuard: InterceptorFn<State, Context, Event> = (event, snapshot) => {
-  if (event.type === 'ADMIN_ACTION' && !snapshot.context.isAdmin) {
-    console.warn('Blocked: insufficient permissions');
-    return null; // null blocks the event
-  }
-  return event;
-};
-
-const config = {
-  context: { isAdmin: false },
+type Event = { type: 'START' } | { type: 'RESET' };
+const machine = defineMachine<Record<string, never>, Event>()({
   initial: 'idle',
   states: {
-    active: { on: { STOP: { target: 'idle' } } },
-    idle: {
-      on: {
-        ADMIN_ACTION: { target: 'active' },
-        GO: { target: 'active' },
-      },
-    },
+    idle: { on: { START: { target: 'active' } } },
+    active: { on: { RESET: { target: 'idle' } } },
   },
+});
+
+const actor = machine.createActor();
+const isEvent = (event: unknown): event is Event =>
+  typeof event === 'object' && event !== null &&
+  'type' in event && ((event as { type: unknown }).type === 'START' || (event as { type: unknown }).type === 'RESET');
+
+const dispatch = (event: unknown, authorized: boolean) => {
+  if (!isEvent(event)) return 'invalid';
+  if (event.type === 'RESET' && !authorized) return 'denied';
+  actor.send(event);
+  return 'sent';
 };
 
-// Interceptors run left-to-right: logger runs first, then authGuard
-const m = createMachine(config).start({ interceptors: [logger, authGuard] });
-
-console.log(m.send({ type: 'ADMIN_ACTION' }).status); // 'rejected' — blocked by authGuard
-console.log(m.send({ type: 'GO' }).status); // 'transitioned'
-
-m[Symbol.dispose]();
+console.log(dispatch({ type: 'START' }, true)); // 'sent'
+console.log(dispatch({ type: '__proto__' }, true)); // 'invalid'
+console.log(dispatch({ type: 'RESET' }, false)); // 'denied'
+console.log(actor.snapshot.state); // 'active'
+actor.dispose();
 ```
 
 ### Pitfalls
 
-- **Interceptors run left-to-right.** The first `null` in the chain stops all subsequent interceptors.
-- **Returning `null` swallows the event silently.** `send().status` is `'rejected'`. Log or emit a signal if you need UI feedback.
-- **Interceptors are synchronous.** Do not `await` inside interceptors; use entry/exit actions for async side effects.
-- **Interceptors can transform events.** Return a new event object to change its type or payload before it reaches the machine.
+- Put state-dependent admission rules in `guard`, not in a generic boundary.
+- Do not add an interceptor abstraction around every actor without a concrete boundary need.
 
 ### Related
 
-- [Clockwork Examples](/clockwork/examples.md)
-- [Debugging Transitions](./debugging-transitions.md)
+- [Permission-Based Access Control](./permission-based-access.md)
+- [Multi-Machine Coordination](./multi-machine-coordination.md)
+- [API Reference](../api.md)

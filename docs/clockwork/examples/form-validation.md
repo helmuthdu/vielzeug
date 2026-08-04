@@ -1,198 +1,52 @@
 ---
-title: 'Clockwork Examples — Form with Validation'
-description: 'Multi-step form with validation at each step using @vielzeug/clockwork.'
+title: 'Clockwork Examples — Form Validation'
+description: 'Store submitted fields through replacement context and guard workflow advancement.'
 ---
 
-## Form with Validation
+## Form Validation
 
 ### Problem
 
-Building a multi-step form where each step validates input before advancing, and users can navigate backward. Without proper state machine patterns, managing step transitions, validation errors, and form state becomes scattered across components.
+A form step must retain entered values and reject advancement until they are valid.
 
 ### Solution
 
-Use state nodes with guard conditions to validate input before advancing, and direct context mutation to track progress and capture form data at each step.
+Send field values in events, reduce them into a new context, and guard the advancing transition.
 
 ```ts
-import { createMachine } from '@vielzeug/clockwork';
+import { defineMachine } from '@vielzeug/clockwork';
 
-type FormContext = {
-  step: number;
-  data: { email: string; password: string; name: string };
-  errors: Record<string, string>;
-};
+type Event = { email: string; type: 'SET_EMAIL' } | { type: 'NEXT' } | { type: 'BACK' };
 
-type FormEvent =
-  | { type: 'NEXT' }
-  | { type: 'PREV' }
-  | { type: 'SUBMIT'; data: Record<string, string> }
-  | { type: 'SUBMIT_SUCCESS' }
-  | { type: 'SUBMIT_FAILURE'; error: string }
-  | { type: 'RESET' };
-
-const formMachine = createMachine({
-  initial: 'step1',
-  context: {
-    step: 1,
-    data: { email: '', password: '', name: '' },
-    errors: {},
-  },
+const form = defineMachine<{ email: string }, Event>()({
+  context: { email: '' },
+  initial: 'email',
   states: {
-    step1: {
+    email: {
       on: {
-        NEXT: [
-          {
-            guard: ({ context }) => context.data.email.includes('@'),
-            target: 'step2',
-            actions: [
-              ({ context }) => {
-                context.step = 2;
-              },
-            ],
-          },
-        ],
-        RESET: [
-          {
-            target: 'step1',
-            actions: [
-              ({ context }) => {
-                context.step = 1;
-                context.data = { email: '', password: '', name: '' };
-                context.errors = {};
-              },
-            ],
-          },
-        ],
+        SET_EMAIL: { reduce: ({ event }) => ({ email: event.email }), target: 'email' },
+        NEXT: { guard: ({ context }) => context.email.includes('@'), target: 'review' },
       },
     },
-    step2: {
-      on: {
-        NEXT: [
-          {
-            guard: ({ context }) => context.data.password.length >= 8,
-            target: 'step3',
-            actions: [
-              ({ context }) => {
-                context.step = 3;
-              },
-            ],
-          },
-        ],
-        PREV: [
-          {
-            target: 'step1',
-            actions: [
-              ({ context }) => {
-                context.step = 1;
-              },
-            ],
-          },
-        ],
-        RESET: [{ target: 'step1' }],
-      },
-    },
-    step3: {
-      on: {
-        PREV: [
-          {
-            target: 'step2',
-            actions: [
-              ({ context }) => {
-                context.step = 2;
-              },
-            ],
-          },
-        ],
-        SUBMIT: [
-          {
-            guard: ({ context }) => context.data.name.length > 0,
-            target: 'submitting',
-            actions: [
-              ({ context, event }) => {
-                context.data = event.data as any;
-              },
-            ],
-          },
-        ],
-        RESET: [{ target: 'step1' }],
-      },
-    },
-    submitting: {
-      invoke: [
-        {
-          src: async ({ context }) =>
-            fetch('/api/register', {
-              method: 'POST',
-              body: JSON.stringify(context.data),
-            }).then((r) => {
-              if (!r.ok) throw new Error('Registration failed');
-              return r.json();
-            }),
-          onDone: () => ({ type: 'SUBMIT_SUCCESS' }),
-          onError: (error) => ({ type: 'SUBMIT_FAILURE', error: String(error) }),
-        },
-      ],
-      on: {
-        SUBMIT_SUCCESS: [{ target: 'success' }],
-        SUBMIT_FAILURE: [
-          {
-            target: 'error',
-            actions: [
-              ({ context, event }) => {
-                context.errors = { submit: event.error };
-              },
-            ],
-          },
-        ],
-      },
-    },
-    success: {
-      on: {
-        RESET: [{ target: 'step1' }],
-      },
-    },
-    error: {
-      on: {
-        RESET: [{ target: 'step1' }],
-      },
-    },
+    review: { on: { BACK: { target: 'email' }, NEXT: { target: 'submitted' } } },
+    submitted: {},
   },
-}).start();
+});
 
-const form = formMachine;
-
-console.log(form.state.value); // 'step1'
-console.log(form.context.value.step); // 1
-
-// Try to advance without email — guard blocks transition
-form.send({ type: 'NEXT' }); // Blocked by guard, stays at step1
-
-// Set valid email first (in real usage, from input binding)
-form.context.value.data.email = 'user@example.com';
-form.send({ type: 'NEXT' }); // Passes guard, state: 'step2'
-
-// Advance with password validation
-form.context.value.data.password = 'secure123';
-form.send({ type: 'NEXT' }); // Passes guard, state: 'step3'
-
-// Submit form
-form.context.value.data.name = 'John';
-form.send({ type: 'SUBMIT', data: { email: 'user@example.com', password: 'secure123', name: 'John' } });
-// state: 'submitting' → 'success'
-
-// Can reset to start over
-form.send({ type: 'RESET' }); // state: 'step1', all data cleared
+const actor = form.createActor();
+actor.send({ email: 'ada@example.com', type: 'SET_EMAIL' });
+actor.send({ type: 'NEXT' });
+console.log(actor.snapshot.state); // 'review'
+actor.dispose();
 ```
 
 ### Pitfalls
 
-- **Guard conditions block transitions silently** — Sending NEXT without valid data won't throw; the state stays the same. Use context subscribers to detect stuck states.
-- **Context mutations don't trigger validation** — Modifying `form.context.value.data.email` directly doesn't validate. Always use `send()` to trigger guards; use reactive bindings to update context atomically.
-- **Forgetting to capture event data** — If you dispatch `{ type: 'SUBMIT', data: {...} }` but the action doesn't mutate context with `event.data`, the form data won't be saved. Always capture event data in action functions.
-- **invoke onError receives Error, not string** — In the `onError` handler, the second argument is an Error object; convert to string with `String(error)` before storing in context.
+- A failed guard produces an `ignored` result and keeps the current snapshot.
+- Do not write directly to `actor.snapshot.context`; reducers own context replacement.
 
 ### Related
 
-- [Fetch with Retry](./fetch-retry.md) — Similar guard pattern for retry limits
-- [Ripple documentation](/ripple/) — Reactive state tracking for form inputs
-- [Ward documentation](/ward/) — Role-based validation logic on top of form states
+- [Counter with Reset](./counter-with-reset.md)
+- [Auth Flow with Guards](./auth-flow.md)
+- [API Reference](../api.md)

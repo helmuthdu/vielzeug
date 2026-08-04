@@ -215,14 +215,14 @@ Reach for these when the problem calls for them.
 
 ### Clockwork
 
-Typed finite state machines — pure transitions, immutable snapshots, owned actors, timers, and async invokes.
+Typed finite state machines — pure transitions, plain readonly actor snapshots, owned actors, timers, and async invokes.
 
 ```typescript
-import { createMachine } from '@vielzeug/clockwork';
+import { defineMachine } from '@vielzeug/clockwork';
 
 type AuthEvent = { type: 'LOGIN'; token: string } | { type: 'LOGOUT' };
 
-const authMachine = createMachine({
+const authMachine = defineMachine<{ token: string }, AuthEvent>()({
   initial: 'idle',
   context: { token: '' },
   states: {
@@ -237,7 +237,8 @@ const authMachine = createMachine({
 
 const auth = authMachine.createActor();
 auth.send({ type: 'LOGIN', token: 'abc123' });
-console.log(auth.snapshot.value.state); // 'active'
+console.log(auth.snapshot.state); // 'active'
+auth.dispose();
 ```
 
 [Clockwork docs →](/clockwork/)

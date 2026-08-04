@@ -1,7 +1,7 @@
 export const resolveAndErrorExample = {
-  code: `import { ClockworkError, createMachine } from '@vielzeug/clockwork'
+  code: `import { ClockworkError, defineMachine } from '@vielzeug/clockwork'
 
-const machine = createMachine({
+const machine = defineMachine()({
   context: { role: 'guest' },
   initial: 'locked',
   states: {
@@ -24,12 +24,17 @@ const result = machine.transition(
 )
 console.log('Guest result:', result.type)
 
-try {
-  createMachine({ initial: 'missing', states: { idle: {} } })
-} catch (error) {
-  if (ClockworkError.is(error)) {
-    console.log('Validation code:', error.code)
-    console.log('Details:', error.details)
+for (const definition of [
+  { initial: 'missing', states: { idle: {} } },
+  { context: [], initial: 'idle', states: { idle: {} } },
+]) {
+  try {
+    defineMachine()(definition)
+  } catch (error) {
+    if (ClockworkError.is(error)) {
+      console.log('Validation code:', error.code)
+      console.log('Details:', error.details)
+    }
   }
 }`,
   name: 'Pure Transitions & Errors',

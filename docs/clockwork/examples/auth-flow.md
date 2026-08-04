@@ -1,145 +1,68 @@
 ---
 title: 'Clockwork Examples — Auth Flow with Guards'
-description: Auth flow with guards example for @vielzeug/clockwork.
+description: 'Combine guarded admission with an abortable authentication invoke.'
 ---
 
 ## Auth Flow with Guards
 
 ### Problem
 
-You need an authentication flow that limits brute-force attempts, performs an async login request, manages tokens, and handles logout — all as explicit, type-safe state transitions.
+A login attempt must stop after a limit and then process an asynchronous result.
 
 ### Solution
 
-Use guards to block the `LOGIN` transition after three failed attempts, and `invoke` in `loading` to perform the async login call. The attempt counter accumulates in context so the guard has access on every retry.
+Guard `LOGIN`, store the attempt immutably, and map invoke settlement to ordinary events.
 
 ```ts
-import { createMachine } from '@vielzeug/clockwork';
+import { defineMachine } from '@vielzeug/clockwork';
 
-type State = 'authenticated' | 'error' | 'loading' | 'unauthenticated';
-type Context = { attempts: number; token: string };
 type Event =
-  | { email: string; password: string; type: 'LOGIN' }
-  | { type: 'LOGOUT' }
+  | { email: string; type: 'LOGIN' }
   | { token: string; type: 'AUTH_SUCCESS' }
-  | { type: 'AUTH_FAILED' };
+  | { type: 'AUTH_FAILED' }
+  | { type: 'LOGOUT' };
 
-const authDef = createMachine({
+const auth = defineMachine<{ attempts: number; token: string }, Event>()({
   context: { attempts: 0, token: '' },
-  initial: 'unauthenticated',
+  initial: 'signedOut',
   states: {
-    authenticated: {
-      on: {
-        LOGOUT: {
-          actions: [
-            ({ context }) => {
-              context.token = '';
-            },
-          ],
-          target: 'unauthenticated',
-        },
-      },
-    },
-    error: {
+    signedOut: {
       on: {
         LOGIN: {
-          actions: [
-            ({ context }) => {
-              context.attempts += 1;
-            },
-          ],
           guard: ({ context }) => context.attempts < 3,
+          reduce: ({ context }) => ({ ...context, attempts: context.attempts + 1 }),
           target: 'loading',
         },
       },
     },
     loading: {
-      invoke: [
-        {
-          onDone: (res, _ctx) => ({ token: (res as { token: string }).token, type: 'AUTH_SUCCESS' }),
-          onError: (_err, _ctx) => ({ type: 'AUTH_FAILED' }),
-          src: async ({ entryEvent, signal }) => {
-            if (entryEvent.type !== 'LOGIN') throw new Error('unexpected');
-            return fetch('/auth/login', {
-              body: JSON.stringify({ email: entryEvent.email, password: entryEvent.password }),
-              headers: { 'Content-Type': 'application/json' },
-              method: 'POST',
-              signal,
-            }).then((r) => r.json());
-          },
-        },
-      ],
+      invoke: [{
+        src: async () => ({ token: 'session-token' }),
+        onDone: ({ result }) => ({ token: (result as { token: string }).token, type: 'AUTH_SUCCESS' }),
+        onError: () => ({ type: 'AUTH_FAILED' }),
+      }],
       on: {
-        AUTH_FAILED: {
-          actions: [
-            ({ context }) => {
-              context.attempts += 1;
-            },
-          ],
-          target: 'error',
-        },
-        AUTH_SUCCESS: {
-          actions: [
-            ({ context, event }) => {
-              context.attempts = 0;
-              context.token = event.token;
-            },
-          ],
-          target: 'authenticated',
-        },
+        AUTH_FAILED: { target: 'signedOut' },
+        AUTH_SUCCESS: { reduce: ({ event }) => ({ attempts: 0, token: event.token }), target: 'signedIn' },
       },
     },
-    unauthenticated: {
-      on: {
-        LOGIN: {
-          actions: [
-            ({ context }) => {
-              context.attempts += 1;
-            },
-          ],
-          guard: ({ context }) => context.attempts < 3,
-          target: 'loading',
-        },
-      },
-    },
+    signedIn: { on: { LOGOUT: { reduce: () => ({ attempts: 0, token: '' }), target: 'signedOut' } } },
   },
 });
 
-const m = authDef.start();
-```
-
-### Testing guards with `.resolve()`
-
-```ts
-import { expect, test } from 'vitest';
-
-test('allows login with fewer than 3 attempts', () => {
-  const result = authDef.resolve({
-    context: { attempts: 2, token: '' },
-    event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
-    state: 'unauthenticated',
-  });
-  expect(result?.target).toBe('loading');
-});
-
-test('blocks login after 3 attempts', () => {
-  const result = authDef.resolve({
-    context: { attempts: 3, token: '' },
-    event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
-    state: 'unauthenticated',
-  });
-  expect(result).toBeUndefined();
-});
+const actor = auth.createActor();
+actor.send({ email: 'ada@example.com', type: 'LOGIN' });
+actor.subscribe((snapshot) => console.log(snapshot.state));
+setTimeout(() => actor.dispose(), 0);
 ```
 
 ### Pitfalls
 
-- **Guard runs before actions.** The guard sees the context _before_ actions mutate it — `attempts` is checked pre-increment.
-- **`entryEvent` in invoke `src`** gives access to the event that triggered entry. Check its type — it may also be a lifecycle event (`$init`, `$hydrate`, `$after`).
-- **Always handle both `onDone` and `onError`.** If `onError` is omitted and the invoke rejects, the machine remains in the current state silently.
+- Invokes start on state entry and their `signal` aborts when that state exits or actor disposes.
+- A guard does not report a rejection reason; the result is `ignored`.
 
 ### Related
 
-- [Data Fetching with Error Recovery](./data-fetching.md) — Simpler invoke pattern
-- [Unit Testing with `.resolve()`](./unit-testing.md) — Pure guard testing
-- [API Reference — `GuardFn`](/clockwork/api#guardfnctx-ev)
+- [Data Fetching with Error Recovery](./data-fetching.md)
+- [Pure Transition Testing](./unit-testing.md)
+- [API Reference](../api.md)

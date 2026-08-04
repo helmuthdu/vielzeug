@@ -437,6 +437,7 @@ export default defineConfig({
             { link: '/clockwork/usage#async-invokes', text: 'Async Invokes' },
             { link: '/clockwork/usage#delayed-transitions', text: 'Delayed Transitions' },
             { link: '/clockwork/usage#snapshot-observation-and-persistence', text: 'Snapshots & Persistence' },
+            { link: '/clockwork/usage#error-handling', text: 'Error Handling' },
             { link: '/clockwork/usage#debugging', text: 'Debugging' },
             { link: '/clockwork/usage#testing', text: 'Testing' },
             { link: '/clockwork/usage#framework-integration', text: 'Framework Integration' },

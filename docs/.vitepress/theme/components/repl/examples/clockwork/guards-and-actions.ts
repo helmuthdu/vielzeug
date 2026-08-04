@@ -1,10 +1,10 @@
 export const guardsAndActionsExample = {
-  code: `import { createMachine } from '@vielzeug/clockwork'
+  code: `import { defineMachine } from '@vielzeug/clockwork'
 
 const SECRET_KEY = 'vielzeug'
 
-// Guards select a transition. Reducers return immutable replacement context.
-const machine = createMachine({
+// Guards select a transition. Reducers return replacement context.
+const machine = defineMachine()({
   context: { accessAttempts: 0 },
   initial: 'locked',
   states: {
@@ -29,8 +29,8 @@ const machine = createMachine({
 
 const actor = machine.createActor()
 actor.send({ type: 'UNLOCK', key: 'wrong' })
-console.log('Wrong key:', actor.snapshot.value)
+console.log('Wrong key:', actor.snapshot)
 actor.send({ type: 'UNLOCK', key: SECRET_KEY })
-console.log('Correct key:', actor.snapshot.value)`,
+console.log('Correct key:', actor.snapshot)`,
   name: 'Guards & Reducers',
 };

@@ -1,6 +1,4 @@
-import type { MachineConfig, MachineInstance } from '@vielzeug/clockwork';
-
-import { createMachine } from '@vielzeug/clockwork';
+import { defineMachine } from '@vielzeug/clockwork';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -12,15 +10,15 @@ type CheckoutContext = {
 
 type CheckoutEvent = { type: 'BACK' } | { orderId: string; type: 'CONFIRM' } | { type: 'NEXT' } | { type: 'RESTART' };
 
-// ── Machine definition ────────────────────────────────────────────────────────
+// ── Singleton — one checkout flow at a time, reset via RESTART after confirmation ────
 
-export const checkoutMachineDefinition: MachineConfig<CheckoutStep, CheckoutContext, CheckoutEvent> = {
+export const checkoutMachine = defineMachine<CheckoutContext, CheckoutEvent>()({
   context: { orderId: null },
   initial: 'shipping',
   states: {
     confirmed: {
       on: {
-        RESTART: { actions: [({ context }) => (context.orderId = null)], target: 'shipping' },
+        RESTART: { reduce: ({ context }) => ({ ...context, orderId: null }), target: 'shipping' },
       },
     },
     payment: {
@@ -33,7 +31,7 @@ export const checkoutMachineDefinition: MachineConfig<CheckoutStep, CheckoutCont
       on: {
         BACK: { target: 'payment' },
         CONFIRM: {
-          actions: [({ context, event }) => (context.orderId = event.orderId)],
+          reduce: ({ context, event }) => ({ ...context, orderId: event.orderId }),
           target: 'confirmed',
         },
       },
@@ -44,9 +42,4 @@ export const checkoutMachineDefinition: MachineConfig<CheckoutStep, CheckoutCont
       },
     },
   },
-};
-
-// ── Singleton — one checkout flow at a time, reset via RESTART after confirmation ────
-
-export const checkoutMachine: MachineInstance<CheckoutStep, CheckoutContext, CheckoutEvent> =
-  createMachine(checkoutMachineDefinition).start();
+}).createActor();

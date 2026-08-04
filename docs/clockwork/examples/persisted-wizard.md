@@ -1,90 +1,55 @@
 ---
 title: 'Clockwork Examples — Persisted Wizard'
-description: Persisted wizard example for @vielzeug/clockwork.
+description: 'Persist validated actor snapshots at the application boundary.'
 ---
 
 ## Persisted Wizard
 
 ### Problem
 
-You need a multi-step form wizard that survives page refreshes — the user should resume from their last completed step rather than starting over.
+A multi-step workflow must resume after a reload without built-in runtime persistence.
 
 ### Solution
 
-Use `PersistenceAdapter` with `sessionStorage` (or `localStorage` for longer-lived persistence). The machine auto-hydrates from the stored snapshot on startup, then saves after each transition.
+Validate stored data yourself, pass it as `createActor({ snapshot })`, and persist committed snapshots from a subscription.
 
 ```ts
-import { createMachine, type MachineSnapshot } from '@vielzeug/clockwork';
+import { defineMachine, type MachineSnapshot } from '@vielzeug/clockwork';
 
-type State = 'confirm' | 'details' | 'info' | 'success';
+type State = 'info' | 'details' | 'confirm' | 'success';
 type Context = { details: string; email: string; name: string };
-type Event =
-  | { type: 'BACK' }
-  | { details: string; type: 'SUBMIT_DETAILS' }
-  | { email: string; name: string; type: 'SUBMIT_INFO' }
-  | { type: 'CONFIRM' };
+type Event = { type: 'BACK' } | { details: string; type: 'DETAILS' } | { email: string; name: string; type: 'INFO' } | { type: 'CONFIRM' };
 
-const wizardDef = createMachine({
+const wizard = defineMachine<Context, Event>()({
   context: { details: '', email: '', name: '' },
   initial: 'info',
   states: {
+    info: { on: { INFO: { reduce: ({ context, event }) => ({ ...context, email: event.email, name: event.name }), target: 'details' } } },
+    details: { on: { BACK: { target: 'info' }, DETAILS: { reduce: ({ context, event }) => ({ ...context, details: event.details }), target: 'confirm' } } },
     confirm: { on: { BACK: { target: 'details' }, CONFIRM: { target: 'success' } } },
-    details: {
-      on: {
-        BACK: { target: 'info' },
-        SUBMIT_DETAILS: {
-          actions: [
-            ({ context, event }) => {
-              context.details = event.details;
-            },
-          ],
-          target: 'confirm',
-        },
-      },
-    },
-    info: {
-      on: {
-        SUBMIT_INFO: {
-          actions: [
-            ({ context, event }) => {
-              context.email = event.email;
-              context.name = event.name;
-            },
-          ],
-          target: 'details',
-        },
-      },
-    },
     success: {},
   },
 });
 
-const STORAGE_KEY = 'wizard-snapshot';
+const key = 'wizard-snapshot';
+const parsed = JSON.parse(sessionStorage.getItem(key) ?? 'null') as MachineSnapshot<State, Context> | null;
+const snapshot = parsed?.state && parsed.context ? parsed : undefined;
+const actor = wizard.createActor({ snapshot });
+const stop = actor.subscribe((next) => sessionStorage.setItem(key, JSON.stringify(next)));
 
-const m = wizardDef.start({
-  persistence: {
-    load: () => {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as MachineSnapshot<State, Context>) : undefined;
-    },
-    save: (snap) => sessionStorage.setItem(STORAGE_KEY, JSON.stringify(snap)),
-  },
-});
-
-// On wizard completion, clear storage manually
-if (m.state.value === 'success') {
-  sessionStorage.removeItem(STORAGE_KEY);
-}
+actor.send({ email: 'ada@example.com', name: 'Ada', type: 'INFO' });
+console.log(actor.snapshot.state); // 'details'
+stop();
+actor.dispose();
 ```
 
 ### Pitfalls
 
-- **`PersistenceAdapter` has no `clear()` method.** Clear storage directly via the storage API when you want to reset (e.g. `sessionStorage.removeItem(key)`).
-- **Disposal does NOT clear persistence.** The machine persists its last snapshot so it can resume after page refresh or HMR.
-- **Stale snapshots may reference outdated states.** If you rename states between releases, hydration throws `MACHINE_INVALID_SNAPSHOT_STATE`. Wrap `interpret()` in a try/catch and fall back to a fresh machine.
-- **`snapshot` option takes priority over persistence.** If you pass `options.snapshot`, `persistence.load()` is not called.
+- Clockwork validates restored state names, not your persisted context fields.
+- Store only serializable domain data and version your storage format.
 
 ### Related
 
-- [Data Fetching with Error Recovery](./data-fetching.md) — Combining invokes with state transitions
-- [API Reference — `PersistenceAdapter`](/clockwork/api#persistenceadapterstate-ctx)
+- [Multi-Step Wizard with Routing](./wizard-with-routing.md)
+- [Shopping Cart Checkout](./checkout.md)
+- [API Reference](../api.md)

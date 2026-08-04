@@ -213,15 +213,15 @@ Ore uses Ripple for component reactivity. Clockwork actors expose framework-neut
 
 ```ts
 import { createRipple } from '@vielzeug/ripple';
-import { createMachine } from '@vielzeug/clockwork';
+import { defineMachine } from '@vielzeug/clockwork';
 
 const ripple = createRipple();
-const actor = createMachine({
+const actor = defineMachine<Record<string, never>, { type: 'START' }>()({
   initial: 'idle',
-  states: { active: {}, idle: {} },
+  states: { active: {}, idle: { on: { START: { target: 'active' } } } },
 }).createActor();
 
-const snapshot = ripple.signal(actor.snapshot.value);
+const snapshot = ripple.signal(actor.snapshot);
 const stop = actor.subscribe((next) => (snapshot.value = next));
 const status = ripple.computed(() => snapshot.value.state);
 console.log(status.value);

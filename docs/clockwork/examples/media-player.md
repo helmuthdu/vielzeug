@@ -1,186 +1,61 @@
 ---
 title: 'Clockwork Examples — Media Player'
-description: 'Playback control with async loading states using @vielzeug/clockwork.'
+description: 'Commit playback state before calling browser media APIs.'
 ---
 
 ## Media Player
 
 ### Problem
 
-A media player needs to handle loading audio, playing, pausing, seeking, and volume control. Different states have different capabilities: you can't seek while loading, volume changes affect both playing and paused states. Manual state tracking leads to inconsistent UI and race conditions between overlapping operations.
+Playback commands must update state and call media APIs without mixing side effects into reducers.
 
 ### Solution
 
-Use entry/exit actions for side effects (log playback state), `invoke` for async loading with onDone/onError handlers, and guard-free transitions for simple control changes like seeking.
+Use reducers for playback data and post-commit effects for the media element.
 
 ```ts
-import { createMachine } from '@vielzeug/clockwork';
+import { defineMachine } from '@vielzeug/clockwork';
 
-type PlayerContext = {
-  url: string;
-  currentTime: number;
-  duration: number;
-  volume: number;
-};
+type Event = { type: 'PAUSE' } | { type: 'PLAY' } | { position: number; type: 'SEEK' };
+const media = { currentTime: 0, pause: () => console.log('paused'), play: () => console.log('playing') };
 
-type PlayerEvent =
-  | { type: 'LOAD'; url: string }
-  | { type: 'PLAY' }
-  | { type: 'PAUSE' }
-  | { type: 'SEEK'; time: number }
-  | { type: 'VOLUME'; level: number }
-  | { type: 'LOADED'; duration: number }
-  | { type: 'ERROR'; error: string };
-
-const playerMachine = createMachine({
-  initial: 'idle',
-  context: { url: '', currentTime: 0, duration: 0, volume: 100 },
+const player = defineMachine<{ position: number }, Event>()({
+  context: { position: 0 },
+  initial: 'paused',
   states: {
-    idle: {
+    paused: {
       on: {
-        LOAD: [
-          {
-            target: 'loading',
-            actions: [
-              ({ context, event }) => {
-                context.url = event.url;
-              },
-            ],
-          },
-        ],
-      },
-    },
-    loading: {
-      invoke: [
-        {
-          src: async ({ context }) =>
-            fetch(context.url).then((r) => {
-              if (!r.ok) throw new Error('Failed to load');
-              return r.blob().then((blob) => URL.createObjectURL(blob));
-            }),
-          onDone: () => ({ type: 'LOADED', duration: 180 }), // Duration typically from metadata
-          onError: (error) => ({ type: 'ERROR', error: String(error) }),
-        },
-      ],
-      on: {
-        LOADED: [
-          {
-            target: 'paused',
-            actions: [
-              ({ context, event }) => {
-                context.duration = event.duration;
-              },
-            ],
-          },
-        ],
-        ERROR: [
-          {
-            target: 'error',
-            actions: [
-              ({ context }) => {
-                context.url = '';
-              },
-            ],
-          },
-        ],
+        PLAY: { effects: [() => media.play()], target: 'playing' },
+        SEEK: { reduce: ({ event }) => ({ position: event.position }), target: 'paused' },
       },
     },
     playing: {
-      entry: () => console.log('<ore-icon name="play" size="16"></ore-icon> Playing...'),
-      exit: () => console.log('<ore-icon name="pause" size="16"></ore-icon> Paused'),
       on: {
-        PAUSE: [{ target: 'paused' }],
-        SEEK: [
-          {
-            actions: [
-              ({ context, event }) => {
-                context.currentTime = event.time;
-              },
-            ],
-            target: 'playing',
-          },
-        ],
-        VOLUME: [
-          {
-            actions: [
-              ({ context, event }) => {
-                context.volume = event.level;
-              },
-            ],
-            target: 'playing',
-          },
-        ],
-      },
-    },
-    paused: {
-      on: {
-        PLAY: [{ target: 'playing' }],
-        SEEK: [
-          {
-            actions: [
-              ({ context, event }) => {
-                context.currentTime = event.time;
-              },
-            ],
-            target: 'paused',
-          },
-        ],
-        VOLUME: [
-          {
-            actions: [
-              ({ context, event }) => {
-                context.volume = event.level;
-              },
-            ],
-            target: 'paused',
-          },
-        ],
-      },
-    },
-    error: {
-      on: {
-        LOAD: [
-          {
-            target: 'loading',
-            actions: [
-              ({ context, event }) => {
-                context.url = event.url;
-              },
-            ],
-          },
-        ],
+        PAUSE: { effects: [() => media.pause()], target: 'paused' },
+        SEEK: {
+          effects: [({ context }) => { media.currentTime = context.position; }],
+          reduce: ({ event }) => ({ position: event.position }),
+          target: 'playing',
+        },
       },
     },
   },
-}).start();
+});
 
-const player = playerMachine;
-
-// Start playback
-player.send({ type: 'LOAD', url: '/music/song.mp3' });
-// state: 'loading' (fetching audio)
-
-// Listen for state changes
-player.subscribe((state) => console.log('State:', state.value, 'Volume:', player.context.value.volume));
-
-// Once loading completes: state → 'paused'
-setTimeout(() => {
-  player.send({ type: 'PLAY' }); // state: 'playing' (logs "<ore-icon name="play" size="16"></ore-icon> Playing...")
-  player.send({ type: 'SEEK', time: 30 }); // Seek to 30s
-  player.send({ type: 'VOLUME', level: 50 }); // Volume to 50%
-  player.send({ type: 'PAUSE' }); // state: 'paused' (logs "<ore-icon name="pause" size="16"></ore-icon> Paused")
-}, 100);
+const actor = player.createActor();
+actor.send({ type: 'PLAY' });
+actor.send({ position: 42, type: 'SEEK' });
+console.log(actor.snapshot.context.position); // 42
+actor.dispose();
 ```
 
 ### Pitfalls
 
-- **invoke blocking during state transition** — While in `loading` state, sending PLAY won't work; you must wait for onDone to transition to paused first. Design UI to show "Loading..." spinner.
-- **Seeking while loading is silently ignored** — The SEEK event isn't defined in `loading` state's `on` object, so it has no handler. Add SEEK handlers to every state that should support seeking.
-- **Entry/exit side effects run every transition** — If you have audio.play() in the `playing` entry action, it re-runs every time you seek (transition: playing → playing). Use a custom invoke instead of entry/exit for actual playback control.
-- **Metadata fetch async but separate from src** — The actual audio duration comes from a separate metadata request in real implementations. Store duration in context separately from the URL loading.
+- Effects receive committed context, never a mutable draft.
+- Effects cannot update context; send an event if later state work is needed.
 
 ### Related
 
-- [Fetch with Retry](./fetch-retry.md) — Async loading patterns with retry
-- [Shopping Cart Checkout](./checkout.md) — Multiple state transitions with enter/exit actions
-- [Ore documentation](/ore/) — Binding player state to UI reactively
+- [Debugging Transitions](./debugging-transitions.md)
+- [Counter with Reset](./counter-with-reset.md)
+- [API Reference](../api.md)

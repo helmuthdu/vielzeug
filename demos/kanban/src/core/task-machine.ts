@@ -1,6 +1,4 @@
-import type { MachineConfig, MachineInstance } from '@vielzeug/clockwork';
-
-import { createMachine } from '@vielzeug/clockwork';
+import { defineMachine } from '@vielzeug/clockwork';
 
 import type { TaskStatus } from './types';
 
@@ -19,9 +17,9 @@ type TaskEvent =
   | { type: 'START' }
   | { type: 'SUBMIT' };
 
-// ── Machine definition ────────────────────────────────────────────────────────
+// ── Compiled definition ───────────────────────────────────────────────────────
 
-export const taskMachineDefinition: MachineConfig<TaskStatus, TaskContext, TaskEvent> = {
+const taskMachine = defineMachine<TaskContext, TaskEvent>()({
   context: { assigneeId: null, taskId: '' },
   initial: 'todo',
   states: {
@@ -48,16 +46,12 @@ export const taskMachineDefinition: MachineConfig<TaskStatus, TaskContext, TaskE
       },
     },
   },
-};
+});
 
 // ── Factory ───────────────────────────────────────────────────────────────────
 
-export function createTaskMachine(
-  taskId: string,
-  initialStatus: TaskStatus,
-  assigneeId: string | null,
-): MachineInstance<TaskStatus, TaskContext, TaskEvent> {
-  return createMachine(taskMachineDefinition).start({
+export function createTaskMachine(taskId: string, initialStatus: TaskStatus, assigneeId: string | null) {
+  return taskMachine.createActor({
     snapshot: { context: { assigneeId, taskId }, state: initialStatus },
   });
 }

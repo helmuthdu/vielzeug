@@ -1,8 +1,8 @@
 export const afterTransitionsExample = {
-  code: `import { createMachine } from '@vielzeug/clockwork'
+  code: `import { defineMachine } from '@vielzeug/clockwork'
 
 // Timers begin on entry and cancel automatically on exit or disposal.
-const machine = createMachine({
+const machine = defineMachine()({
   context: { message: '' },
   initial: 'hidden',
   states: {
@@ -23,7 +23,7 @@ const machine = createMachine({
 
 const actor = machine.createActor()
 actor.send({ type: 'SHOW', message: 'Saved' })
-console.log('Visible:', actor.snapshot.value)
-setTimeout(() => console.log('After timer:', actor.snapshot.value), 700)`,
+console.log('Visible:', actor.snapshot)
+setTimeout(() => console.log('After timer:', actor.snapshot), 700)`,
   name: 'Delayed Transitions',
 };

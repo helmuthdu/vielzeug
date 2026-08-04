@@ -1,10 +1,10 @@
 export const entryExitActionsExample = {
-  code: `import { createMachine } from '@vielzeug/clockwork'
+  code: `import { defineMachine } from '@vielzeug/clockwork'
 
 const log = (message) => console.log(message)
 
-// Effects run after actor commits its immutable snapshot.
-const machine = createMachine({
+// Effects run after the actor commits and notifies subscribers.
+const machine = defineMachine()({
   context: { reconnects: 0 },
   initial: 'disconnected',
   states: {

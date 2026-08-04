@@ -1,153 +1,57 @@
 ---
-title: Multi-Step Wizard with Routing
-description: Sync a multi-step wizard state machine with URL routing using Clockwork and Wayfinder.
+title: 'Clockwork Examples — Multi-Step Wizard with Routing'
+description: 'Synchronize explicit actor state with route changes.'
 ---
 
 ## Multi-Step Wizard with Routing
 
 ### Problem
 
-Multi-step wizards need to maintain both internal state and URL state. Users expect:
-
-- Back/forward buttons to navigate steps
-- Bookmarkable step URLs
-- Syncing between machine state and route changes
-- Preserving form data across navigation
-
-Without coordination, the machine state and route can get out of sync, causing confusing UX.
+A wizard needs to reflect state changes in the URL and accept validated route changes.
 
 ### Solution
 
-Use Machine to manage wizard steps with Wayfinder to sync the current step to the URL. The machine guards validate transitions and the router handles URL changes.
+Subscribe to committed snapshots to update the route, then send route-derived events from the router boundary.
 
 ```ts
-import { createMachine } from '@vielzeug/clockwork';
-import { createRouter, navigate } from '@vielzeug/wayfinder';
+import { defineMachine } from '@vielzeug/clockwork';
 
-type WizardEvent =
-  | { type: 'NEXT' }
-  | { type: 'PREV' }
-  | { type: 'SUBMIT'; formData: Record<string, unknown> }
-  | { type: 'ROUTE_CHANGE'; step: string };
+type State = 'details' | 'review';
+type Event = { type: 'NEXT' } | { type: 'PREVIOUS' } | { step: State; type: 'ROUTE' };
 
-const wizardMachine = createMachine({
-  initial: 'step1',
-  context: {
-    formData: {},
-    error: '',
-  },
+const wizard = defineMachine<Record<string, never>, Event>()({
+  initial: 'details',
   states: {
-    step1: {
+    details: {
       on: {
-        NEXT: [{ target: 'step2', actions: [recordStep1Data] }],
-        ROUTE_CHANGE: [{ target: 'step1' }],
+        NEXT: { target: 'review' },
+        ROUTE: { guard: ({ event }) => event.step === 'details', target: 'details' },
       },
     },
-    step2: {
+    review: {
       on: {
-        PREV: [{ target: 'step1' }],
-        NEXT: [
-          {
-            target: 'step3',
-            guard: ({ context }) => validateStep2(context),
-            actions: [recordStep2Data],
-          },
-        ],
-        ROUTE_CHANGE: [{ target: 'step2' }],
+        PREVIOUS: { target: 'details' },
+        ROUTE: { guard: ({ event }) => event.step === 'review', target: 'review' },
       },
-    },
-    step3: {
-      on: {
-        PREV: [{ target: 'step2' }],
-        SUBMIT: [
-          {
-            target: 'submitted',
-            actions: [recordStep3Data],
-          },
-        ],
-        ROUTE_CHANGE: [{ target: 'step3' }],
-      },
-    },
-    submitted: {
-      type: 'final',
-      entry: [uploadFormData],
     },
   },
-}).start();
-
-const recordStep1Data = ({ context, event }: any) => {
-  context.formData = {
-    ...context.formData,
-    name: event.data?.name || '',
-  };
-};
-
-const recordStep2Data = ({ context, event }: any) => {
-  context.formData = {
-    ...context.formData,
-    ...event.data,
-  };
-};
-
-const recordStep3Data = ({ context, event }: any) => {
-  context.formData = {
-    ...context.formData,
-    ...event.formData,
-  };
-};
-
-const uploadFormData = ({ context }: any) => {
-  // Submit context.formData to API
-};
-
-const validateStep2 = (ctx: any) => {
-  return ctx.formData.name && ctx.formData.name.length > 2;
-};
-
-// Setup coordination
-const m = wizardMachine;
-const router = createRouter();
-
-// When machine changes state, update route
-m.state.listen((state) => {
-  navigate(`/wizard/${state}`);
 });
 
-// When route changes, notify machine
-router.on('navigate', ({ path }) => {
-  const step = path.split('/')[2];
-  if (step && ['step1', 'step2', 'step3'].includes(step)) {
-    m.send({ type: 'ROUTE_CHANGE', step });
-  }
-});
-
-// Handle next/previous button clicks
-export function handleNext() {
-  m.send({ type: 'NEXT' });
-}
-
-export function handlePrev() {
-  m.send({ type: 'PREV' });
-}
-
-export function handleSubmit(formData: Record<string, unknown>) {
-  m.send({ type: 'SUBMIT', formData });
-}
+const actor = wizard.createActor();
+const stop = actor.subscribe(({ state }) => history.pushState(null, '', `/wizard/${state}`));
+actor.send({ type: 'NEXT' });
+console.log(actor.snapshot.state); // 'review'
+stop();
+actor.dispose();
 ```
 
 ### Pitfalls
 
-1. **Route changes don't update machine state** - Must dispatch ROUTE_CHANGE event when router navigation occurs, not assume they stay in sync automatically.
-
-2. **Clockwork transitions block route updates** - If a guard fails on ROUTE_CHANGE, the URL changes but machine stays in old state. Provide a FALLBACK transition for failed ROUTE_CHANGE events.
-
-3. **Form data lost on back navigation** - Context is preserved in machine, but if user navigates away and returns, context may be cleared. Persist formData to localStorage on each step.
-
-4. **Duplicate events on startup** - Router listener and machine both may fire during initialization. Use a flag to prevent processing route change events until machine is fully initialized.
+- Validate path parameters before creating a `ROUTE` event.
+- Prevent route feedback loops by checking the current URL before writing history.
 
 ### Related
 
-- [Fetch with Retry](./fetch-retry.md) - Async patterns for step submission
-- [Wayfinder](../wayfinder/) - Client-side routing with middleware
-- [Form with Validation](./form-validation.md) - Multi-step form patterns
-- [Vault](../vault/) - Persist wizard state across sessions
+- [Persisted Wizard](./persisted-wizard.md)
+- [Model Nested Workflows with Flat States](./hierarchical-states.md)
+- [API Reference](../api.md)
