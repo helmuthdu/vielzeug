@@ -33,10 +33,10 @@
     "test:unit": "vitest run --project unit"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.30.0"
   },
   "devDependencies": {
-    "@types/node": "^26.1.0",
+    "@types/node": "^26.1.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   },

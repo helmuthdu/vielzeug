@@ -91,13 +91,13 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^26.1.0",
+    "@types/node": "^26.1.2",
     "@vielzeug/courier": "workspace:*",
     "@vielzeug/herald": "workspace:*",
     "@vielzeug/pulse": "workspace:*",
     "@vielzeug/ripple": "workspace:*",
     "typescript": "^6.0.3",
-    "vite": "^8.1.3",
+    "vite": "^8.2.0",
     "vitest": "^4.1.10"
   }
 }

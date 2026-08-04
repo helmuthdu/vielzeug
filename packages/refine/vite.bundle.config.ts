@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, mergeConfig } from 'vite';
 
-import { getBundleConfig, readWorkspaceDeps } from '../../vite.config';
+import { getBundleConfig, readWorkspaceDeps } from '../../vite.config.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

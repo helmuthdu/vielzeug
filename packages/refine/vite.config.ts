@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, mergeConfig } from 'vite';
 
-import { getConfig, readWorkspaceDeps } from '../../vite.config';
+import { getConfig, readWorkspaceDeps } from '../../vite.config.ts';
 // @ts-expect-error - .mjs files don't have type declarations in this context
 import { getRefineLibraryEntries } from './scripts/refine-manifest.mjs';
 

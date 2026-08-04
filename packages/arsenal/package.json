@@ -70,12 +70,6 @@
       "types": "./dist/string/index.d.ts",
       "import": "./dist/string/index.js",
       "require": "./dist/string/index.cjs"
-    },
-    "./typed": {
-      "source": "./src/typed/index.ts",
-      "types": "./dist/typed/index.d.ts",
-      "import": "./dist/typed/index.js",
-      "require": "./dist/typed/index.cjs"
     }
   },
   "scripts": {
@@ -86,7 +80,7 @@
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
     "test": "pnpm run verify:exports && vitest",
-    "verify:exports": "node ./scripts/generate-barrels.mjs --check",
+    "verify:exports": "node ./scripts/check-exports.mjs",
     "build:bundle": "vite build --config vite.bundle.config.ts"
   },
   "publishConfig": {
@@ -97,9 +91,9 @@
     "node": ">=22"
   },
   "devDependencies": {
-    "@types/node": "^26.1.0",
+    "@types/node": "^26.1.2",
     "typescript": "^6.0.3",
-    "vite": "^8.1.3",
+    "vite": "^8.2.0",
     "vitest": "^4.1.10"
   }
 }

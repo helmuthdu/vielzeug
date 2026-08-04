@@ -41,8 +41,8 @@
     "@vielzeug/wayfinder": "^1.0.4"
   },
   "devDependencies": {
-    "playwright": "^1.62.0",
-    "typescript": "^7.0.2",
-    "vite": "^8.1.5"
+    "playwright": "^1.62.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.0"
   }
 }
