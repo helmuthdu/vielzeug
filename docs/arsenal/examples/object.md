@@ -15,7 +15,7 @@ description: Object utility examples for Arsenal.
 - [mapKeys](./object/mapKeys.md)
 - [mapValues](./object/mapValues.md)
 - [omit](./object/omit.md)
-- [parseJSON](./object/parseJSON.md)
+- [tryParseJson](./object/parseJSON.md)
 - [pick](./object/pick.md)
 - [prune](./object/prune.md)
 - [hash](./object/hash.md)

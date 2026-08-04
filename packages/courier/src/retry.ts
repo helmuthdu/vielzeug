@@ -1,4 +1,4 @@
-import { backoff } from '@vielzeug/arsenal';
+import { backoff } from '@vielzeug/arsenal/async';
 
 /** Internal default: one attempt, no retries. */
 export const DEFAULT_TIMES = 1;

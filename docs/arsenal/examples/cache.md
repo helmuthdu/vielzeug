@@ -6,4 +6,4 @@ description: Cache utility examples for Arsenal.
 ## Quick Reference
 
 - [memo](./cache/memo.md)
-- [stash](./cache/stash.md)
+- [cache](./cache/stash.md)

@@ -1,4 +1,3 @@
-import { ArsenalValidationError } from '../errors';
 import { abortError } from './abortError';
 
 /**
@@ -34,7 +33,7 @@ import { abortError } from './abortError';
  *   callback throws, instead of letting them keep running to completion unobserved. Default
  *   preserves the existing best-effort-completion behavior.
  * @returns Promise resolving to an ordered array of results
- * @throws {ArsenalValidationError} If limit is less than 1
+ * @throws {RangeError} If limit is less than 1
  * @throws {DOMException} If aborted via signal
  */
 export async function parallel<T, R>(
@@ -45,7 +44,7 @@ export async function parallel<T, R>(
   const { abortOnError = false, limit = Infinity, signal } = options;
 
   if (limit < 1) {
-    throw new ArsenalValidationError(`parallel: limit must be at least 1, got ${limit}`);
+    throw new RangeError(`parallel: limit must be at least 1, got ${limit}`);
   }
 
   if (signal?.aborted) {

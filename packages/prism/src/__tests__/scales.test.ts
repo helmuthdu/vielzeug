@@ -1,4 +1,3 @@
-import { signal } from '@vielzeug/ripple';
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildXScale, buildYScale } from '../core/cartesian-scales';

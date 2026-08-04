@@ -1,4 +1,4 @@
-import { retry } from '@vielzeug/arsenal';
+import { retry } from '@vielzeug/arsenal/async';
 
 import type { MutationOptions, QueryCache } from './types';
 

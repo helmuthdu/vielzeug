@@ -60,5 +60,5 @@ stringify(new Token(), { onClassInstance: 'throw' }); // throws TypeError
 
 ### Related
 
-- [parseJSON](./parseJSON.md)
-- [stash](../cache/stash.md)
+- [tryParseJson](./parseJSON.md)
+- [cache](../cache/stash.md)

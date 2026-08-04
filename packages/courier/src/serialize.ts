@@ -1,4 +1,4 @@
-import { hash } from '@vielzeug/arsenal';
+import { hash } from '@vielzeug/arsenal/object';
 
 export { hash };
 

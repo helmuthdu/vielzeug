@@ -1,5 +1,5 @@
 export const asyncAttemptExample = {
-  code: `import { attempt, isFail, isOk, retry } from '@vielzeug/arsenal'
+  code: `import { attempt, isFail, isOk, retry } from '@vielzeug/arsenal/async'
 
 // attempt() wraps any async function — never throws, always returns { ok, value|error }
 const ok = await attempt(async () => {

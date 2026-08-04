@@ -1,4 +1,3 @@
-import { ArsenalError } from '../../errors';
 import { similarity } from '../similarity';
 
 describe('similarity', () => {
@@ -46,8 +45,8 @@ describe('similarity', () => {
   it('throws RangeError for strings exceeding 10 000 characters', () => {
     const long = 'a'.repeat(10_001);
 
-    expect(() => similarity(long, 'abc')).toThrow(ArsenalError);
-    expect(() => similarity('abc', long)).toThrow(ArsenalError);
+    expect(() => similarity(long, 'abc')).toThrow(RangeError);
+    expect(() => similarity('abc', long)).toThrow(RangeError);
   });
 
   it('does not throw at the 10 000 character boundary', () => {

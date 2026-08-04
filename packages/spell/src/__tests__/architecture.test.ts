@@ -5,7 +5,9 @@ describe('Spell 2 execution and definition boundaries', () => {
   it('runs asynchronous pipe checks only through parseAsync()', async () => {
     const schema = s.string().pipe(s.string().checkAsync(async (value) => value === 'ok' || 'Rejected'));
 
-    expect(() => schema.parse('ok')).toThrow('async checks');
+    const parseSync = schema.parse as unknown as (value: unknown) => unknown;
+
+    expect(() => parseSync.call(schema, 'ok')).toThrow('async checks');
     await expect(schema.parseAsync('ok')).resolves.toBe('ok');
     await expect(schema.parseAsync('no')).rejects.toThrow('Rejected');
   });

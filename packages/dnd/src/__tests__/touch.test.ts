@@ -103,7 +103,7 @@ describe('createTouchDragShim', () => {
 
     el.addEventListener('dragstart', onDragStart);
 
-    using shim = createTouchDragShim();
+    using _shim = createTouchDragShim();
 
     const event = makeTouchEvent('touchstart', { clientX: 10, clientY: 20 });
     const preventDefault = vi.spyOn(event, 'preventDefault');
@@ -123,7 +123,7 @@ describe('createTouchDragShim', () => {
 
     el.addEventListener('dragstart', onDragStart);
 
-    using shim = createTouchDragShim();
+    using _shim = createTouchDragShim();
 
     document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 10, clientY: 20 }));
 
@@ -150,7 +150,7 @@ describe('createTouchDragShim', () => {
 
     el.addEventListener('dragstart', onDragStart);
 
-    using shim = createTouchDragShim();
+    using _shim = createTouchDragShim();
 
     document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 10, clientY: 20 }));
 
@@ -173,7 +173,7 @@ describe('createTouchDragShim', () => {
 
     document.addEventListener('dragstart', onDragStart);
 
-    using shim = createTouchDragShim();
+    using _shim = createTouchDragShim();
 
     document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
 
@@ -188,7 +188,7 @@ describe('createTouchDragShim', () => {
 
     const elementFromPoint = mockElementFromPoint(source);
 
-    using shim = createTouchDragShim();
+    using _shim = createTouchDragShim();
 
     document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
 
@@ -211,7 +211,7 @@ describe('createTouchDragShim', () => {
 
     const elementFromPoint = mockElementFromPoint(source);
 
-    using shim = createTouchDragShim();
+    using _shim = createTouchDragShim();
 
     document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
     document.dispatchEvent(makeTouchEvent('touchmove', { clientX: 10, clientY: 0 }));
@@ -243,7 +243,7 @@ describe('createTouchDragShim', () => {
 
     mockElementFromPoint(source);
 
-    using shim = createTouchDragShim();
+    using _shim = createTouchDragShim();
 
     document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
     document.dispatchEvent(makeTouchEvent('touchmove', { clientX: 10, clientY: 0 }));
@@ -282,7 +282,7 @@ describe('createTouchDragShim', () => {
 
     const elementFromPoint = mockElementFromPoint(a1!);
 
-    using shim = createTouchDragShim();
+    using _shim = createTouchDragShim();
 
     document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
 
@@ -309,7 +309,7 @@ describe('createTouchDragShim', () => {
 
     vi.stubGlobal('DataTransfer', ctor);
 
-    using shim = createTouchDragShim();
+    using _shim = createTouchDragShim();
 
     const source = makeDraggable();
 
@@ -327,7 +327,7 @@ describe('createTouchDragShim', () => {
 
     mockElementFromPoint(source);
 
-    using shim = createTouchDragShim();
+    using _shim = createTouchDragShim();
 
     document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
     document.dispatchEvent(makeTouchEvent('touchmove', { clientX: 10, clientY: 0 }));
@@ -355,7 +355,7 @@ describe('createTouchDragShim', () => {
 
     el.addEventListener('dragstart', onDragStart);
 
-    using shim = createTouchDragShim({ draggableSelector: '.my-handle' });
+    using _shim = createTouchDragShim({ draggableSelector: '.my-handle' });
 
     document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
     document.dispatchEvent(makeTouchEvent('touchmove', { clientX: 10, clientY: 0 }));
@@ -374,7 +374,7 @@ describe('createTouchDragShim', () => {
 
     const options = { disabled: true };
 
-    using shim = createTouchDragShim(options);
+    using _shim = createTouchDragShim(options);
 
     document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
 
@@ -397,7 +397,7 @@ describe('createTouchDragShim', () => {
 
     el.addEventListener('dragstart', onDragStart);
 
-    using shim = createTouchDragShim();
+    using _shim = createTouchDragShim();
 
     document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
 
@@ -420,7 +420,7 @@ describe('createTouchDragShim', () => {
       source.textContent = 'Card content';
       mockElementFromPoint(source);
 
-      using shim = createTouchDragShim();
+      using _shim = createTouchDragShim();
 
       document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
 
@@ -442,7 +442,7 @@ describe('createTouchDragShim', () => {
 
       mockElementFromPoint(source);
 
-      using shim = createTouchDragShim();
+      using _shim = createTouchDragShim();
 
       document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
       document.dispatchEvent(makeTouchEvent('touchmove', { clientX: 10, clientY: 0 }));
@@ -460,7 +460,7 @@ describe('createTouchDragShim', () => {
 
       mockElementFromPoint(source);
 
-      using shim = createTouchDragShim();
+      using _shim = createTouchDragShim();
 
       document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
       document.dispatchEvent(makeTouchEvent('touchmove', { clientX: 10, clientY: 0 }));
@@ -477,7 +477,7 @@ describe('createTouchDragShim', () => {
 
       mockElementFromPoint(source);
 
-      using shim = createTouchDragShim();
+      using _shim = createTouchDragShim();
 
       document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
       document.dispatchEvent(makeTouchEvent('touchmove', { clientX: 10, clientY: 0 }));
@@ -511,7 +511,7 @@ describe('createTouchDragShim', () => {
 
       mockElementFromPoint(source);
 
-      using shim = createTouchDragShim({ showDragPreview: false });
+      using _shim = createTouchDragShim({ showDragPreview: false });
 
       document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
       document.dispatchEvent(makeTouchEvent('touchmove', { clientX: 10, clientY: 0 }));
@@ -548,7 +548,7 @@ describe('createTouchDragShim', () => {
 
       document.elementFromPoint = elementFromPoint as typeof document.elementFromPoint;
 
-      using shim = createTouchDragShim();
+      using _shim = createTouchDragShim();
 
       document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
       document.dispatchEvent(makeTouchEvent('touchmove', { clientX: 10, clientY: 0 }));
@@ -578,7 +578,7 @@ describe('createTouchDragShim', () => {
 
       source.addEventListener('dragstart', onDragStart);
 
-      using shim = createTouchDragShim();
+      using _shim = createTouchDragShim();
 
       document.dispatchEvent(makeTouchEvent('touchstart', { clientX: 0, clientY: 0 }));
       document.dispatchEvent(makeTouchEvent('touchmove', { clientX: 10, clientY: 0 }));

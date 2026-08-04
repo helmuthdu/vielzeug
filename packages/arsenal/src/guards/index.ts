@@ -1,7 +1,5 @@
 export * from './combinators';
 export * from './isAbortError';
-export * from './isArray';
-export * from './isBoolean';
 export * from './isDate';
 export * from './isDefined';
 export * from './isEmpty';
@@ -15,5 +13,4 @@ export * from './isPlainObject';
 export * from './isPrimitive';
 export * from './isPromise';
 export * from './isRegex';
-export * from './isString';
 export * from './shallowEqual';

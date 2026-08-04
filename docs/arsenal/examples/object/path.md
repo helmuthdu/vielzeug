@@ -7,37 +7,30 @@ description: 'getPath example for @vielzeug/arsenal.'
 
 ### Problem
 
-You need safe nested property access using a dot-notation string path, with a typed fallback for missing paths.
+You need safe nested property access with either a fallback or an explicit missing-value error.
 
 ### Solution
 
-Use `getPath(item, path, defaultValue?, options?)` to traverse nested objects. Use dot notation only — `'a.b.c'` not `'a[0]'`.
+Use `getPath` for optional access, `getPathOr` for fallback, and `requirePath` for required values.
 
 ```ts
-import { getPath } from '@vielzeug/arsenal';
+import { getPath, getPathOr, requirePath } from '@vielzeug/arsenal/object';
 
 const config = { api: { host: 'localhost', port: 3000 }, items: [10, 20] };
 
 getPath(config, 'api.port'); // 3000
-getPath(config, 'api.timeout', 5000); // 5000 — fallback for missing path
-getPath(config, 'items.1'); // 20 — array index access
-```
-
-#### Throw on missing path
-
-```ts
-import { getPath } from '@vielzeug/arsenal';
-
-getPath(config, 'api.missing', undefined, { throwOnMissing: true });
-// throws TypeError
+getPathOr(config, 'api.timeout', 5_000); // 5000
+getPath(config, 'items.1'); // 20
+requirePath(config, 'api.port'); // 3000
 ```
 
 ### Pitfalls
 
-- **Dot notation only.** Using `'a[0]'` instead of `'a.0'` throws a `TypeError` with a correction hint.
-- `isSafePath(key)` can pre-validate a path — it returns `false` for `__proto__`, `constructor`, or `prototype`.
+- Numeric bracket notation such as `'items[1]'` is supported.
+- Unsafe path segments never resolve.
+- `requirePath` throws `TypeError` for a missing value.
 
 ### Related
 
 - [flattenPaths](./flattenPaths.md)
-- [parseJSON](./parseJSON.md)
+- [tryParseJson](./parseJSON.md)

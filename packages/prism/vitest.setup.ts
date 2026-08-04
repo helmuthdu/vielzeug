@@ -33,7 +33,7 @@ declare global {
   var axeCheck: (node: Element, options?: axe.RunOptions) => Promise<axe.AxeResults>;
 }
 
-global.ResizeObserver = class ResizeObserver {
+globalThis.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}

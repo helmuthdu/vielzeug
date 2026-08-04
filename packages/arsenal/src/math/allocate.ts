@@ -1,5 +1,3 @@
-import { ArsenalValidationError } from '../errors';
-
 /**
  * Distributes an amount proportionally according to given ratios.
  * Handles rounding to ensure the sum equals the original amount exactly.
@@ -24,7 +22,7 @@ import { ArsenalValidationError } from '../errors';
  * @param amount - Total amount to allocate
  * @param ratios - Array of ratios for distribution or number of equal parts
  * @returns Array of allocated amounts with remainder applied to last bucket (sum equals original amount)
- * @throws {ArsenalValidationError} If ratios array is empty, contains negative values, sums to zero, or parts is not a positive integer
+ * @throws {RangeError} If ratios array is empty, contains negative values, sums to zero, or parts is not a positive integer.
  */
 export function allocate(amount: number, ratios: number[] | number): number[];
 export function allocate(amount: bigint, ratios: number[] | number): bigint[];
@@ -32,24 +30,24 @@ export function allocate(amount: number | bigint, ratios: number[] | number): (n
   // If second param is a number, validate and treat it as number of equal parts
   if (typeof ratios === 'number') {
     if (!Number.isInteger(ratios) || ratios < 1) {
-      throw new ArsenalValidationError(`Parts must be a positive integer, got ${ratios}`);
+      throw new RangeError(`allocate: parts must be a positive integer, got ${ratios}`);
     }
   }
 
   const actualRatios = Array.isArray(ratios) ? ratios : Array(ratios).fill(1);
 
   if (actualRatios.length === 0) {
-    throw new ArsenalValidationError('Ratios array cannot be empty');
+    throw new RangeError('Ratios array cannot be empty');
   }
 
   if (actualRatios.some((r) => r < 0)) {
-    throw new ArsenalValidationError('Ratios must be non-negative');
+    throw new RangeError('Ratios must be non-negative');
   }
 
   const totalRatio = actualRatios.reduce((sum, ratio) => sum + ratio, 0);
 
   if (totalRatio === 0) {
-    throw new ArsenalValidationError('Total ratio cannot be zero');
+    throw new RangeError('Total ratio cannot be zero');
   }
 
   if (typeof amount === 'bigint') {

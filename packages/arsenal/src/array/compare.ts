@@ -1,5 +1,3 @@
-import { ArsenalValidationError } from '../errors';
-
 /**
  * Compares two values and returns a number suitable for use as a sort comparator.
  *
@@ -55,7 +53,7 @@ export const compare = (a: unknown, b: unknown): number => {
     return at === bt ? 0 : at > bt ? 1 : -1;
   }
 
-  throw new ArsenalValidationError(
+  throw new TypeError(
     `compare: unsupported types "${typeof a}" and "${typeof b}". Supported: number, string, Date, null, undefined.`,
   );
 };

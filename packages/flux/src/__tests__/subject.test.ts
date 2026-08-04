@@ -18,7 +18,7 @@ describe('createChannel()', () => {
   });
 
   it('replays an explicit bounded history', () => {
-    const channel = createChannel({ replay: 2 });
+    const channel = createChannel<string>({ replay: 2 });
 
     channel.send('first');
     channel.send('second');

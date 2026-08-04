@@ -1,46 +1,30 @@
 ---
-title: 'Arsenal Examples — parseJSON'
-description: 'parseJSON example for @vielzeug/arsenal.'
+title: 'Arsenal Examples — tryParseJson'
+description: 'tryParseJson example for @vielzeug/arsenal.'
 ---
 
-## parseJSON
+## tryParseJson
 
 ### Problem
 
-You need to parse JSON from localStorage or an API without crashing on malformed input, and want a typed fallback for the error case.
+You need to preserve JSON syntax failure before validating parsed application data.
 
 ### Solution
 
-Use `parseJSON(json, options?)` to return the parsed value or a `fallback` when parsing fails. It accepts `string | null | undefined`.
-
 ```ts
-import { parseJSON } from '@vielzeug/arsenal';
-
-const raw = localStorage.getItem('settings');
-const settings = parseJSON(raw, { fallback: { theme: 'light' } });
-// returns parsed object or { theme: 'light' } on failure
-```
-
-#### With a validator
-
-```ts
-import { parseJSON } from '@vielzeug/arsenal';
+import { tryParseJson } from '@vielzeug/arsenal/object';
 import { s } from '@vielzeug/spell';
 
-const Schema = s.object({ theme: s.string() });
-const settings = parseJSON(raw, {
-  fallback: { theme: 'light' },
-  validator: (v) => Schema.safeParse(v).ok,
-});
+const User = s.object({ id: s.number(), name: s.string() });
+const parsed = tryParseJson(raw);
+
+if (!parsed.ok) throw parsed.error;
+
+const user = User.parse(parsed.value);
 ```
 
 ### Pitfalls
 
-- Without `fallback`, returns `undefined` on failure — the return type includes `undefined`.
-- `null` / `undefined` input immediately returns `fallback` without calling `JSON.parse`.
-- The JSON string `"null"` parses to `null` (not `fallback`) — only the input being `null` triggers the fallback.
-
-### Related
-
-- [hash](./hash.md)
-- [getPath](./getPath.md)
+- Successful values are `unknown`, not claimed generic types.
+- Use a schema validator for application data.
+- Use `JSON.parse` directly when syntax failures should throw immediately.

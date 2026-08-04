@@ -1,5 +1,5 @@
 export const asyncRetryExample = {
-  code: `import { retry } from '@vielzeug/arsenal'
+  code: `import { retry } from '@vielzeug/arsenal/async'
 
 let attempts = 0
 const unreliableOperation = async () => {

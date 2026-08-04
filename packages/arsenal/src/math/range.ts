@@ -1,5 +1,3 @@
-import { ArsenalValidationError } from '../errors';
-
 /**
  * Creates an array of numbers from `0` up to, but not including, `stop` with step `1`.
  *
@@ -33,7 +31,7 @@ export function range(start: number, stop: number): number[];
  *
  * @returns The range of numbers.
  *
- * @throws {ArsenalValidationError} If start, stop, or step are not finite numbers, step is 0, or range exceeds maximum size.
+ * @throws {RangeError} If start, stop, or step are not finite numbers, step is 0, or range exceeds maximum size.
  */
 export function range(start: number, stop: number, step: number): number[];
 export function range(startOrStop: number, stop?: number, step?: number): number[] {
@@ -41,10 +39,10 @@ export function range(startOrStop: number, stop?: number, step?: number): number
     stop === undefined ? [0, startOrStop, 1] : step === undefined ? [startOrStop, stop, 1] : [startOrStop, stop, step];
 
   if (!Number.isFinite(resolvedStart) || !Number.isFinite(resolvedStop) || !Number.isFinite(resolvedStep)) {
-    throw new ArsenalValidationError('range: start, stop, and step must be finite numbers');
+    throw new RangeError('range: start, stop, and step must be finite numbers');
   }
 
-  if (resolvedStep === 0) throw new ArsenalValidationError('range: step cannot be 0');
+  if (resolvedStep === 0) throw new RangeError('range: step cannot be 0');
 
   if (resolvedStart === resolvedStop) {
     return [];
@@ -53,7 +51,7 @@ export function range(startOrStop: number, stop?: number, step?: number): number
   const raw = (resolvedStop - resolvedStart) / resolvedStep;
   const length = Math.max(0, Number.isInteger(raw) ? raw : Math.ceil(raw + Number.EPSILON));
 
-  if (length > 10_000_000) throw new ArsenalValidationError('range: exceeds maximum allowed size of 10,000,000');
+  if (length > 10_000_000) throw new RangeError('range: exceeds maximum allowed size of 10,000,000');
 
   return Array.from({ length }, (_, i) => resolvedStart + i * resolvedStep);
 }

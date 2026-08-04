@@ -350,11 +350,13 @@ describe('createWorker', () => {
         task<void, void>(() => new Promise(() => {})),
         { timeout: 25 },
       );
-      const error = await worker.run(undefined).catch((e) => e as FamiliarTimeoutError);
+      const error = await worker.run(undefined).catch((e) => e);
 
       expect(error).toBeInstanceOf(FamiliarTimeoutError);
+
+      if (!(error instanceof FamiliarTimeoutError)) throw error;
+
       expect(error.name).toBe('FamiliarTimeoutError');
-      expect(error).toBeInstanceOf(FamiliarTimeoutError);
       expect(error.timeoutMs).toBe(25);
       worker.dispose();
     }, 1000);
@@ -493,9 +495,12 @@ describe('createWorker', () => {
     it('drain() rejects with FamiliarTimeoutError when timeoutMs elapses before idle', async () => {
       const worker = createWorker(task<void, void>(() => new Promise(() => {})));
       const running = worker.run(undefined);
-      const error = await worker.drain(25).catch((e) => e);
+      const error = await worker.drain(25).catch((error: unknown) => error);
 
       expect(error).toBeInstanceOf(FamiliarTimeoutError);
+
+      if (!(error instanceof FamiliarTimeoutError)) throw error;
+
       expect(error.timeoutMs).toBe(25);
       worker.dispose();
       await running.catch(() => {});

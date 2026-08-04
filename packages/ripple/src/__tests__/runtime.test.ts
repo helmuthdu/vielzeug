@@ -6,7 +6,9 @@ describe('ripple graph', () => {
     const count = ripple.signal(0);
     const parity = ripple.computed(() => count.value % 2);
     const values: number[] = [];
-    const stop = ripple.effect(() => values.push(parity.value));
+    const stop = ripple.effect(() => {
+      values.push(parity.value);
+    });
 
     count.value = 2;
     count.value = 3;
@@ -40,7 +42,9 @@ describe('ripple graph', () => {
     const ripple = createRipple();
     const count = ripple.signal(0);
     const values: number[] = [];
-    const stop = ripple.effect(() => values.push(count.value));
+    const stop = ripple.effect(() => {
+      values.push(count.value);
+    });
 
     ripple.batch(() => {
       count.value = 1;
@@ -60,7 +64,9 @@ describe('ripple graph', () => {
     const stop = ripple.effect(() => {
       if (!enabled.value) return;
 
-      ripple.effect(() => values.push(child.value));
+      ripple.effect(() => {
+        values.push(child.value);
+      });
     });
 
     enabled.value = false;

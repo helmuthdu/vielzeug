@@ -910,7 +910,7 @@ describe('ward: predicate error propagation', () => {
         effect: 'allow',
         resource: 'posts',
         role: ['editor'],
-        when: async () => true,
+        when: (async () => true) as unknown as WardPredicate,
       },
     ]);
 
@@ -927,7 +927,7 @@ describe('ward: predicate error propagation', () => {
         effect: 'allow',
         resource: 'posts',
         role: ['editor'],
-        when: async () => true,
+        when: (async () => true) as unknown as WardPredicate,
       },
     ]);
 

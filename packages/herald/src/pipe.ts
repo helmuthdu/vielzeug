@@ -1,4 +1,4 @@
-import type { Bus, EventKey, EventMap, PipeEntry, PipeableKey, Unsubscribe } from './types';
+import type { BehaviorBus, Bus, EventKey, EventMap, PipeEntry, PipeableKey, Unsubscribe } from './types';
 
 import { combineSignals } from './bus';
 import { HeraldConfigError } from './errors';
@@ -23,9 +23,9 @@ import { HeraldConfigError } from './errors';
  * pipeEvents(authBus, appBus, [{ from: 'auth:login', to: 'user:authenticated' }]);
  */
 export function pipeEvents<S extends EventMap, T extends EventMap>(
-  source: Bus<S>,
+  source: Bus<S> | BehaviorBus<S>,
   target: Bus<T>,
-  entries: readonly [PipeEntry<S, T>, ...PipeEntry<S, T>[]],
+  entries: readonly [NoInfer<PipeEntry<S, T>>, ...NoInfer<PipeEntry<S, T>>[]],
   opts?: { signal?: AbortSignal },
 ): Unsubscribe {
   if (entries.length === 0) throw new HeraldConfigError('pipeEvents() requires at least one entry');

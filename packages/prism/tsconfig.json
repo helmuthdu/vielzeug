@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*.d.ts", "src/**/*.ts"],
+  "include": ["src/**/*.d.ts", "src/**/*.ts", "vitest.setup.ts"],
   "exclude": ["node_modules"],
   "compilerOptions": {
     "baseUrl": ".",

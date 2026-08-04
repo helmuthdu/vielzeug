@@ -1,27 +1,23 @@
 export const asyncQueueExample = {
-  code: `import { queue } from '@vielzeug/arsenal'
+  code: `import { taskPool } from '@vielzeug/arsenal/async'
 
-// concurrency: 2 — at most 2 tasks run simultaneously
-const taskQueue = queue({ concurrency: 2 })
+const pool = taskPool({ concurrency: 2 })
+const tasks = [100, 50, 75, 30].map((delay, index) =>
+  pool.run(async (signal) => {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(resolve, delay)
+      signal.addEventListener('abort', () => {
+        clearTimeout(timer)
+        reject(signal.reason)
+      }, { once: true })
+    })
+    return 'task-' + (index + 1)
+  }),
+)
 
-const tasks = [
-  () => new Promise(resolve => setTimeout(() => resolve('Task 1'), 100)),
-  () => new Promise(resolve => setTimeout(() => resolve('Task 2'), 50)),
-  () => new Promise(resolve => setTimeout(() => resolve('Task 3'), 75)),
-  () => new Promise(resolve => setTimeout(() => resolve('Task 4'), 30)),
-]
-
-console.log('Starting queue...')
-
-const promises = tasks.map(task => taskQueue.add(task))
-
-// active = running, pending = waiting, size = active + pending
-console.log(\`After enqueue — active: \${taskQueue.active}, pending: \${taskQueue.pending}, size: \${taskQueue.size}\`)
-
-const results = await Promise.all(promises)
-await taskQueue.onIdle()
-
-console.log('Queue idle — size:', taskQueue.size)
-console.log('Results:', results)`,
-  name: 'queue - Concurrent execution with active/pending tracking',
+console.log('After enqueue:', { active: pool.active, pending: pool.pending })
+console.log('Results:', await Promise.all(tasks))
+await pool.idle()
+pool.dispose()`,
+  name: 'taskPool - Bounded concurrent work',
 };

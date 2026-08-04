@@ -1,5 +1,6 @@
-import { secureRandomIndex } from '../_common/_secureRandomIndex';
-import { ArsenalValidationError } from '../errors';
+import type { RandomSource } from './source';
+
+import { randomIndex } from './_index';
 
 /**
  * Generates a random integer between two values, inclusive.
@@ -13,8 +14,8 @@ import { ArsenalValidationError } from '../errors';
  * @param max - The maximum value.
  * @returns A random integer between min and max.
  */
-export function random(min: number, max: number): number {
-  if (min > max) throw new ArsenalValidationError('random: minimum value must not be greater than maximum value');
+export function random(min: number, max: number, source?: RandomSource): number {
+  if (min > max) throw new RangeError('random: minimum value must not be greater than maximum value');
 
-  return secureRandomIndex(max - min + 1) + min;
+  return randomIndex(max - min + 1, source) + min;
 }

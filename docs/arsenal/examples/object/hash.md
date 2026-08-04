@@ -59,5 +59,5 @@ hash(new Token(), { onClassInstance: 'throw' }); // throws TypeError
 
 ### Related
 
-- [parseJSON](./parseJSON.md)
-- [stash](./stash.md)
+- [tryParseJson](./parseJSON.md)
+- [cache](../cache/stash.md)

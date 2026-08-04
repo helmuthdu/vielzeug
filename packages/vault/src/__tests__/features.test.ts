@@ -8,7 +8,7 @@
  *   - keys() and entries() (F2)
  */
 
-import type { ReactiveSignal } from '../index';
+import type { ReactiveSignal, VaultCodec } from '../index';
 
 import {
   createLocalStorage,
@@ -1346,7 +1346,6 @@ describe('scheduleExpiredPrune interval validation + signal', () => {
   test('signal abort stops the schedule', async () => {
     vi.useFakeTimers();
 
-    const db = createMemory({ schema });
     const ac = new AbortController();
     let pruneCount = 0;
 
@@ -1471,21 +1470,21 @@ describe('createVersionedCodec', () => {
   });
 
   test('decodes old version records using their codec', () => {
-    const v1Codec = {
-      decode: (r: unknown) => {
+    const v1Codec: VaultCodec = {
+      decode: <T>(r: unknown) => {
         const v = r as { value: { legacy: boolean } };
 
-        return { value: v.value };
+        return { value: v.value as T };
       },
-      encode: (v: unknown) => ({ value: v }),
+      encode: <T>(v: T) => ({ value: v }),
     };
-    const v2Codec = {
-      decode: (r: unknown) => {
+    const v2Codec: VaultCodec = {
+      decode: <T>(r: unknown) => {
         const v = r as { value: { modern: boolean } };
 
-        return { value: v.value };
+        return { value: v.value as T };
       },
-      encode: (v: unknown) => ({ value: v }),
+      encode: <T>(v: T) => ({ value: v }),
     };
     const codec = createVersionedCodec(
       [
@@ -1503,7 +1502,7 @@ describe('createVersionedCodec', () => {
 
   test('returns undefined for unknown version', () => {
     const codec = createVersionedCodec(
-      [{ codec: { decode: (r) => r as { value: unknown }, encode: (v) => v }, version: 1 }],
+      [{ codec: { decode: <T>(r: unknown) => r as { value: T }, encode: <T>(v: T) => v }, version: 1 }],
       1,
     );
 
@@ -1512,7 +1511,7 @@ describe('createVersionedCodec', () => {
 
   test('returns undefined when __v field is missing', () => {
     const codec = createVersionedCodec(
-      [{ codec: { decode: (r) => r as { value: unknown }, encode: (v) => v }, version: 1 }],
+      [{ codec: { decode: <T>(r: unknown) => r as { value: T }, encode: <T>(v: T) => v }, version: 1 }],
       1,
     );
 
@@ -1524,7 +1523,7 @@ describe('createVersionedCodec', () => {
   });
 
   test('throws VaultError for duplicate versions', () => {
-    const c = { decode: (r: unknown) => r as { value: unknown }, encode: (v: unknown) => v };
+    const c: VaultCodec = { decode: <T>(r: unknown) => r as { value: T }, encode: <T>(v: T) => v };
 
     expect(() =>
       createVersionedCodec(
@@ -1538,13 +1537,13 @@ describe('createVersionedCodec', () => {
   });
 
   test('throws VaultError when currentVersion is not in versions', () => {
-    const c = { decode: (r: unknown) => r as { value: unknown }, encode: (v: unknown) => v };
+    const c: VaultCodec = { decode: <T>(r: unknown) => r as { value: T }, encode: <T>(v: T) => v };
 
     expect(() => createVersionedCodec([{ codec: c, version: 1 }], 99)).toThrow(VaultError);
   });
 
   test('throws VaultError for negative version number', () => {
-    const c = { decode: (r: unknown) => r as { value: unknown }, encode: (v: unknown) => v };
+    const c: VaultCodec = { decode: <T>(r: unknown) => r as { value: T }, encode: <T>(v: T) => v };
 
     expect(() => createVersionedCodec([{ codec: c, version: -1 }], -1)).toThrow(VaultError);
   });

@@ -11,6 +11,6 @@ description: Practical examples and recipes for arsenal.
 - [Function utilities](./examples/function.md)
 - [Guards / Typed predicates](./examples/typed.md)
 - [Math utilities](./examples/math.md)
-- [Object utilities](./examples/object.md) — includes `getPath`, `parseJSON`, `stringify`, `diff`, `deepMerge`
+- [Object utilities](./examples/object.md) — includes `getPath`, `tryParseJson`, `stringify`, `diff`, `deepMerge`
 - [Random utilities](./examples/random.md)
 - [String utilities](./examples/string.md)

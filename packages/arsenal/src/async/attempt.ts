@@ -30,12 +30,8 @@ export function isFail<T>(result: AttemptResult<T>): result is { ok: false; erro
 }
 
 /**
- * Executes a function — sync or async — and returns an `AttemptResult` (or
- * `Promise<AttemptResult>` for async factories). Never throws.
- *
- * TypeScript infers the return type from the factory:
- * - sync factory → `AttemptResult<T>`
- * - async factory → `Promise<AttemptResult<T>>`
+ * Executes a function — sync or async — and resolves to an `AttemptResult`.
+ * Never throws.
  *
  * @example
  * ```ts
@@ -53,20 +49,9 @@ export function isFail<T>(result: AttemptResult<T>): result is { ok: false; erro
  * const result = await attempt(() => retry(fn, { times: 3 }));
  * ```
  */
-export function attempt<T>(fn: () => Promise<T>): Promise<AttemptResult<T>>;
-export function attempt<T>(fn: () => T): AttemptResult<T>;
-export function attempt<T>(fn: () => T | Promise<T>): AttemptResult<T> | Promise<AttemptResult<T>> {
+export async function attempt<T>(fn: () => T | Promise<T>): Promise<AttemptResult<T>> {
   try {
-    const result = fn();
-
-    if (typeof (result as PromiseLike<T>)?.then === 'function') {
-      return (result as Promise<T>).then(
-        (value) => ({ ok: true as const, value }),
-        (error) => ({ error, ok: false as const }),
-      );
-    }
-
-    return { ok: true, value: result as T };
+    return { ok: true, value: await fn() };
   } catch (error) {
     return { error, ok: false };
   }

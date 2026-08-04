@@ -1,4 +1,4 @@
-import { type Infer, s, SpellValidationError } from '../index';
+import { type Infer, type Schema, s, SpellValidationError } from '../index';
 
 describe('optional nullable nullish required', () => {
   it('optional() accepts undefined and still validates concrete values', () => {
@@ -224,16 +224,19 @@ describe('assert()', () => {
   });
 
   it('narrows the type as an assertion', () => {
+    const schema: Schema<string> = s.string();
     const value: unknown = 'hello';
 
-    s.string().assert(value);
+    schema.assert(value);
 
     expect(value.toUpperCase()).toBe('HELLO');
   });
 
   it('prepends label to root-level error messages', () => {
+    const schema: Schema<string> = s.string();
+
     try {
-      s.string().assert(42, 'userId');
+      schema.assert(42, 'userId');
       expect.fail('should have thrown');
     } catch (e) {
       expect(e).toBeInstanceOf(SpellValidationError);
@@ -242,8 +245,10 @@ describe('assert()', () => {
   });
 
   it('does not prepend label to nested path issues', () => {
+    const schema: Schema<{ name: string }> = s.object({ name: s.string() });
+
     try {
-      s.object({ name: s.string() }).assert({ name: 42 }, 'payload');
+      schema.assert({ name: 42 }, 'payload');
       expect.fail('should have thrown');
     } catch (e) {
       expect(e).toBeInstanceOf(SpellValidationError);
@@ -256,8 +261,10 @@ describe('assert()', () => {
   });
 
   it('throws without label prefix when no label is given', () => {
+    const schema: Schema<string> = s.string();
+
     try {
-      s.string().assert(42);
+      schema.assert(42);
       expect.fail('should have thrown');
     } catch (e) {
       expect(e).toBeInstanceOf(SpellValidationError);
@@ -293,8 +300,8 @@ describe('kind getter', () => {
   it('returns correct kind for composite schemas', () => {
     expect(s.array(s.string()).kind).toBe('array');
     expect(s.object({ a: s.string() }).kind).toBe('object');
-    expect(s.union([s.string(), s.number()]).kind).toBe('union');
-    expect(s.intersect([s.object({ a: s.string() }), s.object({ b: s.number() })]).kind).toBe('intersect');
+    expect(s.union(s.string(), s.number()).kind).toBe('union');
+    expect(s.intersect(s.object({ a: s.string() }), s.object({ b: s.number() })).kind).toBe('intersect');
     expect(s.tuple([s.string(), s.number()]).kind).toBe('tuple');
     expect(s.set(s.string()).kind).toBe('set');
     expect(s.map(s.string(), s.number()).kind).toBe('map');

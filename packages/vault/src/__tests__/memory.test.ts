@@ -704,16 +704,16 @@ describe('Memory adapter', () => {
       // that causes the codec to throw during isBroadcastMsg validation.
       const POISON = '__POISON__';
       const poisonCodec = {
-        decode: (raw: unknown): { expiresAt?: number; value: unknown } | undefined => {
+        decode: <T>(raw: unknown): { expiresAt?: number; value: T } | undefined => {
           if (typeof raw === 'object' && raw !== null && (raw as Record<string, unknown>)['__poison']) {
             throw new Error('codec exploded on poison record');
           }
 
           if (typeof raw !== 'object' || raw === null || !('value' in raw)) return undefined;
 
-          return raw as { value: unknown };
+          return raw as { value: T };
         },
-        encode: (value: unknown, expiresAt?: number) => (expiresAt !== undefined ? { expiresAt, value } : { value }),
+        encode: <T>(value: T, expiresAt?: number) => (expiresAt !== undefined ? { expiresAt, value } : { value }),
       };
 
       const db2 = createMemory({ codec: poisonCodec, name: 'sec-throwing-codec3', schema: userSchema });

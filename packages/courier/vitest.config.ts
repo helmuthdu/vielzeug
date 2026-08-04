@@ -8,9 +8,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@vielzeug/arsenal': path.resolve(__dirname, '../arsenal/src/index.ts'),
-    },
+    alias: [
+      { find: /^@vielzeug\/arsenal\/async$/, replacement: path.resolve(__dirname, '../arsenal/src/async/index.ts') },
+      { find: /^@vielzeug\/arsenal\/object$/, replacement: path.resolve(__dirname, '../arsenal/src/object/index.ts') },
+      { find: /^@vielzeug\/arsenal\/random$/, replacement: path.resolve(__dirname, '../arsenal/src/random/index.ts') },
+      { find: /^@vielzeug\/arsenal$/, replacement: path.resolve(__dirname, '../arsenal/src/index.ts') },
+    ],
   },
   test: {
     environment: 'jsdom',

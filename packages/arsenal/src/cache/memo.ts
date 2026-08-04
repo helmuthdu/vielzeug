@@ -1,7 +1,7 @@
 import type { Fn } from '../types';
 
 import { LruMap } from '../_common/_lruMap';
-import { ArsenalSerializationError, ArsenalValidationError } from '../errors';
+import { ArsenalSerializationError } from '../errors';
 
 export type MemoOptions<T extends Fn> = {
   key?: (...args: Parameters<T>) => PropertyKey;
@@ -69,7 +69,7 @@ type SyncFn<T extends Fn> = ReturnType<T> extends Promise<unknown> ? never : T;
  *
  * **Do not pass async functions.** `memo` caches the raw `Promise` object, not
  * the resolved value — subsequent calls return the same stale Promise. Use
- * `stash.getOrSet` for async caching with TTL and stampede prevention.
+ * `cache.getOrLoad` for async caching with TTL and load deduplication.
  *
  * @example
  * ```ts
@@ -86,11 +86,11 @@ type SyncFn<T extends Fn> = ReturnType<T> extends Promise<unknown> ? never : T;
  * @param [options.maxSize] - Maximum cache size. Oldest entries evicted when exceeded (LRU). Default: `Infinity`.
  * @param [options.key] - Custom cache key function. Defaults to `JSON.stringify(args)`.
  *
- * @throws {ArsenalValidationError} If `maxSize` is not a positive integer or `Infinity`.
+ * @throws {RangeError} If `maxSize` is not a positive integer or `Infinity`.
  */
 export function memo<T extends Fn>(fn: SyncFn<T>, { key, maxSize = Infinity }: MemoOptions<T> = {}): Memoized<T> {
   if (maxSize !== Infinity && (!Number.isInteger(maxSize) || maxSize < 1)) {
-    throw new ArsenalValidationError(`memo: maxSize must be a positive integer or Infinity, got ${maxSize}`);
+    throw new RangeError(`memo: maxSize must be a positive integer or Infinity, got ${maxSize}`);
   }
 
   const cache = new LruMap<PropertyKey, ReturnType<T>>(maxSize);

@@ -7,51 +7,36 @@ description: 'deepMerge and shallowMerge examples for @vielzeug/arsenal.'
 
 ### Problem
 
-You need to combine configuration objects, handling nested keys correctly — without stomping nested objects the way `Object.assign` does.
+You need to combine configuration objects without stomping nested values.
 
 ### Solution
 
-Use `deepMerge(...items)` for recursive merging. Pass `{ arrayStrategy: 'concat' }` as the last argument to concatenate arrays. Use `shallowMerge(...items)` for a single-level `Object.assign`-style merge.
+Pass deep-merge sources as an array. Configuration stays separate from data. Use `shallowMerge(...items)` for a single-level `Object.assign`-style merge.
 
 ```ts
-import { deepMerge } from '@vielzeug/arsenal';
+import { deepMerge } from '@vielzeug/arsenal/object';
 
 const base = { api: { host: 'localhost', port: 3000 }, retries: 3 };
 const overrides = { api: { port: 4000 }, timeout: 5_000 };
 
-deepMerge(base, overrides);
+const merged = deepMerge([base, overrides]);
 // { api: { host: 'localhost', port: 4000 }, retries: 3, timeout: 5_000 }
 ```
 
 #### Concatenate arrays instead of replacing them
 
 ```ts
-import { deepMerge } from '@vielzeug/arsenal';
+import { deepMerge } from '@vielzeug/arsenal/object';
 
-const a = { tags: ['ts', 'node'] };
-const b = { tags: ['vue'] };
-
-deepMerge(a, b, { arrayStrategy: 'concat' });
+const merged = deepMerge([{ tags: ['ts', 'node'] }, { tags: ['vue'] }], { arrayStrategy: 'concat' });
 // { tags: ['ts', 'node', 'vue'] }
-```
-
-#### Merge three or more objects
-
-```ts
-import { deepMerge, shallowMerge } from '@vielzeug/arsenal';
-
-deepMerge({ a: { x: 1 } }, { a: { y: 2 } }, { b: 3 });
-// { a: { x: 1, y: 2 }, b: 3 }
-
-shallowMerge({ a: 1, b: 2 }, { b: 3, c: 4 }, { d: 5 });
-// { a: 1, b: 3, c: 4, d: 5 }
 ```
 
 ### Pitfalls
 
-- `deepMerge` replaces arrays by default — pass `{ arrayStrategy: 'concat' }` as the last argument to concatenate.
-- Later arguments win on key conflicts for both functions.
-- The options object `{ arrayStrategy: 'concat' | 'replace' }` must be the **last** positional argument and must contain only that key.
+- `deepMerge` replaces arrays by default.
+- Options are second argument; source objects always stay in first array argument.
+- Later sources win on key conflicts.
 
 ### Related
 

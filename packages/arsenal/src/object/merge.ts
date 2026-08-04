@@ -73,24 +73,8 @@ function mergeObjects<T extends Obj, U extends Obj>(target: T, source: U, option
  * // { tags: ['a', 'b'] }
  * ```
  */
-export function deepMerge<T extends Obj[]>(...args: [...T] | [...T, DeepMergeOptions]): Merge<T> {
-  const lastArg = args[args.length - 1];
-  const hasOptions =
-    args.length > 0 &&
-    typeof lastArg === 'object' &&
-    lastArg !== null &&
-    !Array.isArray(lastArg) &&
-    'arrayStrategy' in lastArg &&
-    Object.keys(lastArg).length === 1 &&
-    ((lastArg as DeepMergeOptions).arrayStrategy === 'concat' ||
-      (lastArg as DeepMergeOptions).arrayStrategy === 'replace');
-
-  const options: DeepMergeOptions = hasOptions ? (lastArg as DeepMergeOptions) : {};
-  const items = (hasOptions ? args.slice(0, -1) : args) as Obj[];
-
-  if (items.length === 0) return {} as Merge<T>;
-
-  return items.reduce((acc: Obj, obj: Obj) => mergeObjects(acc, obj, options) as Obj, {} as Obj) as unknown as Merge<T>;
+export function deepMerge<T extends Obj[]>(items: readonly [...T], options: DeepMergeOptions = {}): Merge<T> {
+  return items.reduce((acc: Obj, item) => mergeObjects(acc, item, options) as Obj, {} as Obj) as Merge<T>;
 }
 
 /**

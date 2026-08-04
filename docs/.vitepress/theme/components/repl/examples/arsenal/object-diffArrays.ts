@@ -1,5 +1,5 @@
 export const objectDiffArraysExample = {
-  code: `import { diffArrays } from '@vielzeug/arsenal'
+  code: `import { diffArrays } from '@vielzeug/arsenal/object'
 
 // Default 'set' strategy — order independent
 const v1 = [1, 2, 3]

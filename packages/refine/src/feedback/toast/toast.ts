@@ -1,5 +1,5 @@
 import '../alert/alert';
-import { uuid } from '@vielzeug/arsenal';
+import { uuid } from '@vielzeug/arsenal/random';
 import { define, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';

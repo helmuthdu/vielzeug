@@ -20,6 +20,14 @@ describe('random', () => {
     expect(() => random(min, max)).toThrowError('random: minimum value must not be greater than maximum value');
   });
 
+  it('uses a supplied random source', () => {
+    expect(random(1, 4, { next: () => 0.5 })).toBe(3);
+  });
+
+  it('rejects an invalid random source result', () => {
+    expect(() => random(1, 4, { next: () => 1 })).toThrow(RangeError);
+  });
+
   it('should handle edge case where min equals max', () => {
     const min = 5;
     const max = 5;

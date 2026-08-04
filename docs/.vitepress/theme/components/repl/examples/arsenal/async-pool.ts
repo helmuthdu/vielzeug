@@ -1,18 +1,17 @@
 export const asyncPoolExample = {
-  code: `import { queue } from '@vielzeug/arsenal'
+  code: `import { taskPool } from '@vielzeug/arsenal/async'
 
-const requestQueue = queue({ concurrency: 3 })
-
+const pool = taskPool({ concurrency: 3 })
 const tasks = Array.from({ length: 6 }, (_, index) =>
-  requestQueue.add(async () => {
+  pool.run(async () => {
     console.log(\`Task \${index + 1} started\`)
     await new Promise(resolve => setTimeout(resolve, 100))
     return \`Result \${index + 1}\`
-  })
+  }),
 )
 
-const results = await Promise.all(tasks)
-await requestQueue.onIdle()
-console.log('All results:', results)`,
-  name: 'queue - Parallel execution with concurrency limit',
+console.log('All results:', await Promise.all(tasks))
+await pool.idle()
+pool.dispose()`,
+  name: 'taskPool - Parallel execution with concurrency limit',
 };

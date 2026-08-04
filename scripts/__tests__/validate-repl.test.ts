@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { buildExampleFiles, discoverPackages, resolveVitestBin, sanitize } from '../validate-repl';
+import { buildExampleFiles, discoverPackages, resolvePackageFilter, resolveVitestBin, sanitize } from '../validate-repl';
 
 describe('module has no import-time side effects', () => {
   it('only exports functions, does not touch the filesystem', () => {
@@ -45,6 +45,16 @@ describe('buildExampleFiles()', () => {
   it('always includes the jsdom environment pragma as the first line', () => {
     const { test } = buildExampleFiles('ripple', 'x', { code: 'x', name: 'X' });
     expect(test.split('\n')[0]).toBe('// @vitest-environment jsdom');
+  });
+});
+
+describe('resolvePackageFilter()', () => {
+  it('accepts an equals-style package flag', () => {
+    expect(resolvePackageFilter('arsenal')).toBe('arsenal');
+  });
+
+  it('rejects a bare package flag instead of validating every package', () => {
+    expect(() => resolvePackageFilter(true)).toThrow('Use --package=<name>.');
   });
 });
 

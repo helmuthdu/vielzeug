@@ -1,5 +1,5 @@
 export const functionRunAllExample = {
-  code: `import { runAll } from '@vielzeug/arsenal'
+  code: `import { runAll } from '@vielzeug/arsenal/function'
 
 // Run every teardown function — collect errors instead of stopping on first failure
 const log = []

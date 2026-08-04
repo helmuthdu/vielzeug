@@ -1,4 +1,4 @@
-import { debounce } from '@vielzeug/arsenal';
+import { debounce } from '@vielzeug/arsenal/function';
 import { define, html, prop, getHost, onCleanup, onMounted, useEmit, useSlots } from '@vielzeug/ore';
 import { unsafeHtml } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';

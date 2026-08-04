@@ -1,7 +1,5 @@
 export * from './assert';
-export * from './constant';
 export * from './debounce';
-export * from './identity';
 export * from './once';
 export * from './pipe';
 export * from './runAll';

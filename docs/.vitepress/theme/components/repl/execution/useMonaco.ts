@@ -21,8 +21,8 @@ export function loadMonaco(): Promise<typeof Monaco> {
   monacoPromise ??= (async () => {
     const [monaco, { default: EditorWorker }, { default: TsWorker }] = await Promise.all([
       import('monaco-editor'),
-      import('monaco-editor/esm/vs/editor/editor.worker?worker'),
-      import('monaco-editor/esm/vs/language/typescript/ts.worker?worker'),
+      import('monaco-editor/editor/editor.worker?worker'),
+      import('monaco-editor/language/typescript/ts.worker?worker'),
     ]);
 
     self.MonacoEnvironment = {

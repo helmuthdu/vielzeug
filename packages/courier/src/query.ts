@@ -1,4 +1,4 @@
-import { retry } from '@vielzeug/arsenal';
+import { retry } from '@vielzeug/arsenal/async';
 
 import type { AsyncState, Query, QueryCache, QueryContext, QueryDefinition, QueryKey, Unsubscribe } from './types';
 

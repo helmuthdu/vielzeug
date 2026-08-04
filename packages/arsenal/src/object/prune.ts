@@ -3,7 +3,6 @@ import { filterMap } from '../array/filterMap';
 import { isEmpty } from '../guards/isEmpty';
 import { isNil } from '../guards/isNil';
 import { isPlainObject } from '../guards/isPlainObject';
-import { isString } from '../guards/isString';
 
 /**
  * Removes all nullable and empty values from strings, arrays, or objects.
@@ -33,7 +32,7 @@ export function prune<T>(value: T): T | undefined;
 export function prune<T>(value: T): T | undefined {
   if (isNil(value)) return undefined;
 
-  if (isString(value)) {
+  if (typeof value === 'string') {
     const trimmed = value.trim();
 
     return (trimmed === '' ? undefined : trimmed) as T | undefined;

@@ -9,6 +9,6 @@ export * from './mapKeys';
 export * from './mapValues';
 export * from './merge';
 export * from './omit';
-export * from './parseJSON';
 export * from './pick';
 export * from './prune';
+export * from './tryParseJson';

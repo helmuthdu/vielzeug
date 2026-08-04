@@ -1,4 +1,3 @@
-import { ArsenalValidationError } from '../errors';
 import { abortError } from './abortError';
 import { sleep } from './sleep';
 
@@ -56,7 +55,7 @@ function buildSignal(timeout: number | undefined, signal: AbortSignal | undefine
  * @param [options.onError] - Called with the last error before rethrowing — both on final attempt exhaustion
  *   and when `shouldRetry` returns `false` to abort early.
  * @returns The resolved value.
- * @throws {ArsenalValidationError} If `times` is not a positive integer.
+ * @throws {RangeError} If `times` is not a positive integer.
  * @throws The last error if all attempts fail.
  */
 export async function retry<T>(
@@ -64,7 +63,7 @@ export async function retry<T>(
   { delay = 250, onError, shouldRetry, signal, timeout, times = 3 }: RetryOptions = {},
 ): Promise<T> {
   if (!Number.isInteger(times) || times < 1) {
-    throw new ArsenalValidationError(`retry: times must be a positive integer, got ${times}`);
+    throw new RangeError(`retry: times must be a positive integer, got ${times}`);
   }
 
   for (let tryCount = 1; tryCount <= times; tryCount++) {

@@ -286,7 +286,7 @@ describe('createGroupedVirtualizer – function estimate callbacks', () => {
     const onChange = vi.fn();
 
     createGroupedVirtualizer(el, {
-      estimateHeaderSize: (section, sectionIndex) => {
+      estimateHeaderSize: (_section, sectionIndex) => {
         headerSizes[sectionIndex] = sectionIndex === 0 ? 32 : 48;
 
         return headerSizes[sectionIndex]!;
@@ -308,7 +308,7 @@ describe('createGroupedVirtualizer – function estimate callbacks', () => {
 
     createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
-      estimateItemSize: (item, itemIndex) => (itemIndex === 0 ? 60 : 30),
+      estimateItemSize: (_item, itemIndex) => (itemIndex === 0 ? 60 : 30),
       onChange,
       sections,
     });

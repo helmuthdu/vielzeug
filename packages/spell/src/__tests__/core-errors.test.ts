@@ -1,4 +1,4 @@
-import { diagnostics, s, SpellError, SpellValidationError } from '../index';
+import { diagnostics, type ParseResult, s, SpellError, SpellValidationError } from '../index';
 
 const { createParseContext, prependIssuePath } = diagnostics;
 
@@ -95,16 +95,14 @@ describe('diagnostics helpers', () => {
       },
     });
 
-    const cases = [
-      [s.string().min(3), 'x', 'Localized string minimum 3'],
-      [s.string().email(), 'invalid', 'Localized email'],
-      [s.number().min(3), 1, 'Localized number minimum 3'],
-      [s.array(s.string()).min(2), ['one'], 'Localized array minimum 2'],
-    ] as const;
+    const cases: readonly [ParseResult<unknown>, string][] = [
+      [s.string().min(3).safeParse('x', context), 'Localized string minimum 3'],
+      [s.string().email().safeParse('invalid', context), 'Localized email'],
+      [s.number().min(3).safeParse(1, context), 'Localized number minimum 3'],
+      [s.array(s.string()).min(2).safeParse(['one'], context), 'Localized array minimum 2'],
+    ];
 
-    for (const [schema, value, expected] of cases) {
-      const result = schema.safeParse(value, context);
-
+    for (const [result, expected] of cases) {
       expect(result).toMatchObject({ success: false });
 
       if (!result.success) expect(result.error.issues[0]?.message).toBe(expected);

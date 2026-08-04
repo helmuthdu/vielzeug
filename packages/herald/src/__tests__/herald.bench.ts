@@ -1,6 +1,7 @@
 import { bench, describe } from 'vitest';
 
 import { createBus } from '../index';
+import { createTestBus } from '../testing';
 
 type BenchEvents = {
   tick: number;
@@ -58,10 +59,10 @@ describe('bus lifecycle', () => {
   });
 
   bench('createBus + 10 subs + removeAllListeners + dispose', () => {
-    const bus = createBus<BenchEvents>();
+    const bus = createTestBus<BenchEvents>();
 
     for (let i = 0; i < 10; i++) bus.on('tick', () => {});
-    bus.removeAllListeners();
+    bus.removeAllListeners('tick');
     bus.dispose();
   });
 });

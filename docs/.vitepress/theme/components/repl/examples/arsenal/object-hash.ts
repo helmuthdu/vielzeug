@@ -1,5 +1,5 @@
 export const objectHashExample = {
-  code: `import { hash } from '@vielzeug/arsenal'
+  code: `import { hash } from '@vielzeug/arsenal/object'
 
 // Stable cache key regardless of object key insertion order
 const key1 = hash({ sort: 'asc', filter: { role: 'admin' } })

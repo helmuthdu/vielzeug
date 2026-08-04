@@ -1,5 +1,5 @@
 export const objectPruneExample = {
-  code: `import { prune } from '@vielzeug/arsenal'
+  code: `import { prune } from '@vielzeug/arsenal/object'
 
 const data = {
   name: '  Alice  ',

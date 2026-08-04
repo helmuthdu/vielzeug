@@ -14,8 +14,7 @@ A pure sync function is called repeatedly with the same arguments and the comput
 Use `memo(fn, options?)` to memoize with an optional `maxSize` (LRU cap) and a custom `key` function. Returns a `Memoized<T>` with `.clear()`, `.invalidate()`, and `.size`.
 
 ```ts
-import { memo } from '@vielzeug/arsenal';
-// or: import { memo } from '@vielzeug/arsenal/cache';
+import { memo } from '@vielzeug/arsenal/cache';
 
 const expensiveCalc = memo(
   (n: number) => {
@@ -35,7 +34,7 @@ expensiveCalc.clear(); // clears all entries
 #### Custom key for object arguments
 
 ```ts
-import { memo } from '@vielzeug/arsenal';
+import { memo } from '@vielzeug/arsenal/cache';
 
 const formatLabel = memo((params: { page: number; size: number }) => `Page ${params.page} of ${params.size}`, {
   key: ({ page, size }) => `${page}:${size}`,
@@ -45,26 +44,24 @@ formatLabel({ page: 1, size: 20 }); // 'Page 1 of 20' — computed
 formatLabel({ page: 1, size: 20 }); // cached
 ```
 
-#### Async caching — use stash instead
+#### Async caching — use cache instead
 
-`memo` only accepts **sync** functions. For async caching with TTL and stampede prevention use `stash.getOrSet`:
+`memo` only accepts **sync** functions. For async caching with TTL and load deduplication use `cache.getOrLoad`:
 
 ```ts
-import { stash } from '@vielzeug/arsenal';
+import { cache } from '@vielzeug/arsenal/cache';
 
-const userCache = stash<User>({ ttlMs: 60_000, maxSize: 100 });
-
-// Concurrent callers with the same key share one in-flight Promise
-const user = await userCache.getOrSet('user:1', () => fetchUser(1));
+const userCache = cache<string, User>({ ttlMs: 60_000, capacity: 100 });
+const user = await userCache.getOrLoad('user:1', () => fetchUser(1));
 ```
 
 ### Pitfalls
 
 - `memo` only accepts sync functions — passing an async function is a compile-time error.
 - Pass a `key` function when arguments are objects — without it, arguments are `JSON.stringify`-ed, which may be unstable for non-plain objects.
-- There is no TTL option. Use `stash` when time-based expiry is required.
+- There is no TTL option. Use `cache` when time-based expiry is required.
 
 ### Related
 
-- [stash](../object/stash.md)
+- [cache](../cache/stash.md)
 - [debounce](./debounce.md)

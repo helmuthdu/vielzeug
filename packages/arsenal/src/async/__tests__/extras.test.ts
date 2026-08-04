@@ -39,7 +39,7 @@ describe('async extras', () => {
     const memoized = memo(asyncFn);
 
     // At runtime the call succeeds (caches the Promise object), but the type error
-    // is the guard: callers must use stash.getOrSet for async memoization.
+    // is the guard: callers must use cache.getOrLoad for async memoization.
     expect(typeof memoized).toBe('function');
   });
 

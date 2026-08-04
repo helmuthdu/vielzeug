@@ -1,5 +1,5 @@
 export const functionDebounceExample = {
-  code: `import { debounce } from '@vielzeug/arsenal'
+  code: `import { debounce } from '@vielzeug/arsenal/function'
 
 // --- Trailing (default) ---
 let trailingCount = 0

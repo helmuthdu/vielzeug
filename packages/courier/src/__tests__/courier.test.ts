@@ -4,7 +4,7 @@ import { createCourier } from '../courier';
 
 describe('createCourier', () => {
   it('shares interceptors and headers across REST and streams', async () => {
-    const fetch = vi.fn(async () => new Response('hello', { status: 200 }));
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response('hello', { status: 200 }));
     const courier = createCourier({ fetch, headers: { authorization: 'Bearer token' } });
 
     courier.use(async (context, next) => next(context.withHeaders({ 'x-request-id': 'request-1' })));
@@ -14,7 +14,7 @@ describe('createCourier', () => {
 
     expect(fetch).toHaveBeenCalledTimes(2);
     for (const [, init] of fetch.mock.calls) {
-      expect(init.headers).toMatchObject({ authorization: 'Bearer token', 'x-request-id': 'request-1' });
+      expect(init?.headers).toMatchObject({ authorization: 'Bearer token', 'x-request-id': 'request-1' });
     }
   });
 

@@ -14,7 +14,7 @@ You need a randomly reordered copy of an array — for example randomizing a qui
 Use `shuffle(array)` to return a new Fisher-Yates shuffled array. The original is not mutated.
 
 ```ts
-import { shuffle } from '@vielzeug/arsenal';
+import { shuffle } from '@vielzeug/arsenal/random';
 
 shuffle([1, 2, 3, 4, 5]); // e.g. [3, 1, 5, 2, 4]
 shuffle([1, 2, 3, 4, 5]); // e.g. [2, 4, 1, 5, 3]
@@ -23,7 +23,7 @@ shuffle([1, 2, 3, 4, 5]); // e.g. [2, 4, 1, 5, 3]
 ### Pitfalls
 
 - Returns a new array — the original is unchanged.
-- Uses `Math.random()` — not cryptographically secure.
+- Default random source uses `crypto.getRandomValues`; pass a `RandomSource` for deterministic tests.
 
 ### Related
 

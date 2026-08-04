@@ -1,29 +1,49 @@
 import { vi } from 'vitest';
 
-export class FakeTarget {
-  private listeners: Map<string, EventListener[]> = new Map();
+import type { Handler } from '../types';
 
-  addEventListener(type: string, fn: EventListener): void {
-    const list = this.listeners.get(type) ?? [];
+export class FakeTarget implements EventTarget {
+  private listeners: Map<string, Set<EventListenerOrEventListenerObject>> = new Map();
 
-    list.push(fn);
-    this.listeners.set(type, list);
+  addEventListener(
+    type: string,
+    callback: EventListenerOrEventListenerObject | null,
+    _options?: AddEventListenerOptions | boolean,
+  ): void {
+    if (!callback) return;
+
+    const listeners = this.listeners.get(type) ?? new Set();
+
+    listeners.add(callback);
+    this.listeners.set(type, listeners);
   }
 
   dispatch(event: KeyboardEvent): void {
-    const type = event.type ?? 'keydown';
-
-    for (const fn of this.listeners.get(type) ?? []) fn(event);
+    this.dispatchEvent(event);
   }
 
-  removeEventListener(type: string, fn: EventListener): void {
-    const list = this.listeners.get(type) ?? [];
+  dispatchEvent(event: Event): boolean {
+    for (const listener of this.listeners.get(event.type) ?? []) {
+      if (typeof listener === 'function') listener.call(this, event);
+      else listener.handleEvent.call(listener, event);
+    }
 
-    this.listeners.set(
-      type,
-      list.filter((l) => l !== fn),
-    );
+    return !event.defaultPrevented;
   }
+
+  removeEventListener(
+    type: string,
+    callback: EventListenerOrEventListenerObject | null,
+    _options?: boolean | EventListenerOptions,
+  ): void {
+    if (!callback) return;
+
+    this.listeners.get(type)?.delete(callback);
+  }
+}
+
+export function mockHandler(): Handler {
+  return vi.fn<Handler>();
 }
 
 export function makeEvent(

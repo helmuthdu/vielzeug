@@ -1,5 +1,5 @@
 export const stringCamelcaseExample = {
-  code: `import { camelCase, pascalCase, kebabCase, snakeCase } from '@vielzeug/arsenal'
+  code: `import { camelCase, pascalCase, kebabCase, snakeCase } from '@vielzeug/arsenal/string'
 
 const input = 'hello world example'
 

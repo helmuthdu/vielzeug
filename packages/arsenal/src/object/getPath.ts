@@ -1,7 +1,6 @@
 import type { Obj } from '../types';
 
 import { UNSAFE_PATH_SEGMENTS } from '../_common/unsafePaths';
-import { ArsenalValidationError } from '../errors';
 
 type PathValue<T, P extends string> = P extends `${infer Key}.${infer Rest}`
   ? Key extends keyof T
@@ -11,87 +10,53 @@ type PathValue<T, P extends string> = P extends `${infer Key}.${infer Rest}`
     ? T[P]
     : undefined;
 
-export type GetPathOptions = {
-  /**
-   * When `false`, throws an `ArsenalValidationError` on bracket-notation segments instead of
-   * auto-converting them to dot notation. Default: `true`.
-   */
-  bracketNotation?: boolean;
-  /**
-   * Returned when the path is missing or resolves to `undefined`.
-   * Mutually exclusive with `strict` — if both are set, `strict` takes precedence.
-   */
-  fallback?: unknown;
-  /**
-   * When `true`, throws an `ArsenalValidationError` if any path segment is missing.
-   * Default: `false`.
-   */
-  strict?: boolean;
-};
+function pathSegments(path: string): string[] {
+  return path
+    .replace(/\[(\d+)\]/g, '.$1')
+    .replace(/^\.|\.$/g, '')
+    .split('.')
+    .filter(Boolean);
+}
 
-/**
- * Retrieves the value at a dot-notation path of an object.
- *
- * Bracket notation (`a[0].b`) is automatically converted to dot notation by default.
- * Unsafe path segments (`__proto__`, `constructor`, `prototype`) always return `options.fallback`.
- *
- * @example
- * ```ts
- * const obj = { a: { b: { c: 3 } }, d: [1, 2, 3] };
- *
- * getPath(obj, 'a.b.c');                          // 3
- * getPath(obj, 'a.b.x', { fallback: 'fallback' }); // 'fallback'
- * getPath(obj, 'd[1]');                            // 2  (bracket auto-converted)
- * getPath(obj, 'e.f.g', { strict: true });         // throws ArsenalValidationError
- * getPath(obj, 'a[0]', { bracketNotation: false }); // throws ArsenalValidationError
- * ```
- *
- * @template T - The object type.
- * @template P - The path string type.
- * @param item - The object to query.
- * @param path - The dot-separated path.
- * @param [options] - Options: `fallback`, `strict`, `bracketNotation`.
- * @returns The resolved value, or `options.fallback` if missing.
- * @throws {ArsenalValidationError} When `bracketNotation: false` and bracket syntax is used.
- * @throws {ArsenalValidationError} When `strict: true` and the path does not exist.
- */
-export function getPath<T extends Obj, P extends string>(
-  item: T,
-  path: P,
-  options: GetPathOptions = {},
-): PathValue<T, P> | undefined {
-  const { bracketNotation = true, fallback: defaultValue, strict = false } = options;
-
-  if (/[[\]]/.test(path)) {
-    if (!bracketNotation) {
-      throw new ArsenalValidationError(
-        `getPath: bracket notation is not supported. Use dot notation: '${path.replace(/\[(\d+)\]/g, '.$1').replace(/^\.|\.$/g, '')}' or pass { bracketNotation: true }.`,
-      );
-    }
-
-    path = path.replace(/\[(\d+)\]/g, '.$1').replace(/^\.|\.$/g, '') as P;
-  }
-
-  const fragments = path.split('.').filter(Boolean);
+function readPath(item: Obj, path: string): unknown {
   let current: unknown = item;
 
-  for (const fragment of fragments) {
-    if (UNSAFE_PATH_SEGMENTS.has(fragment)) return defaultValue as PathValue<T, P>;
+  for (const segment of pathSegments(path)) {
+    if (UNSAFE_PATH_SEGMENTS.has(segment) || current == null || typeof current !== 'object') return undefined;
 
-    if (current == null || typeof current !== 'object') {
-      if (strict) throw new ArsenalValidationError(`Cannot read property '${fragment}' of ${current}`);
+    current = (current as Record<string, unknown>)[segment];
 
-      return defaultValue as PathValue<T, P>;
-    }
-
-    current = (current as Record<string, unknown>)[fragment];
-
-    if (current === undefined) {
-      if (strict) throw new ArsenalValidationError(`Property '${fragment}' does not exist`);
-
-      return defaultValue as PathValue<T, P>;
-    }
+    if (current === undefined) return undefined;
   }
 
-  return current as PathValue<T, P>;
+  return current;
+}
+
+/**
+ * Retrieves a value at a dot-notation or numeric bracket-notation path.
+ * Returns `undefined` when the path is missing or contains an unsafe segment.
+ * Use `getPathOr` to supply a fallback or `requirePath` to throw on a missing path.
+ */
+export function getPath<T extends Obj, P extends string>(item: T, path: P): PathValue<T, P> | undefined {
+  return readPath(item, path) as PathValue<T, P> | undefined;
+}
+
+/**
+ * Retrieves a value at a path or returns `fallback` when the path is missing.
+ */
+export function getPathOr<T extends Obj, P extends string, F>(item: T, path: P, fallback: F): PathValue<T, P> | F {
+  const value = readPath(item, path);
+
+  return (value === undefined ? fallback : value) as PathValue<T, P> | F;
+}
+
+/**
+ * Retrieves a value at a path or throws when the path is missing.
+ */
+export function requirePath<T extends Obj, P extends string>(item: T, path: P): Exclude<PathValue<T, P>, undefined> {
+  const value = readPath(item, path);
+
+  if (value === undefined) throw new TypeError(`Path does not exist: '${path}'`);
+
+  return value as Exclude<PathValue<T, P>, undefined>;
 }

@@ -166,7 +166,7 @@ describe('createPieChart', () => {
   });
 
   it('cancels in-flight animation RAF on dispose', () => {
-    const cancelSpy = vi.spyOn(global, 'cancelAnimationFrame');
+    const cancelSpy = vi.spyOn(globalThis, 'cancelAnimationFrame');
     const chart = createPieChart(container, { data: DATA, transition: { duration: 500 } });
 
     // The pie's enter transition (duration: 500) schedules a rAF loop synchronously —

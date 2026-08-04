@@ -1,28 +1,10 @@
 ---
 title: Arsenal — Utility library for TypeScript
-description: Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, and typed checks.
+description: Tree-shakeable TypeScript utilities with focused category entry points for arrays, async work, caching, objects, strings, math, and guards.
 package: arsenal
 category: utilities
-keywords: [utility, array, string, object, math, async, debounce, throttle, functional, helpers]
-exports:
-  [
-    chunk,
-    debounce,
-    throttle,
-    allOf,
-    clamp,
-    isEqual,
-    attempt,
-    retry,
-    sleep,
-    hash,
-    fuzzy,
-    getPath,
-    deepMerge,
-    diff,
-    stash,
-    memo,
-  ]
+keywords: [utility, array, string, object, math, async, debounce, throttle, cache]
+exports: [chunk, groupBy, retry, debounce, clamp, isEqual, taskPool, cache, fuzzyFilter, tryParseJson]
 related: [tempo, sourcerer, spell, coins]
 environments: [browser, node, ssr, deno]
 ---
@@ -33,23 +15,33 @@ environments: [browser, node, ssr, deno]
 
 ## Why Arsenal?
 
-Arsenal favors a curated, typed utility surface over an everything-and-the-kitchen-sink API, with zero dependencies and modern tree-shakeable exports.
+Arsenal keeps common utilities at package root and places specialized behavior behind category entry points. This keeps autocomplete focused while preserving one dependency and tree-shakeable modules.
 
-| Feature                     | Arsenal                                       | lodash-es                                  | Remeda                                     |
-| --------------------------- | --------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
-| Bundle size                 | <PackageInfo package="arsenal" type="size" /> | ~72 kB                                     | ~18 kB                                     |
-| TypeScript-first ergonomics | <ore-icon name="check" size="16"></ore-icon>    | Partial                                    | <ore-icon name="check" size="16"></ore-icon> |
-| Deep utility coverage       | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="check" size="16"></ore-icon> | Partial                                    |
-| Async control-flow helpers  | <ore-icon name="check" size="16"></ore-icon>    | Partial                                    | <ore-icon name="x" size="16"></ore-icon>     |
-| Typed predicate functions   | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon>     | Partial                                    |
-| Tree-shakeable modules      | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Zero dependencies           | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+```ts
+// Before
+const users = JSON.parse(raw).filter((user) => user.name.includes(query));
+
+// After
+import { fuzzyFilter } from '@vielzeug/arsenal/array';
+import { tryParseJson } from '@vielzeug/arsenal/object';
+
+const parsed = tryParseJson(raw);
+const users = parsed.ok ? fuzzyFilter(parsed.value as User[], query, { select: (user) => user.name }) : [];
+```
+
+| Feature | Arsenal | lodash-es | Remeda |
+| --- | --- | --- | --- |
+| Bundle size | <PackageInfo package="arsenal" type="size" /> | ~72 kB | ~18 kB |
+| Typed root utilities | <ore-icon name="check" size="16"></ore-icon> | Partial | <ore-icon name="check" size="16"></ore-icon> |
+| Category entry points | <ore-icon name="check" size="16"></ore-icon> | Partial | Partial |
+| Async task pool and cache | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
-**Use Arsenal when** you want one compact, typed utility layer that covers array/object/function/async/math use cases. For money handling, use [`@vielzeug/coins`](/coins/).
+**Use Arsenal when** you need one typed utility dependency with focused subpaths for specialized behavior.
 
-**Consider narrower alternatives when** you only need a small functional subset and prefer ultra-focused APIs.
+**Consider narrower alternatives when** you need only platform APIs or a small functional subset.
 
 </div>
 
@@ -74,57 +66,35 @@ yarn add @vielzeug/arsenal
 ## Quick Start
 
 ```ts
-import { chunk, deepMerge, diff, fuzzy, hash, parseJSON, pick, queue, retry } from '@vielzeug/arsenal';
+import { chunk, groupBy, retry } from '@vielzeug/arsenal';
+import { cache } from '@vielzeug/arsenal/cache';
+import { taskPool } from '@vielzeug/arsenal/async';
 
 const pages = chunk([1, 2, 3, 4, 5], 2);
-const user = pick({ id: 1, name: 'Alice', role: 'admin' }, ['id', 'name']);
+const byRole = groupBy([{ role: 'admin' }, { role: 'user' }], (user) => user.role);
 
-const q = queue({ concurrency: 2 });
-await q.add(() => fetch('/api/a'));
+const pool = taskPool({ concurrency: 2 });
+const health = await pool.run((signal) => retry(() => fetch('/health', { signal }).then((response) => response.json())));
 
-const health = await retry(() => fetch('/api/health').then((r) => r.json()), {
-  times: 3,
-  delay: 250,
-  timeout: 5000,
-});
+const responses = cache<string, unknown>({ ttlMs: 60_000 });
+const profile = await responses.getOrLoad('/profile', () => fetch('/profile').then((response) => response.json()));
 
-const cfg = parseJSON('{"api":{"host":"localhost","port":3000}}', {
-  fallback: { api: { host: 'localhost', port: 3000 } },
-});
-
-// Fuzzy search — filter mode returns T[], scored mode returns ScoredResult<T>[]
-const users = [
-  { id: 1, name: 'Alice' },
-  { id: 2, name: 'Bob' },
-];
-const hits = fuzzy(users, 'alice'); // User[]
-const ranked = fuzzy(users, 'alice', { scored: true }); // ScoredResult<User>[]
-// [{ item: { name: 'Alice', ... }, score: 0.91 }, ...]
-
-// Deep merge with optional array concatenation
-deepMerge({ a: { x: 1 } }, { a: { y: 2 } }); // { a: { x: 1, y: 2 } }
-deepMerge({ tags: ['a'] }, { tags: ['b'] }, { arrayStrategy: 'concat' }); // { tags: ['a','b'] }
-
-// Structured diff
-diff({ port: 3000 }, { port: 4000 });
-// { added: [], removed: [], changed: { port: { before: 3000, after: 4000 } } }
-
-// Deterministic cache keys from any value
-const key = hash({ sort: 'asc', filter: { role: 'admin' } });
+pool.dispose();
+console.log(pages, byRole, health, profile);
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- **Array**: `chunk`, `compact`, `countBy`, `difference`, `filterMap`, `flatten`, `groupBy`, `indexBy`, `partition`, `fuzzy`, `fuzzyFilter`, `fuzzyScore`, `take/drop`, `union/intersection`, `zip/unzip`, and more
-- **Async**: `abortError`, `attempt`, `parallel`, `queue`, `retry`, `sleep`, `waitFor`
-- **Cache**: `memo` (sync LRU memoization), `stash` (TTL cache with stampede prevention)
-- **Object**: `pick`, `omit`, `mapValues`, `mapKeys`, `filterValues`, `defaults`, `deepMerge`, `shallowMerge`, `diff`, `diffArrays`, `invert`, `prune`, `getPath`, `flattenPaths`, `unflattenPaths`, `parseJSON`, `hash` (deterministic, handles `Date`/`Set`/`Map`/`bigint`)
-- **Function**: `pipe`, `assert`, `runAll`, `debounce`, `throttle`, `tap`, `identity`, `constant`, `once`, `memo`
-- **Guards**: `allOf`, `anyOf`, `noneOf`, `isArray`, `isBoolean`, `isDate`, `isDefined`, `isEmpty`, `isEqual`, `isError`, `isFunction`, `isMatch`, `isNil`, `isNumber`, `isPlainObject`, `isPrimitive`, `isPromise`, `isRegex`, `isString`, `isAbortError`, `shallowEqual`
-- **Math**: `lerp`, `normalize`, `mod`, `gcd/lcm`, `variance`, `standardDeviation`, `backoff`, plus numeric helpers
-- **Random**: `draw`, `random`, `shuffle`, `uuid`
+- **`chunk`**: common array/string chunking from package root
+- **`retry`**: retry async work with cancellation support from package root
+- **`taskPool`**: bounded, disposable concurrent work from `/async`
+- **`cache`**: identity-keyed TTL cache with async load deduplication from `/cache`
+- **`fuzzyFilter`**: explicit-field fuzzy filtering from `/array`
+- **`tryParseJson`**: preserve JSON syntax failures from `/object`
+- **`clamp`**: numeric bounds from package root
+- **`isEqual`**: structural equality from package root
 
 </div>
 
@@ -142,10 +112,10 @@ const key = hash({ sort: 'asc', filter: { role: 'admin' } });
 
 <div class="see-also">
 
-- [Tempo](/tempo/) — date/time utilities including `expires`, `timeDiff`, and `dateRange`
-- [Coins](/coins/) — money formatting and currency conversion (`currency`, `exchange`)
-- [Sourcerer](/sourcerer/) — reactive paginated sources built on top of arsenal primitives
-- [Spell](/spell/) — schema validation that pairs naturally with `parseJSON` and `assert`
+- [Spell](/spell/) — validate `unknown` JSON data after `tryParseJson`.
+- [Vault](/vault/) — persistent storage; Arsenal cache is in-memory only.
+- [Tempo](/tempo/) — date/time utilities kept outside Arsenal.
+- [Coins](/coins/) — money formatting and currency conversion.
 
 </div>
 

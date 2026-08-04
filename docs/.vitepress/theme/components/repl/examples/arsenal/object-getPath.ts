@@ -1,5 +1,5 @@
 export const objectGetPathExample = {
-  code: `import { getPath } from '@vielzeug/arsenal'
+  code: `import { getPath, getPathOr, requirePath } from '@vielzeug/arsenal/object'
 
 const config = {
   server: { host: 'localhost', ports: [3000, 3001] },
@@ -10,19 +10,15 @@ const config = {
 console.log(getPath(config, 'server.host'))                          // 'localhost'
 console.log(getPath(config, 'db.pool.max'))                          // 10
 console.log(getPath(config, 'server.ports.0'))                       // 3000
-console.log(getPath(config, 'missing', { fallback: 'default' }))     // 'default'
-
-// Bracket notation is auto-converted by default
+console.log(getPathOr(config, 'missing', 'default'))                 // 'default'
 console.log(getPath(config, 'server.ports[1]'))                      // 3001
 
-// strict:true — throws when a path segment is missing
 try {
-  getPath(config, 'db.pool.timeout', { strict: true })
+  requirePath(config, 'db.pool.timeout')
 } catch (e) {
   console.log('threw:', e.message)
 }
 
-// Prototype-pollution segments are blocked — returns fallback
-console.log(getPath(config, '__proto__.polluted', { fallback: 'safe' })) // 'safe'`,
-  name: 'getPath - Dot-notation access with fallback and strict options',
+console.log(getPathOr(config, '__proto__.polluted', 'safe'))         // 'safe'`,
+  name: 'getPath - Dot-notation access',
 };

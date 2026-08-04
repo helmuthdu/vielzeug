@@ -1,4 +1,3 @@
-import { ArsenalError } from '../../errors';
 import { retry } from '../retry';
 import { sleep } from '../sleep';
 
@@ -163,17 +162,17 @@ describe('retry', () => {
     expect(mockFn).toHaveBeenCalledWith(undefined);
   });
 
-  it('throws ArsenalError for times: 0 without calling fn — regression for the silent undefined-return bug', async () => {
+  it('throws RangeError for times: 0 without calling fn — regression for the silent undefined-return bug', async () => {
     const mockFn = vi.fn().mockResolvedValue('ok');
 
-    await expect(retry(mockFn, { times: 0 })).rejects.toThrow(ArsenalError);
+    await expect(retry(mockFn, { times: 0 })).rejects.toThrow(RangeError);
     expect(mockFn).not.toHaveBeenCalled();
   });
 
-  it('throws ArsenalError for a negative times', async () => {
+  it('throws RangeError for a negative times', async () => {
     const mockFn = vi.fn().mockResolvedValue('ok');
 
-    await expect(retry(mockFn, { times: -1 })).rejects.toThrow(ArsenalError);
+    await expect(retry(mockFn, { times: -1 })).rejects.toThrow(RangeError);
     expect(mockFn).not.toHaveBeenCalled();
   });
 });

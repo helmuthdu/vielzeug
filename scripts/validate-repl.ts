@@ -52,6 +52,14 @@ export function sanitize(key: string): string {
   return key.replace(/[^a-zA-Z0-9_-]/g, '_');
 }
 
+export function resolvePackageFilter(packageFlag: unknown): string | null {
+  if (packageFlag === undefined) return null;
+
+  if (typeof packageFlag !== 'string') throw new Error('Use --package=<name>.');
+
+  return packageFlag;
+}
+
 /** Builds this example's snippet + vitest test file contents. Pure — no filesystem access —
  * so the tricky bit (jsdom pragma, conditional fake-indexeddb import, escaping the test name)
  * is unit-testable without writing anything to disk. */
@@ -102,9 +110,7 @@ export function resolveVitestBin(): string {
 
 async function main(): Promise<void> {
   const { flags } = parseArgs(process.argv.slice(2));
-  const filterPackage = typeof flags.package === 'string' ? flags.package : null;
-
-  const targets = discoverPackages(EXAMPLES_DIR, filterPackage);
+  const targets = discoverPackages(EXAMPLES_DIR, resolvePackageFilter(flags.package));
 
   rmSync(TMP_DIR, { force: true, recursive: true });
   mkdirSync(TMP_DIR, { recursive: true });

@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { createKeymap } from '../keymap';
 import { createKeymapLayer } from '../layer';
-import { FakeTarget, makeEvent } from './_fixtures';
+import { FakeTarget, makeEvent, mockHandler } from './_fixtures';
 
 describe('createKeymapLayer', () => {
   let target: FakeTarget;
@@ -12,8 +12,8 @@ describe('createKeymapLayer', () => {
   });
 
   it('layer and parent fire independently when both are mounted', () => {
-    const baseHandler = vi.fn();
-    const layerHandler = vi.fn();
+    const baseHandler = mockHandler();
+    const layerHandler = mockHandler();
     const base = createKeymap({ 'ctrl+k': baseHandler });
     const layer = createKeymapLayer(base, { 'ctrl+k': layerHandler });
     const unmountBase = base.mount(target);
@@ -35,8 +35,8 @@ describe('createKeymapLayer', () => {
   });
 
   it('deactivate() suspends the layer; parent still fires when mounted separately', () => {
-    const baseHandler = vi.fn();
-    const layerHandler = vi.fn();
+    const baseHandler = mockHandler();
+    const layerHandler = mockHandler();
     const base = createKeymap({ 'ctrl+k': baseHandler });
     const layer = createKeymapLayer(base, { 'ctrl+k': layerHandler });
 
@@ -55,7 +55,7 @@ describe('createKeymapLayer', () => {
   });
 
   it('activate() re-enables the layer', () => {
-    const layerHandler = vi.fn();
+    const layerHandler = mockHandler();
     const base = createKeymap({});
     const layer = createKeymapLayer(base, { 'ctrl+k': layerHandler });
     const unmount = layer.mount(target);
@@ -71,7 +71,7 @@ describe('createKeymapLayer', () => {
   });
 
   it('bind() adds shortcut to layer', () => {
-    const handler = vi.fn();
+    const handler = mockHandler();
     const base = createKeymap({});
     const layer = createKeymapLayer(base, {});
     const unmount = layer.mount(target);
@@ -84,7 +84,7 @@ describe('createKeymapLayer', () => {
   });
 
   it('unbind() removes shortcut from layer', () => {
-    const handler = vi.fn();
+    const handler = mockHandler();
     const base = createKeymap({});
     const layer = createKeymapLayer(base, { 'ctrl+z': handler });
     const unmount = layer.mount(target);
@@ -97,7 +97,7 @@ describe('createKeymapLayer', () => {
   });
 
   it('layer-only shortcut fires without mounting parent', () => {
-    const layerHandler = vi.fn();
+    const layerHandler = mockHandler();
     const base = createKeymap({});
     const unmount = createKeymapLayer(base, { 'ctrl+k': layerHandler }).mount(target);
 
@@ -108,7 +108,7 @@ describe('createKeymapLayer', () => {
   });
 
   it('respects global when() from layer options', () => {
-    const handler = vi.fn();
+    const handler = mockHandler();
     let active = false;
     const base = createKeymap({});
     const layer = createKeymapLayer(base, { 'ctrl+k': handler }, { when: () => active });
@@ -125,8 +125,8 @@ describe('createKeymapLayer', () => {
   });
 
   it('dispose() only tears down the layer — parent remains functional', () => {
-    const baseHandler = vi.fn();
-    const layerHandler = vi.fn();
+    const baseHandler = mockHandler();
+    const layerHandler = mockHandler();
     const base = createKeymap({ 'ctrl+k': baseHandler });
     const layer = createKeymapLayer(base, { 'ctrl+k': layerHandler });
     const unmountBase = base.mount(target);
@@ -156,7 +156,7 @@ describe('createKeymapLayer', () => {
   });
 
   it('[Symbol.dispose]() disposes the layer', () => {
-    const layerHandler = vi.fn();
+    const layerHandler = mockHandler();
     const base = createKeymap({});
     const layer = createKeymapLayer(base, { 'ctrl+k': layerHandler });
     const unmount = layer.mount(target);
@@ -176,8 +176,8 @@ describe('createKeymapLayer', () => {
   });
 
   it('listBindings() returns layer bindings only (not parent bindings)', () => {
-    const base = createKeymap({ 'ctrl+s': vi.fn() });
-    const layer = createKeymapLayer(base, { 'ctrl+k': vi.fn() });
+    const base = createKeymap({ 'ctrl+s': mockHandler() });
+    const layer = createKeymapLayer(base, { 'ctrl+k': mockHandler() });
 
     expect(layer.listBindings()).toHaveLength(1);
     expect(layer.listBindings()[0].shortcut[0]).toEqual({ key: 'k', modifiers: new Set(['ctrl']) });
@@ -187,12 +187,12 @@ describe('createKeymapLayer', () => {
     const layer = createKeymapLayer(createKeymap({}), {});
 
     expect(layer.listBindings()).toHaveLength(0);
-    layer.bind('ctrl+k', vi.fn());
+    layer.bind('ctrl+k', mockHandler());
     expect(layer.listBindings()).toHaveLength(1);
   });
 
   it('mounting parent separately fires it exactly once (no double-listener from layer)', () => {
-    const baseHandler = vi.fn();
+    const baseHandler = mockHandler();
     const base = createKeymap({ 'ctrl+k': baseHandler });
     const layer = createKeymapLayer(base, {});
     const unmountBase = base.mount(target);

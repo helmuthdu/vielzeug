@@ -1,23 +1,8 @@
 # @vielzeug/arsenal
 
-> Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, random, and typed checks.
+> Tree-shakeable, zero-dependency TypeScript utilities with focused category entry points.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/arsenal)](https://www.npmjs.com/package/@vielzeug/arsenal) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<details>
-<summary>Quick Reference</summary>
-
-**Package:** `@vielzeug/arsenal` &nbsp;·&nbsp; **Category:** Utilities
-
-**Key exports:** `chunk`, `debounce`, `throttle`, `allOf`, `clamp`, `isEqual`, `retry`, `sleep`, `stringify`, `fuzzy`, `getPath`, `deepMerge`, `diff`, `stash`, `memo`
-
-**When to use:** Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, random, and typed checks.
-
-**Related:** [`@vielzeug/coins`](https://www.npmjs.com/package/@vielzeug/coins) · [`@vielzeug/tempo`](https://www.npmjs.com/package/@vielzeug/tempo)
-
-</details>
-
-`@vielzeug/arsenal` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
 
 ## Installation
 
@@ -30,67 +15,38 @@ yarn add @vielzeug/arsenal
 ## Quick Start
 
 ```ts
-import {
-  allOf,
-  chunk,
-  deepMerge,
-  diff,
-  filterMap,
-  fuzzy,
-  groupBy,
-  noneOf,
-  partial,
-  pick,
-  queue,
-  retry,
-  stringify,
-} from '@vielzeug/arsenal';
+import { chunk, groupBy, retry } from '@vielzeug/arsenal';
+import { fuzzyFilter } from '@vielzeug/arsenal/array';
+import { taskPool } from '@vielzeug/arsenal/async';
+import { cache } from '@vielzeug/arsenal/cache';
+import { tryParseJson } from '@vielzeug/arsenal/object';
 
-const users = [
-  { id: 1, name: 'Alice', role: 'admin' },
-  { id: 2, name: 'Bob', role: 'user' },
-];
-const pages = chunk([1, 2, 3, 4, 5], 2);
-const byRole = groupBy(users, (u) => u.role);
-const safe = pick(users[0], ['id', 'name']);
+const parsed = tryParseJson('{"users":[{"name":"Alice"}]}');
+const users = parsed.ok ? (parsed.value as { users: { name: string }[] }).users : [];
+const matches = fuzzyFilter(users, 'ali', { select: (user) => user.name });
 
-const q = queue({ concurrency: 2 });
-await q.add(() => fetch('/api/a'));
+const pool = taskPool({ concurrency: 2 });
+const data = await pool.run((signal) => retry(() => fetch('/api', { signal }).then((response) => response.json())));
 
-const data = await retry(() => fetch('/api/health').then((r) => r.json()), {
-  times: 3,
-  delay: 200,
-});
+const responses = cache<string, unknown>({ ttlMs: 60_000 });
+const profile = await responses.getOrLoad('/profile', () => fetch('/profile').then((response) => response.json()));
 
-const doubleAll = partial((factor: number, values: number[]) => values.map((n) => n * factor), 2);
-const doubled = filterMap(doubleAll([1, 2, 3]), (n) => (n > 2 ? n : undefined));
-
-// Compose predicates — allOf / anyOf / noneOf
-const isWorkingAge = allOf<number>(
-  (age) => age >= 18,
-  (age) => age < 65,
-);
-const evens = [1, 2, 3, 4].filter(noneOf((n: number) => n % 2 !== 0));
-
-// Fuzzy search — filter mode or scored mode
-const filtered = fuzzy(users, 'alice');                      // User[]
-const ranked = fuzzy(users, 'alice', { scored: true });      // ScoredResult<User>[]
-// [{ item: { name: 'Alice', ... }, score: 0.91 }, ...]
-
-// Deep merge with optional array strategy
-deepMerge({ a: { x: 1 } }, { a: { y: 2 } });                // { a: { x: 1, y: 2 } }
-deepMerge({ tags: ['a'] }, { tags: ['b'] }, { arrayStrategy: 'concat' }); // { tags: ['a', 'b'] }
-
-// Structured object diff
-diff({ port: 3000, host: 'localhost' }, { port: 4000 });
-// { added: [], removed: ['host'], changed: { port: { before: 3000, after: 4000 } } }
-
-// Deterministic cache keys
-const key = stringify({ sort: 'asc', filter: { role: 'admin' } });
+console.log(chunk([1, 2, 3], 2), groupBy(matches, (user) => user.name), data, profile);
+pool.dispose();
 ```
 
-> **Money utilities** (`currency`, `exchange`) have moved to [`@vielzeug/coins`](https://www.npmjs.com/package/@vielzeug/coins).
-> **Date utilities** (`expires`, `timeDiff`, `dateRange`) are available in [`@vielzeug/tempo`](https://www.npmjs.com/package/@vielzeug/tempo).
+## Entry Points
+
+- `@vielzeug/arsenal` — curated common utilities
+- `@vielzeug/arsenal/array` — array transforms and fuzzy search
+- `@vielzeug/arsenal/async` — cancellation, retry, task pools, timing
+- `@vielzeug/arsenal/cache` — in-memory cache and memoization
+- `@vielzeug/arsenal/function` — function composition and timing
+- `@vielzeug/arsenal/guards` — type guards and predicates
+- `@vielzeug/arsenal/math` — numeric and statistical helpers
+- `@vielzeug/arsenal/object` — object transforms, paths, hash, JSON parsing result
+- `@vielzeug/arsenal/random` — cryptographic random helpers
+- `@vielzeug/arsenal/string` — text transforms and similarity
 
 ## Documentation
 

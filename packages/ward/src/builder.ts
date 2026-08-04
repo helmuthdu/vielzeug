@@ -30,7 +30,7 @@ export function ruleFor<TAction extends string = string, TData = unknown>(
   effect: 'allow' | 'deny',
   role: string | readonly string[],
   resource: string | typeof WILDCARD,
-  actions: readonly (TAction | typeof WILDCARD)[],
+  actions: readonly (TAction | NoInfer<typeof WILDCARD>)[],
   options?: RuleOptions<TData>,
 ): WardRule<TAction, TData>[] {
   return actions.map((action) => ({
@@ -61,7 +61,7 @@ export function ruleFor<TAction extends string = string, TData = unknown>(
 export function allow<TAction extends string = string, TData = unknown>(
   role: string | readonly string[],
   resource: string | typeof WILDCARD,
-  actions: readonly (TAction | typeof WILDCARD)[],
+  actions: readonly (TAction | NoInfer<typeof WILDCARD>)[],
   options?: RuleOptions<TData>,
 ): WardRule<TAction, TData>[] {
   return ruleFor('allow', role, resource, actions, options);
@@ -81,7 +81,7 @@ export function allow<TAction extends string = string, TData = unknown>(
 export function deny<TAction extends string = string, TData = unknown>(
   role: string | readonly string[],
   resource: string | typeof WILDCARD,
-  actions: readonly (TAction | typeof WILDCARD)[],
+  actions: readonly (TAction | NoInfer<typeof WILDCARD>)[],
   options?: RuleOptions<TData>,
 ): WardRule<TAction, TData>[] {
   return ruleFor('deny', role, resource, actions, options);
@@ -137,7 +137,9 @@ export const predicate = {
    * allow('editor', 'posts:*', ['update'], { when: predicate.owns('authorId') })
    * ```
    */
-  owns<TData = unknown>(attributeKey: keyof TData & string): WardPredicate<TData> {
+  owns<TData = unknown>(
+    attributeKey: [keyof TData] extends [never] ? string : keyof TData & string,
+  ): WardPredicate<TData> {
     return ({ data, principal }) => {
       if (!data || typeof data !== 'object') return false;
 
@@ -160,6 +162,8 @@ export const predicate = {
  *
  * Also available as `predicate.owns()` when using the grouped namespace.
  */
-export function owns<TData = unknown>(attributeKey: keyof TData & string): WardPredicate<TData> {
+export function owns<TData = unknown>(
+  attributeKey: [keyof TData] extends [never] ? string : keyof TData & string,
+): WardPredicate<TData> {
   return predicate.owns(attributeKey);
 }

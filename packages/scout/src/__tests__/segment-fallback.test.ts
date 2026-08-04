@@ -5,12 +5,12 @@ import { segmentWords } from '../segment';
 // sharing a file with `segment.test.ts` would let an earlier test populate the cache with a
 // real segmenter before this test deletes `Intl.Segmenter`, masking the fallback path.
 test('falls back to returning text unchanged when Intl.Segmenter is unavailable', () => {
-  const original = Intl.Segmenter;
+  const original = Object.getOwnPropertyDescriptor(Intl, 'Segmenter');
 
   // @ts-expect-error — simulating an older runtime without Intl.Segmenter
   delete Intl.Segmenter;
 
   expect(segmentWords('我喜欢学习中文')).toBe('我喜欢学习中文');
 
-  Intl.Segmenter = original;
+  if (original) Object.defineProperty(Intl, 'Segmenter', original);
 });

@@ -14,7 +14,7 @@ You need to run async tasks over an array concurrently but want to cap the numbe
 Use `parallel(array, fn, { limit })` to process items with bounded concurrency. Results are returned in input order.
 
 ```ts
-import { parallel } from '@vielzeug/arsenal';
+import { parallel } from '@vielzeug/arsenal/async';
 
 const ids = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -29,7 +29,7 @@ const results = await parallel(
 #### Without a limit
 
 ```ts
-import { parallel } from '@vielzeug/arsenal';
+import { parallel } from '@vielzeug/arsenal/async';
 
 // All tasks start simultaneously — equivalent to Promise.all with a map
 const all = await parallel([1, 2, 3], async (n) => n * 2);
@@ -44,5 +44,5 @@ const all = await parallel([1, 2, 3], async (n) => n * 2);
 
 ### Related
 
-- [queue](./queue.md)
+- [taskPool](./queue.md)
 - [attempt](./attempt.md)

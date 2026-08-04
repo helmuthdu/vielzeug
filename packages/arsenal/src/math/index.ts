@@ -1,4 +1,3 @@
-export * from './abs';
 export * from './allocate';
 export * from './average';
 export * from './clamp';
@@ -6,9 +5,7 @@ export * from './gcd';
 export * from './lcm';
 export * from './lerp';
 export * from './linspace';
-export * from './max';
 export * from './median';
-export * from './min';
 export * from './mod';
 export * from './normalize';
 export * from './percent';

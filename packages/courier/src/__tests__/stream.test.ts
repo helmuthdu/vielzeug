@@ -58,11 +58,11 @@ describe('Courier streams', () => {
   it('aborts the request when an iterator is returned while blocked on a read', async () => {
     let requestSignal: AbortSignal | undefined;
     const courier = createCourier({
-      fetch: vi.fn(
-        (_, init: RequestInit) =>
+      fetch: vi.fn<typeof globalThis.fetch>(
+        (_, init) =>
           new Promise<Response>((_, reject) => {
-            requestSignal = init.signal!;
-            requestSignal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+            requestSignal = init?.signal ?? undefined;
+            requestSignal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
           }),
       ),
     });
@@ -70,7 +70,7 @@ describe('Courier streams', () => {
     const pending = iterator.next();
 
     await vi.waitFor(() => expect(requestSignal).toBeDefined());
-    void iterator.return();
+    void iterator.return?.();
 
     expect(requestSignal!.aborted).toBe(true);
     await expect(pending).rejects.toBeInstanceOf(CourierAbortError);

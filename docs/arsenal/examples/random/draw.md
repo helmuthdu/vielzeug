@@ -14,7 +14,7 @@ You need to pick one random element from an array — for example selecting a ra
 Use `draw(array)` to return a single randomly selected element, or `drawMany(array, n)` to pick `n` unique items.
 
 ```ts
-import { draw, drawMany } from '@vielzeug/arsenal';
+import { draw, drawMany } from '@vielzeug/arsenal/random';
 
 const servers = ['us-east', 'eu-west', 'ap-south'];
 draw(servers); // e.g. 'eu-west'
@@ -27,8 +27,8 @@ drawMany(servers, 10); // ['us-east', 'eu-west', 'ap-south'] (clamped to length)
 ### Pitfalls
 
 - `draw` returns `undefined` for empty arrays — handle the empty case explicitly.
-- `draw` uses `Math.random()` — not cryptographically secure.
-- `drawMany` uses `crypto.getRandomValues` — cryptographically random; safe for sampling.
+- Default random source uses `crypto.getRandomValues`.
+- Pass a `RandomSource` as final argument when tests need deterministic output.
 
 ### Related
 

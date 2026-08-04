@@ -1230,7 +1230,6 @@ describe('createVirtualizer – isScrolling', () => {
   it('onScrollingChange fires true on first scroll, false via debounce when native event unavailable', () => {
     // Use an element that does NOT have onscrollend (simulate older browser)
     // by removing it before creating the virtualizer.
-    const el = makeContainer({ clientHeight: 200 });
     const changes: boolean[] = [];
 
     // Force non-native path: use the window mock (makeWindow) which lacks onscrollend

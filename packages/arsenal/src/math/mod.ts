@@ -1,5 +1,3 @@
-import { ArsenalValidationError } from '../errors';
-
 /**
  * Sign-correct modulo — unlike the native `%` operator, the result always has the same sign
  * as the divisor `b` (e.g. `mod(-1, 4)` is `3`, not `-1`).
@@ -14,10 +12,10 @@ import { ArsenalValidationError } from '../errors';
  * @param b - The divisor. Must not be `0`.
  * @returns The sign-correct modulo of `a` by `b`.
  *
- * @throws {ArsenalValidationError} If `b` is `0`.
+ * @throws {RangeError} If `b` is `0`.
  */
 export function mod(a: number, b: number): number {
-  if (b === 0) throw new ArsenalValidationError('mod: divisor cannot be 0');
+  if (b === 0) throw new RangeError('mod: divisor cannot be 0');
 
   return ((a % b) + b) % b;
 }

@@ -1,6 +1,6 @@
 import type { Readable } from '@vielzeug/ripple';
 
-import { clamp as clampRange } from '@vielzeug/arsenal';
+import { clamp as clampRange } from '@vielzeug/arsenal/math';
 
 import { toFiniteNumberOr, toPositiveStep } from './numbers';
 

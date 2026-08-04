@@ -77,6 +77,12 @@ export const getConfig = (
   const name = options?.name || 'Vielzeug';
   const preserveModules = options?.preserveModules ?? true;
   const external = options?.external;
+  const isExternal = (id: string): boolean =>
+    external?.some((dependency) => {
+      const packagePath = `/packages/${dependency.replace(/^@[^/]+\//, '')}/`;
+
+      return id === dependency || id.startsWith(`${dependency}/`) || id.includes(packagePath);
+    }) ?? false;
 
   console.log(`|> Building library in ${__dirname}`);
 
@@ -91,17 +97,19 @@ export const getConfig = (
           // upload-artifact action (and some filesystems) reject outright.
           const cleanEntryName = entryName.split('?')[0];
 
-          if (cleanEntryName === 'src/index') {
+          const outputName = cleanEntryName.replace(/^src\//, '');
+
+          if (outputName === 'index') {
             return `index.${format === 'es' ? 'js' : 'cjs'}`;
           }
 
-          return `${cleanEntryName}.${format === 'es' ? 'js' : 'cjs'}`;
+          return `${outputName}.${format === 'es' ? 'js' : 'cjs'}`;
         },
         formats: ['es', 'cjs'] as LibraryFormats[],
         name,
       },
       rolldownOptions: {
-        ...(external?.length && { external }),
+        ...(external?.length && { external: isExternal }),
         output: {
           preserveModules,
           ...(preserveModules && { preserveModulesRoot: resolve(__dirname, 'src') }),

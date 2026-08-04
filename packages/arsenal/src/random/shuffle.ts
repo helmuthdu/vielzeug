@@ -1,4 +1,6 @@
-import { secureRandomIndex } from '../_common/_secureRandomIndex';
+import type { RandomSource } from './source';
+
+import { randomIndex } from './_index';
 
 /**
  * Returns a new randomly-shuffled copy of the array using Fisher-Yates
@@ -10,11 +12,11 @@ import { secureRandomIndex } from '../_common/_secureRandomIndex';
  * shuffle(arr); // e.g. [3, 1, 4, 2]
  * ```
  */
-export function shuffle<T>(array: T[]): T[] {
+export function shuffle<T>(array: T[], source?: RandomSource): T[] {
   const result = [...array];
 
   for (let i = result.length - 1; i > 0; i--) {
-    const j = secureRandomIndex(i + 1);
+    const j = randomIndex(i + 1, source);
 
     [result[i], result[j]] = [result[j], result[i]];
   }

@@ -149,7 +149,7 @@ describe('defineMachine', () => {
       "constructor": { "on": { "__proto__": { "target": "__proto__" } } },
       "__proto__": { "on": { "toString": { "target": "toString" } } }
     }`) as MachineConfig<State, Record<string, never>, Event>['states'];
-    const machine = defineMachine<Record<string, never>, Event>()({ initial: 'toString', states });
+    const machine = defineMachine<Record<string, never>, Event>()({ context: {}, initial: 'toString', states });
 
     expect(machine.can(machine.initialSnapshot, { type: 'constructor' })).toBe(true);
     expect(machine.transition(machine.initialSnapshot, { type: 'constructor' }).snapshot.state).toBe('constructor');
@@ -212,6 +212,7 @@ describe('actors', () => {
     const entry = vi.fn();
     const source = vi.fn();
     const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
       initial: 'loading',
       states: {
         done: {},
@@ -236,6 +237,7 @@ describe('actors', () => {
     type Event = { readonly type: '$after' };
 
     const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
       initial: 'idle',
       states: {
         done: {},
@@ -301,6 +303,7 @@ describe('actors', () => {
     type Event = { readonly type: 'GO' };
 
     const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
       initial: 'idle',
       states: {
         idle: {
@@ -331,6 +334,7 @@ describe('actors', () => {
 
     const phases: string[] = [];
     const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
       initial: 'idle',
       states: {
         done: {},
@@ -386,6 +390,7 @@ describe('actors', () => {
     type Event = { readonly type: 'GO' };
 
     const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
       initial: 'idle',
       states: {
         idle: {
@@ -422,6 +427,7 @@ describe('actors', () => {
     type Event = { readonly type: 'GO' };
 
     const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
       initial: 'loading',
       states: {
         done: {},
@@ -441,6 +447,7 @@ describe('actors', () => {
 
     const errors: string[] = [];
     const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
       initial: 'idle',
       states: { idle: { on: { GO: { effects: [({ send }) => send({ type: 'GO' })], target: 'idle' } } } },
     });
@@ -465,6 +472,7 @@ describe('debugActor', () => {
 
     const logger = vi.fn();
     const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
       initial: 'idle',
       states: { idle: { on: { GO: { target: 'ready' } } }, ready: {} },
     });

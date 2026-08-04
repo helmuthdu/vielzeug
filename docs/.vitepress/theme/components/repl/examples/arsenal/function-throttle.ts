@@ -1,5 +1,5 @@
 export const functionThrottleExample = {
-  code: `import { throttle } from '@vielzeug/arsenal'
+  code: `import { throttle } from '@vielzeug/arsenal/function'
 
 let scrollCount = 0
 const handleScroll = () => {

@@ -1,5 +1,3 @@
-import { vi } from 'vitest';
-
 import { createWard, guardRequest, guardRequestWith } from '../index';
 
 // ---------------------------------------------------------------------------

@@ -35,7 +35,9 @@ describe('explicit checks', () => {
   it('checkAsync() rejects synchronous parsing before validation', () => {
     const schema = s.string().checkAsync(async () => 'Rejected');
 
-    expect(() => schema.parse('value')).toThrow('cannot evaluate async checks');
+    const parseSync = schema.parse as unknown as (value: unknown) => unknown;
+
+    expect(() => parseSync.call(schema, 'value')).toThrow('cannot evaluate async checks');
   });
 
   it('checkAsync() awaits asynchronous domain rules', async () => {

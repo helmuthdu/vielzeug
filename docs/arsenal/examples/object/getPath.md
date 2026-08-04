@@ -11,52 +11,28 @@ You need to safely read a deeply nested property from an object using a string p
 
 ### Solution
 
-Use `getPath(item, path, options?)` for safe dot-notation access. Bracket notation is auto-converted by default.
+Use `getPath(item, path)` for safe dot-notation access. `getPathOr` supplies a fallback. `requirePath` throws for missing values. Numeric bracket notation is supported.
 
 ```ts
-import { getPath } from '@vielzeug/arsenal';
+import { getPath, getPathOr, requirePath } from '@vielzeug/arsenal/object';
 
 const config = { api: { host: 'localhost', port: 3000 }, items: [10, 20] };
 
 getPath(config, 'api.port'); // 3000
-getPath(config, 'items[1]'); // 20 — bracket auto-converted
+getPath(config, 'items[1]'); // 20
 getPath(config, 'api.timeout'); // undefined
-```
-
-#### Default values
-
-```ts
-import { getPath } from '@vielzeug/arsenal';
-
-getPath(config, 'api.timeout', { fallback: 5_000 }); // 5000
-getPath(config, 'missing.deep', { fallback: null }); // null
-```
-
-#### Strict mode — throw on missing path
-
-```ts
-import { getPath } from '@vielzeug/arsenal';
-
-getPath(config, 'api.missing', { strict: true });
-// throws Error: path segment 'missing' not found
-```
-
-#### Disable bracket auto-conversion
-
-```ts
-import { getPath } from '@vielzeug/arsenal';
-
-getPath(config, 'items[0]', { bracketNotation: false });
-// throws TypeError — use 'items.0' instead
+getPathOr(config, 'api.timeout', 5_000); // 5000
+requirePath(config, 'api.port'); // 3000
+requirePath(config, 'api.timeout'); // throws TypeError
 ```
 
 ### Pitfalls
 
-- The option key is `fallback`, not `default` or `defaultValue`.
-- Bracket notation is **on by default** — pass `{ bracketNotation: false }` to reject it.
-- Unsafe segments (`__proto__`, `constructor`, `prototype`) return `options.fallback` silently.
+- Unsafe segments (`__proto__`, `constructor`, `prototype`) never resolve.
+- `getPathOr` handles missing and `undefined` values.
+- Use `requirePath` only when a missing value is a programmer error.
 
 ### Related
 
 - [flattenPaths](./flattenPaths.md)
-- [parseJSON](./parseJSON.md)
+- [tryParseJson](./parseJSON.md)

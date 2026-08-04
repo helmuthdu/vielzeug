@@ -1,5 +1,5 @@
 export const objectDiffExample = {
-  code: `import { diff } from '@vielzeug/arsenal'
+  code: `import { diff } from '@vielzeug/arsenal/object'
 
 const before = {
   name: 'Alice',

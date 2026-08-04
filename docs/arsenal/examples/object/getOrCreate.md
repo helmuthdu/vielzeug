@@ -32,5 +32,5 @@ registry.get('events'); // ['click', 'keydown']
 
 ### Related
 
-- [stash](./stash.md)
+- [cache](../cache/stash.md)
 - [cache](./cache.md)

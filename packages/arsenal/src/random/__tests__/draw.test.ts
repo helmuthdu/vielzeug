@@ -16,6 +16,10 @@ describe('draw', () => {
     expect(arr).toContain(result);
   });
 
+  it('uses a supplied random source', () => {
+    expect(draw([1, 2, 3, 4], { next: () => 0.5 })).toBe(3);
+  });
+
   it('works with string arrays', () => {
     const arr = ['a', 'b', 'c'];
 

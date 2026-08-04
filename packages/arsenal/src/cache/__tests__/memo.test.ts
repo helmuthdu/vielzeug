@@ -1,4 +1,3 @@
-import { ArsenalError } from '../../errors';
 import { memo } from '../memo';
 
 describe('memo', () => {
@@ -145,10 +144,10 @@ describe('memo', () => {
     expect(memoizedFn.size).toBeLessThanOrEqual(3);
   });
 
-  it('throws ArsenalError for a non-integer or NaN maxSize — regression for the disabled-eviction bug', () => {
-    expect(() => memo((x: number) => x, { maxSize: Number.NaN })).toThrow(ArsenalError);
-    expect(() => memo((x: number) => x, { maxSize: -1 })).toThrow(ArsenalError);
-    expect(() => memo((x: number) => x, { maxSize: 1.5 })).toThrow(ArsenalError);
+  it('throws RangeError for a non-integer or NaN maxSize — regression for the disabled-eviction bug', () => {
+    expect(() => memo((x: number) => x, { maxSize: Number.NaN })).toThrow(RangeError);
+    expect(() => memo((x: number) => x, { maxSize: -1 })).toThrow(RangeError);
+    expect(() => memo((x: number) => x, { maxSize: 1.5 })).toThrow(RangeError);
   });
 
   it('accepts Infinity as maxSize (the default, unbounded)', () => {

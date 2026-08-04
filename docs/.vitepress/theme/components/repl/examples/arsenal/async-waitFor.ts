@@ -1,5 +1,5 @@
 export const asyncWaitForExample = {
-  code: `import { waitFor } from '@vielzeug/arsenal'
+  code: `import { waitFor } from '@vielzeug/arsenal/async'
 
 // Simulate a value that becomes ready after a short delay
 let ready = false

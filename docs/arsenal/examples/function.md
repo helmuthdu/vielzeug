@@ -7,9 +7,7 @@ description: Function utility examples for Arsenal.
 
 - [allOf / anyOf / noneOf](./function/allOf.md)
 - [assert](./function/assert.md)
-- [constant](./function/constant.md)
 - [debounce](./function/debounce.md)
-- [identity](./function/identity.md)
 - [memo](./function/memo.md)
 - [not](./function/not.md)
 - [once](./function/once.md)
@@ -21,21 +19,10 @@ description: Function utility examples for Arsenal.
 ## Common Patterns
 
 ```ts
-import {
-  allOf,
-  anyOf,
-  assert,
-  compareBy,
-  constant,
-  debounce,
-  identity,
-  memo,
-  noneOf,
-  once,
-  pipe,
-  tap,
-  throttle,
-} from '@vielzeug/arsenal';
+import { compareBy } from '@vielzeug/arsenal/array';
+import { memo } from '@vielzeug/arsenal/cache';
+import { debounce, once, pipe, tap, throttle } from '@vielzeug/arsenal/function';
+import { allOf, anyOf, noneOf } from '@vielzeug/arsenal/guards';
 
 assert(Array.isArray([1, 2, 3]), 'Expected array');
 
@@ -62,8 +49,6 @@ const isSpecialAge = anyOf<number>(
 const odds = [1, 2, 3, 4].filter(noneOf((n: number) => n % 2 === 0));
 
 const expensive = memo((n: number) => n * n);
-const identityValue = identity('ok');
-const alwaysFive = constant(5);
 const observed = tap(42, (value) => console.log('tap', value));
 const initOnce = once(() => console.log('init'));
 const onInput = debounce((q: string) => console.log(q), 250);
@@ -73,8 +58,6 @@ console.log(
   sortUsers,
   trimUpper('  alice  '),
   expensive(4),
-  identityValue,
-  alwaysFive(),
   odds,
   observed,
   isWorkingAge(32, 0, [32]),

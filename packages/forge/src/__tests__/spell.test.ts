@@ -55,7 +55,10 @@ describe('Spell adapter', () => {
     await form.validate();
 
     expect(form.field('email').error).toBe('First');
-    expect(Object.hasOwn(form.state.errors ?? {}, '__proto__')).toBe(false);
+
+    const errors = form.state.errors;
+
+    expect(typeof errors === 'object' && errors !== null ? Object.hasOwn(errors, '__proto__') : false).toBe(false);
   });
 
   test('returns aborted before a slow Spell parser resolves', async () => {

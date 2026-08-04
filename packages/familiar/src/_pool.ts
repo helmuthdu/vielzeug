@@ -9,7 +9,7 @@
  * Not part of the public API surface.
  */
 
-import { abortError } from '@vielzeug/arsenal';
+import { abortError } from '@vielzeug/arsenal/async';
 
 import type {
   BatchOptions,

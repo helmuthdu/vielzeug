@@ -1,4 +1,4 @@
-import { clamp } from '@vielzeug/arsenal';
+import { clamp } from '@vielzeug/arsenal/math';
 
 import type { Alignment, Middleware, Padding, Placement, Rect, Side, SideObject, TypedMiddleware } from './types';
 

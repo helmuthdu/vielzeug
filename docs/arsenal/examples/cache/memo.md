@@ -38,24 +38,24 @@ formatLabel({ page: 1, size: 20 }); // computed
 formatLabel({ page: 1, size: 20 }); // cached
 ```
 
-#### Async caching — use stash instead
+#### Async caching — use cache instead
 
-`memo` only accepts **sync** functions. For async caching with TTL and stampede prevention:
+`memo` only accepts **sync** functions. For async caching with TTL and load deduplication:
 
 ```ts
-import { stash } from '@vielzeug/arsenal/cache';
+import { cache } from '@vielzeug/arsenal/cache';
 
-const userCache = stash<User>({ ttlMs: 60_000, maxSize: 100 });
-const user = await userCache.getOrSet('user:1', () => fetchUser(1));
+const userCache = cache<string, User>({ ttlMs: 60_000, capacity: 100 });
+const user = await userCache.getOrLoad('user:1', () => fetchUser(1));
 ```
 
 ### Pitfalls
 
 - `memo` only accepts sync functions — passing an async function is a compile-time error.
 - Pass a `key` function when arguments are objects — without it, arguments are `JSON.stringify`-ed, which may be unstable.
-- There is no TTL option. Use `stash` when time-based expiry is required.
+- There is no TTL option. Use `cache` when time-based expiry is required.
 
 ### Related
 
-- [stash](./stash.md)
+- [cache](./stash.md)
 - [debounce](../function/debounce.md)

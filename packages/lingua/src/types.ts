@@ -20,6 +20,13 @@ export type ResourceSource<C extends Catalog = Catalog> = C | ResourceLoader<C>;
 export type ResourceDefinition<C extends Catalog = Catalog> = Record<Locale, ResourceSource<C>>;
 /** Resource declarations may contain static catalogs or lazy loaders. */
 export type Resources<C extends Catalog = Catalog> = Record<string, ResourceDefinition<C>>;
+type SourceCatalog<S> = S extends ResourceLoader<infer C> ? C : S extends Catalog ? S : never;
+/** Union of static and lazy catalog shapes declared across all resources. */
+export type ResourceCatalog<R extends Resources = Resources> = {
+  [Resource in keyof R]: {
+    [ResourceLocale in keyof R[Resource]]: SourceCatalog<R[Resource][ResourceLocale]>;
+  }[keyof R[Resource]];
+}[keyof R];
 /** Resolved catalog payload used for SSR serialization and hydration. */
 export type LoadedResources<C extends Catalog = Catalog> = Record<string, Record<Locale, C>>;
 

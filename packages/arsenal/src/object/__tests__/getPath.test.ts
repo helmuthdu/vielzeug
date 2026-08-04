@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ArsenalError } from '../../errors';
-import { getPath } from '../getPath';
+import { getPath, getPathOr, requirePath } from '../getPath';
 
 const obj = { a: { b: { c: 3 } }, d: [1, 2, 3], e: 0, f: false };
 
@@ -30,52 +29,40 @@ describe('getPath', () => {
   });
 
   describe('bracket notation', () => {
-    it('converts bracket notation to dot notation by default', () => {
+    it('converts numeric bracket notation to dot notation', () => {
       expect(getPath(obj, 'd[1]')).toBe(2);
-    });
-
-    it('throws TypeError when bracketNotation: false and bracket syntax used', () => {
-      expect(() => getPath(obj, 'd[1]', { bracketNotation: false })).toThrow(ArsenalError);
-    });
-
-    it('does not throw with bracketNotation: false and no brackets', () => {
-      expect(getPath(obj, 'a.b.c', { bracketNotation: false })).toBe(3);
     });
   });
 
-  describe('fallback option', () => {
+  describe('fallback lookup', () => {
     it('returns fallback when path is missing', () => {
-      expect(getPath(obj, 'a.b.x', { fallback: 'fallback' })).toBe('fallback');
+      expect(getPathOr(obj, 'a.b.x', 'fallback')).toBe('fallback');
     });
 
     it('returns fallback when path resolves through null', () => {
-      expect(getPath({ a: null }, 'a.b', { fallback: 42 })).toBe(42);
+      expect(getPathOr({ a: null }, 'a.b', 42)).toBe(42);
     });
 
     it('does not return fallback when path resolves to a defined value', () => {
-      expect(getPath(obj, 'a.b.c', { fallback: 99 })).toBe(3);
+      expect(getPathOr(obj, 'a.b.c', 99)).toBe(3);
     });
 
-    it('returns fallback for empty path result (undefined value)', () => {
-      expect(getPath({ x: undefined }, 'x', { fallback: 5 })).toBe(5);
+    it('returns fallback for undefined values', () => {
+      expect(getPathOr({ x: undefined }, 'x', 5)).toBe(5);
     });
   });
 
-  describe('strict mode', () => {
-    it('throws Error when strict: true and path is missing', () => {
-      expect(() => getPath(obj, 'a.b.x', { strict: true })).toThrow(Error);
+  describe('required lookup', () => {
+    it('throws TypeError when path is missing', () => {
+      expect(() => requirePath(obj, 'a.b.x')).toThrow(TypeError);
     });
 
-    it('throws Error when strict: true and intermediate segment is missing', () => {
-      expect(() => getPath(obj, 'z.y', { strict: true })).toThrow(Error);
+    it('throws TypeError when an intermediate segment is missing', () => {
+      expect(() => requirePath(obj, 'z.y')).toThrow(TypeError);
     });
 
-    it('strict takes precedence over fallback', () => {
-      expect(() => getPath(obj, 'a.b.x', { fallback: 'fb', strict: true })).toThrow(Error);
-    });
-
-    it('does not throw when strict: true and path exists', () => {
-      expect(getPath(obj, 'a.b.c', { strict: true })).toBe(3);
+    it('returns an existing value', () => {
+      expect(requirePath(obj, 'a.b.c')).toBe(3);
     });
   });
 
@@ -93,7 +80,7 @@ describe('getPath', () => {
     });
 
     it('returns fallback for unsafe segment', () => {
-      expect(getPath({} as Record<string, unknown>, '__proto__', { fallback: 'safe' })).toBe('safe');
+      expect(getPathOr({} as Record<string, unknown>, '__proto__', 'safe')).toBe('safe');
     });
   });
 });

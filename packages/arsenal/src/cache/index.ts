@@ -1,2 +1,2 @@
+export * from './cache';
 export * from './memo';
-export * from './stash';

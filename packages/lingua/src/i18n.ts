@@ -3,6 +3,8 @@ import type {
   I18nOptions,
   I18nState,
   Locale,
+  ResourceCatalog,
+  Resources,
   PluralKey,
   PluralOptions,
   SubscribeOptions,
@@ -46,8 +48,14 @@ export type I18n<C extends Catalog = Catalog> = {
   translate(key: PluralKey<C> | (string & {}), options: PluralOptions): string;
 };
 
-export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C> {
-  const resources = createResourceStore(options.resources);
+export function createI18n<R extends Resources>(
+  options: Omit<I18nOptions<ResourceCatalog<R>>, 'resources'> & { resources: R & Resources<ResourceCatalog<R>> },
+): I18n<ResourceCatalog<R>>;
+export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C>;
+export function createI18n(options: I18nOptions<Catalog>): I18n<Catalog> {
+  type C = Catalog;
+
+  const resources = createResourceStore<C>(options.resources);
   const fallback = options.fallback;
   const controller = new AbortController();
   const subscribers = new Set<(snapshot: I18nSnapshot<C>) => void>();

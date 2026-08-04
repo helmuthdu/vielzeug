@@ -1,4 +1,4 @@
-import { isPlainObject } from '@vielzeug/arsenal';
+import { isPlainObject } from '@vielzeug/arsenal/guards';
 
 import { SpellDefinitionError, SpellValidationError } from './errors';
 import { createParseContext } from './messages';

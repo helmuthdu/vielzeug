@@ -1,4 +1,4 @@
-import { uuid } from '@vielzeug/arsenal';
+import { uuid } from '@vielzeug/arsenal/random';
 
 import type { Interceptor } from './transport';
 

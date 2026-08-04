@@ -1,4 +1,4 @@
-import { sleep } from '@vielzeug/arsenal';
+import { sleep } from '@vielzeug/arsenal/async';
 import { fireChange, fireClick, fireKeyDown } from '@vielzeug/assay';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 

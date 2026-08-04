@@ -108,7 +108,7 @@ describe('unflattenPaths', () => {
   });
 
   it('later keys overwrite earlier for conflicting paths', () => {
-    const result = unflattenPaths({ 'a.b': 1, 'a.b': 2 });
+    const result = unflattenPaths(Object.assign({ 'a.b': 1 }, { 'a.b': 2 }));
 
     expect(result).toEqual({ a: { b: 2 } });
   });

@@ -41,17 +41,17 @@
       "import": "./dist/function/index.js",
       "require": "./dist/function/index.cjs"
     },
-    "./math": {
-      "source": "./src/math/index.ts",
-      "types": "./dist/math/index.d.ts",
-      "import": "./dist/math/index.js",
-      "require": "./dist/math/index.cjs"
-    },
     "./guards": {
       "source": "./src/guards/index.ts",
       "types": "./dist/guards/index.d.ts",
       "import": "./dist/guards/index.js",
       "require": "./dist/guards/index.cjs"
+    },
+    "./math": {
+      "source": "./src/math/index.ts",
+      "types": "./dist/math/index.d.ts",
+      "import": "./dist/math/index.js",
+      "require": "./dist/math/index.cjs"
     },
     "./object": {
       "source": "./src/object/index.ts",
@@ -80,7 +80,8 @@
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
     "test": "pnpm run verify:exports && vitest",
-    "verify:exports": "node ./scripts/check-exports.mjs",
+    "sync:exports": "node ./scripts/sync-exports.mjs",
+    "verify:exports": "node ./scripts/sync-exports.mjs --check",
     "build:bundle": "vite build --config vite.bundle.config.ts"
   },
   "publishConfig": {

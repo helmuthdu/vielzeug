@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createKeymap } from '../keymap';
-import { FakeTarget, makeEvent } from './_fixtures';
+import { FakeTarget, makeEvent, mockHandler } from './_fixtures';
 
 describe('createKeymap', () => {
   let target: FakeTarget;
@@ -15,7 +15,7 @@ describe('createKeymap', () => {
   });
 
   it('fires handler on matching keydown', () => {
-    const handler = vi.fn();
+    const handler = mockHandler();
     const map = createKeymap({ 'ctrl+k': handler });
     const unmount = map.mount(target);
 
@@ -26,7 +26,7 @@ describe('createKeymap', () => {
   });
 
   it('does not fire on non-matching key', () => {
-    const handler = vi.fn();
+    const handler = mockHandler();
     const map = createKeymap({ 'ctrl+k': handler });
     const unmount = map.mount(target);
 
@@ -37,7 +37,7 @@ describe('createKeymap', () => {
   });
 
   it('calls preventDefault by default', () => {
-    const handler = vi.fn();
+    const handler = mockHandler();
     const map = createKeymap({ 'ctrl+k': handler });
     const unmount = map.mount(target);
     const event = makeEvent('k', { ctrlKey: true });
@@ -49,7 +49,7 @@ describe('createKeymap', () => {
   });
 
   it('skips preventDefault when disabled', () => {
-    const handler = vi.fn();
+    const handler = mockHandler();
     const map = createKeymap({ 'ctrl+k': handler }, { preventDefault: false });
     const unmount = map.mount(target);
     const event = makeEvent('k', { ctrlKey: true });
@@ -61,7 +61,7 @@ describe('createKeymap', () => {
   });
 
   it('calls stopPropagation when enabled', () => {
-    const handler = vi.fn();
+    const handler = mockHandler();
     const map = createKeymap({ 'ctrl+k': handler }, { stopPropagation: true });
     const unmount = map.mount(target);
     const event = makeEvent('k', { ctrlKey: true });
@@ -73,7 +73,7 @@ describe('createKeymap', () => {
   });
 
   it('respects global when() guard', () => {
-    const handler = vi.fn();
+    const handler = mockHandler();
     let active = false;
     const map = createKeymap({ 'ctrl+k': handler }, { when: () => active });
     const unmount = map.mount(target);
@@ -89,7 +89,7 @@ describe('createKeymap', () => {
   });
 
   it('unmount removes listener', () => {
-    const handler = vi.fn();
+    const handler = mockHandler();
     const map = createKeymap({ 'ctrl+k': handler });
     const unmount = map.mount(target);
 
@@ -99,7 +99,7 @@ describe('createKeymap', () => {
   });
 
   it('dispose removes all listeners', () => {
-    const handler = vi.fn();
+    const handler = mockHandler();
     const map = createKeymap({ 'ctrl+k': handler });
 
     map.mount(target);
@@ -109,7 +109,7 @@ describe('createKeymap', () => {
   });
 
   it('dispose() is idempotent', () => {
-    const map = createKeymap({ 'ctrl+k': vi.fn() });
+    const map = createKeymap({ 'ctrl+k': mockHandler() });
 
     map.mount(target);
     map.dispose();
@@ -135,7 +135,7 @@ describe('createKeymap', () => {
   });
 
   it('supports Symbol.dispose', () => {
-    const handler = vi.fn();
+    const handler = mockHandler();
     const map = createKeymap({ 'ctrl+k': handler });
 
     map.mount(target);
@@ -145,7 +145,7 @@ describe('createKeymap', () => {
   });
 
   it('can mount to multiple targets', () => {
-    const handler = vi.fn();
+    const handler = mockHandler();
     const map = createKeymap({ 'ctrl+k': handler });
     const t2 = new FakeTarget();
     const u1 = map.mount(target);
@@ -160,17 +160,17 @@ describe('createKeymap', () => {
   });
 
   it('throws on invalid shortcut at construction', () => {
-    expect(() => createKeymap({ ctrl: vi.fn() })).toThrow('Invalid shortcut step: "ctrl"');
+    expect(() => createKeymap({ ctrl: mockHandler() })).toThrow('Invalid shortcut step: "ctrl"');
   });
 
   it('throws on ambiguous shortcut at construction', () => {
-    expect(() => createKeymap({ 'ctrl+k+j': vi.fn() })).toThrow('Ambiguous shortcut step');
+    expect(() => createKeymap({ 'ctrl+k+j': mockHandler() })).toThrow('Ambiguous shortcut step');
   });
 
   it('throws on invalid shortcut passed to bind()', () => {
     const map = createKeymap({});
 
-    expect(() => map.bind('ctrl', vi.fn())).toThrow('Invalid shortcut step: "ctrl"');
+    expect(() => map.bind('ctrl', mockHandler())).toThrow('Invalid shortcut step: "ctrl"');
   });
 
   it('creates an empty keymap with no arguments', () => {
@@ -183,7 +183,7 @@ describe('createKeymap', () => {
 
   describe('modKey option', () => {
     it('resolves mod+k as ctrl+k when modKey is ctrl', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'mod+k': handler }, { modKey: 'ctrl' });
       const unmount = map.mount(target);
 
@@ -194,7 +194,7 @@ describe('createKeymap', () => {
     });
 
     it('resolves mod+k as meta+k when modKey is meta', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'mod+k': handler }, { modKey: 'meta' });
       const unmount = map.mount(target);
 
@@ -205,7 +205,7 @@ describe('createKeymap', () => {
     });
 
     it('does not fire mod+k (meta) on ctrl event when modKey is meta', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'mod+k': handler }, { modKey: 'meta' });
       const unmount = map.mount(target);
 
@@ -218,7 +218,7 @@ describe('createKeymap', () => {
 
   describe('per-binding when guard (BindingOptions syntax)', () => {
     it('fires handler when per-binding guard passes', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'ctrl+k': { handler, when: () => true } });
       const unmount = map.mount(target);
 
@@ -229,7 +229,7 @@ describe('createKeymap', () => {
     });
 
     it('suppresses handler when per-binding guard fails', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'ctrl+k': { handler, when: () => false } });
       const unmount = map.mount(target);
 
@@ -240,8 +240,8 @@ describe('createKeymap', () => {
     });
 
     it('allows different when guards on different bindings', () => {
-      const h1 = vi.fn();
-      const h2 = vi.fn();
+      const h1 = mockHandler();
+      const h2 = mockHandler();
       const map = createKeymap({
         'ctrl+j': { handler: h2, when: () => true },
         'ctrl+k': { handler: h1, when: () => false },
@@ -257,7 +257,7 @@ describe('createKeymap', () => {
     });
 
     it('global when() blocks even when per-binding guard passes', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'ctrl+k': { handler, when: () => true } }, { when: () => false });
       const unmount = map.mount(target);
 
@@ -269,7 +269,7 @@ describe('createKeymap', () => {
 
     it('chord completion with failing per-binding guard resets chord state', () => {
       let panelOpen = false;
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'g g': { handler, when: () => panelOpen } });
       const unmount = map.mount(target);
 
@@ -288,8 +288,8 @@ describe('createKeymap', () => {
 
   describe('priority', () => {
     it('bind() with higher priority overwrites lower priority for same shortcut', () => {
-      const h1 = vi.fn();
-      const h2 = vi.fn();
+      const h1 = mockHandler();
+      const h2 = mockHandler();
       const map = createKeymap({ 'ctrl+k': { handler: h1, priority: 0 } });
       const unmount = map.mount(target);
 
@@ -304,7 +304,7 @@ describe('createKeymap', () => {
 
   describe('trigger option', () => {
     it('fires on keyup when trigger is keyup', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ space: { handler, trigger: 'keyup' } });
       const unmount = map.mount(target);
 
@@ -318,7 +318,7 @@ describe('createKeymap', () => {
     });
 
     it('does not fire keydown binding on keyup event', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'ctrl+k': handler });
       const unmount = map.mount(target);
 
@@ -331,7 +331,7 @@ describe('createKeymap', () => {
 
   describe('bind() and unbind()', () => {
     it('bind() adds a new shortcut dynamically', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({});
       const unmount = map.mount(target);
 
@@ -343,7 +343,7 @@ describe('createKeymap', () => {
     });
 
     it('bind() returns an unbind function', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({});
       const unmount = map.mount(target);
 
@@ -357,7 +357,7 @@ describe('createKeymap', () => {
     });
 
     it('unbind() removes the shortcut', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'ctrl+k': handler });
       const unmount = map.mount(target);
 
@@ -369,8 +369,8 @@ describe('createKeymap', () => {
     });
 
     it('bind() overwrites an existing shortcut for the same key', () => {
-      const h1 = vi.fn();
-      const h2 = vi.fn();
+      const h1 = mockHandler();
+      const h2 = mockHandler();
       const map = createKeymap({ 'ctrl+k': h1 });
       const unmount = map.mount(target);
 
@@ -383,7 +383,7 @@ describe('createKeymap', () => {
     });
 
     it('bind() supports BindingOptions with when guard', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({});
       const unmount = map.mount(target);
 
@@ -406,7 +406,7 @@ describe('createKeymap', () => {
     });
 
     it('bind() unbind closure removes the correct canonical slot (alias)', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({});
       const unmount = map.mount(target);
       const unbind = map.bind('cmd+k', handler);
@@ -419,7 +419,7 @@ describe('createKeymap', () => {
     });
 
     it('unbind() via alias resolves to the same canonical binding', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'cmd+k': handler });
       const unmount = map.mount(target);
 
@@ -431,8 +431,8 @@ describe('createKeymap', () => {
     });
 
     it('bind() with alias overwrites the same canonical slot as the original', () => {
-      const h1 = vi.fn();
-      const h2 = vi.fn();
+      const h1 = mockHandler();
+      const h2 = mockHandler();
       const map = createKeymap({ 'cmd+k': h1 });
       const unmount = map.mount(target);
 
@@ -447,7 +447,7 @@ describe('createKeymap', () => {
 
   describe('special key support', () => {
     it('fires on Escape via "escape"', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ escape: handler });
       const unmount = map.mount(target);
 
@@ -458,7 +458,7 @@ describe('createKeymap', () => {
     });
 
     it('fires on Escape via "esc" alias', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ esc: handler });
       const unmount = map.mount(target);
 
@@ -469,7 +469,7 @@ describe('createKeymap', () => {
     });
 
     it('fires on Space via "space" alias', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ space: handler });
       const unmount = map.mount(target);
 
@@ -480,7 +480,7 @@ describe('createKeymap', () => {
     });
 
     it('fires on ArrowUp via "up" alias', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ up: handler });
       const unmount = map.mount(target);
 
@@ -491,7 +491,7 @@ describe('createKeymap', () => {
     });
 
     it('fires on Delete via "del" alias', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ del: handler });
       const unmount = map.mount(target);
 
@@ -502,7 +502,7 @@ describe('createKeymap', () => {
     });
 
     it('fires on ctrl+space', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'ctrl+space': handler });
       const unmount = map.mount(target);
 
@@ -515,7 +515,7 @@ describe('createKeymap', () => {
 
   describe('dispose + remount lifecycle', () => {
     it('handler fires after dispose() then mount() again', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'ctrl+k': handler });
       const unmount = map.mount(target);
 
@@ -531,7 +531,7 @@ describe('createKeymap', () => {
     });
 
     it('dispose() removes all mounts; further events do not fire', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'ctrl+k': handler });
 
       map.mount(target);
@@ -549,14 +549,14 @@ describe('createKeymap', () => {
     });
 
     it('returns one entry per registered binding', () => {
-      const map = createKeymap({ 'ctrl+k': vi.fn(), 'ctrl+s': vi.fn() });
+      const map = createKeymap({ 'ctrl+k': mockHandler(), 'ctrl+s': mockHandler() });
 
       expect(map.listBindings()).toHaveLength(2);
     });
 
     it('entry contains shortcut, trigger, and priority', () => {
       const map = createKeymap({
-        'ctrl+k': { handler: vi.fn(), priority: 5, trigger: 'keyup' },
+        'ctrl+k': { handler: mockHandler(), priority: 5, trigger: 'keyup' },
       });
       const [entry] = map.listBindings();
 
@@ -567,7 +567,7 @@ describe('createKeymap', () => {
     });
 
     it('defaults trigger to keydown and priority to 0', () => {
-      const map = createKeymap({ 'ctrl+k': vi.fn() });
+      const map = createKeymap({ 'ctrl+k': mockHandler() });
       const [entry] = map.listBindings();
 
       expect(entry.trigger).toBe('keydown');
@@ -577,7 +577,7 @@ describe('createKeymap', () => {
     it('reflects bind() and unbind() changes', () => {
       const map = createKeymap({});
 
-      map.bind('ctrl+k', vi.fn());
+      map.bind('ctrl+k', mockHandler());
       expect(map.listBindings()).toHaveLength(1);
 
       map.unbind('ctrl+k');
@@ -585,15 +585,15 @@ describe('createKeymap', () => {
     });
 
     it('aliases resolve to one entry (not duplicates)', () => {
-      const map = createKeymap({ 'cmd+k': vi.fn() });
+      const map = createKeymap({ 'cmd+k': mockHandler() });
 
-      map.bind('meta+k', vi.fn());
+      map.bind('meta+k', mockHandler());
       expect(map.listBindings()).toHaveLength(1);
     });
 
     it('bind() unbind closure also removes the entry from listBindings', () => {
       const map = createKeymap({});
-      const unbind = map.bind('ctrl+k', vi.fn());
+      const unbind = map.bind('ctrl+k', mockHandler());
 
       expect(map.listBindings()).toHaveLength(1);
       unbind();
@@ -601,7 +601,7 @@ describe('createKeymap', () => {
     });
 
     it('returns a real snapshot — mutating a returned entry does not affect live matching', () => {
-      const handler = vi.fn();
+      const handler = mockHandler();
       const map = createKeymap({ 'ctrl+k': handler });
       const unmount = map.mount(target);
 
@@ -614,7 +614,7 @@ describe('createKeymap', () => {
     });
 
     it('returns distinct modifiers Set instances across calls', () => {
-      const map = createKeymap({ 'ctrl+k': vi.fn() });
+      const map = createKeymap({ 'ctrl+k': mockHandler() });
 
       const setA = map.listBindings()[0]!.shortcut[0]!.modifiers;
       const setB = map.listBindings()[0]!.shortcut[0]!.modifiers;
@@ -699,7 +699,7 @@ describe('createKeymap', () => {
 
     it('falls back a non-finite priority to 0 and warns', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const map = createKeymap({ 'ctrl+k': { handler: vi.fn(), priority: NaN } });
+      const map = createKeymap({ 'ctrl+k': { handler: mockHandler(), priority: NaN } });
 
       expect(warnSpy).toHaveBeenCalledWith(
         '[@vielzeug/keymap] binding priority must be a finite number; received NaN. Using 0.',

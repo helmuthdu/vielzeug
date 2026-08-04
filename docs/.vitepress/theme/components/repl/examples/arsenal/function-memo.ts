@@ -1,5 +1,5 @@
 export const functionMemoExample = {
-  code: `import { memo } from '@vielzeug/arsenal'
+  code: `import { memo } from '@vielzeug/arsenal/cache'
 
 // LRU cache capped at 3 entries — oldest evicted when full
 let callCount = 0

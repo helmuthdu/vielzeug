@@ -1,4 +1,3 @@
-import { PulseTimeoutError } from '../errors';
 import { createPulse } from '../pulse';
 import { MockWebSocket, setup } from './_fixtures';
 

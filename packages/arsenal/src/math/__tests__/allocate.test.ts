@@ -1,4 +1,3 @@
-import { ArsenalError } from '../../errors';
 import { allocate } from '../allocate';
 
 describe('allocate', () => {
@@ -76,15 +75,15 @@ describe('allocate', () => {
     });
 
     it('should throw for non-integer parts', () => {
-      expect(() => allocate(100, 1.5)).toThrow(ArsenalError);
+      expect(() => allocate(100, 1.5)).toThrow(RangeError);
     });
 
     it('should throw for zero parts', () => {
-      expect(() => allocate(100, 0)).toThrow(ArsenalError);
+      expect(() => allocate(100, 0)).toThrow(RangeError);
     });
 
     it('should throw for negative parts', () => {
-      expect(() => allocate(100, -2)).toThrow(ArsenalError);
+      expect(() => allocate(100, -2)).toThrow(RangeError);
     });
   });
 

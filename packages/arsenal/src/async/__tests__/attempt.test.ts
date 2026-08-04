@@ -1,32 +1,32 @@
 import { attempt, isFail, isOk } from '../attempt';
 
 describe('attempt (sync)', () => {
-  it('returns { ok: true, value } on success', () => {
-    const result = attempt(() => 42);
+  it('returns a promise with { ok: true, value } on success', async () => {
+    const result = await attempt(() => 42);
 
     expect(result).toEqual({ ok: true, value: 42 });
   });
 
-  it('returns { ok: false, error } on failure', () => {
+  it('returns a promise with { ok: false, error } on failure', async () => {
     const err = new Error('fail');
-    const result = attempt(() => {
+    const result = await attempt(() => {
       throw err;
     });
 
     expect(result).toEqual({ error: err, ok: false });
   });
 
-  it('isOk narrows to success branch', () => {
-    const result = attempt(() => 42);
+  it('isOk narrows to success branch', async () => {
+    const result = await attempt(() => 42);
 
     expect(isOk(result)).toBe(true);
 
     if (isOk(result)) expect(result.value).toBe(42);
   });
 
-  it('isFail narrows to failure branch', () => {
+  it('isFail narrows to failure branch', async () => {
     const err = new Error('x');
-    const result = attempt(() => {
+    const result = await attempt(() => {
       throw err;
     });
 

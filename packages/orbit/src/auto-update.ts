@@ -1,4 +1,4 @@
-import { throttle } from '@vielzeug/arsenal';
+import { throttle } from '@vielzeug/arsenal/function';
 
 import type { ReferenceElement } from './types';
 

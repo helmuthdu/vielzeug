@@ -1,11 +1,11 @@
 export const objectMergeExample = {
-  code: `import { deepMerge, shallowMerge } from '@vielzeug/arsenal'
+  code: `import { deepMerge, shallowMerge } from '@vielzeug/arsenal/object'
 
 const obj1 = { a: 1, b: { c: 2 }, d: [1, 2] }
 const obj2 = { b: { d: 3 }, e: 4, d: [3, 4] }
 const obj3 = { a: 10, f: 5 }
 
-const deeplyMerged = deepMerge(obj1, obj2, obj3)
+const deeplyMerged = deepMerge([obj1, obj2, obj3])
 console.log('Deep merge:', deeplyMerged)
 
 const shallowlyMerged = shallowMerge(obj1, obj2, obj3)
@@ -20,6 +20,6 @@ const config2 = {
   features: { notifications: true },
 }
 
-console.log('Merged configs:', deepMerge(config1, config2))`,
+console.log('Merged configs:', deepMerge([config1, config2]))`,
   name: 'deepMerge - Merge objects',
 };

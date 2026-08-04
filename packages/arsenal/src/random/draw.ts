@@ -1,4 +1,6 @@
-import { secureRandomIndex } from '../_common/_secureRandomIndex';
+import type { RandomSource } from './source';
+
+import { randomIndex } from './_index';
 import { random } from './random';
 
 /**
@@ -11,10 +13,10 @@ import { random } from './random';
  * draw([]);         // undefined
  * ```
  */
-export function draw<T>(array: T[]): T | undefined {
+export function draw<T>(array: T[], source?: RandomSource): T | undefined {
   if (array.length === 0) return undefined;
 
-  return array[random(0, array.length - 1)];
+  return array[random(0, array.length - 1, source)];
 }
 
 /**
@@ -28,7 +30,7 @@ export function draw<T>(array: T[]): T | undefined {
  * drawMany([1, 2], 10);          // [1, 2] (clamped to array length)
  * ```
  */
-export function drawMany<T>(array: T[], n: number): T[] {
+export function drawMany<T>(array: T[], n: number, source?: RandomSource): T[] {
   const count = Math.max(0, Math.min(array.length, Math.floor(n)));
 
   if (count === 0) return [];
@@ -38,11 +40,11 @@ export function drawMany<T>(array: T[], n: number): T[] {
   const copy = [...array];
 
   for (let index = copy.length - 1; index > 0; index--) {
-    const randomIndex = secureRandomIndex(index + 1);
+    const selectedIndex = randomIndex(index + 1, source);
     const temp = copy[index];
 
-    copy[index] = copy[randomIndex]!;
-    copy[randomIndex] = temp!;
+    copy[index] = copy[selectedIndex]!;
+    copy[selectedIndex] = temp!;
   }
 
   return copy.slice(0, count);

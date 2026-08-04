@@ -13,7 +13,7 @@ export type ReadonlyDeep<T> = T extends (...args: never[]) => unknown
 export type FormErrors<T> = T extends readonly unknown[]
   ? string
   : T extends Record<string, unknown>
-    ? { readonly [K in keyof T]?: FormErrors<T[K]> }
+    ? string | { readonly [K in keyof T]?: FormErrors<T[K]> }
     : string;
 
 export type ValidationErrors<TValues extends Record<string, unknown>> = Readonly<{
@@ -29,7 +29,7 @@ export type FormValidator<TValues extends Record<string, unknown>> = (
 export type FormOptions<TValues extends Record<string, unknown>> = Readonly<{
   initialValues: TValues;
   onSubscriberError?: (error: unknown) => void;
-  validate?: FormValidator<TValues>;
+  validate?: FormValidator<NoInfer<TValues>>;
 }>;
 
 export type SubscribeOptions = Readonly<{

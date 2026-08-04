@@ -265,7 +265,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   url<Name extends RouteName<TRoutes>>(
     name: Name,
     params?: PathParams<RoutePathByName<TRoutes, Name>>,
-    query?: QueryParams,
+    query?: ResolvedQueryParams,
   ): string {
     const route = getRouteByName(name, this.#routesByName);
 

@@ -26,7 +26,7 @@ pnpm docs:dev
 pnpm docs:build
 pnpm validate:docs -- --package=<name>
 pnpm validate:repl
-pnpm validate:repl -- --package <name>
+pnpm validate:repl -- --package=<name>
 pnpm gen:ai-data
 pnpm check:ai-data
 ```

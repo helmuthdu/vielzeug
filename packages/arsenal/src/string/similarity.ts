@@ -1,5 +1,3 @@
-import { ArsenalValidationError } from '../errors';
-
 /**
  * Calculate the similarity between two strings using the Levenshtein distance algorithm.
  *
@@ -18,13 +16,13 @@ import { ArsenalValidationError } from '../errors';
  *
  * @returns A number between 0 and 1 representing the similarity between the two strings.
  *
- * @throws {ArsenalValidationError} If either input string exceeds 10 000 characters.
+ * @throws {RangeError} If either input string exceeds 10 000 characters.
  */
 const MAX_SIMILARITY_LENGTH = 10_000;
 
 export function similarity(str1: string, str2: string): number {
   if (str1.length > MAX_SIMILARITY_LENGTH || str2.length > MAX_SIMILARITY_LENGTH) {
-    throw new ArsenalValidationError(
+    throw new RangeError(
       `similarity: input strings must not exceed ${MAX_SIMILARITY_LENGTH} characters to prevent excessive memory usage`,
     );
   }

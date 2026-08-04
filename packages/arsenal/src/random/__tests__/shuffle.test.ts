@@ -17,6 +17,10 @@ describe('shuffle', () => {
     expect(arr).toEqual(copy);
   });
 
+  it('uses a supplied random source', () => {
+    expect(shuffle([1, 2, 3, 4], { next: () => 0 })).toEqual([2, 3, 4, 1]);
+  });
+
   it('should return an empty array when input is empty', () => {
     const arr: number[] = [];
     const result = shuffle(arr);

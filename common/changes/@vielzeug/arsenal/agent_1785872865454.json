@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Redesign Arsenal around focused category entry points",
+      "packageName": "@vielzeug/arsenal",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/arsenal"
+}

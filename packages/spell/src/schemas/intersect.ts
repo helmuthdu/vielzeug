@@ -1,4 +1,4 @@
-import { isPlainObject } from '@vielzeug/arsenal';
+import { isPlainObject } from '@vielzeug/arsenal/guards';
 
 import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 

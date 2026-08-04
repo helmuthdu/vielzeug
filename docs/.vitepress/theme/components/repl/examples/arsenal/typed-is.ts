@@ -1,25 +1,18 @@
 export const typedIsExample = {
-  code: `import {
-  isArray, isString, isNumber, isBoolean, isPlainObject,
-  isFunction, isDate, isRegex, isNil, isEmpty
-} from '@vielzeug/arsenal'
+  code: `import { isDefined, isEmpty, isNil, isNumber, isPlainObject } from '@vielzeug/arsenal/guards'
 
-const values = [
-  'hello', 42, true, [1, 2, 3], ['a', 'b'], {}, null, undefined,
-  () => {}, new Date(), /test/
-]
+const values = ['hello', 42, true, [1, 2, 3], {}, null, undefined]
 
-values.forEach(val => {
-  console.log(\`Value: \${String(val)}\`)
-  console.log(\`  String: \${isString(val)}\`)
-  console.log(\`  Number: \${isNumber(val)}\`)
-  console.log(\`  Array: \${isArray(val)}\`)
-  // isArray with an item guard — narrows to string[]
-  console.log(\`  Array<string>: \${isArray(val, isString)}\`)
-  console.log(\`  PlainObject: \${isPlainObject(val)}\`)
-  console.log(\`  Nil: \${isNil(val)}\`)
-  console.log(\`  Empty: \${isEmpty(val)}\`)
-  console.log('---')
+values.forEach(value => {
+  console.log({
+    array: Array.isArray(value),
+    defined: isDefined(value),
+    empty: isEmpty(value),
+    nil: isNil(value),
+    number: isNumber(value),
+    plainObject: isPlainObject(value),
+    string: typeof value === 'string',
+  })
 })`,
-  name: 'Type checking utilities',
+  name: 'Guards and platform type checks',
 };

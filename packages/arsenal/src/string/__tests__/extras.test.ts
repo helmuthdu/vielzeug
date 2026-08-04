@@ -1,7 +1,5 @@
-import { endsWith } from '../endsWith';
 import { escape } from '../escape';
 import { pad } from '../pad';
-import { startsWith } from '../startsWith';
 import { titleCase } from '../titleCase';
 import { unescape } from '../unescape';
 import { words } from '../words';
@@ -25,10 +23,5 @@ describe('string extras', () => {
   it('escapes and unescapes HTML entities', () => {
     expect(escape('<div>"x" & y</div>')).toBe('&lt;div&gt;&quot;x&quot; &amp; y&lt;/div&gt;');
     expect(unescape('&lt;div&gt;&quot;x&quot; &amp; y&lt;/div&gt;')).toBe('<div>"x" & y</div>');
-  });
-
-  it('checks prefixes and suffixes', () => {
-    expect(startsWith('vielzeug', 'viel')).toBe(true);
-    expect(endsWith('vielzeug', 'zeug')).toBe(true);
   });
 });
