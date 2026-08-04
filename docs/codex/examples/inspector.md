@@ -1,19 +1,15 @@
 ---
 title: 'Codex Examples — Inspector'
-description: 'Inspector example for @vielzeug/codex.'
+description: 'Inspect local Codex MCP server.'
 ---
 
 ## Inspector
 
 ### Problem
 
-You want to explore all available tools interactively, test tool calls with different arguments, and verify the server is wired up correctly before integrating with an AI client.
+You need inspect MCP tools and verify local snapshot server.
 
 ### Solution
-
-Build the server and run it through the MCP Inspector for an interactive UI. Use HTTP mode during integration testing to inspect raw request and response payloads.
-
-#### Interactive inspection with MCP Inspector
 
 ```sh
 cd packages/codex
@@ -21,33 +17,20 @@ pnpm build
 npx @modelcontextprotocol/inspector node dist/cli.js
 ```
 
-The Inspector opens a browser UI where you can browse tools, call them with custom arguments, and view the raw MCP protocol messages.
-
-#### HTTP mode for integration debugging
+For HTTP debugging:
 
 ```sh
-cd packages/codex
-pnpm build
-node dist/cli.js --port 3100
+node dist/cli.js --port=3100 --debug
+curl http://127.0.0.1:3100/health
+# {"status":"ok","version":"<snapshot version>"}
 ```
-
-Verify the server is up:
-
-```sh
-curl http://localhost:3100/health
-# {"status":"ok","version":"1.0.1"}
-```
-
-Then connect any MCP client or send raw HTTP requests to `http://localhost:3100/`.
 
 ### Pitfalls
 
-- The Inspector requires a built `dist/cli.js`. Run `pnpm build` in `packages/codex` first; inspecting the source directly will fail.
-- HTTP mode binds to `0.0.0.0` by default. Do not expose the port publicly in development environments.
-- The MCP Inspector version must be compatible with MCP SDK v1.x. Use `npx @modelcontextprotocol/inspector` without a pinned version to get the latest compatible release.
+- Inspector needs built `dist/cli.js`.
+- HTTP binds loopback only.
+- Use stdio for normal MCP client setup.
 
 ### Related
 
-- [Usage Guide — Transport Modes](../usage.md#transport-modes)
-- [API Reference — Runtime Behavior](../api.md#runtime-behavior)
-- [Looking Up Components](./looking-up-components.md)
+- [Usage Guide](../usage.md)

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: Redesign Codex around validated chunked snapshots, catalog APIs, and local-only Streamable HTTP.",
+      "packageName": "@vielzeug/codex",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

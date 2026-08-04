@@ -20,7 +20,7 @@ function readJson(absPath) {
 }
 
 const TASK_KEY_PATTERN = /^[a-z][a-z0-9-]*$/;
-const DOCS_PROFILES = new Set(['catalog', 'cli-tool', 'component-library']);
+const DOCS_CONTRACTS = new Set(['catalog', 'component-library']);
 
 function assertSchemaVersion(data, filePath) {
   if (data?.$schemaVersion !== 1) throw new Error(`${filePath}: unsupported or missing $schemaVersion`);
@@ -128,8 +128,8 @@ export function assertValidPackages(packages) {
     if (pkg.testCommand !== undefined && typeof pkg.testCommand !== 'string') {
       throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" testCommand must be a string`);
     }
-    if (pkg.docsProfile !== undefined && (!DOCS_PROFILES.has(pkg.docsProfile) || typeof pkg.docsProfile !== 'string')) {
-      throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" has invalid docsProfile`);
+    if (pkg.docsContract !== undefined && (!DOCS_CONTRACTS.has(pkg.docsContract) || typeof pkg.docsContract !== 'string')) {
+      throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" has invalid docsContract`);
     }
     for (const field of ['dependencies', 'peerDependencies', 'optionalPeers']) {
       if (

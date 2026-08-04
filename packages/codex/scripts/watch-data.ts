@@ -1,58 +1,45 @@
 #!/usr/bin/env node
-/**
- * Watches docs/ for changes and re-runs prepare:data automatically.
- * Uses only Node built-ins (fs.watch, child_process) — no extra deps.
- *
- * Usage: node --experimental-strip-types ./scripts/watch-data.ts
- */
-import { spawn } from 'node:child_process';
 import { watch } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { log } from './_log.ts';
+import { generateSnapshot, generatorWatchRoots } from './generator.ts';
+import { writeDevSnapshot } from './write-bundled-data.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const docsDir = resolve(__dirname, '../../../docs');
-const scriptPath = resolve(__dirname, './generate-bundled-data.ts');
-
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+const repoRoot = resolve(__dirname, '../../..');
+const snapshotDir = resolve(__dirname, '../.dev');
+let timer: ReturnType<typeof setTimeout> | undefined;
 let running = false;
-let dirty = false;
+let pending = false;
 
-function regenerate(): void {
+function refresh(): void {
   if (running) {
-    dirty = true;
-
+    pending = true;
     return;
   }
-
   running = true;
-  dirty = false;
-
-  log('watch: docs changed — regenerating data…');
-
-  const child = spawn(process.execPath, ['--experimental-strip-types', scriptPath], { stdio: 'inherit' });
-
-  child.on('close', (code) => {
+  try {
+    writeDevSnapshot(snapshotDir, generateSnapshot({ repoRoot }));
+    log('watch: snapshot refreshed');
+  } catch (error) {
+    log(`watch: snapshot refresh failed: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
     running = false;
-
-    if (code === 0) {
-      log('watch: data regenerated ✓');
-    } else {
-      log(`watch: generate-bundled-data exited with code ${code ?? '?'}`);
+    if (pending) {
+      pending = false;
+      refresh();
     }
+  }
+}
 
-    if (dirty) regenerate();
+for (const root of generatorWatchRoots(repoRoot)) {
+  watch(root, { recursive: true }, (_event, file) => {
+    if (!file || !/\.(?:json|md|ts)$/.test(file)) return;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(refresh, 200);
   });
 }
 
-watch(docsDir, { recursive: true }, (_event, filename) => {
-  if (!filename?.endsWith('.md') && !filename?.endsWith('.ts')) return;
-
-  if (debounceTimer !== null) clearTimeout(debounceTimer);
-
-  debounceTimer = setTimeout(regenerate, 300);
-});
-
-log(`watch: watching ${docsDir} for changes…`);
+log('watch: observing all snapshot inputs');

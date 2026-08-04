@@ -1,4 +1,4 @@
-import { ToolError } from '../errors.js';
+import { CatalogError } from '../catalog.js';
 
 /**
  * Every tool's `inputSchema` used to be pure documentation — validated for real by a
@@ -44,7 +44,7 @@ export type InferArgs<S extends ToolSchema> = {
   [K in keyof S['properties']]: S['properties'][K] extends { enum: readonly (infer E)[] } ? E : string;
 };
 
-/** Validates + trims raw MCP tool arguments against a `ToolSchema`. Throws `ToolError('INVALID_ARG', ...)` on the first violation. */
+/** Validates + trims raw MCP tool arguments against a `ToolSchema`. Throws `CatalogError('INVALID_ARG', ...)` on the first violation. */
 export function parseArgs<S extends ToolSchema>(schema: S, raw: Record<string, unknown>): InferArgs<S> {
   const result: Record<string, string> = {};
 
@@ -53,27 +53,27 @@ export function parseArgs<S extends ToolSchema>(schema: S, raw: Record<string, u
     const value = raw[key];
 
     if (value === undefined || value === '') {
-      if (required) throw new ToolError('INVALID_ARG', `${key}: required non-empty string.`);
+      if (required) throw new CatalogError('INVALID_ARG', `${key}: required non-empty string.`);
 
       if (prop.default !== undefined) result[key] = prop.default;
 
       continue;
     }
 
-    if (typeof value !== 'string') throw new ToolError('INVALID_ARG', `${key}: must be a string.`);
+    if (typeof value !== 'string') throw new CatalogError('INVALID_ARG', `${key}: must be a string.`);
 
     const trimmed = value.trim();
 
-    if (required && trimmed.length === 0) throw new ToolError('INVALID_ARG', `${key}: required non-empty string.`);
+    if (required && trimmed.length === 0) throw new CatalogError('INVALID_ARG', `${key}: required non-empty string.`);
 
     if (prop.minLength !== undefined && trimmed.length < prop.minLength)
-      throw new ToolError('INVALID_ARG', `${key}: must be at least ${prop.minLength} characters.`);
+      throw new CatalogError('INVALID_ARG', `${key}: must be at least ${prop.minLength} characters.`);
 
     if (prop.maxLength !== undefined && trimmed.length > prop.maxLength)
-      throw new ToolError('INVALID_ARG', `${key}: exceeds ${prop.maxLength} character limit. Shorten the value.`);
+      throw new CatalogError('INVALID_ARG', `${key}: exceeds ${prop.maxLength} character limit. Shorten the value.`);
 
     if (prop.enum && !prop.enum.includes(trimmed))
-      throw new ToolError('INVALID_ARG', `${key}: must be one of ${prop.enum.join(', ')}.`);
+      throw new CatalogError('INVALID_ARG', `${key}: must be one of ${prop.enum.join(', ')}.`);
 
     result[key] = trimmed;
   }

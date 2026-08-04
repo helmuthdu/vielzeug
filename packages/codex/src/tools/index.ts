@@ -2,81 +2,51 @@ import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
 
-import type { ToolContext, ToolDefinition } from './shared.js';
+import type { ToolDefinition } from './shared.js';
 
 import { log } from '../_log.js';
-import { ToolError } from '../errors.js';
+import { CatalogError, type Catalog } from '../catalog.js';
 import { packageTools } from './packages.js';
 import { refineTools } from './refine.js';
 
-export { buildToolContext, type ToolContext } from './shared.js';
+export const ALL_TOOLS: readonly ToolDefinition[] = [...packageTools, ...refineTools];
 
-// One flat list: generic package tools first, then refine's structured-metadata tools.
-// Deliberately no sandbox/ore/spell-specific tools — those used to hand-duplicate (and,
-// for sandbox, actively misrepresent) API surface already covered accurately by the
-// generic get-docs/get-source/get-type-signature tools above. See docs/sandbox/api.md,
-// docs/ore/api.md, docs/spell/api.md for that reference material instead.
-//
-// Exported (not just a local const) so scripts/generate-tool-docs.ts can render the
-// README tables straight from this registry instead of a hand-maintained copy.
-export const ALL_TOOLS: ToolDefinition[] = [...packageTools, ...refineTools];
+const byName = new Map(ALL_TOOLS.map((tool) => [tool.name, tool]));
 
-const TOOL_MAP = new Map(ALL_TOOLS.map((t) => [t.name, t]));
-
-const DEBUG = process.env['CODEX_DEBUG'] === '1';
-
-function debugArgs(args: Record<string, unknown>): string {
-  const entries = Object.entries(args)
-    .map(
-      ([k, v]) =>
-        `${k}=${typeof v === 'string' ? JSON.stringify(v.length > 40 ? `${v.slice(0, 40)}…` : v) : String(v)}`,
-    )
-    .join(', ');
-
-  return entries ? `(${entries})` : '()';
+function content(value: unknown) {
+  return {
+    content: [{ text: typeof value === 'string' ? value : JSON.stringify(value, null, 2), type: 'text' as const }],
+  };
 }
 
-export function registerTools(server: Server, context: ToolContext): void {
+export function registerTools(server: Server, catalog: Catalog, debug = false): void {
   server.setRequestHandler(ListToolsRequestSchema, () => ({
-    tools: ALL_TOOLS.map((tool) => ({ description: tool.description, inputSchema: tool.inputSchema, name: tool.name })),
+    tools: ALL_TOOLS.map(({ description, inputSchema, name }) => ({ description, inputSchema, name })),
   }));
-
   server.setRequestHandler(CallToolRequestSchema, (request) => {
-    const tool = TOOL_MAP.get(request.params.name);
+    const tool = byName.get(request.params.name);
 
-    if (!tool) {
-      if (DEBUG) log(`[codex] tool not found: ${request.params.name}`);
+    if (!tool) throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
 
-      throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
-    }
-
-    const args = request.params.arguments ?? {};
-
-    if (DEBUG) log(`[codex] → ${tool.name}${debugArgs(args)}`);
-
-    const t0 = DEBUG ? Date.now() : 0;
+    const started = Date.now();
 
     try {
-      const result = tool.run(args, context);
+      const result = tool.execute(request.params.arguments ?? {}, catalog);
 
-      if (DEBUG) log(`[codex] ✓ ${tool.name} (${Date.now() - t0}ms)`);
+      if (debug) log(`${tool.name} ${Date.now() - started}ms`);
 
-      return result;
-    } catch (err) {
-      // Every expected failure (bad arg, unknown slug/tag, missing bundled data) is a
-      // ToolError; anything else is a real bug and is left to propagate as a protocol error.
-      if (err instanceof ToolError) {
-        if (DEBUG) log(`[codex] ✗ ${tool.name} ${err.code}: ${err.message}`);
+      return content(result);
+    } catch (error) {
+      if (error instanceof CatalogError) {
+        if (debug) log(`${tool.name} ${error.code}: ${error.message}`);
 
         return {
-          content: [{ text: JSON.stringify({ code: err.code, message: err.message }), type: 'text' }],
+          content: [{ text: JSON.stringify({ code: error.code, message: error.message }), type: 'text' as const }],
           isError: true,
         };
       }
 
-      if (DEBUG) log(`[codex] ✗ ${tool.name} threw: ${err instanceof Error ? err.message : String(err)}`);
-
-      throw err;
+      throw error;
     }
   });
 }

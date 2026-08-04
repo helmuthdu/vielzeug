@@ -25,15 +25,14 @@ Not every package is a consumed library. Identify the archetype before applying 
 | **Build / dev tool**         | `devDependencies`-only; runs at build time                               | Quick Start shows CLI invocation or config; `usage.md`'s Basic Usage starts with config, not code; API reference may be a config schema                                                                                                 |
 | **Pure type package**        | Exports only `type`/`interface`; no runtime code                         | Skip Quick Start code block; `api.md` is types-only; examples only for non-obvious patterns                                                                                                                                             |
 
-## Validator profiles
+## Validator contracts
 
-`pnpm validate:docs` reads explicit structural profiles from each package's `docsProfile` field in `.ai/data/packages.json`:
+`pnpm validate:docs` reads explicit structural contracts from each package's `docsContract` field in `.ai/data/packages.json`:
 
-- **`arsenal` — catalog:** nested category indexes and helper pages are navigation, not individual how-to recipes. Validator checks root pages and catalog entry structure without requiring every leaf to use recipe headings or appear directly in top-level index.
-- **`codex` — CLI tool:** MCP server exposes CLI, HTTP, and programmatic entry points. Standard structure remains required; profile records that its package archetype is executable rather than consumed-library default.
-- **`refine` — component library:** component pages, framework guides, and stylesheet/component sub-paths replace `examples.md`. Validator requires `index.md`, `usage.md`, and `api.md`, but does not require function-library usage/API headings.
+- **`arsenal` — catalog:** nested category indexes and helper pages are navigation, not individual how-to recipes. Contract validates root pages and catalog entry structure without requiring every leaf to use recipe headings or appear directly in top-level index.
+- **`refine` — component library:** component pages, framework guides, and stylesheet/component sub-paths replace `examples.md`. Contract requires `index.md`, `usage.md`, and `api.md`, but does not require function-library usage/API headings.
 
-Add profile only for durable package-level information architecture. Do not use one to suppress normal documentation defects.
+Packages without `docsContract` use `standard`. Add a contract only for durable package-level information architecture. Do not use one to suppress normal documentation defects.
 
 ## `index.md` — Overview
 

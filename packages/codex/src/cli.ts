@@ -1,125 +1,88 @@
 #!/usr/bin/env node
-import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
-
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
-import type { HttpServerHandle } from './http.js';
-import type { BundledData } from './types.js';
-
 import { log } from './_log.js';
-import { loadData } from './data.js';
-import { startHttpServer } from './http.js';
+import { SnapshotCatalog } from './catalog.js';
+import { startHttpHost } from './http.js';
 import { resolvePort } from './port.js';
-import { createServer } from './server.js';
+import { createMcpServer } from './server.js';
+import { loadSnapshot } from './snapshot.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-function printUsage(): void {
+function usage(): void {
   log(
     [
-      'Usage: codex [--port <number>] [--data <path>]',
+      'Usage: codex [--port=<number>] [--snapshot=<directory>] [--debug]',
       '',
       'Options:',
-      '  --port <number>   Run streamable HTTP transport on the specified port.',
-      '  --data <path>     Load bundled data from a custom snapshot file instead of the built-in one.',
-      '  -h, --help        Show this help message.',
-      '  -v, --version     Print package version.',
+      '  --port=<number>        Run Streamable HTTP on loopback.',
+      '  --snapshot=<directory> Load a snapshot directory.',
+      '  --debug                Log tool timings and expected tool errors.',
+      '  -h, --help             Show help.',
+      '  -v, --version          Print version.',
     ].join('\n'),
   );
 }
 
-/** CLI entry point. Exported for testing — invoke directly with a custom argv instead of spawning a subprocess. */
-export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
+export async function main(argv: readonly string[] = process.argv.slice(2)): Promise<number> {
   if (argv.includes('--help') || argv.includes('-h')) {
-    printUsage();
+    usage();
 
-    return;
+    return 0;
   }
 
   if (argv.includes('--version') || argv.includes('-v')) {
-    const pkgJson = JSON.parse(readFileSync(resolve(__dirname, '../package.json'), 'utf8')) as {
-      version: string;
-    };
+    const pkg = JSON.parse(readFileSync(resolve(__dirname, '../package.json'), 'utf8')) as { version: string };
 
-    process.stdout.write(`${pkgJson.version}\n`);
+    process.stdout.write(`${pkg.version}\n`);
 
-    return;
+    return 0;
   }
 
-  let values: { data?: string; port?: string };
+  let values: { debug?: boolean; port?: string; snapshot?: string };
 
   try {
     ({ values } = parseArgs({
       args: argv,
-      options: { data: { type: 'string' }, port: { type: 'string' } },
+      options: { debug: { type: 'boolean' }, port: { type: 'string' }, snapshot: { type: 'string' } },
       strict: true,
     }));
-  } catch (err) {
-    log(`error: ${err instanceof Error ? err.message : String(err)}`);
-    printUsage();
-    process.exit(1);
 
-    return;
-  }
+    const snapshot = loadSnapshot(values.snapshot);
+    const catalog = new SnapshotCatalog(snapshot);
+    const port = resolvePort(values.port);
 
-  let port: number | null;
-  let mcpServer: Server;
-  let data: BundledData;
+    if (port === null) {
+      await createMcpServer(catalog, { debug: values.debug, version: snapshot.manifest.version }).connect(
+        new StdioServerTransport(),
+      );
 
-  try {
-    data = loadData(values.data);
-    port = resolvePort(values.port);
-    mcpServer = createServer(data);
-  } catch (err) {
-    log(`error: ${err instanceof Error ? err.message : String(err)}`);
-    process.exit(1);
-
-    return;
-  }
-
-  if (port !== null) {
-    let handle: HttpServerHandle;
-
-    try {
-      handle = await startHttpServer(mcpServer, port, () => createServer(data), data.version);
-    } catch (err) {
-      const code = err instanceof Error ? (err as NodeJS.ErrnoException).code : undefined;
-      const detail = code === 'EADDRINUSE' ? `port ${port} is already in use.` : String(err);
-
-      log(`error: ${detail}`);
-      process.exit(1);
-
-      return;
+      return 0;
     }
 
+    const host = await startHttpHost({ catalog, debug: values.debug, port, version: snapshot.manifest.version });
     const shutdown = (): void => {
-      handle.dispose().then(
-        () => process.exit(0),
-        () => process.exit(1),
-      );
+      void host.dispose().then(() => {
+        process.exitCode = 0;
+      });
     };
 
-    process.once('SIGTERM', shutdown);
     process.once('SIGINT', shutdown);
+    process.once('SIGTERM', shutdown);
 
-    return;
-  }
+    return 0;
+  } catch (error) {
+    log(`error: ${error instanceof Error ? error.message : String(error)}`);
 
-  const transport = new StdioServerTransport();
-
-  try {
-    await mcpServer.connect(transport);
-  } catch (err) {
-    log(`error: ${err instanceof Error ? err.message : String(err)}`);
-    process.exit(1);
+    return 1;
   }
 }
 
-// Only auto-run when executed directly (e.g. `node dist/cli.js`), not when imported by tests.
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  await main();
+  process.exitCode = await main();
 }

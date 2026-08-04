@@ -63,6 +63,15 @@ function readExportedIdMap(sourceFile: ts.SourceFile): Map<string, string> {
 }
 
 /** Reads `name`/`code` string properties off the exported example object in a single example file. */
+function stringValue(expression: ts.Expression, sourceFile: ts.SourceFile): string | undefined {
+  if (ts.isStringLiteralLike(expression)) return expression.text;
+  if (!ts.isTemplateExpression(expression)) return undefined;
+
+  let value = expression.head.text;
+  for (const span of expression.templateSpans) value += `\${${span.expression.getText(sourceFile)}}${span.literal.text}`;
+  return value;
+}
+
 function readExampleFields(filePath: string, exportedName: string): { code: string; name: string } | undefined {
   if (!existsSync(filePath)) return undefined;
 
@@ -75,19 +84,24 @@ function readExampleFields(filePath: string, exportedName: string): { code: stri
     for (const decl of stmt.declarationList.declarations) {
       if (!ts.isIdentifier(decl.name) || decl.name.text !== exportedName) continue;
 
-      if (!decl.initializer || !ts.isObjectLiteralExpression(decl.initializer)) continue;
+      if (!decl.initializer) continue;
+
+      const rawCode = stringValue(decl.initializer, sourceFile);
+      if (rawCode !== undefined) return { code: rawCode, name: exportedName.replace(/Example$/, '') };
+      if (!ts.isObjectLiteralExpression(decl.initializer)) continue;
 
       let code: string | undefined;
       let name: string | undefined;
 
       for (const prop of decl.initializer.properties) {
-        if (!ts.isPropertyAssignment(prop) || !ts.isStringLiteralLike(prop.initializer)) continue;
+        if (!ts.isPropertyAssignment(prop)) continue;
 
         const key = propertyKeyText(prop.name);
+        const value = stringValue(prop.initializer, sourceFile);
 
-        if (key === 'code') code = prop.initializer.text;
+        if (key === 'code') code = value;
 
-        if (key === 'name') name = prop.initializer.text;
+        if (key === 'name') name = value;
       }
 
       if (code !== undefined && name !== undefined) return { code, name };
@@ -119,11 +133,12 @@ export function readReplExamples(repoRoot: string, slug: string): BundledExample
   for (const [id, identifier] of idMap) {
     const filePath = importMap.get(identifier);
 
-    if (!filePath) continue;
+    if (!filePath) throw new Error(`REPL example "${slug}/${id}" imports unresolved identifier "${identifier}".`);
 
     const fields = readExampleFields(filePath, identifier);
 
-    if (fields) examples.push({ id, ...fields });
+    if (!fields) throw new Error(`REPL example "${slug}/${id}" must export literal name and code strings.`);
+    examples.push({ id, ...fields });
   }
 
   return examples.sort((a, b) => a.id.localeCompare(b.id));

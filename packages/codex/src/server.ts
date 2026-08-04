@@ -1,19 +1,13 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 
-import type { BundledData } from './types.js';
+import type { Catalog } from './catalog.js';
 
-import { loadData } from './data.js';
-import { buildToolContext, registerTools } from './tools/index.js';
+import { registerTools } from './tools/index.js';
 
-export function createServer(data: BundledData): Server {
-  const server = new Server({ name: 'vielzeug', version: data.version }, { capabilities: { tools: {} } });
+export function createMcpServer(catalog: Catalog, options: { debug?: boolean; version: string }): Server {
+  const server = new Server({ name: 'vielzeug', version: options.version }, { capabilities: { tools: {} } });
 
-  registerTools(server, buildToolContext(data));
+  registerTools(server, catalog, options.debug);
 
   return server;
-}
-
-/** Convenience factory: loads bundled data from disk and creates the MCP server in one call. */
-export function createServerFromDisk(): Server {
-  return createServer(loadData());
 }

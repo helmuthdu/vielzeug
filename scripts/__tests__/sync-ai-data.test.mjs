@@ -67,19 +67,19 @@ describe('assertValidPackages()', () => {
     ).toThrow(/must use name/);
   });
 
-  it('rejects an unsupported documentation profile', () => {
+  it('rejects an unsupported documentation contract', () => {
     expect(() =>
       assertValidPackages([
         {
           category: 'Utilities',
           description: 'Utility',
-          docsProfile: 'unsupported',
+          docsContract: 'unsupported',
           domOutput: false,
           name: '@vielzeug/tool',
           slug: 'tool',
         },
       ]),
-    ).toThrow(/invalid docsProfile/);
+    ).toThrow(/invalid docsContract/);
   });
 });
 

@@ -1,26 +1,60 @@
-// .ts extension required: this file runs under node --experimental-strip-types (scripts only, never compiled by tsc).
-/**
- * Single place that persists a GeneratorResult to disk — generate-bundled-data.ts (CI/publish)
- * and dev.ts (local watch loop) used to each hand-roll this same mkdir + 4-file write sequence,
- * which had already drifted once (dev.ts was missing the CODEX_FORCE_REGEN-equivalent behavior).
- */
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { dirname, resolve } from 'node:path';
 
-import type { GeneratorResult } from './generator.ts';
-
+import type { SnapshotArtifacts, SnapshotPointer } from '../src/types.ts';
 import { generateLlmsTxt } from './llms.ts';
 
-export function writeBundledData(dataDir: string, result: GeneratorResult): void {
-  mkdirSync(dataDir, { recursive: true });
-  writeFileSync(resolve(dataDir, 'vielzeug-data.json'), `${JSON.stringify(result.data, null, 2)}\n`, 'utf8');
+function writeJson(path: string, value: unknown): void {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
 
-  if (result.hashes) {
-    writeFileSync(resolve(dataDir, '.cache.json'), `${JSON.stringify(result.hashes, null, 2)}\n`, 'utf8');
+function validateArtifacts(snapshot: SnapshotArtifacts): void {
+  const slugs = new Set(snapshot.catalog.packages.map((pkg) => pkg.slug));
+  const searchSlugs = new Set(snapshot.search.map((record) => record.slug));
+  if (slugs.size !== snapshot.catalog.packages.length || snapshot.contents.size !== slugs.size || searchSlugs.size !== slugs.size) {
+    throw new Error('Snapshot artifacts must contain exactly one catalog, content chunk, and search record per package.');
   }
+  for (const meta of snapshot.catalog.packages) {
+    const content = snapshot.contents.get(meta.slug);
+    if (!content || !searchSlugs.has(meta.slug)) throw new Error(`Snapshot artifacts are missing ${meta.slug}.`);
+    if ((content.apiSource !== null) !== meta.hasSource) throw new Error(`Snapshot source metadata disagrees for ${meta.slug}.`);
+    if (Object.keys(content.docs).sort().join() !== [...meta.availableDocPages].sort().join()) throw new Error(`Snapshot documentation metadata disagrees for ${meta.slug}.`);
+    if (content.examples.map((example) => example.id).sort().join() !== [...meta.exampleIds].sort().join()) throw new Error(`Snapshot example metadata disagrees for ${meta.slug}.`);
+  }
+}
 
-  const { llmsFullTxt, llmsTxt } = generateLlmsTxt(result.data);
+function writeDirectory(directory: string, snapshot: SnapshotArtifacts): void {
+  writeJson(resolve(directory, 'catalog.json'), snapshot.catalog);
+  writeJson(resolve(directory, 'search.json'), snapshot.search);
+  writeJson(resolve(directory, 'refine.json'), snapshot.refineComponents);
+  for (const [slug, content] of snapshot.contents) writeJson(resolve(directory, 'packages', `${slug}.json`), content);
+  const llms = generateLlmsTxt(snapshot.catalog, snapshot.contents);
+  writeFileSync(resolve(directory, 'llms.txt'), llms.llmsTxt, 'utf8');
+  writeFileSync(resolve(directory, 'llms-full.txt'), llms.llmsFullTxt, 'utf8');
+  writeJson(resolve(directory, 'manifest.json'), snapshot.manifest);
+}
 
-  writeFileSync(resolve(dataDir, 'llms.txt'), llmsTxt, 'utf8');
-  writeFileSync(resolve(dataDir, 'llms-full.txt'), llmsFullTxt, 'utf8');
+/** Release artifacts contain one static snapshot, avoiding version-history package bloat. */
+export function writeSnapshot(snapshotRoot: string, snapshot: SnapshotArtifacts): void {
+  validateArtifacts(snapshot);
+  const staging = `${snapshotRoot}.staging-${process.pid}-${randomUUID()}`;
+  try {
+    writeDirectory(staging, snapshot);
+    rmSync(snapshotRoot, { force: true, recursive: true });
+    renameSync(staging, snapshotRoot);
+  } catch (error) {
+    rmSync(staging, { force: true, recursive: true });
+    throw error;
+  }
+}
+
+/** Dev snapshots retain immutable generations for processes still lazily reading old chunks. */
+export function writeDevSnapshot(snapshotRoot: string, snapshot: SnapshotArtifacts): void {
+  validateArtifacts(snapshot);
+  const id = randomUUID();
+  const directory = resolve(snapshotRoot, 'snapshots', id);
+  writeDirectory(directory, snapshot);
+  writeJson(resolve(snapshotRoot, 'current.json'), { directory: `snapshots/${id}` } satisfies SnapshotPointer);
 }

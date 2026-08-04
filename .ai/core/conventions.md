@@ -144,7 +144,7 @@ Then:
 
 1. Register package in `rush.json`.
 2. Add curated `.ai/data/packages.json` metadata: `slug`, `name`, `category`, `description`, `domOutput`; add `testCommand` only for a nonstandard invocation.
-3. Add `docsProfile` only for a durable nonstandard documentation architecture.
+3. Add `docsContract` only for a durable nonstandard documentation architecture.
 4. Run `.ai/tasks/document.md` after adding a public package surface.
 5. Run `pnpm check:ai-data`.
 

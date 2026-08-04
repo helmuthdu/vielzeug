@@ -113,7 +113,6 @@ signal, so the whole realtime layer (`core/realtime.ts`) was dropped.
 
 ## AI tooling note
 
-While building this demo, package APIs were looked up via `@vielzeug/codex`'s bundled data
-(`loadData()` from `packages/codex/dist/data.js`) rather than reading every package's source
-file-by-file — the same MCP data `codex` serves to AI clients, queried directly here to avoid
-re-implementing its lookup logic.
+While building this demo, package APIs were looked up through `@vielzeug/codex`'s MCP catalog
+rather than reading every package source file-by-file. The same snapshot-backed catalog powers
+Codex clients and avoids duplicated lookup logic.

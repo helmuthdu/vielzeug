@@ -3,13 +3,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { parseFrontmatter, parseMarkdownDocument } from '../lib/markdown.ts';
 import {
-  docsProfileFor,
-  parseFrontmatter,
-  relativeMarkdownLinks,
+  DOCS_CONTRACTS,
+  loadDocsWorkspace,
   resolveMarkdownTarget,
-  validateDocsPackage,
-} from '../validate-docs';
+  validateDocsWorkspace,
+  validatePackageDocs,
+} from '../validate-docs.ts';
 
 const roots: string[] = [];
 
@@ -17,15 +18,24 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { force: true, recursive: true });
 });
 
-function fixture(): { docsDir: string; packagesDir: string } {
+interface Fixture {
+  docsDir: string;
+  packagesDir: string;
+}
+
+function write(file: string, source: string): void {
+  mkdirSync(join(file, '..'), { recursive: true });
+  writeFileSync(file, source);
+}
+
+function fixture(): Fixture {
   const root = mkdtempSync(join(tmpdir(), 'vielzeug-docs-'));
   roots.push(root);
   const docsDir = join(root, 'docs');
   const packagesDir = join(root, 'packages');
-  mkdirSync(join(docsDir, 'widget', 'examples'), { recursive: true });
   mkdirSync(join(packagesDir, 'widget'), { recursive: true });
 
-  writeFileSync(
+  write(
     join(docsDir, 'widget', 'index.md'),
     `---
 title: Widget
@@ -52,7 +62,7 @@ environments: [node]
 ## See Also
 `,
   );
-  writeFileSync(
+  write(
     join(docsDir, 'widget', 'usage.md'),
     `---
 title: Usage
@@ -65,7 +75,7 @@ description: Use widget
 ## Best Practices
 `,
   );
-  writeFileSync(
+  write(
     join(docsDir, 'widget', 'api.md'),
     `---
 title: API
@@ -78,8 +88,8 @@ description: Widget API
 ## Package Entry Point
 `,
   );
-  writeFileSync(join(docsDir, 'widget', 'examples.md'), `[Create](./examples/create.md)\n`);
-  writeFileSync(
+  write(join(docsDir, 'widget', 'examples.md'), '[Create](./examples/create.md)\n');
+  write(
     join(docsDir, 'widget', 'examples', 'create.md'),
     `---
 title: Create
@@ -101,47 +111,134 @@ description: Create widget
   return { docsDir, packagesDir };
 }
 
-describe('documentation helpers', () => {
-  it('selects explicit structural profiles for non-standard packages', () => {
-    expect(docsProfileFor('arsenal')).toBe('catalog');
-    expect(docsProfileFor('assay')).toBe('standard');
-    expect(docsProfileFor('codex')).toBe('cli-tool');
-    expect(docsProfileFor('keymap')).toBe('standard');
-    expect(docsProfileFor('prism')).toBe('standard');
-    expect(docsProfileFor('refine')).toBe('component-library');
-    expect(docsProfileFor('sandbox')).toBe('standard');
-    expect(docsProfileFor('spell')).toBe('standard');
-    expect(docsProfileFor('ward')).toBe('standard');
-    expect(docsProfileFor('ripple')).toBe('standard');
+function validate(paths: Fixture, filterPackage: string | null = null) {
+  return validateDocsWorkspace(loadDocsWorkspace(paths), filterPackage);
+}
+
+describe('shared Markdown parser', () => {
+  it('uses one frontmatter parser for scalar, array, and safe values', () => {
+    expect(parseFrontmatter("---\ntitle: 'Widget'\nexports:\n  - createWidget\n__proto__: unsafe\n---")).toEqual({
+      exports: ['createWidget'],
+      title: 'Widget',
+    });
   });
 
-  it('parses simple frontmatter and local markdown links', () => {
-    expect(parseFrontmatter('---\ntitle: Test\n---\n')).toEqual({ title: 'Test' });
-    expect(relativeMarkdownLinks('[Local](./guide.md) [External](https://example.test)')).toEqual(['./guide.md']);
-    expect(resolveMarkdownTarget('/docs/pkg/index.md', './guide')).toBe('/docs/pkg/guide.md');
+  it('collects document structure while ignoring fenced code', () => {
+    const document = parseMarkdownDocument(
+      '/docs/widget/usage.md',
+      `[[toc]]
+
+## Real heading
+[Working](./real.md)
+
+\`\`\`md
+## Fake heading
+[Broken](./missing.md)
+<PackageHero />
+\`\`\`
+`,
+    );
+
+    expect(document.toc).toBe(true);
+    expect(document.headings).toEqual([{ depth: 2, line: 3, text: 'Real heading' }]);
+    expect(document.links).toEqual([{ line: 4, target: './real.md' }]);
+    expect(document.components).not.toContain('PackageHero');
   });
 });
 
-describe('validateDocsPackage()', () => {
+describe('documentation contracts', () => {
   it('accepts a complete standard package document shape', () => {
     const paths = fixture();
-    expect(validateDocsPackage('widget', paths)).toEqual([]);
+    expect(validate(paths)).toEqual({ checkedPackages: ['widget'], diagnostics: [] });
   });
 
-  it('reports missing structural requirements', () => {
+  it('selects explicit contracts from package metadata', () => {
+    const paths = fixture();
+    const packageDataPath = join(paths.docsDir, '..', 'packages.json');
+    writeFileSync(packageDataPath, JSON.stringify({ packages: [{ docsContract: 'component-library', slug: 'widget' }] }));
+    rmSync(join(paths.docsDir, 'widget', 'examples.md'));
+    rmSync(join(paths.docsDir, 'widget', 'examples'), { recursive: true });
+    writeFileSync(join(paths.docsDir, 'widget', 'usage.md'), '[[toc]]\n');
+    writeFileSync(join(paths.docsDir, 'widget', 'api.md'), '[[toc]]\n');
+
+    const result = validateDocsWorkspace(loadDocsWorkspace({ ...paths, packageDataPath }));
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it('reports independent missing-page and page-content defects together', () => {
     const paths = fixture();
     writeFileSync(join(paths.docsDir, 'widget', 'usage.md'), '## Basic Usage\n');
+    rmSync(join(paths.docsDir, 'widget', 'api.md'));
 
-    expect(validateDocsPackage('widget', paths).map((failure) => failure.message)).toContain('missing [[toc]]');
+    const diagnostics = validate(paths).diagnostics;
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ rule: 'page/missing', file: join(paths.docsDir, 'widget', 'api.md') }),
+        expect.objectContaining({ rule: 'toc/missing', file: join(paths.docsDir, 'widget', 'usage.md') }),
+        expect.objectContaining({ rule: 'heading/missing', message: 'Missing required section: Best Practices' }),
+      ]),
+    );
   });
 
-  it('reports sidebar routes with missing documents', () => {
+  it('reports missing docs, orphan docs, and malformed package frontmatter', () => {
     const paths = fixture();
-    const sidebarFile = join(paths.docsDir, 'sidebar.ts');
-    writeFileSync(sidebarFile, "const sidebar = [{ link: '/widget/missing', text: 'Missing' }];\n");
+    mkdirSync(join(paths.packagesDir, 'undocumented'));
+    mkdirSync(join(paths.docsDir, 'orphan'));
+    write(join(paths.docsDir, 'orphan', 'index.md'), '---\npackage: wrong\n---\n');
+    writeFileSync(join(paths.docsDir, 'widget', 'index.md'), '---\npackage: other\n---\n');
 
-    expect(validateDocsPackage('widget', { ...paths, sidebarFile }).map((failure) => failure.message)).toContain(
-      'sidebar target does not exist: /widget/missing',
+    const diagnostics = validate(paths).diagnostics;
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ package: 'undocumented', rule: 'workspace/missing-docs' }),
+        expect.objectContaining({ package: 'orphan', rule: 'workspace/orphan-docs' }),
+        expect.objectContaining({ package: 'widget', rule: 'frontmatter/package-mismatch' }),
+      ]),
     );
+  });
+
+  it('validates links with line locations and ignores nested catalog recipes', () => {
+    const paths = fixture();
+    writeFileSync(join(paths.docsDir, 'widget', 'usage.md'), '[[toc]]\n\n## Basic Usage\n\n## Best Practices\n[Missing](./missing.md)\n');
+    writeFileSync(join(paths.docsDir, 'widget', 'examples', 'create.md'), '[Missing](./also-missing.md)\n');
+
+    const standard = validate(paths).diagnostics;
+    expect(standard).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ line: 6, rule: 'link/broken', message: 'Relative link target does not exist: ./missing.md' }),
+        expect.objectContaining({ rule: 'link/broken', message: 'Relative link target does not exist: ./also-missing.md' }),
+      ]),
+    );
+
+    const workspace = loadDocsWorkspace(paths);
+    const docs = workspace.packageDocs.get('widget');
+    expect(docs).toBeDefined();
+    expect(validatePackageDocs(docs!, DOCS_CONTRACTS.catalog, workspace.knownFiles)).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ message: 'Relative link target does not exist: ./also-missing.md' })]),
+    );
+  });
+
+  it('requires recipe index parity and every required recipe section', () => {
+    const paths = fixture();
+    writeFileSync(join(paths.docsDir, 'widget', 'examples.md'), '');
+    writeFileSync(join(paths.docsDir, 'widget', 'examples', 'create.md'), '### Problem\n');
+
+    const diagnostics = validate(paths).diagnostics;
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ rule: 'recipe/unindexed' }),
+        expect.objectContaining({ rule: 'recipe/heading-missing', message: 'Missing recipe section: Solution.' }),
+      ]),
+    );
+  });
+
+  it('resolves extensions, directory indexes, queries, and anchors', () => {
+    expect(resolveMarkdownTarget('/docs/widget/index.md', './usage#basic-usage')).toBe('/docs/widget/usage.md');
+    expect(resolveMarkdownTarget('/docs/widget/index.md', './examples/?tab=one')).toBe('/docs/widget/examples/index.md');
+  });
+
+  it('rejects unknown filtered packages', () => {
+    const paths = fixture();
+    expect(() => validate(paths, 'missing')).toThrow('Unknown package documentation: missing');
   });
 });

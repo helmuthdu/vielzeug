@@ -143,8 +143,9 @@ docs/.vitepress/.temp/
 .agents
 /skills-lock.json
 
-# Codex generated bundled data
+# Codex generated bundled data and local immutable dev snapshots
 packages/codex/data/
+packages/codex/.dev/
 
 # REPL example validation temp files
 scripts/.repl-tmp/

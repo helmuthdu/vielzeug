@@ -1,5 +1,5 @@
 /**
- * Validates mechanical package-documentation contracts without judging prose.
+ * Validates package-documentation structure.
  *
  * Usage:
  *   pnpm validate:docs
@@ -10,261 +10,407 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, normalize, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { type MarkdownDocument, parseMarkdownDocument } from './lib/markdown.ts';
 import { isMain, parseArgs } from './lib/cli.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 export const ROOT = resolve(__dirname, '..');
 const DEFAULT_DOCS_DIR = join(ROOT, 'docs');
 const DEFAULT_PACKAGES_DIR = join(ROOT, 'packages');
-const STANDARD_PAGES = ['index.md', 'usage.md', 'api.md', 'examples.md'] as const;
-const INDEX_FRONTMATTER = [
-  'title',
-  'description',
-  'package',
-  'category',
-  'keywords',
-  'related',
-  'exports',
-  'environments',
-];
-
-type DocsProfile = 'catalog' | 'cli-tool' | 'component-library' | 'standard';
 const DEFAULT_PACKAGE_DATA = join(ROOT, '.ai/data/packages.json');
 
-export function docsProfileFor(slug: string, packageDataPath = DEFAULT_PACKAGE_DATA): DocsProfile {
-  if (!existsSync(packageDataPath)) return 'standard';
+type LinkScope = 'all' | 'root';
+export type DocsContractName = 'catalog' | 'component-library' | 'standard';
 
-  const data = JSON.parse(readFileSync(packageDataPath, 'utf8')) as {
-    packages?: Array<{ docsProfile?: DocsProfile; slug: string }>;
+interface HeadingRequirement {
+  alternatives?: readonly string[];
+  text: string;
+  match?: 'exact' | 'prefix';
+}
+
+interface PageContract {
+  components?: readonly string[];
+  frontmatter?: readonly string[];
+  headings?: readonly HeadingRequirement[];
+  packageMustMatchSlug?: boolean;
+  toc?: boolean;
+}
+
+export interface DocsContract {
+  linkScope: LinkScope;
+  pages: Readonly<Record<string, PageContract>>;
+  recipes?: {
+    directory: string;
+    index: string;
+    indexed: boolean;
+    requiredHeadings: readonly string[];
   };
-  const profile = data.packages?.find((pkg) => pkg.slug === slug)?.docsProfile;
-  return profile ?? 'standard';
 }
 
-export interface DocsValidationFailure {
+const INDEX_CONTRACT: PageContract = {
+  components: ['PackageHero'],
+  frontmatter: ['title', 'description', 'package', 'category', 'keywords', 'related', 'exports', 'environments'],
+  headings: [
+    { match: 'prefix', text: 'Why ' },
+    { text: 'Installation' },
+    { text: 'Quick Start' },
+    { text: 'Features' },
+    { text: 'Documentation' },
+    { text: 'See Also' },
+  ],
+  packageMustMatchSlug: true,
+};
+
+const STANDARD_PAGE_CONTRACTS = {
+  'api.md': {
+    headings: [{ alternatives: ['Package Entry Point', 'Package Entry Points'], text: 'Package Entry Point' }, { text: 'API Overview' }],
+    toc: true,
+  },
+  'examples.md': {},
+  'index.md': INDEX_CONTRACT,
+  'usage.md': {
+    headings: [{ text: 'Basic Usage' }, { text: 'Best Practices' }],
+    toc: true,
+  },
+} satisfies Record<string, PageContract>;
+
+// Contracts describe each package documentation shape in one place; validators never infer policy from package kind.
+export const DOCS_CONTRACTS = {
+  catalog: {
+    linkScope: 'root',
+    pages: STANDARD_PAGE_CONTRACTS,
+    recipes: { directory: 'examples', index: 'examples.md', indexed: false, requiredHeadings: [] },
+  },
+  'component-library': {
+    linkScope: 'root',
+    pages: {
+      'api.md': { toc: true },
+      'index.md': INDEX_CONTRACT,
+      'usage.md': { toc: true },
+    },
+  },
+  standard: {
+    linkScope: 'all',
+    pages: STANDARD_PAGE_CONTRACTS,
+    recipes: {
+      directory: 'examples',
+      index: 'examples.md',
+      indexed: true,
+      requiredHeadings: ['Problem', 'Solution', 'Pitfalls', 'Related'],
+    },
+  },
+} satisfies Record<DocsContractName, DocsContract>;
+
+export interface Diagnostic {
   file: string;
+  hint?: string;
+  line?: number;
   message: string;
+  package: string;
+  rule: string;
 }
 
-function markdownFiles(dir: string): string[] {
+export interface PackageDocs {
+  docsDir: string;
+  files: ReadonlyMap<string, MarkdownDocument>;
+  slug: string;
+}
+
+export interface DocsWorkspace {
+  contracts: ReadonlyMap<string, DocsContractName>;
+  knownFiles: ReadonlySet<string>;
+  packageDocs: ReadonlyMap<string, PackageDocs>;
+  sourceDirectories: ReadonlyMap<string, string>;
+}
+
+export interface ValidationResult {
+  checkedPackages: readonly string[];
+  diagnostics: readonly Diagnostic[];
+}
+
+export interface LoadDocsWorkspaceOptions {
+  docsDir?: string;
+  packageDataPath?: string;
+  packagesDir?: string;
+}
+
+function directoryNames(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+}
+
+function filesIn(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+
   const files: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) files.push(...markdownFiles(path));
-    else if (entry.isFile() && extname(entry.name) === '.md') files.push(path);
+    if (entry.isDirectory()) files.push(...filesIn(path));
+    else if (entry.isFile()) files.push(path);
   }
   return files;
 }
 
-export function parseFrontmatter(source: string): Record<string, string> {
-  if (!source.startsWith('---\n')) return {};
-  const end = source.indexOf('\n---', 4);
-  if (end === -1) return {};
+function toDocumentPath(docsDir: string, file: string): string {
+  return relative(docsDir, file).replaceAll('\\', '/');
+}
 
-  return Object.fromEntries(
-    source
-      .slice(4, end)
-      .split('\n')
-      .flatMap((line) => {
-        const match = /^([\w-]+):\s*(.*)$/.exec(line);
-        return match ? [[match[1], match[2]]] : [];
-      }),
+function loadPackageDocs(docsDir: string, slug: string): PackageDocs {
+  const packageDir = join(docsDir, slug);
+  const files = new Map<string, MarkdownDocument>();
+
+  for (const file of filesIn(packageDir)) {
+    if (extname(file) !== '.md') continue;
+    files.set(toDocumentPath(packageDir, file), parseMarkdownDocument(file, readFileSync(file, 'utf8')));
+  }
+
+  return { docsDir: packageDir, files, slug };
+}
+
+function contractName(value: unknown): DocsContractName {
+  if (value === 'catalog' || value === 'component-library') return value;
+  return 'standard';
+}
+
+function loadContracts(packageDataPath: string): Map<string, DocsContractName> {
+  if (!existsSync(packageDataPath)) return new Map();
+
+  const data = JSON.parse(readFileSync(packageDataPath, 'utf8')) as {
+    packages?: Array<{ docsContract?: unknown; slug?: unknown }>;
+  };
+  const contracts = new Map<string, DocsContractName>();
+  for (const pkg of data.packages ?? []) {
+    if (typeof pkg.slug === 'string') contracts.set(pkg.slug, contractName(pkg.docsContract));
+  }
+  return contracts;
+}
+
+export function loadDocsWorkspace({
+  docsDir = DEFAULT_DOCS_DIR,
+  packageDataPath = DEFAULT_PACKAGE_DATA,
+  packagesDir = DEFAULT_PACKAGES_DIR,
+}: LoadDocsWorkspaceOptions = {}): DocsWorkspace {
+  const sourceDirectories = new Map(directoryNames(packagesDir).map((slug) => [slug, join(packagesDir, slug)]));
+  const packageDocs = new Map<string, PackageDocs>();
+
+  for (const slug of directoryNames(docsDir)) {
+    const index = join(docsDir, slug, 'index.md');
+    const isSourcePackage = sourceDirectories.has(slug);
+    const declaresPackage = existsSync(index) && typeof parseMarkdownDocument(index, readFileSync(index, 'utf8')).frontmatter.package === 'string';
+    if (isSourcePackage || declaresPackage) packageDocs.set(slug, loadPackageDocs(docsDir, slug));
+  }
+
+  return {
+    contracts: loadContracts(packageDataPath),
+    knownFiles: new Set(filesIn(docsDir).map((file) => normalize(file))),
+    packageDocs,
+    sourceDirectories,
+  };
+}
+
+function diagnostic(
+  packageName: string,
+  file: string,
+  rule: string,
+  message: string,
+  options: Pick<Diagnostic, 'hint' | 'line'> = {},
+): Diagnostic {
+  return { file, message, package: packageName, rule, ...options };
+}
+
+function hasHeading(document: MarkdownDocument, requirement: HeadingRequirement): boolean {
+  const texts = requirement.alternatives ?? [requirement.text];
+  return document.headings.some(
+    (heading) =>
+      heading.depth === 2 &&
+      texts.some((text) => (requirement.match === 'prefix' ? heading.text.startsWith(text) : heading.text === text)),
   );
 }
 
-export function hasHeading(source: string, heading: string): boolean {
-  return new RegExp(`^## ${heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'm').test(source);
+function validatePage(
+  docs: PackageDocs,
+  page: string,
+  rule: PageContract,
+  diagnostics: Diagnostic[],
+): MarkdownDocument | null {
+  const document = docs.files.get(page);
+  if (!document) {
+    diagnostics.push(
+      diagnostic(docs.slug, join(docs.docsDir, page), 'page/missing', `Missing required page: ${page}`, {
+        hint: `Create ${page} for ${docs.slug}.`,
+      }),
+    );
+    return null;
+  }
+
+  for (const field of rule.frontmatter ?? []) {
+    if (!(field in document.frontmatter)) {
+      diagnostics.push(
+        diagnostic(docs.slug, document.path, 'frontmatter/missing', `Missing required frontmatter field: ${field}`, {
+          hint: `Add ${field} to ${page}.`,
+        }),
+      );
+    }
+  }
+  if (rule.packageMustMatchSlug && document.frontmatter.package !== docs.slug) {
+    diagnostics.push(
+      diagnostic(docs.slug, document.path, 'frontmatter/package-mismatch', `Frontmatter package must be ${docs.slug}.`),
+    );
+  }
+  if (rule.toc && !document.toc) {
+    diagnostics.push(diagnostic(docs.slug, document.path, 'toc/missing', 'Missing [[toc]].'));
+  }
+  for (const component of rule.components ?? []) {
+    if (!document.components.has(component)) {
+      diagnostics.push(
+        diagnostic(docs.slug, document.path, 'component/missing', `Missing required component: <${component}>.`, {
+          hint: `Add <${component} ... /> to ${page}.`,
+        }),
+      );
+    }
+  }
+  for (const heading of rule.headings ?? []) {
+    if (!hasHeading(document, heading)) {
+      diagnostics.push(
+        diagnostic(docs.slug, document.path, 'heading/missing', `Missing required section: ${heading.text}`, {
+          hint: `Add a level-two ${heading.match === 'prefix' ? 'section starting with' : 'section named'} ${heading.text}.`,
+        }),
+      );
+    }
+  }
+
+  return document;
 }
 
-export function relativeMarkdownLinks(source: string): string[] {
-  const links = [...source.matchAll(/\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)].map((match) => match[1]);
-  return links.filter((link) => !link.startsWith('#') && !/^(?:@|https?:|mailto:|tel:|\/)/.test(link));
+function isRelativeMarkdownLink(target: string): boolean {
+  return !target.startsWith('#') && !/^(?:@|\/|[a-z][\w+.-]*:)/i.test(target);
 }
 
 export function resolveMarkdownTarget(file: string, target: string): string {
-  const path = target.split('#', 1)[0];
-  if (path === '') return file;
-  const resolved = normalize(resolve(dirname(file), path));
+  const pathname = target.split(/[?#]/, 1)[0];
+  if (pathname === '') return normalize(file);
+
+  const resolved = normalize(resolve(dirname(file), pathname));
+  if (pathname.endsWith('/')) return join(resolved, 'index.md');
   return extname(resolved) === '' ? `${resolved}.md` : resolved;
 }
 
-function addFailure(failures: DocsValidationFailure[], file: string, message: string): void {
-  failures.push({ file, message });
+function validateRecipes(docs: PackageDocs, contract: NonNullable<DocsContract['recipes']>, diagnostics: Diagnostic[]): void {
+  const recipes = [...docs.files.entries()].filter(([path]) => path.startsWith(`${contract.directory}/`));
+  const index = docs.files.get(contract.index);
+  const indexed =
+    contract.indexed && index
+      ? new Set(
+          index.links
+            .filter((link) => isRelativeMarkdownLink(link.target))
+            .map((link) => resolveMarkdownTarget(index.path, link.target)),
+        )
+      : null;
+
+  for (const [, recipe] of recipes) {
+    if (indexed && !indexed.has(recipe.path)) {
+      diagnostics.push(
+        diagnostic(docs.slug, recipe.path, 'recipe/unindexed', `${relative(docs.docsDir, recipe.path)} is not linked by ${contract.index}.`),
+      );
+    }
+    for (const heading of contract.requiredHeadings) {
+      if (!recipe.headings.some((candidate) => candidate.depth === 3 && candidate.text === heading)) {
+        diagnostics.push(
+          diagnostic(docs.slug, recipe.path, 'recipe/heading-missing', `Missing recipe section: ${heading}.`, {
+            hint: `Add a level-three ${heading} section.`,
+          }),
+        );
+      }
+    }
+  }
 }
 
-function validateSidebar(slug: string, docsDir: string, sidebarFile: string, failures: DocsValidationFailure[]): void {
-  if (!existsSync(sidebarFile)) return;
+export function validatePackageDocs(
+  docs: PackageDocs,
+  contract: DocsContract,
+  knownFiles: ReadonlySet<string>,
+): readonly Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
 
-  const pattern = new RegExp(`link:\\s*['\"](\\/${slug}\\/[^'\"]*)['\"]`, 'g');
-  for (const match of readFileSync(sidebarFile, 'utf8').matchAll(pattern)) {
-    const route = match[1];
-    const [pathname] = route.split('#', 1);
-    const relativePath = pathname.slice(1).replace(/\/$/, '');
-    const target = relativePath === slug ? join(docsDir, slug, 'index.md') : join(docsDir, `${relativePath}.md`);
-    if (!existsSync(target)) {
-      addFailure(failures, sidebarFile, `sidebar target does not exist: ${route}`);
+  for (const [page, rule] of Object.entries(contract.pages)) validatePage(docs, page, rule, diagnostics);
+  if (contract.recipes) validateRecipes(docs, contract.recipes, diagnostics);
+
+  const documents = [...docs.files.entries()]
+    .filter(([path]) => contract.linkScope === 'all' || !path.includes('/'))
+    .map(([, document]) => document);
+  for (const document of documents) {
+    for (const link of document.links) {
+      if (!isRelativeMarkdownLink(link.target)) continue;
+      const target = resolveMarkdownTarget(document.path, link.target);
+      if (!knownFiles.has(target)) {
+        diagnostics.push(
+          diagnostic(docs.slug, document.path, 'link/broken', `Relative link target does not exist: ${link.target}`, {
+            line: link.line,
+          }),
+        );
+      }
+    }
+  }
+
+  return diagnostics;
+}
+
+function selectedSlugs(workspace: DocsWorkspace, filterPackage: string | null): string[] {
+  const slugs = new Set([...workspace.sourceDirectories.keys(), ...workspace.packageDocs.keys()]);
+  if (filterPackage) {
+    if (!slugs.has(filterPackage)) throw new Error(`Unknown package documentation: ${filterPackage}`);
+    return [filterPackage];
+  }
+  return [...slugs].sort();
+}
+
+export function validateDocsWorkspace(workspace: DocsWorkspace, filterPackage: string | null = null): ValidationResult {
+  const diagnostics: Diagnostic[] = [];
+  const checkedPackages = selectedSlugs(workspace, filterPackage);
+
+  for (const slug of checkedPackages) {
+    const sourceDir = workspace.sourceDirectories.get(slug);
+    const docs = workspace.packageDocs.get(slug);
+    if (!sourceDir && docs) {
+      diagnostics.push(
+        diagnostic(slug, docs.docsDir, 'workspace/orphan-docs', `Documentation directory has no matching package source: ${slug}.`),
+      );
       continue;
     }
-  }
-}
-
-function validateIndex(
-  slug: string,
-  file: string,
-  source: string,
-  profile: DocsProfile,
-  failures: DocsValidationFailure[],
-): void {
-  const frontmatter = parseFrontmatter(source);
-  for (const field of INDEX_FRONTMATTER) {
-    if (!(field in frontmatter)) addFailure(failures, file, `missing index frontmatter field: ${field}`);
-  }
-  if (frontmatter.package && frontmatter.package !== slug)
-    addFailure(failures, file, `frontmatter package must be ${slug}`);
-
-  const requiredOverview = ['<PackageHero', 'Why ', 'Installation', 'Features', 'Documentation', 'See Also'];
-  requiredOverview.splice(3, 0, 'Quick Start');
-
-  for (const value of requiredOverview) {
-    const found =
-      value === '<PackageHero'
-        ? source.includes(value)
-        : value === 'Why '
-          ? /^## Why /m.test(source)
-          : hasHeading(source, value);
-    if (!found) addFailure(failures, file, `missing required overview structure: ${value}`);
-  }
-}
-
-function validateUsage(file: string, source: string, profile: DocsProfile, failures: DocsValidationFailure[]): void {
-  if (!source.includes('[[toc]]')) addFailure(failures, file, 'missing [[toc]]');
-  if (profile === 'component-library') return;
-  if (!hasHeading(source, 'Basic Usage')) addFailure(failures, file, 'missing Basic Usage section');
-  if (!hasHeading(source, 'Best Practices')) addFailure(failures, file, 'missing Best Practices section');
-}
-
-function validateApi(file: string, source: string, profile: DocsProfile, failures: DocsValidationFailure[]): void {
-  if (!source.includes('[[toc]]')) addFailure(failures, file, 'missing [[toc]]');
-  if (profile === 'component-library') return;
-  if (!hasHeading(source, 'API Overview')) addFailure(failures, file, 'missing API Overview section');
-  if (!hasHeading(source, 'Package Entry Point') && !hasHeading(source, 'Package Entry Points')) {
-    addFailure(failures, file, 'missing Package Entry Point section');
-  }
-}
-
-function validateRecipes(
-  pkgDir: string,
-  examples: string,
-  profile: DocsProfile,
-  failures: DocsValidationFailure[],
-): void {
-  if (profile === 'component-library' || !existsSync(examples)) return;
-
-  const recipeFiles = markdownFiles(examples);
-  const examplesIndex = join(pkgDir, 'examples.md');
-  const indexed =
-    profile === 'catalog'
-      ? null
-      : new Set(
-          relativeMarkdownLinks(readFileSync(examplesIndex, 'utf8')).map((link) =>
-            resolveMarkdownTarget(examplesIndex, link),
-          ),
-        );
-
-  for (const recipe of recipeFiles) {
-    const source = readFileSync(recipe, 'utf8');
-    if (indexed && !indexed.has(recipe)) addFailure(failures, recipe, 'recipe is not linked by examples.md');
-    if (profile === 'catalog') continue;
-    for (const heading of ['Problem', 'Solution', 'Pitfalls', 'Related']) {
-      if (!new RegExp(`^### ${heading}$`, 'm').test(source)) addFailure(failures, recipe, `missing ${heading} section`);
+    if (sourceDir && !docs) {
+      diagnostics.push(
+        diagnostic(slug, sourceDir, 'workspace/missing-docs', `Package source has no documentation directory: ${slug}.`, {
+          hint: `Create docs/${slug}/index.md with package: ${slug} frontmatter.`,
+        }),
+      );
+      continue;
     }
-  }
-}
-
-export function validateDocsPackage(
-  slug: string,
-  {
-    docsDir = DEFAULT_DOCS_DIR,
-    packagesDir = DEFAULT_PACKAGES_DIR,
-    sidebarFile = docsDir === DEFAULT_DOCS_DIR ? join(docsDir, '.vitepress/config.ts') : null,
-  } = {},
-): DocsValidationFailure[] {
-  const failures: DocsValidationFailure[] = [];
-  const pkgDir = join(docsDir, slug);
-  const sourceDir = join(packagesDir, slug);
-  const profile = docsProfileFor(slug);
-  const standardPages =
-    profile === 'component-library' ? STANDARD_PAGES.filter((page) => page !== 'examples.md') : STANDARD_PAGES;
-
-  if (!existsSync(sourceDir)) return [{ file: sourceDir, message: 'package source directory does not exist' }];
-  if (!existsSync(pkgDir)) return [{ file: pkgDir, message: 'package documentation directory does not exist' }];
-
-  for (const page of standardPages) {
-    if (!existsSync(join(pkgDir, page))) addFailure(failures, join(pkgDir, page), 'missing standard package page');
-  }
-  if (failures.length > 0) return failures;
-
-  const index = join(pkgDir, 'index.md');
-  const usage = join(pkgDir, 'usage.md');
-  const api = join(pkgDir, 'api.md');
-  validateIndex(slug, index, readFileSync(index, 'utf8'), profile, failures);
-  validateUsage(usage, readFileSync(usage, 'utf8'), profile, failures);
-  validateApi(api, readFileSync(api, 'utf8'), profile, failures);
-  validateRecipes(pkgDir, join(pkgDir, 'examples'), profile, failures);
-  if (sidebarFile && profile !== 'catalog') {
-    validateSidebar(slug, docsDir, sidebarFile, failures);
+    if (docs) diagnostics.push(...validatePackageDocs(docs, DOCS_CONTRACTS[workspace.contracts.get(slug) ?? 'standard'], workspace.knownFiles));
   }
 
-  const filesForLinkValidation =
-    profile === 'standard'
-      ? markdownFiles(pkgDir)
-      : readdirSync(pkgDir, { withFileTypes: true })
-          .filter((entry) => entry.isFile() && extname(entry.name) === '.md')
-          .map((entry) => join(pkgDir, entry.name));
-  for (const file of filesForLinkValidation) {
-    const source = readFileSync(file, 'utf8');
-    for (const link of relativeMarkdownLinks(source)) {
-      const target = resolveMarkdownTarget(file, link);
-      if (!existsSync(target)) addFailure(failures, file, `relative link target does not exist: ${link}`);
-    }
-  }
-
-  return failures;
-}
-
-export function discoverDocsPackages(
-  docsDir: string,
-  filterPackage: string | null,
-  packagesDir = DEFAULT_PACKAGES_DIR,
-): string[] {
-  const slugs = readdirSync(docsDir, { withFileTypes: true })
-    .filter(
-      (entry) =>
-        entry.isDirectory() &&
-        existsSync(join(docsDir, entry.name, 'index.md')) &&
-        existsSync(join(packagesDir, entry.name)),
-    )
-    .map((entry) => entry.name)
-    .sort();
-
-  if (!filterPackage) return slugs;
-  if (!slugs.includes(filterPackage)) throw new Error(`No package documentation for: ${filterPackage}`);
-  return [filterPackage];
+  return { checkedPackages, diagnostics };
 }
 
 function main(): void {
   const { flags } = parseArgs(process.argv.slice(2));
   const filterPackage = typeof flags.package === 'string' ? flags.package : null;
-  const packages = discoverDocsPackages(DEFAULT_DOCS_DIR, filterPackage);
-  const failures = packages.flatMap((slug) => validateDocsPackage(slug));
+  const result = validateDocsWorkspace(loadDocsWorkspace(), filterPackage);
 
-  if (failures.length === 0) {
-    console.log(`Validated documentation structure for ${packages.length} package${packages.length === 1 ? '' : 's'}.`);
+  if (result.diagnostics.length === 0) {
+    console.log(`Validated documentation structure for ${result.checkedPackages.length} package${result.checkedPackages.length === 1 ? '' : 's'}.`);
     return;
   }
 
-  for (const failure of failures) console.error(`[FAIL] ${relative(ROOT, failure.file)}: ${failure.message}`);
-  throw new Error(`${failures.length} documentation validation failure${failures.length === 1 ? '' : 's'}`);
+  for (const item of result.diagnostics) {
+    const location = item.line ? `:${item.line}` : '';
+    console.error(`[${item.rule}] ${relative(ROOT, item.file)}${location}: ${item.message}`);
+    if (item.hint) console.error(`  hint: ${item.hint}`);
+  }
+  console.error(`${result.diagnostics.length} documentation validation failure${result.diagnostics.length === 1 ? '' : 's'}.`);
+  process.exitCode = 1;
 }
 
 if (isMain(import.meta.url)) {
