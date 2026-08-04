@@ -27,11 +27,12 @@ Use `[BLOCKED]` before changing a public API incompatibly, adding a dependency, 
 2. Read affected source, public entry points, tests, and local contracts.
 3. Check direct dependents when a dependency edge or public API is involved.
 4. State ordered file changes before editing under full rigor.
-5. Add or update a regression test when behavior changes.
-6. Implement smallest coherent change; update exports, types, and error/disposal contracts together.
-7. Update documentation, README, recipes, or REPL examples when public use changes.
-8. Run validation selected by changed surface.
-9. Under full rigor, create a scoped Rush change file for every modified publishable package with version-relevant behavior.
+5. Before parallel or delegated work, record cross-file contract decisions, assign each one owner, and keep implementation scopes decision-disjoint.
+6. Add or update a regression test when behavior changes.
+7. Implement smallest coherent change; update exports, types, and error/disposal contracts together.
+8. Update documentation, README, recipes, or REPL examples when public use changes.
+9. Run validation selected by changed surface.
+10. Under full rigor, create a scoped Rush change file for every modified publishable package with version-relevant behavior.
 
 ## Propagation
 
