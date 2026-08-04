@@ -5,12 +5,28 @@ description: Concepts, patterns, and best practices for @vielzeug/prism — reac
 
 [[toc]]
 
-## Basic Setup
+## Basic Usage
 
 Every chart needs a container element with defined dimensions and the theme CSS:
 
 ```ts
+import { createLineChart } from '@vielzeug/prism';
 import '@vielzeug/prism/theme';
+
+const container = document.querySelector<HTMLElement>('#chart')!;
+const chart = createLineChart(container, {
+  series: [
+    {
+      name: 'Revenue',
+      data: [
+        { key: 1, value: 10 },
+        { key: 2, value: 16 },
+      ],
+    },
+  ],
+});
+
+chart.dispose();
 ```
 
 ```html

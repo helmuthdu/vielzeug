@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  assertTaskReferencesExist,
+  assertValidPackages,
   assertValidTasks,
   extractAiReferences,
   findDanglingAiReferences,
@@ -20,8 +22,8 @@ describe('assertValidTasks()', () => {
   it('accepts well-formed task metadata', () => {
     expect(() =>
       assertValidTasks([
-        { key: 'analyze', references: ['.ai/tasks/analyze.md'] },
-        { key: 'change', references: ['.ai/tasks/change.md'] },
+        { description: 'Review.', inputs: ['scope'], key: 'review', references: ['.ai/tasks/review.md'] },
+        { description: 'Build.', inputs: ['scope'], key: 'build', references: ['.ai/tasks/build.md'] },
       ]),
     ).not.toThrow();
   });
@@ -29,30 +31,70 @@ describe('assertValidTasks()', () => {
   it('rejects duplicate task keys', () => {
     expect(() =>
       assertValidTasks([
-        { key: 'analyze', references: ['a'] },
-        { key: 'analyze', references: ['b'] },
+        { description: 'Analyze.', inputs: [], key: 'analyze', references: ['a'] },
+        { description: 'Analyze.', inputs: [], key: 'analyze', references: ['b'] },
       ]),
     ).toThrow(/duplicate task key/);
   });
 
   it('rejects invalid task keys', () => {
-    expect(() => assertValidTasks([{ key: 'Bad Key', references: ['a'] }])).toThrow(/must match/);
+    expect(() => assertValidTasks([{ description: 'Bad.', inputs: [], key: 'Bad Key', references: ['a'] }])).toThrow(
+      /must match/,
+    );
   });
 
   it('rejects tasks without references', () => {
-    expect(() => assertValidTasks([{ key: 'analyze', references: [] }])).toThrow(/at least one reference/);
+    expect(() => assertValidTasks([{ description: 'Analyze.', inputs: [], key: 'analyze', references: [] }])).toThrow(
+      /at least one string reference/,
+    );
+  });
+});
+
+describe('assertTaskReferencesExist()', () => {
+  it('rejects a missing canonical task document', () => {
+    expect(() => assertTaskReferencesExist([{ key: 'missing', references: [] }], '/does-not-exist')).toThrow(
+      /canonical task document/,
+    );
+  });
+});
+
+describe('assertValidPackages()', () => {
+  it('rejects a package name that does not match its slug', () => {
+    expect(() =>
+      assertValidPackages([
+        { category: 'Utilities', description: 'Utility', domOutput: false, name: '@vielzeug/other', slug: 'tool' },
+      ]),
+    ).toThrow(/must use name/);
+  });
+
+  it('rejects an unsupported documentation profile', () => {
+    expect(() =>
+      assertValidPackages([
+        {
+          category: 'Utilities',
+          description: 'Utility',
+          docsProfile: 'unsupported',
+          domOutput: false,
+          name: '@vielzeug/tool',
+          slug: 'tool',
+        },
+      ]),
+    ).toThrow(/invalid docsProfile/);
   });
 });
 
 describe('taskStubContent()', () => {
   it('points adapter stubs at the new task doc path', () => {
-    const content = taskStubContent({ key: 'docs', description: 'Sync docs with source.' });
-    expect(content).toMatch(/# docs/);
-    expect(content).toMatch(/\.ai\/tasks\/docs\.md/);
-  });
-
-  it('rejects descriptions that would break YAML frontmatter', () => {
-    expect(() => taskStubContent({ key: 'docs', description: 'bad: value' })).toThrow(/YAML frontmatter/);
+    const content = taskStubContent({
+      description: 'Update docs with source-backed rules.',
+      inputs: ['package'],
+      key: 'document',
+      references: ['.ai/core/policy.md', '.ai/tasks/document.md'],
+    });
+    expect(content).toMatch(/# document/);
+    expect(content).toMatch(/\.ai\/tasks\/document\.md/);
+    expect(content).toMatch(/## Inputs/);
+    expect(content).toMatch(/\.ai\/core\/policy\.md/);
   });
 });
 
@@ -70,7 +112,7 @@ describe('mergePackageData()', () => {
           optionalPeers: [],
         },
       ],
-      [{ slug: 'forge', dependencies: ['arsenal', 'ripple'], optionalPeers: [] }],
+      [{ slug: 'forge', dependencies: ['arsenal', 'ripple'], optionalPeers: [], peerDependencies: ['spell'] }],
     );
 
     expect(merged).toEqual([
@@ -82,6 +124,7 @@ describe('mergePackageData()', () => {
         name: '@vielzeug/forge',
         dependencies: ['arsenal', 'ripple'],
         optionalPeers: [],
+        peerDependencies: ['spell'],
       },
     ]);
   });
@@ -123,12 +166,17 @@ describe('renderPackagesTable() / patchPackagesReference()', () => {
         domOutput: true,
         dependencies: ['ore', 'ripple'],
         optionalPeers: [],
+        peerDependencies: [],
         testCommand: 'pnpm --filter @vielzeug/refine test',
       },
     ]);
 
-    expect(table).toContain('| Package | Category | DOM | Description | Dependencies | Optional peers | Test command |');
-    expect(table).toContain('| `@vielzeug/refine` | UI | yes | Components | `ore`, `ripple` | — | `pnpm --filter @vielzeug/refine test` |');
+    expect(table).toContain(
+      '| Package | Category | DOM | Description | Dependencies | Required peers | Optional peers | Test command |',
+    );
+    expect(table).toContain(
+      '| `@vielzeug/refine` | UI | yes | Components | `ore`, `ripple` | — | — | `pnpm --filter @vielzeug/refine test` |',
+    );
   });
 
   it('patches the generated table block in the packages reference', () => {
@@ -148,6 +196,7 @@ describe('renderPackagesTable() / patchPackagesReference()', () => {
         domOutput: false,
         dependencies: ['arsenal'],
         optionalPeers: [],
+        peerDependencies: [],
       },
     ]);
 
@@ -173,19 +222,13 @@ describe('extractAiReferences()', () => {
 
 describe('findDanglingAiReferences()', () => {
   it('reports a reference that fails the fileExists check', () => {
-    const dangling = findDanglingAiReferences(
-      { 'AGENTS.md': 'See .ai/core/ghost.md for details.' },
-      () => false,
-    );
+    const dangling = findDanglingAiReferences({ 'AGENTS.md': 'See .ai/core/ghost.md for details.' }, () => false);
 
     expect(dangling).toEqual([{ file: 'AGENTS.md', ref: '.ai/core/ghost.md' }]);
   });
 
   it('reports nothing when every reference resolves', () => {
-    const dangling = findDanglingAiReferences(
-      { 'AGENTS.md': 'See .ai/core/policy.md for details.' },
-      () => true,
-    );
+    const dangling = findDanglingAiReferences({ 'AGENTS.md': 'See .ai/core/policy.md for details.' }, () => true);
 
     expect(dangling).toEqual([]);
   });
@@ -203,4 +246,3 @@ describe('findDanglingAiReferences()', () => {
     expect(dangling).toEqual([{ file: 'packages/AGENTS.md', ref: '.ai/core/missing.md' }]);
   });
 });
-

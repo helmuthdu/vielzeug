@@ -5,7 +5,7 @@ description: How to use createKeymap for single shortcuts, chord sequences, cont
 
 [[toc]]
 
-## Basic Shortcuts
+## Basic Usage
 
 Pass a record of shortcut strings to handlers:
 
@@ -13,10 +13,10 @@ Pass a record of shortcut strings to handlers:
 import { createKeymap } from '@vielzeug/keymap';
 
 const map = createKeymap({
-  'ctrl+s':     () => save(),
-  'ctrl+z':     () => undo(),
+  'ctrl+s': () => save(),
+  'ctrl+z': () => undo(),
   'ctrl+shift+z': () => redo(),
-  'escape':     () => closeModal(),
+  escape: () => closeModal(),
 });
 
 const unmount = map.mount(document);
@@ -28,18 +28,18 @@ The returned `unmount` function detaches listeners from that target only. Call `
 
 You can write shortcuts in the style that feels natural — Keymap normalises everything:
 
-| You write | Canonical form |
-| --------- | -------------- |
-| `cmd`, `command`, `win` | `meta` |
-| `opt`, `option` | `alt` |
-| `ctrl`, `control` | `ctrl` |
-| `shift` | `shift` |
+| You write               | Canonical form |
+| ----------------------- | -------------- |
+| `cmd`, `command`, `win` | `meta`         |
+| `opt`, `option`         | `alt`          |
+| `ctrl`, `control`       | `ctrl`         |
+| `shift`                 | `shift`        |
 
 ```ts
 // All three are equivalent:
-createKeymap({ 'cmd+k':     handler });
+createKeymap({ 'cmd+k': handler });
 createKeymap({ 'command+k': handler });
-createKeymap({ 'meta+k':    handler });
+createKeymap({ 'meta+k': handler });
 ```
 
 ## Chord Sequences
@@ -47,13 +47,16 @@ createKeymap({ 'meta+k':    handler });
 Separate chord steps with a space. The default timeout between steps is 1 s:
 
 ```ts
-const map = createKeymap({
-  'ctrl+k ctrl+s': () => save(),   // VS Code–style
-  'g g':           () => goToTop(), // Vim-style
-  'g G':           () => goToBottom(),
-}, {
-  chordTimeout: 750, // ms — reset partial chord if exceeded
-});
+const map = createKeymap(
+  {
+    'ctrl+k ctrl+s': () => save(), // VS Code–style
+    'g g': () => goToTop(), // Vim-style
+    'g G': () => goToBottom(),
+  },
+  {
+    chordTimeout: 750, // ms — reset partial chord if exceeded
+  },
+);
 ```
 
 > **Tip:** A shorter binding always fires immediately when typed, even if a longer chord shares its prefix — binding order doesn't matter. `'g'` and `'g g'` together means `'g g'` can never be reached, because `'g'` fires the instant it's pressed. Use `findShortcutConflicts()` (see below) to detect this before it surprises a user.
@@ -64,10 +67,10 @@ Pass a `BindingOptions` object instead of a plain handler to add guards, trigger
 
 ```ts
 const map = createKeymap({
-  'ctrl+s': () => save(),                                   // plain handler
-  escape:   { handler: closePanel, when: () => isOpen() },  // per-binding guard
-  space:    { handler: togglePlay, trigger: 'keyup' },       // fires on keyup
-  'ctrl+z': { handler: undo, priority: 10 },                 // wins over lower-priority bindings
+  'ctrl+s': () => save(), // plain handler
+  escape: { handler: closePanel, when: () => isOpen() }, // per-binding guard
+  space: { handler: togglePlay, trigger: 'keyup' }, // fires on keyup
+  'ctrl+z': { handler: undo, priority: 10 }, // wins over lower-priority bindings
 });
 ```
 
@@ -76,17 +79,14 @@ const map = createKeymap({
 Use a global `when()` in `KeymapOptions` to disable an entire keymap conditionally:
 
 ```ts
-const map = createKeymap(
-  { escape: () => closePanel() },
-  { when: () => panelIsOpen() },
-);
+const map = createKeymap({ escape: () => closePanel() }, { when: () => panelIsOpen() });
 ```
 
 For per-binding guards, use `BindingOptions.when`:
 
 ```ts
 const map = createKeymap({
-  escape:    { handler: closePanel, when: () => isPanelOpen() },
+  escape: { handler: closePanel, when: () => isPanelOpen() },
   backspace: { handler: deleteLine, when: () => isEditorFocused() },
 });
 ```
@@ -116,7 +116,7 @@ const map = createKeymap({
 map.bind('ctrl+k', pluginOverride);
 ```
 
-> `BindingOptions.priority` doesn't affect this — because bindings are keyed by their canonical shortcut, two *live* bindings can never actually compete for the same event, so there's no tie for `priority` to break. It's a validated, reserved field kept for forward compatibility — see the note in [`api.md`](./api.md#bindingoptions).
+> `BindingOptions.priority` doesn't affect this — because bindings are keyed by their canonical shortcut, two _live_ bindings can never actually compete for the same event, so there's no tie for `priority` to break. It's a validated, reserved field kept for forward compatibility — see the note in [`api.md`](./api.md#bindingoptions).
 
 ## Display with `formatShortcut`
 
@@ -127,7 +127,7 @@ import { formatShortcut } from '@vielzeug/keymap';
 
 formatShortcut('mod+shift+p', 'meta'); // '⇧⌘P'
 formatShortcut('mod+shift+p', 'ctrl'); // 'Ctrl+Shift+P'
-formatShortcut('ctrl+k ctrl+s');       // platform-detected
+formatShortcut('ctrl+k ctrl+s'); // platform-detected
 ```
 
 Returns `''` and emits a dev warning for empty or invalid shortcuts.
@@ -172,7 +172,7 @@ const unmountBase = base.mount(document);
 const unmountModal = modal.mount(document);
 
 modal.deactivate(); // base handles everything; layer is suspended
-modal.activate();   // layer resumes
+modal.activate(); // layer resumes
 
 modal.parent === base; // true
 
@@ -198,7 +198,7 @@ const u2 = map.mount(editorB);
 // map.dispose() removes from both
 ```
 
-Mounting the *same* target twice without unmounting first (e.g. a forgotten cleanup in an effect) still works — handlers just fire twice — and emits a dev warning to flag the likely mistake.
+Mounting the _same_ target twice without unmounting first (e.g. a forgotten cleanup in an effect) still works — handlers just fire twice — and emits a dev warning to flag the likely mistake.
 
 ## `preventDefault` and `stopPropagation`
 
@@ -206,7 +206,7 @@ Mounting the *same* target twice without unmounting first (e.g. a forgotten clea
 const map = createKeymap(
   { 'ctrl+s': () => save() },
   {
-    preventDefault: true,   // default: true — prevents browser save dialog
+    preventDefault: true, // default: true — prevents browser save dialog
     stopPropagation: false, // default: false
   },
 );
@@ -224,7 +224,7 @@ function App() {
   useEffect(() => {
     const map = createKeymap({
       'ctrl+k': () => setOpen(true),
-      'escape': () => setOpen(false),
+      escape: () => setOpen(false),
     });
     const unmount = map.mount(document);
     return () => unmount();
@@ -239,11 +239,13 @@ import { createKeymap } from '@vielzeug/keymap';
 
 const map = createKeymap({
   'ctrl+k': () => openPalette(),
-  'escape': () => closePalette(),
+  escape: () => closePalette(),
 });
 
 let unmount: (() => void) | undefined;
-onMounted(() => { unmount = map.mount(document); });
+onMounted(() => {
+  unmount = map.mount(document);
+});
 onUnmounted(() => unmount?.());
 </script>
 ```
@@ -254,7 +256,7 @@ import { createKeymap } from '@vielzeug/keymap';
 
 const map = createKeymap({
   'ctrl+k': () => openPalette(),
-  'escape': () => closePalette(),
+  escape: () => closePalette(),
 });
 
 onMount(() => {
@@ -277,9 +279,9 @@ import { createLedger } from '@vielzeug/ledger';
 
 const ledger = createLedger();
 const map = createKeymap({
-  'ctrl+z':       () => ledger.undo(),
+  'ctrl+z': () => ledger.undo(),
   'ctrl+shift+z': () => ledger.redo(),
-  'ctrl+y':       () => ledger.redo(), // Windows alias
+  'ctrl+y': () => ledger.redo(), // Windows alias
 });
 map.mount(document);
 ```
@@ -294,7 +296,7 @@ import { createBus } from '@vielzeug/herald';
 
 const bus = createBus<{ 'shortcut:save': void; 'shortcut:palette': void }>();
 const map = createKeymap({
-  'ctrl+s':       () => bus.emit('shortcut:save'),
+  'ctrl+s': () => bus.emit('shortcut:save'),
   'meta+shift+p': () => bus.emit('shortcut:palette'),
 });
 map.mount(document);

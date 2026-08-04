@@ -7,7 +7,7 @@ VitePress documentation site. Per-package docs live in `docs/<name>/` and follow
 ## Ownership
 
 - **Documentation template, tone, and per-page structure rules** — `.ai/reference/docs-template.md`.
-- **REPL example rules** — `.ai/tasks/repl.md`.
+- **Documentation, README, recipe, and REPL rules** — `.ai/tasks/document.md`.
 - Package facts referenced by docs — `.ai/data/packages.json` and `.ai/reference/packages.md`.
 
 ## Local Contracts
@@ -23,12 +23,13 @@ VitePress documentation site. Per-package docs live in `docs/<name>/` and follow
 
 ## Work Guidance
 
-- Run docs work through the `.ai/tasks/docs.md` and `.ai/tasks/repl.md` task playbooks rather than ad-hoc edits.
-- Editing docs invalidates the `codex` bundle — **always** rebuild codex after a docs pass (`pnpm --filter @vielzeug/codex build`). It is fast and idempotent; skipping it leaves the MCP bundle stale for future sessions.
+- Run docs, recipes, README, and REPL work through `.ai/tasks/document.md` rather than ad-hoc edits.
+- Editing docs invalidates the `codex` bundle — rebuild Codex before VitePress (`pnpm --filter @vielzeug/codex build`, then `pnpm docs:build`). Codex refreshes bundled MCP data and `llms*.txt`; VitePress copies those current files into site output.
 
 ## Verification
 
-- Build: `pnpm docs:build` (catches broken markdown, dead links, invalid frontmatter).
+- Structure and relative links: `pnpm validate:docs -- --package=<name>`.
+- Build: `pnpm docs:build` (renders VitePress; dead links are not a build gate while `ignoreDeadLinks` is enabled).
 - Local preview: `pnpm docs:dev`.
 
 ## Child DOX Index

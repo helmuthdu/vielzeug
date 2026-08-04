@@ -209,20 +209,25 @@ onUnmounted(() => stop.dispose());
 
 ## Working with Other Vielzeug Libraries
 
-Ore uses Ripple for component reactivity. Clockwork exposes machine state through reactive values. Ledger adds undo/redo commands around state changes without replacing the graph.
+Ore uses Ripple for component reactivity. Clockwork actors expose framework-neutral snapshots; bridge actor subscriptions into a Ripple signal. Ledger adds undo/redo commands around state changes without replacing graph.
 
 ```ts
 import { createRipple } from '@vielzeug/ripple';
 import { createMachine } from '@vielzeug/clockwork';
 
 const ripple = createRipple();
-const machine = createMachine({
+const actor = createMachine({
   initial: 'idle',
   states: { active: {}, idle: {} },
-}).start();
+}).createActor();
 
-const status = ripple.computed(() => machine.state.value);
+const snapshot = ripple.signal(actor.snapshot.value);
+const stop = actor.subscribe((next) => (snapshot.value = next));
+const status = ripple.computed(() => snapshot.value.state);
 console.log(status.value);
+
+stop();
+actor.dispose();
 ripple.dispose();
 ```
 

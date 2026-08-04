@@ -3,9 +3,15 @@ title: Sticky Items in DOM Virtual List
 description: Mark certain items as sticky headers using the sticky option in createDomVirtualList.
 ---
 
-# Sticky Items in DOM Virtual List
+## Sticky Items in DOM Virtual List
 
-Pass a `sticky` predicate to `createDomVirtualList` (or `createVirtualScroller`) to pin items at the viewport top while they are in view. Sticky items arrive in `stickyItems` inside the `render` callback.
+### Problem
+
+Keep section headers visible while a DOM virtual list scrolls without rendering every list item.
+
+### Solution
+
+Pass a `sticky` predicate to `createDomVirtualList` (or `createVirtualScroller`). Sticky items arrive in `stickyItems` inside the `render` callback.
 
 ```ts
 import { createDomVirtualList } from '@vielzeug/scroll';
@@ -47,4 +53,12 @@ const ctrl = createDomVirtualList<Row>({
 ctrl.setItems(rows);
 ```
 
-> **Note:** `stickyItems` contains items for which `sticky` returned `true` and that are at or above the current viewport top. Render them as a floating overlay — not inside the `listEl`.
+### Pitfalls
+
+- Render sticky headers in an overlay, not inside `listEl`.
+- Give sticky rows an accurate size estimate to avoid visible position jumps.
+
+### Related
+
+- [Scroll Usage Guide](../usage.md)
+- [Scroll API Reference](../api.md)

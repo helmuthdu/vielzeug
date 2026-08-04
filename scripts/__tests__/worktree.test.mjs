@@ -31,7 +31,7 @@ describe('readDependencyGraph()', () => {
 
   it("marks flux's optional peerDependencies as optional", () => {
     const flux = graph.get('flux');
-    expect(flux.get('ripple')).toBe(false); // hard dependency
+    expect(flux.get('ripple')).toBe(true); // optional peer
     expect(flux.get('courier')).toBe(true); // optional peer
     expect(flux.get('herald')).toBe(true);
     expect(flux.get('pulse')).toBe(true);

@@ -39,13 +39,12 @@ Per-package: `cd packages/<name> && pnpm build|test|lint|fix`. Test path convent
 
 Canonical AI task definitions live in `.ai/tasks/`. Read the smallest task that fits the job:
 
-| Need | Task file |
-| --- | --- |
-| Review or redesign a package | `.ai/tasks/analyze.md` |
-| Implement a package or repo change | `.ai/tasks/change.md` |
-| Run focused review / security / coverage checks | `.ai/tasks/validate.md` |
-| Sync docs | `.ai/tasks/docs.md` |
-| Update REPL examples | `.ai/tasks/repl.md` |
+| Need                                           | Task file               |
+| ---------------------------------------------- | ----------------------- |
+| Change code, tests, tooling, or CI             | `.ai/tasks/build.md`    |
+| Investigate, audit, plan, or redesign          | `.ai/tasks/review.md`   |
+| Update docs, README, recipes, or REPL examples | `.ai/tasks/document.md` |
+| Prepare releases, commits, or pull requests    | `.ai/tasks/release.md`  |
 
 ## AI integration (`codex`)
 

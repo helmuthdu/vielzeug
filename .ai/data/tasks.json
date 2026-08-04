@@ -2,44 +2,47 @@
   "$schemaVersion": 1,
   "tasks": [
     {
-      "key": "analyze",
-      "description": "Review or redesign a package or subsystem and produce a concrete plan.",
+      "key": "build",
+      "description": "Change package source, tests, tooling, CI, or public behavior.",
       "inputs": ["scope", "goal"],
-      "references": [".ai/core/policy.md", ".ai/core/workspace.md", ".ai/core/conventions.md", ".ai/tasks/analyze.md"]
-    },
-    {
-      "key": "change",
-      "description": "Implement a clean, coherent package or repo change.",
-      "inputs": ["scope", "goal"],
-      "references": [".ai/core/policy.md", ".ai/core/workspace.md", ".ai/core/conventions.md", ".ai/tasks/change.md"]
-    },
-    {
-      "key": "validate",
-      "description": "Run focused correctness, design, type, security, or coverage checks.",
-      "inputs": ["scope", "modules"],
       "references": [
         ".ai/core/policy.md",
         ".ai/core/workspace.md",
+        ".ai/core/conventions.md",
+        ".ai/data/packages.json",
+        ".ai/tasks/build.md"
+      ]
+    },
+    {
+      "key": "review",
+      "description": "Investigate, audit, redesign, plan, or review code.",
+      "inputs": ["scope", "goal", "checks", "depth"],
+      "references": [
+        ".ai/core/policy.md",
+        ".ai/core/workspace.md",
+        ".ai/core/conventions.md",
         ".ai/reference/security-checklist.md",
-        ".ai/tasks/validate.md"
+        ".ai/tasks/review.md"
       ]
     },
     {
-      "key": "docs",
-      "description": "Sync package documentation with source and template rules.",
-      "inputs": ["package"],
+      "key": "document",
+      "description": "Update package documentation, README content, recipes, or REPL examples.",
+      "inputs": ["package", "surfaces", "depth"],
       "references": [
         ".ai/core/policy.md",
         ".ai/core/workspace.md",
+        ".ai/data/packages.json",
         ".ai/reference/docs-template.md",
-        ".ai/tasks/docs.md"
+        "docs/AGENTS.md",
+        ".ai/tasks/document.md"
       ]
     },
     {
-      "key": "repl",
-      "description": "Update REPL examples to match the current API and recommended usage.",
-      "inputs": ["package"],
-      "references": [".ai/core/policy.md", ".ai/core/workspace.md", ".ai/tasks/repl.md"]
+      "key": "release",
+      "description": "Prepare delivery artifacts, change files, commits, pull requests, or release diagnostics.",
+      "inputs": ["scope", "goal"],
+      "references": [".ai/core/policy.md", ".ai/core/workspace.md", ".github/AGENTS.md", ".ai/tasks/release.md"]
     }
   ]
 }

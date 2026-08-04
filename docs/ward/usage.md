@@ -5,7 +5,7 @@ description: Build deterministic authorization policies with immutable rule sets
 
 [[toc]]
 
-## Create a Ward
+## Basic Usage
 
 ```ts
 import { WILDCARD, createWard } from '@vielzeug/ward';
@@ -130,3 +130,50 @@ const extracted = await guardRequestWith({
   action: 'read',
 });
 ```
+
+## Testing
+
+Test policy outcomes through `explain()` so each test captures an allowed, explicit-deny, or no-match result.
+
+```ts
+import { expect, it } from 'vitest';
+
+it('denies an action with no matching rule', () => {
+  expect(
+    ward.explain({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts', action: 'delete' }).allowed,
+  ).toBe(false);
+});
+```
+
+## Framework Integration
+
+Keep Ward independent from rendering frameworks. Obtain a current principal from framework state, bind it with `forUser()`, and rebind whenever identity or roles change.
+
+::: code-group
+
+```tsx [React]
+const actions = ward.forUser(user).allowedActions({ resource: 'posts', knownActions: ['read', 'update'] as const });
+```
+
+```vue [Vue 3]
+<script setup lang="ts">
+const actions = ward
+  .forUser(user.value)
+  .allowedActions({ resource: 'posts', knownActions: ['read', 'update'] as const });
+</script>
+```
+
+```ts [Svelte]
+const actions = ward.forUser(user).allowedActions({ resource: 'posts', knownActions: ['read', 'update'] as const });
+```
+
+:::
+
+## Best Practices
+
+- Model default-deny by adding only explicit allow rules.
+- Keep predicates synchronous and provide required resource data.
+- Assign priority deliberately before relying on specificity.
+- Rebind `forUser()` when identity or roles change.
+- Use `trace()` and `detectConflicts()` to diagnose policy behavior.
+- Enforce authorization again at request and mutation boundaries.

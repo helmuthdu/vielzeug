@@ -15,6 +15,7 @@
     "lint:css": "stylelint packages/**/*.css",
     "lint:js": "eslint",
     "test": "vitest",
+    "validate:docs": "node --import jiti/register scripts/validate-docs.ts",
     "validate:repl": "node --import jiti/register scripts/validate-repl.ts",
     "gen:repl-registry": "node --import jiti/register scripts/generate-repl-registry.ts",
     "docs:dev": "pnpm gen:repl-registry && vitepress dev docs",

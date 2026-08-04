@@ -215,25 +215,29 @@ Reach for these when the problem calls for them.
 
 ### Clockwork
 
-Typed finite state machine — guards, async invokes, nested states, and signal integration.
+Typed finite state machines — pure transitions, immutable snapshots, owned actors, timers, and async invokes.
 
 ```typescript
-import { define } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type AuthEvent = { type: 'LOGIN'; token: string } | { type: 'LOGOUT' };
 
-const authMachine = define({
+const authMachine = createMachine({
   initial: 'idle',
   context: { token: '' },
   states: {
-    idle: { on: { LOGIN: [{ target: 'active', actions: [({ context, event }) => { context.token = event.token; }] }] } },
-    active: { on: { LOGOUT: [{ target: 'idle', actions: [({ context }) => { context.token = ''; }] }] } },
+    idle: {
+      on: {
+        LOGIN: { reduce: ({ event }) => ({ token: event.token }), target: 'active' },
+      },
+    },
+    active: { on: { LOGOUT: { reduce: () => ({ token: '' }), target: 'idle' } } },
   },
 });
 
-const auth = authMachine.start();
+const auth = authMachine.createActor();
 auth.send({ type: 'LOGIN', token: 'abc123' });
-console.log(auth.state.value); // 'active'
+console.log(auth.snapshot.value.state); // 'active'
 ```
 
 [Clockwork docs →](/clockwork/)

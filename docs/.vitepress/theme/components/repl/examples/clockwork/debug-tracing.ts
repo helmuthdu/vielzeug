@@ -1,47 +1,24 @@
 export const debugTracingExample = {
-  code: `import { createMachine } from '@vielzeug/clockwork'
+  code: `import { debugMachine } from '@vielzeug/clockwork/devtools'
 
-const orderConfig = {
+// Debug wrapper logs each dispatch result and committed snapshot.
+const machine = debugMachine({
   initial: 'pending',
-  context: { cancelledAt: null },
   states: {
-    pending:   { on: { SUBMIT: { target: 'confirmed' }, CANCEL: { target: 'cancelled', actions: [({ context }) => { context.cancelledAt = Date.now() }] } } },
-    confirmed: { on: { PAY:    { target: 'paid'      }, CANCEL: { target: 'cancelled', actions: [({ context }) => { context.cancelledAt = Date.now() }] } } },
-    paid:      { on: { SHIP:    { target: 'shipped'   } } },
-    shipped:   { on: { DELIVER: { target: 'delivered' } } },
-    delivered: {},
-    cancelled: {},
-  },
-}
-
-const m = createMachine(orderConfig).start({
-  traceLimit: 50,
-  onDebug: (ev) => {
-    if (ev.type === 'transition-skipped')
-      console.log('Skipped in ' + ev.from + ': ' + ev.event.type)
+    pending: { on: { SUBMIT: { target: 'confirmed' } } },
+    confirmed: { on: { PAY: { target: 'paid' } } },
+    paid: {},
   },
 })
 
-m.send({ type: 'SUBMIT'  })
-m.send({ type: 'PAY'     })
-m.send({ type: 'SHIP'    })
-m.send({ type: 'DELIVER' })
-
-console.log('Final state:', m.state.value) // 'delivered'
-
-// Replay the full transition trace
-const trace = m.getTrace()
-console.log('Trace ('+ trace.length +' steps):')
-trace.forEach(({ from, to, event }) => {
-  console.log('  ' + from + ' -> ' + to + '  (on ' + event.type + ')')
-})
-
-// resolve() is a pure function — no side effects, useful for tests
-const resolution = createMachine(orderConfig).resolve({
-  state:   'pending',
-  context: { cancelledAt: null },
-  event:   { type: 'SUBMIT' },
-})
-console.log('Would go to:', resolution?.target) // 'confirmed'`,
-  name: 'Debug Hooks & Tracing',
+const actor = machine.createActor()
+const history = []
+const stop = actor.subscribe((snapshot) => history.push(snapshot.state))
+actor.send({ type: 'SUBMIT' })
+actor.send({ type: 'PAY' })
+console.log('Final state:', actor.snapshot.value.state)
+console.log('History:', history)
+stop()
+actor.dispose()`,
+  name: 'Debug Machine',
 };

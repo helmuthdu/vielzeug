@@ -12,7 +12,7 @@ DOX is adopted in a **tiered** fashion: a child `AGENTS.md` exists only where a 
 - **Engineering conventions** (disposal, logging, errors, file layout) — `.ai/core/conventions.md`.
 - **Package catalogue and dependency graph** — `.ai/data/packages.json` and `.ai/reference/packages.md`.
 - **Workspace toolchain, commands, versioning** — `.ai/core/workspace.md`.
-- **Task playbooks** (analyze / change / validate / docs / repl) — `.ai/tasks/*.md`, with structured task metadata in `.ai/data/tasks.json`.
+- **Task playbooks** (build / review / document / release) — `.ai/tasks/*.md`, with structured task metadata in `.ai/data/tasks.json`.
 - **Contributor workflow** — `.github/contributing.md`.
 - **Additional contributor/tooling context** — `CLAUDE.md`.
 
@@ -20,13 +20,12 @@ DOX is adopted in a **tiered** fashion: a child `AGENTS.md` exists only where a 
 
 Reach for the smallest task that matches the job:
 
-| Situation | Read |
-| --- | --- |
-| Review or redesign a package | `.ai/tasks/analyze.md` |
-| Implement a package or repo change | `.ai/tasks/change.md` |
-| Run focused correctness / security / coverage checks | `.ai/tasks/validate.md` |
-| Sync package docs | `.ai/tasks/docs.md` |
-| Update REPL examples | `.ai/tasks/repl.md` |
+| Situation                                      | Read                    |
+| ---------------------------------------------- | ----------------------- |
+| Change code, tests, tooling, or CI             | `.ai/tasks/build.md`    |
+| Investigate, audit, plan, or redesign          | `.ai/tasks/review.md`   |
+| Update docs, README, recipes, or REPL examples | `.ai/tasks/document.md` |
+| Prepare releases, commits, or pull requests    | `.ai/tasks/release.md`  |
 
 Default guidance: prefer one focused task plus the smallest useful validation instead of a fixed multi-phase pipeline.
 
@@ -44,7 +43,8 @@ Defer to `.ai/core/conventions.md` for engineering conventions, `.ai/data/packag
 - Tests: `pnpm vitest run packages/<name>/src/__tests__/`
 - Lint: `pnpm --filter @vielzeug/<name> lint`
 - Build: `pnpm --filter @vielzeug/<name> build`
-- Docs: `pnpm docs:build`
+- Docs structure: `pnpm validate:docs -- --package=<name>`
+- Docs: `pnpm --filter @vielzeug/codex build && pnpm docs:build`
 - REPL examples: `pnpm validate:repl` (`-- --package <name>` for a focused package run)
 - AI metadata: `pnpm check:ai-data` (`pnpm gen:ai-data` to refresh `.ai/data/` and generated references)
 

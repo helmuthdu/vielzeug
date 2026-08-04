@@ -14,9 +14,9 @@ As a policy grows, rules can inadvertently shadow each other. You want to detect
 Use `ward.detectConflicts()` to find duplicate or shadowed predicate-free rules. The result is lazily computed and cached, so calling it repeatedly is cheap after the first call.
 
 ```ts
-import { createWard } from '@vielzeug/ward';
+import { createWard, owns } from '@vielzeug/ward';
 
-const ward = createWard([
+const rules = [
   { role: 'editor', resource: 'posts', action: 'update', effect: 'allow' },
   // Duplicate: same (role, resource, action) — this rule can never fire
   { role: 'editor', resource: 'posts', action: 'update', effect: 'deny' },
@@ -24,8 +24,9 @@ const ward = createWard([
   // Shadowed: the wildcard rule covers everything the next rule could match
   { role: '*', resource: 'posts', action: '*', effect: 'allow', priority: 10 },
   { role: 'viewer', resource: 'posts', action: 'read', effect: 'deny' },
-]);
+] as const;
 
+const ward = createWard(rules);
 const conflicts = ward.detectConflicts();
 // [
 //   { kind: 'duplicate', indexA: 0, indexB: 1, ruleA: …, ruleB: … },

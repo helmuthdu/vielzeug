@@ -34,7 +34,7 @@ Surface an escalation with a `[BLOCKED]` marker (see Structured markers below) i
 
 ## Rigor
 
-Two depths apply across `analyze`/`validate`/`change` work, orthogonal to *scope* (which files/modules/packages are in play):
+Two depths apply across `build` and `review` work, orthogonal to _scope_ (which files/modules/packages are in play):
 
 - **`full`** (default) — the task doc's full depth applies: every listed check/pass runs, findings are ranked, and severity/impact gates are respected.
 - **`quick`** — collapse every check/pass into one combined pass over the same scope. Use this for a small, explicitly-named change (one function, one bug) where running the full depth would be wasted effort. Never use `quick` to skip a fix-before-proceeding gate (e.g. a confirmed security finding) — rigor controls how much is analyzed, not whether a found issue gets fixed.
@@ -43,7 +43,7 @@ State which depth applied in one line at the top of the output (`Rigor: quick` /
 
 ## Structured markers
 
-Use bracketed markers for greppable status across analyze/change/validate output instead of inventing a new prose shape per run:
+Use bracketed markers for greppable task output instead of inventing a new prose shape per run:
 
 - `[FINDING]` — a raw observation, not yet actioned.
 - `[FIXED]` — a finding resolved during the same pass; annotate inline (`... [FIXED]`) rather than deleting the original line.
@@ -55,7 +55,7 @@ A task doc may define additional domain-specific markers (e.g. `[GAP]` for a tes
 
 ## Progress checkpoints
 
-For multi-step work that touches more than a couple of files (a `change` task's cross-package propagation, a `validate` pass across several modules), emit a short checkpoint after each major step instead of one wall of output at the end:
+For multi-step work that touches more than a couple of files (cross-package propagation or review across several modules), emit a short checkpoint after each major step instead of one wall of output at the end:
 
 ```
 ✅ CHECKPOINT: <step> complete — <2-4 bullets: what changed, what's next>
@@ -74,4 +74,3 @@ Every code change should finish with the narrowest useful validation:
 ## State
 
 Ephemeral run state belongs under `.ai/state/` — see `.ai/state/AGENTS.md` for the full contract (when to use it, file shapes, cleanup rules). Never encode the resumable state directly in canonical task docs.
-

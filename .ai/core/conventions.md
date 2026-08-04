@@ -3,22 +3,43 @@
 > Workspace and commands: `.ai/core/workspace.md`
 > Package metadata and dependency graph: `.ai/data/packages.json`
 
-## Package rules
+## Rule strength
 
-- Zero external runtime dependencies by default. Documented exceptions (verify against `package.json` before assuming this list is exhaustive): `refine` bundles `lucide` as a runtime dependency (icons); `codex` bundles `@modelcontextprotocol/sdk` (it *is* the MCP protocol implementation); `tempo` bundles `@js-temporal/polyfill` (the TC39 Temporal proposal isn't natively available everywhere yet). `refine`, `prism`, `ore` use `axe-core` as a devDependency for accessibility testing (not bundled).
-- TypeScript strict mode everywhere.
-- No `any` in package source.
-- All public exports go through `src/index.ts`.
+- **MUST** — required unless user explicitly approves an exception.
+- **SHOULD** — default; deviate only when the local design is clearer and rationale is evident from code.
+- **MAY** — optional pattern.
 
-## API design
+## Non-negotiables
 
-- 3 or more parameters → collapse into a single options object.
-- Function names `camelCase`; types/classes `PascalCase`.
-- Resources that own something expose `dispose()`, `disposed: boolean`, `disposalSignal: AbortSignal` (see Teardown below) — never a bare `console.log` for diagnostics; go through `_dev.ts` (see Dev logging below).
+- **MUST:** Use TypeScript strict mode. No `any` in package source.
+- **MUST:** Route public root exports through `src/index.ts`.
+- **MUST:** Do not add an external runtime dependency without explicit approval.
+- **MUST:** Treat `package.json` as dependency authority. Use `.ai/data/packages.json` for agent-facing package facts and impact analysis.
+- **MUST:** Keep source, tests, public exports, and user-facing examples consistent.
 
-## Teardown
+## Public API design
 
-Owned resources use `dispose()` — never `destroy()`, `disconnect()`, `close()`, or `cleanup()`.
+- **SHOULD:** Use an options object for 3+ independent parameters.
+- **MAY:** Keep positional parameters when order is universal, required, and readable: `clamp(value, min, max)`.
+- **MUST NOT:** Use positional booleans or same-primitive argument shapes that are hard to distinguish.
+- **MUST:** Use `camelCase` for functions and `PascalCase` for types/classes.
+- **MUST:** Update `src/index.ts`, types, docs, recipes, README, and REPL examples together when a public API changes.
+- **MUST:** Treat renamed or removed exports as breaking until explicitly confirmed otherwise.
+- **MUST NOT:** Add compatibility aliases, deprecated parallel APIs, or silent fallback behavior without explicit approval.
+
+## Lifecycle and disposal
+
+| Resource                     | `dispose()` | `disposed` | `disposalSignal`     | Symbol protocol           |
+| ---------------------------- | ----------- | ---------- | -------------------- | ------------------------- |
+| Long-lived stateful handle   | MUST        | MUST       | MUST                 | `[Symbol.dispose]()`      |
+| Short-lived operation handle | MUST        | MUST       | omit                 | `[Symbol.dispose]()`      |
+| Async teardown handle        | MUST        | MUST       | MUST when long-lived | `[Symbol.asyncDispose]()` |
+| Native cleanup callback      | do not wrap | n/a        | n/a                  | n/a                       |
+
+- **MUST:** Name owned-resource teardown `dispose()`, never `destroy()`, `disconnect()`, `close()`, or `cleanup()`.
+- **SHOULD:** Reserve async disposal for teardown that genuinely requires `await`.
+- **MAY:** Implement both `[Symbol.dispose]()` and `[Symbol.asyncDispose]()` only when synchronous abort and awaited drain have distinct guarantees. Document both guarantees beside methods.
+- **MUST:** Let ESLint order Symbol keys; run `pnpm fix` instead of hand-ordering them.
 
 ```ts
 interface SomeHandle {
@@ -29,57 +50,76 @@ interface SomeHandle {
 }
 ```
 
-Include `disposalSignal` on long-lived stateful objects a consumer might tie their own cleanup to (buses, adapters, forms, worker pools). Omit it on objects created and discarded within a single operation (queries, mutations, batch jobs). `[Symbol.dispose]`/`[Symbol.asyncDispose]` key ordering is enforced by ESLint — run `pnpm fix` rather than reasoning about it manually. Native platform APIs that already return a teardown function (e.g. `autoUpdate() => () => void`) are not wrapped.
-
-Async teardown is reserved for cases that genuinely require `await`.
-
-**Sanctioned hybrid exception:** a handle may implement both `[Symbol.dispose]` (stop immediately, do not wait for in-flight async work) and `[Symbol.asyncDispose]` (stop and await full drain) when callers genuinely need both a cheap synchronous abort and an optional full-drain await — e.g. `ripple`'s `effectAsync()` return value. Document the difference in guarantees right next to each method; do not add this hybrid shape to a handle that only ever needs one of the two.
-
-## Dev logging
-
-Internal warnings go through a private `src/_dev.ts`. Never mix this with the Layer 2 devtools below.
-
-- never export `_dev.ts`
-- never use `import.meta.env.DEV` — gate via `__<PKG>_PROD__` global instead (library packages run outside Vite contexts)
-- never use bare `console.warn` or `console.error` in package source
-- `_dev.ts` exports only the subset of helpers the package actually uses
-
-| Helper | When to use |
-| --- | --- |
-| `warn(msg)` | Unexpected API misuse; emits `console.warn` |
-| `error(msg, ...args)` | Recoverable internal errors with extra context; emits `console.error` |
-| `devOnly(fn)` | Dev-only logic that needs more than a single `warn()`/`error()` call |
-
-Message format: `` `[@vielzeug/<pkg>] <description>` ``. Tests that assert warning output spy on `console.warn`/`console.error` — they do not import `_dev` directly. Add `@security` to `warn`'s JSDoc only when messages may include user-supplied data.
-
-## Devtools (Layer 2)
-
-Opt-in structured debug logging exported only from a package's `/devtools` sub-path (e.g. `@vielzeug/herald/devtools`). Uses `console.debug`, tree-shaken in production, no environment gate — consumers choose to import it.
-
-- Naming: always `debug<Noun>` — never `attach*`, `enable*`, `with*Debug`.
-- **Factory-wrap** shape — when the primitive is normally obtained via `create<Noun>()`: `debug<Noun>` takes the same arguments and returns the same instance type, logging pre-wired. Examples: `debugCourier`, `debugBus`, `debugWard`, `debugRouter`, `debugMachine`, `debugFloat`, `debugEffect`.
-- **Instance-attach** shape — when the primitive is normally already a live instance by the time you'd observe it: `debug<Noun>(existingInstance, options?)` subscribes to its public API and returns a plain `() => void` to stop observing. Never creates a new instance. Examples: `debugForm`, `debugSearch`.
-- Exception: a global, process-wide hook installer for a real DevTools-extension inspector takes no `<Noun>` since it isn't instance-scoped — `installDevTools(hook)` (currently only `ripple`, alongside its own `debugEffect`).
-
-## Error classes
+## Errors
 
 Public typed errors live in `src/errors.ts`.
 
-- one base `<Pkg>Error extends Error`
-- subtypes extend the base, not `Error`
-- use `opts?: ErrorOptions` for cause chaining
+```ts
+export class PkgError extends Error {
+  constructor(message: string, opts?: ErrorOptions) {
+    super(message, opts);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is PkgError {
+    return err instanceof PkgError;
+  }
+}
+
+export class PkgFooError extends PkgError {}
+```
+
+- **MUST:** Define one `<Pkg>Error` base class; subtypes extend it, never `Error` directly.
+- **MUST:** Put `static is()` only on the base class.
+- **MUST:** Use `opts?: ErrorOptions` for cause chaining.
+- **MUST:** Supply a meaningful error message; do not prefix messages with `[@vielzeug/<pkg>]`.
+- **MUST:** Export public error types from `src/index.ts`.
+
+## Internal logging and consumer devtools
+
+### Internal diagnostics
+
+Use private `src/_dev.ts` for development-only validation. Never mix it with consumer debug tooling.
+
+- **MUST NOT:** Export `_dev.ts`.
+- **MUST NOT:** Use `import.meta.env.DEV`; gate with `__<PKG>_PROD__` global.
+- **MUST NOT:** Use bare `console.warn` or `console.error` in package source.
+- **SHOULD:** Export only helpers actually used by the package.
+- **MUST:** Format messages as `[@vielzeug/<pkg>] <description>`.
+- **MUST:** Test warning output by spying on `console.warn` or `console.error`, never by importing `_dev.ts`.
+- **SHOULD:** Add `@security` to `warn` JSDoc only when messages can include user-supplied data.
+
+| Helper                | Use                                     |
+| --------------------- | --------------------------------------- |
+| `warn(msg)`           | Unexpected API misuse                   |
+| `error(msg, ...args)` | Recoverable internal error with context |
+| `devOnly(fn)`         | Multi-step development-only logic       |
+
+### Consumer devtools
+
+Consumer observability lives only in `/devtools` and uses `console.debug`.
+
+- **MUST:** Name APIs `debug<Noun>`; never `attach*`, `enable*`, or `with*Debug`.
+- **SHOULD:** Use factory-wrap shape when consumers normally call `create<Noun>()`.
+- **SHOULD:** Use instance-attach shape when consumers already own a live instance; return `() => void`.
+- **MAY:** Use `installDevTools(hook)` only for a process-wide inspector hook.
 
 ## File layout
 
 ```text
 packages/<name>/src/
-├── _dev.ts
-├── _<internal>.ts
-├── errors.ts
-├── types.ts
-├── devtools.ts
-└── index.ts
+├── index.ts              required public root surface
+├── __tests__/            package behavior tests
+├── _dev.ts               internal diagnostics when needed
+├── _*.ts                 private implementation as needed
+├── errors.ts             public typed errors when needed
+├── types.ts              standalone public types when needed
+└── devtools.ts           optional `/devtools` surface
 ```
+
+- **MUST:** Never re-export `_`-prefixed files from `index.ts`.
+- **MAY:** Omit optional files. Do not create empty placeholders.
 
 ## New-package scaffold
 
@@ -91,6 +131,7 @@ packages/<name>/
   tsconfig.json
   tsconfig.declarations.json
   vitest.config.ts
+  vite.bundle.config.ts
   vite.config.ts
   src/
     index.ts
@@ -99,15 +140,33 @@ packages/<name>/
   README.md
 ```
 
-Then register the package in:
+Then:
 
-- `rush.json` — required, hand-maintained (no generator writes this file).
-- `.ai/data/packages.json` — required: add a curated entry (`slug`, `name`, `category`, `description`, `domOutput`, plus `testCommand` only if the package needs a non-standard test invocation). `pnpm check:ai-data`/`gen:ai-data` fails with "missing curated metadata" until this exists.
+1. Register package in `rush.json`.
+2. Add curated `.ai/data/packages.json` metadata: `slug`, `name`, `category`, `description`, `domOutput`; add `testCommand` only for a nonstandard invocation.
+3. Add `docsProfile` only for a durable nonstandard documentation architecture.
+4. Run `.ai/tasks/document.md` after adding a public package surface.
+5. Run `pnpm check:ai-data`.
 
-Do **not** hand-edit `docs/.vitepress/config.ts`'s `@vielzeug/*` alias map or the REPL/docs package lists — they're derived from the `packages/` directory listing via `scripts/vielzeug-packages.ts` (`buildVielzeugSrcAliases`, `listVielzeugPackages`). Adding the package directory with a valid `package.json` is enough.
+Do not hand-edit docs alias maps or generated package lists; `scripts/vielzeug-packages.ts` derives them from valid package directories.
 
 ## Reference packages
 
-- `spell` — canonical small focused package
-- `arsenal` — canonical multi-helper package
+- `spell` — small focused API, errors, types, and central tests.
+- `arsenal` — tree-shakeable helper categories and barrel exports.
+- `ripple` — disposal, async lifecycle, and devtools patterns.
+- `ore` — DOM-output boundaries and accessibility testing.
+- `codex` — CLI behavior, generated data, and bundled documentation.
 
+## Enforcement map
+
+| Convention                           | Enforcement                     |
+| ------------------------------------ | ------------------------------- |
+| Import/object ordering               | ESLint                          |
+| Formatting                           | Prettier / `pnpm fix`           |
+| Package metadata and task references | `pnpm check:ai-data`            |
+| Package behavior                     | focused Vitest tests            |
+| Package lint/build                   | package lint and build commands |
+| Documentation structure              | `pnpm validate:docs`            |
+| REPL examples                        | `pnpm validate:repl`            |
+| Production dev-warning gate          | `pnpm verify:prod-gate`         |

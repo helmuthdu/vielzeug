@@ -5,7 +5,7 @@ description: Scoped DOM queries, exact event dispatch, and cancellable waiting w
 
 [[toc]]
 
-## Scoped queries
+## Basic Usage
 
 `within(root)` is Assay's query API. It accepts an element, document fragment, or shadow root and keeps every lookup
 in that scope. Use `get*` when a match is required and nullable `query*` methods when absence is part of the assertion.
@@ -93,7 +93,11 @@ import { fireClick } from '@vielzeug/assay';
 import { html } from '@vielzeug/ore';
 import { mount } from '@vielzeug/ore/testing';
 
-const fixture = await mount(() => html`<button @click=${onSave}>Save</button>`);
+const fixture = await mount(
+  () => html`
+    <button @click=${onSave}>Save</button>
+  `,
+);
 
 fireClick(fixture.get('button'));
 await fixture.flush();
@@ -104,7 +108,7 @@ expect(onSave).toHaveBeenCalledOnce();
 Refine's testing entry point contains only Refine-specific assertions and typed mount wrappers. Import Assay helpers
 directly instead of routing generic DOM operations through another package.
 
-## Best practices
+## Best Practices
 
 - Scope multiple assertions with `within()` rather than repeatedly querying the document.
 - Prefer `get*` for required controls and `query*` for intentional absence checks.

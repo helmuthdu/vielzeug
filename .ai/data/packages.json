@@ -6,9 +6,11 @@
       "name": "@vielzeug/arsenal",
       "category": "Utilities",
       "description": "75+ tree-shakeable array/object/string/async helpers",
+      "docsProfile": "catalog",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "assay",
@@ -17,25 +19,29 @@
       "description": "Framework-agnostic DOM testing primitives — scoped queries, event dispatch, async waiting",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "clockwork",
       "name": "@vielzeug/clockwork",
       "category": "State",
-      "description": "Finite state machine interpreter with typed events",
+      "description": "Framework-neutral finite state machines with pure transitions and actors",
       "domOutput": false,
-      "dependencies": ["ripple"],
-      "optionalPeers": []
+      "dependencies": [],
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "codex",
       "name": "@vielzeug/codex",
       "category": "AI",
       "description": "MCP server exposing all Vielzeug docs to AI clients",
+      "docsProfile": "cli-tool",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "coins",
@@ -44,7 +50,8 @@
       "description": "Currency formatting and exchange utilities for monetary arithmetic",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "conduit",
@@ -53,7 +60,8 @@
       "description": "Typed dependency injection container",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "courier",
@@ -62,7 +70,8 @@
       "description": "Typed HTTP client with caching and mutations",
       "domOutput": false,
       "dependencies": ["arsenal"],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "dnd",
@@ -71,7 +80,8 @@
       "description": "Drag-and-drop — drop zones and sortable lists",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "familiar",
@@ -80,7 +90,8 @@
       "description": "Web Worker pool with tasks, timeouts, cancellation",
       "domOutput": false,
       "dependencies": ["arsenal"],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "flux",
@@ -89,7 +100,8 @@
       "description": "Minimal push streams with explicit ownership, buffering, and ecosystem adapters",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": ["courier", "herald", "pulse", "ripple"]
+      "optionalPeers": ["courier", "herald", "pulse", "ripple"],
+      "peerDependencies": []
     },
     {
       "slug": "forge",
@@ -98,7 +110,8 @@
       "description": "Typed form state, validation, submission",
       "domOutput": false,
       "dependencies": ["arsenal"],
-      "optionalPeers": ["spell", "vault"]
+      "optionalPeers": ["spell", "vault"],
+      "peerDependencies": []
     },
     {
       "slug": "herald",
@@ -107,7 +120,8 @@
       "description": "Typed event bus, pub/sub, async streams",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "keymap",
@@ -116,7 +130,8 @@
       "description": "Headless keyboard shortcut manager with chord sequences",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "ledger",
@@ -125,7 +140,8 @@
       "description": "Async undo/redo command history with Ripple reactive state",
       "domOutput": false,
       "dependencies": ["ripple"],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "lingua",
@@ -134,7 +150,8 @@
       "description": "Typed i18n with pluralization and async loading",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "orbit",
@@ -143,7 +160,8 @@
       "description": "Floating element positioning (tooltip, popover)",
       "domOutput": false,
       "dependencies": ["arsenal", "ripple"],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "ore",
@@ -152,7 +170,8 @@
       "description": "Functional web-component authoring on top of ripple",
       "domOutput": true,
       "dependencies": [],
-      "optionalPeers": ["assay"]
+      "optionalPeers": ["assay"],
+      "peerDependencies": ["ripple"]
     },
     {
       "slug": "prism",
@@ -161,7 +180,8 @@
       "description": "Reactive SVG charting library — line, bar, area, pie, sparkline",
       "domOutput": true,
       "dependencies": ["orbit", "ripple"],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "pulse",
@@ -170,17 +190,20 @@
       "description": "Typed WebSocket client with channels, rooms, presence, reconnect",
       "domOutput": false,
       "dependencies": ["ripple"],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "refine",
       "name": "@vielzeug/refine",
       "category": "UI",
       "description": "Accessible, themeable web components built on ore",
+      "docsProfile": "component-library",
       "domOutput": true,
       "testCommand": "pnpm --filter @vielzeug/refine test",
       "dependencies": ["arsenal", "assay", "dnd", "keymap", "orbit", "ore", "ripple", "tempo"],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "ripple",
@@ -189,7 +212,8 @@
       "description": "Reactive runtime primitives: signals, derived values, effects, and scopes",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "rune",
@@ -198,7 +222,8 @@
       "description": "Structured scoped logger with remote transport",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "sandbox",
@@ -207,7 +232,8 @@
       "description": "Sandboxed iframe runtime with typed postMessage state bridge",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "scout",
@@ -216,7 +242,8 @@
       "description": "Trigram fuzzy-search index with highlighting and reactive layer",
       "domOutput": false,
       "dependencies": ["ripple"],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "scroll",
@@ -225,7 +252,8 @@
       "description": "Virtual list engine for large datasets",
       "domOutput": false,
       "dependencies": ["ripple"],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "sourcerer",
@@ -234,7 +262,8 @@
       "description": "Reactive data sources with pagination and search",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "spell",
@@ -243,7 +272,8 @@
       "description": "Zero-dep schema validation (Zod-like)",
       "domOutput": false,
       "dependencies": ["arsenal"],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "tempo",
@@ -252,7 +282,8 @@
       "description": "Temporal-powered date utilities",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "vault",
@@ -261,7 +292,8 @@
       "description": "IndexedDB + LocalStorage unified typed API",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "ward",
@@ -270,7 +302,8 @@
       "description": "RBAC engine with wildcards and predicates",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     },
     {
       "slug": "wayfinder",
@@ -279,7 +312,8 @@
       "description": "Client-side router with middleware and guards",
       "domOutput": false,
       "dependencies": [],
-      "optionalPeers": []
+      "optionalPeers": [],
+      "peerDependencies": []
     }
   ]
 }

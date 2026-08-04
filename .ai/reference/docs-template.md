@@ -1,6 +1,6 @@
 # Vielzeug Documentation Template
 
-Shared page structure for `docs/<name>/`. This is reference material, not a task narrative — the `docs` task tells you when to load it and how to sequence edits; this file tells you exactly what each page must contain.
+Shared page structure for `docs/<name>/`. This is reference material, not a task narrative — the `document` task tells you when to load it and how to sequence edits; this file tells you exactly what each page must contain.
 
 ## Global writing rules
 
@@ -11,19 +11,29 @@ Apply to every page you edit:
 - Explain intent before implementation — a one-line description before each code block.
 - Code first, prose second. When in doubt, show annotated code rather than long prose.
 - No marketing language ("powerful", "blazing fast", "seamless"). Use factual comparison tables instead.
-- Code comments explain *why*, not *what*. One comment per meaningful block; never multi-line comment blocks.
+- Code comments explain _why_, not _what_. One comment per meaningful block; never multi-line comment blocks.
 
 ## Package archetypes
 
 Not every package is a consumed library. Identify the archetype before applying the template — a package can match more than one row. Check `package.json` (`bin`, `exports`, `engines`) and `src/cli.ts` before assuming the Library default, and check `packages/<name>/AGENTS.md` for declared exceptions.
 
-| Archetype | Indicators | Adaptations |
-| --- | --- | --- |
-| **Library** (default) | `src/index.ts` exports functions/classes; imported by userland | None — use the full template as written |
-| **CLI / executable tool** | `bin` field in `package.json`; primary interaction is a terminal command | Quick Start leads with the shell command, not TypeScript; `usage.md`'s Framework Integration becomes "Embedding in a `<Runtime>` Process" (programmatic use as secondary); comparison table compares invocation modes, not API surfaces |
-| **DOM-output / headless UI** | Renders DOM directly (`refine`, `prism`); no REPL examples by convention | No REPL examples or Monaco types; Framework Integration shows web-component HTML/JS usage, not React/Vue/Svelte unless the package ships adapters |
-| **Build / dev tool** | `devDependencies`-only; runs at build time | Quick Start shows CLI invocation or config; `usage.md`'s Basic Usage starts with config, not code; API reference may be a config schema |
-| **Pure type package** | Exports only `type`/`interface`; no runtime code | Skip Quick Start code block; `api.md` is types-only; examples only for non-obvious patterns |
+| Archetype                    | Indicators                                                               | Adaptations                                                                                                                                                                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Library** (default)        | `src/index.ts` exports functions/classes; imported by userland           | None — use the full template as written                                                                                                                                                                                                 |
+| **CLI / executable tool**    | `bin` field in `package.json`; primary interaction is a terminal command | Quick Start leads with the shell command, not TypeScript; `usage.md`'s Framework Integration becomes "Embedding in a `<Runtime>` Process" (programmatic use as secondary); comparison table compares invocation modes, not API surfaces |
+| **DOM-output / headless UI** | Renders DOM directly (`refine`, `prism`); no REPL examples by convention | No REPL examples or Monaco types; Framework Integration shows web-component HTML/JS usage, not React/Vue/Svelte unless the package ships adapters                                                                                       |
+| **Build / dev tool**         | `devDependencies`-only; runs at build time                               | Quick Start shows CLI invocation or config; `usage.md`'s Basic Usage starts with config, not code; API reference may be a config schema                                                                                                 |
+| **Pure type package**        | Exports only `type`/`interface`; no runtime code                         | Skip Quick Start code block; `api.md` is types-only; examples only for non-obvious patterns                                                                                                                                             |
+
+## Validator profiles
+
+`pnpm validate:docs` reads explicit structural profiles from each package's `docsProfile` field in `.ai/data/packages.json`:
+
+- **`arsenal` — catalog:** nested category indexes and helper pages are navigation, not individual how-to recipes. Validator checks root pages and catalog entry structure without requiring every leaf to use recipe headings or appear directly in top-level index.
+- **`codex` — CLI tool:** MCP server exposes CLI, HTTP, and programmatic entry points. Standard structure remains required; profile records that its package archetype is executable rather than consumed-library default.
+- **`refine` — component library:** component pages, framework guides, and stylesheet/component sub-paths replace `examples.md`. Validator requires `index.md`, `usage.md`, and `api.md`, but does not require function-library usage/API headings.
+
+Add profile only for durable package-level information architecture. Do not use one to suppress normal documentation defects.
 
 ## `index.md` — Overview
 
@@ -92,6 +102,8 @@ Required structure: `## <Recipe Name>` then, in order, `### Problem` (1–3 sent
 
 ## Verification checklist
 
+`pnpm validate:docs -- --package=<name>` checks objective page shape, recipe/index parity, and relative links. It does not judge technical accuracy, examples, comparisons, prose, or Diátaxis fit; review those requirements below from source.
+
 Run before declaring a docs pass done:
 
 - [ ] Every signature in `api.md` matches `src/index.ts` exactly
@@ -105,4 +117,3 @@ Run before declaring a docs pass done:
 - [ ] No references to removed APIs
 - [ ] Sidebar config (`docs/.vitepress/config.ts`) updated if examples were added/removed
 - [ ] If `src/_dev.ts` exists, `@security` JSDoc tags are present on messages carrying user-supplied data
-

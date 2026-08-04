@@ -71,11 +71,14 @@ describe('renderPackagesTable() / patchPackagesReference()', () => {
         domOutput: true,
         dependencies: ['ripple'],
         optionalPeers: [],
+        peerDependencies: [],
       },
     ]);
 
-    expect(table).toContain('| Package | Category | DOM | Description | Dependencies | Optional peers | Test command |');
-    expect(table).toContain('| `@vielzeug/ore` | UI | yes | Web-component primitives | `ripple` | — | — |');
+    expect(table).toContain(
+      '| Package | Category | DOM | Description | Dependencies | Required peers | Optional peers | Test command |',
+    );
+    expect(table).toContain('| `@vielzeug/ore` | UI | yes | Web-component primitives | `ripple` | — | — | — |');
   });
 
   it('patches the generated packages table into the reference file', () => {
@@ -95,6 +98,7 @@ describe('renderPackagesTable() / patchPackagesReference()', () => {
         domOutput: false,
         dependencies: [],
         optionalPeers: [],
+        peerDependencies: [],
       },
     ]);
 

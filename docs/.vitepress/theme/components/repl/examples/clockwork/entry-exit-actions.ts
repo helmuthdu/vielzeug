@@ -1,60 +1,34 @@
 export const entryExitActionsExample = {
   code: `import { createMachine } from '@vielzeug/clockwork'
 
-// Track side effects with entry/exit actions
-const log = (msg) => console.log(msg)
+const log = (message) => console.log(message)
 
-const conn = createMachine({
+// Effects run after actor commits its immutable snapshot.
+const machine = createMachine({
+  context: { reconnects: 0 },
   initial: 'disconnected',
-  context: { reconnects: 0, lastError: '' },
   states: {
     disconnected: {
-      entry: () => log('[disconnected] entry: socket closed'),
-      on: {
-        CONNECT: { target: 'connecting' },
-      },
-    },
-    connecting: {
-      entry: () => log('[connecting] entry: dialing server...'),
-      exit:  () => log('[connecting] exit:  dial complete'),
-      invoke: [{
-        src: async () => {
-          await new Promise(res => setTimeout(res, 200))
-          return 'ws://localhost:3000'
-        },
-        onDone:  (url,   _ctx) => ({ type: 'CONNECTED',   url }),
-        onError: (error, _ctx) => ({ type: 'CONNECT_FAIL', error: String(error) }),
-      }],
-      on: {
-        CONNECTED:    { target: 'connected',    actions: [({ context }) => { context.lastError = '' }] },
-        CONNECT_FAIL: { target: 'disconnected', actions: [({ context, event }) => { context.lastError = event.error }] },
-      },
+      entry: [() => log('[disconnected] socket closed')],
+      on: { CONNECT: { target: 'connected' } },
     },
     connected: {
-      entry: ({ context }) => log('[connected] entry: ready (reconnects: ' + context.reconnects + ')'),
-      exit:  () => log('[connected] exit:  connection lost'),
+      entry: [({ context }) => log('[connected] reconnects: ' + context.reconnects)],
+      exit: [() => log('[connected] socket closing')],
       on: {
         DISCONNECT: { target: 'disconnected' },
         ERROR: {
-          target: 'connecting',
-          actions: [({ context }) => { context.reconnects += 1 }],
+          reduce: ({ context }) => ({ reconnects: context.reconnects + 1 }),
+          target: 'disconnected',
         },
       },
     },
   },
-}).start()
+})
 
-console.log('State:', conn.state.value)  // 'disconnected'
-conn.send({ type: 'CONNECT' })
-console.log('State:', conn.state.value)  // 'connecting'
-
-setTimeout(() => {
-  console.log('State:', conn.state.value)  // 'connected'
-
-  // Simulate an error triggering reconnect
-  conn.send({ type: 'ERROR' })
-  console.log('State after error:', conn.state.value)  // 'connecting'
-  console.log('Reconnects:', conn.context.value.reconnects)  // 1
-}, 400)`,
-  name: 'Entry & Exit Actions',
+const actor = machine.createActor()
+actor.subscribe((snapshot) => console.log('Committed:', snapshot))
+actor.send({ type: 'CONNECT' })
+actor.send({ type: 'ERROR' })`,
+  name: 'Post-commit Effects',
 };

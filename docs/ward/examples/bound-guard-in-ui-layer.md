@@ -1,9 +1,17 @@
 ---
 title: 'Ward Examples — Bound Guard in UI Layer'
-description: 'Bound guard in UI layer example for @vielzeug/ward.'
+description: 'Create a principal-bound Ward view for repeated UI permission checks.'
 ---
 
 ## Bound Guard in UI Layer
+
+### Problem
+
+A UI often needs several permission checks for one signed-in user without repeating that principal in every call.
+
+### Solution
+
+Bind the current user once with `forUser()` and expose the resulting action checks to the UI.
 
 ```ts
 import { createWard } from '@vielzeug/ward';
@@ -26,3 +34,14 @@ export function usePostActions(user: { id: string; roles: string[] }) {
   };
 }
 ```
+
+### Pitfalls
+
+- `forUser()` snapshots user roles; bind again when identity or roles change.
+- Keep authorization at mutation and request boundaries; hidden UI controls are not an authorization check.
+
+### Related
+
+- [Blog Roles](./blog-roles.md)
+- [Multi-Role Rules](./multi-role-rules.md)
+- [Ward Usage Guide](../usage.md)

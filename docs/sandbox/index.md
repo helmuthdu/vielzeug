@@ -30,6 +30,15 @@ environments: [browser]
 
 Running untrusted HTML in the main window is unsafe — arbitrary code can access the DOM, cookies, and user data. Sandbox creates an isolated `<iframe sandbox="allow-scripts">` that receives content over a typed postMessage bridge. The sandbox cannot reach the host page.
 
+```ts
+// Before
+container.innerHTML = untrustedHtml;
+
+// After
+const sandbox = createSandbox(container);
+await sandbox.render(untrustedHtml);
+```
+
 Common use cases:
 
 - **Component previews** — render isolated HTML/CSS examples in documentation or design tools
@@ -39,20 +48,20 @@ Common use cases:
 - **Widget embedding** — wrap third-party widgets with strict CSP and bidirectional messaging
 - **AI-generated UI** — render LLM-produced HTML components with guaranteed isolation
 
-| Feature                    | Raw `<iframe>`              | Sandbox                                                |
-| -------------------------- | --------------------------- | ------------------------------------------------------ |
-| Bundle size                | 0 B (built-in)              | <PackageInfo package="sandbox" type="size" />          |
-| Zero dependencies          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Content-Security-Policy    | Manual                      | Auto-generated, strict by default                      |
-| Typed postMessage protocol | <ore-icon name="x" size="16"></ore-icon> | `setState()` / `SandboxMessage` union           |
-| Error forwarding           | <ore-icon name="x" size="16"></ore-icon> | `onerror` + `unhandledrejection` → host         |
-| Dispose / `using`          | Manual `remove()`           | `dispose()` + `[Symbol.dispose]`                       |
+| Feature                    | Raw `<iframe>`                               | Sandbox                                       |
+| -------------------------- | -------------------------------------------- | --------------------------------------------- |
+| Bundle size                | 0 B (built-in)                               | <PackageInfo package="sandbox" type="size" /> |
+| Zero dependencies          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>  |
+| Content-Security-Policy    | Manual                                       | Auto-generated, strict by default             |
+| Typed postMessage protocol | <ore-icon name="x" size="16"></ore-icon>     | `setState()` / `SandboxMessage` union         |
+| Error forwarding           | <ore-icon name="x" size="16"></ore-icon>     | `onerror` + `unhandledrejection` → host       |
+| Dispose / `using`          | Manual `remove()`                            | `dispose()` + `[Symbol.dispose]`              |
 
 <div class="decision-callout">
 
 **Use Sandbox when** you need to render untrusted or user-provided HTML in the browser with guaranteed isolation, CSP enforcement, and a typed event bridge.
 
-**Stick with a raw `<iframe>` when** you only need to embed a known third-party URL — Sandbox is for programmatic `srcdoc` content, not URL-based embedding.
+**Consider a raw `<iframe>` when** you only need to embed a known third-party URL — Sandbox is for programmatic `srcdoc` content, not URL-based embedding.
 
 </div>
 
@@ -82,11 +91,15 @@ import { createSandbox } from '@vielzeug/sandbox';
 const container = document.getElementById('preview')!;
 const sandbox = createSandbox(container);
 
-// render() returns a Promise that resolves when the document is ready
-await sandbox.render('<ore-button variant="primary">Click me</ore-button>');
+try {
+  // render() resolves when the document is ready
+  await sandbox.render('<ore-button variant="primary">Click me</ore-button>');
 
-// Push state into the sandbox
-sandbox.setState('theme', 'dark');
+  // Push state into the sandbox
+  sandbox.setState('theme', 'dark');
+} catch (error) {
+  console.error('Sandbox render failed', error);
+}
 
 // Receive events from sandbox code (ready is not forwarded — internal use only)
 sandbox.onMessage((msg) => {

@@ -24,6 +24,7 @@ pnpm lint
 pnpm fix
 pnpm docs:dev
 pnpm docs:build
+pnpm validate:docs -- --package=<name>
 pnpm validate:repl
 pnpm validate:repl -- --package <name>
 pnpm gen:ai-data
@@ -71,4 +72,3 @@ Format: `feat(courier): add retry logic`.
 ## Scratch state
 
 AI scratch state is gitignored under `.ai/state/` — see `.ai/state/AGENTS.md` for the contract (when to use it, file shapes, cleanup rules).
-

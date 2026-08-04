@@ -1,63 +1,37 @@
 export const asyncInvokesExample = {
   code: `import { createMachine } from '@vielzeug/clockwork'
 
-const m = createMachine({
+// Invokes get an AbortSignal and send regular events when settled.
+const machine = createMachine({
+  context: { error: '', user: null },
   initial: 'idle',
-  context: {
-    userId: 0,
-    user: null,
-    error: '',
-    attempts: 0,
-  },
   states: {
-    idle: {
-      on: {
-        FETCH: {
-          target: 'loading',
-          actions: [({ context, event }) => { context.userId = event.id; context.attempts = 1 }],
-        },
-      },
-    },
+    idle: { on: { FETCH: { target: 'loading' } } },
     loading: {
       invoke: [{
-        src: async ({ context, signal }) => {
-          // Simulate a 300ms API call — abortable via AbortSignal
-          await new Promise((res, rej) => {
-            const t = setTimeout(res, 300)
-            signal.addEventListener('abort', () => { clearTimeout(t); rej(new Error('aborted')) })
+        src: async ({ signal }) => {
+          await new Promise((resolve, reject) => {
+            const timer = setTimeout(resolve, 250)
+            signal.addEventListener('abort', () => { clearTimeout(timer); reject(new Error('aborted')) })
           })
-          if (context.userId === 42) throw new Error('User not found')
-          return { name: 'Alice', email: 'alice@example.com' }
+          return { name: 'Alice' }
         },
-        onDone:  (result, _ctx) => ({ type: 'DONE',   user: result }),
-        onError: (error,  _ctx) => ({ type: 'FAILED', error: String(error) }),
+        onDone: ({ result }) => ({ type: 'DONE', user: result }),
+        onError: ({ error }) => ({ type: 'FAILED', message: String(error) }),
       }],
       on: {
-        DONE:   { target: 'success', actions: [({ context, event }) => { context.user = event.user; context.error = '' }] },
-        FAILED: { target: 'error',   actions: [({ context, event }) => { context.user = null; context.error = event.error }] },
+        DONE: { reduce: ({ event }) => ({ error: '', user: event.user }), target: 'ready' },
+        FAILED: { reduce: ({ event }) => ({ error: event.message, user: null }), target: 'error' },
       },
     },
-    success: {
-      on: {
-        FETCH: { target: 'loading', actions: [({ context, event }) => { context.userId = event.id }] },
-      },
-    },
-    error: {
-      on: {
-        RETRY: { target: 'loading', actions: [({ context }) => { context.attempts += 1 }] },
-      },
-    },
+    ready: {},
+    error: {},
   },
-}).start()
+})
 
-console.log('Initial:', m.state.value)   // 'idle'
-m.send({ type: 'FETCH', id: 1 })
-console.log('After FETCH:', m.state.value) // 'loading'
-
-// Invoke resolves after ~300ms
-setTimeout(() => {
-  console.log('Resolved:', m.state.value)  // 'success'
-  console.log('User:', JSON.stringify(m.context.value.user))
-}, 500)`,
+const actor = machine.createActor()
+actor.send({ type: 'FETCH' })
+console.log('Loading:', actor.snapshot.value)
+setTimeout(() => console.log('Resolved:', actor.snapshot.value), 400)`,
   name: 'Async Invokes',
 };

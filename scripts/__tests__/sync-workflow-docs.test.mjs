@@ -12,15 +12,24 @@ describe('module has no import-time side effects', () => {
 });
 
 describe('stubContent()', () => {
-  it('embeds task key and description into the compatibility stub template', () => {
-    const content = stubContent({ key: 'change', description: 'Implement a clean change.' });
-    expect(content).toMatch(/description: Implement a clean change\./);
-    expect(content).toMatch(/# change/);
-    expect(content).toMatch(/\.ai\/tasks\/change\.md/);
+  it('embeds task key, inputs, references, and description into compatibility stub template', () => {
+    const content = stubContent({
+      description: 'Change source and tests.',
+      inputs: ['scope'],
+      key: 'build',
+      references: ['.ai/core/policy.md'],
+    });
+    expect(content).toMatch(/description: Change source and tests\./);
+    expect(content).toMatch(/# build/);
+    expect(content).toMatch(/## Inputs/);
+    expect(content).toMatch(/\.ai\/core\/policy\.md/);
+    expect(content).toMatch(/\.ai\/tasks\/build\.md/);
   });
 
-  it('rejects a description containing a colon (breaks YAML frontmatter)', () => {
-    expect(() => stubContent({ key: 'change', description: 'bad: value' })).toThrow(/breaks YAML frontmatter/);
+  it('serializes a description containing a colon safely', () => {
+    expect(stubContent({ description: 'bad: value', inputs: [], key: 'build', references: [] })).toMatch(
+      /description: "bad: value"/,
+    );
   });
 });
 
@@ -28,21 +37,23 @@ describe('assertValidManifest() compatibility export', () => {
   it('accepts valid task metadata', () => {
     expect(() =>
       assertValidManifest([
-        { key: 'analyze', references: ['.ai/tasks/analyze.md'] },
-        { key: 'change', references: ['.ai/tasks/change.md'] },
+        { description: 'Review.', inputs: ['scope'], key: 'review', references: ['.ai/tasks/review.md'] },
+        { description: 'Build.', inputs: ['scope'], key: 'build', references: ['.ai/tasks/build.md'] },
       ]),
     ).not.toThrow();
   });
 
   it('rejects a task key that is unsafe as a file path', () => {
-    expect(() => assertValidManifest([{ key: 'bad/key', references: ['x'] }])).toThrow(/must match/);
+    expect(() => assertValidManifest([{ description: 'Bad.', inputs: [], key: 'bad/key', references: ['x'] }])).toThrow(
+      /must match/,
+    );
   });
 
   it('rejects duplicate task keys', () => {
     expect(() =>
       assertValidManifest([
-        { key: 'change', references: ['a'] },
-        { key: 'change', references: ['b'] },
+        { description: 'Change.', inputs: [], key: 'change', references: ['a'] },
+        { description: 'Change.', inputs: [], key: 'change', references: ['b'] },
       ]),
     ).toThrow(/duplicate task key/);
   });

@@ -6,17 +6,7 @@ category: validation
 keywords: [schema, validation, parsing, json-schema, locale, typescript, descriptors]
 related: [forge, courier, vault]
 exports:
-  [
-    s,
-    Schema,
-    PipeSchema,
-    SpellValidationError,
-    SpellDefinitionError,
-    ErrorCode,
-    diagnostics,
-    "./json",
-    "./predicates",
-  ]
+  [s, Schema, PipeSchema, SpellValidationError, SpellDefinitionError, ErrorCode, diagnostics, './json', './predicates']
 environments: [browser, node, ssr, deno]
 ---
 
@@ -62,14 +52,14 @@ const User = s.object({
 const user = User.parse({ email: 'ada@example.com', role: 'admin' });
 ```
 
-| Feature           | Spell                                                                     | Zod                                        | Yup                                        |
-| ----------------- | ------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
-| Bundle size       | <PackageInfo package="spell" type="size" />                               | ~62 kB                                     | ~14 kB                                     |
-| Type inference    | <ore-icon name="check" size="16"></ore-icon> `Infer<T>`                     | <ore-icon name="check" size="16"></ore-icon> | Partial                                    |
+| Feature           | Spell                                                                       | Zod                                          | Yup                                          |
+| ----------------- | --------------------------------------------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Bundle size       | <PackageInfo package="spell" type="size" />                                 | ~62 kB                                       | ~14 kB                                       |
+| Type inference    | <ore-icon name="check" size="16"></ore-icon> `Infer<T>`                     | <ore-icon name="check" size="16"></ore-icon> | Partial                                      |
 | Coercion API      | <ore-icon name="check" size="16"></ore-icon> `s.coerce.*`                   | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Async validation  | <ore-icon name="check" size="16"></ore-icon> `.checkAsync()`                  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Error flattening  | <ore-icon name="check" size="16"></ore-icon> `flatten()` + `flattenFirst()` | <ore-icon name="check" size="16"></ore-icon> | Partial                                    |
-| Third-party runtime dependencies | <ore-icon name="x" size="16"></ore-icon>                                | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>     |
+| Async validation  | <ore-icon name="check" size="16"></ore-icon> `.checkAsync()`                | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Error flattening  | <ore-icon name="check" size="16"></ore-icon> `flatten()` + `flattenFirst()` | <ore-icon name="check" size="16"></ore-icon> | Partial                                      |
+| Zero dependencies | <ore-icon name="check" size="16"></ore-icon>                                | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 
@@ -123,7 +113,10 @@ const payload: unknown = {
   team: 'platform',
 };
 
-const user = User.parse(payload);
+const result = User.safeParse(payload);
+
+if (!result.success) throw result.error;
+const user = result.data;
 ```
 
 ## Features

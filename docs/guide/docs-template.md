@@ -5,7 +5,7 @@ description: Canonical structure, language, and formatting rules for all Vielzeu
 
 # Vielzeug Documentation Template
 
-This document defines the canonical structure, language, and formatting rules for all library documentation pages in the Vielzeug monorepo. When writing or revising docs for any package, follow this template exactly. Consistency across all 24 libraries is the primary goal.
+Public explanation of Vielzeug documentation structure. Maintainers and agents use `.ai/reference/docs-template.md` as the canonical contract; this page explains same model for readers and must not introduce competing requirements. Consistency across package documentation is the primary goal.
 
 ## Documentation Philosophy
 
@@ -96,11 +96,11 @@ environments: [browser, node, ssr, deno]
 
 <Before/After code block — show the same task done without the library versus with it.>
 
-| Feature              | <PackageName>                               | <Competitor 1> | <Competitor 2> |
-| -------------------- | ------------------------------------------- | -------------- | -------------- |
-| Bundle size          | <PackageInfo package="<pkg>" type="size" /> | ...            | ...            |
-| Zero dependencies    | <ore-icon name="check" size="16"></ore-icon>  | ...            | ...            |
-| <Key differentiator> | <ore-icon name="check" size="16"></ore-icon>  | ...            | ...            |
+| Feature              | <PackageName>                                | <Competitor 1> | <Competitor 2> |
+| -------------------- | -------------------------------------------- | -------------- | -------------- |
+| Bundle size          | <PackageInfo package="<pkg>" type="size" />  | ...            | ...            |
+| Zero dependencies    | <ore-icon name="check" size="16"></ore-icon> | ...            | ...            |
+| <Key differentiator> | <ore-icon name="check" size="16"></ore-icon> | ...            | ...            |
 
 <div class="decision-callout">
 

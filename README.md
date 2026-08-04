@@ -87,7 +87,7 @@ pnpm add @vielzeug/refine
 
 ### [@vielzeug/clockwork](packages/clockwork) – Finite State Machines
 
-Typed finite state machine interpreter with guards, async invokes, context signals, and persistence.
+Framework-neutral typed state machines with pure transitions, immutable snapshots, and owned actors.
 
 ```bash
 pnpm add @vielzeug/clockwork
@@ -95,11 +95,11 @@ pnpm add @vielzeug/clockwork
 
 **Key Features:**
 
-- Fully typed states, events, and transitions
-- Guard conditions, entry/exit actions, and action arrays
-- Async `invoke` with `onDone`/`onError` callbacks
-- Reactive `state` and `context` signals via `@vielzeug/ripple`
-- Persistence adapters and transition tracing
+- Fully typed flat states, events, guards, and transitions
+- Pure context reducers with immutable snapshots
+- Post-commit effects, async `invoke`, and delayed transitions
+- Actor subscriptions, cancellation, and disposal
+- Framework-neutral runtime with zero dependencies
 
 [📖 Documentation](https://vielzeug.dev/clockwork/) • [Examples](https://vielzeug.dev/clockwork/examples)
 

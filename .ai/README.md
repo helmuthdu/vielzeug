@@ -14,22 +14,18 @@ The design is intentionally small:
 
 Pick the smallest task that fits the job:
 
-| Need | Read |
-| --- | --- |
-| Review or redesign a package | `.ai/tasks/analyze.md` |
-| Implement a package change | `.ai/tasks/change.md` |
-| Run focused review / security / coverage checks | `.ai/tasks/validate.md` |
-| Sync package docs | `.ai/tasks/docs.md` |
-| Update REPL examples | `.ai/tasks/repl.md` |
+| Need                                           | Read                    |
+| ---------------------------------------------- | ----------------------- |
+| Change code, tests, tooling, or CI             | `.ai/tasks/build.md`    |
+| Investigate, audit, plan, or redesign          | `.ai/tasks/review.md`   |
+| Update docs, README, recipes, or REPL examples | `.ai/tasks/document.md` |
+| Prepare releases, commits, or pull requests    | `.ai/tasks/release.md`  |
 
-Then load the two shared references every task depends on:
+Load references declared for that task in `.ai/data/tasks.json` and the task's `Load first` section. Generated local adapters render same list for one-hop task startup.
 
-- `.ai/core/policy.md`
-- `.ai/core/workspace.md`
+Load `.ai/core/conventions.md` before editing package source. Follow relevant `AGENTS.md` chain before entering a subtree.
 
-Load `.ai/core/conventions.md` before editing package source.
-
-`policy.md` also defines the cross-task conventions every task doc builds on instead of restating: **rigor** (`full`/`quick` depth, orthogonal to scope), **structured markers** (`[FINDING]`, `[FIXED]`, `[DEFERRED]`, `[BLOCKED]`, `[VERIFY]`), and **progress checkpoints** for multi-step work.
+`policy.md` defines cross-task conventions task docs build on instead of restating: **rigor** (`full`/`quick` depth, orthogonal to scope), **structured markers** (`[FINDING]`, `[FIXED]`, `[DEFERRED]`, `[BLOCKED]`, `[VERIFY]`), and **progress checkpoints** for multi-step work.
 
 ## Design principles
 
@@ -54,4 +50,3 @@ Shared reference material:
 ## State
 
 Active run state is ephemeral and gitignored. See `.ai/state/AGENTS.md`.
-

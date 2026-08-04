@@ -5,6 +5,14 @@ description: 'Use toSearchMatcher to plug a ScoutIndex into a Sourcerer local so
 
 ## Sourcerer Integration
 
+### Problem
+
+Filter a local Sourcerer source with Scout's weighted fuzzy index while retaining Sourcerer's pagination and query state.
+
+### Solution
+
+Create one index for source items, then pass `toSearchMatcher(index)` as the source matcher.
+
 ```ts
 import { createIndex, toSearchMatcher } from '@vielzeug/scout';
 import { createLocalSource } from '@vielzeug/sourcerer';
@@ -28,4 +36,12 @@ index.add(newUser);
 source.setData(index.items);
 ```
 
-`toSearchMatcher()` caches one indexed match set per query. Local-source ordering stays explicit; apply a source `sort` query when needed.
+### Pitfalls
+
+- Keep source ordering explicit; use Sourcerer's `sort` query when result order matters.
+- Update both index and source data after changing collection items.
+
+### Related
+
+- [Scout Usage Guide](../usage.md)
+- [Sourcerer](/sourcerer/)

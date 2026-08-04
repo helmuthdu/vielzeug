@@ -20,15 +20,25 @@ function readJson(absPath) {
 }
 
 const TASK_KEY_PATTERN = /^[a-z][a-z0-9-]*$/;
+const DOCS_PROFILES = new Set(['catalog', 'cli-tool', 'component-library']);
+
+function assertSchemaVersion(data, filePath) {
+  if (data?.$schemaVersion !== 1) throw new Error(`${filePath}: unsupported or missing $schemaVersion`);
+}
 
 export function readAiTasks(root = ROOT) {
   const filePath = path.join(root, '.ai/data/tasks.json');
-  return readJson(filePath).tasks;
+  const data = readJson(filePath);
+  assertSchemaVersion(data, '.ai/data/tasks.json');
+  return data.tasks;
 }
 
 export function assertValidTasks(tasks) {
+  if (!Array.isArray(tasks)) throw new Error('.ai/data/tasks.json: "tasks" must be an array');
+
   const seen = new Set();
   for (const task of tasks) {
+    if (!task || typeof task !== 'object') throw new Error('.ai/data/tasks.json: every task must be an object');
     if (!TASK_KEY_PATTERN.test(task.key)) {
       throw new Error(`.ai/data/tasks.json: task key \"${task.key}\" must match ${TASK_KEY_PATTERN}`);
     }
@@ -36,8 +46,39 @@ export function assertValidTasks(tasks) {
       throw new Error(`.ai/data/tasks.json: duplicate task key \"${task.key}\"`);
     }
     seen.add(task.key);
-    if (!Array.isArray(task.references) || task.references.length === 0) {
-      throw new Error(`.ai/data/tasks.json: task \"${task.key}\" must list at least one reference`);
+
+    for (const field of ['description', 'inputs']) {
+      if (field === 'description' && (typeof task[field] !== 'string' || task[field].trim() === '')) {
+        throw new Error(`.ai/data/tasks.json: task \"${task.key}\" must have a non-empty description`);
+      }
+      if (
+        field === 'inputs' &&
+        (!Array.isArray(task[field]) || task[field].some((input) => typeof input !== 'string'))
+      ) {
+        throw new Error(`.ai/data/tasks.json: task \"${task.key}\" inputs must be an array of strings`);
+      }
+    }
+
+    if (
+      !Array.isArray(task.references) ||
+      task.references.length === 0 ||
+      task.references.some((ref) => typeof ref !== 'string')
+    ) {
+      throw new Error(`.ai/data/tasks.json: task \"${task.key}\" must list at least one string reference`);
+    }
+  }
+}
+
+export function assertTaskReferencesExist(tasks, root = ROOT) {
+  for (const task of tasks) {
+    const canonicalTask = `.ai/tasks/${task.key}.md`;
+    if (!existsSync(path.join(root, canonicalTask))) {
+      throw new Error(`.ai/data/tasks.json: task \"${task.key}\" has no canonical task document (${canonicalTask})`);
+    }
+    for (const reference of task.references) {
+      if (!existsSync(path.join(root, reference))) {
+        throw new Error(`.ai/data/tasks.json: task \"${task.key}\" references missing file \"${reference}\"`);
+      }
     }
   }
 }
@@ -45,6 +86,7 @@ export function assertValidTasks(tasks) {
 export function readAiPackages(root = ROOT) {
   const filePath = path.join(root, '.ai/data/packages.json');
   const data = readJson(filePath);
+  assertSchemaVersion(data, '.ai/data/packages.json');
   return data.packages;
 }
 
@@ -52,11 +94,57 @@ export function readLivePackages(root = ROOT) {
   return readPackageManifests(path.join(root, 'packages')).map(({ dependencies, peers, slug }) => ({
     dependencies,
     optionalPeers: peers.filter((peer) => peer.optional).map((peer) => peer.name),
+    peerDependencies: peers
+      .filter((peer) => !peer.optional && !dependencies.includes(peer.name))
+      .map((peer) => peer.name),
     slug,
   }));
 }
 
+export function assertValidPackages(packages) {
+  if (!Array.isArray(packages)) throw new Error('.ai/data/packages.json: "packages" must be an array');
+
+  const seen = new Set();
+  for (const pkg of packages) {
+    if (!pkg || typeof pkg !== 'object') throw new Error('.ai/data/packages.json: every package must be an object');
+    if (typeof pkg.slug !== 'string' || !TASK_KEY_PATTERN.test(pkg.slug)) {
+      throw new Error(`.ai/data/packages.json: invalid package slug \"${pkg.slug}\"`);
+    }
+    if (seen.has(pkg.slug)) throw new Error(`.ai/data/packages.json: duplicate package slug \"${pkg.slug}\"`);
+    seen.add(pkg.slug);
+    if (pkg.name !== `@vielzeug/${pkg.slug}`) {
+      throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" must use name \"@vielzeug/${pkg.slug}\"`);
+    }
+    if (
+      typeof pkg.category !== 'string' ||
+      pkg.category.trim() === '' ||
+      typeof pkg.description !== 'string' ||
+      pkg.description.trim() === ''
+    ) {
+      throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" must have category and description`);
+    }
+    if (typeof pkg.domOutput !== 'boolean')
+      throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" domOutput must be boolean`);
+    if (pkg.testCommand !== undefined && typeof pkg.testCommand !== 'string') {
+      throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" testCommand must be a string`);
+    }
+    if (pkg.docsProfile !== undefined && (!DOCS_PROFILES.has(pkg.docsProfile) || typeof pkg.docsProfile !== 'string')) {
+      throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" has invalid docsProfile`);
+    }
+    for (const field of ['dependencies', 'peerDependencies', 'optionalPeers']) {
+      if (
+        pkg[field] !== undefined &&
+        (!Array.isArray(pkg[field]) || pkg[field].some((dependency) => typeof dependency !== 'string'))
+      ) {
+        throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" ${field} must be an array of strings`);
+      }
+    }
+  }
+}
+
 export function mergePackageData(curatedPackages, livePackages) {
+  assertValidPackages(curatedPackages);
+
   const curatedBySlug = new Map(curatedPackages.map((pkg) => [pkg.slug, pkg]));
   const liveBySlug = new Map(livePackages.map((pkg) => [pkg.slug, pkg]));
 
@@ -81,6 +169,7 @@ export function mergePackageData(curatedPackages, livePackages) {
       // becomes a second hidden dependency source.
       dependencies: liveBySlug.get(pkg.slug).dependencies,
       optionalPeers: liveBySlug.get(pkg.slug).optionalPeers,
+      peerDependencies: liveBySlug.get(pkg.slug).peerDependencies,
     }))
     .sort((a, b) => a.slug.localeCompare(b.slug));
 }
@@ -110,6 +199,7 @@ export function renderPackagesTable(packages) {
     'DOM',
     'Description',
     'Dependencies',
+    'Required peers',
     'Optional peers',
     'Test command',
   ];
@@ -119,6 +209,7 @@ export function renderPackagesTable(packages) {
     pkg.domOutput ? 'yes' : 'no',
     pkg.description,
     pkg.dependencies.length > 0 ? pkg.dependencies.map((dep) => `\`${dep}\``).join(', ') : '—',
+    pkg.peerDependencies?.length > 0 ? pkg.peerDependencies.map((dep) => `\`${dep}\``).join(', ') : '—',
     pkg.optionalPeers.length > 0 ? pkg.optionalPeers.map((dep) => `\`${dep}\``).join(', ') : '—',
     pkg.testCommand ? `\`${pkg.testCommand}\`` : '—',
   ]);
@@ -127,19 +218,29 @@ export function renderPackagesTable(packages) {
 }
 
 export function taskStubContent(task) {
-  if (/[:\n]/.test(task.description)) {
-    throw new Error(`taskStubContent(): description for \"${task.key}\" breaks YAML frontmatter`);
-  }
+  const inputs = task.inputs?.length > 0 ? task.inputs.map((input) => `- \`${input}\``).join('\n') : '- None';
+  const references = task.references?.map((reference) => `- \`${reference}\``).join('\n') || '- None';
+  const description = /[:#{}[\],&*!|>'"%@`\n]/.test(task.description)
+    ? JSON.stringify(task.description)
+    : task.description;
 
   return `---
-description: ${task.description}
+description: ${description}
 ---
 
 # ${task.key}
 
-> **Canonical task:** See [\`.ai/tasks/${task.key}.md\`](../../.ai/tasks/${task.key}.md).
+## Inputs
 
-Read the task doc first, then load the shared references listed in \`.ai/data/tasks.json\`.
+${inputs}
+
+## Load
+
+${references}
+
+## Procedure
+
+Read [\`.ai/tasks/${task.key}.md\`](../../.ai/tasks/${task.key}.md) before work. It is canonical.
 `;
 }
 
@@ -188,7 +289,13 @@ export function collectAiReferenceSources(root = ROOT) {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const abs = path.join(dir, entry.name);
       const nowInsideAi = insideAi || entry.name === '.ai';
+      const relPath = path.relative(root, abs);
       if (entry.isDirectory()) {
+        if (relPath === '.ai/state') {
+          const contract = path.join(abs, 'AGENTS.md');
+          if (existsSync(contract)) files.push(path.relative(root, contract));
+          continue;
+        }
         if (!nowInsideAi && AI_REF_IGNORE_DIRS.has(entry.name)) continue;
         walk(abs, nowInsideAi);
         continue;
@@ -214,10 +321,7 @@ export function extractAiReferences(text) {
  * `fileExists` (defaults to a real filesystem check rooted at `ROOT`) and returns every
  * dangling `{ file, ref }` pair. Takes an injectable `fileExists` so this stays unit-testable
  * without touching disk. */
-export function findDanglingAiReferences(
-  fileContents,
-  fileExists = (relPath) => existsSync(path.join(ROOT, relPath)),
-) {
+export function findDanglingAiReferences(fileContents, fileExists = (relPath) => existsSync(path.join(ROOT, relPath))) {
   const dangling = [];
   for (const [file, content] of Object.entries(fileContents)) {
     for (const ref of extractAiReferences(content)) {
@@ -233,6 +337,7 @@ export async function main({ check = false } = {}) {
   const mergedPackages = mergePackageData(curatedPackages, livePackages);
   const tasks = readAiTasks();
   assertValidTasks(tasks);
+  assertTaskReferencesExist(tasks);
 
   let stale = false;
   const onStale = (message) => {
@@ -278,5 +383,3 @@ if (isMain(import.meta.url)) {
   const ok = await main({ check: Boolean(flags.check) });
   if (!ok) process.exitCode = 1;
 }
-
-

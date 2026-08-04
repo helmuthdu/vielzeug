@@ -4,7 +4,20 @@ description: Chord-aware keyboard shortcut manager with context guards, modifier
 package: keymap
 category: app-infrastructure
 keywords: [keyboard, shortcuts, hotkeys, chord, keybinding, headless, accessibility]
-exports: [canonicalizeShortcut, createKeymap, createKeymapLayer, detectModKey, findShortcutConflicts, formatShortcut, KeymapError, KeymapParseError, matchStep, parseShortcut, parseStep]
+exports:
+  [
+    canonicalizeShortcut,
+    createKeymap,
+    createKeymapLayer,
+    detectModKey,
+    findShortcutConflicts,
+    formatShortcut,
+    KeymapError,
+    KeymapParseError,
+    matchStep,
+    parseShortcut,
+    parseStep,
+  ]
 related: [herald, refine, ore]
 environments: [browser, node, ssr, deno]
 ---
@@ -17,21 +30,35 @@ environments: [browser, node, ssr, deno]
 
 Browser keyboard handling is error-prone: modifier key normalisation, platform differences (`ctrl` vs `meta`), chord sequences, and cleanup all require boilerplate. Keymap handles all of it in a headless, zero-dependency package.
 
-| Feature              | Raw `addEventListener`                       | Keymap                                                    |
-| -------------------- | -------------------------------------------- | --------------------------------------------------------- |
-| Bundle size          | 0 B (built-in)                               | <PackageInfo package="keymap" type="size" />              |
-| Zero dependencies    | <ore-icon name="check" size="16"></ore-icon>   | <ore-icon name="check" size="16"></ore-icon>                |
-| Chord sequences      | <ore-icon name="x" size="16"></ore-icon>       | <ore-icon name="check" size="16"></ore-icon>                |
-| Modifier aliases     | <ore-icon name="x" size="16"></ore-icon>       | `cmd`, `win`, `option` → canonical                        |
-| Context guards       | Manual `if` in handler                       | `when()` predicate per keymap                             |
-| Headless / SSR-safe  | DOM required                                 | <ore-icon name="check" size="16"></ore-icon>                |
-| Disposable           | Manual `removeEventListener`                 | `dispose()` + `using`                                     |
+```ts
+// Before
+window.addEventListener('keydown', (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key === 's') event.preventDefault();
+});
+
+// After
+import { createKeymap } from '@vielzeug/keymap';
+
+const save = () => console.log('save');
+const map = createKeymap({ 'mod+s': save });
+const unmount = map.mount(document);
+```
+
+| Feature             | Raw `addEventListener`                       | Keymap                                       |
+| ------------------- | -------------------------------------------- | -------------------------------------------- |
+| Bundle size         | 0 B (built-in)                               | <PackageInfo package="keymap" type="size" /> |
+| Zero dependencies   | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Chord sequences     | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon> |
+| Modifier aliases    | <ore-icon name="x" size="16"></ore-icon>     | `cmd`, `win`, `option` → canonical           |
+| Context guards      | Manual `if` in handler                       | `when()` predicate per keymap                |
+| Headless / SSR-safe | DOM required                                 | <ore-icon name="check" size="16"></ore-icon> |
+| Disposable          | Manual `removeEventListener`                 | `dispose()` + `using`                        |
 
 <div class="decision-callout">
 
 **Use Keymap when** you need chord sequences (`g g`, `ctrl+k ctrl+s`), modifier aliases, or context-scoped hotkeys that can be cleanly mounted and unmounted.
 
-**Stick with raw `addEventListener` when** you have a single, static, never-removed hotkey and don't need chords.
+**Consider raw `addEventListener` when** you have a single, static, never-removed hotkey and don't need chords.
 
 </div>
 
@@ -58,17 +85,22 @@ yarn add @vielzeug/keymap
 ```ts
 import { createKeymap } from '@vielzeug/keymap';
 
+const save = () => console.log('save');
+const openPalette = () => console.log('palette');
+const goToTop = () => window.scrollTo({ top: 0 });
+const closePanel = () => console.log('close');
+
 const map = createKeymap({
   'ctrl+k ctrl+s': () => save(),
-  'meta+shift+p':  () => openPalette(),
-  'g g':           () => goToTop(),
-  'escape':        () => closePanel(),
+  'meta+shift+p': () => openPalette(),
+  'g g': () => goToTop(),
+  escape: () => closePanel(),
 });
 
 const unmount = map.mount(document);
 
 // Later:
-unmount();     // remove from this target only
+unmount(); // remove from this target only
 map.dispose(); // or: using map = createKeymap(…)
 ```
 

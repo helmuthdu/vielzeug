@@ -69,15 +69,15 @@ const chart = createLineChart(document.getElementById('chart')!, {
 data.value = [...data.value, { key: 4, value: 65 }];
 ```
 
-| Feature            | Prism                                      | Chart.js                               | Lightweight Charts                         | D3                                         |
-| ------------------ | ------------------------------------------ | -------------------------------------- | ------------------------------------------ | ------------------------------------------ |
-| Bundle size        | ~8 kB                                      | ~60 kB                                 | ~45 kB                                     | ~30 kB (core)                              |
-| Renderer           | SVG                                        | Canvas                                 | Canvas                                     | SVG/Canvas                                 |
-| Zero external deps | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| CSS themeable      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Limited                                    | <ore-icon name="check" size="16"></ore-icon> |
+| Feature            | Prism                                        | Chart.js                                 | Lightweight Charts                           | D3                                           |
+| ------------------ | -------------------------------------------- | ---------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Bundle size        | <PackageInfo package="prism" type="size" />  | ~60 kB                                   | ~45 kB                                       | ~30 kB (core)                                |
+| Renderer           | SVG                                          | Canvas                                   | Canvas                                       | SVG/Canvas                                   |
+| Zero dependencies  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| CSS themeable      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Limited                                      | <ore-icon name="check" size="16"></ore-icon> |
 | Reactive (signals) | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
-| Accessible SVG     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | Manual                                     |
-| TypeScript-first   | <ore-icon name="check" size="16"></ore-icon> | Partial                                | <ore-icon name="check" size="16"></ore-icon> | Types available                            |
+| Accessible SVG     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | Manual                                       |
+| TypeScript-first   | <ore-icon name="check" size="16"></ore-icon> | Partial                                  | <ore-icon name="check" size="16"></ore-icon> | Types available                              |
 
 <div class="decision-callout">
 
@@ -162,10 +162,10 @@ chart.dispose();
 
 ## Sub-paths
 
-| Import                     | Purpose                                                             |
-| -------------------------- | -------------------------------------------------------------------- |
-| `@vielzeug/prism`          | All chart factories, scales, and types                               |
-| `@vielzeug/prism/theme`    | Default CSS (custom properties + dark mode)                          |
+| Import                     | Purpose                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| `@vielzeug/prism`          | All chart factories, scales, and types                                               |
+| `@vielzeug/prism/theme`    | Default CSS (custom properties + dark mode)                                          |
 | `@vielzeug/prism/devtools` | `debugChart()` — opt-in `console.debug` lifecycle logging, tree-shaken in production |
 
 ## Documentation
