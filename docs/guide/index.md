@@ -313,7 +313,7 @@ const api = await container.resolve(ApiToken);
 | **[Scout](/scout/)**             | Trigram fuzzy search with per-field weights, reactive query state, and match highlighting          |
 | **[Sourcerer](/sourcerer/)**     | Typed data-source adapter for pagination, filtering, sorting, search, and infinite scroll          |
 | **[Pulse](/pulse/)**             | Typed WebSocket client with channel multiplexing, presence tracking, and auto-reconnect            |
-| **[Lingua](/lingua/)**           | I18n with typed translations, pluralization, namespace lazy-loading, and SSR support               |
+| **[Lingua](/lingua/)**           | Typed translations, pluralization, lazy locale catalogs, and SSR support                           |
 | **[Herald](/herald/)**           | Typed event bus — pub/sub with namespaces, wildcards, and once-listeners                           |
 | **[Keymap](/keymap/)**           | Headless keyboard shortcut manager with chord sequences, modifier aliases, and context guards      |
 | **[Ledger](/ledger/)**           | Async undo/redo command history with Ripple signals for reactive `canUndo`/`canRedo` state         |

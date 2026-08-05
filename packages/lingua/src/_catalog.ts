@@ -66,13 +66,3 @@ export function compileCatalog(catalog: Catalog): CompiledCatalog {
 
   return messages;
 }
-
-export function mergeCatalogs(catalogs: Iterable<CompiledCatalog>): CompiledCatalog {
-  const merged = new Map<string, CompiledMessage>();
-
-  for (const catalog of catalogs) {
-    for (const [key, message] of catalog) merged.set(key, message);
-  }
-
-  return merged;
-}

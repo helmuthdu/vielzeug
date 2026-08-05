@@ -53,7 +53,7 @@ describe('createTranslator', () => {
       onMissingValue: (name) => `<${name}>`,
     });
 
-    expect(translator.translate('unknown')).toBe('[unknown]');
+    expect(translator.translateDynamic('unknown')).toBe('[unknown]');
     expect(translator.translate('error')).toBe('Try <retry>.');
   });
 
@@ -70,6 +70,12 @@ describe('createTranslator', () => {
     catalog.en.greeting = 'Changed';
 
     expect(translator.translate('greeting')).toBe('Hello');
+  });
+
+  test('looks up dynamic keys only through the explicit escape hatch', () => {
+    const translator = createTranslator(catalogs, { locale: 'en' });
+
+    expect(translator.translateDynamic('missing')).toBe('missing');
   });
 
   test('rejects malformed and unsafe catalog nodes at the resource boundary', () => {

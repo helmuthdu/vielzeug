@@ -1,38 +1,33 @@
 ---
 title: 'Lingua Examples — SSR Hydration'
-description: Transfer resolved locale catalogs from a server store to a client store.
+description: Transfer resolved locale catalogs from server store to client store.
 ---
 
 ## SSR Hydration
 
 ### Problem
 
-You need server-rendered translation output and matching client state without shipping resource loader functions in page data. Use `serialize()` on server and `hydrateI18n()` on client.
+You need server-rendered translation output and matching client state without shipping catalog loaders in page data. Use `serialize()` on server and `hydrateTranslationStore()` on client.
 
 ### Solution
 
-Create server state from resolved resources, then build a client store from that payload.
+Create server state from loaded catalogs, then build client store from payload.
 
 ```ts
-import { createI18n, hydrateI18n } from '@vielzeug/lingua';
+import { createTranslationStore, hydrateTranslationStore } from '@vielzeug/lingua';
 
-const serverI18n = createI18n({
+const serverI18n = createTranslationStore({
+  catalogs: { en: { title: 'Server title' } },
   locale: 'en',
-  resources: {
-    core: { en: { title: 'Server title' } },
-    settings: { en: { heading: 'Settings' } },
-  },
 });
 
 try {
-  await serverI18n.load('settings');
   const state = serverI18n.serialize();
   const payload = JSON.stringify(state);
-  const clientI18n = hydrateI18n(JSON.parse(payload) as typeof state);
+  const clientI18n = hydrateTranslationStore(JSON.parse(payload) as typeof state);
 
   try {
     console.log(clientI18n.translate('title'));
-    console.log(clientI18n.translate('heading'));
   } finally {
     clientI18n.dispose();
   }
@@ -43,12 +38,12 @@ try {
 
 ### Pitfalls
 
-- Serialize only after required optional resources resolve.
+- Serialize after needed lazy catalog resolves.
 - Do not expect loader functions in hydrated state; state contains raw catalogs only.
-- Pass fallback and missing-message handlers to `hydrateI18n()` when client behavior differs from defaults.
+- Pass fallback and missing-message handlers to `hydrateTranslationStore()` when client behavior differs from defaults.
 
 ### Related
 
-- [Feature resources](./feature-resources.md)
+- [Lazy locale catalog](./feature-resources.md)
 - [Static translator](./static-translator.md)
 - [SSR State usage](../usage.md#ssr-state)

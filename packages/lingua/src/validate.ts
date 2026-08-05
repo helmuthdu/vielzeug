@@ -26,7 +26,7 @@ export function validateCatalog(catalog: Catalog, locale: Locale): ValidationIss
 
     if (isPluralMessage(node)) {
       for (const missing of categories) {
-        if (!node.plural[missing]) issues.push({ key, locale: canonical, missing });
+        if (!Object.hasOwn(node.plural, missing)) issues.push({ key, locale: canonical, missing });
       }
 
       return;

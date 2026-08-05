@@ -1,15 +1,12 @@
 export const storeExample = {
-  code: `import { createI18n } from '@vielzeug/lingua'
+  code: `import { createTranslationStore } from '@vielzeug/lingua'
 
-// Subscribe to immutable translator snapshots as locale changes.
-const i18n = createI18n({
-  locale: 'en',
-  resources: {
-    core: {
-      en: { save: 'Save' },
-      fr: { save: 'Enregistrer' },
-    },
+const i18n = createTranslationStore({
+  catalogs: {
+    en: { save: 'Save' },
+    fr: { save: 'Enregistrer' },
   },
+  locale: 'en',
 })
 
 i18n.subscribe(({ locale, translator }) => {

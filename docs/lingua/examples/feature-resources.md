@@ -1,40 +1,34 @@
 ---
-title: 'Lingua Examples — Feature Resources'
-description: Load optional locale resources when a feature becomes available.
+title: 'Lingua Examples — Lazy Locale Catalog'
+description: Load a locale catalog only when locale becomes active.
 ---
 
-## Feature Resources
+## Lazy Locale Catalog
 
 ### Problem
 
-You want route or feature strings to load on demand without a separate namespace registry. Declare feature resources once, then load them through the same i18n store.
+You want bundled default language and on-demand catalogs for other locales without namespace lifecycle or merge rules.
 
 ### Solution
 
-Declare `settings` beside `core`, load it for active locale, and request it while switching locale.
+Declare one catalog source per locale. Switch locale, then load it explicitly.
 
 ```ts
-import { createI18n } from '@vielzeug/lingua';
+import { createTranslationStore } from '@vielzeug/lingua';
 
-const i18n = createI18n({
-  locale: 'en',
-  resources: {
-    core: {
-      en: { navigation: { settings: 'Settings' } },
-      fr: { navigation: { settings: 'Réglages' } },
-    },
-    settings: {
-      en: async () => ({ title: 'Settings' }),
-      fr: async () => ({ title: 'Réglages' }),
-    },
+const i18n = createTranslationStore({
+  catalogs: {
+    en: { title: 'Settings' },
+    fr: async () => ({ title: 'Réglages' }),
   },
+  locale: 'en',
 });
 
 try {
-  await i18n.load('settings');
   console.log(i18n.translate('title'));
 
-  await i18n.setLocale('fr', { load: ['settings'] });
+  await i18n.setLocale('fr');
+  await i18n.load();
   console.log(i18n.translate('title'));
 } finally {
   i18n.dispose();
@@ -43,9 +37,9 @@ try {
 
 ### Pitfalls
 
-- Declare a source for every locale you load for each feature resource.
-- Load optional resources before rendering their keys.
-- Order resource declarations intentionally; later resources override earlier duplicate keys.
+- Declare source for every locale selected at runtime.
+- Load a lazy catalog before rendering its translations.
+- Keep each locale catalog complete for required keys.
 
 ### Related
 

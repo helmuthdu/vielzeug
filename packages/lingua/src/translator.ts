@@ -16,21 +16,20 @@ import { LinguaInvalidPluralCountError } from './errors';
 
 export type Translator<C extends Catalog = Catalog> = {
   readonly locale: Locale;
-  segments<V>(
-    key: TextKey<C> | (string & {}),
-    options: TranslateOptions & { values: Record<string, V> },
-  ): Array<string | V>;
-  segments<V>(
-    key: PluralKey<C> | (string & {}),
-    options: PluralOptions & { values?: Record<string, V> },
+  segments<V>(key: TextKey<C>, options: TranslateOptions & { values: Record<string, V> }): Array<string | V>;
+  segments<V>(key: PluralKey<C>, options: PluralOptions & { values?: Record<string, V> }): Array<string | number | V>;
+  segmentsDynamic<V>(
+    key: string,
+    options: (TranslateOptions | PluralOptions) & { values?: Record<string, V> },
   ): Array<string | number | V>;
-  translate(key: TextKey<C> | (string & {}), options?: TranslateOptions): string;
-  translate(key: PluralKey<C> | (string & {}), options: PluralOptions): string;
+  translate(key: TextKey<C>, options?: TranslateOptions): string;
+  translate(key: PluralKey<C>, options: PluralOptions): string;
+  translateDynamic(key: string, options?: TranslateOptions | PluralOptions): string;
 };
 
 type ResolvedMessage = { readonly locale: Locale; readonly message: CompiledMessage };
 
-function createTranslatorFromCompiled<C extends Catalog>(
+export function createTranslatorFromCompiled<C extends Catalog>(
   catalogs: ReadonlyMap<Locale, CompiledCatalog>,
   options: TranslatorOptions = {},
 ): Translator<C> {
@@ -84,25 +83,38 @@ function createTranslatorFromCompiled<C extends Catalog>(
   const valuesFor = (options: TranslateOptions | PluralOptions): Record<string, unknown> =>
     'count' in options ? { count: options.count, ...options.values } : (options.values ?? {});
 
+  const segmentsDynamic = <V>(
+    key: string,
+    options: (TranslateOptions | PluralOptions) & { values?: Record<string, V> },
+  ): Array<string | number | V> => {
+    const found = templateFor(key, options);
+
+    if (!found) return [missingKey(key, locale)];
+
+    return renderSegments(found.template, valuesFor(options) as Record<string, V | number>, (name) =>
+      missingValue(name, found.key, locale),
+    );
+  };
+
+  const translateDynamic = (key: string, options: TranslateOptions | PluralOptions = {}): string => {
+    const found = templateFor(key, options);
+
+    if (!found) return missingKey(key, locale);
+
+    return renderText(found.template, valuesFor(options), (name) => missingValue(name, found.key, locale));
+  };
+
   return {
     locale,
-    segments<V>(key: string, options: (TranslateOptions | PluralOptions) & { values?: Record<string, V> }) {
-      const found = templateFor(key, options);
-
-      if (!found) return [missingKey(key, locale)];
-
-      return renderSegments(found.template, valuesFor(options) as Record<string, V | number>, (name) =>
-        missingValue(name, found.key, locale),
-      );
+    segments(key: string, options: (TranslateOptions | PluralOptions) & { values?: Record<string, unknown> }) {
+      return segmentsDynamic(key, options);
     },
+    segmentsDynamic,
     translate(key: string, options: TranslateOptions | PluralOptions = {}) {
-      const found = templateFor(key, options);
-
-      if (!found) return missingKey(key, locale);
-
-      return renderText(found.template, valuesFor(options), (name) => missingValue(name, found.key, locale));
+      return translateDynamic(key, options);
     },
-  };
+    translateDynamic,
+  } as Translator<C>;
 }
 
 export function createTranslator<C extends Catalog>(catalogs: Catalogs<C>, options?: TranslatorOptions): Translator<C> {
@@ -114,5 +126,3 @@ export function createTranslator<C extends Catalog>(catalogs: Catalogs<C>, optio
 
   return createTranslatorFromCompiled<C>(compiled, options);
 }
-
-export { createTranslatorFromCompiled };

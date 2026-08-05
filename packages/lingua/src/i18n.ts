@@ -1,72 +1,44 @@
-import type {
-  Catalog,
-  I18nOptions,
-  I18nState,
-  Locale,
-  ResourceCatalog,
-  Resources,
-  PluralKey,
-  PluralOptions,
-  SubscribeOptions,
-  TextKey,
-  TranslateOptions,
-} from './types';
+import type { Catalog, TranslationStoreOptions, TranslationState, Locale, SubscribeOptions } from './types';
 
 import { error as logError } from './_dev';
-import { canonicalLocale } from './_locale';
-import { createResourceStore } from './_resources';
+import { canonicalLocale, localeChain } from './_locale';
+import { createCatalogStore } from './_resources';
 import { LinguaDisposedError, LinguaInvalidStateError } from './errors';
 import { type Translator, createTranslatorFromCompiled } from './translator';
 
-export type I18nSnapshot<C extends Catalog = Catalog> = {
+export type TranslationSnapshot<C extends Catalog = Catalog> = {
   readonly locale: Locale;
   readonly revision: number;
   readonly translator: Translator<C>;
 };
 
-export type I18n<C extends Catalog = Catalog> = {
+export type TranslationStore<C extends Catalog = Catalog> = Translator<C> & {
   [Symbol.dispose](): void;
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
-  getSnapshot(): I18nSnapshot<C>;
-  isLoaded(resource: string, options?: { locale?: Locale }): boolean;
-  load(resource: string, options?: { locale?: Locale }): Promise<void>;
-  readonly locale: Locale;
-  segments<V>(
-    key: TextKey<C> | (string & {}),
-    options: TranslateOptions & { values: Record<string, V> },
-  ): Array<string | V>;
-  segments<V>(
-    key: PluralKey<C> | (string & {}),
-    options: PluralOptions & { values?: Record<string, V> },
-  ): Array<string | number | V>;
-  serialize(): I18nState<C>;
-  setLocale(locale: Locale, options?: { load?: readonly string[] }): Promise<void>;
-  subscribe(listener: (snapshot: I18nSnapshot<C>) => void, options?: SubscribeOptions): () => void;
-  translate(key: TextKey<C> | (string & {}), options?: TranslateOptions): string;
-  translate(key: PluralKey<C> | (string & {}), options: PluralOptions): string;
+  getSnapshot(): TranslationSnapshot<C>;
+  isLoaded(options?: { locale?: Locale }): boolean;
+  load(options?: { locale?: Locale }): Promise<void>;
+  serialize(): TranslationState<C>;
+  setLocale(locale: Locale): Promise<void>;
+  subscribe(listener: (snapshot: TranslationSnapshot<C>) => void, options?: SubscribeOptions): () => void;
 };
 
-export function createI18n<R extends Resources>(
-  options: Omit<I18nOptions<ResourceCatalog<R>>, 'resources'> & { resources: R & Resources<ResourceCatalog<R>> },
-): I18n<ResourceCatalog<R>>;
-export function createI18n<C extends Catalog>(options: I18nOptions<C>): I18n<C>;
-export function createI18n(options: I18nOptions<Catalog>): I18n<Catalog> {
-  type C = Catalog;
-
-  const resources = createResourceStore<C>(options.resources);
+export function createTranslationStore<C extends Catalog>(options: TranslationStoreOptions<C>): TranslationStore<C> {
+  const catalogs = createCatalogStore(options.catalogs);
   const fallback = options.fallback;
+  const fallbackLocales = (Array.isArray(fallback) ? fallback : fallback ? [fallback] : []).map(canonicalLocale);
   const controller = new AbortController();
-  const subscribers = new Set<(snapshot: I18nSnapshot<C>) => void>();
+  const subscribers = new Set<(snapshot: TranslationSnapshot<C>) => void>();
   let disposed = false;
   let locale = canonicalLocale(options.locale ?? 'en');
   let revision = 0;
 
-  const buildSnapshot = (): I18nSnapshot<C> => ({
+  const buildSnapshot = (): TranslationSnapshot<C> => ({
     locale,
     revision,
-    translator: createTranslatorFromCompiled<C>(resources.catalogMap(), { ...options, fallback, locale }),
+    translator: createTranslatorFromCompiled<C>(catalogs.catalogMap(), { ...options, fallback, locale }),
   });
   let snapshot = buildSnapshot();
 
@@ -82,7 +54,7 @@ export function createI18n(options: I18nOptions<Catalog>): I18n<Catalog> {
     controller.abort();
   };
 
-  const dispatch = (listener: (snapshot: I18nSnapshot<C>) => void): void => {
+  const dispatch = (listener: (next: TranslationSnapshot<C>) => void): void => {
     try {
       listener(snapshot);
     } catch (error) {
@@ -97,7 +69,7 @@ export function createI18n(options: I18nOptions<Catalog>): I18n<Catalog> {
     for (const listener of [...subscribers]) dispatch(listener);
   };
 
-  const relevant = (candidate: Locale): boolean => snapshot.translator.locale === candidate || candidate === locale;
+  const relevant = (candidate: Locale): boolean => localeChain(locale, fallbackLocales).includes(candidate);
 
   return {
     get disposalSignal() {
@@ -110,38 +82,38 @@ export function createI18n(options: I18nOptions<Catalog>): I18n<Catalog> {
     getSnapshot() {
       return snapshot;
     },
-    isLoaded(resource, loadOptions) {
-      return !disposed && resources.isLoaded(resource, loadOptions?.locale ?? locale);
+    isLoaded(loadOptions) {
+      return !disposed && catalogs.isLoaded(loadOptions?.locale ?? locale);
     },
-    async load(resource, loadOptions) {
+    async load(loadOptions) {
       assertLive();
 
       const targetLocale = canonicalLocale(loadOptions?.locale ?? locale);
-      const changed = await resources.load(resource, targetLocale);
+      const changed = await catalogs.load(targetLocale);
 
       if (!disposed && changed && relevant(targetLocale)) notify();
     },
     get locale() {
       return locale;
     },
-    segments(key: string, translateOptions: TranslateOptions | PluralOptions) {
-      return snapshot.translator.segments(key, translateOptions as never);
+    segments(key: string, translateOptions) {
+      return snapshot.translator.segmentsDynamic(key, translateOptions);
+    },
+    segmentsDynamic(key, translateOptions) {
+      return snapshot.translator.segmentsDynamic(key, translateOptions);
     },
     serialize() {
       assertLive();
 
-      return resources.state(locale);
+      return catalogs.state(locale);
     },
-    async setLocale(nextLocale, setOptions) {
+    async setLocale(nextLocale) {
       assertLive();
 
       const next = canonicalLocale(nextLocale);
 
-      for (const resource of ['core', ...(setOptions?.load ?? [])]) {
-        if (options.resources[resource]) await resources.load(resource, next);
-      }
+      if (next === locale) return;
 
-      assertLive();
       locale = next;
       notify();
     },
@@ -163,19 +135,22 @@ export function createI18n(options: I18nOptions<Catalog>): I18n<Catalog> {
       return unsubscribe;
     },
     [Symbol.dispose]: dispose,
-    translate(key: string, translateOptions: TranslateOptions | PluralOptions = {}) {
-      return snapshot.translator.translate(key, translateOptions as never);
+    translate(key: string, translateOptions = {}) {
+      return snapshot.translator.translateDynamic(key, translateOptions);
     },
-  };
+    translateDynamic(key, translateOptions) {
+      return snapshot.translator.translateDynamic(key, translateOptions);
+    },
+  } as TranslationStore<C>;
 }
 
-export function hydrateI18n<C extends Catalog>(
-  state: I18nState<C>,
-  options?: Omit<I18nOptions<C>, 'locale' | 'resources'>,
-): I18n<C> {
-  if (state.version !== 2) {
+export function hydrateTranslationStore<C extends Catalog>(
+  state: TranslationState<C>,
+  options?: Omit<TranslationStoreOptions<C>, 'locale' | 'catalogs'>,
+): TranslationStore<C> {
+  if (state.version !== 3) {
     throw new LinguaInvalidStateError(`Unsupported lingua state version: ${String(state.version)}.`);
   }
 
-  return createI18n({ ...options, locale: state.locale, resources: state.resources });
+  return createTranslationStore({ ...options, catalogs: state.catalogs, locale: state.locale });
 }

@@ -38,6 +38,34 @@ const main = async () => {
     }
   }
 
+  const requiredExports = {
+    '.': [
+      'LinguaDisposedError',
+      'LinguaError',
+      'LinguaInvalidCatalogError',
+      'LinguaInvalidLocaleError',
+      'LinguaInvalidPluralCountError',
+      'LinguaInvalidStateError',
+      'LinguaMissingCatalogError',
+      'createTranslationStore',
+      'createTranslator',
+      'hydrateTranslationStore',
+    ],
+    './format': ['createFormatter'],
+    './validate': ['validateCatalog'],
+  };
+
+  for (const [subpath, names] of Object.entries(requiredExports)) {
+    const { import: esmEntry, require: cjsEntry } = packageJson.exports[subpath];
+    const esm = await import(pathToFileURL(path.join(packageRoot, esmEntry)).href);
+    const cjs = requireFromPackage(path.join(packageRoot, cjsEntry));
+
+    for (const name of names) {
+      if (!(name in esm)) failures.push(`${subpath} ESM export missing: ${name}`);
+      if (!(name in cjs)) failures.push(`${subpath} CJS export missing: ${name}`);
+    }
+  }
+
   if (failures.length > 0) {
     console.error('Broken package exports (built dist does not match package.json "exports"):');
 

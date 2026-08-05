@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/lingua",
   "version": "1.1.4",
-  "description": "Explicit typed localization with pluralization, declarative resources, and SSR hydration",
+  "description": "Explicit typed localization with pluralization, lazy locale catalogs, and SSR hydration",
   "type": "module",
   "files": [
     "dist"

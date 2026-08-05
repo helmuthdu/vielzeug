@@ -14,21 +14,12 @@ export type Catalog = {
 };
 
 export type Catalogs<C extends Catalog = Catalog> = Record<Locale, C>;
-
-export type ResourceLoader<C extends Catalog = Catalog> = () => Promise<C>;
-export type ResourceSource<C extends Catalog = Catalog> = C | ResourceLoader<C>;
-export type ResourceDefinition<C extends Catalog = Catalog> = Record<Locale, ResourceSource<C>>;
-/** Resource declarations may contain static catalogs or lazy loaders. */
-export type Resources<C extends Catalog = Catalog> = Record<string, ResourceDefinition<C>>;
-type SourceCatalog<S> = S extends ResourceLoader<infer C> ? C : S extends Catalog ? S : never;
-/** Union of static and lazy catalog shapes declared across all resources. */
-export type ResourceCatalog<R extends Resources = Resources> = {
-  [Resource in keyof R]: {
-    [ResourceLocale in keyof R[Resource]]: SourceCatalog<R[Resource][ResourceLocale]>;
-  }[keyof R[Resource]];
-}[keyof R];
+export type CatalogLoader<C extends Catalog = Catalog> = () => Promise<C>;
+export type CatalogSource<C extends Catalog = Catalog> = C | CatalogLoader<C>;
+/** Locale declarations may contain static catalogs or lazy loaders. */
+export type CatalogSources<C extends Catalog = Catalog> = Record<Locale, CatalogSource<C>>;
 /** Resolved catalog payload used for SSR serialization and hydration. */
-export type LoadedResources<C extends Catalog = Catalog> = Record<string, Record<Locale, C>>;
+export type LoadedCatalogs<C extends Catalog = Catalog> = Catalogs<C>;
 
 export type MessageKey<
   C,
@@ -95,12 +86,12 @@ export type SubscribeOptions = {
   signal?: AbortSignal;
 };
 
-export type I18nOptions<C extends Catalog = Catalog> = TranslatorOptions & {
-  resources: Resources<C>;
+export type TranslationStoreOptions<C extends Catalog = Catalog> = TranslatorOptions & {
+  catalogs: CatalogSources<C>;
 };
 
-export type I18nState<C extends Catalog = Catalog> = {
+export type TranslationState<C extends Catalog = Catalog> = {
+  readonly catalogs: LoadedCatalogs<C>;
   readonly locale: Locale;
-  readonly resources: LoadedResources<C>;
-  readonly version: 2;
+  readonly version: 3;
 };

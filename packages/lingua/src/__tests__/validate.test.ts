@@ -22,6 +22,10 @@ describe('validateCatalog', () => {
     expect(issues.map(({ missing }) => missing)).toEqual(expect.arrayContaining(['few', 'many', 'one', 'two', 'zero']));
   });
 
+  test('accepts empty plural templates as declared forms', () => {
+    expect(validateCatalog({ inbox: { plural: { one: '', other: '' } } }, 'en')).toEqual([]);
+  });
+
   test('uses compiler catalog validation for malformed catalog data', () => {
     expect(() => validateCatalog({ inbox: { plural: null } } as never, 'en')).toThrow(LinguaInvalidCatalogError);
   });

@@ -1,66 +1,41 @@
-import type { Catalog, I18nState, LoadedResources, Locale, Resources } from './types';
+import type { Catalog, CatalogSources, TranslationState, LoadedCatalogs, Locale } from './types';
 
-import { type CompiledCatalog, compileCatalog, mergeCatalogs } from './_catalog';
+import { type CompiledCatalog, compileCatalog } from './_catalog';
 import { canonicalLocale } from './_locale';
-import { LinguaMissingResourceError } from './errors';
+import { LinguaMissingCatalogError } from './errors';
 
-type LoadedResourceMap<C extends Catalog> = Map<
-  Locale,
-  Map<string, { readonly catalog: C; readonly compiled: CompiledCatalog }>
->;
+/** One catalog state machine owns static sources, lazy sources, and in-flight work. */
+export function createCatalogStore<C extends Catalog>(sources: CatalogSources<C>) {
+  const definitions = new Map<Locale, C | (() => Promise<C>)>();
+  const loaded = new Map<Locale, { readonly catalog: C; readonly compiled: CompiledCatalog }>();
+  const tasks = new Map<Locale, Promise<void>>();
 
-/** One resource state machine owns static sources, lazy sources, and in-flight work. */
-export function createResourceStore<C extends Catalog>(resources: Resources<C>) {
-  const definitions = new Map<string, Map<Locale, C | (() => Promise<C>)>>();
-  // Declaration order is merge precedence. Async completion order must never alter output.
-  const resourceOrder = Object.keys(resources);
-  const loaded: LoadedResourceMap<C> = new Map();
-  const tasks = new Map<string, Promise<void>>();
+  for (const [locale, source] of Object.entries(sources)) definitions.set(canonicalLocale(locale), source);
 
-  for (const [resource, sources] of Object.entries(resources)) {
-    const normalized = new Map<Locale, C | (() => Promise<C>)>();
-
-    for (const [locale, source] of Object.entries(sources)) normalized.set(canonicalLocale(locale), source);
-
-    definitions.set(resource, normalized);
-  }
-
-  const add = (resource: string, locale: Locale, catalog: C): void => {
-    let localeResources = loaded.get(locale);
-
-    if (!localeResources) {
-      localeResources = new Map();
-      loaded.set(locale, localeResources);
-    }
-
-    localeResources.set(resource, { catalog, compiled: compileCatalog(catalog) });
+  const add = (locale: Locale, catalog: C): void => {
+    loaded.set(locale, { catalog, compiled: compileCatalog(catalog) });
   };
 
-  for (const [resource, sources] of definitions) {
-    for (const [locale, source] of sources) {
-      if (typeof source !== 'function') add(resource, locale, source);
-    }
+  for (const [locale, source] of definitions) {
+    if (typeof source !== 'function') add(locale, source);
   }
 
-  const load = async (resource: string, requestedLocale: Locale): Promise<boolean> => {
+  const load = async (requestedLocale: Locale): Promise<boolean> => {
     const locale = canonicalLocale(requestedLocale);
 
-    if (loaded.get(locale)?.has(resource)) return false;
+    if (loaded.has(locale)) return false;
 
-    const source = definitions.get(resource)?.get(locale);
+    const source = definitions.get(locale);
 
-    if (!source) {
-      throw new LinguaMissingResourceError(`Resource "${resource}" has no source for locale "${locale}".`);
-    }
+    if (!source) throw new LinguaMissingCatalogError(`Catalog has no source for locale "${locale}".`);
 
     if (typeof source !== 'function') {
-      add(resource, locale, source);
+      add(locale, source);
 
       return true;
     }
 
-    const key = `${resource}:${locale}`;
-    const existing = tasks.get(key);
+    const existing = tasks.get(locale);
 
     if (existing) {
       await existing;
@@ -70,16 +45,16 @@ export function createResourceStore<C extends Catalog>(resources: Resources<C>) 
 
     const task = source().then(
       (catalog) => {
-        add(resource, locale, catalog);
-        tasks.delete(key);
+        add(locale, catalog);
+        tasks.delete(locale);
       },
       (error: unknown) => {
-        tasks.delete(key);
+        tasks.delete(locale);
         throw error;
       },
     );
 
-    tasks.set(key, task);
+    tasks.set(locale, task);
     await task;
 
     return true;
@@ -87,34 +62,18 @@ export function createResourceStore<C extends Catalog>(resources: Resources<C>) 
 
   return {
     catalogMap(): ReadonlyMap<Locale, CompiledCatalog> {
-      const catalogs = new Map<Locale, CompiledCatalog>();
-
-      for (const [locale, resourceCatalogs] of loaded) {
-        const fragments = resourceOrder.flatMap((resource) => {
-          const catalog = resourceCatalogs.get(resource);
-
-          return catalog ? [catalog.compiled] : [];
-        });
-
-        catalogs.set(locale, mergeCatalogs(fragments));
-      }
-
-      return catalogs;
+      return new Map([...loaded].map(([locale, { compiled }]) => [locale, compiled]));
     },
-    isLoaded(resource: string, locale: Locale): boolean {
-      return loaded.get(canonicalLocale(locale))?.has(resource) ?? false;
+    isLoaded(locale: Locale): boolean {
+      return loaded.has(canonicalLocale(locale));
     },
     load,
-    state(locale: Locale): I18nState<C> {
-      const stateResources: LoadedResources<C> = {};
+    state(locale: Locale): TranslationState<C> {
+      const catalogs: LoadedCatalogs<C> = {};
 
-      for (const [loadedLocale, resourceCatalogs] of loaded) {
-        for (const [resource, { catalog }] of resourceCatalogs) {
-          (stateResources[resource] ??= {})[loadedLocale] = catalog;
-        }
-      }
+      for (const [loadedLocale, { catalog }] of loaded) catalogs[loadedLocale] = catalog;
 
-      return { locale, resources: stateResources, version: 2 };
+      return { catalogs, locale, version: 3 };
     },
   };
 }

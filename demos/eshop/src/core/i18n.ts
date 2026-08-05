@@ -1,6 +1,6 @@
 import { stream } from '@vielzeug/flux';
 import { toSignal } from '@vielzeug/flux/ripple';
-import { createI18n } from '@vielzeug/lingua';
+import { createTranslationStore } from '@vielzeug/lingua';
 import { computed } from '@vielzeug/ripple';
 
 // ── Message catalog ──────────────────────────────────────────────────────────
@@ -533,9 +533,9 @@ const messages = {
 
 // ── Instance ─────────────────────────────────────────────────────────────────
 
-export const i18n = createI18n({
+export const i18n = createTranslationStore({
+  catalogs: messages,
   locale: 'en',
-  resources: { core: messages },
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -560,12 +560,12 @@ const localeBinding = toSignal(
 export const currentLocale = computed(() => localeBinding.value);
 
 /**
- * `i18n.translate()` itself isn't a ripple-reactive read — reading `currentLocale.value` here (even
+ * `i18n.translateDynamic()` itself isn't a ripple-reactive read — reading `currentLocale.value` here (even
  * though its value is unused) registers that dependency on every caller's behalf, so any
  * template binding built on `t()` re-evaluates the instant `setLocale()` runs.
  */
 export function t(key: string, vars?: Record<string, unknown>): string {
   void currentLocale.value;
 
-  return i18n.translate(key, { values: vars });
+  return i18n.translateDynamic(key, { values: vars });
 }

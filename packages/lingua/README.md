@@ -2,7 +2,7 @@
 
 > Explicit, framework-neutral localization for TypeScript.
 
-`@vielzeug/lingua` separates immutable translation from mutable locale resources. Text and plural messages have distinct catalog shapes; resource loading has one lifecycle.
+`@vielzeug/lingua` provides an immutable translator for fixed locales and a stateful i18n store for locale changes and optional lazy catalogs.
 
 ## Installation
 
@@ -13,28 +13,26 @@ pnpm add @vielzeug/lingua
 ## Quick Start
 
 ```ts
-import { createI18n } from '@vielzeug/lingua';
+import { createTranslationStore } from '@vielzeug/lingua';
 
-const i18n = createI18n({
-  locale: 'en',
-  resources: {
-    core: {
-      en: {
-        greeting: 'Hello, {name}!',
-        inbox: { plural: { one: 'One message', other: '{count} messages' } },
-      },
+const translations = createTranslationStore({
+  catalogs: {
+    en: {
+      greeting: 'Hello, {name}!',
+      inbox: { plural: { one: 'One message', other: '{count} messages' } },
     },
   },
+  locale: 'en',
 });
 
-i18n.translate('greeting', { values: { name: 'Ada' } });
-i18n.translate('inbox', { count: 3 });
+translations.translate('greeting', { values: { name: 'Ada' } });
+translations.translate('inbox', { count: 3 });
 ```
 
 ## Exports
 
-- `createTranslator` — immutable translation engine.
-- `createI18n` / `hydrateI18n` — reactive locale resources and SSR state.
+- `createTranslator` — immutable translation engine for fixed-locale catalogs.
+- `createTranslationStore` / `hydrateTranslationStore` — mutable locale state, lazy catalog loading, and SSR state.
 - `createFormatter` from `@vielzeug/lingua/format`.
 - `validateCatalog` from `@vielzeug/lingua/validate`.
 

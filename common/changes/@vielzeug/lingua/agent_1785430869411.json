@@ -1,17 +1,7 @@
 {
   "changes": [
     {
-      "comment": "feat: removed extend(), isRegistered(), isNamespaceRegistered(), Formatter.clear(), and the pipe-plural shorthand. has() is leaf-only by default (use { kind: 'branch' }). isLoaded()/isNamespaceLoaded() now throw on invalid locale tags. getSupportedLocales() takes { sorted }. I18nState is versioned. loadNamespace(ns, factory?, locale?) now does register+load in one call.",
-      "packageName": "@vielzeug/lingua",
-      "type": "minor"
-    },
-    {
-      "comment": "feat: createTranslator() \u2014 minimal static single-locale factory (t/ti/tp/tpi) for per-component catalogs, and ti()/tpi() segmented interpolation (mixed Array<string|V>, plus a raw-number count segment for tpi()) on Translator, I18n, and ScopedI18n",
-      "packageName": "@vielzeug/lingua",
-      "type": "minor"
-    },
-    {
-      "comment": "feat!: redesign localization around explicit catalogs and declarative resources",
+      "comment": "feat!: redesign localization around explicit locale catalogs. Replaces createI18n()/hydrateI18n() with createTranslationStore()/hydrateTranslationStore(), resources with catalogs, and I18n state version 2 with TranslationState version 3. Removes namespace/resource APIs and LinguaMissingResourceError. Use createTranslator() for fixed-locale translation.",
       "packageName": "@vielzeug/lingua",
       "type": "major"
     }

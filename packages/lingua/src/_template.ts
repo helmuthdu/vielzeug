@@ -30,7 +30,7 @@ export function renderText(
     .map((part) => {
       if (typeof part === 'string') return part;
 
-      const value = values[part.value];
+      const value = Object.hasOwn(values, part.value) ? values[part.value] : undefined;
 
       return value == null ? missing(part.value) : String(value);
     })
