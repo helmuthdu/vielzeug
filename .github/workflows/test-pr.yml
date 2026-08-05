@@ -10,12 +10,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── Verify change logs + build ────────────────────────────────────────────────
-  build:
-    name: Build
+  change-log:
+    name: Verify Change Logs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -26,13 +25,8 @@ jobs:
       - name: Verify change logs
         run: node common/scripts/install-run-rush.js change --verify
 
-      - name: Rush rebuild
-        run: node common/scripts/install-run-rush.js rebuild --verbose
-
-  # ── Test + Lint (parallel, both independent of build) ────────────────────────
   test-lint:
     name: Test & Lint
-    needs: build
     uses: ./.github/workflows/_test-lint.yml
     with:
       coverage: false

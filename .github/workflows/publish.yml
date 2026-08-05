@@ -28,11 +28,6 @@ on:
         description: 'mode=single only: package name (e.g. @vielzeug/coins). Must have a pending change file — run rush change locally first.'
         required: false
         type: string
-      build-first:
-        description: 'mode=missing only: build all packages before publishing'
-        required: false
-        default: true
-        type: boolean
       dry-run:
         description: 'Do everything except the actual npm publish / git tag / GitHub release'
         required: false
@@ -48,14 +43,25 @@ permissions:
   packages: write
 
 jobs:
+  verify-main:
+    name: Verify main ref
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "❌ Publishing can only run from main, not ${GITHUB_REF}."
+          exit 1
+
   prepare-single:
+    needs: verify-main
     if: inputs.mode == 'single'
     runs-on: ubuntu-latest
     outputs:
       folder: ${{ steps.project.outputs.folder }}
       version: ${{ steps.project.outputs.version }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -127,20 +133,21 @@ jobs:
             echo "🔄 Retry ${attempt}/3..."
           done
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: built-packages
           path: packages/
           retention-days: 1
 
   prepare-all:
+    needs: verify-main
     if: inputs.mode == 'all'
     runs-on: ubuntu-latest
     outputs:
       has-releases: ${{ steps.plan.outputs.has-releases }}
       matrix: ${{ steps.plan.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -193,7 +200,7 @@ jobs:
             echo "🔄 Retry ${attempt}/3..."
           done
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: built-packages
           path: packages/
@@ -243,6 +250,7 @@ jobs:
       version: ${{ matrix.version }}
 
   publish-missing:
+    needs: verify-main
     if: inputs.mode == 'missing'
     runs-on: ubuntu-latest
     # Requires manual approval — configure required reviewers under
@@ -254,7 +262,7 @@ jobs:
       packages: write
       id-token: write # required for npm Trusted Publishing (OIDC)
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
 
@@ -263,8 +271,7 @@ jobs:
           root-install: 'false'
 
       - name: Build all packages
-        if: inputs.build-first != 'false'
-        run: node common/scripts/install-run-rush.js build --verbose
+        run: node common/scripts/install-run-rush.js rebuild --verbose
 
       # See scripts/release/npm-publish.mjs for why there's no "configure npm registry" step
       # here — writing an .npmrc auth line breaks OIDC trusted publishing

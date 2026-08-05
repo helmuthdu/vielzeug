@@ -51,14 +51,25 @@ permissions:
   contents: write
 
 jobs:
+  verify-main:
+    name: Verify main ref
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "❌ Releasing can only run from main, not ${GITHUB_REF}."
+          exit 1
+
   # Node-only setup — this workflow never runs `npm publish`, so it doesn't need a full
   # rush/pnpm install, only enough Node to run the release CLI and resolve packages from
   # rush.json.
   release-single:
+    needs: verify-main
     if: inputs.mode == 'single'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -86,13 +97,14 @@ jobs:
         run: node scripts/release/cli.mjs tag-release "${{ inputs.package }}" "${{ inputs.version }}" "${{ steps.project.outputs.folder }}"
 
   prepare-all:
+    needs: verify-main
     if: inputs.mode == 'all'
     runs-on: ubuntu-latest
     outputs:
       has-releases: ${{ steps.plan.outputs.has-releases }}
       matrix: ${{ steps.plan.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -122,7 +134,7 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.prepare-all.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}

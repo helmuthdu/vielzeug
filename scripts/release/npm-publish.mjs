@@ -15,7 +15,7 @@
  * No `NPM_TOKEN` secret exists. Publishing relies entirely on npm's Trusted Publishing (OIDC):
  * npm CLI >= 11.5.1 auto-exchanges the GitHub Actions job's OIDC identity for a short-lived
  * publish token, provided a Trusted Publisher is registered on npmjs.com for that package, this
- * repo, and the exact workflow filename that runs `npm publish` (`_publish-one.yml`) — and
+ * repo, and the triggering workflow filename (`publish.yml`; see `.github/AGENTS.md`) — and
  * provided the caller job has `permissions: id-token: write`.
  *
  * The workflows never write an `.npmrc` auth line for this. `actions/setup-node`'s
@@ -69,6 +69,12 @@ function defaultSleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function assertPackedDist(files, folder) {
+  if (!Array.isArray(files) || !files.some(({ path: filePath }) => filePath.startsWith('dist/'))) {
+    throw new Error(`Refusing to publish ${folder}: npm pack did not include a dist artifact`);
+  }
+}
+
 /**
  * Rewrites `folder`'s package.json on disk to resolve `workspace:*` dependency specifiers into
  * real semver ranges, and returns a restore function that puts the original file content back.
@@ -98,7 +104,10 @@ export async function publishPackage(
   const restorePackageJson = resolveWorkspaceDeps(folder, { findProject });
   let filename;
   try {
-    [{ filename }] = JSON.parse(run('npm', ['pack', '--json'], { cwd: folder }));
+    const [packed] = JSON.parse(run('npm', ['pack', '--json'], { cwd: folder }));
+    assertPackedDist(packed?.files, folder);
+    if (typeof packed?.filename !== 'string') throw new Error(`npm pack did not return an artifact for ${folder}`);
+    filename = packed.filename;
   } finally {
     restorePackageJson();
   }

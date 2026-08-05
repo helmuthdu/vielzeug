@@ -6,8 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { publishPackage } from '../npm-publish.mjs';
 
-function packResult(filename) {
-  return JSON.stringify([{ filename }]);
+function packResult(filename, files = [{ path: 'dist/index.js' }]) {
+  return JSON.stringify([{ files, filename }]);
 }
 
 function conflictError() {
@@ -111,6 +111,23 @@ describe('publishPackage()', () => {
 
     expect(run).toHaveBeenCalledTimes(1);
     expect(run).toHaveBeenCalledWith('npm', ['pack', '--json'], { cwd: '/repo/packages/pkg' });
+  });
+
+  it('refuses to publish a tarball without dist artifacts', async () => {
+    const run = vi.fn().mockReturnValueOnce(packResult('pkg-1.0.0.tgz', [{ path: 'package.json' }]));
+
+    await expect(
+      publishPackage('/repo/packages/pkg', { resolveWorkspaceDeps: noopResolveWorkspaceDeps, run }),
+    ).rejects.toThrow('npm pack did not include a dist artifact');
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects malformed npm pack output', async () => {
+    const run = vi.fn().mockReturnValueOnce('[]');
+
+    await expect(
+      publishPackage('/repo/packages/pkg', { resolveWorkspaceDeps: noopResolveWorkspaceDeps, run }),
+    ).rejects.toThrow('npm pack did not include a dist artifact');
   });
 
   it('appends --otp when one is provided (2FA-for-writes accounts)', async () => {

@@ -108,7 +108,7 @@ async function main(argv) {
       }
       await publishPackage(folder, { dryRun, interactive: Boolean(flags.interactive), otp: flags.otp });
       tagAndRelease({ dryRun, folder, package: pkg, version });
-      console.log(`✅ Published ${pkg}@${version}`);
+      console.log(dryRun ? `[dry-run] validated ${pkg}@${version}` : `✅ Published ${pkg}@${version}`);
       return;
     }
 
