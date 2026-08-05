@@ -2,6 +2,27 @@
   "name": "@vielzeug/ripple",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/ripple_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "fix: fix sub-path export packaging, add disposalSignal lifecycle contract, deep-freeze store state, redesign SSR provider API, compile-time lens path validation",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          }
+        ],
+        "major": [
+          {
+            "comment": "refactor!: redesign reactive runtime and public API",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.3.0",
       "tag": "@vielzeug/ripple_v1.3.0",
       "date": "Sun, 26 Jul 2026 06:43:54 GMT",

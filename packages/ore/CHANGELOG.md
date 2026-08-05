@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+This log was last generated on Wed, 05 Aug 2026 16:48:52 GMT and should not be manually modified.
+
+## 2.0.0
+Wed, 05 Aug 2026 16:48:52 GMT
+
+### Breaking changes
+
+- refactor!: consolidate runtime APIs at the root; remove subpaths, model(), form-controller policy, onError recovery, and colon bindings; require synchronous setup and explicit unsafeHtml()
+
+### Minor changes
+
+- chore(ore): remove aria() (use bind({ aria }, { target })); live() now returns a per-binding wrapper (no global signal registry); HTMLResult public surface is mount-only; EmitFn is strictly typed (no string escape hatch); FormFieldHandle.setValidity removed (use setCustomValidity/internals); testing install() is now install(afterEach, { formInternals: true }) opt-in; assay moved to optional peer dependency. Also: single Symbol.for branding, namespaced template markers (data-ore-b / <!--ore:N-->), production dev-gate baked into dist build, unified form-control sync path, dev warnings for unknown event modifiers / non-spread in-tag interpolations / null listen targets
 
 ## 1.3.0
 Sun, 26 Jul 2026 06:43:54 GMT

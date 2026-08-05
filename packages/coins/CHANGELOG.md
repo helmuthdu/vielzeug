@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/coins
 
-This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+This log was last generated on Wed, 05 Aug 2026 16:48:52 GMT and should not be manually modified.
+
+## 2.0.0
+Wed, 05 Aug 2026 16:48:52 GMT
+
+### Breaking changes
+
+- Redesign exact money and currency APIs
 
 ## 1.0.5
 Sun, 26 Jul 2026 06:43:54 GMT

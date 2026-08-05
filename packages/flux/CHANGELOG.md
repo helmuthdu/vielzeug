@@ -1,6 +1,21 @@
 # Change Log - @vielzeug/flux
 
-This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+This log was last generated on Wed, 05 Aug 2026 16:48:52 GMT and should not be manually modified.
+
+## 2.0.0
+Wed, 05 Aug 2026 16:48:52 GMT
+
+### Breaking changes
+
+- refactor!: redesign streams around returned teardowns, pipe(), explicit buffers, channels, adapter subpaths, and terminal consumer names
+
+### Minor changes
+
+- feat: adapt Courier adapters to AsyncIterable streams and query handles
+
+### Patches
+
+- fix: pipe operator type inference
 
 ## 1.0.8
 Sun, 26 Jul 2026 06:43:54 GMT

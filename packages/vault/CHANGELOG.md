@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/vault
 
-This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+This log was last generated on Wed, 05 Aug 2026 16:48:52 GMT and should not be manually modified.
+
+## 2.0.0
+Wed, 05 Aug 2026 16:48:52 GMT
+
+### Breaking changes
+
+- refactor!: redesign storage around portable keys, fixed envelopes, capability-specific stores, and observe()
 
 ## 1.0.4
 Fri, 24 Jul 2026 05:28:41 GMT

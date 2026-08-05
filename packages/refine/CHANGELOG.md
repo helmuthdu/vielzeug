@@ -1,6 +1,24 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+This log was last generated on Wed, 05 Aug 2026 16:48:52 GMT and should not be manually modified.
+
+## 2.0.0
+Wed, 05 Aug 2026 16:48:52 GMT
+
+### Breaking changes
+
+- refactor!: migrate component observers to Ripple watch module
+
+### Minor changes
+
+- fix: fix broken stepper/avatar-group subpath exports, move ore-step/ore-stepper to context-based coordination, remove duplicate toast-like message feature from ore-stepper
+- refactor: simplify public component boundaries and native form behavior
+
+### Patches
+
+- fix: ore-slider no longer forces width:100% by default, breaking layout next to other fields in a flex/grid row; add fullwidth opt-in matching ore-input/ore-select/ore-number-input convention
+- chore: replace removed aria() with bind({ aria }, { target }); opt into form-internals polyfill via install(afterEach, { formInternals: true }); narrow headless option-list close reasons to DropdownCloseReason (latent type bug exposed by ore's strict EmitFn)
+- fix: refine slider touch geometry
 
 ## 1.8.0
 Sun, 26 Jul 2026 06:43:54 GMT

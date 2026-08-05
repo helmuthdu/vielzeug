@@ -2,6 +2,20 @@
   "name": "@vielzeug/vault",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/vault_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "refactor!: redesign storage around portable keys, fixed envelopes, capability-specific stores, and observe()",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.4",
       "tag": "@vielzeug/vault_v1.0.4",
       "date": "Fri, 24 Jul 2026 05:28:41 GMT",

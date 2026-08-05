@@ -2,6 +2,20 @@
   "name": "@vielzeug/lingua",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/lingua_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "refactor!: redesign localization around explicit locale catalogs. Replaces createI18n()/hydrateI18n() with createTranslationStore()/hydrateTranslationStore(), resources with catalogs, and I18n state version 2 with TranslationState version 3. Removes namespace/resource APIs and LinguaMissingResourceError. Use createTranslator() for fixed-locale translation.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.4",
       "tag": "@vielzeug/lingua_v1.1.4",
       "date": "Sun, 26 Jul 2026 06:43:54 GMT",

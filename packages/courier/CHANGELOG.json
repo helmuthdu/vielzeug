@@ -2,6 +2,32 @@
   "name": "@vielzeug/courier",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/courier_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "refactor!: mutations start at status 'idle' (isLoading false; previously 'loading' — reset() and aborts also return to 'idle'); MutationOptions.onFinally removed (use onSettled); toSyncStore() removed (mutation.store and observe() are already SyncStore); qc.fetch() returns Promise<T | undefined>; readable()'s onError no longer suppresses terminal errors (notified, then always thrown — catch around the loop for partial-data-then-silence); initialData now seeds the cache even when enabled: false. Feature: queries accept a url source routed through the api client (createQuery({ api }), wired automatically by createCourier); observeMany() accepts select/placeholderData; fetchMany() accepts { settled: true }; error bodies always parse as JSON/text even with binary responseType; query cache GC uses a single retargeted timer",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
+        ],
+        "major": [
+          {
+            "comment": "feat!: redesign Courier around one client, query handles, direct mutations, and AsyncIterable streams",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.5",
       "tag": "@vielzeug/courier_v1.1.5",
       "date": "Sun, 26 Jul 2026 06:43:54 GMT",

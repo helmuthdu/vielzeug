@@ -2,6 +2,20 @@
   "name": "@vielzeug/coins",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/coins_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Redesign exact money and currency APIs",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "2927dc2cc27925742b1ad36a3eba7e4e89c0a799"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.5",
       "tag": "@vielzeug/coins_v1.0.5",
       "date": "Sun, 26 Jul 2026 06:43:54 GMT",

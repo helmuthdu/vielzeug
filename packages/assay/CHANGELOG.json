@@ -2,6 +2,20 @@
   "name": "@vielzeug/assay",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/assay_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "refactor!: replace synthetic user interactions and duplicate queries with explicit dispatch, scoped required queries, and cancellable waits",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "221a22d33825af19fe58705cdcd163f665976c8a"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.0",
       "tag": "@vielzeug/assay_v1.0.0",
       "date": "Sun, 26 Jul 2026 06:43:54 GMT",

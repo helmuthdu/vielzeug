@@ -2,6 +2,54 @@
   "name": "@vielzeug/flux",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/flux_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat: adapt Courier adapters to AsyncIterable streams and query handles",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "fix: pipe operator type inference",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
+        ],
+        "major": [
+          {
+            "comment": "refactor!: redesign streams around returned teardowns, pipe(), explicit buffers, channels, adapter subpaths, and terminal consumer names",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.8",
       "tag": "@vielzeug/flux_v1.0.8",
       "date": "Sun, 26 Jul 2026 06:43:54 GMT",

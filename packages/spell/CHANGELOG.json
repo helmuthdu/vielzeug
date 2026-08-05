@@ -2,6 +2,25 @@
   "name": "@vielzeug/spell",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/spell_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "refactor!: group secondary APIs, remove aliases, make async checks explicit, and require declarative definitions for JSON Schema export",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "342043bb7ea847091c5a10a4b24b34d965673c43"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.2.2",
       "tag": "@vielzeug/spell_v1.2.2",
       "date": "Sun, 26 Jul 2026 06:43:54 GMT",

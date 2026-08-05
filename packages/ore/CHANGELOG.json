@@ -2,6 +2,41 @@
   "name": "@vielzeug/ore",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/ore_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "chore(ore): remove aria() (use bind({ aria }, { target })); live() now returns a per-binding wrapper (no global signal registry); HTMLResult public surface is mount-only; EmitFn is strictly typed (no string escape hatch); FormFieldHandle.setValidity removed (use setCustomValidity/internals); testing install() is now install(afterEach, { formInternals: true }) opt-in; assay moved to optional peer dependency. Also: single Symbol.for branding, namespaced template markers (data-ore-b / <!--ore:N-->), production dev-gate baked into dist build, unified form-control sync path, dev warnings for unknown event modifiers / non-spread in-tag interpolations / null listen targets",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
+        ],
+        "major": [
+          {
+            "comment": "refactor!: consolidate runtime APIs at the root; remove subpaths, model(), form-controller policy, onError recovery, and colon bindings; require synchronous setup and explicit unsafeHtml()",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/assay\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/assay\" to `^2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `^2.0.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.3.0",
       "tag": "@vielzeug/ore_v1.3.0",
       "date": "Sun, 26 Jul 2026 06:43:54 GMT",

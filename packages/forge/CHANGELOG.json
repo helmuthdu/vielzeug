@@ -2,6 +2,44 @@
   "name": "@vielzeug/forge",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/forge_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore: accept asynchronous Spell schemas in the validator adapter",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
+        ],
+        "major": [
+          {
+            "comment": "refactor!: replace flat controller and Ripple runtime with explicit immutable forms, safe value constraints, and DOM, Spell customValidator, and Vault adapters",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/spell\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/vault\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/spell\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/vault\" to `2.0.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.4.0",
       "tag": "@vielzeug/forge_v1.4.0",
       "date": "Sun, 26 Jul 2026 06:43:54 GMT",

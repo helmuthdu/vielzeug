@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/forge
 
-This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+This log was last generated on Wed, 05 Aug 2026 16:48:52 GMT and should not be manually modified.
+
+## 2.0.0
+Wed, 05 Aug 2026 16:48:52 GMT
+
+### Breaking changes
+
+- refactor!: replace flat controller and Ripple runtime with explicit immutable forms, safe value constraints, and DOM, Spell customValidator, and Vault adapters
+
+### Patches
+
+- chore: accept asynchronous Spell schemas in the validator adapter
 
 ## 1.4.0
 Sun, 26 Jul 2026 06:43:54 GMT

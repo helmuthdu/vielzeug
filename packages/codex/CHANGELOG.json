@@ -2,6 +2,27 @@
   "name": "@vielzeug/codex",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/codex_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore: refresh bundled docs data",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
+        ],
+        "major": [
+          {
+            "comment": "refactor!: Redesign Codex around validated chunked snapshots, catalog APIs, and local-only Streamable HTTP.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.4",
       "tag": "@vielzeug/codex_v1.0.4",
       "date": "Sun, 26 Jul 2026 06:43:54 GMT",

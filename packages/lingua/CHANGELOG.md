@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/lingua
 
-This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+This log was last generated on Wed, 05 Aug 2026 16:48:52 GMT and should not be manually modified.
+
+## 2.0.0
+Wed, 05 Aug 2026 16:48:52 GMT
+
+### Breaking changes
+
+- refactor!: redesign localization around explicit locale catalogs. Replaces createI18n()/hydrateI18n() with createTranslationStore()/hydrateTranslationStore(), resources with catalogs, and I18n state version 2 with TranslationState version 3. Removes namespace/resource APIs and LinguaMissingResourceError. Use createTranslator() for fixed-locale translation.
 
 ## 1.1.4
 Sun, 26 Jul 2026 06:43:54 GMT

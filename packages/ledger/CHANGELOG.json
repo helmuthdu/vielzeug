@@ -2,6 +2,25 @@
   "name": "@vielzeug/ledger",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/ledger_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "refactor: expose ledger reactive state as Readable values",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "527dba22684b8b40920fd823a4831743d65ba539"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.6",
       "tag": "@vielzeug/ledger_v1.1.6",
       "date": "Sun, 26 Jul 2026 06:43:54 GMT",

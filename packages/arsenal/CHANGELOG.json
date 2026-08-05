@@ -2,6 +2,20 @@
   "name": "@vielzeug/arsenal",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/arsenal_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Redesign Arsenal around focused category entry points",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "938687c99ac7da5c603636cdbad9261f4622cc45"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.2",
       "tag": "@vielzeug/arsenal_v1.1.2",
       "date": "Fri, 24 Jul 2026 05:28:41 GMT",

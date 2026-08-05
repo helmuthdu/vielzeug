@@ -2,6 +2,20 @@
   "name": "@vielzeug/sourcerer",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/sourcerer_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "refactor!: replace source APIs with atomic snapshots",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.0",
       "tag": "@vielzeug/sourcerer_v1.1.0",
       "date": "Sun, 26 Jul 2026 06:43:54 GMT",

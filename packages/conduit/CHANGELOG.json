@@ -2,6 +2,20 @@
   "name": "@vielzeug/conduit",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/conduit_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Redesign Conduit around dependency-first async factories",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "c68ba6bfe6815a15043b31b07bd7c693705dcec9"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.4",
       "tag": "@vielzeug/conduit_v1.0.4",
       "date": "Fri, 24 Jul 2026 05:28:41 GMT",

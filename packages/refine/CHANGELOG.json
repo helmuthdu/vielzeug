@@ -2,6 +2,66 @@
   "name": "@vielzeug/refine",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/refine_v2.0.0",
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: ore-slider no longer forces width:100% by default, breaking layout next to other fields in a flex/grid row; add fullwidth opt-in matching ore-input/ore-select/ore-number-input convention",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          },
+          {
+            "comment": "chore: replace removed aria() with bind({ aria }, { target }); opt into form-internals polyfill via install(afterEach, { formInternals: true }); narrow headless option-list close reasons to DropdownCloseReason (latent type bug exposed by ore's strict EmitFn)",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          },
+          {
+            "comment": "fix: refine slider touch geometry",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "fix: fix broken stepper/avatar-group subpath exports, move ore-step/ore-stepper to context-based coordination, remove duplicate toast-like message feature from ore-stepper",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          },
+          {
+            "comment": "refactor: simplify public component boundaries and native form behavior",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          }
+        ],
+        "major": [
+          {
+            "comment": "refactor!: migrate component observers to Ripple watch module",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/assay\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/orbit\" to `1.1.4`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ore\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.8.0",
       "tag": "@vielzeug/refine_v1.8.0",
       "date": "Sun, 26 Jul 2026 06:43:54 GMT",

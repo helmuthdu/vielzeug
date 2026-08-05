@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/ripple
 
-This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+This log was last generated on Wed, 05 Aug 2026 16:48:52 GMT and should not be manually modified.
+
+## 2.0.0
+Wed, 05 Aug 2026 16:48:52 GMT
+
+### Breaking changes
+
+- refactor!: redesign reactive runtime and public API
+
+### Minor changes
+
+- fix: fix sub-path export packaging, add disposalSignal lifecycle contract, deep-freeze store state, redesign SSR provider API, compile-time lens path validation
 
 ## 1.3.0
 Sun, 26 Jul 2026 06:43:54 GMT
