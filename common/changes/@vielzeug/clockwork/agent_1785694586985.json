@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "refactor: align reactive machine state with Ripple runtime",
+      "comment": "refactor!: redesign Clockwork around pure transitions and actors",
       "packageName": "@vielzeug/clockwork",
       "type": "major"
     }

@@ -4,6 +4,16 @@
       "comment": "feat: adapt Courier adapters to AsyncIterable streams and query handles",
       "packageName": "@vielzeug/flux",
       "type": "minor"
+    },
+    {
+      "comment": "fix: pipe operator type inference",
+      "packageName": "@vielzeug/flux",
+      "type": "patch"
+    },
+    {
+      "comment": "refactor!: redesign streams around returned teardowns, pipe(), explicit buffers, channels, adapter subpaths, and terminal consumer names",
+      "packageName": "@vielzeug/flux",
+      "type": "major"
     }
   ],
   "email": "agent@vielzeug",
