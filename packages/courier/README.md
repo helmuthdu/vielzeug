@@ -40,9 +40,10 @@ const client = createCourier({
   query: { staleTime: 5_000 },
 });
 
-const user = client.queries.create<User>({
-  fetch: ({ signal }) => client.get('/users/{id}', { params: { id: 1 }, signal }),
-  key: ['users', 1],
+const userKey = ['users', 1] as const;
+await client.queries.fetch({
+  fetch: ({ signal }) => client.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+  key: userKey,
   staleTime: 5_000,
 });
 

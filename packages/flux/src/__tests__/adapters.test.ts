@@ -65,9 +65,9 @@ describe('ripple adapter', () => {
 describe('courier adapter', () => {
   it('reads snapshots and stream event payloads', async () => {
     let listener: (() => void) | undefined;
-    const query = {
-      getSnapshot: () => 1,
-      subscribe(callback: () => void) {
+    const queryCache = {
+      getSnapshot: () => ({ data: 1, error: null, isFetching: false, status: 'success' as const, updatedAt: 0 }),
+      subscribe(_key: readonly unknown[], callback: () => void) {
         listener = callback;
 
         return () => {
@@ -75,8 +75,9 @@ describe('courier adapter', () => {
         };
       },
     };
-    const values: number[] = [];
-    const subscription = fromQuery(query).subscribe((value) => values.push(value));
+    const query = { fetch: async () => 1, key: ['query'] as const };
+    const values: Array<number | null | undefined> = [];
+    const subscription = fromQuery(queryCache, query).subscribe((value) => values.push(value?.data));
 
     listener?.();
     subscription.unsubscribe();

@@ -81,7 +81,7 @@ export function buildTimeoutSignal(timeoutMs: number, external?: AbortSignal | n
 
 /**
  * Shared transport core: interceptor pipeline, header management, AbortController lifecycle.
- * Both `createApi` and `createStream` build on this to avoid duplicating infrastructure.
+ * HTTP requests and streams build on this to avoid duplicating infrastructure.
  */
 export function createTransportCore(opts: TransportOptions = {}) {
   const {

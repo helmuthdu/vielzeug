@@ -397,9 +397,14 @@ toSignal<T>(source: Stream<T>, options: ToSignalOptions<T>): SignalBinding<T>
 ### `@vielzeug/flux/courier`
 
 ```ts
-fromQuery<T>(query: { getSnapshot(): T; subscribe(listener: () => void): () => void }): Stream<T>
+fromQuery<T extends { key: readonly unknown[]; fetch: (...args: never[]) => Promise<unknown> }>(
+  cache: { getSnapshot<T>(key: readonly unknown[]): T | null; subscribe(key: readonly unknown[], listener: () => void): () => void },
+  definition: T,
+): Stream<AsyncState<Awaited<ReturnType<T['fetch']>>> | null>
 fromSse<T>(source: AsyncIterable<{ data: T; event: string }>, event: string): Stream<T>
 ```
+
+`fromQuery()` infers data from `definition.fetch` and emits Courier-compatible `AsyncState` snapshots.
 
 ### `@vielzeug/flux/herald`
 

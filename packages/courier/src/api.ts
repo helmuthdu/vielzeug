@@ -2,52 +2,22 @@ import type { HttpRequestConfig, Params } from './url';
 
 import { classifyRequestError, CourierDisposedError, CourierHttpError, CourierSchemaValidationError } from './errors';
 import { parseResponse } from './response';
-import { buildRequestInit, hash } from './serialize';
+import { buildRequestInit } from './serialize';
 import {
   anySignal,
   buildTimeoutSignal,
   createTransportCore,
-  type FetchContext,
-  type Interceptor,
   type TransportCore,
   type TransportOptions,
   validateTimeout,
 } from './transport';
 import { buildUrl } from './url';
 
-export type { FetchContext, Interceptor };
-
-// Only safe + idempotent methods are auto-deduplicated. DELETE is idempotent but
-// not safe (it produces a side-effect), so it must opt-in via explicit dedupeKey
-// to avoid silently coalescing concurrent destructive requests.
-const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-
-function getDedupeKey(
-  method: string,
-  url: string,
-  responseType: string,
-  dedupeKey: HttpRequestConfig['dedupeKey'],
-): string | undefined {
-  if (IDEMPOTENT_METHODS.has(method)) {
-    // Key on method + URL + responseType only. Headers are uniform within a
-    // single client instance and should not prevent deduplication when a token
-    // refresh updates globalHeaders mid-flight.
-    return `${method}:${url}:${responseType}`;
-  }
-
-  if (dedupeKey === undefined) {
-    return undefined;
-  }
-
-  return `${method}:${url}:${hash(dedupeKey)}`;
-}
+export type { FetchContext, Interceptor } from './transport';
 
 /**
  * Creates a typed REST client — `get`/`post`/`put`/`patch`/`delete`/`request`, all backed by a
  * shared interceptor pipeline, header management, and `AbortController` lifecycle.
- *
- * Safe + idempotent requests (`GET`/`HEAD`/`OPTIONS`) are deduplicated by default — concurrent
- * calls with the same method, URL, and response type share a single in-flight request.
  *
  * @example
  * ```ts
@@ -66,7 +36,6 @@ export function createApi(opts?: TransportOptions & { transport?: TransportCore 
   const { transport: sharedTransport, ...transportOpts } = opts ?? {};
   const transport = sharedTransport ?? createTransportCore(transportOpts);
   const ownTransport = !sharedTransport;
-  const inFlight = new Map<string, Promise<unknown>>();
 
   async function execute<T>(
     headers: Record<string, string>,
@@ -138,7 +107,7 @@ export function createApi(opts?: TransportOptions & { transport?: TransportCore 
     url: P,
     config: HttpRequestConfig<P> = {} as HttpRequestConfig<P>,
   ) {
-    if (transport.disposed) throw new CourierDisposedError('ApiClient');
+    if (transport.disposed) throw new CourierDisposedError('Courier');
 
     const m = method.toUpperCase();
 
@@ -152,8 +121,6 @@ export function createApi(opts?: TransportOptions & { transport?: TransportCore 
 
     const {
       body,
-      dedupe = true,
-      dedupeKey,
       fetchInit,
       headers,
       responseType,
@@ -164,56 +131,38 @@ export function createApi(opts?: TransportOptions & { transport?: TransportCore 
 
     if (cfgTimeout !== undefined) validateTimeout(cfgTimeout);
 
-    const mergedHeaders = transport.mergeHeaders(headers);
-    const requestDedupeKey = dedupe ? getDedupeKey(m, full, responseType ?? 'auto', dedupeKey) : undefined;
-
-    if (requestDedupeKey) {
-      const existing = inFlight.get(requestDedupeKey);
-
-      if (existing) return existing as Promise<T>;
-    }
-
     const requestAc = new AbortController();
     const untrack = transport.track(requestAc);
-    const combinedExt = anySignal(extSignal, requestAc.signal) ?? requestAc.signal;
-    const signal = buildTimeoutSignal(cfgTimeout ?? transport.getTimeout(), combinedExt);
-
-    const { headers: initHeaders, ...restInit } = buildRequestInit(m, mergedHeaders, body, signal, fetchInit ?? {});
-    const p = execute<T>(
-      initHeaders as Record<string, string>,
-      restInit,
-      full,
+    const signal = buildTimeoutSignal(cfgTimeout ?? transport.getTimeout(), anySignal(extSignal, requestAc.signal));
+    const { headers: initHeaders, ...restInit } = buildRequestInit(
       m,
-      responseType,
-      schema as { parse(data: unknown): T } | undefined,
+      transport.mergeHeaders(headers),
+      body,
+      signal,
+      fetchInit ?? {},
     );
 
-    if (requestDedupeKey) inFlight.set(requestDedupeKey, p);
-
     try {
-      return (await p) as T;
+      return await execute<T>(
+        initHeaders as Record<string, string>,
+        restInit,
+        full,
+        m,
+        responseType,
+        schema as { parse(data: unknown): T } | undefined,
+      );
     } finally {
-      if (requestDedupeKey) inFlight.delete(requestDedupeKey);
-
       untrack();
     }
   }
 
   return {
-    cancelAll(): void {
-      // Note: narrow race — a request that starts after the abort signals fire but before
-      // their in-flight promise settles may see an empty inFlight map and error a redundant
-      // request. This is an accepted trade-off for the simplicity of a synchronous clear.
-      transport.cancelAll();
-      inFlight.clear();
-    },
+    cancelAll: transport.cancelAll,
     delete: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('DELETE', url, cfg),
     get disposalSignal() {
       return transport.disposalSignal;
     },
     dispose(): void {
-      inFlight.clear();
-
       if (ownTransport) transport.dispose();
     },
     get disposed() {

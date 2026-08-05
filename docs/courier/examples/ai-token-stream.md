@@ -22,7 +22,7 @@ const courier = createCourier({ baseUrl: 'https://api.example.com' });
 let message = '';
 
 for await (const chunk of courier.read<ChatChunk>('/chat', {
-  body: { prompt: 'Explain query handles briefly.' },
+  body: { prompt: 'Explain cached queries briefly.' },
   method: 'POST',
   parse: 'ndjson',
 })) {

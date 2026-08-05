@@ -19,15 +19,6 @@ export type PathConfig<P extends string> = [ExtractPathParams<P>] extends [never
 export type CourierRequestConfig<P extends string = string, T = unknown> = PathConfig<P> & {
   /** Request body. Plain objects → JSON. BodyInit values passed as-is. */
   body?: unknown;
-  /**
-   * Set to `false` to bypass in-flight deduplication for this request.
-   * Safe + idempotent methods (GET, HEAD, OPTIONS) are deduplicated by default.
-   * DELETE is idempotent but has side-effects, so it does not auto-dedupe;
-   * pass an explicit `dedupeKey` to opt in.
-   */
-  dedupe?: boolean;
-  /** Explicit deduplication key for non-idempotent requests. */
-  dedupeKey?: unknown;
   /** Query string parameters. */
   query?: Params;
   /** Response parsing strategy. */

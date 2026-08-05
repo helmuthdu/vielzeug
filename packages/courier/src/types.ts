@@ -37,18 +37,9 @@ export type QueryDefinition<T> = {
   staleTime?: number;
 };
 
-export type Query<T> = {
-  dispose(): void;
-  fetch(): Promise<T>;
-  getSnapshot(): AsyncState<T>;
-  invalidate(): void;
-  refetch(): Promise<T>;
-  subscribe(listener: () => void): Unsubscribe;
-};
-
 export type QueryCache = {
   clear(): void;
-  create<T>(definition: QueryDefinition<T>): Query<T>;
+  fetch<T>(definition: QueryDefinition<T>, options?: { force?: boolean }): Promise<T>;
   get<T>(key: QueryKey): T | undefined;
   getSnapshot<T>(key: QueryKey): AsyncState<T> | null;
   invalidate(key: QueryKey): void;
@@ -63,5 +54,4 @@ export type MutationOptions<T> = {
   onSuccess?: (data: T, queries: QueryCache) => void | Promise<void>;
   request: (context: MutationContext) => Promise<T>;
   signal?: AbortSignal;
-  times?: number;
 };

@@ -150,20 +150,20 @@ if (!result.success) console.log(result.error.issues);
 
 ### Courier
 
-HTTP client with caching, request deduplication, typed mutations, SSE streaming, and interceptors.
+HTTP client with explicit cached reads, direct mutations, SSE streaming, and interceptors.
 
 ```typescript
 import { createCourier } from '@vielzeug/courier';
 
 const courier = createCourier({ baseUrl: '/api', query: { staleTime: 5_000 } });
-const user = courier.queries.create({
-  key: ['user', id],
+const key = ['user', id] as const;
+
+await courier.queries.fetch({
+  key,
   fetch: ({ signal }) => courier.get<User>(`/users/${id}`, { signal }),
 });
-
-await user.fetch();
 await courier.patch(`/users/${id}`, { body: { name: 'Alice' } });
-courier.queries.invalidate(['user', id]);
+courier.queries.invalidate(key);
 ```
 
 [Courier docs →](/courier/)
@@ -342,7 +342,7 @@ const api = await container.resolve(ApiToken);
 | **Clockwork + Herald**      | Publish state-change events to decouple multiple machines from each other                                    |
 | **Flux + Ripple**           | `fromSignal()` / `toSignal()` bridge signals and streams — Ripple for state, Flux for pipelines             |
 | **Flux + Herald**           | `fromBus()` / `toBus()` turn a Herald bus into a Flux stream and back                                       |
-| **Flux + Courier** | `fromSse()` / `fromQuery()` adapt Courier event iterators and query handles into stream pipelines |
+| **Flux + Courier** | `fromSse()` / `fromQuery()` adapt Courier event iterators and cache entries into stream pipelines |
 | **Flux + Pulse**            | `fromPulse()` / `fromPresence()` convert Pulse WebSocket channels into composable Flux streams              |
 | **Scout + Ripple**          | `createReactiveSearch()` wraps the index in Ripple signals — query and results are reactive computed values  |
 | **Scout + Sourcerer**       | `toSearchMatcher()` wires a Scout index into `createLocalSource` as its matcher                 |

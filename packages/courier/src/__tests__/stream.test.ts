@@ -26,7 +26,7 @@ describe('Courier streams', () => {
 
     for await (const event of courier.events<{ count: number }>('/events')) events.push(event);
 
-    expect(events).toEqual([{ data: { count: 2 }, event: 'update', id: '1' }]);
+    expect(events).toEqual([{ data: { count: 2 }, event: 'update' }]);
   });
 
   it('sends SSE accept headers while allowing caller overrides', async () => {

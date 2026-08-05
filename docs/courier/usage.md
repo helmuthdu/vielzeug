@@ -1,14 +1,14 @@
 ---
 title: Courier — Usage Guide
-description: Use one Courier client for HTTP, cached reads, direct mutations, and abortable streams.
+description: Use one Courier client for HTTP, explicit cached reads, direct mutations, and abortable streams.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-Create one Courier client for an application or request scope. Its transport policy and disposal lifecycle
-apply to every request, query, mutation, and stream.
+Create one Courier client for an application or request scope. Its transport policy and disposal lifecycle apply
+to every request, cache entry, mutation, and stream.
 
 ```ts
 import { createCourier } from '@vielzeug/courier';
@@ -16,14 +16,20 @@ import { createCourier } from '@vielzeug/courier';
 type User = { id: number; name: string };
 
 const courier = createCourier({ baseUrl: 'https://api.example.com', query: { staleTime: 30_000 } });
-const user = await courier.get<User>('/users/{id}', { params: { id: 1 } });
-console.log(user.name);
+const key = ['users', 1] as const;
+
+await courier.queries.fetch({
+  key,
+  fetch: ({ signal }) => courier.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+});
+console.log(courier.queries.get<User>(key)?.name);
 ```
 
 ## HTTP Requests
 
-Use root methods for REST requests. Courier encodes path parameters, serializes plain-object bodies, and
-parses successful response bodies.
+Use root methods for REST requests. Courier encodes path parameters, serializes plain-object bodies, and parses
+successful response bodies. Each direct HTTP call is independent; use a query key when concurrent cached reads
+should share work.
 
 ```ts
 const posts = await courier.get<{ id: number; title: string }[]>('/users/{id}/posts', {
@@ -37,13 +43,12 @@ await courier.patch('/posts/{id}', {
 });
 ```
 
-GET, HEAD, and OPTIONS calls with the same URL are deduplicated while active. Set `dedupe: false` for an
-independent request. Call `courier.headers({ authorization: 'Bearer token' })` to update subsequent calls.
+Call `courier.headers({ authorization: 'Bearer token' })` to update subsequent calls.
 
 ## Interceptors
 
-Interceptors apply to HTTP and streaming requests. Register a policy once, then remove it when its
-containing scope ends.
+Interceptors apply to HTTP and streaming requests. Register a policy once, then remove it when its containing
+scope ends.
 
 ```ts
 import { withBearerAuth, withRequestId } from '@vielzeug/courier';
@@ -58,34 +63,37 @@ removeAuth();
 Use `debugCourier()` from `@vielzeug/courier/devtools` to create a logging-enabled client during local
 development. `withLogging()` includes full URLs, so sanitize query values before persistent logging.
 
-## Query Handles
+## Cached Queries
 
-Define a key and a fetch function once. The resulting handle exposes its current `AsyncState`, not a
-framework-specific store.
+Pass a stable key and fetch definition to `queries.fetch()`. The cache owns data, snapshots, subscriptions, and
+in-flight deduplication for that key.
 
 ```ts
-const profile = courier.queries.create<{ id: number; name: string }>({
-  key: ['profile', 1],
-  fetch: ({ signal }) => courier.get('/profile/{id}', { params: { id: 1 }, signal }),
+const key = ['profile', 1] as const;
+const definition = {
+  key,
+  fetch: ({ signal }) => courier.get<{ id: number; name: string }>('/profile/{id}', { params: { id: 1 }, signal }),
   staleTime: 60_000,
+};
+
+const stop = courier.queries.subscribe(key, () => {
+  const state = courier.queries.getSnapshot<{ id: number; name: string }>(key);
+  if (state?.status === 'success') console.log(state.data.name);
+  if (state?.status === 'error') console.error(state.error);
 });
 
-const stop = profile.subscribe(() => {
-  const state = profile.getSnapshot();
-  if (state.status === 'success') console.log(state.data.name);
-  if (state.status === 'error') console.error(state.error);
-});
-
-await profile.fetch();
+await courier.queries.fetch(definition);
 stop();
 ```
 
-`fetch()` reuses fresh data; `refetch()` always runs the fetch function. `invalidate()` marks matching
-keys stale but does not fetch. Call `courier.queries.refetchStale()` when visible data must refresh now.
+`queries.fetch(definition)` reuses fresh data. Pass `{ force: true }` to fetch regardless of freshness.
+`invalidate(key)` marks matching keys stale but does not fetch. Call `queries.refetchStale()` when visible data
+must refresh now.
 
 ## Direct Mutations
 
-Use `mutate()` for a write operation and update the cache in `onSuccess`.
+Use `mutate()` for a write operation and update the cache in `onSuccess`. Courier never retries writes: retry
+only operations your application can prove idempotent.
 
 ```ts
 type User = { id: number; name: string };
@@ -102,15 +110,14 @@ const created = await courier.mutate({
 console.log(created.id);
 ```
 
-Pass `times` to retry an individual operation. Pass an external `signal` when the caller owns
-cancellation. Keep pending and error UI state in the framework that owns that UI.
+Pass an external `signal` when caller owns cancellation. Keep pending and error UI state in framework that owns
+that UI.
 
 ## Server-Sent Events
 
-`events()` returns an abortable `AsyncIterableIterator`. Breaking the loop, calling `return()`, aborting a
-provided signal, or disposing the client stops its request immediately.
-Courier sends `Accept: text/event-stream` and `Cache-Control: no-cache` by default; pass headers to
-override either value when your endpoint requires a different policy.
+`events()` returns an abortable `AsyncIterableIterator`. Breaking loop, calling `return()`, aborting a provided
+signal, or disposing client stops its request immediately. Courier sends `Accept: text/event-stream` and
+`Cache-Control: no-cache` by default; pass headers to override either value.
 
 ```ts
 type Notification = { text: string };
@@ -122,8 +129,8 @@ for await (const event of courier.events<Notification>('/events')) {
 }
 ```
 
-Courier parses valid JSON event data and otherwise returns text. It does not reconnect automatically, so
-the application owns retry policy.
+Courier parses valid JSON event data and otherwise returns text. It does not reconnect automatically or retain
+SSE event IDs; application owns reconnect policy.
 
 ## HTTP Streaming
 
@@ -133,7 +140,7 @@ Use `read()` for text chunks or NDJSON records.
 type ChatChunk = { done: boolean; delta: string };
 
 for await (const chunk of courier.read<ChatChunk>('/chat', {
-  body: { prompt: 'Explain query handles.' },
+  body: { prompt: 'Explain cached queries.' },
   method: 'POST',
   parse: 'ndjson',
 })) {
@@ -142,31 +149,33 @@ for await (const chunk of courier.read<ChatChunk>('/chat', {
 }
 ```
 
-Streams have no timeout unless `timeout` is supplied. HTTP, network, timeout, and cancellation failures
-are reported with Courier error classes; starting a stream after disposal throws `CourierDisposedError`.
+Streams have no timeout unless `timeout` is supplied. HTTP, network, timeout, and cancellation failures use
+Courier error classes; starting a stream after disposal throws `CourierDisposedError`.
 
 ## Framework Integration
 
-Create Courier and its query handles at the application or route boundary. Views should read a snapshot
-synchronously, subscribe during their lifecycle, and let the framework own rendering state. Call `fetch()`
-when the view becomes active; it returns fresh cached data without starting a second request.
+Create Courier at application or route boundary. Views read a key snapshot synchronously, subscribe during
+their lifecycle, and let framework own rendering state.
 
 ::: code-group
 
 ```tsx [React]
 import { useEffect, useSyncExternalStore } from 'react';
-import type { AsyncState, Query } from '@vielzeug/courier';
+import { createCourier } from '@vielzeug/courier';
+import type { AsyncState, QueryDefinition } from '@vielzeug/courier';
 
 type User = { id: number; name: string };
 
-export function Profile({ profile }: { profile: Query<User> }) {
-  const state: AsyncState<User> = useSyncExternalStore(profile.subscribe, profile.getSnapshot, profile.getSnapshot);
+export function Profile({ courier, definition }: { courier: ReturnType<typeof createCourier>; definition: QueryDefinition<User> }) {
+  const state = useSyncExternalStore(
+    (listener) => courier.queries.subscribe(definition.key, listener),
+    () => courier.queries.getSnapshot<User>(definition.key),
+    () => courier.queries.getSnapshot<User>(definition.key),
+  ) as AsyncState<User> | null;
 
-  useEffect(() => {
-    void profile.fetch();
-  }, [profile]);
+  useEffect(() => void courier.queries.fetch(definition), [courier, definition]);
 
-  if (state.status === 'loading') return <p>Loading...</p>;
+  if (!state || state.status === 'loading') return <p>Loading...</p>;
   if (state.status === 'error') return <p role="alert">{state.error.message}</p>;
   return <p>{state.data.name}</p>;
 }
@@ -174,17 +183,18 @@ export function Profile({ profile }: { profile: Query<User> }) {
 
 ```ts [Vue 3]
 import { onMounted, onUnmounted, ref } from 'vue';
-import type { AsyncState, Query } from '@vielzeug/courier';
+import { createCourier } from '@vielzeug/courier';
+import type { AsyncState, QueryDefinition } from '@vielzeug/courier';
 
 type User = { id: number; name: string };
 
-export function useProfile(profile: Query<User>) {
-  const state = ref<AsyncState<User>>(profile.getSnapshot());
-  const unsubscribe = profile.subscribe(() => {
-    state.value = profile.getSnapshot();
+export function useProfile(courier: ReturnType<typeof createCourier>, definition: QueryDefinition<User>) {
+  const state = ref<AsyncState<User> | null>(courier.queries.getSnapshot(definition.key));
+  const unsubscribe = courier.queries.subscribe(definition.key, () => {
+    state.value = courier.queries.getSnapshot(definition.key);
   });
 
-  onMounted(() => void profile.fetch());
+  onMounted(() => void courier.queries.fetch(definition));
   onUnmounted(unsubscribe);
 
   return { state };
@@ -194,115 +204,83 @@ export function useProfile(profile: Query<User>) {
 ```svelte [Svelte]
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { AsyncState, Query } from '@vielzeug/courier';
+  import { createCourier } from '@vielzeug/courier';
+  import type { AsyncState, QueryDefinition } from '@vielzeug/courier';
 
   type User = { id: number; name: string };
 
-  export let profile: Query<User>;
-  let state: AsyncState<User> = profile.getSnapshot();
+  export let courier: ReturnType<typeof createCourier>;
+  export let definition: QueryDefinition<User>;
+  let state: AsyncState<User> | null = courier.queries.getSnapshot(definition.key);
 
   onMount(() => {
-    const unsubscribe = profile.subscribe(() => (state = profile.getSnapshot()));
-    void profile.fetch();
+    const unsubscribe = courier.queries.subscribe(definition.key, () => (state = courier.queries.getSnapshot(definition.key)));
+    void courier.queries.fetch(definition);
     return unsubscribe;
   });
 </script>
 
-{#if state.status === 'success'}
+{#if state?.status === 'success'}
   <p>{state.data.name}</p>
 {/if}
 ```
 
 :::
 
-Courier exposes no framework-specific loading or error store. Render `AsyncState` in the framework that
-owns the view, and do not dispose a shared query handle during an individual component unmount.
+Courier exposes no framework-specific loading or error store. Render `AsyncState` in framework that owns view.
 
 ## Working with Other Vielzeug Libraries
 
 ### Flux
 
-Use Flux when query snapshots or SSE events need filtering, composition, or a subscription lifecycle
-separate from the UI framework. Unsubscribing from `fromSse()` calls the underlying iterator's `return()`,
-which closes Courier's stream request immediately.
+Use Flux when cache snapshots or SSE events need filtering, composition, or subscription lifecycle separate from
+UI framework. Pass cache and query definition to `fromQuery()`.
 
 ```ts
 import { fromQuery, fromSse } from '@vielzeug/flux/courier';
-import { createCourier } from '@vielzeug/courier';
 
-type Notification = { text: string };
+const profile = {
+  key: ['profile'] as const,
+  fetch: ({ signal }: { signal: AbortSignal }) => courier.get<{ id: number; name: string }>('/profile', { signal }),
+};
+const profile$ = fromQuery(courier.queries, profile);
+const notifications$ = fromSse(courier.events<{ text: string }>('/events'), 'message');
 
-const courier = createCourier({ baseUrl: 'https://api.example.com' });
-const profile = courier.queries.create({
-  key: ['profile'],
-  fetch: ({ signal }) => courier.get('/profile', { signal }),
-});
-const profile$ = fromQuery(profile);
-const notifications$ = fromSse(courier.events<Notification>('/events'), 'message');
+void courier.queries.fetch(profile);
 
-const profileSubscription = profile$.subscribe((state) => console.log(state.status));
+const profileSubscription = profile$.subscribe((state) => console.log(state?.status));
 const notificationSubscription = notifications$.subscribe((notification) => console.log(notification.text));
 
-notificationSubscription.unsubscribe(); // Calls iterator.return() and aborts the SSE request.
+notificationSubscription.unsubscribe();
 profileSubscription.unsubscribe();
 ```
 
 ### Ripple
 
-Use a Ripple signal when Courier data must participate in fine-grained reactive state outside a component.
-Keep the query as the source of truth and mirror only its snapshot into the signal.
+Use a Ripple signal when Courier data must participate in fine-grained reactive state outside a component. Mirror
+only cache snapshot into signal.
 
 ```ts
-import { createCourier, type AsyncState } from '@vielzeug/courier';
-import { effect, signal } from '@vielzeug/ripple';
+import { signal } from '@vielzeug/ripple';
 
-type User = { id: number; name: string };
+const key = ['profile', 1] as const;
+const profileState = signal(courier.queries.getSnapshot<{ id: number; name: string }>(key));
+const unsubscribe = courier.queries.subscribe(key, () => (profileState.value = courier.queries.getSnapshot(key)));
 
-const courier = createCourier({ baseUrl: 'https://api.example.com' });
-const profile = courier.queries.create<User>({
-  key: ['profile'],
-  fetch: ({ signal }) => courier.get('/profile', { signal }),
+await courier.queries.fetch({
+  key,
+  fetch: ({ signal }) => courier.get('/profile/{id}', { params: { id: 1 }, signal }),
 });
-const profileState = signal<AsyncState<User>>(profile.getSnapshot());
-const unsubscribe = profile.subscribe(() => (profileState.value = profile.getSnapshot()));
-const logger = effect(() => console.log(profileState.value.status));
 
-await profile.fetch();
 unsubscribe();
-logger.dispose();
-```
-
-### Spell
-
-Pass a Spell schema to `schema` when an endpoint must validate its parsed payload before it enters the
-cache or view state. Courier wraps validation failures in `CourierSchemaValidationError` and preserves the
-unvalidated payload on `error.data`.
-
-```ts
-import { createCourier } from '@vielzeug/courier';
-import { s, type Infer } from '@vielzeug/spell';
-
-const User = s.object({
-  id: s.number().integer(),
-  name: s.string().min(1),
-});
-type User = Infer<typeof User>;
-
-const courier = createCourier({ baseUrl: 'https://api.example.com' });
-const user = await courier.get<User>('/users/{id}', {
-  params: { id: 1 },
-  schema: User,
-});
-
-console.log(user.name);
 ```
 
 ## Best Practices
 
-- Create one Courier client per application or server request scope.
-- Keep query keys stable and represent the data they identify.
-- Call `refetch()` for polling and `refetchStale()` after invalidation when the UI must update.
-- Pass query signals through to every cancellable data source.
-- Treat `CourierAbortError` as normal control flow when users navigate away.
-- Break stream loops when the consumer no longer needs data.
-- Dispose client scopes deterministically during application shutdown.
+- Create one Courier client per application or SSR request scope.
+- Use stable, complete cache keys for every cached response identity.
+- Fetch through `queries.fetch()` when work should deduplicate and cache.
+- Invalidate keys after writes, then refetch stale visible data when needed.
+- Keep retries outside mutations until operation idempotency is proven.
+- Dispose only at final application or request boundary.
+- Keep credentials out of URLs when using logging interceptors.

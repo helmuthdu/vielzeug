@@ -1,34 +1,117 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createCourier } from '../courier';
+import {
+  CourierHttpError,
+  CourierSchemaValidationError,
+  CourierTimeoutError,
+  createCourier,
+  withBearerAuth,
+  withRequestId,
+} from '../index';
 
-describe('createCourier', () => {
-  it('shares interceptors and headers across REST and streams', async () => {
-    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response('hello', { status: 200 }));
-    const courier = createCourier({ fetch, headers: { authorization: 'Bearer token' } });
+describe('Courier HTTP client', () => {
+  it('builds requests, validates responses, and applies interceptors', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async () =>
+        new Response(JSON.stringify({ id: 1, name: 'Ada' }), { headers: { 'content-type': 'application/json' } }),
+    );
+    const courier = createCourier({ baseUrl: 'https://api.example.com/', fetch });
 
-    courier.use(async (context, next) => next(context.withHeaders({ 'x-request-id': 'request-1' })));
+    courier.use(withBearerAuth('token'));
+    courier.use(withRequestId({ generate: () => 'request-1' }));
 
-    await courier.get('/users');
-    await courier.read('/events').next();
+    await expect(
+      courier.post('/users/{id}', {
+        body: { name: 'Ada' },
+        params: { id: 'a/b' },
+        query: { include: ['roles', 'teams'] },
+        schema: { parse: (data) => data as { id: number; name: string } },
+      }),
+    ).resolves.toEqual({ id: 1, name: 'Ada' });
 
-    expect(fetch).toHaveBeenCalledTimes(2);
-    for (const [, init] of fetch.mock.calls) {
-      expect(init?.headers).toMatchObject({ authorization: 'Bearer token', 'x-request-id': 'request-1' });
-    }
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.example.com/users/a%2Fb?include=roles&include=teams',
+      expect.objectContaining({
+        body: JSON.stringify({ name: 'Ada' }),
+        headers: expect.objectContaining({
+          authorization: 'Bearer token',
+          'content-type': 'application/json',
+          'x-request-id': 'request-1',
+        }),
+        method: 'POST',
+      }),
+    );
   });
 
-  it('passes its query cache to successful mutations', async () => {
+  it('does not deduplicate independent HTTP requests', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async () => new Response(JSON.stringify({ ok: true }), { headers: { 'content-type': 'application/json' } }),
+    );
+    const courier = createCourier({ fetch });
+
+    await Promise.all([courier.get('/profile'), courier.get('/profile')]);
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('preserves HTTP error bodies and wraps schema failures', async () => {
+    const httpCourier = createCourier({
+      fetch: vi.fn(async () => new Response(JSON.stringify({ code: 'missing' }), { status: 404 })),
+    });
+    const schemaCourier = createCourier({
+      fetch: vi.fn(
+        async () => new Response(JSON.stringify({ id: 'wrong' }), { headers: { 'content-type': 'application/json' } }),
+      ),
+    });
+
+    await expect(httpCourier.get('/users/1')).rejects.toMatchObject<CourierHttpError>({
+      data: '{"code":"missing"}',
+      status: 404,
+    });
+    await expect(
+      schemaCourier.get('/users/1', {
+        schema: {
+          parse: () => {
+            throw new Error('id must be a number');
+          },
+        },
+      }),
+    ).rejects.toBeInstanceOf(CourierSchemaValidationError);
+  });
+
+  it('normalizes request timeouts and rejects requests after disposal', async () => {
+    const courier = createCourier({
+      fetch: vi.fn<typeof globalThis.fetch>(
+        (_, init) =>
+          new Promise<Response>((_, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(new DOMException('Timed out', 'TimeoutError')));
+          }),
+      ),
+    });
+
+    await expect(courier.get('/slow', { timeout: 1 })).rejects.toBeInstanceOf(CourierTimeoutError);
+
+    courier.dispose();
+
+    await expect(courier.get('/after-disposal')).rejects.toThrow('Courier disposed');
+  });
+});
+
+describe('Courier mutations', () => {
+  it('runs each mutation once and exposes the query cache to onSuccess', async () => {
     const courier = createCourier();
-    const onSuccess = vi.fn((data: { id: number }, queries) => queries.set(['users', data.id], data));
+    const request = vi.fn(async () => ({ id: 1 }));
 
-    await courier.mutate({ onSuccess, request: async () => ({ id: 1 }) });
+    await courier.mutate({
+      onSuccess: (user, queries) => queries.set(['users', user.id], user),
+      request,
+    });
 
-    expect(onSuccess).toHaveBeenCalledOnce();
+    expect(request).toHaveBeenCalledOnce();
     expect(courier.queries.get(['users', 1])).toEqual({ id: 1 });
   });
 
-  it('cancels active mutations and prevents new requests after disposal', async () => {
+  it('cancels active mutations and rejects new mutations after disposal', async () => {
     const courier = createCourier();
     const started = new Promise<void>((resolve) => {
       void courier
@@ -46,29 +129,5 @@ describe('createCourier', () => {
     courier.dispose();
 
     await expect(courier.mutate({ request: async () => 'never' })).rejects.toThrow('Courier disposed');
-    await expect(
-      courier.queries.create({ fetch: async () => 'never', key: ['disposed-query'] }).fetch(),
-    ).rejects.toThrow('QueryCache disposed');
-  });
-
-  it('cancels active query fetches', async () => {
-    const courier = createCourier();
-    let querySignal: AbortSignal | undefined;
-    const query = courier.queries.create({
-      fetch: ({ signal }) =>
-        new Promise<never>((_, reject) => {
-          querySignal = signal;
-          signal.addEventListener('abort', () => reject(new Error('aborted')));
-        }),
-      key: ['active-query'],
-    });
-
-    const pending = query.fetch();
-
-    await vi.waitFor(() => expect(querySignal).toBeDefined());
-    courier.cancelAll();
-
-    expect(querySignal!.aborted).toBe(true);
-    await expect(pending).rejects.toThrow('aborted');
   });
 });

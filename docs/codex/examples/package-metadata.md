@@ -24,7 +24,7 @@ Result:
   "name": "@vielzeug/courier",
   "slug": "courier",
   "version": "3.0.1",
-  "description": "Unified HTTP client with query handles, direct mutations, and streams",
+  "description": "Unified HTTP client with explicit cache keys, direct mutations, and streams",
   "category": "http",
   "keywords": ["http", "fetch", "cache", "mutation"],
   "exports": ["createCourier", "CourierError", "withBearerAuth"],

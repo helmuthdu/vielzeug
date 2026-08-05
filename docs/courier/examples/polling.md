@@ -1,17 +1,17 @@
 ---
 title: 'Courier Examples — Polling'
-description: 'Periodically refetch an explicit Courier query handle.'
+description: 'Periodically refetch an explicit Courier cache entry.'
 ---
 
 ## Polling
 
 ### Problem
 
-You need to keep a job view current and stop polling when the view is disposed.
+You need to keep a job view current and stop polling when view is disposed.
 
 ### Solution
 
-Call `refetch()` from a timer and release both the timer and subscriptions with the surrounding view.
+Reuse one query definition. Pass `{ force: true }` from timer to bypass freshness window.
 
 ```ts
 import { createCourier } from '@vielzeug/courier';
@@ -20,28 +20,27 @@ type Job = { id: string; status: 'complete' | 'running' };
 
 const courier = createCourier({ baseUrl: 'https://api.example.com' });
 const jobId = 'job-42';
-const job = courier.queries.create<Job>({
-  key: ['job', jobId],
-  fetch: ({ signal }) => courier.get('/jobs/{id}', { params: { id: jobId }, signal }),
-});
+const job = {
+  key: ['job', jobId] as const,
+  fetch: ({ signal }) => courier.get<Job>('/jobs/{id}', { params: { id: jobId }, signal }),
+};
 
-const timer = setInterval(() => void job.refetch(), 3_000);
-await job.fetch();
+const timer = setInterval(() => void courier.queries.fetch(job, { force: true }), 3_000);
+await courier.queries.fetch(job);
 
 function dispose() {
   clearInterval(timer);
-  job.dispose();
 }
 ```
 
 ### Pitfalls
 
-- Use `refetch()` for polling; `invalidate()` only marks a query stale.
-- Pause polling while the UI is hidden when that matches your product requirements.
-- Avoid overlapping writes and refetches for the same resource without an application-level policy.
+- Use `{ force: true }` for polling; `invalidate()` only marks query stale.
+- Pause polling while UI is hidden when that matches product requirements.
+- Avoid overlapping writes and refetches for same resource without application-level policy.
 
 ### Related
 
 - [CRUD Operations](./crud-operations.md)
 - [Disposal](./disposal.md)
-- [Usage Guide](../usage.md#query-handles)
+- [Usage Guide](../usage.md#cached-queries)

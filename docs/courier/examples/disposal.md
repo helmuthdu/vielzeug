@@ -31,7 +31,7 @@ function shutdownApplication(): void {
 
 - A disposed client cannot start requests or streams.
 - Create clients per application or SSR request scope, not per component render.
-- `query.dispose()` removes that handle's subscriptions; it does not dispose the client.
+- Unsubscribe cache listeners when their view or route ends; it does not dispose client.
 
 ### Related
 

@@ -11,7 +11,7 @@ A users screen needs a cached list and predictable cache updates after creating 
 
 ### Solution
 
-Use a query handle for the read and a direct mutation for the write.
+Fetch cache entry by stable key, then use direct mutation for write.
 
 ```ts
 import { createCourier } from '@vielzeug/courier';
@@ -19,18 +19,18 @@ import { createCourier } from '@vielzeug/courier';
 type User = { id: number; name: string };
 
 const courier = createCourier({ baseUrl: 'https://api.example.com' });
-const users = courier.queries.create<User[]>({
-  key: ['users'],
-  fetch: ({ signal }) => courier.get('/users', { signal }),
+const key = ['users'] as const;
+
+await courier.queries.fetch({
+  key,
+  fetch: ({ signal }) => courier.get<User[]>('/users', { signal }),
   staleTime: 5_000,
 });
-
-await users.fetch();
 await courier.mutate({
   request: ({ signal }) => courier.post<User>('/users', { body: { name: 'Ada' }, signal }),
   onSuccess: (user, queries) => {
     queries.set(['users', user.id], user);
-    queries.invalidate(['users']);
+    queries.invalidate(key);
     queries.refetchStale();
   },
 });
@@ -38,11 +38,11 @@ await courier.mutate({
 
 ### Pitfalls
 
-- Query keys must be stable values rather than values generated during a render.
-- `invalidate()` marks cached data stale; it does not send a request.
-- Prefer `set()` only when the new value is known to be complete.
+- Cache keys must be stable values rather than values generated during render.
+- `invalidate()` marks cached data stale; it does not send request.
+- Prefer `set()` only when new value is known complete.
 
 ### Related
 
-- [Query Handles](../usage.md#query-handles)
+- [Cached Queries](../usage.md#cached-queries)
 - [Optimistic Updates](./optimistic-updates.md)

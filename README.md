@@ -165,7 +165,7 @@ pnpm add @vielzeug/spell
 
 ### [@vielzeug/courier](packages/courier) – HTTP Client
 
-Modern, type-safe HTTP client with explicit query handles, direct mutations, and AsyncIterable streams.
+Modern, type-safe HTTP client with explicit cache keys, direct mutations, and AsyncIterable streams.
 
 ```bash
 pnpm add @vielzeug/courier
@@ -174,9 +174,9 @@ pnpm add @vielzeug/courier
 **Key Features:**
 
 - One client for HTTP, queries, mutations, and streams
-- Smart caching with explicit query handles and request deduplication
-- Direct mutations with retry and explicit cache updates
-- Automatic retry with exponential backoff (10 KB min / 3.4 KB gz)
+- Keyed cache entries with explicit fetch definitions and in-flight deduplication
+- Direct mutations with explicit cache updates
+- Abortable SSE and HTTP streams (10 KB min / 3.4 KB gz)
 
 [📖 Documentation](https://vielzeug.dev/courier/) • [Examples](https://vielzeug.dev/courier/examples)
 

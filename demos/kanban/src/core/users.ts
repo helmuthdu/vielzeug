@@ -1,42 +1,34 @@
-import type { AsyncState } from '@vielzeug/courier';
-
-/**
- * Reactive user directory — the one place this app fetches "the user list", chained through
- * three packages so each does the job it's built for: `@vielzeug/courier`'s query cache fetches
- * and caches the mock `/api/users` response, `@vielzeug/flux`'s `fromQuery` adapts its query
- * handle into a stream, and `@vielzeug/ripple`'s `toSignal` lands that stream as a reactive
- * signal every view below can read. `userInitials()`/`userMap` are exported from here too so the
- * lookup logic exists in exactly one place instead of being copy-pasted per view.
- */
-import { fromQuery } from '@vielzeug/flux/courier';
-import { toSignal } from '@vielzeug/flux/ripple';
-import { computed } from '@vielzeug/ripple';
+import { computed, signal } from '@vielzeug/ripple';
 
 import type { User } from './types';
 
 import { courier, getUsers } from './api';
 import { seedUsers } from './seed-data';
 
-const usersQuery = courier.queries.create<User[]>({
+const usersKey = ['users'] as const;
+const usersDefinition = {
   fetch: () => getUsers(),
-  key: ['users'],
+  key: usersKey,
   staleTime: 60_000,
+};
+
+courier.queries.set(usersKey, seedUsers);
+
+export const usersSignal = signal<User[]>(seedUsers);
+
+courier.queries.subscribe(usersKey, () => {
+  usersSignal.value = courier.queries.getSnapshot<User[]>(usersKey)?.data ?? seedUsers;
 });
+void courier.queries.fetch(usersDefinition);
 
-courier.queries.set(['users'], seedUsers);
-
-const usersBinding = toSignal(fromQuery<AsyncState<User[]>>(usersQuery), { initial: usersQuery.getSnapshot() });
-
-export const usersSignal = computed<User[]>(() => usersBinding.value.data ?? seedUsers);
-
-export const userMap = computed(() => new Map(usersSignal.value.map((u) => [u.id, u])));
+export const userMap = computed(() => new Map(usersSignal.value.map((user) => [user.id, user])));
 
 /** Up-to-2-letter initials from a display name, e.g. "Alice Chen" → "AC". */
 export function initialsFromName(name: string): string {
   return name
     .split(' ')
     .slice(0, 2)
-    .map((p) => p[0])
+    .map((part) => part[0])
     .join('')
     .toUpperCase();
 }

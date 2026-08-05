@@ -16,7 +16,7 @@ export type StreamOptions<P extends string = string> = {
   timeout?: number;
 };
 
-export type StreamEvent<T = unknown> = { readonly data: T; readonly event: string; readonly id: string | undefined };
+export type StreamEvent<T = unknown> = { readonly data: T; readonly event: string };
 
 function abortable<T>(create: (signal: AbortSignal) => AsyncGenerator<T>): AsyncIterableIterator<T> {
   const controller = new AbortController();
@@ -100,7 +100,6 @@ export function createStreams(transport: TransportCore) {
     let buffer = '';
     let event = 'message';
     let data = '';
-    let id: string | undefined;
 
     try {
       while (true) {
@@ -127,12 +126,11 @@ export function createStreams(transport: TransportCore) {
                 // SSE text payloads are valid raw values.
               }
 
-              yield { data: parsed as T, event, id };
+              yield { data: parsed as T, event };
             }
 
             data = '';
             event = 'message';
-            id = undefined;
             continue;
           }
 
@@ -144,7 +142,6 @@ export function createStreams(transport: TransportCore) {
 
           if (field === 'data') data += `${value}\n`;
           else if (field === 'event') event = value;
-          else if (field === 'id' && !value.includes('\0')) id = value;
         }
       }
     } finally {

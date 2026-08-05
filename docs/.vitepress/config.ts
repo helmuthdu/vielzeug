@@ -608,14 +608,12 @@ export default defineConfig({
         {
           items: [
             { link: '/courier/usage#basic-usage', text: 'Basic Usage' },
-            { link: '/courier/usage#http-client', text: 'HTTP Client' },
+            { link: '/courier/usage#http-requests', text: 'HTTP Requests' },
             { link: '/courier/usage#interceptors', text: 'Interceptors' },
-            { link: '/courier/usage#query-handles', text: 'Query Handles' },
-            { link: '/courier/usage#mutations', text: 'Mutations' },
+            { link: '/courier/usage#cached-queries', text: 'Cached Queries' },
+            { link: '/courier/usage#direct-mutations', text: 'Direct Mutations' },
             { link: '/courier/usage#server-sent-events', text: 'Server-Sent Events' },
             { link: '/courier/usage#http-streaming', text: 'HTTP Streaming' },
-            { link: '/courier/usage#error-handling', text: 'Error Handling' },
-            { link: '/courier/usage#common-patterns', text: 'Common Patterns' },
             { link: '/courier/usage#framework-integration', text: 'Framework Integration' },
             { link: '/courier/usage#working-with-other-vielzeug-libraries', text: 'Vielzeug Integration' },
             { link: '/courier/usage#best-practices', text: 'Best Practices' },

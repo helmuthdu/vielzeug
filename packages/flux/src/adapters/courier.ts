@@ -2,10 +2,38 @@ import type { Stream } from '../types';
 
 import { stream } from '../core';
 
-type QueryHandle<T> = {
-  getSnapshot(): T;
-  subscribe(onStoreChange: () => void): () => void;
+type QueryCache = {
+  getSnapshot<T>(key: readonly unknown[]): T | null;
+  subscribe(key: readonly unknown[], onStoreChange: () => void): () => void;
 };
+
+type QueryDefinition = {
+  fetch: (...args: never[]) => Promise<unknown>;
+  key: readonly unknown[];
+};
+
+type QuerySnapshot<T> =
+  | {
+      readonly data: undefined;
+      readonly error: null;
+      readonly isFetching: boolean;
+      readonly status: 'loading';
+      readonly updatedAt: undefined;
+    }
+  | {
+      readonly data: T;
+      readonly error: null;
+      readonly isFetching: boolean;
+      readonly status: 'success';
+      readonly updatedAt: number;
+    }
+  | {
+      readonly data: T | undefined;
+      readonly error: Error;
+      readonly isFetching: false;
+      readonly status: 'error';
+      readonly updatedAt: number;
+    };
 
 type StreamEvent<T> = { readonly data: T; readonly event: string };
 
@@ -37,10 +65,15 @@ export function fromSse<T>(source: AsyncIterable<StreamEvent<T>>, event: string)
   });
 }
 
-export function fromQuery<T>(query: QueryHandle<T>): Stream<T> {
+export function fromQuery<T extends QueryDefinition>(
+  cache: QueryCache,
+  definition: T,
+): Stream<QuerySnapshot<Awaited<ReturnType<T['fetch']>>> | null> {
   return stream((sink) => {
-    sink.next(query.getSnapshot());
+    const snapshot = () => cache.getSnapshot<QuerySnapshot<Awaited<ReturnType<T['fetch']>>>>(definition.key);
 
-    return query.subscribe(() => sink.next(query.getSnapshot()));
+    sink.next(snapshot());
+
+    return cache.subscribe(definition.key, () => sink.next(snapshot()));
   });
 }

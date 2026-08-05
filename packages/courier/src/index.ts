@@ -16,7 +16,6 @@ export type {
   AsyncState,
   MutationContext,
   MutationOptions,
-  Query,
   QueryCache,
   QueryContext,
   QueryDefinition,

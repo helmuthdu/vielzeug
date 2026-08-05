@@ -1,16 +1,13 @@
-import { retry } from '@vielzeug/arsenal/async';
-
 import type { MutationOptions, QueryCache } from './types';
 
 import { createApi } from './api';
 import { CourierDisposedError } from './errors';
 import { createQueryCache } from './query';
-import { resolveRetryDelay } from './retry';
 import { createStreams } from './stream';
 import { anySignal, createTransportCore, type TransportOptions } from './transport';
 
 export type CourierOptions = TransportOptions & {
-  query?: { staleTime?: number; times?: number };
+  query?: { staleTime?: number };
 };
 
 export type Courier = ReturnType<typeof createCourier>;
@@ -35,13 +32,9 @@ export function createCourier(options: CourierOptions = {}) {
     const signal = anySignal(options.signal, controller.signal, transport.disposalSignal) ?? controller.signal;
 
     try {
-      const data = await retry(() => options.request({ signal }), {
-        delay: (attempt) => resolveRetryDelay(attempt),
-        signal,
-        times: options.times ?? 1,
-      });
+      const data = await options.request({ signal });
 
-      await options.onSuccess?.(data, queries as QueryCache);
+      await options.onSuccess?.(data, queries);
 
       return data;
     } finally {
