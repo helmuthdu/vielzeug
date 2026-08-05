@@ -357,7 +357,7 @@ function generate() {
   ].join('\n');
 }
 
-function withGeneratedBlock(source, block) {
+function generatedBlock(source) {
   const begin = source.indexOf(GENERATED_BEGIN);
   const end = source.indexOf(GENERATED_END);
 
@@ -365,14 +365,32 @@ function withGeneratedBlock(source, block) {
     throw new Error(`theme.css is missing the generated-block markers:\n${GENERATED_BEGIN}\n${GENERATED_END}`);
   }
 
+  return { begin, end, value: source.slice(begin + GENERATED_BEGIN.length, end) };
+}
+
+function withGeneratedBlock(source, block) {
+  const { begin, end } = generatedBlock(source);
+
   return `${source.slice(0, begin + GENERATED_BEGIN.length)}\n${block}\n${source.slice(end)}`;
+}
+
+function normalizedBlock(block) {
+  return block
+    .split('\n')
+    .filter((line) => line.trim())
+    .map((line) => line.trimEnd())
+    .join('\n');
+}
+
+function normalizedGeneratedBlock(source) {
+  return normalizedBlock(generatedBlock(source).value);
 }
 
 function stylelintFix(source) {
   // Written next to the real file (not os.tmpdir()) so stylelint's config
   // lookup resolves the same `stylelint.config.ts` a normal `pnpm lint:css`
   // run would use for this file.
-  const tmpPath = `${THEME_CSS_PATH}.sync-tmp.${processRef.pid}`;
+  const tmpPath = `${THEME_CSS_PATH}.sync-tmp.${processRef.pid}.css`;
   const stylelintBin = join(
     dirname(require.resolve('stylelint/package.json')),
     require('stylelint/package.json').bin.stylelint,
@@ -404,10 +422,11 @@ async function formatCss(source) {
 
 async function main(command) {
   const source = readFileSync(THEME_CSS_PATH, 'utf8');
-  const nextSource = await formatCss(withGeneratedBlock(source, generate()));
+  const generated = generate();
+  const nextSource = await formatCss(withGeneratedBlock(source, generated));
 
   if (command === 'check') {
-    if (source !== nextSource) {
+    if (normalizedGeneratedBlock(source) !== normalizedGeneratedBlock(nextSource)) {
       console.error('theme.css is out of sync with theme-tokens.mjs — run `pnpm run sync:theme`.');
       processRef.exit(1);
     }
