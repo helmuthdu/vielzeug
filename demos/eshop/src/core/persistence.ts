@@ -1,4 +1,3 @@
-import type { CurrencyCode } from '@vielzeug/coins';
 import type { Adapter } from '@vielzeug/vault';
 
 import { effect } from '@vielzeug/ripple';
@@ -8,7 +7,7 @@ import type { ThemePreference } from './theme';
 import type { CartItem } from './types';
 
 import { cartItems, compareModelIds } from './cart-store';
-import { currentCurrency, setCurrency } from './currency';
+import { currencyFromCode, currentCurrency, setCurrency } from './currency';
 import { setLocale } from './i18n';
 import { accentHue, setAccentHue, setThemePreference, themePreference } from './theme';
 
@@ -20,7 +19,7 @@ import { accentHue, setAccentHue, setThemePreference, themePreference } from './
 type CartRow = { compareModelIds: string[]; id: 'current'; items: CartItem[] };
 type PreferencesRow = {
   accentHue: number;
-  currency: CurrencyCode;
+  currency: string;
   id: 'preferences';
   locale: 'de' | 'en';
   theme: ThemePreference;
@@ -72,12 +71,12 @@ export async function setupPersistence(): Promise<void> {
   if (savedPrefs) {
     setThemePreference(savedPrefs.theme);
     setAccentHue(savedPrefs.accentHue);
-    setCurrency(savedPrefs.currency);
+    setCurrency(currencyFromCode(savedPrefs.currency));
     setLocale(savedPrefs.locale);
   } else {
     await savePreferences({
       accentHue: accentHue.value,
-      currency: currentCurrency.value,
+      currency: currentCurrency.value.code,
       locale: 'en',
       theme: themePreference.value,
     });
@@ -90,7 +89,7 @@ export async function setupPersistence(): Promise<void> {
   effect(() => {
     void savePreferences({
       accentHue: accentHue.value,
-      currency: currentCurrency.value,
+      currency: currentCurrency.value.code,
       locale: 'en',
       theme: themePreference.value,
     });

@@ -1,6 +1,4 @@
-import type { CurrencyCode } from '@vielzeug/coins';
-
-import { format as formatMoney, money } from '@vielzeug/coins';
+import { currency, format as formatMoney, money } from '@vielzeug/coins';
 import { expires, format as formatDate, parsePlainDate } from '@vielzeug/tempo';
 
 import type { Task } from './types';
@@ -9,7 +7,7 @@ import type { Task } from './types';
 export function formatBudget(budget: Task['budget']): string | null {
   if (!budget) return null;
 
-  return formatMoney(money(budget.amount, budget.currency as CurrencyCode), { maximumFractionDigits: 0 });
+  return formatMoney(money(budget.amount, currency(budget.currency)), { maximumFractionDigits: 0 });
 }
 
 /** Renders an ISO (`yyyy-MM-dd`) due date as e.g. `Jul 20`. */

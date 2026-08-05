@@ -1,49 +1,59 @@
-import type { ExchangeRate, Money, RoundingMode } from './types';
+import type { Currency, ExchangeRate, Money, RoundingMode } from './types';
 
+import { isCurrency } from './currency';
+import { decimal, roundDivision } from './decimal';
 import { CoinsError, CurrencyMismatchError } from './errors';
-import { applyRounding, parseRational, validateCurrencyCode } from './utils';
+import { isMoney, withMinor } from './money';
 
-/**
- * Converts a `Money` value to another currency using the provided exchange rate.
- * Uses lossless bigint arithmetic throughout — `rate.rate` is parsed as a decimal
- * string to avoid IEEE-754 rounding errors. A number `rate.rate` is converted via
- * `String()` first (for symmetry with `multiply()`/`divide()`); prefer a string when
- * precision matters.
- *
- * @param mode Rounding mode applied when the converted amount is not a whole minor unit.
- *             Defaults to `'half-away-from-zero'`.
- *
- * @throws {CurrencyMismatchError} If `money.currency` does not match `rate.from`.
- *   Note: `rate.from` is validated implicitly — because `money.currency` is always a valid ISO 4217
- *   code (enforced by `money()`), the mismatch check ensures `rate.from` must equal a valid code.
- *   If you supply an invalid code in `rate.from`, you will receive `CurrencyMismatchError`, not
- *   `InvalidCurrencyError`. Pre-validate `rate.from` with `validateCurrencyCode()` if needed.
- * @throws {InvalidCurrencyError}  If `rate.to` is not a recognised ISO 4217 currency code.
- * @throws {CoinsError}            If `rate.rate` is an empty string, non-numeric, or a negative value.
- *
- * @example
- * ```ts
- * const usd = money('1000.00', 'USD');
- * exchange(usd, { from: 'USD', to: 'EUR', rate: '0.85' });
- * // { amount: 85000n, currency: 'EUR' }
- * ```
- */
-export function exchange(m: Money, rate: ExchangeRate, mode: RoundingMode = 'half-away-from-zero'): Money {
-  if (m.currency !== rate.from) {
-    throw new CurrencyMismatchError(m.currency, rate.from);
-  }
+export function exchangeRate<From extends Currency, To extends Currency>({
+  from,
+  to,
+  value,
+}: {
+  from: From;
+  to: To;
+  value: string;
+}): ExchangeRate<From, To> {
+  if (!isCurrency(from) || !isCurrency(to))
+    throw new CoinsError('INVALID_CURRENCY', 'Exchange rate requires registered currencies');
 
-  if (rate.rate === '') throw new CoinsError('Exchange rate must be a non-empty decimal string');
+  const parsed = decimal(value);
 
-  const { denominator, negative: rateNegative, numerator } = parseRational(String(rate.rate));
+  if (parsed.numerator < 0n) throw new CoinsError('INVALID_DECIMAL', 'Exchange rates cannot be negative');
 
-  if (rateNegative) throw new CoinsError('Exchange rate must be non-negative');
+  return Object.freeze({ from, to, value: parsed });
+}
 
-  const negative = m.amount < 0n;
-  const absAmount = m.amount < 0n ? -m.amount : m.amount;
-  const raw = absAmount * numerator;
-  const quotient = raw / denominator;
-  const result = applyRounding(quotient, raw % denominator, denominator, mode, negative);
+export function exchange<From extends Currency, To extends Currency>(
+  value: Money<From>,
+  rate: ExchangeRate<From, To>,
+  options: { rounding?: RoundingMode } = {},
+): Money<To> {
+  if (!isMoney(value) || !isValidRate(rate))
+    throw new CoinsError('INVALID_MONEY', 'Exchange requires canonical money and rate values');
 
-  return { amount: negative ? -result : result, currency: validateCurrencyCode(rate.to) };
+  if (value.currency !== rate.from) throw new CurrencyMismatchError(value.currency.code, rate.from.code);
+
+  const numerator = value.amount * rate.value.numerator * 10n ** BigInt(rate.to.minorUnit);
+  const denominator = rate.value.denominator * 10n ** BigInt(rate.from.minorUnit);
+
+  return withMinor(roundDivision(numerator, denominator, options.rounding ?? 'halfAwayFromZero'), rate.to);
+}
+
+function isValidRate(value: unknown): value is ExchangeRate {
+  if (typeof value !== 'object' || value === null || !Object.isFrozen(value)) return false;
+
+  const rate = value as Partial<ExchangeRate>;
+
+  return (
+    isCurrency(rate.from) &&
+    isCurrency(rate.to) &&
+    typeof rate.value === 'object' &&
+    rate.value !== null &&
+    Object.isFrozen(rate.value) &&
+    typeof rate.value.numerator === 'bigint' &&
+    rate.value.numerator >= 0n &&
+    typeof rate.value.denominator === 'bigint' &&
+    rate.value.denominator > 0n
+  );
 }

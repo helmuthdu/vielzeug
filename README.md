@@ -566,10 +566,10 @@ pnpm add @vielzeug/coins
 
 **Key Features:**
 
-- `money(amount, currency)` as an immutable value type backed by bigint — exact precision throughout
-- Full arithmetic: `add`, `subtract`, `multiply`, `divide`, `allocate`, `splitEvenly`
-- Locale-aware formatting via `Intl.NumberFormat` with `format()` and `formatParts()`
-- `exchange()` for currency conversion with custom rate maps
+- `money('19.99', USD)` for exact decimal values and explicit `{ unit: 'minor' }` bigint construction
+- Exact arithmetic, aggregation, and allocation with named rounding options
+- Deterministic currency definitions; `Intl.NumberFormat` only controls presentation
+- `exchangeRate()` and `exchange()` for exact currency conversion
 - Zero dependencies
 
 [📖 Documentation](https://vielzeug.dev/coins/) • [Examples](https://vielzeug.dev/coins/examples)

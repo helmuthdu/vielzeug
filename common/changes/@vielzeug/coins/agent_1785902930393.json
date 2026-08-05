@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Redesign exact money and currency APIs",
+      "packageName": "@vielzeug/coins",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/coins"
+}

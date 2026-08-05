@@ -1,44 +1,36 @@
-import type { CurrencyCode } from '@vielzeug/coins';
+import type { Currency } from '@vielzeug/coins';
 
-import { format as formatMoney, money } from '@vielzeug/coins';
+import { currency, exchange, exchangeRate, format as formatMoney, money, USD, EUR, GBP } from '@vielzeug/coins';
 import { signal } from '@vielzeug/ripple';
 
-/**
- * Static demo exchange rates against the storage currency (USD) — real apps would source these
- * from a rates API via `@vielzeug/courier`; the point here is exercising `@vielzeug/coins`'
- * `exchange()`-shaped conversion + `format()`, not building a live FX feed.
- */
-const RATES: Record<CurrencyCode, number> = {
-  EUR: 0.92,
-  GBP: 0.79,
-  USD: 1,
-};
+const RATES = {
+  EUR: exchangeRate({ from: USD, to: EUR, value: '0.92' }),
+  GBP: exchangeRate({ from: USD, to: GBP, value: '0.79' }),
+} as const;
 
-export const SUPPORTED_CURRENCIES: CurrencyCode[] = ['USD', 'EUR', 'GBP'];
+export const SUPPORTED_CURRENCIES = [USD, EUR, GBP] as const;
+export const currentCurrency = signal<Currency>(USD);
 
-export const currentCurrency = signal<CurrencyCode>('USD');
-
-export function setCurrency(currency: CurrencyCode): void {
-  currentCurrency.value = currency;
+export function setCurrency(next: Currency): void {
+  currentCurrency.value = next;
 }
 
-/** Converts a USD-denominated decimal amount string into the currently selected display currency. */
-export function toDisplayCurrency(usdAmount: string): { amount: string; currency: CurrencyCode } {
-  const currency = currentCurrency.value;
-  const rate = RATES[currency];
-  const converted = (Number.parseFloat(usdAmount) * rate).toFixed(2);
+export function toDisplayCurrency(usdAmount: string) {
+  const selected = currentCurrency.value;
+  const value = money(usdAmount, USD);
+  const converted = selected.code === USD.code ? value : exchange(value, RATES[selected.code as keyof typeof RATES]);
 
-  return { amount: converted, currency };
+  return converted;
 }
 
-/**
- * Formats a USD-denominated decimal amount string as a localized string in the display
- * currency. Not itself a ripple-reactive read (like i18n.ts's `t()`) — callers wrap it in a
- * `computed()`/template binding that also reads `currentCurrency.value` so it re-renders when
- * the currency changes; see `core/pricing.ts` for the pattern.
- */
 export function formatPrice(usdAmount: string): string {
-  const { amount, currency } = toDisplayCurrency(usdAmount);
+  const selected = currentCurrency.value;
+  const value = money(usdAmount, USD);
+  const converted = selected.code === USD.code ? value : exchange(value, RATES[selected.code as keyof typeof RATES]);
 
-  return formatMoney(money(amount, currency), { maximumFractionDigits: 0 });
+  return formatMoney(converted, { maximumFractionDigits: 0 });
+}
+
+export function currencyFromCode(code: string): Currency {
+  return currency(code);
 }

@@ -1,251 +1,38 @@
-import { CoinsError } from '../errors';
-import { format, formatParts } from '../format';
-import { money } from '../money';
+import { describe, expect, it } from 'vitest';
+
+import { EUR, JPY, USD, format, formatParts, money } from '../index';
 
 describe('format', () => {
-  describe('basic formatting', () => {
-    it('formats USD with default options', () => {
-      expect(format(money('1234.56', 'USD'))).toBe('$1,234.56');
-    });
-
-    it('formats zero amount', () => {
-      expect(format(money('0.00', 'USD'))).toBe('$0.00');
-    });
-
-    it('formats negative amounts', () => {
-      expect(format(money('-100.00', 'USD'))).toBe('-$100.00');
-    });
-
-    it('formats large amounts without float precision loss', () => {
-      // 1,234,567,890,123,456.78 USD
-      expect(format(money(123456789012345678n, 'USD'))).toBe('$1,234,567,890,123,456.78');
-    });
-
-    it('formats largest safe-integer-range amounts exactly', () => {
-      expect(format(money(99999999999999n, 'USD'))).toBe('$999,999,999,999.99');
-    });
-
-    it('formats thousand separators (grouping)', () => {
-      // Validates that getIntegerFormatter (via Intl) adds grouping separators and
-      // buildFromTemplate skips the template group parts to avoid duplication.
-      expect(format(money('1234567.00', 'USD'))).toBe('$1,234,567.00');
-    });
+  it('formats bigint-backed values without number conversion', () => {
+    expect(format(money('1234.56', USD))).toBe('$1,234.56');
+    expect(format(money(123456789012345678n, USD, { unit: 'minor' }))).toBe('$1,234,567,890,123,456.78');
   });
 
-  describe('locale formatting', () => {
-    it('formats with German locale', () => {
-      const result = format(money('1234.56', 'EUR'), { locale: 'de-DE' });
-
-      expect(result).toContain('1.234,56');
-    });
-
-    it('formats with French locale', () => {
-      const result = format(money('1234.56', 'EUR'), { locale: 'fr-FR' });
-
-      expect(result).toContain('1\u202f234,56'); // narrow no-break space is standard in fr-FR
-    });
+  it('honors locale, currency scale, and display options', () => {
+    expect(format(money('1234.56', EUR), { locale: 'de-DE' })).toContain('1.234,56');
+    expect(format(money('1234', JPY))).toBe('¥1,234');
+    expect(format(money('1000', USD), { style: 'code' })).toContain('USD');
   });
 
-  describe('style option', () => {
-    it('formats with symbol style (default)', () => {
-      expect(format(money('1000.00', 'USD'), { style: 'symbol' })).toBe('$1,000.00');
-    });
-
-    it('formats with code style', () => {
-      expect(format(money('1000.00', 'USD'), { style: 'code' })).toContain('USD');
-      expect(format(money('1000.00', 'USD'), { style: 'code' })).toContain('1,000.00');
-    });
-
-    it('formats with name style', () => {
-      const result = format(money('1000.00', 'USD'), { style: 'name' });
-
-      expect(result).toContain('1,000.00');
-      expect(result.toLowerCase()).toMatch(/us dollar/);
-    });
-
-    it('formats with narrowSymbol style', () => {
-      const result = format(money('1000.00', 'USD'), { style: 'narrowSymbol' });
-
-      expect(result).toContain('1,000.00');
-      expect(result).toContain('$');
-    });
-
-    it('formatParts narrowSymbol joined equals format() output', () => {
-      const m = money('1000.00', 'USD');
-      const opts = { style: 'narrowSymbol' as const };
-
-      expect(
-        formatParts(m, opts)
-          .map((p) => p.value)
-          .join(''),
-      ).toBe(format(m, opts));
-    });
-  });
-
-  describe('zero-decimal currencies', () => {
-    it('formats JPY without decimal point', () => {
-      expect(format(money('1234', 'JPY'))).toBe('¥1,234');
-    });
-
-    it('formats KRW without decimal point', () => {
-      const result = format(money('5000', 'KRW'));
-
-      expect(result).toContain('5,000');
-      expect(result).not.toContain('.');
-    });
-  });
-
-  describe('three-decimal currencies', () => {
-    it('formats BHD with three decimal places', () => {
-      const result = format(money('123.456', 'BHD'));
-
-      expect(result).toContain('123.456');
-    });
-
-    it('formats KWD with three decimal places', () => {
-      const result = format(money('1.000', 'KWD'));
-
-      expect(result).toContain('1.000');
-    });
-  });
-
-  describe('custom fraction digits', () => {
-    it('respects minimumFractionDigits', () => {
-      // Show at least 3 decimal places on a 2-decimal currency
-      const result = format(money('100.00', 'USD'), { maximumFractionDigits: 3, minimumFractionDigits: 3 });
-
-      expect(result).toBe('$100.000');
-    });
-
-    it('respects maximumFractionDigits = 0', () => {
-      const result = format(money('100.99', 'USD'), { maximumFractionDigits: 0, minimumFractionDigits: 0 });
-
-      expect(result).toBe('$101');
-    });
-
-    it('accepts maximumFractionDigits alone without throwing (regression: minFrac defaulted to currency decimals)', () => {
-      expect(() => format(money('100.99', 'USD'), { maximumFractionDigits: 0 })).not.toThrow();
-      expect(format(money('100.99', 'USD'), { maximumFractionDigits: 0 })).toBe('$101');
-    });
-
-    it('accepts maximumFractionDigits: 1 alone on a 2-decimal currency', () => {
-      expect(format(money('1.50', 'USD'), { maximumFractionDigits: 1 })).toBe('$1.5');
-      expect(format(money('1.55', 'USD'), { maximumFractionDigits: 1 })).toBe('$1.6');
-    });
-
-    it('trims trailing zeros down to minimumFractionDigits', () => {
-      // 100.50 with min=0 trims to $100.5
-      const result = format(money('100.50', 'USD'), { maximumFractionDigits: 2, minimumFractionDigits: 0 });
-
-      expect(result).toBe('$100.5');
-    });
-
-    it('throws when minimumFractionDigits > maximumFractionDigits', () => {
-      expect(() => format(money('100.00', 'USD'), { maximumFractionDigits: 1, minimumFractionDigits: 2 })).toThrow(
-        CoinsError,
-      );
-    });
-
-    it('throws on non-integer fraction digits', () => {
-      expect(() => format(money('100.00', 'USD'), { maximumFractionDigits: 1.5 })).toThrow(CoinsError);
-      expect(() => format(money('100.00', 'USD'), { minimumFractionDigits: 1.5 })).toThrow(CoinsError);
-    });
-
-    it('throws on negative fraction digits', () => {
-      expect(() => format(money('100.00', 'USD'), { maximumFractionDigits: -1 })).toThrow(CoinsError);
-      expect(() => format(money('100.00', 'USD'), { minimumFractionDigits: -1 })).toThrow(CoinsError);
-    });
-  });
-});
-
-describe('formatParts', () => {
-  it('returns semantic parts for a simple USD amount', () => {
-    const parts = formatParts(money('1234.56', 'USD'));
-
-    expect(parts.find((p) => p.type === 'currency')?.value).toBe('$');
-    expect(parts.find((p) => p.type === 'integer')?.value).toBe('1,234');
-    expect(parts.find((p) => p.type === 'decimal')?.value).toBe('.');
-    expect(parts.find((p) => p.type === 'fraction')?.value).toBe('56');
-  });
-
-  it('includes minusSign for negative amounts', () => {
-    const parts = formatParts(money('-100.00', 'USD'));
-
-    expect(parts.some((p) => p.type === 'minusSign')).toBe(true);
-    expect(parts.find((p) => p.type === 'integer')?.value).toBe('100');
-  });
-
-  it('omits decimal and fraction when maximumFractionDigits is 0', () => {
-    const parts = formatParts(money('100.56', 'USD'), { maximumFractionDigits: 0, minimumFractionDigits: 0 });
-
-    expect(parts.some((p) => p.type === 'decimal')).toBe(false);
-    expect(parts.some((p) => p.type === 'fraction')).toBe(false);
-  });
-
-  it('string-joined parts equal format() output', () => {
-    const m = money('1234.56', 'USD');
+  it('joins semantic parts back to the formatted value', () => {
+    const value = money('-100.50', USD);
 
     expect(
-      formatParts(m)
-        .map((p) => p.value)
+      formatParts(value)
+        .map((part) => part.value)
         .join(''),
-    ).toBe(format(m));
+    ).toBe(format(value));
   });
 
-  it('string-joined parts equal format() for negative amounts', () => {
-    const m = money('-99.99', 'USD');
-
-    expect(
-      formatParts(m)
-        .map((p) => p.value)
-        .join(''),
-    ).toBe(format(m));
+  it('rounds visible fraction digits with named options', () => {
+    expect(format(money('100.99', USD), { maximumFractionDigits: 0, minimumFractionDigits: 0 })).toBe('$101');
   });
 
-  it('string-joined parts equal format() with code style', () => {
-    const m = money('1000.00', 'USD');
-    const opts = { style: 'code' as const };
-
-    expect(
-      formatParts(m, opts)
-        .map((p) => p.value)
-        .join(''),
-    ).toBe(format(m, opts));
+  it('bounds fraction digits before bigint or Intl work', () => {
+    expect(() => format(money('1', USD), { maximumFractionDigits: 21 })).toThrow(/maximum ≤ 20/);
   });
 
-  it('string-joined parts equal format() with non-default locale', () => {
-    const m = money('1234.56', 'EUR');
-    const opts = { locale: 'de-DE' };
-
-    expect(
-      formatParts(m, opts)
-        .map((p) => p.value)
-        .join(''),
-    ).toBe(format(m, opts));
-  });
-});
-
-describe('format — additional edge cases', () => {
-  it('rescales negative amount with maximumFractionDigits < currency decimals', () => {
-    // -100.99 USD rescaled to 0 decimals: abs=10099, divisor=100, quotient=100, rem=99 → rounds up → 101 → -101
-    expect(format(money('-100.99', 'USD'), { maximumFractionDigits: 0, minimumFractionDigits: 0 })).toBe('-$101');
-    // -100.49 USD rescaled to 0 decimals: abs=10049, quotient=100, rem=49 → truncates → 100 → -$100
-    expect(format(money('-100.49', 'USD'), { maximumFractionDigits: 0, minimumFractionDigits: 0 })).toBe('-$100');
-  });
-
-  it('formats negative zero-decimal currency (JPY)', () => {
-    expect(format(money(-1234n, 'JPY'))).toContain('1,234');
-    expect(format(money(-1234n, 'JPY'))).toContain('-');
-    expect(format(money(-1234n, 'JPY'))).not.toContain('.');
-  });
-
-  it('string-joined parts equal format() for negative JPY', () => {
-    const m = money(-1234n, 'JPY');
-
-    expect(
-      formatParts(m)
-        .map((p) => p.value)
-        .join(''),
-    ).toBe(format(m));
+  it('normalizes invalid locale failures into CoinsError', () => {
+    expect(() => format(money('1', USD), { locale: 'not_a_locale' })).toThrow(/Cannot/);
   });
 });

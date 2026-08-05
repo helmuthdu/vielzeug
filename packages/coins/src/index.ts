@@ -1,42 +1,29 @@
+export { clamp, allocate, sum } from './aggregate';
+export { BHD, currency, defineCurrency, EUR, GBP, isCurrency, JPY, KRW, KWD, USD } from './currency';
+export { decimal } from './decimal';
 export { CoinsError, CurrencyMismatchError, InvalidCurrencyError } from './errors';
-export { exchange } from './exchange';
+export type { CoinsErrorCode } from './errors';
+export { exchange, exchangeRate } from './exchange';
 export { format, formatParts } from './format';
-export { getCurrencyDecimals, validateCurrencyCode } from './utils';
 export {
   abs,
   add,
-  allocate,
-  clamp,
   compare,
   divide,
-  fromJSON,
-  greaterThan,
-  greaterThanOrEqual,
-  isEqual,
   isMoney,
-  isNegative,
-  isNonNegative,
-  isNonPositive,
-  isPositive,
-  isZero,
-  lessThan,
-  lessThanOrEqual,
-  max,
-  min,
   money,
   multiply,
   negate,
-  roundTo,
-  splitEvenly,
+  parseMoney,
+  round,
   subtract,
-  sum,
   toDecimal,
-  toJSON,
-  toNumber,
-  withAmount,
 } from './money';
+export { parseMoneyJSON, toJSON } from './serialization';
 export type {
+  Currency,
   CurrencyCode,
+  Decimal,
   ExchangeRate,
   FormatOptions,
   Money,

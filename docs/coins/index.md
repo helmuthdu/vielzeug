@@ -1,51 +1,11 @@
 ---
-title: Coins — Money utilities for TypeScript
-description: Zero-dependency, bigint-based monetary arithmetic, formatting, and currency conversion for TypeScript.
+title: Coins — Exact Money for TypeScript
+description: Exact bigint monetary arithmetic with explicit currency definitions, decimal strings, allocation, exchange, formatting, and JSON boundaries.
 package: coins
-category: utilities
-keywords: [money, currency, exchange rate, formatting, bigint, locale, arithmetic, allocation]
-related: [arsenal, tempo]
-exports:
-  [
-    money,
-    add,
-    subtract,
-    multiply,
-    divide,
-    abs,
-    negate,
-    roundTo,
-    allocate,
-    splitEvenly,
-    clamp,
-    sum,
-    min,
-    max,
-    compare,
-    isEqual,
-    greaterThan,
-    greaterThanOrEqual,
-    lessThan,
-    lessThanOrEqual,
-    isZero,
-    isPositive,
-    isNegative,
-    isNonNegative,
-    isNonPositive,
-    format,
-    formatParts,
-    exchange,
-    toDecimal,
-    toNumber,
-    toJSON,
-    fromJSON,
-    withAmount,
-    isMoney,
-    validateCurrencyCode,
-    getCurrencyDecimals,
-    CurrencyMismatchError,
-    InvalidCurrencyError,
-  ]
+category: finance
+keywords: [money, currency, bigint, decimal, exchange, formatting]
+exports: [money, currency, add, allocate, exchange, format]
+related: [vault, courier, spell]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -55,36 +15,31 @@ environments: [browser, node, ssr, deno]
 
 ## Why Coins?
 
-Monetary arithmetic with `number` accumulates IEEE-754 rounding errors. These errors are invisible in tests but show up in production totals, allocation remainders, and exchange results.
+Coins keeps monetary values in bigint minor units, but makes units explicit at construction. Currency scale comes from deterministic definitions; `Intl` formats a known value without deciding its arithmetic representation.
 
 ```ts
-// Before — float arithmetic
-const price = 10.1 + 10.2; // 20.299999999999997, not 20.3
-const [a, b, c] = [price / 3, price / 3, price / 3];
-a + b + c; // 20.299999999999997 — penny lost
+// Before
+const total = (19.99 + 7.25) * 1.08;
 
-// After — bigint minor units
-import { add, allocate, money, toDecimal } from '@vielzeug/coins';
-const price = add(money('10.10', 'USD'), money('10.20', 'USD'));
-const [a, b, c] = allocate(price, [1, 1, 1]);
-a.amount + b.amount + c.amount === price.amount; // true — always
+// After
+import { USD, add, money, multiply } from '@vielzeug/coins';
+
+const total = multiply(add(money('19.99', USD), money('7.25', USD)), '1.08');
 ```
 
-| Feature                      | Coins                                       | Dinero.js v2                                    | currency.js                                                           |
-| ---------------------------- | ------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
-| Bundle size                  | <PackageInfo package="coins" type="size" /> | ~14 kB                                          | ~2.5 kB                                                               |
-| Zero dependencies            | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon>                            |
-| `bigint` minor units         | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="x" size="16"></ore-icon> (number) | <ore-icon name="x" size="16"></ore-icon> (number)                       |
-| TypeScript-native            | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="triangle-alert" size="16"></ore-icon> third-party types |
-| Validated currency codes     | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="x" size="16"></ore-icon>          | <ore-icon name="x" size="16"></ore-icon>                                |
-| Locale-aware formatting      | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="triangle-alert" size="16"></ore-icon> manual            |
-| Largest Remainder allocation | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>                                |
+| Feature | Coins | decimal.js | Dinero.js |
+| --- | --- | --- | --- |
+| Bundle size | <PackageInfo package="coins" type="size" /> | External dependency | External dependency |
+| Bigint minor units | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Explicit currency scale | <ore-icon name="check" size="16"></ore-icon> | App-defined | Partial |
+| Exact allocation | <ore-icon name="check" size="16"></ore-icon> | Manual | <ore-icon name="check" size="16"></ore-icon> |
+| Zero dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
-**Use Coins when** you need exact bigint arithmetic with validated currencies, typed allocation, and `Intl`-powered formatting in a single zero-dependency package.
+**Use Coins when** application values represent real money and every rounding boundary must be visible.
 
-**Consider Dinero.js when** your team already uses it and float precision is acceptable for your use case.
+**Consider native numbers when** values are estimates, analytics, or display-only approximations.
 
 </div>
 
@@ -109,48 +64,25 @@ yarn add @vielzeug/coins
 ## Quick Start
 
 ```ts
-import { add, allocate, exchange, format, money, multiply } from '@vielzeug/coins';
-import type { ExchangeRate, Money } from '@vielzeug/coins';
+import { USD, add, format, money, multiply } from '@vielzeug/coins';
 
-// Create money from decimal strings (lossless) or bigint minor units
-const price: Money = money('19.99', 'USD'); // { amount: 1999n, currency: 'USD' }
-const tax: Money = money('1.60', 'USD');
-const total: Money = add(price, tax); // { amount: 3559n, currency: 'USD' }
+const subtotal = add(money('12.50', USD), money('7.25', USD));
+const total = multiply(subtotal, '1.08', { rounding: 'halfEven' });
 
-// Arithmetic
-multiply(total, '1.1'); // $39.15 (half-away-from-zero, default)
-multiply(total, '1.1', 'floor'); // explicit rounding mode
-
-// Lossless allocation — no minor unit is ever lost or gained
-allocate(money('10.00', 'USD'), [1, 1, 1]); // [$3.34, $3.33, $3.33]
-
-// Locale-aware formatting
-format(total); // '$35.59'
-format(total, { locale: 'de-DE' }); // '35,59 $'
-format(total, { style: 'code' }); // 'USD 35.59'
-
-// Currency exchange — ExchangeRate.from/to are plain strings; rate is a decimal string
-const rate: ExchangeRate = { from: 'USD', rate: '0.92', to: 'EUR' };
-exchange(total, rate); // { amount: 3274n, currency: 'EUR' }
+console.log(format(total));
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- `money()` — create from decimal string, number, or bigint minor units; currency validated at creation time via `Intl`; dev warning when float has more decimals than currency supports
-- Arithmetic — `add`, `subtract`, `multiply`, `divide`, `abs`, `negate`; all throw `CurrencyMismatchError` on currency mismatch
-- `roundTo()` — round to fewer decimal places (e.g. whole dollars); configurable rounding mode
-- Allocation — `allocate` (weighted) and `splitEvenly` (equal); Largest Remainder Method guarantees exact totals
-- Aggregates — `sum`, `min`, `max`, `clamp`; `min`/`max` accept a non-empty array
-- Comparison — `compare`, `isEqual` (returns `false` on currency mismatch), `greaterThan`, `greaterThanOrEqual`, `lessThan`, `lessThanOrEqual`, `isZero`, `isPositive`, `isNegative`, `isNonNegative`, `isNonPositive`
-- `format()` — `Intl.NumberFormat`-powered string output with symbol / code / name / narrowSymbol styles
-- `formatParts()` — typed part array for custom UI rendering (superscript cents, coloured symbols, etc.)
-- `exchange()` — currency conversion using string rates; `ExchangeRate.from`/`to` are plain strings; throws `CurrencyMismatchError` on mismatch
-- Serialization — `toDecimal`, `toNumber`, `toJSON`, `fromJSON`; safe `bigint` round-trip through JSON
-- `withAmount()` — clone a `Money` with a new bigint amount, preserving the currency
-- `isMoney()` — type guard for narrowing unknown payloads; own-property check guards against prototype pollution
-- `CurrencyMismatchError` / `InvalidCurrencyError` — typed error subclasses for structured `catch` blocks
+- **`money`**: one constructor for decimal and explicit minor-unit values
+- **`currency`**: deterministic built-in currency definitions
+- **`add`**: exact same-currency arithmetic
+- **`allocate`**: split every minor unit without loss
+- **`exchange`**: typed source and target currency conversion
+- **`format`**: locale presentation for bigint values
+- **`parseMoneyJSON`**: validate persisted money values
 
 </div>
 
@@ -168,8 +100,9 @@ exchange(total, rate); // { amount: 3274n, currency: 'EUR' }
 
 <div class="see-also">
 
-- [Arsenal](/arsenal/) — general-purpose utility functions; pairs with Coins for formatting pipelines that combine numbers, strings, and currency in one pass
-- [Tempo](/tempo/) — date and time utilities; combine with Coins when displaying transaction histories or time-windowed financial summaries
+- [Vault](/vault/) — persist validated money JSON.
+- [Courier](/courier/) — retrieve exchange-rate data.
+- [Spell](/spell/) — validate external monetary payloads.
 
 </div>
 
