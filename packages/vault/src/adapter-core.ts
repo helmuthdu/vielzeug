@@ -1,18 +1,18 @@
 import type {
-  Adapter,
   AnySchema,
   BaseAdapterOptions,
   DebugInfo,
+  IndexedDbVaultStore,
   KeyOf,
   MetricsEvent,
   RecordOf,
   TransactionContext,
   TtlMs,
+  VaultStore,
 } from './types';
 
-import { warn } from './_dev';
 import { VaultDisposedError, VaultError, VaultScopeError } from './errors';
-import { createObserveMany, createObserverHub, createWatchIterable, getRecordKey } from './internal';
+import { createObserverHub, getRecordKey } from './internal';
 import { createQueryBuilder, type NativeRange, type QueryContext } from './query';
 import { assertTtlMs } from './ttl';
 
@@ -177,10 +177,9 @@ export function buildTxContext<S extends AnySchema, K extends keyof S & string>(
 
       const live = await core.count(table);
 
-      if (live === 0) return;
-
       await core.clear(table);
-      onMutate(table);
+
+      if (live > 0) onMutate(table);
     },
     async count(table) {
       checkScope(table);
@@ -326,16 +325,17 @@ export function buildTxContext<S extends AnySchema, K extends keyof S & string>(
 
 /* -------------------- buildAdapterOps -------------------- */
 
+/** Builds the portable surface first; IndexedDB opts into transactions at its factory boundary. */
 export function buildAdapterOps<S extends AnySchema>(
   schema: S,
   core: StorageBackend<S>,
   options?: BaseAdapterOptions<S> & {
-    buildBatch?: (deps: BatchDeps<S>) => BatchImpl<S>;
     onCrossTabMessage?: (notify: (table: keyof S & string) => void) => (() => void) | undefined;
     onMutation?: (table: keyof S & string) => void;
+    onTransactions?: (deps: BatchDeps<S>) => void;
   },
-): Adapter<S> {
-  const { logger, onMetrics, signals, validators } = options ?? {};
+): VaultStore<S> {
+  const { logger, onMetrics, validators } = options ?? {};
 
   const observers = createObserverHub<S>(
     (table) => core.getAll(table),
@@ -378,16 +378,6 @@ export function buildAdapterOps<S extends AnySchema>(
 
   const disconnectExternal = options?.onCrossTabMessage?.(notifyExternal) ?? undefined;
 
-  if (signals) {
-    for (const [tableName, signal] of Object.entries(signals)) {
-      if (signal) {
-        observers.observe(tableName as keyof S & string, (records) => {
-          signal.update(() => records as RecordOf<S, keyof S>[]);
-        });
-      }
-    }
-  }
-
   const validate = <K extends keyof S & string>(table: K, value: RecordOf<S, K>): RecordOf<S, K> => {
     const validator = validators?.[table];
 
@@ -409,28 +399,9 @@ export function buildAdapterOps<S extends AnySchema>(
     return fn().finally(() => onMetrics({ duration: getTimestamp() - start, operation: op, table }));
   };
 
-  const deferredBatch = async <K extends keyof S & string, R>(
-    fn: (tx: TransactionContext<S, K>) => Promise<R>,
-    scope: ReadonlySet<string>,
-  ): Promise<R> => {
-    const dirty = new Set<K>();
-    const tx = buildTxContext<S, K>(schema, core as StorageBackend<S, K>, (t) => dirty.add(t), validate, scope);
-    const result = await fn(tx);
-
-    for (const t of dirty) {
-      notifyMutation(t);
-    }
-
-    return result;
-  };
-
-  const nativeBatch = options?.buildBatch?.({ notifyMutation, validate });
-
-  let warnedNonAtomic = false;
+  options?.onTransactions?.({ notifyMutation, validate });
 
   const txCtx = buildTxContext<S, keyof S & string>(schema, core, notifyMutation, validate);
-
-  const observeMany = createObserveMany<S>(observers);
 
   const disposeController = new AbortController();
   let disposed = false;
@@ -439,22 +410,7 @@ export function buildAdapterOps<S extends AnySchema>(
     if (disposed) throw new VaultDisposedError();
   };
 
-  const adapter: Adapter<S> = {
-    async batch<K extends keyof S & string, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>) {
-      checkDisposed();
-
-      if (tables.length === 0) throw new VaultScopeError('batch requires at least one table');
-
-      if (!nativeBatch && !warnedNonAtomic) {
-        warnedNonAtomic = true;
-        warn(
-          'batch() on this adapter is not atomic — concurrent mutations may interleave. Use createIndexedDB for atomic batches.',
-        );
-      }
-
-      return timed('*', 'batch', () => (nativeBatch ? nativeBatch(tables, fn) : deferredBatch(fn, new Set(tables))));
-    },
-
+  const adapter: VaultStore<S> = {
     async clear(table) {
       checkDisposed();
       await timed(table, 'clear', () => txCtx.clear(table));
@@ -576,12 +532,6 @@ export function buildAdapterOps<S extends AnySchema>(
       return observers.observe(table, listener, opts);
     },
 
-    observeMany: (tables, listener, opts) => {
-      checkDisposed();
-
-      return observeMany(tables, listener, opts);
-    },
-
     async pruneExpired(tables?: readonly (keyof S & string)[]) {
       checkDisposed();
 
@@ -655,17 +605,15 @@ export function buildAdapterOps<S extends AnySchema>(
 
       return timed(table, 'upsert', () => txCtx.upsert(table, key, fn, ttl));
     },
-
-    watch(table, options) {
-      checkDisposed();
-
-      return createWatchIterable<RecordOf<S, typeof table>>(
-        (listener) => observers.observe(table, listener),
-        options?.mode ?? 'latest',
-        options?.signal,
-      );
-    },
   };
 
   return adapter;
+}
+
+/** IndexedDB is the only backend that can bind this callback to one native transaction. */
+export function withIndexedDbTransactions<S extends AnySchema>(
+  store: VaultStore<S>,
+  batch: BatchImpl<S>,
+): IndexedDbVaultStore<S> {
+  return Object.assign(store, { batch }) as IndexedDbVaultStore<S>;
 }

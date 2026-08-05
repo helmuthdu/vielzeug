@@ -1,4 +1,4 @@
-import type { Adapter } from '@vielzeug/vault';
+import type { VaultStore } from '@vielzeug/vault';
 
 import { effect } from '@vielzeug/ripple';
 import { createLocalStorage, table } from '@vielzeug/vault';
@@ -9,19 +9,7 @@ import type { Board } from './types';
 import { boardSignal } from './board-store';
 import { setThemePreference, themePreference } from './theme';
 
-// ---------------------------------------------------------------------------
-// Vault schema — a single row keyed 'current' holds the whole board. A real backend-per-task
-// table isn't warranted here: the board is edited/undone as one unit via history.ts's ledger,
-// so persisting it as one unit keeps a reload's restore trivially consistent with that model.
-//
-// KNOWN ISSUE (published @vielzeug/vault@1.0.3, npm): the phantom `schemaEntryBrand` field that
-// `RecordOf<S, K>` needs to recover a table's record type from `S` is present in the package's
-// own source but missing from its *published* `.d.ts` — so `table<T>(...)`'s type is erased to
-// `{}` by the time it reaches `Adapter<S>.get/put`. This is a packaging bug in the published
-// package, not a modeling error here; casting at the two call sites below is the narrowest
-// workaround. Safe to drop once a vault release re-includes the brand in its declarations.
-// ---------------------------------------------------------------------------
-
+// The schema carries each row's real record and portable string-key types into the store.
 type BoardRow = { board: Board; id: 'current' };
 type ThemeRow = { id: 'appearance'; preference: ThemePreference };
 
@@ -29,37 +17,25 @@ const schema = {
   board: table<BoardRow>('id'),
   theme: table<ThemeRow>('id'),
 };
-const store: Adapter<typeof schema> = createLocalStorage({ name: 'kanban', schema });
+const store: VaultStore<typeof schema> = createLocalStorage({ name: 'kanban', schema });
 
 async function loadBoard(): Promise<Board | null> {
-  const row = (await store.get('board', 'current')) as BoardRow | undefined;
-
-  return row?.board ?? null;
+  return (await store.get('board', 'current'))?.board ?? null;
 }
 
 async function saveBoard(board: Board): Promise<void> {
-  await store.put('board', { board, id: 'current' } as never);
+  await store.put('board', { board, id: 'current' });
 }
 
 async function loadThemePreference(): Promise<ThemePreference | null> {
-  const row = (await store.get('theme', 'appearance')) as ThemeRow | undefined;
-
-  return row?.preference ?? null;
+  return (await store.get('theme', 'appearance'))?.preference ?? null;
 }
 
 async function saveThemePreference(preference: ThemePreference): Promise<void> {
-  await store.put('theme', { id: 'appearance', preference } as never);
+  await store.put('theme', { id: 'appearance', preference });
 }
 
-// ---------------------------------------------------------------------------
-// Setup
-// ---------------------------------------------------------------------------
-
-/**
- * Hydrates `boardSignal` from vault-backed localStorage (if a prior session saved one), then
- * keeps every subsequent change durable by writing the board back on every reactive update.
- * Call once at startup, before anything reads `boardSignal`.
- */
+/** Hydrates local state once, then persists each later reactive update. */
 export async function setupPersistence(): Promise<void> {
   const saved = await loadBoard();
   const savedThemePreference = await loadThemePreference();

@@ -1,14 +1,12 @@
 ---
 title: Vault — Examples
-description: Practical examples and recipes for vault.
+description: Portable storage, observation, and IndexedDB transactions.
 ---
 
-## Examples
-
 - [CRUD](./examples/crud.md)
+- [TTL](./examples/ttl.md)
 - [Querying](./examples/querying.md)
-- [TTL and Pruning](./examples/ttl.md)
-- [Reactive Tables](./examples/reactive.md)
-- [Batch Writes](./examples/batch.md)
-- [Lazy Iteration](./examples/iterate.md)
-- [Plugins and Error Handling](./examples/plugins.md)
+- [Reactive observation](./examples/reactive.md)
+- [IndexedDB iteration](./examples/iterate.md)
+- [IndexedDB batch transactions](./examples/batch.md)
+- [Plugin validation](./examples/plugins.md)

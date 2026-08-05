@@ -1,9 +1,5 @@
 export type Role = 'admin' | 'member' | 'viewer';
 
-// `type` aliases (not `interface`) throughout this file: @vielzeug/vault's `table<T extends
-// Record<string, unknown>>()` (see core/persistence.ts) only structurally satisfies that
-// constraint against type literals — interfaces are nominally open/extendable and never get
-// an implicit index signature, so `table<Task>(...)` fails to type-check against an interface.
 export type User = {
   id: string;
   name: string;

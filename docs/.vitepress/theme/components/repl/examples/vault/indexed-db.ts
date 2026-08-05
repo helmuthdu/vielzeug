@@ -5,7 +5,7 @@ const schema = {
   logs: table('id'),
 }
 
-// createIndexedDB returns IndexedDbAdapter — the only adapter with iterate()
+// createIndexedDB returns IndexedDbVaultStore with transactions and cursor iteration
 const db = createIndexedDB({
   name: 'app-logs',
   schema,
@@ -25,7 +25,7 @@ await db.batch(['logs'], async (tx) => {
   await tx.deleteMany('logs', [1, 2]) // remove old entries in the same transaction
 })
 
-// iterate() — cursor-based streaming, only on IndexedDbAdapter
+// iterate() — cursor-based streaming, only on IndexedDbVaultStore
 // the full table is never loaded into memory at once
 const messages = []
 for await (const entry of db.iterate('logs')) {
@@ -43,5 +43,5 @@ for (const t of info.tables) {
 }
 
 db.dispose()`,
-  name: 'IndexedDB Adapter — Atomic Batch & iterate()',
+  name: 'IndexedDB — Atomic Batch & iterate()',
 };

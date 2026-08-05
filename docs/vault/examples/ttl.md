@@ -70,7 +70,7 @@ for (const t of info.tables) {
 ### Pitfalls
 
 - Expired records are evicted **lazily** on the next read to that key. If a table is written to frequently but rarely read, expired records accumulate. Call `pruneExpired()` or `scheduleExpiredPrune` to reclaim storage proactively.
-- `ttl.hours(0)` is valid and means the record expires immediately. The record may still be readable within the same synchronous tick, but will be treated as expired on the next async read.
+- `ttl.hours(0)` throws because TTL durations must be finite positive values. Omit TTL for records that should not expire.
 - On **IndexedDB**, `pruneExpired` uses a cursor-based pass — expired records are deleted without loading their values into memory. On **LocalStorage / SessionStorage** and **Memory**, each key is checked in sequence.
 - `scheduleExpiredPrune` uses `setInterval` internally. Call the returned `stop()` function before calling `db.dispose()` when a manual stop is needed. When `dispose()` is called without stopping the schedule first, the next interval tick will receive a `VaultDisposedError` and automatically clear the timer — so no dangling timer will fire after the adapter is torn down.
 

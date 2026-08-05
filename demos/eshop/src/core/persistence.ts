@@ -1,4 +1,4 @@
-import type { Adapter } from '@vielzeug/vault';
+import type { VaultStore } from '@vielzeug/vault';
 
 import { effect } from '@vielzeug/ripple';
 import { createLocalStorage, table } from '@vielzeug/vault';
@@ -30,26 +30,26 @@ const schema = {
   preferences: table<PreferencesRow>('id'),
 };
 
-const store: Adapter<typeof schema> = createLocalStorage({ name: 'vielzeug-motors', schema });
+const store: VaultStore<typeof schema> = createLocalStorage({ name: 'vielzeug-motors', schema });
 
 async function loadCart(): Promise<CartRow | null> {
-  const row = (await store.get('cart', 'current')) as CartRow | undefined;
+  const row = await store.get('cart', 'current');
 
   return row ?? null;
 }
 
 async function saveCart(items: CartItem[], compare: string[]): Promise<void> {
-  await store.put('cart', { compareModelIds: compare, id: 'current', items } as never);
+  await store.put('cart', { compareModelIds: compare, id: 'current', items });
 }
 
 async function loadPreferences(): Promise<PreferencesRow | null> {
-  const row = (await store.get('preferences', 'preferences')) as PreferencesRow | undefined;
+  const row = await store.get('preferences', 'preferences');
 
   return row ?? null;
 }
 
 async function savePreferences(prefs: Omit<PreferencesRow, 'id'>): Promise<void> {
-  await store.put('preferences', { id: 'preferences', ...prefs } as never);
+  await store.put('preferences', { id: 'preferences', ...prefs });
 }
 
 /**

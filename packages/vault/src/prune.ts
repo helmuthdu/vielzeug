@@ -1,4 +1,4 @@
-import type { Adapter, AnySchema } from './types';
+import type { AnySchema, VaultStore } from './types';
 
 import { warn } from './_dev';
 import { VaultDisposedError, VaultError } from './errors';
@@ -17,7 +17,7 @@ import { VaultDisposedError, VaultError } from './errors';
  * ```
  */
 export function scheduleExpiredPrune<S extends AnySchema>(
-  adapter: Pick<Adapter<S>, 'pruneExpired'>,
+  adapter: Pick<VaultStore<S>, 'pruneExpired'>,
   options: {
     interval: number;
     /**

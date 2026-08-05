@@ -1,24 +1,32 @@
-import type { AnySchema, KeyOf, RecordOf } from './types';
+import type { AnySchema, KeyOf, RecordOf, VaultKey } from './types';
 
-import { error as logError, warn } from './_dev';
-import { VaultDisposedError, VaultError, VaultScopeError } from './errors';
+import { error as logError } from './_dev';
+import { VaultDisposedError, VaultError } from './errors';
 
 type ObserverListener<T> = (records: T[]) => void;
 
-/**
- * Separator used between encoded key segments. The null byte (\x00) is safe
- * because `encodeURIComponent` always percent-encodes it to `%00` (a 3-character
- * string), so the raw `\x00` byte can never appear inside an encoded segment —
- * eliminating key-collision risk that a URL-safe character like `~` would carry.
- */
 const SEP = '\x00';
+
+/**
+ * Type-tagged keys make `1` and `'1'` distinct in string-keyed adapters while
+ * keeping the same portable primary-key contract as IndexedDB.
+ */
+export function encodeVaultKey(key: VaultKey): string {
+  if (typeof key === 'number') {
+    if (!Number.isFinite(key)) throw new VaultError(`primary key must be a finite number, received ${String(key)}`);
+
+    return `n:${String(key)}`;
+  }
+
+  return `s:${encodeURIComponent(key)}`;
+}
 
 export function encodeDbPrefix(dbName: string): string {
   return `${encodeURIComponent(dbName)}${SEP}`;
 }
 
-export function encodeStorageKey(dbName: string, table: string, key: string): string {
-  return `${encodeURIComponent(dbName)}${SEP}${encodeURIComponent(table)}${SEP}${encodeURIComponent(key)}`;
+export function encodeStorageKey(dbName: string, table: string, key: VaultKey): string {
+  return `${encodeURIComponent(dbName)}${SEP}${encodeURIComponent(table)}${SEP}${encodeVaultKey(key)}`;
 }
 
 export function encodeStorageTablePrefix(dbName: string, table: string): string {
@@ -44,6 +52,7 @@ export function decodeStorageTableFromKey(dbName: string, storageKey: string | n
   }
 }
 
+/** `observe()` is Vault's single reactivity primitive: a snapshot now, then on mutations. */
 export function createObserverHub<S extends AnySchema>(
   getAll: <K extends keyof S & string>(table: K) => Promise<RecordOf<S, K>[]>,
   onError?: (error: unknown) => void,
@@ -52,11 +61,8 @@ export function createObserverHub<S extends AnySchema>(
   let disposed = false;
 
   const reportObserverError = (error: unknown): void => {
-    if (onError) {
-      onError(error);
-    } else {
-      logError('observer notification failed', error);
-    }
+    if (onError) onError(error);
+    else logError('observer notification failed', error);
   };
 
   const notify = <K extends keyof S & string>(table: K): void => {
@@ -82,7 +88,7 @@ export function createObserverHub<S extends AnySchema>(
           }
         }
       })
-      .catch((error) => reportObserverError(error));
+      .catch(reportObserverError);
   };
 
   const observe = <K extends keyof S & string>(
@@ -90,34 +96,26 @@ export function createObserverHub<S extends AnySchema>(
     listener: (records: RecordOf<S, K>[]) => void,
     { immediate = true, signal }: { immediate?: boolean; signal?: AbortSignal } = {},
   ): (() => void) => {
-    if (disposed) {
-      throw new VaultDisposedError('observer hub is disposed');
-    }
+    if (disposed) throw new VaultDisposedError('observer hub is disposed');
 
     if (signal?.aborted) return () => {};
 
-    const key = table;
     const wrapped = listener as ObserverListener<unknown>;
-    let listeners = observers.get(key);
+    const listeners = observers.get(table) ?? new Set<ObserverListener<unknown>>();
 
-    if (!listeners) {
-      listeners = new Set();
-      observers.set(key, listeners);
-    }
-
+    observers.set(table, listeners);
     listeners.add(wrapped);
 
-    // Fire an initial snapshot unless the caller opted out.
     if (immediate) notify(table);
 
     const stop = (): void => {
-      const current = observers.get(key);
+      const current = observers.get(table);
 
       if (!current) return;
 
       current.delete(wrapped);
 
-      if (current.size === 0) observers.delete(key);
+      if (current.size === 0) observers.delete(table);
     };
 
     signal?.addEventListener('abort', stop, { once: true });
@@ -125,176 +123,13 @@ export function createObserverHub<S extends AnySchema>(
     return stop;
   };
 
-  const dispose = (): void => {
-    disposed = true;
-    observers.clear();
-  };
-
-  return { dispose, notify, observe };
-}
-
-/**
- * Creates an AsyncIterable that yields a snapshot on every mutation.
- * The first snapshot is emitted immediately (on the first `next()` call).
- *
- * `mode` controls back-pressure:
- * - `'latest'` (default): if the consumer lags, only the most recent snapshot is retained.
- *   Intermediate states are discarded. Best for rendering/display use-cases.
- * - `'all'`: every snapshot is queued and delivered in order. Use when every intermediate
- *   state matters (audit trails, animation).
- *
- * Pass an `AbortSignal` to cancel the iteration externally:
- * ```ts
- * const controller = new AbortController();
- * for await (const users of db.watch('users', { signal: controller.signal })) { ... }
- * controller.abort(); // stops the loop
- * ```
- *
- * **Resource note:** The observer subscription is created eagerly on `[Symbol.asyncIterator]()` to
- * avoid missing mutations before the first `next()` call. Always consume the iterator to completion,
- * `break`/`return` out of `for await`, or pass an `AbortSignal` — otherwise the subscription
- * will remain active until the adapter is disposed.
- */
-export function createWatchIterable<T>(
-  subscribe: (listener: (snapshot: T[]) => void, signal?: AbortSignal) => () => void,
-  mode: 'all' | 'latest' = 'latest',
-  signal?: AbortSignal,
-): AsyncIterable<T[]> {
   return {
-    [Symbol.asyncIterator]() {
-      let pending: T[][] = [];
-      let waiting: ((value: IteratorResult<T[]>) => void) | null = null;
-      let done = signal?.aborted ?? false;
-      let unsubscribe: (() => void) | null = null;
-
-      const finish = (): void => {
-        if (done) return;
-
-        done = true;
-        unsubscribe?.();
-        unsubscribe = null;
-
-        if (waiting) {
-          waiting({ done: true, value: undefined });
-          waiting = null;
-        }
-      };
-
-      signal?.addEventListener('abort', finish, { once: true });
-
-      // Eager registration: subscribe immediately so mutations between iterator
-      // creation and first next() are not silently lost.
-      if (!done) {
-        unsubscribe = subscribe((snapshot) => {
-          if (done) return;
-
-          if (waiting) {
-            const resolve = waiting;
-
-            waiting = null;
-            resolve({ done: false, value: snapshot });
-          } else if (mode === 'all') {
-            pending.push(snapshot);
-          } else {
-            pending = [snapshot];
-          }
-        });
-      }
-
-      return {
-        async next(): Promise<IteratorResult<T[]>> {
-          if (done) return { done: true, value: undefined };
-
-          if (pending.length > 0) {
-            const value = pending.shift()!;
-
-            return { done: false, value };
-          }
-
-          return new Promise<IteratorResult<T[]>>((resolve) => {
-            waiting = resolve;
-          });
-        },
-
-        async return(): Promise<IteratorResult<T[]>> {
-          finish();
-
-          return { done: true, value: undefined };
-        },
-
-        async throw(err?: unknown): Promise<IteratorResult<T[]>> {
-          finish();
-
-          return Promise.reject(err);
-        },
-      };
+    dispose: () => {
+      disposed = true;
+      observers.clear();
     },
-  };
-}
-
-/**
- * Observes multiple tables simultaneously. The listener receives a combined snapshot
- * `{ [tableName]: RecordOf<S, T>[] }` and fires once after all tables have delivered
- * their first snapshot. Subsequent firings are coalesced per microtask.
- *
- * Since `observe()` always fires immediately, each per-table observer populates the
- * snapshotMap on registration. No separate prefetch step is needed.
- */
-export function createObserveMany<S extends AnySchema>(hub: ReturnType<typeof createObserverHub<S>>) {
-  return function observeMany<K extends keyof S & string>(
-    tables: readonly K[],
-    listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
-    { eager = false, signal }: { eager?: boolean; signal?: AbortSignal } = {},
-  ): () => void {
-    const distinctTables = [...new Set(tables)] as K[];
-
-    if (distinctTables.length === 0) throw new VaultScopeError('observeMany requires at least one table');
-
-    if (distinctTables.length < tables.length) {
-      warn('observeMany: duplicate table names were ignored');
-    }
-
-    if (signal?.aborted) return () => {};
-
-    const snapshotMap = new Map<string, RecordOf<S, K>[]>();
-    let microtaskQueued = false;
-    let stopped = false;
-
-    const buildCombined = (): { [T in K]: RecordOf<S, T>[] } =>
-      Object.fromEntries(tables.map((t) => [t, snapshotMap.get(t) ?? []])) as { [T in K]: RecordOf<S, T>[] };
-
-    const scheduleFlush = (): void => {
-      // In eager mode fire as soon as any table has delivered; in default mode wait for all.
-      if (microtaskQueued || (!eager && snapshotMap.size < distinctTables.length)) return;
-
-      microtaskQueued = true;
-      queueMicrotask(() => {
-        microtaskQueued = false;
-
-        if (!stopped) listener(buildCombined());
-      });
-    };
-
-    // Register observers — each fires an immediate snapshot that populates snapshotMap.
-    // Once all tables have delivered, scheduleFlush emits the first combined snapshot.
-    // Signal is NOT passed to inner hub.observe() calls — the outer stop() is the single
-    // cleanup path, avoiding O(tables) redundant abort listeners per signal.
-    const stopFns = distinctTables.map((t) =>
-      hub.observe(t, (records) => {
-        snapshotMap.set(t, records as RecordOf<S, K>[]);
-        scheduleFlush();
-      }),
-    );
-
-    const stop = (): void => {
-      stopped = true;
-
-      for (const s of stopFns) s();
-    };
-
-    signal?.addEventListener('abort', stop, { once: true });
-
-    return stop;
+    notify,
+    observe,
   };
 }
 
@@ -306,10 +141,12 @@ export function getRecordKey<S extends AnySchema, K extends keyof S>(
   const keyField = String(schema[table].key);
   const keyValue = (value as Record<string, unknown>)[keyField];
 
-  if (keyValue === undefined || keyValue === null) {
-    throw new VaultError(
-      `key field "${keyField}" in table "${String(table)}" must be a non-null value, got ${String(keyValue)}`,
-    );
+  if (typeof keyValue !== 'number' && typeof keyValue !== 'string') {
+    throw new VaultError(`record in table "${String(table)}" must have a string or finite-number key at "${keyField}"`);
+  }
+
+  if (typeof keyValue === 'number' && !Number.isFinite(keyValue)) {
+    throw new VaultError(`record in table "${String(table)}" must have a finite-number key at "${keyField}"`);
   }
 
   return keyValue as KeyOf<S, K>;

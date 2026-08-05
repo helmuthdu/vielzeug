@@ -1,9 +1,8 @@
-import type { Adapter, AnySchema, BaseAdapterOptions, KeyOf, RecordOf, TtlMs } from '../types';
+import type { AnySchema, BaseAdapterOptions, KeyOf, RecordOf, VaultStore } from '../types';
 
 import { buildAdapterOps, type StorageBackend } from '../adapter-core';
-import { VaultDisposedError } from '../errors';
-import { getRecordKey } from '../internal';
-import { defaultCodec, isExpired, type StoredRecord } from '../ttl';
+import { encodeVaultKey, getRecordKey } from '../internal';
+import { isExpired, parseStored, type StoredRecord } from '../ttl';
 
 type MemoryBroadcastMsg =
   | { table: string; type: 'clear' }
@@ -12,196 +11,146 @@ type MemoryBroadcastMsg =
   | { key: string; stored: StoredRecord<unknown>; table: string; type: 'put' }
   | { entries: Array<{ key: string; stored: StoredRecord<unknown> }>; table: string; type: 'putAll' };
 
-/** Runtime type guard — rejects malformed or unknown BroadcastChannel messages. */
-function makeBroadcastMsgGuard(codec: { decode<T>(raw: unknown): (StoredRecord<T> & { value: T }) | undefined }) {
-  return function isBroadcastMsg(data: unknown): data is MemoryBroadcastMsg {
-    if (typeof data !== 'object' || data === null) return false;
+type MemoryOptions<S extends AnySchema> = BaseAdapterOptions<S> & { name?: string };
 
-    const d = data as Record<string, unknown>;
+function isBroadcastMessage(value: unknown): value is MemoryBroadcastMsg {
+  if (typeof value !== 'object' || value === null) return false;
 
-    if (typeof d['table'] !== 'string' || typeof d['type'] !== 'string') return false;
+  const message = value as Record<string, unknown>;
 
-    // Guard against prototype-polluting table names from crafted cross-tab messages.
-    if (d['table'] === '__proto__' || d['table'] === 'constructor' || d['table'] === 'prototype') return false;
+  if (typeof message['table'] !== 'string' || typeof message['type'] !== 'string') return false;
 
-    switch (d['type']) {
-      case 'clear':
-        return true;
-      case 'delete':
-        return typeof d['key'] === 'string';
-      case 'deleteMany':
-        return Array.isArray(d['keys']) && (d['keys'] as unknown[]).every((k) => typeof k === 'string');
-      case 'put':
-        return typeof d['key'] === 'string' && codec.decode(d['stored']) !== undefined;
-      case 'putAll':
-        return (
-          Array.isArray(d['entries']) &&
-          (d['entries'] as unknown[]).every(
-            (e) =>
-              typeof e === 'object' &&
-              e !== null &&
-              typeof (e as Record<string, unknown>)['key'] === 'string' &&
-              codec.decode((e as Record<string, unknown>)['stored']) !== undefined,
-          )
-        );
-      default:
-        return false;
-    }
-  };
+  if (message['table'] === '__proto__' || message['table'] === 'constructor' || message['table'] === 'prototype') {
+    return false;
+  }
+
+  switch (message['type']) {
+    case 'clear':
+      return true;
+    case 'delete':
+      return typeof message['key'] === 'string';
+    case 'deleteMany':
+      return Array.isArray(message['keys']) && message['keys'].every((key) => typeof key === 'string');
+    case 'put':
+      return typeof message['key'] === 'string' && parseStored(message['stored']) !== undefined;
+    case 'putAll':
+      return (
+        Array.isArray(message['entries']) &&
+        message['entries'].every(
+          (entry) =>
+            typeof entry === 'object' &&
+            entry !== null &&
+            typeof (entry as Record<string, unknown>)['key'] === 'string' &&
+            parseStored((entry as Record<string, unknown>)['stored']) !== undefined,
+        )
+      );
+    default:
+      return false;
+  }
 }
 
-type MemoryOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
-  /**
-   * When provided and BroadcastChannel is available, enables cross-tab state sync.
-   * All `createMemory` instances with the same `name` will replicate mutations to each other.
-   */
-  name?: string;
-};
-
-export type MemoryAdapter<S extends AnySchema> = Adapter<S> & {
-  iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>>;
-};
-
-export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): MemoryAdapter<S> {
-  const { codec = defaultCodec, logger, name, onMetrics, schema, signals, validators } = options;
-  const tables = new Map(Object.keys(schema).map((k) => [k, new Map<string, StoredRecord<unknown>>()]));
-  const getTableStore = (table: string) => tables.get(table)!;
-  const isBroadcastMsg = makeBroadcastMsgGuard(codec);
-
+/** Memory uses tagged Map keys so numeric and string primary keys never collide. */
+export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): VaultStore<S> {
+  const { logger, name, onMetrics, schema, validators } = options;
+  const tables = new Map(Object.keys(schema).map((table) => [table, new Map<string, StoredRecord<unknown>>()]));
+  const getTable = (table: string): Map<string, StoredRecord<unknown>> => tables.get(table)!;
   const channel =
     name !== undefined && typeof BroadcastChannel !== 'undefined'
       ? new BroadcastChannel(`vault-memory:${name}`)
       : undefined;
 
   const core: StorageBackend<S> = {
-    async clear<K extends keyof S & string>(table: K): Promise<void> {
-      getTableStore(table).clear();
+    async clear(table) {
+      getTable(table).clear();
       channel?.postMessage({ table, type: 'clear' });
     },
+    async count(table) {
+      const store = getTable(table);
+      let count = 0;
 
-    async count<K extends keyof S & string>(table: K): Promise<number> {
-      const store = getTableStore(table);
-      let liveCount = 0;
-      const expiredKeys: string[] = [];
+      for (const [key, stored] of store) {
+        const record = parseStored(stored);
 
-      for (const [key, raw] of store) {
-        const decoded = codec.decode<RecordOf<S, K>>(raw);
-
-        if (!decoded || isExpired(decoded.expiresAt)) {
-          expiredKeys.push(key);
-        } else {
-          liveCount += 1;
-        }
+        if (!record || isExpired(record.expiresAt)) store.delete(key);
+        else count += 1;
       }
 
-      for (const key of expiredKeys) store.delete(key);
-
-      return liveCount;
+      return count;
     },
+    async delete(table, key) {
+      const store = getTable(table);
+      const encodedKey = encodeVaultKey(key);
+      const record = parseStored(store.get(encodedKey));
 
-    async delete<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean> {
-      const store = getTableStore(table);
-      const raw = store.get(String(key));
+      store.delete(encodedKey);
 
-      if (!raw) return false;
+      const deleted = record !== undefined && !isExpired(record.expiresAt);
 
-      const decoded = codec.decode<RecordOf<S, K>>(raw);
-      const isLive = decoded !== undefined && !isExpired(decoded.expiresAt);
+      if (deleted) channel?.postMessage({ key: encodedKey, table, type: 'delete' });
 
-      store.delete(String(key));
-
-      if (isLive) channel?.postMessage({ key: String(key), table, type: 'delete' });
-
-      return isLive;
+      return deleted;
     },
-
-    async deleteMany<K extends keyof S & string>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
-      const store = getTableStore(table);
+    async deleteMany(table, keys) {
+      let deleted = 0;
       const deletedKeys: string[] = [];
 
       for (const key of keys) {
-        const strKey = String(key);
-        const raw = store.get(strKey);
+        const encodedKey = encodeVaultKey(key);
+        const record = parseStored(getTable(table).get(encodedKey));
 
-        if (raw) {
-          const decoded = codec.decode<RecordOf<S, K>>(raw);
+        getTable(table).delete(encodedKey);
 
-          if (decoded !== undefined && !isExpired(decoded.expiresAt)) deletedKeys.push(strKey);
-
-          store.delete(strKey);
+        if (record !== undefined && !isExpired(record.expiresAt)) {
+          deleted += 1;
+          deletedKeys.push(encodedKey);
         }
       }
 
       if (deletedKeys.length > 0) channel?.postMessage({ keys: deletedKeys, table, type: 'deleteMany' });
 
-      return deletedKeys.length;
+      return deleted;
     },
-
     dispose: channel ? async () => channel.close() : undefined,
+    async get(table, key) {
+      const store = getTable(table);
+      const encodedKey = encodeVaultKey(key);
+      const record = parseStored<RecordOf<S, typeof table>>(store.get(encodedKey));
 
-    async get<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
-      const store = getTableStore(table);
-      const raw = store.get(String(key));
-
-      if (!raw) return undefined;
-
-      const decoded = codec.decode<RecordOf<S, K>>(raw);
-
-      if (!decoded || isExpired(decoded.expiresAt)) {
-        store.delete(String(key));
+      if (!record || isExpired(record.expiresAt)) {
+        store.delete(encodedKey);
 
         return undefined;
       }
 
-      return decoded.value;
+      return record.value;
     },
+    async getAll(table) {
+      const store = getTable(table);
+      const values: RecordOf<S, typeof table>[] = [];
 
-    async getAll<K extends keyof S & string>(table: K): Promise<RecordOf<S, K>[]> {
-      const store = getTableStore(table);
-      const records: RecordOf<S, K>[] = [];
-      const expiredKeys: string[] = [];
+      for (const [key, stored] of store) {
+        const record = parseStored<RecordOf<S, typeof table>>(stored);
 
-      for (const [key, raw] of store) {
-        const decoded = codec.decode<RecordOf<S, K>>(raw);
-
-        if (!decoded || isExpired(decoded.expiresAt)) {
-          expiredKeys.push(key);
-        } else {
-          records.push(decoded.value);
-        }
+        if (!record || isExpired(record.expiresAt)) store.delete(key);
+        else values.push(record.value);
       }
 
-      for (const key of expiredKeys) store.delete(key);
-
-      return records;
+      return values;
     },
-
-    async getRawCount<K extends keyof S & string>(table: K): Promise<number> {
-      return getTableStore(table).size;
+    async getRawCount(table) {
+      return getTable(table).size;
     },
-
-    async has<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean> {
-      const store = getTableStore(table);
-      const raw = store.get(String(key));
-
-      if (!raw) return false;
-
-      const decoded = codec.decode<RecordOf<S, K>>(raw);
-      const live = decoded !== undefined && !isExpired(decoded.expiresAt);
-
-      if (!live) store.delete(String(key));
-
-      return live;
+    async has(table, key) {
+      return (await core.get(table, key)) !== undefined;
     },
-
-    async pruneExpiredInTable<K extends keyof S & string>(table: K): Promise<number> {
-      const store = getTableStore(table);
+    async pruneExpiredInTable(table) {
+      const store = getTable(table);
       let pruned = 0;
 
-      for (const [key, raw] of store) {
-        const decoded = codec.decode<RecordOf<S, K>>(raw);
+      for (const [key, stored] of store) {
+        const record = parseStored(stored);
 
-        if (!decoded || isExpired(decoded.expiresAt)) {
+        if (!record || isExpired(record.expiresAt)) {
           store.delete(key);
           pruned += 1;
         }
@@ -209,26 +158,22 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Me
 
       return pruned;
     },
+    async put(table, value, ttl) {
+      const key = encodeVaultKey(getRecordKey(schema, table, value));
+      const stored: StoredRecord<unknown> = ttl === undefined ? { value } : { expiresAt: Date.now() + ttl, value };
 
-    async put<K extends keyof S & string>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
-      const key = String(getRecordKey(schema, table, value));
-      const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
-      const stored = codec.encode(value, expiresAt) as StoredRecord<unknown>;
-
-      getTableStore(table).set(key, stored);
+      getTable(table).set(key, stored);
       channel?.postMessage({ key, stored, table, type: 'put' });
     },
-
-    async putAll<K extends keyof S & string>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
-      const store = getTableStore(table);
+    async putAll(table, values, ttl) {
+      const expiresAt = ttl === undefined ? undefined : Date.now() + ttl;
       const entries: Array<{ key: string; stored: StoredRecord<unknown> }> = [];
-      const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
 
       for (const value of values) {
-        const key = String(getRecordKey(schema, table, value));
-        const stored = codec.encode(value, expiresAt) as StoredRecord<unknown>;
+        const key = encodeVaultKey(getRecordKey(schema, table, value));
+        const stored: StoredRecord<unknown> = expiresAt === undefined ? { value } : { expiresAt, value };
 
-        store.set(key, stored);
+        getTable(table).set(key, stored);
         entries.push({ key, stored });
       }
 
@@ -236,47 +181,32 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Me
     },
   };
 
-  const adapter = buildAdapterOps(schema, core, {
+  return buildAdapterOps(schema, core, {
     logger,
     onCrossTabMessage: channel
       ? (notify) => {
           channel.onmessage = (event: MessageEvent<unknown>) => {
-            let msg: MemoryBroadcastMsg;
+            if (!isBroadcastMessage(event.data)) return;
 
-            try {
-              if (!isBroadcastMsg(event.data)) return;
+            const message = event.data;
 
-              msg = event.data;
-            } catch {
-              return;
-            }
+            if (!tables.has(message.table)) return;
 
-            const store = tables.get(msg.table);
+            const store = getTable(message.table);
+            const validateStored = (key: string, stored: StoredRecord<unknown>): boolean => {
+              const parsed = parseStored(stored);
+              const keyField = schema[message.table as keyof S & string]?.key;
+              const validator = validators?.[message.table as keyof S];
 
-            if (!store) return;
+              if (!parsed || !keyField) return false;
 
-            const validator = validators?.[msg.table as keyof S];
-
-            const keyField = schema[msg.table as keyof S & string]?.key;
-
-            const applyStoredWithValidation = (key: string, stored: StoredRecord<unknown>): boolean => {
               try {
-                const parsed = codec.decode(stored as unknown);
+                const value = validator ? validator.parse(parsed.value) : parsed.value;
 
-                if (!parsed) return false;
+                if (encodeVaultKey((value as Record<string, unknown>)[keyField] as KeyOf<S, keyof S>) !== key)
+                  return false;
 
-                const rawValue = validator ? validator.parse(parsed.value) : parsed.value;
-
-                // Security: verify the record's own primary key matches the broadcast envelope key.
-                // Prevents a rogue same-origin sender from inserting records with mismatched keys.
-                if (keyField && String((rawValue as Record<string, unknown>)[keyField]) !== key) return false;
-
-                const validated: StoredRecord<unknown> =
-                  parsed.expiresAt !== undefined
-                    ? { expiresAt: parsed.expiresAt, value: rawValue }
-                    : { value: rawValue };
-
-                store.set(key, validated);
+                store.set(key, parsed.expiresAt === undefined ? { value } : { expiresAt: parsed.expiresAt, value });
 
                 return true;
               } catch {
@@ -284,40 +214,29 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Me
               }
             };
 
-            switch (msg.type) {
+            switch (message.type) {
               case 'clear':
                 store.clear();
-                notify(msg.table as keyof S & string);
-
-                return;
+                notify(message.table as keyof S & string);
+                break;
               case 'delete':
-                store.delete(msg.key);
-                notify(msg.table as keyof S & string);
-
-                return;
+                store.delete(message.key);
+                notify(message.table as keyof S & string);
+                break;
               case 'deleteMany':
-                for (const key of msg.keys) store.delete(key);
-                notify(msg.table as keyof S & string);
-
-                return;
+                for (const key of message.keys) store.delete(key);
+                notify(message.table as keyof S & string);
+                break;
               case 'put':
-                if (applyStoredWithValidation(msg.key, msg.stored)) {
-                  notify(msg.table as keyof S & string);
-                }
+                if (validateStored(message.key, message.stored)) notify(message.table as keyof S & string);
 
-                return;
+                break;
               case 'putAll':
-                {
-                  let anyApplied = false;
-
-                  for (const { key, stored } of msg.entries) {
-                    if (applyStoredWithValidation(key, stored)) anyApplied = true;
-                  }
-
-                  if (anyApplied) notify(msg.table as keyof S & string);
+                if (message.entries.some((entry) => validateStored(entry.key, entry.stored))) {
+                  notify(message.table as keyof S & string);
                 }
 
-                return;
+                break;
             }
           };
 
@@ -328,34 +247,6 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Me
       : undefined,
     onMetrics,
     schema,
-    signals,
     validators,
   });
-
-  return {
-    ...adapter,
-    iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>> {
-      const store = getTableStore(String(table));
-
-      return {
-        async *[Symbol.asyncIterator]() {
-          if (adapter.disposed) throw new VaultDisposedError();
-
-          const expiredKeys: string[] = [];
-
-          for (const [key, raw] of store) {
-            const decoded = codec.decode<RecordOf<S, K>>(raw);
-
-            if (!decoded || isExpired(decoded.expiresAt)) {
-              expiredKeys.push(key);
-            } else {
-              yield decoded.value;
-            }
-          }
-
-          for (const key of expiredKeys) store.delete(key);
-        },
-      };
-    },
-  };
 }

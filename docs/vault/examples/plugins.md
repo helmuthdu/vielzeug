@@ -100,11 +100,11 @@ const db = createLocalStorage({
 import { createIndexedDB, table, type MigrationFn } from '@vielzeug/vault';
 
 type User = { id: number; name: string };
-const schema = { users: table<User>('id') };
+const schema = { users: table<User>('id').index('name') };
 
 const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
   if (oldVersion < 2 && db.objectStoreNames.contains('users')) {
-    tx.objectStore('users').createIndex('name', 'name', { unique: false });
+    tx.objectStore('users').createIndex('name', 'value.name', { unique: false });
   }
 };
 
@@ -135,7 +135,7 @@ try {
   if (err instanceof VaultDisposedError) {
     // adapter was disposed before this call
   } else if (err instanceof VaultScopeError) {
-    // batch() accessed an out-of-scope table, or observeMany() received an empty array
+    // an IndexedDB transaction accessed a table outside its declared scope
   } else if (err instanceof VaultQuotaError) {
     // LocalStorage / SessionStorage write exceeded quota
   } else if (err instanceof VaultMigrationError) {

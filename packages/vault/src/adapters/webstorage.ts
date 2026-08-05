@@ -1,4 +1,4 @@
-import type { Adapter, AnySchema, BaseAdapterOptions, KeyOf, RecordOf, TtlMs } from '../types';
+import type { AnySchema, BaseAdapterOptions, KeyOf, RecordOf, TtlMs, VaultStore } from '../types';
 
 import { buildAdapterOps, type StorageBackend } from '../adapter-core';
 import { VaultError, VaultQuotaError } from '../errors';
@@ -9,7 +9,7 @@ import {
   encodeStorageTablePrefix,
   getRecordKey,
 } from '../internal';
-import { defaultCodec, isExpired } from '../ttl';
+import { isExpired, parseStored } from '../ttl';
 
 // Firefox historically threw 'NS_ERROR_DOM_QUOTA_REACHED'; modern browsers use the standard name.
 const QUOTA_ERROR_NAMES = new Set(['QuotaExceededError', 'NS_ERROR_DOM_QUOTA_REACHED']);
@@ -28,19 +28,8 @@ function createWebStorageAdapter<S extends AnySchema>(
     getStorage: () => Storage;
     storageLabel: string;
   },
-): Adapter<S> {
-  const {
-    codec = defaultCodec,
-    getStorage,
-    logger,
-    name,
-    onMetrics,
-    onQuotaExceeded,
-    schema,
-    signals,
-    storageLabel,
-    validators,
-  } = options;
+): VaultStore<S> {
+  const { getStorage, logger, name, onMetrics, onQuotaExceeded, schema, storageLabel, validators } = options;
 
   let resolvedStorage: Storage;
 
@@ -108,13 +97,13 @@ function createWebStorageAdapter<S extends AnySchema>(
    * This design avoids the `{ cleanup?: boolean }` flag that required callers to remember
    * to pass `{ cleanup: false }` inside loops.
    */
-  const parseEntry = <T extends Record<string, unknown>>(storageKey: string): T | undefined => {
+  const parseEntry = <T extends object>(storageKey: string): T | undefined => {
     const raw = storage().getItem(storageKey);
 
     if (!raw) return undefined;
 
     try {
-      const stored = codec.decode<T>(JSON.parse(raw) as unknown);
+      const stored = parseStored<T>(JSON.parse(raw) as unknown);
 
       if (!stored || isExpired(stored.expiresAt)) return undefined;
 
@@ -171,7 +160,7 @@ function createWebStorageAdapter<S extends AnySchema>(
     },
 
     async delete<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean> {
-      const storageKey = encodeStorageKey(name, table, String(key));
+      const storageKey = encodeStorageKey(name, table, key);
       const value = parseEntry<RecordOf<S, K>>(storageKey);
 
       if (value !== undefined) {
@@ -189,7 +178,7 @@ function createWebStorageAdapter<S extends AnySchema>(
       let deleted = 0;
 
       for (const key of keys) {
-        const storageKey = encodeStorageKey(name, table, String(key));
+        const storageKey = encodeStorageKey(name, table, key);
         const value = parseEntry<RecordOf<S, K>>(storageKey);
 
         if (value !== undefined) {
@@ -204,7 +193,7 @@ function createWebStorageAdapter<S extends AnySchema>(
     },
 
     async get<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined> {
-      const storageKey = encodeStorageKey(name, table, String(key));
+      const storageKey = encodeStorageKey(name, table, key);
       const value = parseEntry<RecordOf<S, K>>(storageKey);
 
       if (value === undefined && ownedKeys.has(storageKey)) evict(storageKey);
@@ -275,7 +264,7 @@ function createWebStorageAdapter<S extends AnySchema>(
     },
 
     async has<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean> {
-      const storageKey = encodeStorageKey(name, table, String(key));
+      const storageKey = encodeStorageKey(name, table, key);
       const value = parseEntry<RecordOf<S, K>>(storageKey);
 
       if (value === undefined && ownedKeys.has(storageKey)) evict(storageKey);
@@ -298,7 +287,7 @@ function createWebStorageAdapter<S extends AnySchema>(
         }
 
         try {
-          const stored = codec.decode(JSON.parse(raw) as unknown);
+          const stored = parseStored(JSON.parse(raw) as unknown);
 
           if (!stored || isExpired(stored.expiresAt)) {
             expiredKeys.push(storageKey);
@@ -316,10 +305,10 @@ function createWebStorageAdapter<S extends AnySchema>(
     },
 
     async put<K extends keyof S & string>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
-      const storageKey = encodeStorageKey(name, table, String(getRecordKey(schema, table, value)));
+      const storageKey = encodeStorageKey(name, table, getRecordKey(schema, table, value));
       const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
 
-      writeItem(table, storageKey, codec.encode(value, expiresAt));
+      writeItem(table, storageKey, expiresAt === undefined ? { value } : { expiresAt, value });
       ownedKeys.add(storageKey);
     },
 
@@ -327,9 +316,9 @@ function createWebStorageAdapter<S extends AnySchema>(
       const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
 
       for (const value of values) {
-        const storageKey = encodeStorageKey(name, table, String(getRecordKey(schema, table, value)));
+        const storageKey = encodeStorageKey(name, table, getRecordKey(schema, table, value));
 
-        writeItem(table, storageKey, codec.encode(value, expiresAt));
+        writeItem(table, storageKey, expiresAt === undefined ? { value } : { expiresAt, value });
         ownedKeys.add(storageKey);
       }
     },
@@ -375,12 +364,11 @@ function createWebStorageAdapter<S extends AnySchema>(
     },
     onMetrics,
     schema,
-    signals,
     validators,
   });
 }
 
-export function createLocalStorage<S extends AnySchema>(options: WebStorageOptions<S>): Adapter<S> {
+export function createLocalStorage<S extends AnySchema>(options: WebStorageOptions<S>): VaultStore<S> {
   return createWebStorageAdapter({
     ...options,
     getStorage: () => (typeof window !== 'undefined' ? window.localStorage : localStorage),
@@ -388,7 +376,7 @@ export function createLocalStorage<S extends AnySchema>(options: WebStorageOptio
   });
 }
 
-export function createSessionStorage<S extends AnySchema>(options: WebStorageOptions<S>): Adapter<S> {
+export function createSessionStorage<S extends AnySchema>(options: WebStorageOptions<S>): VaultStore<S> {
   return createWebStorageAdapter({
     ...options,
     getStorage: () => (typeof window !== 'undefined' ? window.sessionStorage : sessionStorage),

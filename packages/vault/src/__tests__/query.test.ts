@@ -1,4 +1,4 @@
-import { type Adapter, createMemory, table, VaultError } from '../index';
+import { type VaultStore, createMemory, table, VaultError } from '../index';
 
 type Row = { age: number; city: string; id: number; name: string };
 
@@ -11,7 +11,7 @@ describe('QueryBuilder (via query)', () => {
     { age: 35, city: 'Paris', id: 3, name: 'Charlie' },
   ];
 
-  let db: Adapter<typeof schema>;
+  let db: VaultStore<typeof schema>;
 
   beforeEach(async () => {
     db = createMemory({ schema });

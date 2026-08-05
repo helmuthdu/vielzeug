@@ -19,7 +19,7 @@ description: Complete reference for immutable forms, fields, validation, seriali
 | `debugForm()` | Log public state transitions | Sync | Import from `/devtools` |
 | `bindField()` | Bind one DOM element | Sync | Does not schedule validation |
 | `customValidator()` | Adapt a Spell schema | Async | Does not transform `form.value` |
-| `saveForm()` / `loadForm()` | Persist explicit Vault records | Async | Codec owns record shape |
+| `saveForm()` / `loadForm()` | Persist explicit Vault records | Async | FormDraftCodec owns record shape |
 
 ## Package Entry Point
 
@@ -222,11 +222,11 @@ const form = createForm({ initialValues: { email: '' }, validate: customValidato
 
 ```ts
 function saveForm<TValues extends Record<string, unknown>, S extends AnySchema, K extends keyof S & string>(
-  form: Form<TValues>, adapter: Adapter<S>, table: K, codec: FormDraftCodec<TValues, S, K>,
+  form: Form<TValues>, adapter: VaultStore<S>, table: K, codec: FormDraftCodec<TValues, S, K>,
 ): Promise<void>;
 
 function loadForm<TValues extends Record<string, unknown>, S extends AnySchema, K extends keyof S & string>(
-  form: Form<TValues>, adapter: Adapter<S>, table: K, key: KeyOf<S, K>, codec: FormDraftCodec<TValues, S, K>,
+  form: Form<TValues>, adapter: VaultStore<S>, table: K, key: KeyOf<S, K>, codec: FormDraftCodec<TValues, S, K>,
 ): Promise<boolean>;
 ```
 

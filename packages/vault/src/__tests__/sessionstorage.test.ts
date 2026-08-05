@@ -1,4 +1,4 @@
-import { type Adapter, createSessionStorage, table, ttl } from '../index';
+import { type VaultStore, createSessionStorage, table, ttl } from '../index';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
@@ -7,7 +7,7 @@ const userSchema = { users: table<User>('id') };
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 describe('SessionStorage adapter', () => {
-  let db: Adapter<typeof userSchema>;
+  let db: VaultStore<typeof userSchema>;
 
   beforeEach(() => {
     sessionStorage.clear();

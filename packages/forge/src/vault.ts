@@ -1,4 +1,4 @@
-import type { Adapter, AnySchema, KeyOf, RecordOf } from '@vielzeug/vault';
+import type { AnySchema, KeyOf, RecordOf, VaultStore } from '@vielzeug/vault';
 
 import type { Form, ReadonlyDeep } from './types';
 
@@ -18,7 +18,7 @@ export async function loadForm<
   K extends keyof S & string,
 >(
   form: Form<TValues>,
-  adapter: Adapter<S>,
+  adapter: VaultStore<S>,
   table: K,
   key: KeyOf<S, K>,
   codec: FormDraftCodec<TValues, S, K>,
@@ -40,6 +40,6 @@ export async function saveForm<
   TValues extends Record<string, unknown>,
   S extends AnySchema,
   K extends keyof S & string,
->(form: Form<TValues>, adapter: Adapter<S>, table: K, codec: FormDraftCodec<TValues, S, K>): Promise<void> {
+>(form: Form<TValues>, adapter: VaultStore<S>, table: K, codec: FormDraftCodec<TValues, S, K>): Promise<void> {
   await adapter.put(table, codec.toRecord(form.value));
 }

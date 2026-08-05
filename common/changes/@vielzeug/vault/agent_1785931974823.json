@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "redesign storage around portable keys, fixed envelopes, capability-specific stores, and observe()",
+      "packageName": "@vielzeug/vault",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/vault"
+}

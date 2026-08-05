@@ -6,7 +6,7 @@ type Predicate<T> = (value: T, index: number, array: T[]) => boolean;
  * *which* records match (limit, offset, orderBy), only how results are presented.
  */
 type QueryOp<T> = { apply: (data: T[]) => T[]; isNonFilter?: boolean };
-type ComparableFieldKeys<T extends Record<string, unknown>> = {
+type ComparableFieldKeys<T extends object> = {
   [K in keyof T]-?: Extract<NonNullable<T[K]>, number | string> extends never ? never : K;
 }[keyof T];
 
@@ -20,7 +20,7 @@ export type NativeRange =
   | { lower: unknown; type: 'between'; upper: unknown }
   | { prefix: string; type: 'starts' };
 
-export type QueryContext<T extends Record<string, unknown>> = {
+export type QueryContext<T extends object> = {
   deleteMany?: (records: T[]) => Promise<number>;
   /**
    * When present alongside `indexedFields`, replaces `source()` for secondary-index filter ops.
@@ -47,7 +47,7 @@ export type QueryContext<T extends Record<string, unknown>> = {
  * Shared query methods. `T` is the base record type; `N` is the progressively-narrowed type
  * accumulated by `equals()` calls.
  */
-type ChainedQuery<T extends Record<string, unknown>, N extends T, Self extends ChainedQuery<T, N, Self>> = {
+type ChainedQuery<T extends object, N extends T, Self extends ChainedQuery<T, N, Self>> = {
   /**
    * Filter records where `field` is between `lower` and `upper` (inclusive).
    * Preserves any type narrowing already accumulated by prior `equals()` calls.
@@ -104,21 +104,14 @@ type ChainedQuery<T extends Record<string, unknown>, N extends T, Self extends C
   totalCount(): Promise<number>;
 };
 
-/** Extends the shared query API with `delete()`. Available on both `Adapter.query()` and inside `batch()` callbacks. */
-export interface QueryBuilder<T extends Record<string, unknown>, N extends T = T> extends ChainedQuery<
-  T,
-  N,
-  QueryBuilder<T, N>
-> {
+/** Extends the shared query API with `delete()`. Available on stores and IndexedDB transaction callbacks. */
+export interface QueryBuilder<T extends object, N extends T = T> extends ChainedQuery<T, N, QueryBuilder<T, N>> {
   delete(): Promise<number>;
 }
 
 /* -------------------- Helpers -------------------- */
 
-async function applyOps<T extends Record<string, unknown>>(
-  ctx: QueryContext<T>,
-  ops: readonly QueryOp<T>[],
-): Promise<T[]> {
+async function applyOps<T extends object>(ctx: QueryContext<T>, ops: readonly QueryOp<T>[]): Promise<T[]> {
   let data = await ctx.source();
 
   for (const op of ops) {
@@ -139,16 +132,13 @@ function assertNonNegativeInteger(value: number, name: string): number {
 /* -------------------- Push-down helpers -------------------- */
 
 /** Build a new QueryContext with source replaced by a range/index fetch. Drops range hints since push-down is done. */
-function pushDownContext<T extends Record<string, unknown>>(
-  ctx: QueryContext<T>,
-  newSource: () => Promise<T[]>,
-): QueryContext<T> {
+function pushDownContext<T extends object>(ctx: QueryContext<T>, newSource: () => Promise<T[]>): QueryContext<T> {
   return { deleteMany: ctx.deleteMany, source: newSource };
 }
 
 /* -------------------- Factory -------------------- */
 
-export function createQueryBuilder<T extends Record<string, unknown>, N extends T = T>(
+export function createQueryBuilder<T extends object, N extends T = T>(
   ctx: QueryContext<T>,
   ops: readonly QueryOp<T>[] = [],
 ): QueryBuilder<T, N> {

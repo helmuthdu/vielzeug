@@ -2,10 +2,6 @@
 
 export type Role = 'customer' | 'sales' | 'admin';
 
-// `type` aliases (not `interface`) throughout this file — @vielzeug/vault's `table<T extends
-// Record<string, unknown>>()` (see core/persistence.ts) only structurally satisfies that
-// constraint against type literals; interfaces are nominally open and never get an implicit
-// index signature. Matches the same convention documented in demos/kanban/src/core/types.ts.
 export type User = {
   email: string;
   id: string;
