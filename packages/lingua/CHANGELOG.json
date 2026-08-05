@@ -2,6 +2,20 @@
   "name": "@vielzeug/lingua",
   "entries": [
     {
+      "version": "2.1.0",
+      "tag": "@vielzeug/lingua_v2.1.0",
+      "date": "Wed, 05 Aug 2026 19:50:19 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat: add single-catalog translators and harden package resolution",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "62592e8394077e557850a3b1983b87d04cee4a17"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.0",
       "tag": "@vielzeug/lingua_v2.0.0",
       "date": "Wed, 05 Aug 2026 16:48:52 GMT",

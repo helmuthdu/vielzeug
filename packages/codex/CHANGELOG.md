@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Wed, 05 Aug 2026 16:48:52 GMT and should not be manually modified.
+This log was last generated on Wed, 05 Aug 2026 19:50:19 GMT and should not be manually modified.
+
+## 2.0.1
+Wed, 05 Aug 2026 19:50:19 GMT
+
+### Patches
+
+- refresh bundled Lingua documentation
 
 ## 2.0.0
 Wed, 05 Aug 2026 16:48:52 GMT

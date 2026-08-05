@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/lingua
 
-This log was last generated on Wed, 05 Aug 2026 16:48:52 GMT and should not be manually modified.
+This log was last generated on Wed, 05 Aug 2026 19:50:19 GMT and should not be manually modified.
+
+## 2.1.0
+Wed, 05 Aug 2026 19:50:19 GMT
+
+### Minor changes
+
+- feat: add single-catalog translators and harden package resolution
 
 ## 2.0.0
 Wed, 05 Aug 2026 16:48:52 GMT

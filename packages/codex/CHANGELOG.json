@@ -2,6 +2,20 @@
   "name": "@vielzeug/codex",
   "entries": [
     {
+      "version": "2.0.1",
+      "tag": "@vielzeug/codex_v2.0.1",
+      "date": "Wed, 05 Aug 2026 19:50:19 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "refresh bundled Lingua documentation",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "62592e8394077e557850a3b1983b87d04cee4a17"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.0",
       "tag": "@vielzeug/codex_v2.0.0",
       "date": "Wed, 05 Aug 2026 16:48:52 GMT",
