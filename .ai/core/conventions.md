@@ -76,6 +76,17 @@ export class PkgFooError extends PkgError {}
 - **MUST:** Supply a meaningful error message; do not prefix messages with `[@vielzeug/<pkg>]`.
 - **MUST:** Export public error types from `src/index.ts`.
 
+## Tests
+
+- **MUST:** Organize tests by public behavior, feature, or domain; keep standard package tests under `src/__tests__/`.
+- **MUST:** Assert observable behavior: returned values, public errors, side effects, lifecycle, or documented output.
+- **SHOULD:** Keep one behavior or failure mode per test.
+- **SHOULD:** Use deterministic inputs, clocks, randomness, and scheduling.
+- **SHOULD:** Keep setup local and visible; use small helpers only when they clarify repeated domain setup.
+- **MUST NOT:** Assert private state, internal helper calls, or incidental data structures unless that detail is public contract.
+- **MUST NOT:** Use deep nested setup or mocks that obscure behavior under test.
+- **SHOULD:** Remove obsolete, duplicated, brittle, or no-confidence tests during an intentional test-suite redesign.
+
 ## Internal logging and consumer devtools
 
 ### Internal diagnostics

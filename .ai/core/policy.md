@@ -22,6 +22,15 @@ Stable repo-wide rules for AI-driven work. Task docs should reference this file 
 - Prefer direct code reading over speculation.
 - Prefer simple architecture over configurable architecture.
 - Prefer deleting obsolete patterns to wrapping them.
+- When valid approaches conflict, choose one definitive design favoring lower coupling, fewer moving parts, explicit behavior, and idiomatic TypeScript. Do not ship parallel alternatives unless explicitly required.
+
+## Approved breaking redesigns
+
+- `migrationMode` is `compatible` by default. Use `breaking-approved` only after explicit approval of the affected public API break.
+- Under `breaking-approved`, replace old behavior across implementation, exports, tests, docs, recipes, README, REPL examples, and internal call sites.
+- Do not retain deprecated symbols, compatibility shims, transitional wrappers, obsolete tests, or removal-later TODOs unless explicitly approved.
+- Remove dead exports and unreachable implementation in the same change.
+- Record affected dependents, migration impact, and required major release in `[IMPACT]` output.
 
 ## Escalate before proceeding when
 
