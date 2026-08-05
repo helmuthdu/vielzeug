@@ -2,7 +2,7 @@
 
 > Explicit, framework-neutral localization for TypeScript.
 
-`@vielzeug/lingua` provides an immutable translator for fixed locales and a stateful i18n store for locale changes and optional lazy catalogs.
+`@vielzeug/lingua` provides immutable translators for fixed locales and a stateful i18n store for locale changes and optional lazy catalogs.
 
 ## Installation
 
@@ -13,25 +13,34 @@ pnpm add @vielzeug/lingua
 ## Quick Start
 
 ```ts
-import { createTranslationStore } from '@vielzeug/lingua';
+import { createCatalogTranslator } from '@vielzeug/lingua';
 
-const translations = createTranslationStore({
-  catalogs: {
-    en: {
-      greeting: 'Hello, {name}!',
-      inbox: { plural: { one: 'One message', other: '{count} messages' } },
-    },
-  },
-  locale: 'en',
+const translator = createCatalogTranslator({
+  greeting: 'Hello, {name}!',
+  inbox: { plural: { one: 'One message', other: '{count} messages' } },
 });
 
-translations.translate('greeting', { values: { name: 'Ada' } });
-translations.translate('inbox', { count: 3 });
+translator.translate('greeting', { values: { name: 'Ada' } });
+translator.translate('inbox', { count: 3 });
 ```
+
+## Integration Patterns
+
+Use `translate()` for string interpolation and `segments()` for UI values. Give UI values consumer-owned keys before passing them; Lingua returns same values without cloning or mutation.
+
+```ts
+const retry = { key: 'retry', href: '/retry' };
+translator.segments('greeting', { values: { name: retry } });
+```
+
+Use `createTranslationStore()` only when locale changes at runtime. Its stable `subscribe` and `getSnapshot` methods work directly with platform subscription APIs such as React `useSyncExternalStore`; hydrate client store from server `serialize()` state before first render. Missing keys return key, and absent interpolation values return `{name}` by default.
+
+Keep arrays and application metadata outside catalogs. Store message keys with application definitions, then translate labels while building UI options.
 
 ## Exports
 
-- `createTranslator` — immutable translation engine for fixed-locale catalogs.
+- `createCatalogTranslator` — immutable translator for one fixed-locale catalog.
+- `createTranslator` — immutable translator for fixed locale-keyed catalogs.
 - `createTranslationStore` / `hydrateTranslationStore` — mutable locale state, lazy catalog loading, and SSR state.
 - `createFormatter` from `@vielzeug/lingua/format`.
 - `validateCatalog` from `@vielzeug/lingua/validate`.

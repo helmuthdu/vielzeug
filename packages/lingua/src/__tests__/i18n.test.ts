@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import {
+  type Catalog,
   LinguaDisposedError,
   LinguaInvalidStateError,
   LinguaMissingCatalogError,
@@ -11,7 +12,7 @@ import {
 const catalogs = {
   en: { greeting: 'Hello {name}', inbox: { plural: { one: 'One', other: '{count} messages' } }, title: 'Home' },
   fr: { greeting: 'Bonjour {name}', inbox: { plural: { one: 'Un', other: '{count} messages' } }, title: 'Accueil' },
-} as const;
+};
 
 describe('createTranslationStore', () => {
   test('translates declared catalog keys and updates active locale', async () => {
@@ -82,7 +83,7 @@ describe('createTranslationStore', () => {
   });
 
   test('uses fallback catalog after it loads', async () => {
-    const i18n = createTranslationStore({
+    const i18n = createTranslationStore<Catalog>({
       catalogs: { en: async () => ({ empty: 'Fallback' }), fr: {} },
       fallback: 'en',
       locale: 'fr',

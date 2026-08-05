@@ -7,20 +7,17 @@ description: Translate a fixed set of locale catalogs without a resource store.
 
 ### Problem
 
-You need localized component or module strings, but locale selection and catalogs stay fixed for translator lifetime. Use `createTranslator()` instead of managing a resource store.
+You need localized component or module strings from one catalog, and locale selection stays fixed for translator lifetime. Use `createCatalogTranslator()` instead of managing a locale-keyed catalog map or resource store.
 
 ### Solution
 
-Create one translator from locale-keyed explicit catalogs and call `translate()`.
+Create one translator from one explicit catalog and call `translate()`.
 
 ```ts
-import { createTranslator } from '@vielzeug/lingua';
+import { createCatalogTranslator } from '@vielzeug/lingua';
 
-const translator = createTranslator(
-  {
-    en: { save: 'Save', status: { plural: { one: 'One change', other: '{count} changes' } } },
-    fr: { save: 'Enregistrer', status: { plural: { one: 'Une modification', other: '{count} modifications' } } },
-  },
+const translator = createCatalogTranslator(
+  { save: 'Enregistrer', status: { plural: { one: 'Une modification', other: '{count} modifications' } } },
   { locale: 'fr' },
 );
 
@@ -30,9 +27,10 @@ console.log(translator.translate('status', { count: 2 }));
 
 ### Pitfalls
 
-- Pass locale-keyed catalogs; `createTranslator()` does not infer a locale map from one catalog.
+- Pass one catalog; `createCatalogTranslator()` does not accept locale-keyed catalog maps.
 - Create a new translator when locale selection changes.
 - Mark plural messages with `plural`; nested objects only group keys.
+- Keep arrays and application metadata outside catalogs.
 
 ### Related
 

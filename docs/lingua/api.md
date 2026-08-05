@@ -9,6 +9,7 @@ description: Complete API reference for @vielzeug/lingua.
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
+| `createCatalogTranslator()` | Compile one immutable locale catalog | Sync | No fallback locales |
 | `createTranslator()` | Compile immutable locale catalogs | Sync | Locale is fixed for translator lifetime |
 | `createTranslationStore()` | Create mutable locale and catalog store | Sync | Load lazy locale explicitly |
 | `hydrateTranslationStore()` | Create store from serialized loaded catalogs | Sync | Serialized state never includes loaders |
@@ -25,6 +26,39 @@ description: Complete API reference for @vielzeug/lingua.
 | `@vielzeug/lingua/validate` | `validateCatalog()` and `ValidationIssue` |
 
 ## Translation Factories
+
+### createCatalogTranslator
+
+```ts
+function createCatalogTranslator<C extends Catalog>(
+  catalog: C,
+  options?: CatalogTranslatorOptions,
+): Translator<C>;
+```
+
+Compiles one catalog and returns an immutable fixed-locale translator. Locale defaults to `en` and controls plural selection and diagnostics.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `catalog` | `C` | One catalog containing only messages and grouping objects |
+| `options` | `CatalogTranslatorOptions` | Locale and missing-message handlers; fallback is unavailable |
+
+**Returns:** `Translator<C>`.
+
+**Example:**
+
+```ts
+import { createCatalogTranslator } from '@vielzeug/lingua';
+
+const translator = createCatalogTranslator(
+  { save: 'Enregistrer' },
+  { locale: 'fr' },
+);
+
+translator.translate('save');
+```
+
+---
 
 ### createTranslator
 
@@ -220,6 +254,7 @@ type PluralMessage = { readonly plural: Partial<Record<PluralCategory, string>> 
 type CatalogNode = Catalog | PluralMessage | string;
 type Catalog = { readonly [key: string]: CatalogNode };
 type Catalogs<C extends Catalog = Catalog> = Record<Locale, C>;
+type CatalogTranslatorOptions = Omit<TranslatorOptions, 'fallback'>;
 type CatalogLoader<C extends Catalog = Catalog> = () => Promise<C>;
 type CatalogSource<C extends Catalog = Catalog> = C | CatalogLoader<C>;
 type CatalogSources<C extends Catalog = Catalog> = Record<Locale, CatalogSource<C>>;

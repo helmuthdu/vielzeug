@@ -41,19 +41,33 @@ const catalog = {
 };
 ```
 
-Use `{ values }` for text replacements. Pass `count` at top level for plural selection; Lingua injects it into selected template.
+Use `{ values }` for text replacements. Pass `count` at top level for plural selection; Lingua injects it into selected template. Absent replacements render as `{name}` by default. `segments()` preserves an own `undefined` or `null` value; omit property to receive `{name}`.
+
+Catalogs contain strings, grouping objects, and explicit `{ plural: ... }` messages only. Keep application data outside catalog, then translate display labels while constructing it.
+
+```ts
+import { createCatalogTranslator } from '@vielzeug/lingua';
+
+const messages = {
+  status: { blocked: 'Blocked', done: 'Done', inProgress: 'In progress' },
+};
+const statusDefinitions = [
+  { labelKey: 'status.inProgress', value: 'in-progress' },
+  { labelKey: 'status.blocked', value: 'blocked' },
+  { labelKey: 'status.done', value: 'done' },
+] as const;
+const translator = createCatalogTranslator(messages);
+const statusOptions = statusDefinitions.map(({ labelKey, value }) => ({ label: translator.translate(labelKey), value }));
+```
 
 ## Render Framework Content
 
 Use `segments()` when replacements are framework nodes, links, or other values that must not be stringified.
 
 ```ts
-import { createTranslator } from '@vielzeug/lingua';
+import { createCatalogTranslator } from '@vielzeug/lingua';
 
-const translator = createTranslator(
-  { en: { error: 'Try {retry} or {support}.' } },
-  { locale: 'en' },
-);
+const translator = createCatalogTranslator({ error: 'Try {retry} or {support}.' });
 
 const retry = { href: '/retry', label: 'retry' };
 const support = { href: '/support', label: 'support' };
@@ -61,11 +75,24 @@ const support = { href: '/support', label: 'support' };
 console.log(translator.segments('error', { values: { retry, support } }));
 ```
 
-Render returned array with framework fragment or list primitive.
+Render returned array with framework fragment or list primitive. Give UI values consumer-owned keys before passing them to `segments()`; Lingua preserves value identity and never clones or mutates them.
 
 ## Use Static Catalogs
 
-Use `createTranslator()` when catalog data and locale selection are fixed for translator lifetime.
+Use `createCatalogTranslator()` when one catalog and locale stay fixed for translator lifetime. It defaults locale to `en`; pass `locale` when plural rules or diagnostics need another locale. Lingua snapshots catalog messages during construction. Do not mutate source catalog objects afterward.
+
+```ts
+import { createCatalogTranslator } from '@vielzeug/lingua';
+
+const translator = createCatalogTranslator(
+  { save: 'Enregistrer' },
+  { locale: 'fr' },
+);
+
+console.log(translator.translate('save'));
+```
+
+Use `createTranslator()` when fixed translation requires locale-keyed catalogs and fallback resolution.
 
 ```ts
 import { createTranslator } from '@vielzeug/lingua';
@@ -119,7 +146,7 @@ Pass `{ signal }` when an `AbortController` owns subscription lifetime.
 
 ## SSR State
 
-Serialize only resolved catalogs on server, then hydrate client store from payload.
+Serialize resolved catalogs on server, then hydrate client store from same payload. `getSnapshot()` stays referentially stable until store revision changes, so use same hydrated store throughout initial client render.
 
 ```ts
 import { createTranslationStore, hydrateTranslationStore } from '@vielzeug/lingua';
@@ -156,7 +183,7 @@ console.log(validateCatalog(catalog, 'en'));
 
 ## Framework Integration
 
-Adapt `getSnapshot()` and `subscribe()` to framework state primitive.
+Pass stable `getSnapshot()` and `subscribe()` methods to framework state primitives. For SSR, create client store from same serialized state used by server before calling `useSyncExternalStore`.
 
 ::: code-group
 
@@ -166,11 +193,9 @@ import { useSyncExternalStore } from 'react';
 import type { TranslationStore } from '@vielzeug/lingua';
 
 export function useTranslator(i18n: TranslationStore) {
-  return useSyncExternalStore(
-    (notify) => i18n.subscribe(() => notify()),
-    () => i18n.getSnapshot().translator,
-    () => i18n.getSnapshot().translator,
-  );
+  const snapshot = useSyncExternalStore(i18n.subscribe, i18n.getSnapshot, i18n.getSnapshot);
+
+  return snapshot.translator;
 }
 ```
 
@@ -226,11 +251,11 @@ Use Courier loaders when locale catalogs come from HTTP rather than bundled modu
 
 ## Best Practices
 
-- Define plural messages with `{ plural: ... }`.
-- Keep every locale catalog complete for required keys.
+- Define plural messages with `{ plural: ... }` and no sibling metadata.
+- Keep arrays and application metadata outside catalogs.
+- Treat source catalog objects as immutable after construction.
 - Use `translateDynamic()` only for runtime-generated keys.
 - Load a lazy catalog before rendering it.
-- Render `segments()` values with framework-native fragment support.
+- Give UI values keys before passing them to `segments()`.
 - Keep loader functions out of SSR payloads.
-- Pass an `AbortSignal` to subscriptions owned by component or request.
 - Dispose temporary stores after requests, tests, and route lifetimes.

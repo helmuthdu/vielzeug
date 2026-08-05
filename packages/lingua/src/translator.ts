@@ -1,6 +1,7 @@
 import type {
   Catalog,
   Catalogs,
+  CatalogTranslatorOptions,
   Locale,
   PluralKey,
   PluralOptions,
@@ -115,6 +116,17 @@ export function createTranslatorFromCompiled<C extends Catalog>(
     },
     translateDynamic,
   } as Translator<C>;
+}
+
+/** Creates a fixed-locale translator from one catalog. Lingua snapshots catalog messages during construction. */
+export function createCatalogTranslator<C extends Catalog>(
+  catalog: C,
+  options: CatalogTranslatorOptions = {},
+): Translator<C> {
+  const locale = canonicalLocale(options.locale ?? 'en');
+  const compiled = new Map<Locale, CompiledCatalog>([[locale, compileCatalog(catalog)]]);
+
+  return createTranslatorFromCompiled<C>(compiled, { ...options, locale });
 }
 
 export function createTranslator<C extends Catalog>(catalogs: Catalogs<C>, options?: TranslatorOptions): Translator<C> {

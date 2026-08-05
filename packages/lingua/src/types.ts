@@ -81,6 +81,9 @@ export type TranslatorOptions = {
   onMissingValue?: (name: string, key: string, locale: Locale) => string;
 };
 
+/** Options for a translator built from one immutable locale catalog. */
+export type CatalogTranslatorOptions = Omit<TranslatorOptions, 'fallback'>;
+
 export type SubscribeOptions = {
   immediate?: boolean;
   signal?: AbortSignal;

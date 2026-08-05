@@ -47,6 +47,7 @@ const main = async () => {
       'LinguaInvalidPluralCountError',
       'LinguaInvalidStateError',
       'LinguaMissingCatalogError',
+      'createCatalogTranslator',
       'createTranslationStore',
       'createTranslator',
       'hydrateTranslationStore',

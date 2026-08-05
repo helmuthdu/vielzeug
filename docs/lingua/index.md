@@ -5,7 +5,7 @@ package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, catalog-loading]
 related: [ripple, wayfinder, courier]
-exports: [createTranslationStore, createTranslator, hydrateTranslationStore, LinguaError, LinguaDisposedError, LinguaInvalidCatalogError, LinguaInvalidLocaleError, LinguaInvalidPluralCountError, LinguaInvalidStateError, LinguaMissingCatalogError]
+exports: [createCatalogTranslator, createTranslationStore, createTranslator, hydrateTranslationStore, LinguaError, LinguaDisposedError, LinguaInvalidCatalogError, LinguaInvalidLocaleError, LinguaInvalidPluralCountError, LinguaInvalidStateError, LinguaMissingCatalogError]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -87,7 +87,8 @@ try {
 
 <div class="features-grid">
 
-- `createTranslator()` compiles immutable multi-locale catalogs.
+- `createCatalogTranslator()` compiles one immutable fixed-locale catalog.
+- `createTranslator()` compiles immutable locale-keyed catalogs.
 - `createTranslationStore()` manages locale changes and declared catalogs.
 - `translate()` renders text and plural messages through explicit catalog nodes.
 - `translateDynamic()` makes runtime-key lookup explicit.

@@ -30,6 +30,10 @@ export function compileCatalog(catalog: Catalog): CompiledCatalog {
     }
 
     if (isPluralMessage(node)) {
+      if (Reflect.ownKeys(node).some((key) => key !== 'plural')) {
+        throw new LinguaInvalidCatalogError(`Plural message "${prefix}" must contain only a "plural" property.`);
+      }
+
       if (typeof node.plural !== 'object' || node.plural === null || Array.isArray(node.plural)) {
         throw new LinguaInvalidCatalogError(`Plural message "${prefix}" must provide an object of string forms.`);
       }

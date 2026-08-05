@@ -1,10 +1,10 @@
 export const richSegmentsExample = {
-  code: `import { createTranslator } from '@vielzeug/lingua'
+  code: `import { createCatalogTranslator } from '@vielzeug/lingua'
 
 // segments() preserves components, nodes, or other non-string replacements.
-const translator = createTranslator({
-  en: { error: 'Try {retry} or {support}.' },
-}, { locale: 'en' })
+const translator = createCatalogTranslator({
+  error: 'Try {retry} or {support}.',
+})
 
 const retry = { label: 'retry', href: '/retry' }
 const support = { label: 'support', href: '/support' }

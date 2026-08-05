@@ -24,6 +24,6 @@ Move resource definitions and loading code to explicit catalogs. Replace `I18n` 
 
 ## Remove namespace and resource APIs
 
-Namespace and resource APIs, plus `LinguaMissingResourceError`, no longer exist. Use `createTranslator()` when an integration needs translation fixed to one locale.
+Namespace and resource APIs, plus `LinguaMissingResourceError`, no longer exist. Use `createCatalogTranslator()` when an integration needs one fixed locale catalog; use `createTranslator()` for fixed locale-keyed catalogs and fallback resolution.
 
 Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for catalog, store, translator, and state contracts.

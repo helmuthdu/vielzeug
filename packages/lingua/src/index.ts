@@ -13,10 +13,11 @@ export {
   type TranslationSnapshot,
   type TranslationStore,
 } from './i18n';
-export { createTranslator, type Translator } from './translator';
+export { createCatalogTranslator, createTranslator, type Translator } from './translator';
 export type {
   Catalog,
   CatalogLoader,
+  CatalogTranslatorOptions,
   CatalogNode,
   Catalogs,
   CatalogSource,
