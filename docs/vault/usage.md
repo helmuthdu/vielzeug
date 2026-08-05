@@ -120,14 +120,6 @@ const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
 createIndexedDB({ name: 'app-v2', migrate, schema, version: 2 });
 ```
 
-## Upgrade from Vault 1
-
-- Replace `Adapter` with `VaultStore`.
-- Replace `IndexedDbAdapter` with `IndexedDbVaultStore`.
-- Replace `watch`, `observeMany`, signals, and streams with per-table `observe()`.
-- Remove codecs and versioned codecs. Start a new storage namespace or migrate data outside Vault before construction.
-- Move atomic code to `createIndexedDB().batch()`.
-
 ## Framework Integration
 
 ::: code-group

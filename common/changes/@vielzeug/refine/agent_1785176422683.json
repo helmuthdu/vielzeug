@@ -1,17 +1,17 @@
 {
   "changes": [
     {
-      "comment": "fix(refine): ore-slider no longer forces width:100% by default, breaking layout next to other fields in a flex/grid row; add fullwidth opt-in matching ore-input/ore-select/ore-number-input convention",
+      "comment": "fix: ore-slider no longer forces width:100% by default, breaking layout next to other fields in a flex/grid row; add fullwidth opt-in matching ore-input/ore-select/ore-number-input convention",
       "packageName": "@vielzeug/refine",
       "type": "patch"
     },
     {
-      "comment": "fix(refine): fix broken stepper/avatar-group subpath exports, move ore-step/ore-stepper to context-based coordination, remove duplicate toast-like message feature from ore-stepper",
+      "comment": "fix: fix broken stepper/avatar-group subpath exports, move ore-step/ore-stepper to context-based coordination, remove duplicate toast-like message feature from ore-stepper",
       "packageName": "@vielzeug/refine",
       "type": "minor"
     },
     {
-      "comment": "chore(refine): replace removed aria() with bind({ aria }, { target }); opt into form-internals polyfill via install(afterEach, { formInternals: true }); narrow headless option-list close reasons to DropdownCloseReason (latent type bug exposed by ore's strict EmitFn)",
+      "comment": "chore: replace removed aria() with bind({ aria }, { target }); opt into form-internals polyfill via install(afterEach, { formInternals: true }); narrow headless option-list close reasons to DropdownCloseReason (latent type bug exposed by ore's strict EmitFn)",
       "packageName": "@vielzeug/refine",
       "type": "patch"
     },
@@ -26,7 +26,7 @@
       "type": "patch"
     },
     {
-      "comment": "refactor: migrate component observers to Ripple watch module",
+      "comment": "refactor!: migrate component observers to Ripple watch module",
       "packageName": "@vielzeug/refine",
       "type": "major"
     }

@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "refactor: own chart effects through Ripple scopes",
+      "comment": "refactor!: own chart effects through Ripple scopes",
       "packageName": "@vielzeug/prism",
       "type": "major"
     }

@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "feat!: redesign localization around explicit locale catalogs. Replaces createI18n()/hydrateI18n() with createTranslationStore()/hydrateTranslationStore(), resources with catalogs, and I18n state version 2 with TranslationState version 3. Removes namespace/resource APIs and LinguaMissingResourceError. Use createTranslator() for fixed-locale translation.",
+      "comment": "refactor!: redesign localization around explicit locale catalogs. Replaces createI18n()/hydrateI18n() with createTranslationStore()/hydrateTranslationStore(), resources with catalogs, and I18n state version 2 with TranslationState version 3. Removes namespace/resource APIs and LinguaMissingResourceError. Use createTranslator() for fixed-locale translation.",
       "packageName": "@vielzeug/lingua",
       "type": "major"
     }

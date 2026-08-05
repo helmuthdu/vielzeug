@@ -382,6 +382,7 @@ export default defineConfig({
       ],
       '/assay/': [
         { link: '/assay/', text: 'Overview' },
+        { link: '/assay/migration', text: 'Migration' },
         {
           items: [
             { link: '/assay/usage#basic-usage', text: 'Basic Usage' },
@@ -417,6 +418,7 @@ export default defineConfig({
       ],
       '/clockwork/': [
         { link: '/clockwork/', text: 'Overview' },
+        { link: '/clockwork/migration', text: 'Migration' },
         {
           items: [
             { link: '/clockwork/usage#basic-usage', text: 'Basic Usage' },
@@ -476,6 +478,7 @@ export default defineConfig({
       ],
       '/codex/': [
         { link: '/codex/', text: 'Overview' },
+        { link: '/codex/migration', text: 'Migration' },
         {
           items: [
             { link: '/codex/usage#basic-usage', text: 'Basic Usage' },
@@ -522,6 +525,7 @@ export default defineConfig({
       ],
       '/coins/': [
         { link: '/coins/', text: 'Overview' },
+        { link: '/coins/migration', text: 'Migration' },
         {
           items: [
             { link: '/coins/usage#basic-usage', text: 'Basic Usage' },
@@ -564,6 +568,7 @@ export default defineConfig({
       ],
       '/conduit/': [
         { link: '/conduit/', text: 'Overview' },
+        { link: '/conduit/migration', text: 'Migration' },
         {
           items: [
             { link: '/conduit/usage#basic-usage', text: 'Basic Usage' },
@@ -605,6 +610,7 @@ export default defineConfig({
       ],
       '/courier/': [
         { link: '/courier/', text: 'Overview' },
+        { link: '/courier/migration', text: 'Migration' },
         {
           items: [
             { link: '/courier/usage#basic-usage', text: 'Basic Usage' },
@@ -776,6 +782,7 @@ export default defineConfig({
       ],
       '/flux/': [
         { link: '/flux/', text: 'Overview' },
+        { link: '/flux/migration', text: 'Migration' },
         {
           items: [
             { link: '/flux/usage#basic-usage', text: 'Basic Usage' },
@@ -822,6 +829,7 @@ export default defineConfig({
       ],
       '/forge/': [
         { link: '/forge/', text: 'Overview' },
+        { link: '/forge/migration', text: 'Migration' },
         {
           items: [
             { link: '/forge/usage#basic-usage', text: 'Basic Usage' },
@@ -972,6 +980,7 @@ export default defineConfig({
       ],
       '/ledger/': [
         { link: '/ledger/', text: 'Overview' },
+        { link: '/ledger/migration', text: 'Migration' },
         {
           items: [
             { link: '/ledger/usage#basic-usage', text: 'Basic Usage' },
@@ -1016,6 +1025,7 @@ export default defineConfig({
       ],
       '/lingua/': [
         { link: '/lingua/', text: 'Overview' },
+        { link: '/lingua/migration', text: 'Migration' },
         {
           items: [
             { link: '/lingua/usage#basic-usage', text: 'Basic Usage' },
@@ -1116,6 +1126,7 @@ export default defineConfig({
       ],
       '/ore/': [
         { link: '/ore/', text: 'Overview' },
+        { link: '/ore/migration', text: 'Migration' },
         {
           collapsed: false,
           items: [
@@ -1209,6 +1220,7 @@ export default defineConfig({
       ],
       '/prism/': [
         { link: '/prism/', text: 'Overview' },
+        { link: '/prism/migration', text: 'Migration' },
         {
           items: [
             { link: '/prism/usage#basic-usage', text: 'Basic Setup' },
@@ -1283,6 +1295,7 @@ export default defineConfig({
       ],
       '/pulse/': [
         { link: '/pulse/', text: 'Overview' },
+        { link: '/pulse/migration', text: 'Migration' },
         {
           items: [
             { link: '/pulse/usage#basic-usage', text: 'Basic Usage' },
@@ -1329,6 +1342,7 @@ export default defineConfig({
       ],
       '/refine/': [
         { link: '/refine/', text: 'Overview' },
+        { link: '/refine/migration', text: 'Migration' },
         {
           items: [
             {
@@ -1475,6 +1489,7 @@ export default defineConfig({
       ],
       '/ripple/': [
         { link: '/ripple/', text: 'Overview' },
+        { link: '/ripple/migration', text: 'Migration' },
         {
           items: [
             { link: '/ripple/usage#basic-usage', text: 'Basic Usage' },
@@ -1623,6 +1638,7 @@ export default defineConfig({
       ],
       '/scout/': [
         { link: '/scout/', text: 'Overview' },
+        { link: '/scout/migration', text: 'Migration' },
         {
           items: [
             { link: '/scout/usage#basic-usage', text: 'Basic Usage' },
@@ -1739,6 +1755,7 @@ export default defineConfig({
       ],
       '/sourcerer/': [
         { link: '/sourcerer/', text: 'Overview' },
+        { link: '/sourcerer/migration', text: 'Migration' },
         {
           items: [
             { link: '/sourcerer/usage#basic-usage', text: 'Basic Usage' },
@@ -1781,6 +1798,7 @@ export default defineConfig({
       ],
       '/spell/': [
         { link: '/spell/', text: 'Overview' },
+        { link: '/spell/migration', text: 'Migration' },
         {
           items: [
             { link: '/spell/usage#basic-usage', text: 'Basic Usage' },
@@ -1878,6 +1896,7 @@ export default defineConfig({
       ],
       '/vault/': [
         { link: '/vault/', text: 'Overview' },
+        { link: '/vault/migration', text: 'Migration' },
         {
           items: [
             { link: '/vault/usage#create-a-portable-store', text: 'Portable Store' },

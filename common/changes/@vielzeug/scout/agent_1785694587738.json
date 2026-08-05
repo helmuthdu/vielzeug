@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "refactor: replace toSearchFn with toSearchMatcher",
+      "comment": "refactor!: replace toSearchFn with toSearchMatcher",
       "packageName": "@vielzeug/scout",
       "type": "major"
     }
