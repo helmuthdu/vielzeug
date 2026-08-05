@@ -1,19 +1,14 @@
 export const basicContainerExample = {
   code: `import { createContainer, token } from '@vielzeug/conduit'
 
-const ConfigToken = token('Config')
-const LoggerToken = token('Logger')
+const Config = token<{ baseUrl: string }>('Config')
+const Client = token<{ url: string }>('Client')
 
 const container = createContainer()
-container.value(ConfigToken, { apiUrl: 'https://api.example.com', timeout: 5000 })
-container.factory(LoggerToken, async (r) => {
-  const config = await r.resolve(ConfigToken)
-  return { log: (msg) => console.log('[LOG]', config.apiUrl, msg) }
-})
+container.value(Config, { baseUrl: '/api' })
+container.factory(Client, [Config], config => ({ url: config.baseUrl + '/users' }))
 
-const config = await container.resolve(ConfigToken)
-const logger = await container.resolve(LoggerToken)
-logger.log('Container initialized')
-console.log('Timeout:', config.timeout)`,
-  name: 'Basic Container',
+console.log(await container.resolve(Client))
+await container.dispose()`,
+  name: 'Dependency-first factory',
 };

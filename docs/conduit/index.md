@@ -1,33 +1,11 @@
 ---
-title: Conduit — Typed dependency injection for TypeScript
-description: Typed dependency injection for TypeScript.
+title: Conduit — Dependency Injection for TypeScript
+description: Dependency-first asynchronous dependency injection with typed tokens, lifecycle scopes, startup validation, and deterministic disposal.
 package: conduit
-category: di
-keywords: [dependency-injection, ioc, container, singleton, transient, factory, named-scope]
-related: [rune, herald, ward]
-exports:
-  [
-    createContainer,
-    token,
-    scope,
-    loadModules,
-    resolveOptional,
-    resolveOrDefault,
-    tryResolve,
-    trySyncResolve,
-    resolveSyncOptional,
-    resolveSyncOrDefault,
-    ConduitError,
-    ConduitCircularDependencyError,
-    ConduitProviderNotFoundError,
-    ConduitDuplicateRegistrationError,
-    ConduitSyncResolutionError,
-    ConduitScopedResolutionError,
-    ConduitDisposedError,
-    ConduitFrozenError,
-    InferTokenTypes,
-    ResolveInterceptor,
-  ]
+category: infrastructure
+keywords: [dependency injection, container, token, lifecycle, scope]
+exports: [createContainer, token, scope]
+related: [courier, vault, rune]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -37,48 +15,28 @@ environments: [browser, node, ssr, deno]
 
 ## Why Conduit?
 
-Manual dependency wiring often spreads across modules, making lifetimes and teardown behavior difficult to reason about in larger systems.
+Conduit makes service wiring explicit. Factory dependency tuples are source of truth for creation, startup validation, and disposal order.
 
 ```ts
-// Before — manual wiring, no lifecycle, no type safety
-const logger = new ConsoleLogger();
-const db = await connectDb(process.env.DATABASE_URL);
-const repo = new UserRepo(db, logger);
-const service = new UserService(repo, logger);
-// cleanup is your problem
+// Before
+const service = createService(createApi(config), logger);
 
-// After — explicit tokens, typed resolution, disposal hooks
-const container = createContainer();
-container.value(Logger, new ConsoleLogger());
-container.factory(Db, () => connectDb(process.env.DATABASE_URL), { dispose: (db) => db.close() });
-container.factory(UserRepo, async (r) => {
-  const [db, logger] = await Promise.all([r.resolve(Db), r.resolve(Logger)]);
-  return new UserRepo(db, logger);
-});
-container.factory(UserService, async (r) => {
-  const [repo, logger] = await Promise.all([r.resolve(UserRepo), r.resolve(Logger)]);
-  return new UserService(repo, logger);
-});
-
-const service = await container.resolve(UserService);
-await container.dispose(); // all hooks run automatically
+// After
+container.factory(Service, [Api, Logger], (api, logger) => createService(api, logger));
 ```
 
-| Feature                     | Conduit                                       | tsyringe                                                      | InversifyJS                                                                         |
-| --------------------------- | --------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Bundle size                 | <PackageInfo package="conduit" type="size" /> | ~6 kB                                                         | ~45 kB                                                                              |
-| Typed token ergonomics      | <ore-icon name="check" size="16"></ore-icon>  | Partial                                                       | Partial                                                                             |
-| Async-first resolution      | <ore-icon name="check" size="16"></ore-icon>  | Partial                                                       | Partial                                                                             |
-| Child container scopes      | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="check" size="16"></ore-icon>                                        |
-| Explicit disposal lifecycle | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="x" size="16"></ore-icon>                      | Partial                                                                             |
-| Decorator-free usage        | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="x" size="16"></ore-icon> (decorator-oriented) | <ore-icon name="triangle-alert" size="16"></ore-icon> (commonly decorator-oriented) |
-| Zero dependencies           | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="x" size="16"></ore-icon>                                            |
+| Feature | Conduit | Inversify | tsyringe |
+| --- | --- | --- | --- |
+| Dependencies | Explicit token tuples | Decorators/runtime metadata | Decorators/runtime metadata |
+| Async factories | <ore-icon name="check" size="16"></ore-icon> | Partial | Partial |
+| Lifecycle scopes | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Runtime dependencies | 0 | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
-**Use Conduit when** you need a compact typed container with explicit scopes and lifecycle control.
+**Use Conduit when** application services need explicit wiring and owned lifecycle cleanup.
 
-**Consider decorator-heavy DI frameworks when** your project is already standardized around metadata/decorator injection patterns.
+**Consider direct imports when** dependencies are static, small, and need no replacement or disposal boundary.
 
 </div>
 
@@ -105,20 +63,14 @@ yarn add @vielzeug/conduit
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
 
-const Logger = token<{ log(message: string): void }>('Logger');
-const Service = token<{ run(): Promise<void> }>('Service');
-
+const Config = token<{ baseUrl: string }>('Config');
+const Client = token<{ url: string }>('Client');
 const container = createContainer();
 
-container.value(Logger, console);
-container.factory(Service, async (r) => {
-  const logger = await r.resolve(Logger);
-  return { run: async () => logger.log('Running service') };
-});
+container.value(Config, { baseUrl: '/api' });
+container.factory(Client, [Config], (config) => ({ url: `${config.baseUrl}/users` }));
 
-const service = await container.resolve(Service);
-await service.run();
-
+console.log(await container.resolve(Client));
 await container.dispose();
 ```
 
@@ -126,25 +78,11 @@ await container.dispose();
 
 <div class="features-grid">
 
-- Small core API — `token`, `scope`, `createContainer`, and a focused set of container methods
-- Typed dependency contracts via Symbol tokens with phantom types
-- Factory functions receive a `FactoryResolver` — dependencies resolved lazily via `r.resolve(Token)`
-- Named scope tokens via `scope()` and `createScope()` for explicit lifecycle isolation
-- Async-first resolution with singleton deduplication for concurrent callers
-- Sync resolution path (`resolveSync`) for hot paths after warm-up — rethrows cached rejections for failed singletons
-- Free-function helpers: `resolveSyncOptional`, `resolveSyncOrDefault`, `resolveOptional`, `resolveOrDefault`, `tryResolve`, `trySyncResolve`
-- `resolveMany()` to resolve multiple tokens in parallel with typed tuples
-- `resolveAll()` to eagerly warm all singletons; pass `{ includeScoped: true }` to also pre-warm named-scope factories
-- `InferTokenTypes<T>` utility type to infer a typed tuple from a token array
-- Registration existence check (`has`) without triggering factory execution
-- `ContainerModule` + `loadModules()` for grouping and async provider setup
-- `freeze()` to lock the container after startup; idempotent — safe to call multiple times; declare `deps:` on factories for static cycle detection at freeze time
-- `inspect()` to get a serializable dependency graph
-- `on()` to subscribe to container lifecycle events (each event carries a `source` field)
-- `onResolve()` interceptor called after every successful resolution — for telemetry and hot-path observability
-- Dispose hooks on both factory and value registrations; failures warn in dev instead of throwing
-- Named scope containers for request/component/test scope boundaries
-- Explicit disposal lifecycle with `Symbol.asyncDispose` support
+- **`token`**: typed dependency identity
+- **`factory`**: static dependency-first creation
+- **`validate`**: startup graph validation
+- **`scope`**: explicit request and job ownership
+- **`dispose`**: in-flight-safe resource cleanup
 
 </div>
 
@@ -162,9 +100,9 @@ await container.dispose();
 
 <div class="see-also">
 
-- [Familiar](../familiar/index.md) for dependency-managed worker orchestration.
-- [Herald](../herald/index.md) for pub/sub coordination in container-managed modules.
-- [Ward](../ward/index.md) for injecting authorization services.
+- [Courier](/courier/) — inject HTTP clients into application services.
+- [Vault](/vault/) — inject persistence adapters with scoped ownership.
+- [Rune](/rune/) — provide application logging services.
 
 </div>
 

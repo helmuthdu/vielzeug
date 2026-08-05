@@ -15,7 +15,7 @@
     "@vielzeug/arsenal": "^1.1.2",
     "@vielzeug/clockwork": "^1.1.2",
     "@vielzeug/coins": "link:../../packages/coins",
-    "@vielzeug/conduit": "^1.0.4",
+    "@vielzeug/conduit": "link:../../packages/conduit",
     "@vielzeug/courier": "link:../../packages/courier",
     "@vielzeug/dnd": "^1.2.2",
     "@vielzeug/familiar": "^1.0.6",

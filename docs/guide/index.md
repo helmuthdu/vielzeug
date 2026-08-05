@@ -288,14 +288,14 @@ if (!ward.can(currentUser, 'posts', 'delete')) throw new ForbiddenError();
 Lightweight dependency injection — singletons, transient instances, factories, and named scopes.
 
 ```typescript
-import { createContainer, createToken } from '@vielzeug/conduit';
+import { createContainer, token } from '@vielzeug/conduit';
 
-const LoggerToken = createToken<Logger>('Logger');
-const ApiToken = createToken<ApiService>('ApiService');
+const LoggerToken = token<Logger>('Logger');
+const ApiToken = token<ApiService>('ApiService');
 
 const container = createContainer();
-container.factory(LoggerToken, () => new ConsoleLogger(), { lifetime: 'singleton' });
-container.factory(ApiToken, (logger) => new ApiService(logger), { deps: [LoggerToken] });
+container.factory(LoggerToken, [], () => new ConsoleLogger());
+container.factory(ApiToken, [LoggerToken], (logger) => new ApiService(logger));
 
 const api = await container.resolve(ApiToken);
 ```

@@ -66,5 +66,5 @@ import { createForm } from '@vielzeug/forge'; // forms
 import { s } from '@vielzeug/spell'; // validation
 import { createCourier } from '@vielzeug/courier'; // HTTP + caching
 import { createLocalStorage, table } from '@vielzeug/vault'; // storage
-import { createContainer, createToken } from '@vielzeug/conduit'; // DI container
+import { createContainer, token } from '@vielzeug/conduit'; // DI container
 ```

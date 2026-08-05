@@ -89,12 +89,7 @@ export const container = createContainer({ name: 'vielzeug-motors' });
 
 container.value(LoggerToken, logger);
 container.value(ApiToken, courier);
-container.factory(ReportServiceToken, async (r) => {
-  const api = await r.resolve(ApiToken);
-  const log = await r.resolve(LoggerToken);
-
-  return createReportService(api, log);
-});
+container.factory(ReportServiceToken, [ApiToken, LoggerToken], (api, log) => createReportService(api, log));
 
 let reportServicePromise: Promise<ReportService> | null = null;
 

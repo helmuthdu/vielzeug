@@ -1,108 +1,75 @@
-import type { Lifetime, ScopeToken, Token } from './types.js';
+import type { ScopeToken, Token } from './types.js';
 
-export const tokenName = (t: Token<any>): string => t.description ?? 'anonymous';
+export function tokenName(token: Token<unknown>): string {
+  return token.description ?? 'anonymous';
+}
 
-/** Base class for all conduit errors. Use `instanceof ConduitError` to catch any conduit-originated error. */
 export class ConduitError extends Error {
-  constructor(message: string, opts?: ErrorOptions) {
-    super(message, opts);
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
+  static is(error: unknown): error is ConduitError {
+    return error instanceof ConduitError;
   }
 
-  static is(err: unknown): err is ConduitError {
-    return err instanceof ConduitError;
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
 export class ConduitCircularDependencyError extends ConduitError {
-  /** The token path that forms the cycle. */
-  readonly cycle: Token<any>[];
+  readonly cycle: Token<unknown>[];
 
-  constructor(path: Token<any>[]) {
-    super(`Circular dependency detected: ${path.map(tokenName).join(' -> ')}`);
-    this.cycle = path;
+  constructor(cycle: Token<unknown>[]) {
+    super(`Circular dependency detected: ${cycle.map(tokenName).join(' -> ')}`);
+    this.cycle = cycle;
   }
 }
 
 export class ConduitProviderNotFoundError extends ConduitError {
-  /** The token that could not be found. */
-  readonly token: Token<any>;
-  /** The container name at the time of the lookup. */
   readonly containerName: string;
+  readonly token: Token<unknown>;
 
-  constructor(tok: Token<any>, containerName = 'unknown') {
-    super(`No provider registered for token: ${tokenName(tok)} (in container '${containerName}')`);
-    this.token = tok;
+  constructor(token: Token<unknown>, containerName: string) {
+    super(`No provider registered for token: ${tokenName(token)} (in container '${containerName}')`);
     this.containerName = containerName;
+    this.token = token;
   }
 }
 
 export class ConduitDuplicateRegistrationError extends ConduitError {
-  /** The token that was registered twice. */
-  readonly token: Token<any>;
+  readonly token: Token<unknown>;
 
-  constructor(tok: Token<any>) {
-    super(`Token "${tokenName(tok)}" is already registered.`);
-    this.token = tok;
-  }
-}
-
-export class ConduitSyncResolutionError extends ConduitError {
-  /** The token that could not be resolved synchronously. */
-  readonly token: Token<any>;
-  /** The lifetime that prevented synchronous resolution. */
-  readonly lifetime: Lifetime;
-
-  constructor(tok: Token<any>, lifetime: Lifetime) {
-    const reason =
-      lifetime === 'transient'
-        ? 'transient factories are never cached'
-        : typeof lifetime === 'symbol'
-          ? `named-scope "${(lifetime as symbol).description ?? 'anonymous'}" instance has not been resolved yet in this scope`
-          : 'the instance has not been resolved yet; call await container.resolve() or container.resolveAll() first';
-
-    super(`Token "${tokenName(tok)}" cannot be resolved synchronously: ${reason}.`);
-    this.token = tok;
-    this.lifetime = lifetime;
+  constructor(token: Token<unknown>) {
+    super(`Token "${tokenName(token)}" is already registered.`);
+    this.token = token;
   }
 }
 
 export class ConduitScopedResolutionError extends ConduitError {
-  /** The token that required a scope container. */
-  readonly token: Token<any>;
-  /** The required scope token, if any. */
-  readonly requiredScope: ScopeToken | undefined;
+  readonly requiredScope: ScopeToken;
+  readonly token: Token<unknown>;
 
-  constructor(tok: Token<any>, requiredScope?: ScopeToken) {
-    const scopeName = requiredScope?.description ?? 'anonymous';
-
-    super(
-      requiredScope
-        ? `Token "${tokenName(tok)}" requires scope "${scopeName}" but no matching scope container was found in the hierarchy.`
-        : `Token "${tokenName(tok)}" requires a scope container but was resolved from the root.`,
-    );
-    this.token = tok;
+  constructor(token: Token<unknown>, requiredScope: ScopeToken) {
+    super(`Token "${tokenName(token)}" requires scope "${requiredScope.description ?? 'anonymous'}".`);
     this.requiredScope = requiredScope;
+    this.token = token;
   }
 }
 
 export class ConduitDisposedError extends ConduitError {
-  /** The name of the container that was already disposed. */
   readonly containerName: string;
 
-  constructor(containerName = 'unknown') {
-    super(`Cannot use a disposed container (container '${containerName}').`);
+  constructor(containerName: string) {
+    super(`Cannot use disposed container '${containerName}'.`);
     this.containerName = containerName;
   }
 }
 
-export class ConduitFrozenError extends ConduitError {
-  /** The name of the container that is frozen. */
-  readonly containerName: string;
+export class ConduitDisposeError extends ConduitError {
+  readonly errors: unknown[];
 
-  constructor(containerName: string) {
-    super(`Container '${containerName}' is frozen and cannot accept new registrations.`);
-    this.containerName = containerName;
+  constructor(errors: unknown[]) {
+    super(`Container disposal failed with ${errors.length} cleanup error${errors.length === 1 ? '' : 's'}.`);
+    this.errors = errors;
   }
 }

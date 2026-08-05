@@ -1,840 +1,132 @@
 ---
 title: Conduit — API Reference
-description: Complete API reference for @vielzeug/conduit.
+description: Reference for Conduit tokens, dependency-first factories, scopes, validation, and lifecycle disposal.
 ---
 
 [[toc]]
 
 ## API Overview
 
-| Symbol                     | Purpose                                                       | Mode        | Common gotcha                                                                     |
-| -------------------------- | ------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------- |
-| `token()`                  | Create a typed DI token (Symbol-backed)                       | Sync        | Each call produces a distinct symbol                                              |
-| `scope()`                  | Create a named scope token for lifecycle-scoped instances     | Sync        | Register factories with a `ScopeToken` as their lifetime                          |
-| `createContainer()`        | Create a new root DI container                                | Sync        | Register all providers before resolving                                           |
-| `loadModules()`            | Apply `ContainerModule` functions to a container              | **Async**   | Free function; modules run sequentially; returns `Promise<Container>`             |
-| `resolveOptional()`        | Resolve, returning `undefined` if not registered              | **Async**   | Free function; re-throws all other errors                                         |
-| `resolveOrDefault()`       | Resolve, returning a fallback if not registered               | **Async**   | Free function; same re-throw semantics as `resolveOptional`                       |
-| `tryResolve()`             | Resolve, returning `{ ok, value/error }` instead of throwing  | **Async**   | Free function; only swallows `ConduitProviderNotFoundError`; re-throws all others |
-| `resolveSyncOptional()`    | Resolve synchronously, returning `undefined` if not found     | Sync        | Free function; re-throws `ConduitSyncResolutionError`, `ConduitDisposedError`     |
-| `resolveSyncOrDefault()`   | Resolve synchronously, returning a fallback if not found      | Sync        | Free function; `null` from factory is preserved, not replaced by default          |
-| `container.value()`        | Register a static value                                       | Sync        | Throws `ConduitDuplicateRegistrationError` if token already used                  |
-| `container.factory()`      | Register a lazy factory (sync or async)                       | Sync        | Receives a `FactoryResolver`; factory does not run until first `resolve()`        |
-| `container.has()`          | Check if a token is registered (walks parent chain)           | Sync        | Does not execute the factory                                                      |
-| `container.resolve()`      | Resolve a single provider                                     | **Async**   | Throws `ConduitProviderNotFoundError` if token not registered                     |
-| `container.resolveSync()`  | Resolve synchronously from cache                              | Sync        | Throws for transient and not-yet-resolved; rethrows cached rejections             |
-| `container.resolveMany()`  | Resolve multiple tokens in parallel, returning a typed tuple  | **Async**   | Rejects if any token fails                                                        |
-| `container.resolveAll()`   | Eagerly resolve all singleton factories (walks parent chain)  | **Async**   | Pass `{ includeScoped: true }` to also pre-warm named-scope factories             |
-| `container.inspect()`      | Return a serializable graph of registered tokens              | Sync        | Defaults to deep traversal of the full parent chain                               |
-| `container.validate()`     | Validate the graph without freezing                           | Sync        | Same checks as `freeze()` but does not lock the container                         |
-| `container.freeze()`       | Lock registrations; validate completeness                     | Sync        | Detects declared-dep cycles; lazy cycles caught at resolve time                   |
-| `container.createScope()`  | Create a child container, optionally tagged with a scope      | Sync        | Pass a `ScopeToken` to activate named-scope lifecycle                             |
-| `container.on()`           | Subscribe to container events (register / resolve / dispose)  | Sync        | Events carry a `source` field; propagate up to parent listeners                   |
-| `container.onResolve()`    | Register an interceptor called after every successful resolve | Sync        | Returns unsubscribe fn; errors swallowed; propagates to parent                    |
-| `container.dispose()`      | Dispose container and run cleanup hooks                       | **Async**   | Hook failures warn in dev — never rethrow                                         |
-| `container.disposalSignal` | `AbortSignal` aborted when the container is disposed          | Sync getter | Tie external resource lifetimes to this container                                 |
-| `container.disposed`       | Whether the container has been disposed                       | Sync getter | —                                                                                 |
-| `container.name`           | Human-readable container identifier                           | Sync getter | Set via `createContainer({ name })` or `createScope(token, { name })`             |
+| Symbol | Purpose | Mode | Common gotcha |
+| --- | --- | --- | --- |
+| `token` | Create typed dependency identity | Sync | Same description does not mean same token |
+| `scope` | Create named lifecycle identity | Sync | Must match factory lifetime |
+| `createContainer` | Create root registry | Sync | Dispose when application ends |
+| `value` | Register an existing value | Sync | One registration per token/container |
+| `factory` | Register static dependency factory | Sync | Tuple is copied and authoritative |
+| `has` | Check registration visibility | Sync | Walks parent containers |
+| `resolve` | Resolve one dependency | Async | Missing provider throws |
+| `validate` | Validate static graph | Sync | Run after registration |
+| `createScope` | Create child owner | Sync | Named scope required for scoped factories |
+| `dispose` | Release owned resources | Async | May throw `ConduitDisposeError` after cleanup attempts |
 
 ## Package Entry Point
 
-| Import              | Purpose                                    |
-| ------------------- | ------------------------------------------ |
-| `@vielzeug/conduit` | All exports — functions, types, and errors |
+| Import | Purpose |
+| --- | --- |
+| `@vielzeug/conduit` | Complete Conduit API |
+
+## Tokens and Scopes
 
 ```ts
-import { token, scope, createContainer, loadModules } from '@vielzeug/conduit';
-import {
-  resolveOptional,
-  resolveOrDefault,
-  tryResolve,
-  trySyncResolve,
-  resolveSyncOptional,
-  resolveSyncOrDefault,
-} from '@vielzeug/conduit';
+token<T>(description: string): Token<T>
+scope(name: string): ScopeToken
 ```
 
-## Core Functions
-
-### `token()`
-
-```ts
-function token<T>(description: string): Token<T>;
-```
-
-Creates a unique typed symbol used to identify a dependency. Two calls with the same `description` produce distinct symbols.
-
-**Parameters:**
-
-| Parameter     | Type     | Description                                 |
-| ------------- | -------- | ------------------------------------------- |
-| `description` | `string` | Human-readable label used in error messages |
-
-**Returns:** `Token<T>` — a symbol carrying `T` as a phantom type parameter.
-
-**Example:**
-
-```ts
-import { token } from '@vielzeug/conduit';
-
-const Logger = token<{ log(message: string): void }>('Logger');
-const Config = token<{ apiUrl: string }>('Config');
-```
-
----
-
-### `scope()`
-
-```ts
-function scope(name: string): ScopeToken;
-```
-
-Creates a named scope token. Use as a `lifetime` in `factory()` to bind instances to a specific scope container created via `container.createScope(scopeToken)`.
-
-**Returns:** `ScopeToken` — a unique symbol used as a scope identifier.
-
-**Example:**
-
-```ts
-import { scope, token, createContainer } from '@vielzeug/conduit';
-
-const RequestScope = scope('request');
-const Session = token<{ id: string }>('Session');
-
-const root = createContainer();
-root.factory(Session, () => ({ id: crypto.randomUUID() }), { lifetime: RequestScope });
-
-// Per-request scope container
-const requestContainer = root.createScope(RequestScope);
-const session = await requestContainer.resolve(Session);
-```
-
----
-
-### `createContainer()`
-
-```ts
-function createContainer(opts?: { name?: string }): Container;
-```
-
-Creates a new root container with an empty registry.
-
-**Parameters:**
-
-| Option | Type     | Default  | Description                                                   |
-| ------ | -------- | -------- | ------------------------------------------------------------- |
-| `name` | `string` | `'root'` | Human-readable identifier for the container (shown in errors) |
-
-**Returns:** `Container`
-
-**Example:**
-
-```ts
-import { createContainer } from '@vielzeug/conduit';
-
-const container = createContainer({ name: 'app' });
-```
+Tokens and scopes are unique symbols. Descriptions exist only for diagnostics.
 
 ## Container
 
-### `container.value()`
-
 ```ts
-value<T>(tok: Token<T>, value: T, opts?: ValueOptions<T>): this;
+createContainer(options?: { name?: string }): Container
 ```
 
-Registers a constant value. The value is returned as-is on every resolution. An optional `dispose` hook is always called on container disposal (regardless of whether the value was ever resolved).
-
-**Throws:** `ConduitDuplicateRegistrationError` if the token is already registered.
-
-**Parameters — `ValueOptions<T>`:**
-
-| Option    | Type                                     | Default     | Description            |
-| --------- | ---------------------------------------- | ----------- | ---------------------- |
-| `dispose` | `(instance: T) => void \| Promise<void>` | `undefined` | Called during disposal |
-
-**Returns:** `this` (chainable)
-
-**Example:**
+### value
 
 ```ts
-const Db = token<Database>('Db');
-const db = await connectDb();
-
-container.value(Db, db, { dispose: (db) => db.close() });
+container.value(token, value, options?)
 ```
 
----
+`options.dispose` runs during container disposal.
 
-### `container.factory()`
+### has
 
 ```ts
-factory<T>(tok: Token<T>, fn: (resolver: FactoryResolver) => Promise<T> | T, opts?: FactoryOptions<T>): this;
+container.has(token): boolean
 ```
 
-Registers a lazy factory. The factory receives a `FactoryResolver` and runs on first resolution; its result is cached according to `lifetime`.
+Checks local and parent registrations without creating a factory result.
 
-**Throws:** `ConduitDuplicateRegistrationError` if the token is already registered.
-
-**Parameters — `FactoryOptions<T>`:**
-
-| Option     | Type                                       | Default       | Description                                                                                           |
-| ---------- | ------------------------------------------ | ------------- | ----------------------------------------------------------------------------------------------------- |
-| `deps`     | `readonly Token<any>[]`                    | `undefined`   | Statically declared dependencies. Used by `freeze()` for early validation and static cycle detection. |
-| `lifetime` | `'singleton' \| 'transient' \| ScopeToken` | `'singleton'` | Caching strategy                                                                                      |
-| `dispose`  | `(instance: T) => void \| Promise<void>`   | `undefined`   | Called during disposal if the instance was resolved                                                   |
-
-**Returns:** `this` (chainable)
-
-**Example:**
+### factory
 
 ```ts
-const Logger = token<{ log(msg: string): void }>('Logger');
-const Service = token<{ run(): Promise<void> }>('Service');
-
-container.value(Logger, console);
-container.factory(Service, async (r) => {
-  const logger = await r.resolve(Logger);
-  return { run: async () => logger.log('ok') };
-});
+container.factory(token, dependencies, create, options?)
 ```
 
-#### Lifetimes
-
-| Value         | Behavior                                                                                                   |
-| ------------- | ---------------------------------------------------------------------------------------------------------- |
-| `'singleton'` | Factory runs once; the same instance is returned on every subsequent call. Shared across scope containers. |
-| `'transient'` | Factory runs on every resolution; result is never cached.                                                  |
-| `ScopeToken`  | One instance per matching scope container (created via `createScope(scopeToken)`).                         |
-
-#### Singleton failure caching
-
-If a singleton factory rejects, the rejection is cached and rethrown on every subsequent `resolve()` call. The factory is **not** retried. To retry, create a new container.
-
----
-
-### `container.has()`
-
 ```ts
-has<T>(tok: Token<T>): boolean;
+container.factory(Service, [Api, Logger], (api, logger) => createService(api, logger));
 ```
 
-Returns `true` if the token has a registered provider (walks the parent chain). Does not execute the factory.
+`dependencies` is copied at registration and drives creation, validation, cycle detection, and teardown order. Factories may return a value or promise.
 
-**Returns:** `boolean`
-
-**Throws:** `ConduitDisposedError`
-
----
-
-### `loadModules()` (free function)
+`options.lifetime` accepts `'singleton'`, `'transient'`, or `ScopeToken`. A singleton cannot depend on a scoped resource.
 
 ```ts
-function loadModules(container: Container, ...modules: ContainerModule[]): Promise<Container>;
-```
-
-Applies one or more `ContainerModule` functions to a container **sequentially**. Each module may be async; `loadModules()` awaits each in order. Returns `Promise<Container>` (the same container) for chaining.
-
-**Example:**
-
-```ts
-import { createContainer, loadModules, token, type ContainerModule } from '@vielzeug/conduit';
-
-const Logger = token<{ log(msg: string): void }>('Logger');
-
-const loggingModule: ContainerModule = (c) => {
-  c.value(Logger, console);
-};
-
-const container = await loadModules(createContainer(), loggingModule);
-```
-
----
-
-### `container.resolve()`
-
-```ts
-resolve<T>(tok: Token<T>): Promise<T>;
-```
-
-Resolves the provider registered for `tok`. Concurrent calls for a singleton or scoped token share the same in-flight promise.
-
-**Returns:** `Promise<T>`
-
-**Throws:** `ConduitProviderNotFoundError`, `ConduitCircularDependencyError`, `ConduitScopedResolutionError`, `ConduitDisposedError`
-
----
-
-### `container.resolveSync()`
-
-```ts
-resolveSync<T>(tok: Token<T>): T;
-```
-
-Resolves synchronously. Works for value providers (always) and singleton/scoped instances that have already been resolved at least once.
-
-**Returns:** `T`
-
-**Throws:**
-
-- `ConduitSyncResolutionError` — transient factory, or unresolved singleton/scoped instance
-- The **cached rejection** (original error) — if a singleton factory previously failed
-- `ConduitScopedResolutionError` — scoped token called on the root container
-- `ConduitProviderNotFoundError`, `ConduitDisposedError`
-
-**Recommended pattern:**
-
-```ts
-// Warm all singletons once at startup
-await container.resolveAll();
-
-// Then resolve synchronously in hot paths
-const config = container.resolveSync(Config);
-```
-
----
-
-### `resolveSyncOptional()` (free function)
-
-```ts
-function resolveSyncOptional<T>(container: Container, tok: Token<T>): T | undefined;
-```
-
-Resolves a token synchronously. Returns `undefined` when no provider is registered. Re-throws all other errors — including `ConduitSyncResolutionError` (unresolved singleton) and `ConduitDisposedError`.
-
-**Returns:** `T | undefined`
-
-**Example:**
-
-```ts
-import { resolveSyncOptional } from '@vielzeug/conduit';
-
-await container.resolveAll();
-
-const plugin = resolveSyncOptional(container, OptionalPlugin);
-if (plugin) plugin.init();
-```
-
----
-
-### `resolveSyncOrDefault()` (free function)
-
-```ts
-function resolveSyncOrDefault<T>(container: Container, tok: Token<T>, defaultValue: T): T;
-```
-
-Resolves a token synchronously. Returns `defaultValue` when no provider is registered. Equivalent to `resolveSyncOptional(container, tok) ?? defaultValue`.
-
-**Returns:** `T`
-
-**Example:**
-
-```ts
-import { resolveSyncOrDefault } from '@vielzeug/conduit';
-
-await container.resolveAll();
-
-const timeout = resolveSyncOrDefault(container, RequestTimeout, 5000);
-```
-
----
-
-### `resolveOptional()` (free function)
-
-```ts
-function resolveOptional<T>(container: Container, tok: Token<T>): Promise<T | undefined>;
-```
-
-Resolves the token when available. Returns `undefined` when no provider is registered. Re-throws all other errors including `ConduitDisposedError`.
-
-**Returns:** `Promise<T | undefined>`
-
----
-
-### `resolveOrDefault()` (free function)
-
-```ts
-function resolveOrDefault<T>(container: Container, tok: Token<T>, defaultValue: T): Promise<T>;
-```
-
-Resolves the token when available. Returns `defaultValue` when no provider is registered. Re-throws all other errors including `ConduitDisposedError`.
-
-**Returns:** `Promise<T>`
-
-**Example:**
-
-```ts
-import { resolveOrDefault } from '@vielzeug/conduit';
-
-const Telemetry = token<Telemetry>('Telemetry');
-const noop: Telemetry = { track: () => {} };
-
-const telemetry = await resolveOrDefault(container, Telemetry, noop);
-telemetry.track('app-start');
-```
-
----
-
-### `container.resolveAll()`
-
-```ts
-resolveAll(opts?: { includeScoped?: boolean }): Promise<void>;
-```
-
-Eagerly resolves factory registrations in parallel — including those inherited from parent containers.
-
-- By default, only **singleton** factories are resolved. Value registrations and transient factories are always skipped.
-- Pass `{ includeScoped: true }` to also pre-warm **named-scope** factories registered on the current scope container (i.e., the container must be a scope container tagged with the matching `ScopeToken`).
-
-Useful for:
-
-- **Startup validation** — fail fast if any factory throws
-- **Pre-warming** — populate the cache so `resolveSync()` is available immediately
-
-**Returns:** `Promise<void>`
-
-**Throws:** `ConduitDisposedError`
-
-**Example:**
-
-```ts
-const container = createContainer();
-// ... register providers ...
-
-await container.resolveAll(); // warms all singletons
-const config = container.resolveSync(Config);
-
-// Pre-warm a named-scope container:
-const sc = root.createScope(RequestScope);
-await sc.resolveAll({ includeScoped: true }); // also warms RequestScope factories
-```
-
----
-
-### `tryResolve()` (free function)
-
-```ts
-function tryResolve<T>(container: Container, tok: Token<T>): Promise<ResolveResult<T>>;
-```
-
-Resolves a token, returning a discriminated union result object. Returns `{ ok: false, error }` **only** when the token is not registered (`ConduitProviderNotFoundError`). All other errors — including `ConduitDisposedError`, `ConduitCircularDependencyError`, and factory errors — are **re-thrown**.
-
-```ts
-type ResolveResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
-```
-
-**Returns:** `Promise<ResolveResult<T>>`
-
-**Example:**
-
-```ts
-import { tryResolve } from '@vielzeug/conduit';
-
-const result = await tryResolve(container, OptionalPlugin);
-if (result.ok) {
-  result.value.init();
-}
-```
-
----
-
-### `trySyncResolve()` (free function)
-
-```ts
-function trySyncResolve<T>(container: Container, tok: Token<T>): ResolveResult<T>;
-```
-
-Synchronous equivalent of `tryResolve()`. Returns `{ ok: false, error }` **only** when the token is not registered. Re-throws `ConduitSyncResolutionError`, `ConduitDisposedError`, `ConduitScopedResolutionError`, and all other errors.
-
-**Returns:** `ResolveResult<T>`
-
-**Example:**
-
-```ts
-import { trySyncResolve } from '@vielzeug/conduit';
-
-await container.resolveAll();
-
-const result = trySyncResolve(container, OptionalPlugin);
-if (result.ok) {
-  result.value.init();
-}
-```
-
----
-
-### `container.resolveMany()`
-
-```ts
-resolveMany<const D extends Token<any>[]>(toks: D): Promise<InferTokenTypes<D>>;
-```
-
-Resolves multiple tokens in parallel and returns a typed tuple. Equivalent to `Promise.all(toks.map(t => container.resolve(t)))` but with full type inference.
-
-**Returns:** `Promise<InferTokenTypes<D>>` — a tuple typed to each token's `T`.
-
-**Throws:** `ConduitProviderNotFoundError`, `ConduitCircularDependencyError`, `ConduitDisposedError` (first rejection wins).
-
-**Example:**
-
-```ts
-const [db, cache, logger] = await container.resolveMany([Db, Cache, Logger] as const);
-```
-
----
-
-### `container.inspect()`
-
-```ts
-inspect(opts?: { deep?: boolean }): ContainerGraph;
-```
-
-Returns a serializable description of every registered token. By default traverses the full parent chain (`deep: true`). Pass `{ deep: false }` to limit to this container's own registry.
-
-**Throws:** `ConduitDisposedError`
-
-**Parameters:**
-
-| Option | Type      | Default | Description                                   |
-| ------ | --------- | ------- | --------------------------------------------- |
-| `deep` | `boolean` | `true`  | Whether to include parent chain registrations |
-
-**Returns:** `ContainerGraph`
-
-```ts
-type ContainerNode = {
-  /** Statically-declared dependency descriptions (from `deps:` option). */
-  deps?: string[];
-  description: string;
-  kind: 'value' | 'factory';
-  /** 'singleton', 'transient', or 'scope:<name>' for named-scope factories. */
-  lifetime?: 'singleton' | 'transient' | `scope:${string}`;
-};
-
-type ContainerGraph = {
-  nodes: ContainerNode[];
+type FactoryOptions<T> = {
+  dispose?: (value: T) => void | Promise<void>;
+  lifetime?: 'singleton' | 'transient' | ScopeToken;
 };
 ```
 
-**Example:**
+### resolve
 
 ```ts
-const graph = container.inspect();
-
-for (const node of graph.nodes) {
-  const depList = node.deps ? ` deps: [${node.deps.join(', ')}]` : '';
-  console.log(`${node.description} (${node.kind}, ${node.lifetime ?? 'singleton'})${depList}`);
-}
+container.resolve(token): Promise<T>
 ```
 
----
+Singleton resolutions deduplicate concurrent callers.
 
-### `container.validate()`
+### validate
 
 ```ts
-validate(): this;
+container.validate(): Container
 ```
 
-Runs the same static-dep validation as `freeze()` — checks that every token listed in `deps:` arrays is registered and that no `deps` cycle exists — **without** locking the container against further registrations.
+Throws for missing dependencies and circular factory tuples.
 
-Useful in test setups or debug tooling where you want to catch wiring errors early but still need to add tokens afterward.
-
-**Returns:** `this` (chainable)
-
-**Throws:**
-
-- `ConduitDisposedError` — if the container has been disposed
-- `ConduitProviderNotFoundError` — if a declared `deps` dep is missing
-- `ConduitCircularDependencyError` — if declared `deps` form a cycle
-
-**Example:**
+### createScope
 
 ```ts
-const container = createContainer();
-
-container.factory(Service, (r) => new Service(r.resolve(Logger)), { deps: [Logger] });
-container.value(Logger, new ConsoleLogger());
-
-container.validate(); // verifies deps are registered — does not freeze
-container.factory(OptionalFeature, (_r) => new Feature()); // still allowed
+container.createScope(scope?: ScopeToken, options?: { name?: string }): Container
 ```
 
----
+A matching scope owns resources registered with its `ScopeToken` lifetime. Disposing a parent also disposes its active child scopes.
 
-### `container.freeze()`
+### dispose
 
 ```ts
-freeze(): this;
+container.dispose(): Promise<void>
+container.disposalSignal: AbortSignal
+container.disposed: boolean
 ```
 
-Locks the container against further `value()` or `factory()` calls. Before locking, runs a validation pass over statically-declared `deps`:
-
-1. **Missing dep check** — every token listed in any `deps:` array must be registered. Throws `ConduitProviderNotFoundError` if a declared dep is missing.
-2. **Static cycle detection** — checks `deps` graphs for cycles. Throws `ConduitCircularDependencyError` if a cycle is found.
-
-> **Note:** Lazy dependencies (accessed inside the factory via `resolver.resolve()`) that are _not_ listed in `deps:` are **not** checked by `freeze()`. Those cycles are caught at resolve time. Use `deps:` to opt in to early static validation.
-
-`freeze()` is **idempotent** — calling it more than once is a no-op after the first freeze. It is also **local** — scope containers created after `freeze()` are not frozen.
-
-**Returns:** `this` (chainable)
-
-**Throws:**
-
-- `ConduitDisposedError` — if the container has been disposed
-- `ConduitProviderNotFoundError` — if a declared `deps` dep is missing
-- `ConduitCircularDependencyError` — if declared `deps` form a cycle
-- `ConduitFrozenError` — on any subsequent `value()` or `factory()` call
-
-**Example:**
-
-```ts
-const container = createContainer({ name: 'app' });
-
-// Declare deps for early static validation:
-container.factory(Service, (r) => new Service(r.resolve(Logger)), { deps: [Logger] });
-
-await loadModules(container, coreModule, dbModule);
-container.freeze(); // validates static deps + seals
-
-await container.resolveAll(); // pre-warm after freeze
-```
-
----
-
-### `container.createScope()`
-
-```ts
-createScope(scopeToken?: ScopeToken, opts?: { name?: string }): Container;
-```
-
-Creates a child container. When `scopeToken` is provided, the child is tagged with that scope — factories registered with this `ScopeToken` lifetime will resolve and cache within this container. Omitting `scopeToken` creates a plain child that inherits parent registrations.
-
-The auto-generated container name includes the scope token's description when no explicit `name` is given (e.g. `'root:request'` for a scope named `'request'`). Provide `opts.name` to override.
-
-**Returns:** `Container`
-
-**Throws:** `ConduitDisposedError`
-
-**Example:**
-
-```ts
-const RequestScope = scope('request');
-const Session = token<{ id: string }>('Session');
-
-const root = createContainer({ name: 'root' });
-root.factory(Session, () => ({ id: crypto.randomUUID() }), { lifetime: RequestScope });
-
-// Each request gets its own scope container
-function handleRequest(id: string) {
-  const requestContainer = root.createScope(RequestScope, { name: `req-${id}` });
-  return requestContainer.resolve(Session);
-}
-```
-
----
-
-### `container.onResolve()`
-
-```ts
-onResolve(interceptor: ResolveInterceptor): () => void;
-```
-
-Registers an interceptor called after every successful resolution — from both `resolve()` and `resolveSync()`. The interceptor receives the resolved `Token<T>` and the resolved value. Errors thrown by the interceptor are silently swallowed. Interceptors **propagate up** to parent containers (same semantics as `on()`).
-
-**Returns:** An unsubscribe function.
-
-**Throws:** `ConduitDisposedError` — if the container has been disposed.
-
-**Example:**
-
-```ts
-import { createContainer, token, type ResolveInterceptor } from '@vielzeug/conduit';
-
-const Logger = token<Logger>('Logger');
-const container = createContainer();
-
-const unsub = container.onResolve((tok, value) => {
-  console.log(`Resolved: ${tok.description}`, value);
-});
-
-await container.resolve(Logger);
-unsub();
-```
-
----
-
-### `container.on()`
-
-```ts
-on(listener: ContainerEventListener): () => void;
-```
-
-Subscribes to container lifecycle events. The listener receives events synchronously when they occur. Errors thrown by listeners are silently swallowed to protect container operation. Events **propagate up** to parent container listeners — a listener on the root container observes all events from children and scopes.
-
-**Returns:** An unsubscribe function — call it to stop receiving events.
-
-**Throws:** `ConduitDisposedError` — if the container has been disposed.
-
-**Event types:**
-
-| Event type   | Shape                                                                                   | When                                     |
-| ------------ | --------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `'register'` | `{ type: 'register', source: string, description: string, kind: 'value' \| 'factory' }` | `value()` or `factory()` is called       |
-| `'resolve'`  | `{ type: 'resolve', source: string, description: string }`                              | `resolve()` or `resolveSync()` completes |
-| `'dispose'`  | `{ type: 'dispose', source: string }`                                                   | `dispose()` is called                    |
-
-The `source` field is the `name` of the container that emitted the event.
-
-**Example:**
-
-```ts
-const unsubscribe = container.on((event) => {
-  if (event.type === 'register') {
-    console.log(`Registered ${event.description} (${event.kind})`);
-  }
-  if (event.type === 'resolve') {
-    console.log(`Resolved ${event.description}`);
-  }
-});
-
-// Later:
-unsubscribe();
-```
-
----
-
-### `container.dispose()`
-
-```ts
-dispose(): Promise<void>;
-[Symbol.asyncDispose](): Promise<void>;
-```
-
-Disposes the container. Runs all registered cleanup hooks in parallel. Factory hooks fire only for resolved instances. Value hooks always fire. Hook failures are **warned in dev** (via the internal warn channel) — they do not throw. Idempotent — multiple calls are safe.
-
-**Returns:** `Promise<void>`
-
-**Example:**
-
-```ts
-await container.dispose();
-
-// With explicit resource management:
-await using container = createContainer();
-// dispose() called automatically at block exit
-```
-
----
-
-### `container.disposalSignal`
-
-```ts
-get disposalSignal(): AbortSignal;
-```
-
-`AbortSignal` that is aborted when the container is disposed. Use it to tie the lifetime of external resources (e.g., SSE connections, polling loops) to the container.
-
-```ts
-const container = createContainer();
-const resource = startPolling({ signal: container.disposalSignal });
-// When container.dispose() is called, resource automatically stops.
-```
-
----
-
-### `container.disposed`
-
-```ts
-get disposed(): boolean;
-```
-
-Returns `true` after `dispose()` has been called. All container operations throw `ConduitDisposedError` when `disposed` is `true`.
+Disposal blocks new work, aborts `disposalSignal`, disposes active child scopes, waits for in-flight creation, then disposes owned resources in reverse creation order. Cleanup failures are aggregated in `ConduitDisposeError.errors`.
 
 ## Types
 
 ```ts
-/** Symbol carrying T as a phantom type. Created via token(). */
-type Token<T = unknown> = symbol & { __type?: T };
-
-/** A named scope identifier. Created via scope(). */
-type ScopeToken = symbol & { __scopeToken?: never };
-
-/** Caching strategy for factory registrations. */
+type Token<T> = symbol;
+type ScopeToken = symbol;
 type Lifetime = 'singleton' | 'transient' | ScopeToken;
-
-/** Options for container.value(). */
-type ValueOptions<T> = {
-  dispose?: (instance: T) => void | Promise<void>;
-};
-
-/** Options for container.factory(). */
-type FactoryOptions<T> = {
-  /** Statically-declared dependencies for freeze() validation. */
-  deps?: readonly Token<any>[];
-  dispose?: (instance: T) => void | Promise<void>;
-  lifetime?: Lifetime;
-};
-
-/**
- * Infer the resolved-value tuple from a readonly token array.
- * Mirrors the return type of resolveMany().
- */
-type InferTokenTypes<T extends readonly Token<any>[]> = {
-  [K in keyof T]: T[K] extends Token<infer U> ? U : never;
-};
-
-/** Interceptor called after every successful resolution. */
-type ResolveInterceptor = <T>(tok: Token<T>, value: T) => void;
-
-/** Passed to each factory function — resolves other tokens lazily. */
-interface FactoryResolver {
-  resolve<T>(tok: Token<T>): Promise<T>;
-  /** Resolve synchronously. Works for value providers and already-resolved instances. */
-  resolveSync<T>(tok: Token<T>): T;
-}
-
-/** A function that registers providers on a container. May be async. */
-type ContainerModule = (container: Container) => Promise<void> | void;
-
-/** A lifecycle event emitted by the container. */
-type ContainerEvent =
-  | { description: string; kind: 'factory' | 'value'; source: string; type: 'register' }
-  | { description: string; source: string; type: 'resolve' }
-  | { source: string; type: 'dispose' };
-
-/** Listener function for container events. */
-type ContainerEventListener = (event: ContainerEvent) => void;
-
-/** Result type returned by tryResolve(). */
-type ResolveResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
-
-/** Serializable node in the dependency graph returned by inspect(). */
-type ContainerNode = {
-  /** Statically-declared dependency descriptions (from `deps:` option), if declared. */
-  deps?: string[];
-  description: string;
-  kind: 'value' | 'factory';
-  /** 'singleton', 'transient', or 'scope:<name>' for named-scope factories. */
-  lifetime?: 'singleton' | 'transient' | `scope:${string}`;
-};
-
-/** Serializable graph returned by inspect(). */
-type ContainerGraph = {
-  nodes: ContainerNode[];
-};
+type InferTokens<Tokens> = { [K in keyof Tokens]: Tokens[K] extends Token<infer T> ? T : never };
 ```
 
 ## Errors
 
-All conduit errors extend `ConduitError`. Use `instanceof ConduitError` to catch any conduit-originated error in one branch, or narrow further with specific subclass checks.
-
-| Error                               | When thrown                                                                                                          |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `ConduitError`                      | **Base class** for all conduit errors — catch with `instanceof ConduitError`                                         |
-| `ConduitCircularDependencyError`    | `freeze()` detected a declared-dep cycle; lazy cycles detected at resolve time; message includes the full cycle path |
-| `ConduitProviderNotFoundError`      | `resolve()` / `resolveSync()` / `freeze()` — token not registered; message includes container name                   |
-| `ConduitDuplicateRegistrationError` | `value()` or `factory()` called for a token that is already registered                                               |
-| `ConduitSyncResolutionError`        | `resolveSync()` called for a transient factory or an unresolved singleton factory                                    |
-| `ConduitScopedResolutionError`      | `resolve()` / `resolveSync()` called outside a matching named-scope container                                        |
-| `ConduitDisposedError`              | Any operation called after `dispose()` — message includes the container name                                         |
-| `ConduitFrozenError`                | `value()` or `factory()` called after `freeze()` — message includes the container name                               |
+- `ConduitError` — base class; `ConduitError.is(error)` narrows package errors.
+- `ConduitProviderNotFoundError` — dependency has no registration.
+- `ConduitCircularDependencyError` — static factory tuple graph contains a cycle.
+- `ConduitDuplicateRegistrationError` — token registered twice in one container.
+- `ConduitScopedResolutionError` — scoped factory resolved without matching scope.
+- `ConduitDisposedError` — operation attempted after disposal began.
+- `ConduitDisposeError` — one or more cleanup hooks failed.

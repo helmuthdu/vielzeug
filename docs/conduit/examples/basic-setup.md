@@ -1,54 +1,34 @@
 ---
-title: 'Conduit Examples — Basic Setup'
-description: 'Basic setup example for @vielzeug/conduit.'
+title: Conduit Examples — Basic Setup
+description: Register static dependencies with Conduit.
 ---
 
 ## Basic Setup
 
 ### Problem
 
-You need to wire together a small application graph — a logger and a service that depends on it — with typed tokens, lazy construction, and automatic cleanup.
+Create services with explicit typed dependencies.
 
 ### Solution
-
-Use `token()` to define each dependency contract, `container.value()` or `container.factory()` to register providers, and `await container.resolve()` to get an instance.
 
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
 
-const Logger = token<{ log(message: string): void }>('Logger');
-const Service = token<{ run(): Promise<void> }>('Service');
-
+const Config = token<{ baseUrl: string }>('Config');
+const Client = token<{ url: string }>('Client');
 const container = createContainer();
 
-container.value(Logger, {
-  log(message) {
-    console.log(message);
-  },
-});
+container.value(Config, { baseUrl: '/api' });
+container.factory(Client, [Config], (config) => ({ url: `${config.baseUrl}/users` }));
 
-container.factory(Service, async (r) => {
-  const logger = await r.resolve(Logger);
-  return {
-    async run() {
-      logger.log('running');
-    },
-  };
-});
-
-const service = await container.resolve(Service);
-await service.run(); // logs "running"
-
+const client = await container.resolve(Client);
 await container.dispose();
 ```
 
 ### Pitfalls
 
-- Calling `container.resolve()` before `container.value()` or `container.factory()` throws `ConduitProviderNotFoundError`. Register all providers before resolving.
-- Passing a token of type `Token<A>` where `Token<B>` is expected is a type error at compile time. Each `token()` call creates a distinct symbol even when descriptions match.
+Factory tuple must contain every dependency.
 
 ### Related
 
-- [Async Providers](./async-providers.md)
-- [Lifetimes](./lifetimes.md)
-- [Dispose Lifecycle](./dispose-lifecycle.md)
+- [Usage Guide](../usage.md#define-dependencies)

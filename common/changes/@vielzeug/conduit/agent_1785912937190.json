@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Redesign Conduit around dependency-first async factories",
+      "packageName": "@vielzeug/conduit",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/conduit"
+}

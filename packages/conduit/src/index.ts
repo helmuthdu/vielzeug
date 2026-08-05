@@ -1,38 +1,12 @@
 export { createContainer } from './container';
 export {
   ConduitCircularDependencyError,
+  ConduitDisposeError,
   ConduitDisposedError,
-  ConduitError,
-  ConduitFrozenError,
   ConduitDuplicateRegistrationError,
+  ConduitError,
   ConduitProviderNotFoundError,
   ConduitScopedResolutionError,
-  ConduitSyncResolutionError,
 } from './errors';
-export type {
-  Container,
-  ContainerEvent,
-  ContainerEventListener,
-  ContainerGraph,
-  ContainerModule,
-  ContainerNode,
-  FactoryOptions,
-  FactoryResolver,
-  InferTokenTypes,
-  Lifetime,
-  ResolveInterceptor,
-  ResolveResult,
-  ScopeToken,
-  Token,
-  ValueOptions,
-} from './types';
+export type { Container, FactoryOptions, InferTokens, Lifetime, ScopeToken, Token, ValueOptions } from './types';
 export { scope, token } from './types';
-export {
-  loadModules,
-  resolveSyncOptional,
-  resolveSyncOrDefault,
-  resolveOptional,
-  resolveOrDefault,
-  tryResolve,
-  trySyncResolve,
-} from './utils';
