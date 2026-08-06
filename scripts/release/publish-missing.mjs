@@ -31,10 +31,12 @@ export function listPublishablePackages(root = repoRoot) {
   return packages;
 }
 
-export async function listMissingPackages(root = repoRoot, { checkVersion = versionExists } = {}) {
+export async function listMissingPackages(root = repoRoot, { checkVersion = versionExists, progress = () => {} } = {}) {
   const missing = [];
+  const packages = listPublishablePackages(root);
 
-  for (const pkg of listPublishablePackages(root)) {
+  for (const [index, pkg] of packages.entries()) {
+    progress({ current: index + 1, name: pkg.name, total: packages.length, version: pkg.version });
     if (await checkVersion(pkg.name, pkg.version)) continue;
 
     missing.push(pkg);
@@ -45,10 +47,14 @@ export async function listMissingPackages(root = repoRoot, { checkVersion = vers
 
 export async function publishMissing(
   root = repoRoot,
-  { checkVersion = versionExists, dryRun = false, interactive = false, otp, publish = publishPackage, verify } = {},
+  { checkVersion = versionExists, dryRun = false, interactive = false, otp, progress = console.log, publish = publishPackage, verify } = {},
 ) {
   const results = { failed: [], published: [], skipped: [] };
-  const missing = await listMissingPackages(root, { checkVersion });
+  progress('Checking npm for unpublished package versions...');
+  const missing = await listMissingPackages(root, {
+    checkVersion,
+    progress: ({ current, name, total, version }) => progress(`[${current}/${total}] Checking ${name}@${version}`),
+  });
   const missingNames = new Set(missing.map(({ name }) => name));
 
   for (const { name, version } of listPublishablePackages(root)) {
@@ -56,9 +62,10 @@ export async function publishMissing(
   }
 
   if (missing.length > 0) {
+    progress(`Verifying ${missing.length} publish candidate(s) before upload...`);
     const verifyPacked = verify ?? (await import('../verify-packed-packages.mjs')).verifyPackedPackages;
 
-    await verifyPacked(missing.map(({ name }) => name));
+    await verifyPacked(missing.map(({ name }) => name), { progress });
   }
 
   for (const { folder, name, version } of missing) {

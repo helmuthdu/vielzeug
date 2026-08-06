@@ -76,7 +76,7 @@ describe('publishMissing()', () => {
 
     expect(results.skipped).toEqual(['@vielzeug/ore@1.0.4']);
     expect(results.published).toEqual(['@vielzeug/orbit@2.0.0']);
-    expect(verify).toHaveBeenCalledWith(['@vielzeug/orbit']);
+    expect(verify).toHaveBeenCalledWith(['@vielzeug/orbit'], { progress: expect.any(Function) });
     expect(publish).toHaveBeenCalledWith(path.join(repo, 'packages', 'orbit'), {
       dryRun: false,
       interactive: false,

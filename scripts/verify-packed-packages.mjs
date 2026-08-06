@@ -7,7 +7,7 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-import { isMain, parseArgs } from './lib/cli.mjs';
+import { isMain, npmEnvironment, parseArgs } from './lib/cli.mjs';
 import {
   collectPackageClosure,
   dependencyFields,
@@ -96,7 +96,7 @@ async function verifyTypes(manifest, fixture) {
   }
 }
 
-export async function verifyPackedPackages(targets) {
+export async function verifyPackedPackages(targets, { progress = () => {} } = {}) {
   if (targets.length === 0) throw new Error('Provide at least one package with --package=<name>.');
 
   const closure = collectPackageClosure(targets, projectMap(), readPackage);
@@ -104,8 +104,13 @@ export async function verifyPackedPackages(targets) {
   const fixture = await mkdtemp(join(tmpdir(), 'vielzeug-packed-'));
 
   try {
-    for (const [name, { folder }] of closure) packed.set(name, packPublishedPackage(folder));
+    let current = 0;
+    for (const [name, { folder }] of closure) {
+      progress(`[packed ${++current}/${closure.size}] Packing ${name}`);
+      packed.set(name, packPublishedPackage(folder));
+    }
 
+    progress(`Installing ${packed.size} packed package(s) into consumer fixture...`);
     await writeFile(
       join(fixture, 'package.json'),
       JSON.stringify({
@@ -114,9 +119,13 @@ export async function verifyPackedPackages(targets) {
         type: 'module',
       }),
     );
-    await execute('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--package-lock=false'], { cwd: fixture });
+    await execute('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--package-lock=false'], {
+      cwd: fixture,
+      env: npmEnvironment(),
+    });
 
-    for (const target of targets) {
+    for (const [index, target] of targets.entries()) {
+      progress(`[packed ${index + 1}/${targets.length}] Verifying ${target}`);
       const installedRoot = join(fixture, 'node_modules', ...target.split('/'));
       const manifest = JSON.parse(await readFile(join(installedRoot, 'package.json'), 'utf8'));
 
@@ -135,7 +144,7 @@ if (isMain(import.meta.url)) {
   const requested = typeof flags.package === 'string' ? flags.package.split(',').filter(Boolean) : [];
   const targets = requested.includes('all') ? [...projectMap().keys()] : requested;
 
-  verifyPackedPackages(targets).then(
+  verifyPackedPackages(targets, { progress: console.log }).then(
     () => console.log(`OK — packed consumer verification passed for ${targets.join(', ')}.`),
     (error) => {
       console.error(error);

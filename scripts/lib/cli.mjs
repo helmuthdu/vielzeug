@@ -35,9 +35,26 @@ export function isMain(moduleUrl) {
  *     code is the only thing that matters (e.g. "does this git tag exist") where even the
  *     command's own error output would be noise on a expected-to-fail check.
  */
+export function npmEnvironment(environment = process.env) {
+  const sanitized = { ...environment };
+
+  for (const key of Object.keys(sanitized)) {
+    const normalized = key.toLowerCase();
+    if (
+      normalized === 'npm_config_verify_deps_before_run' ||
+      normalized.startsWith('npm_config_npm_') ||
+      normalized.startsWith('npm_config__')
+    ) {
+      delete sanitized[key];
+    }
+  }
+
+  return sanitized;
+}
+
 export function run(cmd, args, { cwd, inherit = false, quiet = false } = {}) {
   const stdio = quiet ? 'ignore' : inherit ? 'inherit' : undefined;
-  return execFileSync(cmd, args, { cwd, encoding: 'utf8', stdio });
+  return execFileSync(cmd, args, { cwd, encoding: 'utf8', env: cmd === 'npm' ? npmEnvironment() : undefined, stdio });
 }
 
 /**

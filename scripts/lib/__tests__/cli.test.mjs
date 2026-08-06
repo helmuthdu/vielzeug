@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isMain, parseArgs, run } from '../cli.mjs';
+import { isMain, npmEnvironment, parseArgs, run } from '../cli.mjs';
 
 describe('run()', () => {
   it('returns captured stdout by default', () => {
@@ -17,6 +17,19 @@ describe('run()', () => {
 
   it('propagates a non-zero exit as a thrown error, regardless of IO posture', () => {
     expect(() => run('node', ['-e', 'process.exit(1)'], { quiet: true })).toThrow();
+  });
+});
+
+describe('npmEnvironment()', () => {
+  it('removes pnpm-injected npm configuration variables but preserves user npm settings', () => {
+    expect(
+      npmEnvironment({
+        NPM_CONFIG_NPM_GLOBALCONFIG: '/private/config',
+        NPM_CONFIG_REGISTRY: 'https://registry.npmjs.org/',
+        npm_config__tdms_registry: 'https://registry.example/',
+        npm_config_verify_deps_before_run: 'true',
+      }),
+    ).toEqual({ NPM_CONFIG_REGISTRY: 'https://registry.npmjs.org/' });
   });
 });
 

@@ -8,9 +8,9 @@
 
 const REGISTRY = 'https://registry.npmjs.org';
 
-export async function versionExists(name, version, { fetchImpl = fetch } = {}) {
+export async function versionExists(name, version, { fetchImpl = fetch, timeout = 15_000 } = {}) {
   const url = `${REGISTRY}/${encodeURIComponent(name)}/${encodeURIComponent(version)}`;
-  const response = await fetchImpl(url, { method: 'GET' });
+  const response = await fetchImpl(url, { method: 'GET', signal: AbortSignal.timeout(timeout) });
 
   if (response.status === 200) return true;
   if (response.status === 404) return false;

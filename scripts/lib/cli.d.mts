@@ -4,6 +4,8 @@
 
 export function isMain(moduleUrl: string): boolean;
 
+export function npmEnvironment(environment?: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
+
 export interface RunOptions {
   cwd?: string;
   inherit?: boolean;

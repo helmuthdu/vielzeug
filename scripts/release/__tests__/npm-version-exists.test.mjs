@@ -18,14 +18,16 @@ describe('versionExists()', () => {
     await expect(versionExists('@vielzeug/ore', '1.0.4', { fetchImpl })).rejects.toThrow('500');
   });
 
-  it('requests the registry with the scoped name and version percent-encoded', async () => {
-    let requestedUrl;
-    const fetchImpl = async (url) => {
-      requestedUrl = url;
+  it('requests the registry with an encoded path and bounded timeout signal', async () => {
+    let request;
+    const fetchImpl = async (url, options) => {
+      request = { options, url };
       return { status: 404 };
     };
 
-    await versionExists('@vielzeug/ore', '1.0.4', { fetchImpl });
-    expect(requestedUrl).toBe('https://registry.npmjs.org/%40vielzeug%2Fore/1.0.4');
+    await versionExists('@vielzeug/ore', '1.0.4', { fetchImpl, timeout: 1_000 });
+    expect(request.url).toBe('https://registry.npmjs.org/%40vielzeug%2Fore/1.0.4');
+    expect(request.options.method).toBe('GET');
+    expect(request.options.signal).toBeInstanceOf(AbortSignal);
   });
 });
