@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/assay
 
-This log was last generated on Wed, 05 Aug 2026 16:48:52 GMT and should not be manually modified.
+This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+
+## 2.0.1
+Thu, 06 Aug 2026 07:20:49 GMT
+
+### Patches
+
+- publish clean export metadata and classic TypeScript subpath mappings
 
 ## 2.0.0
 Wed, 05 Aug 2026 16:48:52 GMT

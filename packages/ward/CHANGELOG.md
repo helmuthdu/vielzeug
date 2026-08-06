@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ward
 
-This log was last generated on Fri, 24 Jul 2026 05:28:41 GMT and should not be manually modified.
+This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+
+## 1.0.6
+Thu, 06 Aug 2026 07:20:49 GMT
+
+### Patches
+
+- publish clean export metadata and classic TypeScript subpath mappings
 
 ## 1.0.5
 Fri, 24 Jul 2026 05:28:41 GMT

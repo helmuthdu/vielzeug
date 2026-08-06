@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/herald",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Typed event bus — pub/sub with namespaces, wildcards, and once-listeners",
   "type": "module",
   "files": [

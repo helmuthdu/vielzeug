@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/vault",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Typed browser storage with portable keys, TTL, observation, and IndexedDB transactions",
   "type": "module",
   "files": [

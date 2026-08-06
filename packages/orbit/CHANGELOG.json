@@ -2,6 +2,28 @@
   "name": "@vielzeug/orbit",
   "entries": [
     {
+      "version": "1.1.5",
+      "tag": "@vielzeug/orbit_v1.1.5",
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "49ec292706645d1f4937897ac628d852f3a11736"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.1`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.4",
       "tag": "@vielzeug/orbit_v1.1.4",
       "date": "Wed, 05 Aug 2026 16:48:52 GMT",

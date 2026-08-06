@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/sourcerer",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Framework-agnostic reactive collection sources with local, page, cursor, and infinite pagination",
   "type": "module",
   "files": [

@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/clockwork",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Framework-neutral typed finite state machines with pure transitions and actors",
   "type": "module",
   "files": [

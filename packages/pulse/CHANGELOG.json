@@ -2,6 +2,25 @@
   "name": "@vielzeug/pulse",
   "entries": [
     {
+      "version": "2.0.1",
+      "tag": "@vielzeug/pulse_v2.0.1",
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "49ec292706645d1f4937897ac628d852f3a11736"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.1`"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.0",
       "tag": "@vielzeug/pulse_v2.0.0",
       "date": "Wed, 05 Aug 2026 16:48:52 GMT",

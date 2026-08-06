@@ -2,6 +2,25 @@
   "name": "@vielzeug/familiar",
   "entries": [
     {
+      "version": "1.0.8",
+      "tag": "@vielzeug/familiar_v1.0.8",
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "49ec292706645d1f4937897ac628d852f3a11736"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.1`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.7",
       "tag": "@vielzeug/familiar_v1.0.7",
       "date": "Wed, 05 Aug 2026 16:48:52 GMT",

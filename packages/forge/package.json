@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/forge",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Immutable typed form state with focused fields and explicit full-form validation",
   "type": "module",
   "files": [

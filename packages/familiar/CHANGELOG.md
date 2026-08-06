@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/familiar
 
-This log was last generated on Wed, 05 Aug 2026 16:48:52 GMT and should not be manually modified.
+This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+
+## 1.0.8
+Thu, 06 Aug 2026 07:20:49 GMT
+
+### Patches
+
+- publish clean export metadata and classic TypeScript subpath mappings
 
 ## 1.0.7
 Wed, 05 Aug 2026 16:48:52 GMT

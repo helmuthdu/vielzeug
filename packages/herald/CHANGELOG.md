@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/herald
 
-This log was last generated on Sun, 26 Jul 2026 06:43:54 GMT and should not be manually modified.
+This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+
+## 1.0.6
+Thu, 06 Aug 2026 07:20:49 GMT
+
+### Patches
+
+- publish clean export metadata and classic TypeScript subpath mappings
 
 ## 1.0.5
 Sun, 26 Jul 2026 06:43:54 GMT
