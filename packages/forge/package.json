@@ -11,31 +11,26 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
     "./devtools": {
-      "source": "./src/devtools.ts",
       "types": "./dist/devtools.d.ts",
       "import": "./dist/devtools.js",
       "require": "./dist/devtools.cjs"
     },
     "./dom": {
-      "source": "./src/dom.ts",
       "types": "./dist/dom.d.ts",
       "import": "./dist/dom.js",
       "require": "./dist/dom.cjs"
     },
     "./spell": {
-      "source": "./src/spell.ts",
       "types": "./dist/spell.d.ts",
       "import": "./dist/spell.js",
       "require": "./dist/spell.cjs"
     },
     "./vault": {
-      "source": "./src/vault.ts",
       "types": "./dist/vault.d.ts",
       "import": "./dist/vault.js",
       "require": "./dist/vault.cjs"
@@ -79,6 +74,22 @@
     },
     "@vielzeug/vault": {
       "optional": true
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "devtools": [
+        "dist/devtools.d.ts"
+      ],
+      "dom": [
+        "dist/dom.d.ts"
+      ],
+      "spell": [
+        "dist/spell.d.ts"
+      ],
+      "vault": [
+        "dist/vault.d.ts"
+      ]
     }
   }
 }

@@ -11,25 +11,21 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
     "./async": {
-      "source": "./src/async.ts",
       "types": "./dist/async.d.ts",
       "import": "./dist/async.js",
       "require": "./dist/async.cjs"
     },
     "./store": {
-      "source": "./src/store.ts",
       "types": "./dist/store.d.ts",
       "import": "./dist/store.js",
       "require": "./dist/store.cjs"
     },
     "./watch": {
-      "source": "./src/watch.ts",
       "types": "./dist/watch.d.ts",
       "import": "./dist/watch.js",
       "require": "./dist/watch.cjs"
@@ -58,5 +54,18 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
+  },
+  "typesVersions": {
+    "*": {
+      "async": [
+        "dist/async.d.ts"
+      ],
+      "store": [
+        "dist/store.d.ts"
+      ],
+      "watch": [
+        "dist/watch.d.ts"
+      ]
+    }
   }
 }

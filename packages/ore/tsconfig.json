@@ -1,8 +1,5 @@
 {
   "extends": "../../tsconfig.json",
   "include": ["src/**/*.d.ts", "src/**/*.ts", "vitest.setup.ts"],
-  "exclude": ["node_modules"],
-  "compilerOptions": {
-    "customConditions": ["source"]
-  }
+  "exclude": ["node_modules"]
 }

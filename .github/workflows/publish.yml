@@ -116,6 +116,9 @@ jobs:
       - name: Apply version bump
         run: node scripts/release/cli.mjs apply "${{ inputs.package }}"
 
+      - name: Verify packed consumer contract
+        run: pnpm verify:packed -- --package=${{ inputs.package }}
+
       - id: project
         run: node scripts/release/cli.mjs project "${{ inputs.package }}" >> "$GITHUB_OUTPUT"
 
@@ -185,6 +188,9 @@ jobs:
 
       - name: Apply version bumps
         run: node scripts/release/cli.mjs apply
+
+      - name: Verify packed consumer contracts
+        run: pnpm verify:packed -- --package=$(echo "${{ steps.changes.outputs.packages }}" | tr ' ' ',')
 
       - name: Push version bump commit
         if: ${{ !inputs.dry-run }}
@@ -267,8 +273,6 @@ jobs:
           fetch-depth: 1
 
       - uses: ./.github/actions/setup
-        with:
-          root-install: 'false'
 
       - name: Build all packages
         run: node common/scripts/install-run-rush.js rebuild --verbose

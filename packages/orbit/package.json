@@ -11,31 +11,26 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
     "./devtools": {
-      "source": "./src/devtools.ts",
       "types": "./dist/devtools.d.ts",
       "import": "./dist/devtools.js",
       "require": "./dist/devtools.cjs"
     },
     "./presets": {
-      "source": "./src/presets.ts",
       "types": "./dist/presets.d.ts",
       "import": "./dist/presets.js",
       "require": "./dist/presets.cjs"
     },
     "./reactive": {
-      "source": "./src/reactive.ts",
       "types": "./dist/reactive.d.ts",
       "import": "./dist/reactive.js",
       "require": "./dist/reactive.cjs"
     },
     "./ssr": {
-      "source": "./src/ssr.ts",
       "types": "./dist/ssr.d.ts",
       "import": "./dist/ssr.js",
       "require": "./dist/ssr.cjs"
@@ -66,5 +61,21 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
+  },
+  "typesVersions": {
+    "*": {
+      "devtools": [
+        "dist/devtools.d.ts"
+      ],
+      "presets": [
+        "dist/presets.d.ts"
+      ],
+      "reactive": [
+        "dist/reactive.d.ts"
+      ],
+      "ssr": [
+        "dist/ssr.d.ts"
+      ]
+    }
   }
 }

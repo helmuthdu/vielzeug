@@ -9,6 +9,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { verifyPackedPackages } from '../verify-packed-packages.mjs';
 import { publishPackage } from './npm-publish.mjs';
 import { versionExists } from './npm-version-exists.mjs';
 
@@ -31,18 +32,33 @@ export function listPublishablePackages(root = repoRoot) {
   return packages;
 }
 
+export async function listMissingPackages(root = repoRoot, { checkVersion = versionExists } = {}) {
+  const missing = [];
+
+  for (const pkg of listPublishablePackages(root)) {
+    if (await checkVersion(pkg.name, pkg.version)) continue;
+
+    missing.push(pkg);
+  }
+
+  return missing;
+}
+
 export async function publishMissing(
   root = repoRoot,
-  { checkVersion = versionExists, dryRun = false, interactive = false, otp, publish = publishPackage } = {},
+  { checkVersion = versionExists, dryRun = false, interactive = false, otp, publish = publishPackage, verify = verifyPackedPackages } = {},
 ) {
   const results = { failed: [], published: [], skipped: [] };
+  const missing = await listMissingPackages(root, { checkVersion });
+  const missingNames = new Set(missing.map(({ name }) => name));
 
-  for (const { folder, name, version } of listPublishablePackages(root)) {
-    if (await checkVersion(name, version)) {
-      results.skipped.push(`${name}@${version}`);
-      continue;
-    }
+  for (const { name, version } of listPublishablePackages(root)) {
+    if (!missingNames.has(name)) results.skipped.push(`${name}@${version}`);
+  }
 
+  if (missing.length > 0) await verify(missing.map(({ name }) => name));
+
+  for (const { folder, name, version } of missing) {
     console.log(`\n📦 Publishing ${name}@${version}`);
     try {
       await publish(path.join(root, folder), { dryRun, interactive, otp });

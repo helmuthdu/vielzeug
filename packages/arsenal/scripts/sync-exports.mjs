@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { normalizePackageManifest } from '../../../scripts/lib/package-manifest.mjs';
 import { EXPORTS, ROOT_EXPORTS } from './exports.manifest.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -13,7 +14,6 @@ const rootBarrel = () => ROOT_EXPORTS.map((name) => `export * from './${name}';`
 
 const packageExports = () => {
   const sourceEntry = (source) => ({
-    source,
     types: source.replace('./src/', './dist/').replace(/\.ts$/, '.d.ts'),
     import: source.replace('./src/', './dist/').replace(/\.ts$/, '.js'),
     require: source.replace('./src/', './dist/').replace(/\.ts$/, '.cjs'),
@@ -44,7 +44,7 @@ const main = async () => {
 
   const packagePath = path.join(packageRoot, 'package.json');
   const pkg = JSON.parse(await readFile(packagePath, 'utf8'));
-  const next = JSON.stringify({ ...pkg, exports: packageExports() }, null, 2).concat('\n');
+  const next = JSON.stringify(normalizePackageManifest({ ...pkg, exports: packageExports() }), null, 2).concat('\n');
 
   await sync(packagePath, next);
 };

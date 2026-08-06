@@ -11,43 +11,36 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
     "./async": {
-      "source": "./src/async.ts",
       "types": "./dist/async.d.ts",
       "import": "./dist/async.js",
       "require": "./dist/async.cjs"
     },
     "./courier": {
-      "source": "./src/courier.ts",
       "types": "./dist/courier.d.ts",
       "import": "./dist/courier.js",
       "require": "./dist/courier.cjs"
     },
     "./herald": {
-      "source": "./src/herald.ts",
       "types": "./dist/herald.d.ts",
       "import": "./dist/herald.js",
       "require": "./dist/herald.cjs"
     },
     "./pulse": {
-      "source": "./src/pulse.ts",
       "types": "./dist/pulse.d.ts",
       "import": "./dist/pulse.js",
       "require": "./dist/pulse.cjs"
     },
     "./ripple": {
-      "source": "./src/ripple.ts",
       "types": "./dist/ripple.d.ts",
       "import": "./dist/ripple.js",
       "require": "./dist/ripple.cjs"
     },
     "./subjects": {
-      "source": "./src/subjects.ts",
       "types": "./dist/subjects.d.ts",
       "import": "./dist/subjects.js",
       "require": "./dist/subjects.cjs"
@@ -99,5 +92,27 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
+  },
+  "typesVersions": {
+    "*": {
+      "async": [
+        "dist/async.d.ts"
+      ],
+      "courier": [
+        "dist/courier.d.ts"
+      ],
+      "herald": [
+        "dist/herald.d.ts"
+      ],
+      "pulse": [
+        "dist/pulse.d.ts"
+      ],
+      "ripple": [
+        "dist/ripple.d.ts"
+      ],
+      "subjects": [
+        "dist/subjects.d.ts"
+      ]
+    }
   }
 }

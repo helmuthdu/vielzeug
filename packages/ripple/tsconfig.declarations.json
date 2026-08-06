@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.declarations.json",
   "compilerOptions": {
-    "customConditions": [],
     "declarationDir": "./dist",
     "rootDir": "./src",
     "types": ["node"]

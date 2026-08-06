@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { resolveWorkspaceDependencies } from '../resolve-workspace-deps.mjs';
+import { createPublishedManifest, resolveWorkspaceDependencies } from '../resolve-workspace-deps.mjs';
 
 function fakeFindProject(versions) {
   return vi.fn((name) => {
@@ -96,5 +96,41 @@ describe('resolveWorkspaceDependencies()', () => {
     const pkg = { name: '@vielzeug/ripple', version: '1.2.1' };
 
     expect(resolveWorkspaceDependencies(pkg, { findProject })).toEqual(pkg);
+  });
+});
+
+describe('createPublishedManifest()', () => {
+  it('strips source conditions and adds classic TypeScript mappings for typed subpaths', () => {
+    const pkg = {
+      exports: {
+        '.': { import: './dist/index.js', require: './dist/index.cjs', source: './src/index.ts', types: './dist/index.d.ts' },
+        './math': {
+          import: './dist/math.js',
+          require: './dist/math.cjs',
+          source: './src/math.ts',
+          types: './dist/math.d.ts',
+        },
+      },
+      name: '@vielzeug/example',
+    };
+
+    expect(createPublishedManifest(pkg)).toEqual({
+      exports: {
+        '.': { import: './dist/index.js', require: './dist/index.cjs', types: './dist/index.d.ts' },
+        './math': { import: './dist/math.js', require: './dist/math.cjs', types: './dist/math.d.ts' },
+      },
+      name: '@vielzeug/example',
+      typesVersions: { '*': { math: ['dist/math.d.ts'] } },
+    });
+    expect(pkg.exports['./math'].source).toBe('./src/math.ts');
+  });
+
+  it('preserves existing classic TypeScript mappings', () => {
+    const pkg = {
+      exports: { './format': { source: './src/format.ts', types: './dist/format.d.ts' } },
+      typesVersions: { '*': { format: ['dist/custom-format.d.ts'] } },
+    };
+
+    expect(createPublishedManifest(pkg).typesVersions).toEqual({ '*': { format: ['dist/custom-format.d.ts'] } });
   });
 });

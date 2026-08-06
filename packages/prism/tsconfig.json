@@ -4,7 +4,6 @@
   "exclude": ["node_modules"],
   "compilerOptions": {
     "baseUrl": ".",
-    "customConditions": ["source"],
     "paths": {
       "@vielzeug/orbit": ["../orbit/src/index.ts"],
       "@vielzeug/ripple": ["../ripple/src/index.ts"]

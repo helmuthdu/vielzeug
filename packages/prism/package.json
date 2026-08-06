@@ -33,18 +33,15 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
     "./theme": {
-      "source": "./src/theme/prism.css",
       "import": "./dist/theme/prism.css",
       "default": "./dist/theme/prism.css"
     },
     "./devtools": {
-      "source": "./src/devtools/index.ts",
       "types": "./dist/devtools/index.d.ts",
       "import": "./dist/devtools.js",
       "require": "./dist/devtools.cjs"
@@ -75,5 +72,12 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "typesVersions": {
+    "*": {
+      "devtools": [
+        "dist/devtools/index.d.ts"
+      ]
+    }
   }
 }

@@ -37,7 +37,7 @@
     }
   },
   "scripts": {
-    "build": "pnpm run typecheck && vite build && pnpm run build:bundle && pnpm run build:types && pnpm run verify:exports && pnpm run verify:package",
+    "build": "pnpm run typecheck && vite build && pnpm run build:bundle && pnpm run build:types && pnpm run verify:exports",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
@@ -46,8 +46,7 @@
     "test": "pnpm run typecheck && vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build:bundle": "vite build --config vite.bundle.config.ts",
-    "verify:exports": "node ./scripts/verify-exports.mjs",
-    "verify:package": "node ./scripts/verify-package.mjs"
+    "verify:exports": "node ./scripts/verify-exports.mjs"
   },
   "publishConfig": {
     "access": "public",

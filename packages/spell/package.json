@@ -11,19 +11,16 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
     "./json": {
-      "source": "./src/json.ts",
       "types": "./dist/json.d.ts",
       "import": "./dist/json.js",
       "require": "./dist/json.cjs"
     },
     "./predicates": {
-      "source": "./src/predicates.ts",
       "types": "./dist/predicates.d.ts",
       "import": "./dist/predicates.js",
       "require": "./dist/predicates.cjs"
@@ -55,5 +52,15 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
+  },
+  "typesVersions": {
+    "*": {
+      "json": [
+        "dist/json.d.ts"
+      ],
+      "predicates": [
+        "dist/predicates.d.ts"
+      ]
+    }
   }
 }

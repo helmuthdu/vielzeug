@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { listPublishablePackages, publishMissing, summaryMarkdown } from '../publish-missing.mjs';
+import { listMissingPackages, listPublishablePackages, publishMissing, summaryMarkdown } from '../publish-missing.mjs';
 
 let root;
 
@@ -42,6 +42,17 @@ describe('listPublishablePackages()', () => {
 });
 
 describe('publishMissing()', () => {
+  it('discovers missing packages before publication', async () => {
+    const repo = makeRepo([
+      { json: { name: '@vielzeug/ore', version: '1.0.4' }, slug: 'ore' },
+      { json: { name: '@vielzeug/orbit', version: '2.0.0' }, slug: 'orbit' },
+    ]);
+
+    await expect(listMissingPackages(repo, { checkVersion: async (name) => name === '@vielzeug/ore' })).resolves.toEqual([
+      { folder: 'packages/orbit', name: '@vielzeug/orbit', version: '2.0.0' },
+    ]);
+  });
+
   it('skips packages whose version already exists and publishes the rest', async () => {
     const repo = makeRepo([
       { json: { name: '@vielzeug/ore', version: '1.0.4' }, slug: 'ore' },
@@ -51,10 +62,12 @@ describe('publishMissing()', () => {
     const checkVersion = vi.fn(async (name) => name === '@vielzeug/ore');
     const publish = vi.fn(async () => {});
 
-    const results = await publishMissing(repo, { checkVersion, publish });
+    const verify = vi.fn();
+    const results = await publishMissing(repo, { checkVersion, publish, verify });
 
     expect(results.skipped).toEqual(['@vielzeug/ore@1.0.4']);
     expect(results.published).toEqual(['@vielzeug/orbit@2.0.0']);
+    expect(verify).toHaveBeenCalledWith(['@vielzeug/orbit']);
     expect(publish).toHaveBeenCalledWith(path.join(repo, 'packages', 'orbit'), {
       dryRun: false,
       interactive: false,
@@ -67,7 +80,7 @@ describe('publishMissing()', () => {
     const checkVersion = vi.fn(async () => false);
     const publish = vi.fn(async () => {});
 
-    await publishMissing(repo, { checkVersion, dryRun: true, publish });
+    await publishMissing(repo, { checkVersion, dryRun: true, publish, verify: vi.fn() });
 
     expect(publish).toHaveBeenCalledWith(path.join(repo, 'packages', 'ore'), {
       dryRun: true,
@@ -81,7 +94,7 @@ describe('publishMissing()', () => {
     const checkVersion = vi.fn(async () => false);
     const publish = vi.fn(async () => {});
 
-    await publishMissing(repo, { checkVersion, otp: '123456', publish });
+    await publishMissing(repo, { checkVersion, otp: '123456', publish, verify: vi.fn() });
 
     expect(publish).toHaveBeenCalledWith(path.join(repo, 'packages', 'ore'), {
       dryRun: false,
@@ -95,7 +108,7 @@ describe('publishMissing()', () => {
     const checkVersion = vi.fn(async () => false);
     const publish = vi.fn(async () => {});
 
-    await publishMissing(repo, { checkVersion, interactive: true, publish });
+    await publishMissing(repo, { checkVersion, interactive: true, publish, verify: vi.fn() });
 
     expect(publish).toHaveBeenCalledWith(path.join(repo, 'packages', 'ore'), {
       dryRun: false,
@@ -115,7 +128,8 @@ describe('publishMissing()', () => {
       if (folder.endsWith('ore')) throw new Error('registry rejected the publish');
     });
 
-    const results = await publishMissing(repo, { checkVersion, publish });
+    const verify = vi.fn();
+    const results = await publishMissing(repo, { checkVersion, publish, verify });
 
     expect(results.failed).toEqual(['@vielzeug/ore@1.0.4']);
     expect(results.published).toEqual(['@vielzeug/orbit@2.0.0']);

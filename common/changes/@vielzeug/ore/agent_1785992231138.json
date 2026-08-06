@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "publish clean export metadata and classic TypeScript subpath mappings",
+      "packageName": "@vielzeug/ore",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

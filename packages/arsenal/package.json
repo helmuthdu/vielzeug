@@ -12,61 +12,51 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
     "./array": {
-      "source": "./src/array/index.ts",
       "types": "./dist/array/index.d.ts",
       "import": "./dist/array/index.js",
       "require": "./dist/array/index.cjs"
     },
     "./async": {
-      "source": "./src/async/index.ts",
       "types": "./dist/async/index.d.ts",
       "import": "./dist/async/index.js",
       "require": "./dist/async/index.cjs"
     },
     "./cache": {
-      "source": "./src/cache/index.ts",
       "types": "./dist/cache/index.d.ts",
       "import": "./dist/cache/index.js",
       "require": "./dist/cache/index.cjs"
     },
     "./function": {
-      "source": "./src/function/index.ts",
       "types": "./dist/function/index.d.ts",
       "import": "./dist/function/index.js",
       "require": "./dist/function/index.cjs"
     },
     "./guards": {
-      "source": "./src/guards/index.ts",
       "types": "./dist/guards/index.d.ts",
       "import": "./dist/guards/index.js",
       "require": "./dist/guards/index.cjs"
     },
     "./math": {
-      "source": "./src/math/index.ts",
       "types": "./dist/math/index.d.ts",
       "import": "./dist/math/index.js",
       "require": "./dist/math/index.cjs"
     },
     "./object": {
-      "source": "./src/object/index.ts",
       "types": "./dist/object/index.d.ts",
       "import": "./dist/object/index.js",
       "require": "./dist/object/index.cjs"
     },
     "./random": {
-      "source": "./src/random/index.ts",
       "types": "./dist/random/index.d.ts",
       "import": "./dist/random/index.js",
       "require": "./dist/random/index.cjs"
     },
     "./string": {
-      "source": "./src/string/index.ts",
       "types": "./dist/string/index.d.ts",
       "import": "./dist/string/index.js",
       "require": "./dist/string/index.cjs"
@@ -96,5 +86,36 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
+  },
+  "typesVersions": {
+    "*": {
+      "array": [
+        "dist/array/index.d.ts"
+      ],
+      "async": [
+        "dist/async/index.d.ts"
+      ],
+      "cache": [
+        "dist/cache/index.d.ts"
+      ],
+      "function": [
+        "dist/function/index.d.ts"
+      ],
+      "guards": [
+        "dist/guards/index.d.ts"
+      ],
+      "math": [
+        "dist/math/index.d.ts"
+      ],
+      "object": [
+        "dist/object/index.d.ts"
+      ],
+      "random": [
+        "dist/random/index.d.ts"
+      ],
+      "string": [
+        "dist/string/index.d.ts"
+      ]
+    }
   }
 }

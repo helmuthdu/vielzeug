@@ -59,5 +59,8 @@ jobs:
         with:
           fail_level: error
 
+      - name: Check package manifests are publishable
+        run: pnpm check:package-manifests
+
       - name: Check AI metadata is in sync with source
         run: pnpm check:ai-data

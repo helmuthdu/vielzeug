@@ -20,6 +20,7 @@
  * range, so just drop the `workspace:` prefix.
  */
 
+import { normalizePackageManifest } from '../lib/package-manifest.mjs';
 import { findProject as defaultFindProject } from './rush-project.mjs';
 
 const DEPENDENCY_FIELDS = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
@@ -53,4 +54,9 @@ export function resolveWorkspaceDependencies(pkg, { findProject = defaultFindPro
   }
 
   return resolved;
+}
+
+/** Published manifests resolve workspace ranges after package metadata has been normalized at development time. */
+export function createPublishedManifest(pkg, options = {}) {
+  return normalizePackageManifest(resolveWorkspaceDependencies(pkg, options));
 }

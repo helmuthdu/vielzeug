@@ -52,16 +52,15 @@
  *
  * `npm pack` has no idea what a `workspace:*` dependency specifier means — it would otherwise
  * pack that literal string straight into the published tarball's package.json, breaking every
- * consumer that installs the result outside this monorepo. `resolveWorkspaceDeps` rewrites them
- * to real semver ranges on disk right before packing and restores the original file straight
- * after — see `resolve-workspace-deps.mjs` for the full rationale.
+ * consumer that installs the result outside this monorepo. `packPublishedPackage()` writes
+ * resolved ranges into an isolated staging manifest before packing, leaving working files intact
+ * — see `resolve-workspace-deps.mjs` for the conversion rules.
  */
 
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { run as defaultRun } from '../lib/cli.mjs';
-import { resolveWorkspaceDependencies } from './resolve-workspace-deps.mjs';
+import { packPublishedPackage } from './pack-published.mjs';
 
 const RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
 
@@ -75,20 +74,6 @@ function assertPackedDist(files, folder) {
   }
 }
 
-/**
- * Rewrites `folder`'s package.json on disk to resolve `workspace:*` dependency specifiers into
- * real semver ranges, and returns a restore function that puts the original file content back.
- * `findProject` is a test seam only (see `resolve-workspace-deps.mjs`'s default) — production
- * callers never need to pass it, it resolves each dependency's real version from `rush.json`.
- */
-function defaultResolveWorkspaceDeps(folder, { findProject } = {}) {
-  const pkgJsonPath = path.join(folder, 'package.json');
-  const original = readFileSync(pkgJsonPath, 'utf8');
-  const rewritten = resolveWorkspaceDependencies(JSON.parse(original), { findProject });
-  writeFileSync(pkgJsonPath, `${JSON.stringify(rewritten, null, 2)}\n`);
-  return () => writeFileSync(pkgJsonPath, original);
-}
-
 export async function publishPackage(
   folder,
   {
@@ -96,28 +81,19 @@ export async function publishPackage(
     findProject,
     interactive = false,
     otp,
-    resolveWorkspaceDeps = defaultResolveWorkspaceDeps,
+    pack = packPublishedPackage,
     run = defaultRun,
     sleep = defaultSleep,
   } = {},
 ) {
-  const restorePackageJson = resolveWorkspaceDeps(folder, { findProject });
-  let filename;
-  try {
-    const [packed] = JSON.parse(run('npm', ['pack', '--json'], { cwd: folder }));
-    assertPackedDist(packed?.files, folder);
-    if (typeof packed?.filename !== 'string') throw new Error(`npm pack did not return an artifact for ${folder}`);
-    filename = packed.filename;
-  } finally {
-    restorePackageJson();
-  }
-
-  const tarballPath = path.join(folder, filename);
-  const publishArgs = ['publish', filename, '--access', 'public', ...(otp ? [`--otp=${otp}`] : [])];
+  const packed = pack(folder, { findProject, run });
 
   try {
+    assertPackedDist(packed.files, folder);
+    const publishArgs = ['publish', packed.tarballPath, '--access', 'public', ...(otp ? [`--otp=${otp}`] : [])];
+
     if (dryRun) {
-      console.log(`[dry-run] packed ${filename} — would run \`npm publish --access public\``);
+      console.log(`[dry-run] packed ${path.basename(packed.tarballPath)} — would run \`npm publish --access public\``);
       return;
     }
 
@@ -138,7 +114,7 @@ export async function publishPackage(
 
         const isRegistryConflict = output.includes('E409');
         if (!isRegistryConflict || attempt >= RETRY_DELAYS_MS.length) {
-          throw new Error(`npm publish failed for ${filename}`);
+          throw new Error(`npm publish failed for ${path.basename(packed.tarballPath)}`);
         }
 
         const delay = RETRY_DELAYS_MS[attempt];
@@ -147,6 +123,6 @@ export async function publishPackage(
       }
     }
   } finally {
-    if (existsSync(tarballPath)) rmSync(tarballPath);
+    packed.cleanup();
   }
 }

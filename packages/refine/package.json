@@ -426,5 +426,201 @@
     "./dist/*.js",
     "./dist/*.cjs",
     "./dist/styles/**"
-  ]
+  ],
+  "typesVersions": {
+    "*": {
+      "accordion": [
+        "dist/disclosure/accordion/accordion.d.ts"
+      ],
+      "accordion-item": [
+        "dist/disclosure/accordion-item/accordion-item.d.ts"
+      ],
+      "alert": [
+        "dist/feedback/alert/alert.d.ts"
+      ],
+      "async": [
+        "dist/feedback/async/async.d.ts"
+      ],
+      "avatar": [
+        "dist/content/avatar/avatar.d.ts"
+      ],
+      "avatar-group": [
+        "dist/content/avatar/avatar-group.d.ts"
+      ],
+      "badge": [
+        "dist/feedback/badge/badge.d.ts"
+      ],
+      "password-strength": [
+        "dist/feedback/password-strength/password-strength.d.ts"
+      ],
+      "box": [
+        "dist/layout/box/box.d.ts"
+      ],
+      "breadcrumb": [
+        "dist/content/breadcrumb/breadcrumb.d.ts"
+      ],
+      "button": [
+        "dist/inputs/button/button.d.ts"
+      ],
+      "button-group": [
+        "dist/inputs/button-group/button-group.d.ts"
+      ],
+      "calendar": [
+        "dist/inputs/calendar/calendar.d.ts"
+      ],
+      "card": [
+        "dist/content/card/card.d.ts"
+      ],
+      "carousel": [
+        "dist/content/carousel/carousel.d.ts"
+      ],
+      "marquee": [
+        "dist/content/marquee/marquee.d.ts"
+      ],
+      "chat-message": [
+        "dist/content/chat-message/chat-message.d.ts"
+      ],
+      "checkbox": [
+        "dist/inputs/checkbox/checkbox.d.ts"
+      ],
+      "checkbox-group": [
+        "dist/inputs/checkbox-group/checkbox-group.d.ts"
+      ],
+      "chip": [
+        "dist/feedback/chip/chip.d.ts"
+      ],
+      "code-window": [
+        "dist/content/code-window/code-window.d.ts"
+      ],
+      "copy-command": [
+        "dist/content/copy-command/copy-command.d.ts"
+      ],
+      "combobox": [
+        "dist/inputs/combobox/combobox.d.ts"
+      ],
+      "command-palette": [
+        "dist/overlay/command-palette/command-palette.d.ts"
+      ],
+      "datagrid": [
+        "dist/inputs/datagrid/datagrid.d.ts"
+      ],
+      "date-picker": [
+        "dist/inputs/date-picker/date-picker.d.ts"
+      ],
+      "dialog": [
+        "dist/overlay/dialog/dialog.d.ts"
+      ],
+      "drawer": [
+        "dist/overlay/drawer/drawer.d.ts"
+      ],
+      "file-input": [
+        "dist/inputs/file-input/file-input.d.ts"
+      ],
+      "grid": [
+        "dist/layout/grid/grid.d.ts"
+      ],
+      "grid-item": [
+        "dist/layout/grid-item/grid-item.d.ts"
+      ],
+      "icon": [
+        "dist/content/icon/icon.d.ts"
+      ],
+      "input": [
+        "dist/inputs/input/input.d.ts"
+      ],
+      "list": [
+        "dist/content/list/list.d.ts"
+      ],
+      "list-item": [
+        "dist/content/list/list-item.d.ts"
+      ],
+      "menu": [
+        "dist/overlay/menu/menu.d.ts"
+      ],
+      "message-composer": [
+        "dist/inputs/message-composer/message-composer.d.ts"
+      ],
+      "navbar": [
+        "dist/layout/navbar/navbar.d.ts"
+      ],
+      "number-input": [
+        "dist/inputs/number-input/number-input.d.ts"
+      ],
+      "otp-input": [
+        "dist/inputs/otp-input/otp-input.d.ts"
+      ],
+      "pagination": [
+        "dist/content/pagination/pagination.d.ts"
+      ],
+      "popover": [
+        "dist/overlay/popover/popover.d.ts"
+      ],
+      "progress": [
+        "dist/feedback/progress/progress.d.ts"
+      ],
+      "radio": [
+        "dist/inputs/radio/radio.d.ts"
+      ],
+      "radio-group": [
+        "dist/inputs/radio-group/radio-group.d.ts"
+      ],
+      "rating": [
+        "dist/inputs/rating/rating.d.ts"
+      ],
+      "select": [
+        "dist/inputs/select/select.d.ts"
+      ],
+      "separator": [
+        "dist/content/separator/separator.d.ts"
+      ],
+      "skeleton": [
+        "dist/feedback/skeleton/skeleton.d.ts"
+      ],
+      "slider": [
+        "dist/inputs/slider/slider.d.ts"
+      ],
+      "sidebar": [
+        "dist/layout/sidebar/sidebar.d.ts"
+      ],
+      "step": [
+        "dist/content/stepper/step.d.ts"
+      ],
+      "stepper": [
+        "dist/content/stepper/stepper.d.ts"
+      ],
+      "switch": [
+        "dist/inputs/switch/switch.d.ts"
+      ],
+      "tab-item": [
+        "dist/disclosure/tab-item/tab-item.d.ts"
+      ],
+      "tab-panel": [
+        "dist/disclosure/tab-panel/tab-panel.d.ts"
+      ],
+      "table": [
+        "dist/content/table/table.d.ts"
+      ],
+      "tabs": [
+        "dist/disclosure/tabs/tabs.d.ts"
+      ],
+      "text": [
+        "dist/content/text/text.d.ts"
+      ],
+      "textarea": [
+        "dist/inputs/textarea/textarea.d.ts"
+      ],
+      "time-picker": [
+        "dist/inputs/time-picker/time-picker.d.ts"
+      ],
+      "toast": [
+        "dist/feedback/toast/toast.d.ts"
+      ],
+      "tooltip": [
+        "dist/overlay/tooltip/tooltip.d.ts"
+      ],
+      "typing-indicator": [
+        "dist/feedback/typing-indicator/typing-indicator.d.ts"
+      ]
+    }
+  }
 }

@@ -11,20 +11,17 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
     "./devtools": {
-      "source": "./src/devtools.ts",
       "types": "./dist/devtools.d.ts",
       "import": "./dist/devtools.js",
       "require": "./dist/devtools.cjs"
     },
     "./testing": {
-      "source": "./src/testing/index.ts",
-      "types": "./dist/testing.d.ts",
+      "types": "./dist/testing/index.d.ts",
       "import": "./dist/testing.js",
       "require": "./dist/testing.cjs"
     }
@@ -52,5 +49,15 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
+  },
+  "typesVersions": {
+    "*": {
+      "devtools": [
+        "dist/devtools.d.ts"
+      ],
+      "testing": [
+        "dist/testing/index.d.ts"
+      ]
+    }
   }
 }
