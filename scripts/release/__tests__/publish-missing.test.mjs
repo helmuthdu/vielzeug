@@ -53,6 +53,15 @@ describe('publishMissing()', () => {
     ]);
   });
 
+  it('does not load packed verification when no packages are missing', async () => {
+    const repo = makeRepo([{ json: { name: '@vielzeug/ore', version: '1.0.4' }, slug: 'ore' }]);
+    const verify = vi.fn();
+
+    await publishMissing(repo, { checkVersion: async () => true, publish: vi.fn(), verify });
+
+    expect(verify).not.toHaveBeenCalled();
+  });
+
   it('skips packages whose version already exists and publishes the rest', async () => {
     const repo = makeRepo([
       { json: { name: '@vielzeug/ore', version: '1.0.4' }, slug: 'ore' },
