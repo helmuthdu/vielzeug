@@ -17,7 +17,7 @@
     "@vielzeug/coins": "link:../../packages/coins",
     "@vielzeug/conduit": "link:../../packages/conduit",
     "@vielzeug/courier": "link:../../packages/courier",
-    "@vielzeug/dnd": "^1.2.2",
+    "@vielzeug/dnd": "link:../../packages/dnd",
     "@vielzeug/familiar": "link:../../packages/familiar",
     "@vielzeug/flux": "^1.0.8",
     "@vielzeug/forge": "^1.4.0",

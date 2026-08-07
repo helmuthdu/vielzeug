@@ -45,6 +45,9 @@ A drop zone with hover feedback, type filtering, async quota validation, and cli
 import { createDropZone } from '@vielzeug/dnd';
 
 const el = document.getElementById('dropzone')!;
+const checkServerQuota = async (_files: File[], _options: { signal: AbortSignal }) => true;
+const showToast = (message: string) => console.warn(message);
+const upload = (file: File) => console.log('Upload:', file.name);
 
 using zone = createDropZone({
   element: el,
@@ -52,11 +55,11 @@ using zone = createDropZone({
   maxFiles: 10,
   paste: true,
 
-  onValidate: async (files) => {
+  onValidate: async (files, { signal }) => {
     // files here are only the type-accepted ones; already-rejected files
     // are forwarded to onDropRejected unconditionally.
     el.classList.add('validating');
-    const ok = await checkServerQuota(files);
+    const ok = await checkServerQuota(files, { signal });
     el.classList.remove('validating');
     return ok; // false → all accepted files forwarded to onDropRejected
   },
@@ -90,7 +93,7 @@ using zone = createDropZone({
 - `e.dataTransfer.items[i].type` can be an empty string for files with unknown MIME types. Extension-based accept patterns (e.g. `.pdf`) cannot be validated from `DataTransferItem` during drag — Dnd lets them through the pre-check and applies exact filtering at drop time.
 - `zone.hovered` is only `true` when the drag payload matches the `accept` filter. Drags carrying rejected types do not trigger `onHoverChange`.
 - `onValidate` only receives type-accepted files. Files already rejected by the `accept` filter are forwarded to `onDropRejected` regardless of what `onValidate` returns.
-- `zone.validating` is `true` while an `onValidate` promise is pending. Use it to render a spinner or disable the UI during the async check.
+- `zone.validating` remains `true` until every pending `onValidate` operation settles. Its `signal` aborts when the zone is disposed.
 - The `paste` listener is attached to `window`, not the element. Any file paste anywhere on the page triggers it while the zone is active.
 
 ### Related

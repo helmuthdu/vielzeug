@@ -1,13 +1,9 @@
 import '@vielzeug/refine/tokens.css';
 import '@vielzeug/prism/theme';
-import { createTouchDragShim } from '@vielzeug/dnd';
 
 import './styles/app.css';
-import { createAppShell } from './ui/app-shell';
-
-// Lives for the app's whole lifetime — no teardown path in this demo, same as setupRealtime().
-createTouchDragShim();
 import { setupPersistence } from './core/persistence';
+import { createAppShell } from './ui/app-shell';
 
 // `router` (core/router.ts) resolves the browser's actual current path — including the
 // `/` → `board` redirect — the moment it's constructed; it does not need (and must never

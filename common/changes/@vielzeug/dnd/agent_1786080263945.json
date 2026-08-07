@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat!: make sortable scopes own connected moves and touch input",
+      "packageName": "@vielzeug/dnd",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/dnd"
+}

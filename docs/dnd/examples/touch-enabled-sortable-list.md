@@ -11,7 +11,7 @@ Your sortable list works with mouse drag but does nothing on touch devices — H
 
 ### Solution
 
-Install `createTouchDragShim()` once at app startup, alongside your normal `createSortable()` setup. No per-list wiring needed — it bridges touch gestures to the same synthetic `DragEvent` sequence `createSortable` already listens for.
+Enable touch input on the scope that owns the list. The scope only handles its registered sortable items.
 
 ```html
 <ul id="list">
@@ -21,35 +21,26 @@ Install `createTouchDragShim()` once at app startup, alongside your normal `crea
 </ul>
 ```
 
-```css
-#list li {
-  /* Prevent touch drags from scrolling the page instead of dragging the item. */
-  touch-action: none;
-}
-```
-
 ```ts
-import { createSortable, createTouchDragShim } from '@vielzeug/dnd';
+import { createSortable, createSortableScope } from '@vielzeug/dnd';
 
-// Call once for the whole app — a single document-level bridge covers every
-// sortable/drop-zone on the page, not just this one list.
-using touchDrag = createTouchDragShim();
+using scope = createSortableScope({ touch: true });
 
 using sortable = createSortable({
   element: document.getElementById('list')!,
   getKey: (el) => el.dataset.sortId!,
   onReorder: ({ ids }) => {
     console.log('New order:', ids);
-    saveOrder(ids);
   },
+  scope,
 });
 ```
 
 ### Pitfalls
 
-- `touch-action: none` (or `none` on the drag handle) is still required — the shim makes touch produce drag events, it doesn't stop the browser's own scroll gesture from competing with it.
-- Create one `createTouchDragShim()` per app, not one per list — it listens at the `document` level, so a second instance just duplicates the same listeners.
-- The shim's default `draggableSelector` (`[draggable="true"]`) already matches what `createSortable`/`createDropZone` set automatically. Only pass a custom selector if you're managing `draggable` yourself.
+- `createSortable` applies `touch-action: none` to sortable items or handles automatically.
+- One touch-enabled scope can coordinate every connected list it owns.
+- The default preview is an inert outline. Configure `touch.preview` when a custom preview is necessary.
 
 ### Related
 

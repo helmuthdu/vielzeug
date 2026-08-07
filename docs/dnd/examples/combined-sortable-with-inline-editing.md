@@ -16,11 +16,13 @@ A list where items can be reordered by drag and inline-edited:
 ```ts
 import { createSortable } from '@vielzeug/dnd';
 
+const listEl = document.getElementById('list')!;
 let items = [
   { id: '1', label: 'Design' },
   { id: '2', label: 'Develop' },
   { id: '3', label: 'Deploy' },
 ];
+const saveItems = (next: typeof items) => console.log('Saved items:', next);
 
 function render() {
   listEl.innerHTML = items

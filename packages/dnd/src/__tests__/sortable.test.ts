@@ -189,7 +189,7 @@ describe('createSortable', () => {
     });
 
     // Regression: without this, a mobile browser can decide the initial finger movement on a
-    // draggable item is a page scroll/pan before `createTouchDragShim`'s own threshold logic and
+    // draggable item is a page scroll/pan before the scope touch controller's threshold logic and
     // `preventDefault()` calls ever run, silently handing the whole gesture to native scrolling.
     // The item then never receives the `dragover` sequence needed to update the drop target, so
     // the drop commits back to wherever it started — indistinguishable from "reverting".
@@ -238,6 +238,33 @@ describe('createSortable', () => {
       expect(first.getAttribute('role')).toBeNull();
       expect(first.getAttribute('tabindex')).toBeNull();
       expect(first.style.touchAction).toBe('');
+    });
+
+    it('restores caller-owned semantics after disposal', () => {
+      const {
+        element,
+        items: [first],
+      } = makeList('a');
+
+      element.setAttribute('role', 'tree');
+      first.setAttribute('draggable', 'false');
+      first.setAttribute('role', 'treeitem');
+      first.setAttribute('tabindex', '-1');
+      first.style.touchAction = 'pan-y';
+
+      const sortable = createSortable({ element, getKey });
+
+      expect(element.getAttribute('role')).toBe('tree');
+      expect(first.getAttribute('role')).toBe('treeitem');
+      expect(first.getAttribute('tabindex')).toBe('-1');
+
+      sortable.dispose();
+
+      expect(element.getAttribute('role')).toBe('tree');
+      expect(first.getAttribute('draggable')).toBe('false');
+      expect(first.getAttribute('role')).toBe('treeitem');
+      expect(first.getAttribute('tabindex')).toBe('-1');
+      expect(first.style.touchAction).toBe('pan-y');
     });
   });
 
@@ -1035,24 +1062,31 @@ describe('createSortable', () => {
 
   describe('connected lists (scope)', () => {
     it('transfers item between lists sharing a scope', () => {
-      const scope = createSortableScope();
       const {
         element: left,
         items: [l1],
       } = makeList('l1', 'l2');
       const { element: right } = makeList('r1');
-      const leftReorder = vi.fn();
-      const rightReorder = vi.fn();
+      const onMove = vi.fn();
+      const scope = createSortableScope({ onMove });
 
-      const leftSortable = createSortable({ element: left, getKey, onReorder: leftReorder, scope });
-      const rightSortable = createSortable({ element: right, getKey, onReorder: rightReorder, scope });
+      const leftSortable = createSortable({ element: left, getKey, scope });
+      const rightSortable = createSortable({ element: right, getKey, scope });
 
       startDrag(l1);
       right.dispatchEvent(makeDragEvent('dragover', { dropEffect: 'move' }));
       endDrag(l1);
 
-      expect(leftReorder).toHaveBeenCalledWith(expect.objectContaining({ ids: ['l2'] }));
-      expect(rightReorder).toHaveBeenCalledWith(expect.objectContaining({ ids: ['r1', 'l1'] }));
+      expect(onMove).toHaveBeenCalledTimes(1);
+      expect(onMove).toHaveBeenCalledWith(
+        expect.objectContaining({
+          itemId: 'l1',
+          source: left,
+          sourceIds: ['l2'],
+          target: right,
+          targetIds: ['r1', 'l1'],
+        }),
+      );
 
       leftSortable.dispose();
       rightSortable.dispose();
@@ -1080,8 +1114,31 @@ describe('createSortable', () => {
       rightSortable.dispose();
     });
 
-    it('fires onBeforeReorder before onReorder for cross-list drag', () => {
-      const scope = createSortableScope();
+    it('reverts the most recent cross-list move through the scope', () => {
+      const {
+        element: left,
+        items: [l1],
+      } = makeList('l1', 'l2');
+      const { element: right } = makeList('r1');
+      const onRevert = vi.fn();
+      const scope = createSortableScope({ onMove: ({ setRevert }) => setRevert(onRevert) });
+      const leftSortable = createSortable({ element: left, getKey, scope });
+      const rightSortable = createSortable({ element: right, getKey, scope });
+
+      startDrag(l1);
+      right.dispatchEvent(makeDragEvent('dragover', { dropEffect: 'move' }));
+      endDrag(l1);
+      scope.revert();
+      scope.revert();
+
+      expect(onRevert).toHaveBeenCalledTimes(1);
+
+      leftSortable.dispose();
+      rightSortable.dispose();
+      scope.dispose();
+    });
+
+    it('fires onBeforeReorder before the scope move callback for cross-list drag', () => {
       const {
         element: left,
         items: [l1],
@@ -1089,22 +1146,19 @@ describe('createSortable', () => {
       const { element: right } = makeList('r1');
       const callOrder: string[] = [];
       const leftBeforeReorder = vi.fn(() => callOrder.push('left-before'));
-      const leftReorder = vi.fn(() => callOrder.push('left-reorder'));
       const rightBeforeReorder = vi.fn(() => callOrder.push('right-before'));
-      const rightReorder = vi.fn(() => callOrder.push('right-reorder'));
+      const scope = createSortableScope({ onMove: () => callOrder.push('move') });
 
       const leftSortable = createSortable({
         element: left,
         getKey,
         onBeforeReorder: leftBeforeReorder,
-        onReorder: leftReorder,
         scope,
       });
       const rightSortable = createSortable({
         element: right,
         getKey,
         onBeforeReorder: rightBeforeReorder,
-        onReorder: rightReorder,
         scope,
       });
 
@@ -1115,42 +1169,40 @@ describe('createSortable', () => {
       expect(leftBeforeReorder).toHaveBeenCalled();
       expect(rightBeforeReorder).toHaveBeenCalled();
 
-      // before always precedes reorder for each container
       const leftBeforeIdx = callOrder.indexOf('left-before');
-      const leftReorderIdx = callOrder.indexOf('left-reorder');
       const rightBeforeIdx = callOrder.indexOf('right-before');
-      const rightReorderIdx = callOrder.indexOf('right-reorder');
+      const moveIdx = callOrder.indexOf('move');
 
-      expect(leftBeforeIdx).toBeLessThan(leftReorderIdx);
-      expect(rightBeforeIdx).toBeLessThan(rightReorderIdx);
+      expect(leftBeforeIdx).toBeLessThan(moveIdx);
+      expect(rightBeforeIdx).toBeLessThan(moveIdx);
 
       leftSortable.dispose();
       rightSortable.dispose();
     });
 
     it('lazy order snapshots: only participating containers are recorded', () => {
-      const scope = createSortableScope();
       const {
         element: listA,
         items: [a1],
       } = makeList('a1', 'a2');
       const { element: listB } = makeList('b1');
       const { element: listC } = makeList('c1');
-      const reorderA = vi.fn();
-      const reorderC = vi.fn();
+      const onMove = vi.fn();
+      const scope = createSortableScope({ onMove });
 
       // Three lists in same scope; drag only involves A and B
-      const sortableA = createSortable({ element: listA, getKey, onReorder: reorderA, scope });
+      const sortableA = createSortable({ element: listA, getKey, scope });
       const sortableB = createSortable({ element: listB, getKey, scope });
-      const sortableC = createSortable({ element: listC, getKey, onReorder: reorderC, scope });
+      const sortableC = createSortable({ element: listC, getKey, scope });
 
       startDrag(a1);
       listB.dispatchEvent(makeDragEvent('dragover', { dropEffect: 'move' }));
       endDrag(a1);
 
-      // C was never visited so its reorder should not fire
-      expect(reorderA).toHaveBeenCalledWith(expect.objectContaining({ ids: ['a2'] }));
-      expect(reorderC).not.toHaveBeenCalled();
+      expect(onMove).toHaveBeenCalledTimes(1);
+      expect(onMove).toHaveBeenCalledWith(
+        expect.objectContaining({ source: listA, sourceIds: ['a2'], target: listB, targetIds: ['b1', 'a1'] }),
+      );
 
       sortableA.dispose();
       sortableB.dispose();

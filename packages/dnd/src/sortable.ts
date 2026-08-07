@@ -1,5 +1,6 @@
 import { warn } from './_dev';
 import { createDisposable, resolveDisabled } from './_shared';
+import { createScopeTouchController, type ScopeTouchController, type TouchInputOptions } from './_touch';
 import { DndScopeError } from './errors';
 import { type Disposable } from './types';
 
@@ -11,6 +12,11 @@ export interface SortableScope extends Disposable {
   /** `true` while any sortable in this scope is actively dragging. */
   readonly isDragging: boolean;
   readonly [SCOPE_BRAND]: true;
+  /**
+   * Calls the revert function registered for the most recent cross-container move.
+   * A no-op when no move registered a revert function.
+   */
+  revert(): void;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -48,6 +54,37 @@ export interface ReorderEvent {
    */
   setRevert(fn: () => void): void;
 }
+
+/** A single committed move between two containers in the same sortable scope. */
+export interface SortableMoveEvent {
+  /** Stable identity of the moved item. */
+  readonly itemId: string;
+  /** Source container before the move. */
+  readonly source: HTMLElement;
+  /** Ordered source item IDs after the move. */
+  readonly sourceIds: string[];
+  /** Target container after the move. */
+  readonly target: HTMLElement;
+  /** Ordered target item IDs after the move. */
+  readonly targetIds: string[];
+  /** Registers a rollback for the most recent scope move. */
+  setRevert(fn: () => void): void;
+}
+
+export interface SortableScopeOptions {
+  /**
+   * Called exactly once for every successful cross-container move.
+   * Local reorders continue to use each sortable's `onReorder` callback.
+   */
+  onMove?: (event: SortableMoveEvent) => void;
+  /**
+   * Enables touch input for sortable items registered to this scope.
+   * The controller ignores unrelated document draggables.
+   */
+  touch?: boolean | TouchInputOptions;
+}
+
+export type SortableTouchOptions = TouchInputOptions;
 
 export interface SortableOptions {
   /** Container element whose direct-child items are sortable. */
@@ -171,12 +208,14 @@ interface ResolvedAutoScrollOptions {
 
 /** Per-container closure passed into shared session functions. */
 interface ContainerHandle {
+  readonly element: HTMLElement;
   getOrderedIds: () => string[];
   isDisabled: () => boolean;
   commitReorder: (orderedIds: string[]) => void;
   notifyBeforeReorder: (from: string[], to: string[]) => void;
   notifyDragEnd: (id: string, event: DragEvent) => void;
   notifyDragStart: (id: string, event: DragEvent) => void;
+  resolveTouchTarget: (target: Element) => HTMLElement | null;
 }
 
 /**
@@ -203,9 +242,26 @@ interface DragSession {
 
 interface SortableScopeState {
   active: DragSession | null;
+  commitMove: (event: Omit<SortableMoveEvent, 'setRevert'>) => void;
   handles: Set<ContainerHandle>;
+  lastRevert: (() => void) | null;
+  touch: ScopeTouchController | null;
   /** All sortables registered in this scope, kept for scope.dispose(). */
   disposables: Set<() => void>;
+}
+
+interface ManagedElementState {
+  dataDndHandle: string | null;
+  dataDndItem: string | null;
+  draggable: string | null;
+  role: string | null;
+  tabIndex: string | null;
+  touchAction: string;
+}
+
+interface TouchDragEvent extends DragEvent {
+  readonly __dndTouch?: boolean;
+  readonly __dndTouchPreview?: boolean;
 }
 
 // ─── Internal constants ───────────────────────────────────────────────────────
@@ -253,12 +309,8 @@ function hasOrderChanged(before: string[], after: string[]): boolean {
   return after.length !== before.length || after.some((id, index) => id !== before[index]);
 }
 
-function clearHandleAttributes(element: HTMLElement): void {
-  element.querySelectorAll<HTMLElement>(`[${HANDLE_ATTR}]`).forEach((handleEl) => {
-    handleEl.removeAttribute(HANDLE_ATTR);
-    handleEl.removeAttribute('draggable');
-    handleEl.style.touchAction = '';
-  });
+function isTouchDragEvent(event: DragEvent): event is TouchDragEvent {
+  return (event as TouchDragEvent).__dndTouch === true;
 }
 
 // ─── Drag session helpers ─────────────────────────────────────────────────────
@@ -332,15 +384,41 @@ function commitSession(scopeState: SortableScopeState, event: DragEvent): void {
 
   session.source.notifyDragEnd(session.draggedId, event);
 
-  for (const [handle, beforeOrder] of session.initialOrders) {
+  const changes: Array<{ after: string[]; before: string[]; handle: ContainerHandle }> = [];
+
+  for (const [handle, before] of session.initialOrders) {
     if (!scopeState.handles.has(handle)) continue;
 
     const afterOrder = handle.getOrderedIds();
 
-    if (!hasOrderChanged(beforeOrder, afterOrder)) continue;
+    if (hasOrderChanged(before, afterOrder)) {
+      changes.push({ after: afterOrder, before, handle });
+    }
+  }
 
-    handle.notifyBeforeReorder(beforeOrder, afterOrder);
-    handle.commitReorder(afterOrder);
+  for (const { after, before, handle } of changes) {
+    handle.notifyBeforeReorder(before, after);
+  }
+
+  if (targetHandle && targetHandle !== session.source) {
+    const sourceChange = changes.find((change) => change.handle === session.source);
+    const targetChange = changes.find((change) => change.handle === targetHandle);
+
+    if (sourceChange && targetChange) {
+      scopeState.commitMove({
+        itemId: session.draggedId,
+        source: session.source.element,
+        sourceIds: sourceChange.after,
+        target: targetHandle.element,
+        targetIds: targetChange.after,
+      });
+    }
+
+    return;
+  }
+
+  for (const { after, handle } of changes) {
+    handle.commitReorder(after);
   }
 }
 
@@ -469,9 +547,25 @@ function applyKeyboardReorder(
  * scope.dispose();
  * ```
  */
-export function createSortableScope(): SortableScope {
-  const state: SortableScopeState = { active: null, disposables: new Set(), handles: new Set() };
+export function createSortableScope(options: SortableScopeOptions = {}): SortableScope {
+  const state: SortableScopeState = {
+    active: null,
+    commitMove(event): void {
+      options.onMove?.({
+        ...event,
+        setRevert(fn): void {
+          state.lastRevert = fn;
+        },
+      });
+    },
+    disposables: new Set(),
+    handles: new Set(),
+    lastRevert: null,
+    touch: null,
+  };
   const disposable = createDisposable(() => {
+    state.touch?.dispose();
+
     // Dispose all registered sortables (each dispose() call is idempotent)
     for (const disposeFn of state.disposables) {
       disposeFn();
@@ -489,11 +583,27 @@ export function createSortableScope(): SortableScope {
     get isDragging() {
       return state.active !== null;
     },
+    revert() {
+      state.lastRevert?.();
+      state.lastRevert = null;
+    },
     [SCOPE_BRAND]: true as const,
     [Symbol.dispose]: disposable[Symbol.dispose],
   } as SortableScope;
 
   sortableScopeStates.set(scope, state);
+
+  if (options.touch) {
+    state.touch = createScopeTouchController(options.touch === true ? {} : options.touch, (target) => {
+      for (const handle of state.handles) {
+        const dragTarget = handle.resolveTouchTarget(target);
+
+        if (dragTarget) return dragTarget;
+      }
+
+      return null;
+    });
+  }
 
   return scope;
 }
@@ -549,21 +659,49 @@ export function createSortable(options: SortableOptions): Sortable {
     Array.from(element.children).filter((c) => (c as HTMLElement).hasAttribute(ITEM_ATTR)) as HTMLElement[];
 
   const getOrderedIds = (): string[] => getItems().map((el) => getKey(el));
+  const managedElements = new Map<HTMLElement, ManagedElementState>();
+  const originalContainerRole = element.getAttribute('role');
+
+  const rememberElement = (managedElement: HTMLElement): ManagedElementState => {
+    const existing = managedElements.get(managedElement);
+
+    if (existing) return existing;
+
+    const state: ManagedElementState = {
+      dataDndHandle: managedElement.getAttribute(HANDLE_ATTR),
+      dataDndItem: managedElement.getAttribute(ITEM_ATTR),
+      draggable: managedElement.getAttribute('draggable'),
+      role: managedElement.getAttribute('role'),
+      tabIndex: managedElement.getAttribute('tabindex'),
+      touchAction: managedElement.style.touchAction,
+    };
+
+    managedElements.set(managedElement, state);
+
+    return state;
+  };
+
+  const restoreAttribute = (managedElement: HTMLElement, name: string, value: string | null): void => {
+    if (value === null) {
+      managedElement.removeAttribute(name);
+    } else {
+      managedElement.setAttribute(name, value);
+    }
+  };
 
   const syncItems = (): void => {
-    clearHandleAttributes(element);
-
     getItems().forEach((el) => {
-      el.setAttribute('role', 'listitem');
-      el.tabIndex = 0;
+      const itemState = rememberElement(el);
+
+      if (itemState.role === null) el.setAttribute('role', 'listitem');
+
+      if (itemState.tabIndex === null) el.tabIndex = 0;
 
       if (handle) {
-        el.removeAttribute('draggable');
-        el.style.touchAction = '';
         el.querySelectorAll<HTMLElement>(handle).forEach((handleEl) => {
+          rememberElement(handleEl);
           handleEl.setAttribute(HANDLE_ATTR, '');
           handleEl.setAttribute('draggable', 'true');
-          // See the matching comment above `cleanupItems()` for why this matters at all.
           handleEl.style.touchAction = 'none';
         });
       } else {
@@ -593,6 +731,8 @@ export function createSortable(options: SortableOptions): Sortable {
         const key = getKey(el);
 
         if (key) {
+          rememberElement(el);
+
           if (seenKeys.has(key)) {
             warn(
               `getKey returned the duplicate key "${key}" for two sibling items — onReorder's ids and applyReorder may become inconsistent. Ensure getKey returns a unique value per item.`,
@@ -614,15 +754,16 @@ export function createSortable(options: SortableOptions): Sortable {
   };
 
   const cleanupItems = (): void => {
-    clearHandleAttributes(element);
+    for (const [managedElement, state] of managedElements) {
+      restoreAttribute(managedElement, HANDLE_ATTR, state.dataDndHandle);
+      restoreAttribute(managedElement, ITEM_ATTR, state.dataDndItem);
+      restoreAttribute(managedElement, 'draggable', state.draggable);
+      restoreAttribute(managedElement, 'role', state.role);
+      restoreAttribute(managedElement, 'tabindex', state.tabIndex);
+      managedElement.style.touchAction = state.touchAction;
+    }
 
-    element.querySelectorAll<HTMLElement>(`[${ITEM_ATTR}]`).forEach((item) => {
-      item.removeAttribute(ITEM_ATTR);
-      item.removeAttribute('draggable');
-      item.removeAttribute('role');
-      item.removeAttribute('tabindex');
-      item.style.touchAction = '';
-    });
+    managedElements.clear();
   };
 
   const createPlaceholder = (source: HTMLElement): HTMLElement => {
@@ -655,11 +796,25 @@ export function createSortable(options: SortableOptions): Sortable {
 
       options.onReorder(event);
     },
+    element,
     getOrderedIds,
     isDisabled: () => resolveDisabled(options.disabled),
     notifyBeforeReorder: (from, to) => options.onBeforeReorder?.(from, to),
     notifyDragEnd: (id, event) => options.onDragEnd?.(id, event),
     notifyDragStart: (id, event) => options.onDragStart?.(id, event),
+    resolveTouchTarget: (target) => {
+      if (resolveDisabled(options.disabled) || !element.contains(target)) return null;
+
+      const item = target.closest<HTMLElement>(`[${ITEM_ATTR}]`);
+
+      if (!item || !element.contains(item)) return null;
+
+      if (!handle) return item;
+
+      const handleTarget = target.closest<HTMLElement>(handle);
+
+      return handleTarget && item.contains(handleTarget) ? handleTarget : null;
+    },
   };
 
   scopeState.handles.add(handle_);
@@ -704,7 +859,8 @@ export function createSortable(options: SortableOptions): Sortable {
       target: handle_,
     };
 
-    scheduleHide(session);
+    if (!isTouchDragEvent(e) || e.__dndTouchPreview) scheduleHide(session);
+
     scopeState.active = session;
 
     if (e.dataTransfer) {
@@ -813,11 +969,12 @@ export function createSortable(options: SortableOptions): Sortable {
     }
 
     scopeState.handles.delete(handle_);
-    element.removeAttribute('role');
+    restoreAttribute(element, 'role', originalContainerRole);
     cleanupItems();
   });
 
-  element.setAttribute('role', 'list');
+  if (originalContainerRole === null) element.setAttribute('role', 'list');
+
   element.addEventListener('dragstart', handleDragStart, { signal: disposable.disposalSignal });
   element.addEventListener('dragover', handleDragOver, { signal: disposable.disposalSignal });
   element.addEventListener('drop', handleDrop, { signal: disposable.disposalSignal });

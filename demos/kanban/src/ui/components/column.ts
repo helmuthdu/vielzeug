@@ -10,26 +10,23 @@ import { type Task, type TaskStatus } from '../../core/types';
 import { renderTaskCard } from './task-card';
 import { openTaskDialog } from './task-dialog';
 
-// ONE scope instance shared across every column — required for cross-column drag.
-export const sharedScope = createSortableScope();
+const moveHandlers = new Map<HTMLElement, (ids: string[]) => void>();
+const reconcilers = new Set<() => void>();
 
-// In-flight `attemptMoveTask` commits, shared across every column instance (not scoped to the
-// column that initiated the move). A cross-column drop fires `onReorder` on BOTH the source
-// container (item removed, no new ids) and the target container (item added) — only the target's
-// callback ever sees a new id to move. If each column tracked its own pending commit, the SOURCE
-// column's post-drag reconcile would find nothing pending and redraw immediately from
-// `boardSignal` before the target's async `attemptMoveTask` had actually updated the task's
-// status, recreating the card back in its original column. Tracking commits here lets every
-// column's dragend flush (source and target alike) wait for ALL outstanding moves before
-// reconciling, so both columns redraw once from the final, settled state.
-const pendingMoveCommits = new Set<Promise<unknown>>();
-
-function trackMoveCommit(commit: Promise<unknown>): void {
-  pendingMoveCommits.add(commit);
-  void commit.finally(() => pendingMoveCommits.delete(commit));
+function reconcileColumns(): void {
+  for (const reconcile of reconcilers) reconcile();
 }
 
+// One scope owns cross-column moves and touch input for the whole board. The move callback
+// identifies the target container directly, so column state never needs to infer a transfer
+// from paired per-list reorder callbacks.
+export const sharedScope = createSortableScope({
+  onMove: ({ target, targetIds }) => moveHandlers.get(target)?.(targetIds),
+  touch: true,
+});
+
 interface ColumnOptions {
+  onMove: (ids: string[]) => void;
   onReorder: (ids: string[]) => void;
 }
 
@@ -39,6 +36,8 @@ interface ColumnHandle {
 }
 
 function createColumn(containerEl: HTMLElement, opts: ColumnOptions): ColumnHandle {
+  moveHandlers.set(containerEl, opts.onMove);
+
   const sortable = createSortable({
     element: containerEl,
     getKey: (el) => el.dataset['taskId'] ?? '',
@@ -48,6 +47,7 @@ function createColumn(containerEl: HTMLElement, opts: ColumnOptions): ColumnHand
 
   return {
     dispose(): void {
+      moveHandlers.delete(containerEl);
       sortable.dispose();
     },
     sync(): void {
@@ -126,32 +126,21 @@ define<{ status: TaskStatus }>('board-column', {
       const container = itemsRef.value!;
 
       col = createColumn(container, {
+        onMove: (ids) => {
+          void Promise.all(
+            ids
+              .filter((id) => !currentTaskIds.has(id))
+              .map(async (id) => {
+                const task = boardSignal.value.tasks.find((candidate) => candidate.id === id);
+
+                return task ? attemptMoveTask(task, props.status.value) : false;
+              }),
+          ).then((moves) => {
+            if (moves.some((moved) => !moved)) reconcileColumns();
+          });
+        },
         onReorder: (ids) => {
-          const hasNewId = ids.some((id) => !currentTaskIds.has(id));
-
-          if (hasNewId) {
-            for (const id of ids) {
-              if (!currentTaskIds.has(id)) {
-                const task = boardSignal.value.tasks.find((t) => t.id === id);
-
-                if (!task) continue;
-
-                trackMoveCommit(attemptMoveTask(task, props.status.value));
-              }
-            }
-
-            return;
-          }
-
-          // No new id here — either a pure same-column reorder (exact same set, just resequenced)
-          // or this column just lost an item to another column (fewer ids than before). Only the
-          // former needs persisting; the latter is the *source* side of a cross-column move,
-          // already fully handled by the target column's `attemptMoveTask` call above —
-          // reordering the remainder here too would race with that async status change and
-          // corrupt `boardSignal.value.tasks` (see `reorderTasks`'s doc comment).
-          if (ids.length === currentTaskIds.size) {
-            trackMoveCommit(reorderTasks(boardSignal, props.status.value, ids));
-          }
+          void reorderTasks(boardSignal, props.status.value, ids);
         },
       });
 
@@ -165,25 +154,14 @@ define<{ status: TaskStatus }>('board-column', {
         reconcile(tasks);
       });
 
-      // Flush deferred reactive renders after any drag ends. Effects skipped during isDragging
-      // need one nudge to reconcile the DOM once commitSession has updated boardSignal. Waits for
-      // every in-flight `attemptMoveTask` commit (see `pendingMoveCommits` above) — not just this
-      // column's own — so a cross-column move settles fully before either side redraws.
-      const onDragEnd = (): void => {
-        queueMicrotask(() => {
-          if (pendingMoveCommits.size === 0) {
-            reconcile(tasksComputed.value);
-
-            return;
-          }
-
-          void Promise.allSettled([...pendingMoveCommits]).then(() => reconcile(tasksComputed.value));
-        });
+      const reconcileCurrent = (): void => {
+        reconcile(tasksComputed.value);
       };
 
-      document.addEventListener('dragend', onDragEnd, { signal: sharedScope.disposalSignal });
+      reconcilers.add(reconcileCurrent);
 
       onCleanup(() => {
+        reconcilers.delete(reconcileCurrent);
         stop.dispose();
         col?.dispose();
         col = null;

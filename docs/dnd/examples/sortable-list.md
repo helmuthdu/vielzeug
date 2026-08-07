@@ -50,14 +50,13 @@ using sortable = createSortable({
   handle: '.handle',
   onReorder: ({ ids }) => {
     console.log('New order:', ids); // ['b', 'a', 'c']
-    saveOrder(ids);
   },
 });
 ```
 
 ### Pitfalls
 
-- If the list container has `touch-action: auto`, touch drags on mobile scroll the page instead of dragging. Set `touch-action: none` on drag handles.
+- Dnd applies `touch-action: none` to managed items or handles. It restores the previous inline value on disposal.
 - Do not call `sortable.sync()` while a drag is in progress. If your list re-renders, wait for `onDragEnd` before mutating the DOM and syncing.
 - `onReorder` fires only when the order actually changes. Do not assume it fires on every drop.
 

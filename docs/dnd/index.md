@@ -5,7 +5,7 @@ package: dnd
 category: ui-interaction
 keywords: [drag-drop, sortable, file-upload, drop-zone, dnd, reorder]
 related: [ore, scroll, refine]
-exports: [createDropZone, createSortable, createSortableScope, createTouchDragShim, applyReorder, matchesAccept]
+exports: [createDropZone, createSortable, createSortableScope, applyReorder, matchesAccept]
 environments: [browser]
 ---
 
@@ -56,7 +56,7 @@ const zone = createDropZone({
 | Sortable lists      | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | Drag handles        | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | `using` support     | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
-| Touch support        | <ore-icon name="check" size="16"></ore-icon> Opt-in shim  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Touch support        | <ore-icon name="check" size="16"></ore-icon> Scoped opt-in | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | Zero dependencies   | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
@@ -91,21 +91,25 @@ yarn add @vielzeug/dnd
 import { createDropZone, createSortable } from '@vielzeug/dnd';
 
 // File drop zone — with async validation and paste support
+const dropzone = document.getElementById('dropzone')!;
+
 using zone = createDropZone({
-  element: document.getElementById('dropzone')!,
+  element: dropzone,
   accept: ['image/*', '.pdf'],
   paste: true,
-  onValidate: async (files) => checkServerQuota(files),
-  onDrop: (files) => uploadFiles(files),
+  onValidate: (files) => files.every((file) => file.size <= 5_000_000),
+  onDrop: (files) => console.log('Upload', files),
   onDropRejected: (files) => {
-    showError(`${files.length} file(s) not accepted`);
+    console.warn(`${files.length} file(s) rejected`);
   },
   onHoverChange: (hovered) => {
-    document.getElementById('dropzone')!.classList.toggle('drag-over', hovered);
+    dropzone.classList.toggle('drag-over', hovered);
   },
 });
 
 // Sortable list — with revert support for optimistic updates
+let currentOrder = ['a', 'b', 'c'];
+
 using sortable = createSortable({
   element: document.getElementById('list')!,
   keyboard: true,
@@ -115,8 +119,10 @@ using sortable = createSortable({
   getKey: (el) => el.dataset.sortId!,
   onReorder: ({ ids, setRevert }) => {
     const prev = currentOrder;
-    setOrder(ids);
-    setRevert(() => setOrder(prev)); // enable sortable.revert() on failure
+    currentOrder = ids;
+    setRevert(() => {
+      currentOrder = prev;
+    });
   },
 });
 ```
@@ -129,7 +135,7 @@ using sortable = createSortable({
 - **MIME type pre-validation** — queries `dataTransfer.items` during drag to set `dropEffect='none'` before the drop; confirmed against `File.type` on drop
 - **Flexible accept patterns** — MIME types (`image/png`), wildcards (`image/*`), and file extensions (`.pdf`)
 - **`maxFiles` limit** — cap the number of accepted files per drop; excess files are forwarded to `onDropRejected`
-- **`onValidate` async gating** — optional async step after type filtering; `zone.validating` is `true` while a promise is pending; only receives type-accepted files
+- **`onValidate` async gating** — optional cancellable async step after type filtering; `zone.validating` remains `true` until every pending validation settles
 - **Clipboard paste support** — `paste: true` routes pasted files through the same `accept`, `maxFiles`, and `onValidate` pipeline; `onPaste` provides a separate callback; paste rejections are forwarded to `onDropRejected` with the same `(files: File[]) => void` signature as drop rejections
 - **`onDropRejected`** — separate callback for files that didn't match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`; event type reflects whether the rejection came from a drop or a paste
 - **Sortable lists** — reorders DOM children with a placeholder indicator; fires `onReorder` only when the order actually changes
@@ -138,8 +144,8 @@ using sortable = createSortable({
 - **`onBeforeReorder` FLIP hook** — fires before commit for both drag and keyboard moves; items are still in pre-commit positions, making it ideal for FLIP animation setup
 - **`sortable.revert()`** — register a revert function via `event.setRevert(fn)` inside `onReorder`; `sortable.revert()` invokes it and clears it for rolling back optimistic updates on server failure
 - **Boundary-safe keyboard reordering** — arrow keys at the first/last item no longer suppress `preventDefault`, so the browser can scroll the page normally
-- **Explicit connected scopes** — lists only exchange items when they share a `createSortableScope()` instance
-- **Touch support via `createTouchDragShim()`** — bridges `touchstart`/`touchmove`/`touchend`/`touchcancel` into the same synthetic `DragEvent` sequence `createSortable`/`createDropZone` already listen for; one `document`-level instance covers the whole app
+- **Transactional connected scopes** — one `onMove` callback receives each cross-list transfer with both final orders
+- **Scoped touch support** — `createSortableScope({ touch: true })` handles only items registered to that scope and uses an inert outline preview
 - **Explicit DOM sync** — call `sortable.sync()` after DOM mutations instead of relying on hidden observers
 - **`[Symbol.dispose]`** — both primitives support the `using` keyword for automatic cleanup
 - **Reactive-friendly options** — `disabled` is re-read on each event (reassign `options.disabled = true` to toggle); `accept` captures the array reference, so push/splice mutations are reflected without recreating the zone
@@ -154,6 +160,7 @@ using sortable = createSortable({
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [Migration Guide](./migration.md)
 
 </div>
 

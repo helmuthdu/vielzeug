@@ -61,13 +61,13 @@ export interface DropZoneOptions {
    *
    * @example
    * ```ts
-   * onValidate: async (files) => {
-   *   const ok = await checkServerQuota(files);
+   * onValidate: async (files, { signal }) => {
+   *   const ok = await checkServerQuota(files, { signal });
    *   return ok;
    * }
    * ```
    */
-  onValidate?: (files: File[]) => boolean | Promise<boolean>;
+  onValidate?: (files: File[], context: DropValidationContext) => boolean | Promise<boolean>;
   /**
    * When `true`, all drag events are ignored and hover state does not change.
    *
@@ -112,6 +112,11 @@ export interface DropZoneOptions {
    * Only active when `paste: true`.
    */
   onPaste?: (files: File[]) => void;
+}
+
+export interface DropValidationContext {
+  /** Aborts when the zone is disposed. Pass this to validation requests. */
+  readonly signal: AbortSignal;
 }
 
 export interface DropZone extends Disposable {
@@ -209,8 +214,11 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   // Determined on the first dragenter and held for the duration of the drag.
   let dragAccepted = false;
   let validating = false;
+  const validationControllers = new Set<AbortController>();
 
   const setValidating = (next: boolean): void => {
+    if (validating === next) return;
+
     validating = next;
     onValidatingChange?.(next);
   };
@@ -232,7 +240,12 @@ export function createDropZone(options: DropZoneOptions): DropZone {
     updateCounter(0);
   };
 
-  const disposable = createDisposable(resetCounter);
+  const disposable = createDisposable(() => {
+    for (const controller of validationControllers) controller.abort();
+
+    validationControllers.clear();
+    resetCounter();
+  });
 
   // Settle the final accepted/rejected split and fire callbacks.
   const settle = (acceptedFiles: File[], rejectedFiles: File[]): void => {
@@ -257,12 +270,34 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   // Run accept/maxFiles filter, then async onValidate, then settle.
   const dispatchWithValidation = (rawFiles: File[], settleFn: (accepted: File[], rejected: File[]) => void): void => {
     const { accepted, rejected: rej } = applyFileFilters(rawFiles, accept, maxFiles);
+    const onValidate = options.onValidate;
+    const validationController = onValidate && accepted.length > 0 ? new AbortController() : null;
 
-    if (options.onValidate) setValidating(true);
+    if (validationController) {
+      validationControllers.add(validationController);
+      setValidating(true);
+    }
 
-    void Promise.resolve(options.onValidate && accepted.length > 0 ? options.onValidate(accepted) : true)
+    const finishValidation = (): void => {
+      if (!validationController) return;
+
+      validationControllers.delete(validationController);
+
+      if (!disposable.disposed) setValidating(validationControllers.size > 0);
+    };
+
+    let validation: boolean | Promise<boolean>;
+
+    try {
+      validation =
+        validationController && onValidate ? onValidate(accepted, { signal: validationController.signal }) : true;
+    } catch (error) {
+      validation = Promise.reject(error);
+    }
+
+    void Promise.resolve(validation)
       .then((valid) => {
-        if (options.onValidate) setValidating(false);
+        finishValidation();
 
         if (disposable.disposed) return;
 
@@ -274,7 +309,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
         }
       })
       .catch(() => {
-        if (options.onValidate) setValidating(false);
+        finishValidation();
 
         if (disposable.disposed) return;
 

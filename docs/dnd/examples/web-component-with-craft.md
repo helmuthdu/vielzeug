@@ -34,7 +34,7 @@ define('my-dropzone', (props) => {
         },
       });
 
-      onCleanup(() => zone.destroy());
+      onCleanup(() => zone.dispose());
     },
     render: () => html`
       <div ref=${dropzoneRef} class="dropzone" :class=${{ 'drag-over': () => isDragging.value }}>
@@ -49,7 +49,7 @@ define('my-dropzone', (props) => {
 
 - `createSortable()` and `createDropZone()` must be called after the element is connected to the DOM — inside `mount()`, not during component definition. The container element does not exist before connection.
 - Each component instance needs its own `createSortable()` / `createDropZone()` instance. Sharing one across instances causes them to manipulate each other's DOM.
-- Call `onCleanup(() => sortable.destroy())` (or `zone.destroy()`) inside `mount()` so the listener is removed when the component disconnects.
+- Call `onCleanup(() => sortable.dispose())` (or `zone.dispose()`) inside `mount()` so the listener is removed when the component disconnects.
 
 ### Related
 

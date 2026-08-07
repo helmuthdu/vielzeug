@@ -12,10 +12,12 @@ description: Drop zones, sortable lists, explicit connected scopes, keyboard sor
 ```ts
 import { createDropZone } from '@vielzeug/dnd';
 
+const dropzone = document.getElementById('dropzone')!;
+
 const zone = createDropZone({
-  element: document.getElementById('dropzone')!,
+  element: dropzone,
   onDrop: (files) => {
-    uploadFiles(files);
+    console.log('Accepted files:', files);
   },
 });
 ```
@@ -103,14 +105,14 @@ using zone = createDropZone({ element: dropEl, onDrop: handleFiles });
 
 ### Async validation
 
-Gate drops behind an async check with `onValidate`. The zone sets `validating: true` while the promise is pending; on resolution, accepted files go to `onDrop` and rejected files go to `onDropRejected`.
+Gate drops behind an async check with `onValidate`. The zone remains `validating: true` until every pending validation settles, and disposal aborts each validation signal.
 
 ```ts
 const zone = createDropZone({
   element: dropEl,
   accept: ['image/*'],
-  onValidate: async (files) => {
-    const ok = await checkServerQuota(files);
+  onValidate: async (files, { signal }) => {
+    const ok = await checkServerQuota(files, { signal });
     return ok; // false → all files forwarded to onDropRejected
   },
   onDrop: (files) => uploadFiles(files),
@@ -205,18 +207,21 @@ When an item is already at the first or last position, the boundary key press is
 Create a shared scope when items should move between containers:
 
 ```ts
-const boardScope = createSortableScope();
+const boardScope = createSortableScope({
+  onMove: ({ itemId, sourceIds, targetIds }) => {
+    persistMove(itemId, sourceIds, targetIds);
+  },
+  touch: true,
+});
 
 createSortable({
   element: todoEl,
   getKey: (el) => el.dataset.sortId!,
-  onReorder: ({ ids }) => saveTodoOrder(ids),
   scope: boardScope,
 });
 createSortable({
   element: doneEl,
   getKey: (el) => el.dataset.sortId!,
-  onReorder: ({ ids }) => saveDoneOrder(ids),
   scope: boardScope,
 });
 ```
@@ -395,57 +400,62 @@ try {
 
 ## Touch Support
 
-HTML5 drag-and-drop has no native touch story — touch devices never fire `dragstart`/`dragover`/`drop`. `createTouchDragShim` bridges `touchstart`/`touchmove`/`touchend`/`touchcancel` into that same synthetic `DragEvent` sequence at the `document` level, so `createSortable`/`createDropZone` work on touch with no per-instance wiring.
+HTML5 drag-and-drop has no native touch story. Enable touch on a sortable scope; it only recognizes items registered to that scope, never unrelated `draggable` elements.
 
 ```ts
-import { createTouchDragShim } from '@vielzeug/dnd';
+import { createSortable, createSortableScope } from '@vielzeug/dnd';
 
-// Call once at app startup — one instance covers the whole page.
-using touchDrag = createTouchDragShim();
+using scope = createSortableScope({ touch: true });
+using sortable = createSortable({ element: listEl, getKey: (el) => el.dataset.id!, scope });
 ```
 
-### Custom draggable selector
+### Touch preview
 
-Defaults to `[draggable="true"]` — the attribute `createSortable`/`createDropZone` already set on managed elements. Override it if you're bridging touch to elements you manage draggability on yourself.
+Touch uses an inert outline by default, avoiding cloned application DOM. Provide a preview factory or opt out when your item styling supplies its own feedback.
 
 ```ts
-createTouchDragShim({ draggableSelector: '.my-drag-handle' });
+const scope = createSortableScope({
+  touch: {
+    // The returned element is cloned before Dnd mounts it as a transient preview.
+    preview: (item) => item.querySelector<HTMLElement>('.drag-preview'),
+  },
+});
 ```
-
-### Drag preview
-
-A native mouse-driven drag gets a floating drag image for free — the browser snapshots the dragged element the moment `dragstart` fires and keeps that image under the cursor for the whole gesture. `createTouchDragShim`'s `dragstart` is a synthetic event, so no such snapshot ever exists; without a preview of its own, the dragged element would simply disappear (hidden by `createSortable`'s own scheduled hide) with no visual feedback until the drop. `createTouchDragShim` renders one automatically — a `cloneNode(true)` of the dragged element, positioned `fixed` and translated to follow the touch point — enabled by default.
-
-```ts
-// Opt out to render fully custom feedback instead (e.g. toggling a class from your own
-// dragstart/dragend listeners):
-createTouchDragShim({ showDragPreview: false });
-```
-
-Note the preview only clones light-DOM content — an item whose visible content lives inside a shadow root will preview as an empty shell.
 
 ### Why draggable items get `touch-action: none`
 
-`createSortable` sets `touch-action: none` on every element it marks as draggable (the item itself, or the handle when `handle` is set) — no configuration needed. Without it, a mobile browser can decide the very first bit of finger movement on a draggable item is a page scroll/pan — a decision made independently of, and before, `createTouchDragShim`'s own drag-start threshold and `preventDefault()` calls ever run — and hand the rest of the gesture to native scrolling. Once that happens the item never receives the `dragover` sequence needed to update the drop target, so the drop commits back to wherever it started, which looks identical to the drop simply reverting. This is most visible dragging between two containers that require any real finger travel (e.g. a Kanban column stacked below the source column on a narrow viewport) — a short in-place reorder rarely travels far enough to trigger the browser's scroll-intent heuristic, which is why this class of bug can pass casual same-container testing and only show up cross-container.
+`createSortable` sets `touch-action: none` on every element it marks as draggable (the item itself, or the handle when `handle` is set). This prevents a mobile browser from treating the initial movement as page scrolling before the scope controller can start the drag.
 
-This has no effect on mouse/pointer input — `touch-action` is touch-only — so it's safe even for `createSortable` instances that never pair with `createTouchDragShim`.
+This has no effect on mouse/pointer input.
 
-### Disabled state
+## Testing
 
-```ts
-const options = { disabled: false };
-const touchDrag = createTouchDragShim(options);
-
-// options.disabled is read live on each touch event — mutate to toggle:
-options.disabled = true;
-```
-
-### Cleanup
+Test observable callbacks and controller state with your DOM test runner. Construct the zone in each test, dispatch a real `drop` event, then dispose it during teardown.
 
 ```ts
-touchDrag.dispose();
-// or:
-using touchDrag = createTouchDragShim();
+import { afterEach, expect, it, vi } from 'vitest';
+import { createDropZone } from '@vielzeug/dnd';
+
+const zones: Array<{ dispose(): void }> = [];
+
+afterEach(() => zones.splice(0).forEach((zone) => zone.dispose()));
+
+it('forwards accepted files', async () => {
+  const element = document.createElement('div');
+  const onDrop = vi.fn();
+  const zone = createDropZone({ element, onDrop });
+  zones.push(zone);
+  const file = new File(['content'], 'readme.txt', { type: 'text/plain' });
+  const event = new Event('drop') as DragEvent;
+
+  Object.defineProperty(event, 'dataTransfer', { value: { files: [file] } });
+  element.dispatchEvent(event);
+
+  await Promise.resolve();
+
+  expect(onDrop).toHaveBeenCalledWith([file]);
+  expect(zone.disposed).toBe(false);
+});
 ```
 
 ## Framework Integration
@@ -572,4 +582,4 @@ define('task-list', {
 - Use `createSortableScope()` only when items should genuinely move between containers.
 - Use drag handles (`.handle` selector) when the full item surface area conflicts with other interactions such as text selection.
 - Test keyboard reordering explicitly — Dnd sets `tabindex` on items and supports arrow keys by default.
-- Call `createTouchDragShim()` once at app startup if you support touch devices — it's a single `document`-level bridge, not something to attach per `createSortable`/`createDropZone` instance.
+- Enable `touch: true` only on scopes that own touch-sortable lists.

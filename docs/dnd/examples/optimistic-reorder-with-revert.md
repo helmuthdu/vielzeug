@@ -44,6 +44,7 @@ let tasks: Task[] = [
 ];
 
 const listEl = document.getElementById('task-list') as HTMLUListElement;
+const saveTasks = async (_orderedIds: string[]) => undefined;
 
 const sortable = createSortable({
   element: listEl,
@@ -92,16 +93,23 @@ const sortable = createSortable({
       tasks = previous;
       renderList(tasks);
     });
+
+    void saveTasks(ids).catch(() => sortable.revert());
   },
 });
 
-async function handleReorder(orderedIds: string[]) {
-  try {
-    await api.saveTasks(orderedIds);
-  } catch {
-    // Server rejected the new order — roll back the optimistic update.
-    sortable.revert();
-  }
+function renderList(next: Task[]) {
+  listEl.replaceChildren(
+    ...next.map((task) => {
+      const item = document.createElement('li');
+
+      item.dataset.sortId = task.id;
+      item.textContent = task.title;
+
+      return item;
+    }),
+  );
+  sortable.sync();
 }
 ```
 

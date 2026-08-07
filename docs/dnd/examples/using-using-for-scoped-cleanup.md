@@ -16,6 +16,10 @@ Both primitives implement `[Symbol.dispose]`, so they work with the `using` keyw
 ```ts
 import { createDropZone, createSortable } from '@vielzeug/dnd';
 
+const handleFiles = (files: File[]) => console.log('Dropped files:', files);
+const saveOrder = (ids: string[]) => console.log('Saved order:', ids);
+const pageReady = () => Promise.resolve();
+
 async function setupPage() {
   using zone = createDropZone({
     element: document.getElementById('dropzone')!,
@@ -24,7 +28,8 @@ async function setupPage() {
 
   using sortable = createSortable({
     element: document.getElementById('list')!,
-    onReorder: saveOrder,
+    getKey: (el) => el.dataset.sortId!,
+    onReorder: ({ ids }) => saveOrder(ids),
   });
 
   await pageReady();

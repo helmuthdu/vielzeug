@@ -640,6 +640,58 @@ describe('createDropZone', () => {
       zone.dispose();
     });
 
+    it('stays validating until every concurrent validation settles', async () => {
+      const element = document.createElement('div');
+      const onValidatingChange = vi.fn();
+      const resolvers: Array<(valid: boolean) => void> = [];
+      const onValidate = vi.fn(
+        () =>
+          new Promise<boolean>((resolve) => {
+            resolvers.push(resolve);
+          }),
+      );
+      const zone = createDropZone({ element, onValidate, onValidatingChange });
+
+      element.dispatchEvent(makeDragEvent('drop', { files: [new File(['a'], 'a.txt')] }));
+      element.dispatchEvent(makeDragEvent('drop', { files: [new File(['b'], 'b.txt')] }));
+
+      expect(zone.validating).toBe(true);
+      expect(onValidatingChange).toHaveBeenCalledTimes(1);
+
+      resolvers[0]!(true);
+      await Promise.resolve();
+
+      expect(zone.validating).toBe(true);
+      expect(onValidatingChange).toHaveBeenCalledTimes(1);
+
+      resolvers[1]!(true);
+      await Promise.resolve();
+
+      expect(zone.validating).toBe(false);
+      expect(onValidatingChange).toHaveBeenCalledWith(false);
+
+      zone.dispose();
+    });
+
+    it('passes an aborted signal to validation when disposed', () => {
+      const element = document.createElement('div');
+      let signal: AbortSignal | undefined;
+      const zone = createDropZone({
+        element,
+        onValidate: (_files, context) => {
+          signal = context.signal;
+
+          return new Promise<boolean>(() => {});
+        },
+      });
+
+      element.dispatchEvent(makeDragEvent('drop', { files: [new File(['a'], 'a.txt')] }));
+
+      expect(signal?.aborted).toBe(false);
+      zone.dispose();
+      expect(signal?.aborted).toBe(true);
+    });
+
     it('falls back to onDropRejected when onValidate throws', async () => {
       const element = document.createElement('div');
       const onDropRejected = vi.fn();
@@ -653,6 +705,30 @@ describe('createDropZone', () => {
       await Promise.resolve(); // two microtask ticks for rejection
 
       expect(onDropRejected).toHaveBeenCalledWith([file]);
+
+      zone.dispose();
+    });
+
+    it('settles validation state when onValidate throws synchronously', async () => {
+      const element = document.createElement('div');
+      const onDropRejected = vi.fn();
+      const zone = createDropZone({
+        element,
+        onDropRejected,
+        onValidate: () => {
+          throw new Error('validation failed');
+        },
+      });
+
+      element.dispatchEvent(makeDragEvent('drop', { files: [new File(['a'], 'a.txt')] }));
+
+      expect(zone.validating).toBe(true);
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(zone.validating).toBe(false);
+      expect(onDropRejected).toHaveBeenCalledWith([expect.any(File)]);
 
       zone.dispose();
     });

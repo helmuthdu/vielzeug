@@ -390,7 +390,7 @@ pnpm add @vielzeug/dnd
 - `createDropZone()` with MIME type, wildcard, and file extension filtering
 - `onDropRejected` callback and counter-based hover state
 - `createSortable()` for native sortable lists with `data-sort-id`
-- Drag handles, dynamic list refresh, and `destroy()` / `using` cleanup
+- Drag handles, dynamic list refresh, and `dispose()` / `using` cleanup
 - Zero dependencies
 
 [📖 Documentation](https://vielzeug.dev/dnd/) • [Examples](https://vielzeug.dev/dnd/examples)

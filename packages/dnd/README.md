@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/dnd` &nbsp;·&nbsp; **Category:** UI Interaction
 
-**Key exports:** `createDropZone`, `createSortable`, `createSortableScope`, `createTouchDragShim`, `applyReorder`, `matchesAccept`
+**Key exports:** `createDropZone`, `createSortable`, `createSortableScope`, `applyReorder`, `matchesAccept`
 
 **When to use:** File drop zones with MIME filtering and async validation, or sortable lists with keyboard, FLIP animation, and optimistic-update support — zero dependencies.
 
@@ -30,14 +30,14 @@ yarn add @vielzeug/dnd
 ## Quick Start
 
 ```ts
-import { createDropZone, createSortable } from '@vielzeug/dnd';
+import { createDropZone, createSortable, createSortableScope } from '@vielzeug/dnd';
 
 // Drop zone — with async validation and clipboard paste support
 using zone = createDropZone({
   element: document.getElementById('dropzone')!,
   accept: ['image/*', '.pdf'],
   paste: true,
-  onValidate: async (files) => checkServerQuota(files),
+  onValidate: async (files, { signal }) => checkServerQuota(files, { signal }),
   onDrop: (files) => uploadFiles(files),
   onDropRejected: (files) => {
     showError(`${files.length} file(s) not accepted`);
@@ -47,19 +47,21 @@ using zone = createDropZone({
   },
 });
 
-// Sortable list — with FLIP hook and revert support
+// Connected sortable lists — one scope owns cross-list moves and touch input
+using scope = createSortableScope({
+  onMove: ({ itemId, sourceIds, targetIds }) => saveMove(itemId, sourceIds, targetIds),
+  touch: true,
+});
 using sortable = createSortable({
   element: document.getElementById('list')!,
-  keyboard: true,
-  autoScroll: { edgeThreshold: 40, speed: 24 },
+  getKey: (el) => el.dataset.sortId!,
   onBeforeReorder: (from, to) => {
     // snapshot element positions here for FLIP animations
   },
-  onReorder: (ids) => {
-    const prev = currentOrder;
+  onReorder: ({ ids }) => {
     setOrder(ids);
-    return () => setOrder(prev); // enable sortable.revert() on server error
   },
+  scope,
 });
 ```
 
@@ -69,6 +71,7 @@ using sortable = createSortable({
 - [Usage Guide](https://vielzeug.dev/dnd/usage)
 - [API Reference](https://vielzeug.dev/dnd/api)
 - [Examples](https://vielzeug.dev/dnd/examples)
+- [Migration Guide](https://vielzeug.dev/dnd/migration)
 
 ## License
 

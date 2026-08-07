@@ -88,22 +88,22 @@ import { createSortable, createSortableScope } from '@vielzeug/dnd';
 
 const todoEl = document.getElementById('todo-list')!;
 const doneEl = document.getElementById('done-list')!;
-const boardScope = createSortableScope();
-
-const saveTodoOrder = (ids: string[]) => {
-  console.log('Todo order:', ids);
+const persistMove = (itemId: string, sourceIds: string[], targetIds: string[]) => {
+  console.log({ itemId, sourceIds, targetIds });
 };
-
-const saveDoneOrder = (ids: string[]) => {
-  console.log('Done order:', ids);
-};
+const boardScope = createSortableScope({
+  onMove: ({ itemId, sourceIds, targetIds }) => {
+    persistMove(itemId, sourceIds, targetIds);
+  },
+  touch: true,
+});
 
 using todoSortable = createSortable({
   element: todoEl,
   handle: '.handle',
   keyboard: true,
   autoScroll: { edgeThreshold: 40, speed: 24, viewport: true },
-  onReorder: saveTodoOrder,
+  getKey: (element) => element.dataset.sortId!,
   scope: boardScope,
 });
 
@@ -111,7 +111,7 @@ using doneSortable = createSortable({
   element: doneEl,
   handle: '.handle',
   keyboard: true,
-  onReorder: saveDoneOrder,
+  getKey: (element) => element.dataset.sortId!,
   scope: boardScope,
 });
 ```
@@ -124,7 +124,7 @@ Keyboard behavior:
 
 ### Pitfalls
 
-- `scope` must be the same `SortableScope` instance across all connected lists — a new scope per list disables cross-list drag.
+- `scope.onMove` fires once per cross-list transfer with both final orders. A new scope per list disables cross-list drag.
 - Keyboard reordering fires `onReorder` on each move, not on drop; debounce persistence calls if needed.
 - `using` declarations require a runtime that supports `Symbol.dispose` (or use explicit `dispose()` calls).
 

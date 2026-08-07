@@ -1,7 +1,15 @@
 export const sortableConnectedExample = {
   code: `import { applyReorder, createSortable, createSortableScope } from '@vielzeug/dnd'
 
-const scope = createSortableScope()
+const scope = createSortableScope({
+  onMove: ({ source, sourceIds, target, targetIds }) => {
+    if (source === todoEl) todoItems = applyReorder(todoItems, sourceIds, i => i.id)
+    if (target === todoEl) todoItems = applyReorder(todoItems, targetIds, i => i.id)
+    if (source === doneEl) doneItems = applyReorder(doneItems, sourceIds, i => i.id)
+    if (target === doneEl) doneItems = applyReorder(doneItems, targetIds, i => i.id)
+    console.log('Moved item between lists')
+  },
+})
 
 const wrapper = document.createElement('div')
 wrapper.style.cssText = 'display:flex;gap:24px;align-items:flex-start;'
@@ -55,20 +63,12 @@ const todoSortable = createSortable({
   element: todoEl,
   getKey,
   scope,
-  onReorder: ({ ids }) => {
-    todoItems = applyReorder(todoItems, ids, i => i.id)
-    console.log('To Do order:', todoItems.map(i => i.title).join(', '))
-  },
 })
 
 const doneSortable = createSortable({
   element: doneEl,
   getKey,
   scope,
-  onReorder: ({ ids }) => {
-    doneItems = applyReorder(doneItems, ids, i => i.id)
-    console.log('Done order:', doneItems.map(i => i.title).join(', '))
-  },
 })
 
 console.log('Connected lists ready — drag items between columns')

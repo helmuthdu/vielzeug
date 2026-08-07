@@ -5,7 +5,7 @@ import '@vielzeug/refine/icon';
 import '@vielzeug/refine/avatar';
 import '@vielzeug/refine/grid';
 import '@vielzeug/refine/grid-item';
-import { createSortable } from '@vielzeug/dnd';
+import { createSortable, createSortableScope } from '@vielzeug/dnd';
 import { define, each, html, onCleanup, onMounted, ref, when } from '@vielzeug/ore';
 import { computed, effect, signal } from '@vielzeug/ripple';
 
@@ -123,11 +123,13 @@ define('compare-drawer', {
 
     onMounted(() => {
       const container = itemsRef.value!;
+      const scope = createSortableScope({ touch: true });
 
       sortable = createSortable({
         element: container,
         getKey: (el) => el.dataset['modelId'] ?? '',
         onReorder: ({ ids }) => reorderCompare(ids),
+        scope,
       });
 
       const stop = effect(() => {
@@ -139,6 +141,7 @@ define('compare-drawer', {
         stop.dispose();
         sortable?.dispose();
         sortable = null;
+        scope.dispose();
       });
     });
 
