@@ -1,61 +1,40 @@
 ---
-title: 'Familiar Examples — Cancellable Batch'
-description: 'Cancellable Batch example for @vielzeug/familiar.'
+title: Cancellable Batch
+description: Cancel queued, waiting, and executing module-worker tasks together.
 ---
 
 ## Cancellable Batch
 
 ### Problem
 
-You queue a batch of tasks into the worker pool and the user navigates away before they finish. Tasks that complete after teardown will try to update state that no longer exists — you need to cancel the entire batch.
+Application input becomes obsolete before all worker tasks finish.
 
 ### Solution
 
-Use `AbortController` to cancel queued tasks when the user navigates away:
+Pass one signal to `batch()`. Aborting it cancels every operation, including active worker work.
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { batch, createWorker } from '@vielzeug/familiar';
 
-const pool = createWorker<string, string>(
-  async (url) => {
-    const r = await fetch(url);
-    return r.text();
-  },
-  { concurrency: 4, timeout: 8000 },
-);
+const pool = createWorker<string, string>(new URL('./fetch.worker.ts', import.meta.url));
+const controller = new AbortController();
+const urls = ['https://example.com/a', 'https://example.com/b'];
 
-function startBatch(urls: string[]) {
-  const ac = new AbortController();
+const values = batch(pool, urls, { signal: controller.signal });
+controller.abort();
 
-  const promise = Promise.allSettled(
-    urls.map((url) =>
-      pool.run(url, { signal: ac.signal }).catch((err) => {
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          console.log(`Batch cancelled: ${url}`);
-          return null;
-        }
-        console.error(`Failed to fetch ${url}:`, err);
-        throw err;
-      }),
-    ),
-  );
-
-  return { result: promise, cancel: () => ac.abort() };
+try {
+  for await (const value of values) console.log(value);
+} finally {
+  pool.dispose();
 }
-
-// Usage:
-const batch = startBatch(['https://example.com/1', 'https://example.com/2']);
-// User navigates away:
-batch.cancel();
-// Queued tasks will reject with AbortError
 ```
 
 ### Pitfalls
 
-- Aborting only cancels **queued** tasks. Tasks already dispatched to a worker slot continue executing — the `fetch()` call inside the task is not aborted. Design task functions to check for stale results and discard them after abort.
-- The example creates `pool` at module level but never disposes it. Call `pool.dispose()` or `pool.drain()` at application shutdown to terminate worker threads and free resources.
+- Reuse one controller only for work that should share a lifetime.
+- Catch `AbortError` separately from task failures.
 
 ### Related
 
-- [Fibonacci with Pool and Timeout](./fibonacci-with-pool-and-timeout.md) — stopping long-running tasks with a time budget
-- [React Integration](./react-integration.md) — tying cancellation to component lifecycle
+- [Usage Guide](../usage.md)

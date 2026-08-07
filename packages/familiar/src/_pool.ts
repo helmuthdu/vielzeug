@@ -1,29 +1,20 @@
-/**
- * Shared pool orchestration engine used by both the real worker implementation and the test
- * double. Handles queue management, iterative drain loop, abort handling, lifecycle (drain /
- * dispose), metrics, batch streaming, task groups, and backpressure.
- *
- * Callers provide a SlotStrategy array — each slot encapsulates run/runStream/prime/terminate.
- * The pool does not care whether slots use a Web Worker or run in-process.
- *
- * Not part of the public API surface.
- */
-
 import { abortError } from '@vielzeug/arsenal/async';
 
 import type {
   BatchOptions,
-  GroupOptions,
+  DrainOptions,
   RunOptions,
   SlotStrategy,
   TaskGroup,
-  WorkerHandle,
+  TaskGroupOptions,
+  WorkerPool,
+  WorkerStats,
   WorkerStatus,
 } from './types';
 
 import { type QueueItem, TaskQueue } from './_queue';
 import { unrefTimer } from './_timers';
-import { FamiliarQueueFullError, FamiliarRuntimeError, FamiliarTerminatedError, FamiliarTimeoutError } from './errors';
+import { FamiliarQueueFullError, FamiliarTerminatedError, FamiliarTimeoutError } from './errors';
 
 export type PoolOptions = {
   concurrency: number;
@@ -32,117 +23,112 @@ export type PoolOptions = {
   onFull: 'reject' | 'wait';
 };
 
+type IdleWaiter = {
+  reject: (reason: unknown) => void;
+  resolve: () => void;
+  timer?: ReturnType<typeof setTimeout>;
+};
+
+type CapacityWaiter = {
+  cleanup(): void;
+  reject(reason: unknown): void;
+  resolve(): void;
+};
+
 export function createPool<TInput, TOutput>(
   slots: SlotStrategy<TInput, TOutput>[],
   options: PoolOptions,
-): WorkerHandle<TInput, TOutput> {
-  const { concurrency, defaultTimeout, maxQueue, onFull } = options;
+): WorkerPool<TInput, TOutput> {
   const freeSlots = [...slots];
   const queue = new TaskQueue<TInput, TOutput>();
-  const disposeController = new AbortController();
-  const idleResolvers: Array<() => void> = [];
-  /** Waiters blocked on run() because the queue is full (onFull='wait' mode). */
-  const fullWaiters: Array<() => void> = [];
-
-  let activeCount = 0;
+  const disposalController = new AbortController();
+  const idleWaiters: IdleWaiter[] = [];
+  const capacityWaiters: CapacityWaiter[] = [];
+  let active = 0;
+  let completed = 0;
+  let failed = 0;
   let drainPromise: Promise<void> | undefined;
-  let completedCount = 0;
-  let failedCount = 0;
-  let groupActiveCount = 0;
+  let draining = false;
   let terminated = false;
 
-  // ─── Idle tracking ────────────────────────────────────────────────────────────
-
   function isIdle(): boolean {
-    return activeCount === 0 && queue.size === 0;
+    return active === 0 && queue.size === 0;
   }
 
-  function notifyIdle(): void {
-    if (!isIdle() || idleResolvers.length === 0) return;
+  function settleIdle(): void {
+    if (!isIdle()) return;
 
-    const resolvers = idleResolvers.splice(0);
+    for (const waiter of idleWaiters.splice(0)) {
+      if (waiter.timer) clearTimeout(waiter.timer);
 
-    for (const resolve of resolvers) resolve();
+      waiter.resolve();
+    }
   }
 
-  function waitForIdle(timeoutMs?: number): Promise<void> {
+  function waitForIdle(drainOptions: DrainOptions = {}): Promise<void> {
     if (isIdle()) return Promise.resolve();
 
     return new Promise<void>((resolve, reject) => {
-      idleResolvers.push(resolve);
+      const waiter: IdleWaiter = { reject, resolve };
 
-      if (timeoutMs !== undefined) {
-        const timer = setTimeout(() => {
-          const idx = idleResolvers.indexOf(resolve);
+      if (drainOptions.timeout !== undefined) {
+        waiter.timer = setTimeout(() => {
+          const index = idleWaiters.indexOf(waiter);
 
-          if (idx !== -1) idleResolvers.splice(idx, 1);
+          if (index !== -1) idleWaiters.splice(index, 1);
 
-          reject(new FamiliarTimeoutError(timeoutMs));
-        }, timeoutMs);
-
-        unrefTimer(timer);
+          reject(new FamiliarTimeoutError(drainOptions.timeout!));
+        }, drainOptions.timeout);
+        unrefTimer(waiter.timer);
       }
+
+      idleWaiters.push(waiter);
     });
   }
 
-  // ─── Full-queue backpressure (onFull='wait') ──────────────────────────────────
-
-  function releaseOneFullWaiter(): void {
-    const waiter = fullWaiters.shift();
-
-    if (waiter) waiter();
+  function releaseCapacity(): void {
+    capacityWaiters.shift()?.resolve();
   }
 
-  // ─── Drain loop (iterative) ───────────────────────────────────────────────────
-
-  let draining = false;
-
-  function drainLoop(): void {
-    if (terminated || draining) return;
-
-    draining = true;
-
-    while (!terminated && freeSlots.length > 0 && queue.size > 0) {
-      const item = nextItem();
-
-      if (!item) break;
-
-      const slot = freeSlots.pop()!;
-
-      item.cleanupAbort?.();
-      activeCount += 1;
-      releaseOneFullWaiter();
-
-      const taskTimeout = item.timeout ?? defaultTimeout;
-
-      slot.run(item.input, item.transferables, taskTimeout).then(
-        (result) => {
-          freeSlots.push(slot);
-          activeCount -= 1;
-          completedCount += 1;
-          item.resolve(result);
-          drainLoop();
-
-          if (isIdle()) notifyIdle();
-        },
-        (error: unknown) => {
-          freeSlots.push(slot);
-          activeCount -= 1;
-
-          if (!(error instanceof FamiliarTerminatedError)) failedCount += 1;
-
-          item.reject(error);
-          drainLoop();
-
-          if (isIdle()) notifyIdle();
-        },
-      );
-    }
-
-    draining = false;
+  function rejectCapacity(reason: unknown): void {
+    for (const waiter of capacityWaiters.splice(0)) waiter.reject(reason);
   }
 
-  // ─── Queue helpers ────────────────────────────────────────────────────────────
+  function waitForCapacity(signal: AbortSignal | undefined): Promise<void> {
+    if (signal?.aborted) return Promise.reject(abortError(signal));
+
+    return new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const waiter: CapacityWaiter = {
+        cleanup() {
+          signal?.removeEventListener('abort', onAbort);
+        },
+        reject(reason) {
+          if (settled) return;
+
+          settled = true;
+          waiter.cleanup();
+
+          const index = capacityWaiters.indexOf(waiter);
+
+          if (index !== -1) capacityWaiters.splice(index, 1);
+
+          reject(reason);
+        },
+        resolve() {
+          if (settled) return;
+
+          settled = true;
+          waiter.cleanup();
+          resolve();
+        },
+      };
+      const onAbort = () => waiter.reject(abortError(signal!));
+
+      signal?.addEventListener('abort', onAbort, { once: true });
+      capacityWaiters.push(waiter);
+    });
+  }
 
   function nextItem(): QueueItem<TInput, TOutput> | undefined {
     while (queue.size > 0) {
@@ -153,27 +139,132 @@ export function createPool<TInput, TOutput>(
       if (item.signal?.aborted) {
         item.cleanupAbort?.();
         item.reject(abortError(item.signal));
+        releaseCapacity();
         continue;
       }
 
       return item;
     }
 
-    // All remaining items were aborted and rejected above — the pool may now be idle.
-    // Notify any drain() waiter so it does not hang.
-    notifyIdle();
+    settleIdle();
 
     return undefined;
   }
 
-  // ─── Lifecycle ────────────────────────────────────────────────────────────────
+  function drainQueue(): void {
+    if (draining || terminated) return;
+
+    draining = true;
+
+    while (!terminated && freeSlots.length > 0 && queue.size > 0) {
+      const next = nextItem();
+
+      if (!next) break;
+
+      const item = next;
+      const slot = freeSlots.pop()!;
+      const timeout = item.timeout ?? options.defaultTimeout;
+
+      active += 1;
+      releaseCapacity();
+
+      const onAbort = () => slot.cancel(abortError(item.signal!));
+
+      item.cleanupAbort = () => {
+        item.signal?.removeEventListener('abort', onAbort);
+        item.cleanupAbort = undefined;
+      };
+      item.signal?.addEventListener('abort', onAbort, { once: true });
+
+      slot.run(item.input, item.transferables, timeout).then(
+        (value) => finish(value),
+        (error: unknown) => fail(error),
+      );
+
+      function finish(value: TOutput): void {
+        item.cleanupAbort?.();
+        freeSlots.push(slot);
+        active -= 1;
+        completed += 1;
+        item.resolve(value);
+        drainQueue();
+        settleIdle();
+      }
+
+      function fail(error: unknown): void {
+        item.cleanupAbort?.();
+        freeSlots.push(slot);
+        active -= 1;
+
+        if (!(error instanceof FamiliarTerminatedError) && error?.constructor?.name !== 'AbortError') failed += 1;
+
+        item.reject(error);
+        drainQueue();
+        settleIdle();
+      }
+    }
+
+    draining = false;
+  }
+
+  async function run(input: TInput, runOptions: RunOptions = {}): Promise<TOutput> {
+    const { priority = 0, signal, timeout, transferables = [] } = runOptions;
+
+    if (terminated) throw new FamiliarTerminatedError();
+
+    if (drainPromise) throw new FamiliarTerminatedError('Worker is draining');
+
+    if (signal?.aborted) throw abortError(signal);
+
+    while (options.onFull === 'wait' && options.maxQueue !== undefined && queue.size >= options.maxQueue) {
+      await waitForCapacity(signal);
+
+      if (terminated) throw new FamiliarTerminatedError();
+
+      if (drainPromise) throw new FamiliarTerminatedError('Worker is draining');
+
+      if (signal?.aborted) throw abortError(signal);
+    }
+
+    let resolve!: (value: TOutput) => void;
+    let reject!: (reason: unknown) => void;
+    const promise = new Promise<TOutput>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    const item: QueueItem<TInput, TOutput> = { input, priority, reject, resolve, signal, timeout, transferables };
+
+    if (!queue.enqueue(item, options.onFull === 'wait' ? undefined : options.maxQueue)) {
+      throw new FamiliarQueueFullError(options.maxQueue!);
+    }
+
+    if (signal) {
+      const onAbort = () => {
+        if (!queue.remove(item)) return;
+
+        item.cleanupAbort?.();
+        reject(abortError(signal));
+        releaseCapacity();
+        settleIdle();
+      };
+
+      item.cleanupAbort = () => {
+        signal.removeEventListener('abort', onAbort);
+        item.cleanupAbort = undefined;
+      };
+      signal.addEventListener('abort', onAbort, { once: true });
+    }
+
+    drainQueue();
+
+    return promise;
+  }
 
   function dispose(): void {
     if (terminated) return;
 
     terminated = true;
-    disposeController.abort();
-
+    disposalController.abort();
     for (const slot of slots) slot.terminate();
 
     while (queue.size > 0) {
@@ -185,356 +276,114 @@ export function createPool<TInput, TOutput>(
       item.reject(new FamiliarTerminatedError());
     }
 
-    const resolvers = idleResolvers.splice(0);
-
-    for (const resolve of resolvers) resolve();
-
-    for (const waiter of fullWaiters.splice(0)) waiter();
+    rejectCapacity(new FamiliarTerminatedError());
+    settleIdle();
   }
 
-  function drain(timeoutMs?: number): Promise<void> {
+  function drain(drainOptions: DrainOptions = {}): Promise<void> {
     if (terminated) return Promise.resolve();
 
     if (drainPromise) return drainPromise;
 
-    drainPromise = waitForIdle(timeoutMs).then(dispose, (err) => {
-      dispose();
-      throw err;
-    });
+    rejectCapacity(new FamiliarTerminatedError('Worker is draining'));
+    drainPromise = waitForIdle(drainOptions).then(
+      () => dispose(),
+      (error: unknown) => {
+        dispose();
+        throw error;
+      },
+    );
 
     return drainPromise;
   }
 
-  // ─── run() ───────────────────────────────────────────────────────────────────
-
-  async function run(input: TInput, runOptions: RunOptions = {}): Promise<TOutput> {
-    const { priority = 0, signal, timeout, transferables = [] } = runOptions;
-
-    if (terminated) {
-      throw new FamiliarTerminatedError();
-    }
-
-    if (drainPromise) {
-      throw new FamiliarTerminatedError('Worker is draining');
-    }
-
-    if (signal?.aborted) {
-      throw abortError(signal);
-    }
-
-    if (onFull === 'wait' && maxQueue !== undefined) {
-      while (!terminated && !drainPromise && queue.size >= maxQueue) {
-        await new Promise<void>((resolve) => fullWaiters.push(resolve));
-      }
-
-      if (terminated) throw new FamiliarTerminatedError();
-
-      if (drainPromise) throw new FamiliarTerminatedError('Worker is draining');
-    }
-
-    let resolve!: (value: TOutput) => void;
-    let reject!: (reason: unknown) => void;
-
-    const promise = new Promise<TOutput>((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-
-    const item: QueueItem<TInput, TOutput> = {
-      input,
-      priority,
-      reject,
-      resolve,
-      signal,
-      timeout,
-      transferables,
-    };
-
-    if (!queue.enqueue(item, onFull === 'wait' ? undefined : maxQueue)) {
-      // maxQueue is guaranteed defined here: enqueue() only returns false when maxQueue is set.
-      throw new FamiliarQueueFullError(maxQueue as number);
-    }
-
-    if (signal) {
-      const onAbort = () => {
-        if (!queue.remove(item)) return;
-
-        item.cleanupAbort?.();
-        reject(abortError(signal));
-        notifyIdle();
-      };
-
-      item.cleanupAbort = () => {
-        signal.removeEventListener('abort', onAbort);
-        item.cleanupAbort = undefined;
-      };
-
-      signal.addEventListener('abort', onAbort, { once: true });
-    }
-
-    drainLoop();
-
-    return promise;
-  }
-
-  // ─── runStream() ─────────────────────────────────────────────────────────────
-
-  function runStream(input: TInput, options: Omit<RunOptions, 'signal'> = {}): AsyncIterable<TOutput> {
-    if (terminated) {
-      throw new FamiliarRuntimeError('Worker was terminated');
-    }
-
-    const slot = freeSlots.pop();
-
-    if (!slot) {
-      throw new FamiliarRuntimeError(
-        `runStream() requires a free worker slot; all ${slots.length} slot${slots.length === 1 ? '' : 's'} are busy`,
-      );
-    }
-
-    const { timeout, transferables = [] } = options;
-    const iter = slot.runStream(input, transferables, timeout);
-
-    return {
-      [Symbol.asyncIterator]() {
-        const inner = iter[Symbol.asyncIterator]();
-        let released = false;
-
-        const releaseSlot = () => {
-          if (!released) {
-            released = true;
-            freeSlots.push(slot);
-          }
-        };
-
-        return {
-          async next() {
-            const result = await inner.next();
-
-            if (result.done) releaseSlot();
-
-            return result;
-          },
-
-          async return(value?: unknown) {
-            slot.cancel();
-            releaseSlot();
-
-            return inner.return?.(value) ?? { done: true as const, value };
-          },
-
-          async throw(error?: unknown) {
-            slot.cancel();
-            releaseSlot();
-
-            if (inner.throw) return inner.throw(error);
-
-            throw error;
-          },
-        };
-      },
-    };
-  }
-
-  // ─── batch() ─────────────────────────────────────────────────────────────────
-
-  async function* batch(inputs: TInput[], batchOptions: BatchOptions = {}): AsyncIterable<TOutput> {
-    if (inputs.length === 0) return;
-
-    const { ordered = true, ...runOpts } = batchOptions;
-    const ac = new AbortController();
-
-    try {
-      if (ordered) {
-        const promises = inputs.map((input) => run(input, { ...runOpts, signal: ac.signal }));
-
-        for (const p of promises) {
-          yield await p;
-        }
-      } else {
-        // As-completed: yield results in the order tasks finish, not submission order.
-        // A single-slot notification channel wakes the consumer when the next result is ready.
-        // Submission is windowed to `concurrency` outstanding (in-flight or buffered-but-unread)
-        // tasks at a time — releasing capacity for one more submission each time the consumer
-        // reads a result — so a slow consumer can't let an entire large batch settle in memory.
-        type Completion = { error: unknown } | { value: TOutput };
-
-        const completions: Completion[] = [];
-        let notifier: (() => void) | null = null;
-        let nextIndex = 0;
-        const windowSize = Math.max(1, concurrency);
-
-        function submitNext(): void {
-          if (nextIndex >= inputs.length) return;
-
-          const input = inputs[nextIndex++]!;
-
-          run(input, { ...runOpts, signal: ac.signal }).then(
-            (value) => {
-              completions.push({ value });
-              notifier?.();
-              notifier = null;
-            },
-            (error: unknown) => {
-              completions.push({ error });
-              notifier?.();
-              notifier = null;
-            },
-          );
-        }
-
-        for (let i = 0; i < windowSize && i < inputs.length; i++) submitNext();
-
-        for (let i = 0; i < inputs.length; i++) {
-          while (completions.length === 0) {
-            await new Promise<void>((resolve) => {
-              notifier = resolve;
-            });
-          }
-
-          const next = completions.shift()!;
-
-          if ('error' in next) throw next.error;
-
-          yield next.value;
-
-          // Only release capacity for another submission once the consumer has actually resumed
-          // past this yield (i.e. did not break/return early) — submitting here unconditionally
-          // would over-submit by one task on every early exit.
-          submitNext();
-        }
-      }
-    } finally {
-      // Abort remaining in-flight tasks on any exit path (normal, consumer break, or error).
-      ac.abort();
-    }
-  }
-
-  // ─── group() ─────────────────────────────────────────────────────────────────
-
-  function group(name?: string, options: GroupOptions = {}): TaskGroup<TInput, TOutput> {
-    const ac = new AbortController();
-
-    if (options.signal) {
-      const sig = options.signal;
-
-      if (sig.aborted) {
-        ac.abort(sig.reason);
-      } else {
-        sig.addEventListener('abort', () => ac.abort(sig.reason), { once: true });
-      }
-    }
-
-    groupActiveCount += 1;
-
-    let submittedCount = 0;
-    let settledCount = 0;
-    let groupClosed = false;
-    const pendingPromises: Promise<TOutput>[] = [];
-
-    function decrementGroupIfDone(): void {
-      if (!groupClosed && submittedCount > 0 && submittedCount === settledCount) {
-        groupClosed = true;
-        groupActiveCount -= 1;
-      }
-    }
-
-    return {
-      abort(reason?: unknown): void {
-        ac.abort(reason);
-      },
-
-      drain(): Promise<PromiseSettledResult<TOutput>[]> {
-        const snapshot = pendingPromises.splice(0);
-
-        if (!groupClosed) {
-          groupClosed = true;
-          groupActiveCount -= 1;
-        }
-
-        return Promise.allSettled(snapshot);
-      },
-
-      get name() {
-        return name;
-      },
-
-      get pending() {
-        return submittedCount - settledCount;
-      },
-
-      run(input: TInput, runOpts: Omit<RunOptions, 'signal'> = {}): Promise<TOutput> {
-        submittedCount += 1;
-
-        const p = run(input, { ...runOpts, signal: ac.signal });
-
-        pendingPromises.push(p);
-        p.then(
-          () => {
-            settledCount += 1;
-            decrementGroupIfDone();
-          },
-          () => {
-            settledCount += 1;
-            decrementGroupIfDone();
-          },
-        );
-
-        return p;
-      },
-
-      get size() {
-        return submittedCount;
-      },
-    };
-  }
-
-  // ─── Status ──────────────────────────────────────────────────────────────────
-
-  function getStatus(): WorkerStatus {
-    if (terminated) return 'terminated';
-
-    return activeCount > 0 || queue.size > 0 ? 'running' : 'idle';
-  }
-
   return {
-    get active(): number {
-      return activeCount;
-    },
-    batch,
-    get completed(): number {
-      return completedCount;
-    },
-    get concurrency(): number {
-      return concurrency;
-    },
-    get disposalSignal(): AbortSignal {
-      return disposeController.signal;
+    get disposalSignal() {
+      return disposalController.signal;
     },
     dispose,
-    get disposed(): boolean {
+    get disposed() {
       return terminated;
     },
     drain,
-    get failed(): number {
-      return failedCount;
-    },
-    group,
-    get groupCount(): number {
-      return groupActiveCount;
-    },
-    prime(): Promise<void> {
-      return Promise.all(slots.map((s) => s.prime())).then(() => {});
-    },
-    get queued(): number {
-      return queue.size;
+    async prime(): Promise<void> {
+      await Promise.all(slots.map((slot) => slot.prime()));
     },
     run,
-    runStream,
+    get stats(): WorkerStats {
+      return { active, completed, failed, queued: queue.size };
+    },
     get status(): WorkerStatus {
-      return getStatus();
+      if (terminated) return 'terminated';
+
+      return active === 0 ? 'idle' : 'running';
     },
     [Symbol.asyncDispose]: () => drain(),
     [Symbol.dispose]: dispose,
+  };
+}
+
+export async function* batch<TInput, TOutput>(
+  pool: WorkerPool<TInput, TOutput>,
+  inputs: readonly TInput[],
+  options: BatchOptions = {},
+): AsyncIterable<TOutput> {
+  const controller = new AbortController();
+  const onAbort = () => controller.abort(options.signal!.reason);
+
+  options.signal?.addEventListener('abort', onAbort, { once: true });
+
+  const tasks = inputs.map((input) => pool.run(input, { ...options, signal: controller.signal }));
+
+  try {
+    for (const task of tasks) yield await task;
+  } catch (error) {
+    controller.abort(error);
+    await Promise.allSettled(tasks);
+    throw error;
+  } finally {
+    options.signal?.removeEventListener('abort', onAbort);
+    controller.abort();
+    await Promise.allSettled(tasks);
+  }
+}
+
+export function createTaskGroup<TInput, TOutput>(
+  pool: WorkerPool<TInput, TOutput>,
+  name: string | undefined = undefined,
+  options: TaskGroupOptions = {},
+): TaskGroup<TInput, TOutput> {
+  const controller = new AbortController();
+  const tasks = new Set<Promise<TOutput>>();
+  let size = 0;
+  const onAbort = () => controller.abort(options.signal!.reason);
+
+  options.signal?.addEventListener('abort', onAbort, { once: true });
+
+  return {
+    abort(reason?: unknown): void {
+      controller.abort(reason);
+    },
+    async drain(): Promise<PromiseSettledResult<TOutput>[]> {
+      return Promise.allSettled([...tasks]);
+    },
+    get name() {
+      return name;
+    },
+    get pending() {
+      return tasks.size;
+    },
+    run(input, runOptions = {}): Promise<TOutput> {
+      const task = pool.run(input, { ...runOptions, signal: controller.signal });
+
+      size += 1;
+      tasks.add(task);
+      void task.finally(() => tasks.delete(task));
+
+      return task;
+    },
+    get size() {
+      return size;
+    },
   };
 }

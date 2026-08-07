@@ -1,64 +1,38 @@
 ---
-title: 'Familiar Examples — Using Transferables'
-description: 'Using Transferables example for @vielzeug/familiar.'
+title: Using Transferables
+description: Move ArrayBuffer ownership into a module worker.
 ---
 
 ## Using Transferables
 
 ### Problem
 
-You need to send a large `ArrayBuffer` (e.g., an image or binary data file) to a worker. Structured-clone copying doubles memory usage — transferring ownership instead moves the buffer with zero copy.
+Large binary payloads should not be copied between main thread and worker.
 
 ### Solution
 
-Use `transferables` to move large buffers into the Worker without structured-clone copying:
+Transfer `ArrayBuffer` ownership with `RunOptions.transferables`.
 
 ```ts
 import { createWorker } from '@vielzeug/familiar';
 
-type Input = {
-  buffer: ArrayBuffer;
-};
+const pool = createWorker<{ buffer: ArrayBuffer }, number>(new URL('./sum.worker.ts', import.meta.url));
+const buffer = new Uint8Array([1, 2, 3]).buffer;
 
-type Output = {
-  length: number;
-};
-
-const worker = createWorker<Input, Output>(({ buffer }) => {
-  const bytes = new Uint8Array(buffer);
-  let sum = 0;
-
-  for (const value of bytes) {
-    sum += value;
-  }
-
-  return {
-    length: sum,
-  };
-});
-
-const bytes = new Uint8Array([1, 2, 3, 4, 5]);
-const buffer = bytes.buffer;
-
-// Transfer the buffer — zero-copy move to the worker
-const result = await worker.run({ buffer }, { transferables: [buffer] });
-
-console.log(result.length); // 15
-console.log(buffer.byteLength); // 0 — buffer is now detached
-
-worker.dispose();
+try {
+  const sum = await pool.run({ buffer }, { transferables: [buffer] });
+  console.log(sum);
+  console.log(buffer.byteLength); // 0
+} finally {
+  pool.dispose();
+}
 ```
-
-::: warning
-Once a buffer is transferred it is detached in the sending context. Do not reuse it after the `run()` call.
-:::
 
 ### Pitfalls
 
-- Accessing the original buffer after `run()` — the buffer is detached the moment it is transferred. Any read returns zero bytes. Copy the buffer with `buffer.slice()` before calling `run()` if the main thread still needs the data.
-- Passing a `TypedArray` view (e.g., `Uint8Array`) in `transferables` instead of its `.buffer` — only `ArrayBuffer` is transferable. Pass `typedArray.buffer`, not the typed array itself.
+- Transferred buffers detach immediately in sender.
+- Transfer buffer, not typed-array view.
 
 ### Related
 
-- [Image Processing](./image-processing.md) — practical example transferring pixel buffers
-- [Data Transformation Pipeline](./data-transformation-pipeline.md) — offloading large datasets between threads
+- [Image Processing](./image-processing.md)

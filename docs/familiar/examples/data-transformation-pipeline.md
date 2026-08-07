@@ -1,50 +1,44 @@
 ---
-title: 'Familiar Examples — Data Transformation Pipeline'
-description: 'Data Transformation Pipeline example for @vielzeug/familiar.'
+title: Data Transformation Pipeline
+description: Process typed data in a module-worker pool.
 ---
 
 ## Data Transformation Pipeline
 
 ### Problem
 
-You need to apply a sequence of CPU-bound transforms to a large dataset — parsing, filtering, aggregating — without blocking the main thread and freezing the UI.
+Large CPU-bound transforms block rendering.
 
 ### Solution
 
-Apply CPU-bound transforms to large datasets without blocking the UI:
+Keep transform code in worker module and submit rows through a pool.
+
+```ts
+// stats.worker.ts
+import { exposeTask } from '@vielzeug/familiar/protocol';
+
+exposeTask((values: number[]) => values.reduce((total, value) => total + value, 0) / values.length);
+```
 
 ```ts
 import { createWorker } from '@vielzeug/familiar';
 
-type Row = { id: number; values: number[] };
-type Stats = { id: number; mean: number; stdDev: number };
+const pool = createWorker<number[], number>(new URL('./stats.worker.ts', import.meta.url), { concurrency: 'auto' });
+const rows = [{ values: [1, 2, 3] }, { values: [4, 5, 6] }];
 
-const statsPool = createWorker<Row, Stats>(
-  ({ id, values }) => {
-    const mean = values.reduce((a, b) => a + b, 0) / values.length;
-    const variance = values.reduce((sum, v) => sum + (v - mean) ** 2, 0) / values.length;
-    return { id, mean, stdDev: Math.sqrt(variance) };
-  },
-  { concurrency: 'auto' },
-);
-
-async function processDataset(rows: Row[]): Promise<Stats[]> {
-  try {
-    const stats = await Promise.all(rows.map((row) => statsPool.run(row)));
-    return stats;
-  } finally {
-    statsPool.dispose();
-  }
+try {
+  const means = await Promise.all(rows.map((row) => pool.run(row.values)));
+  console.log(means);
+} finally {
+  pool.dispose();
 }
 ```
 
 ### Pitfalls
 
-- The example calls `statsPool.dispose()` inside `processDataset`'s `finally` block, making the pool single-use. Calling `processDataset` a second time will reject immediately with `FamiliarTerminatedError`. Create the pool at module level and dispose at app shutdown if you need to call the function more than once.
-- Using `concurrency: 'auto'` saturates all CPU threads, which may degrade other concurrent operations on the page. Set an explicit count when other workers are running in parallel.
+- Choose explicit concurrency when application has other CPU work.
+- Dispose owner-scoped pools after all submitted work settles.
 
 ### Related
 
-- [Image Processing](./image-processing.md)
 - [Using Transferables](./using-transferables.md)
-- [Cancellable Batch](./cancellable-batch.md)

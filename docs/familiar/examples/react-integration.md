@@ -1,86 +1,44 @@
 ---
-title: 'Familiar Examples — React Integration'
-description: 'React Integration example for @vielzeug/familiar.'
+title: React Integration
+description: Own a module-worker pool through React component lifecycle.
 ---
 
 ## React Integration
 
 ### Problem
 
-A React component needs to offload expensive computation to a worker pool. The pool must be created once, survive re-renders, and be closed when the component unmounts.
+Worker pool must survive renders and stop stale requests on unmount or input replacement.
 
 ### Solution
 
-Off-load processing from React components without blocking renders:
+Create pool once, abort obsolete work during effect cleanup, then dispose on unmount.
 
 ```tsx
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { createWorker } from '@vielzeug/familiar';
 
 type SortInput = { data: number[] };
-type SortOutput = { sorted: number[] };
+type SortOutput = number[];
 
-export function SortedList({ data }: { data: number[] }) {
-  const [sorted, setSorted] = useState<number[]>([]);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+const pool = useMemo(
+  () => createWorker<SortInput, SortOutput>(new URL('./sort.worker.ts', import.meta.url)),
+  [],
+);
 
-  // Create worker once and dispose on unmount
-  const worker = useMemo(
-    () => createWorker<SortInput, SortOutput>(({ data }) => ({ sorted: [...data].sort((a, b) => a - b) })),
-    [],
-  );
+useEffect(() => () => pool.dispose(), [pool]);
 
-  useEffect(() => {
-    return () => worker.dispose();
-  }, [worker]);
-
-  // Trigger sort on data change
-  useEffect(() => {
-    let cancelled = false;
-    setError(null);
-    setPending(true);
-
-    worker
-      .run({ data })
-      .then(({ sorted }) => {
-        if (!cancelled) setSorted(sorted);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err : new Error(String(err)));
-      })
-      .finally(() => {
-        if (!cancelled) setPending(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [data, worker]);
-
-  if (error) return <p style={{ color: 'red' }}>Error: {error.message}</p>;
-  if (pending) return <p>Sorting…</p>;
-  return (
-    <ul>
-      {sorted.map((n) => (
-        <li key={n}>{n}</li>
-      ))}
-    </ul>
-  );
-}
+useEffect(() => {
+  const controller = new AbortController();
+  void pool.run({ data }, { signal: controller.signal }).then(setSorted);
+  return () => controller.abort();
+}, [data, pool]);
 ```
-
-- Worker is properly disposed on component unmount.
-- Errors are caught and displayed.
-- Pending state is correctly managed through cancellation tokens.
 
 ### Pitfalls
 
-- Creating `createWorker` in the component body (not inside `useMemo`) spawns new Worker threads on every render. Always stabilize the reference with `useMemo` or `useRef`.
-- `worker` can be stale between effect cleanup and the next setup. Guard calls with optional chaining (`worker?.run()`) rather than the non-null assertion.
-- Workers run in an isolated scope — task functions cannot close over main-thread variables. Encode all required values into the input payload.
+- Keep worker URL stable with pool lifecycle.
+- Handle `AbortError` as expected stale work.
 
 ### Related
 
-- [Cancellable Batch](./cancellable-batch.md) — cancel tasks when the component unmounts
-- [Data Transformation Pipeline](./data-transformation-pipeline.md) — offloading CPU-bound dataset work
+- [Cancellable Batch](./cancellable-batch.md)

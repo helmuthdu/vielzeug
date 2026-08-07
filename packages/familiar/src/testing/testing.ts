@@ -1,39 +1,27 @@
-import type { SlotStrategy, WorkerHandle, WorkerStatus } from '../types';
+import type { SlotStrategy, WorkerOptions, WorkerPool } from '../types';
 
 import { createPool } from '../_pool';
 import {
   FamiliarInvalidOptionsError,
-  FamiliarRuntimeError,
   FamiliarTaskError,
   FamiliarTerminatedError,
+  FamiliarTimeoutError,
 } from '../errors';
 
-export type TestWorkerOptions = {
-  /**
-   * Number of concurrent in-process execution slots. Default: 1 for deterministic test ordering.
-   * Increase only when testing concurrency-specific behavior.
-   */
-  concurrency?: number;
-  /**
-   * When true, errors from fn are wrapped in FamiliarTaskError/FamiliarRuntimeError, mirroring
-   * real worker behavior. Default: false (errors propagate unwrapped for better test DX).
-   */
-  errorWrapping?: boolean;
-  maxQueue?: number;
-  /** 'wait' suspends run() callers when the queue is full instead of rejecting. */
-  onFull?: 'reject' | 'wait';
-};
+export type TestWorkerOptions = Omit<WorkerOptions, 'concurrency' | 'onSlotError'> & { concurrency?: number };
 
-export type TestWorkerHandle<TInput, TOutput> = WorkerHandle<TInput, TOutput> & {
-  /** Recorded { input, output } pairs for every successful run(), in call order. */
-  readonly calls: ReadonlyArray<{ input: TInput; output: TOutput }>;
+export type TestWorkerCall<TInput, TOutput> =
+  { input: TInput; status: 'fulfilled'; value: TOutput } | { input: TInput; reason: unknown; status: 'rejected' };
+
+export type TestWorkerHandle<TInput, TOutput> = WorkerPool<TInput, TOutput> & {
+  readonly calls: ReadonlyArray<TestWorkerCall<TInput, TOutput>>;
 };
 
 export function createTestWorker<TInput, TOutput>(
-  fn: (input: TInput) => TOutput | Promise<TOutput>,
+  handler: (input: TInput) => TOutput | Promise<TOutput>,
   options: TestWorkerOptions = {},
 ): TestWorkerHandle<TInput, TOutput> {
-  const { concurrency = 1, errorWrapping = false, maxQueue, onFull = 'reject' } = options;
+  const { concurrency = 1, maxQueue, onFull = 'reject', timeout } = options;
 
   if (!Number.isInteger(concurrency) || concurrency < 1) {
     throw new FamiliarInvalidOptionsError('`concurrency` must be a positive integer');
@@ -43,83 +31,113 @@ export function createTestWorker<TInput, TOutput>(
     throw new FamiliarInvalidOptionsError('`maxQueue` must be a positive integer');
   }
 
-  const calls: { input: TInput; output: TOutput }[] = [];
+  if (timeout !== undefined && (!Number.isFinite(timeout) || timeout <= 0)) {
+    throw new FamiliarInvalidOptionsError('`timeout` must be a finite number greater than 0');
+  }
 
-  /**
-   * In-process SlotStrategy. Errors propagate unwrapped by default (better test DX:
-   * vitest AssertionErrors surface directly). Set errorWrapping: true to mirror real worker
-   * behavior (useful when testing code that checks `error instanceof FamiliarError`).
-   */
+  const calls: TestWorkerCall<TInput, TOutput>[] = [];
+
   function makeSlot(): SlotStrategy<TInput, TOutput> {
+    let current: { reject(reason: unknown): void; token: symbol } | undefined;
     let terminated = false;
 
     return {
-      cancel(): void {
-        // No-op: in-process tasks cannot be cancelled mid-flight.
+      cancel(reason: unknown): void {
+        current?.reject(reason);
+        current = undefined;
       },
-
-      prime(): Promise<void> {
-        return Promise.resolve();
-      },
-
-      async run(input: TInput, _transferables: Transferable[], _timeout: number | undefined): Promise<TOutput> {
+      prime: () => Promise.resolve(),
+      run(input, transferables, timeoutMs): Promise<TOutput> {
         if (terminated) return Promise.reject(new FamiliarTerminatedError());
 
+        let clonedInput: TInput;
+
         try {
-          const output = await fn(input);
-
-          calls.push({ input, output });
-
-          return output;
-        } catch (e) {
-          if (!errorWrapping) throw e;
-
-          const err = e instanceof Error ? e : new Error(String(e));
-
-          throw new FamiliarTaskError(err.message, { cause: err });
+          clonedInput = structuredClone(input, { transfer: transferables });
+        } catch (error) {
+          return Promise.reject(new FamiliarTaskError('Failed to clone task input', { cause: error }));
         }
-      },
 
-      runStream(_input: TInput, _transferables: Transferable[], _timeout: number | undefined): AsyncIterable<TOutput> {
-        return {
-          [Symbol.asyncIterator]() {
-            return {
-              next(): Promise<IteratorResult<TOutput>> {
-                return Promise.reject(new FamiliarRuntimeError('runStream() is not supported by createTestWorker'));
+        return new Promise<TOutput>((resolve, reject) => {
+          const token = Symbol('task');
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          const settle = (fn: (value: TOutput) => void, value: TOutput): void => {
+            if (current?.token !== token) return;
+
+            current = undefined;
+
+            if (timer) clearTimeout(timer);
+
+            fn(value);
+          };
+          const rejectTask = (reason: unknown): void => {
+            if (current?.token !== token) return;
+
+            current = undefined;
+
+            if (timer) clearTimeout(timer);
+
+            calls.push({ input: clonedInput, reason, status: 'rejected' });
+            reject(reason);
+          };
+
+          current = { reject: rejectTask, token };
+
+          if (timeoutMs !== undefined) {
+            timer = setTimeout(() => rejectTask(new FamiliarTimeoutError(timeoutMs)), timeoutMs);
+          }
+
+          void Promise.resolve()
+            .then(() => handler(clonedInput))
+            .then(
+              (output) => {
+                let clonedOutput: TOutput;
+
+                try {
+                  clonedOutput = structuredClone(output);
+                } catch (error) {
+                  rejectTask(new FamiliarTaskError('Failed to clone task output', { cause: error }));
+
+                  return;
+                }
+
+                if (current?.token !== token) return;
+
+                calls.push({ input: clonedInput, status: 'fulfilled', value: clonedOutput });
+                settle(resolve, clonedOutput);
               },
-            };
-          },
-        };
-      },
+              (error: unknown) => {
+                const cause = error instanceof Error ? error : new Error(String(error));
 
+                rejectTask(new FamiliarTaskError(cause.message, { cause }));
+              },
+            );
+        });
+      },
       terminate(): void {
         terminated = true;
+        current?.reject(new FamiliarTerminatedError());
+        current = undefined;
       },
     };
   }
 
-  const slots = Array.from({ length: concurrency }, makeSlot);
-
-  const pool = createPool(slots, {
+  const pool = createPool(Array.from({ length: concurrency }, makeSlot), {
     concurrency,
-    defaultTimeout: undefined,
+    defaultTimeout: timeout,
     maxQueue,
     onFull,
   });
 
-  // Use Object.defineProperty so the `calls` getter is a true accessor descriptor.
   Object.defineProperty(pool, 'calls', {
     enumerable: true,
-    get(): ReadonlyArray<{ input: TInput; output: TOutput }> {
-      return calls;
-    },
+    get: () => calls as ReadonlyArray<TestWorkerCall<TInput, TOutput>>,
   });
 
-  return pool as unknown as TestWorkerHandle<TInput, TOutput>;
+  return pool as TestWorkerHandle<TInput, TOutput>;
 }
 
-// Re-export types consumed by test files so they don't need to import from two places.
-export type { WorkerHandle, WorkerStatus };
+export type { WorkerPool } from '../types';
 export {
   FamiliarError,
   FamiliarInvalidOptionsError,

@@ -1,6 +1,6 @@
 ---
 title: Familiar — Examples
-description: Practical examples and recipes for familiar.
+description: Module-worker recipes for familiar.
 ---
 
 ## Examples
@@ -11,7 +11,7 @@ description: Practical examples and recipes for familiar.
 - [Using Transferables](./examples/using-transferables.md)
 - [Cancellable Batch](./examples/cancellable-batch.md)
 - [Priority Queue](./examples/priority-queue.md)
-- [Streaming With runStream](./examples/streaming-with-runstream.md)
+- [Streaming With Stream Worker](./examples/streaming-with-runstream.md)
 - [Module Worker](./examples/module-worker.md)
 - [Typed Error Handling](./examples/typed-error-handling.md)
 - [React Integration](./examples/react-integration.md)

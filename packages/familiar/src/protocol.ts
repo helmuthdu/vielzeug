@@ -1,103 +1,79 @@
-/**
- * Host↔worker message protocol helpers for module worker files.
- *
- * Import this sub-path in module worker files to implement the protocol
- * without manual boilerplate.
- *
- * @example
- * // my-worker.ts
- * import { handleMessages } from '@vielzeug/familiar/protocol';
- * handleMessages(async (input: number) => input * 2);
- */
+/** Current host-to-worker protocol version. */
+export const PROTOCOL_VERSION = 1 as const;
 
-/**
- * Current host↔worker message protocol version.
- * Increment when the protocol changes in a breaking way.
- * The host does not validate this value at runtime — it is a debugging convention only.
- * @internal
- */
-export const PROTOCOL_VERSION = 2 as const;
+export type SerializedError = {
+  message: string;
+  name: string;
+  stack?: string;
+};
 
-type ProtocolMessage<TInput> = { id: number; input: TInput };
+export type WorkerRequest<TInput> =
+  | { id: number; input: TInput; kind: 'run'; version: typeof PROTOCOL_VERSION }
+  | { id: number; input: TInput; kind: 'stream'; version: typeof PROTOCOL_VERSION };
 
-type ErrorPayload = { message: string; name: string; stack?: string };
+export type WorkerResponse<TOutput> =
+  | { id: number; kind: 'chunk'; value: TOutput; version: typeof PROTOCOL_VERSION }
+  | { error: SerializedError; id: number; kind: 'error'; version: typeof PROTOCOL_VERSION }
+  | { id: number; kind: 'result'; value: TOutput; version: typeof PROTOCOL_VERSION };
 
-function serializeError(e: unknown): ErrorPayload {
-  const err = e instanceof Error ? e : new Error(String(e));
+export type TaskHandler<TInput, TOutput> = (input: TInput) => TOutput | Promise<TOutput>;
 
-  return { message: err.message, name: err.name, stack: err.stack };
+export type StreamHandler<TInput, TChunk> = (input: TInput) => AsyncIterable<TChunk> | Promise<AsyncIterable<TChunk>>;
+
+function serializeError(error: unknown): SerializedError {
+  const value = error instanceof Error ? error : new Error(String(error));
+
+  return { message: value.message, name: value.name, stack: value.stack };
 }
 
-/**
- * Sets up the `self.onmessage` handler for a module worker.
- * Handles the `{ id, input }` → `{ id, result }` / `{ id, error }` protocol automatically.
- *
- * Errors from `fn` are caught and forwarded as structured `{ id, error }` messages so the
- * host can reconstruct them as `FamiliarTaskError`. Non-Error throws are wrapped in an Error.
- *
- * @example
- * // my-worker.ts
- * import { handleMessages } from '@vielzeug/familiar/protocol';
- *
- * handleMessages(async (input: { a: number; b: number }) => input.a + input.b);
- */
-export function handleMessages<TInput, TOutput>(fn: (input: TInput) => TOutput | Promise<TOutput>): void {
-  (self as unknown as { onmessage: (event: MessageEvent<ProtocolMessage<TInput>>) => void }).onmessage = async (
-    event,
-  ) => {
+function isRequest(value: unknown): value is WorkerRequest<unknown> {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const request = value as Partial<WorkerRequest<unknown>>;
+
+  return typeof request.id === 'number' && (request.kind === 'run' || request.kind === 'stream') && 'input' in request;
+}
+
+function post<TOutput>(message: WorkerResponse<TOutput>): void {
+  (self as unknown as { postMessage(data: WorkerResponse<TOutput>): void }).postMessage(message);
+}
+
+function postError(id: number, error: unknown): void {
+  post({ error: serializeError(error), id, kind: 'error', version: PROTOCOL_VERSION });
+}
+
+/** Register a module worker that handles one request and returns one result. */
+export function exposeTask<TInput, TOutput>(handler: TaskHandler<TInput, TOutput>): void {
+  (self as unknown as { onmessage: (event: MessageEvent<unknown>) => void }).onmessage = async (event) => {
+    if (!isRequest(event.data) || event.data.version !== PROTOCOL_VERSION || event.data.kind !== 'run') return;
+
     const { id, input } = event.data;
 
     try {
-      const result = await fn(input);
+      const value = await handler(input as TInput);
 
-      (self as unknown as { postMessage: (data: unknown) => void }).postMessage({ id, result });
-    } catch (e) {
-      (self as unknown as { postMessage: (data: unknown) => void }).postMessage({ error: serializeError(e), id });
+      post({ id, kind: 'result', value, version: PROTOCOL_VERSION });
+    } catch (error) {
+      postError(id, error);
     }
   };
 }
 
-type StreamProtocolMessage<TInput> = { id: number; input: TInput; stream: true };
+/** Register a module worker that yields chunks for each request. */
+export function exposeStream<TInput, TChunk>(handler: StreamHandler<TInput, TChunk>): void {
+  (self as unknown as { onmessage: (event: MessageEvent<unknown>) => void }).onmessage = async (event) => {
+    if (!isRequest(event.data) || event.data.version !== PROTOCOL_VERSION || event.data.kind !== 'stream') return;
 
-/**
- * Sets up the `self.onmessage` handler for a streaming module worker.
- * The task function must return an `AsyncIterable<TOutput>`; each yielded value is forwarded
- * as a `{ id, chunk }` message, followed by `{ id, result: undefined }` on completion.
- *
- * Mirrors the inline blob worker streaming protocol so `runStream()` works with module workers.
- * Errors are forwarded as `{ id, error }` messages.
- *
- * @example
- * // my-streaming-worker.ts
- * import { handleStreamMessages } from '@vielzeug/familiar/protocol';
- *
- * handleStreamMessages(async function* (n: number) {
- *   for (let i = 0; i < n; i++) {
- *     yield i;
- *   }
- * });
- */
-export function handleStreamMessages<TInput, TOutput>(
-  fn: (input: TInput) => AsyncIterable<TOutput> | Promise<AsyncIterable<TOutput>>,
-): void {
-  const _self = self as unknown as {
-    onmessage: (event: MessageEvent<StreamProtocolMessage<TInput>>) => void;
-    postMessage: (data: unknown) => void;
-  };
-
-  _self.onmessage = async (event) => {
     const { id, input } = event.data;
 
     try {
-      const iterable = await fn(input);
-
-      for await (const chunk of iterable) {
-        _self.postMessage({ chunk, id });
+      for await (const value of await handler(input as TInput)) {
+        post({ id, kind: 'chunk', value, version: PROTOCOL_VERSION });
       }
 
-      _self.postMessage({ id, result: undefined });
-    } catch (e) {
-      _self.postMessage({ error: serializeError(e), id });
+      post({ id, kind: 'result', value: undefined as never, version: PROTOCOL_VERSION });
+    } catch (error) {
+      postError(id, error);
     }
   };
 }

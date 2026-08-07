@@ -1,57 +1,43 @@
 ---
-title: 'Familiar Examples — Image Processing'
-description: 'Image Processing example for @vielzeug/familiar.'
+title: Image Processing
+description: Transfer image pixels to a module-worker pool.
 ---
 
 ## Image Processing
 
 ### Problem
 
-Decoding, filtering, or resizing image data on the main thread causes frame drops. The binary buffer must be sent to a worker, processed, and the result returned — with the UI remaining responsive throughout.
+Image transforms should not block rendering or duplicate large buffers.
 
 ### Solution
 
-Process images off the main thread to avoid frame drops:
+Transfer image buffer into a worker module.
 
 ```ts
 import { createWorker } from '@vielzeug/familiar';
 
-type ImageTask = { pixels: Uint8ClampedArray; width: number; height: number };
-type ImageResult = { pixels: Uint8ClampedArray };
+type ImageTask = { height: number; pixels: Uint8ClampedArray; width: number };
+type ImageResult = ImageTask;
 
-const imagePool = createWorker<ImageTask, ImageResult>(
-  ({ pixels, width, height }) => {
-    const output = new Uint8ClampedArray(pixels.length);
-    for (let i = 0; i < pixels.length; i += 4) {
-      const gray = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
-      output[i] = output[i + 1] = output[i + 2] = gray;
-      output[i + 3] = pixels[i + 3];
-    }
-    return { pixels: output };
-  },
-  { concurrency: 2 },
-);
+const pool = createWorker<ImageTask, ImageResult>(new URL('./grayscale.worker.ts', import.meta.url), { concurrency: 2 });
+const imageData = new ImageData(1, 1);
 
-async function convertToGrayscale(imageData: ImageData): Promise<ImageData> {
-  const { pixels } = await imagePool.run({
-    pixels: imageData.data,
-    width: imageData.width,
-    height: imageData.height,
-  });
-  return new ImageData(pixels, imageData.width, imageData.height);
+try {
+  const result = await pool.run(
+    { pixels: imageData.data, width: imageData.width, height: imageData.height },
+    { transferables: [imageData.data.buffer] },
+  );
+  console.log(result);
+} finally {
+  pool.dispose();
 }
-
-// Don't forget to dispose when done:
-// imagePool.dispose();
 ```
 
 ### Pitfalls
 
-- Not using transferables — `imageData.data` is structured-cloned into the worker, doubling memory usage for large images. Pass `imageData.data.buffer` as a transferable instead; see [Using Transferables](./using-transferables.md).
-- Calling `imagePool.dispose()` while multiple `convertToGrayscale` calls are still in flight terminates all in-progress tasks with `FamiliarTerminatedError`. Dispose only after all outstanding promises have settled.
+- Transferred buffers detach in caller.
+- Worker output must remain structured-cloneable.
 
 ### Related
 
-- [Using Transferables](./using-transferables.md) — reduce memory overhead by transferring pixel buffers
-- [Cancellable Batch](./cancellable-batch.md) — cancel in-flight image tasks on navigation
-- [Data Transformation Pipeline](./data-transformation-pipeline.md) — apply sequential transforms to a dataset
+- [Using Transferables](./using-transferables.md)

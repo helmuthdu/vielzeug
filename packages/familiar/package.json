@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/familiar",
   "version": "1.0.8",
-  "description": "Typed Web Worker pool with task queuing, streaming, AbortSignal cancellation, and heartbeat",
+  "description": "Typed ES module Worker pools with queueing, streaming, and AbortSignal cancellation",
   "type": "module",
   "files": [
     "dist"

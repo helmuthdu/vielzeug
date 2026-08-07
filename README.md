@@ -358,7 +358,7 @@ pnpm add @vielzeug/herald
 
 ### [@vielzeug/familiar](packages/familiar) – Web Worker Pool
 
-Run CPU-intensive tasks off the main thread with a typed Web Worker pool and automatic fallback.
+Run CPU-intensive module-worker tasks off main thread with typed pooling, cancellation, and explicit lifecycle.
 
 ```bash
 pnpm add @vielzeug/familiar
@@ -366,12 +366,12 @@ pnpm add @vielzeug/familiar
 
 **Key Features:**
 
-- `createWorker(fn)` — serialize a function and run it in a dedicated Web Worker
-- `createWorker(fn, { size })` — concurrent worker pool with configurable size
-- Timeout support and task cancellation via `AbortSignal`
-- Graceful fallback to main-thread execution when Workers are unavailable
-- `createTestWorker()` helper for unit testing without Worker infrastructure
-- Zero dependencies
+- `createWorker(url)` — typed pool backed by an ES module worker
+- `exposeTask()` / `exposeStream()` — one versioned worker protocol
+- Timeout and `AbortSignal` cancellation for waiting, queued, and active work
+- `batch()` and `createTaskGroup()` — task-pool composition helpers
+- `createTestWorker()` — faithful in-process task-pool testing
+- No third-party runtime dependencies
 
 [📖 Documentation](https://vielzeug.dev/familiar/) • [Examples](https://vielzeug.dev/familiar/examples)
 

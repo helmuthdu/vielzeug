@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Replace inline workers with module-worker pools",
+      "packageName": "@vielzeug/familiar",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/familiar"
+}

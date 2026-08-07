@@ -1,55 +1,47 @@
 ---
-title: 'Familiar Examples — Fibonacci with Pool and Timeout'
-description: 'Fibonacci with Pool and Timeout example for @vielzeug/familiar.'
+title: Fibonacci With Pool And Timeout
+description: Bound CPU work with a module-worker timeout.
 ---
 
-## Fibonacci with Pool and Timeout
+## Fibonacci With Pool And Timeout
 
 ### Problem
 
-A recursive CPU-bound computation (e.g., Fibonacci) can run arbitrarily long with a large input. You need to run it off the main thread and terminate it if it exceeds a time budget.
+Expensive recursive computation needs a latency limit.
 
 ### Solution
 
-Classic CPU-bound example with a safety timeout:
+Put recursion in worker module and configure task timeout.
 
 ```ts
-import { createWorker, FamiliarTimeoutError } from '@vielzeug/familiar';
+// fib.worker.ts
+import { exposeTask } from '@vielzeug/familiar/protocol';
 
-const fibPool = createWorker<number, number>(
-  function fib(n) {
-    if (n <= 1) return n;
-    return fib(n - 1) + fib(n - 2);
-  },
-  { concurrency: 4, timeout: 5000 },
-);
-
-async function computeFibonacci(n: number): Promise<number | null> {
-  try {
-    return await fibPool.run(n);
-  } catch (error) {
-    if (error instanceof FamiliarTimeoutError) {
-      console.error(`Fibonacci(${n}) exceeded ${error.timeoutMs}ms timeout`);
-      return null;
-    }
-    throw error;
-  }
+function fib(value: number): number {
+  return value <= 1 ? value : fib(value - 1) + fib(value - 2);
 }
 
-// Usage
-const inputs = [30, 32, 34, 36, 38, 40];
-const results = await Promise.all(inputs.map((n) => computeFibonacci(n)));
-console.log(results);
+exposeTask(fib);
+```
 
-fibPool.dispose();
+```ts
+import { createWorker } from '@vielzeug/familiar';
+
+const pool = createWorker<number, number>(new URL('./fib.worker.ts', import.meta.url), { concurrency: 4, timeout: 5_000 });
+
+try {
+  const result = await pool.run(35);
+  console.log(result);
+} finally {
+  pool.dispose();
+}
 ```
 
 ### Pitfalls
 
-- Set `timeout` based on the largest input you expect, not an arbitrary constant. Fibonacci is exponential — `fib(40)` can take several seconds on a slow device, so a 1-second timeout would silently discard valid results.
-- Avoid passing an arrow function that references a helper defined outside `createWorker`. The function is serialized via `.toString()` and runs in an isolated scope, so outer-scope names are `undefined` at runtime. Keep all helpers inside the task function body.
+- Timeout terminates worker slot and rejects with `FamiliarTimeoutError`.
+- Set deadline from expected input limits.
 
 ### Related
 
-- [Cancellable Batch](./cancellable-batch.md) — abort a group of tasks when results are no longer needed
-- [Data Transformation Pipeline](./data-transformation-pipeline.md) — processing multiple inputs across a pool
+- [Typed Error Handling](./typed-error-handling.md)

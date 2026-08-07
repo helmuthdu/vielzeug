@@ -1,167 +1,87 @@
 import type { FamiliarRuntimeError } from './errors';
 
-// ─── Core types ───────────────────────────────────────────────────────────────
-
-export type TaskFn<TInput, TOutput> = (input: TInput) => TOutput | Promise<TOutput>;
-
 export type WorkerStatus = 'idle' | 'running' | 'terminated';
 
-// ─── SlotStrategy — execution abstraction ────────────────────────────────────
-
-/**
- * Execution abstraction consumed by `createPool`.
- * Implementors: `Slot` (real worker) and in-process executor (test double).
- */
-export type SlotStrategy<TInput, TOutput> = {
-  /**
-   * Cancel the current in-flight task and stop the underlying worker without marking the slot as
-   * permanently disposed. The slot can be reused immediately — a fresh worker will be created on
-   * the next run() or runStream() call. Used for streaming early consumer exit (break/throw).
-   */
-  cancel(): void;
-  prime(): Promise<void>;
-  run(input: TInput, transferables: Transferable[], timeout: number | undefined): Promise<TOutput>;
-  runStream(input: TInput, transferables: Transferable[], timeout: number | undefined): AsyncIterable<TOutput>;
-  terminate(): void;
+export type WorkerStats = {
+  readonly active: number;
+  readonly completed: number;
+  readonly failed: number;
+  readonly queued: number;
 };
 
-// ─── RunOptions ───────────────────────────────────────────────────────────────
+export type WorkerOptions = {
+  /** Number of worker slots. Default: 1. Pass 'auto' to use navigator.hardwareConcurrency. */
+  concurrency?: number | 'auto';
+  /** Maximum queued operations. Default: unlimited. */
+  maxQueue?: number;
+  /** Reject new work or wait for queue capacity. Default: 'reject'. */
+  onFull?: 'reject' | 'wait';
+  /** Called after an unhandled worker runtime error. The failed slot is replaced lazily. */
+  onSlotError?: (error: FamiliarRuntimeError) => void;
+  /** Default timeout in milliseconds. Timed-out work terminates and replaces its worker slot. */
+  timeout?: number;
+};
 
 export type RunOptions = {
-  /**
-   * Task scheduling priority. Higher values run before lower values when tasks queue up.
-   * Within the same priority, tasks run FIFO. Default: 0.
-   */
+  /** Higher values run before lower values. Equal values run FIFO. Default: 0. */
   priority?: number;
-  /** AbortSignal to cancel a queued task. Note: in-flight tasks cannot be cancelled. */
+  /** Cancels queued, capacity-waiting, or executing work. */
   signal?: AbortSignal;
-  /** Per-run timeout in milliseconds. Overrides the pool-level timeout for this task only. */
+  /** Per-operation timeout in milliseconds. Overrides WorkerOptions.timeout. */
   timeout?: number;
-  /** Transferable objects to move to the worker thread (avoids structured-clone copy). */
+  /** Values transferred to the worker instead of structured-cloned. */
   transferables?: Transferable[];
 };
 
-export type BatchOptions = Omit<RunOptions, 'signal'> & {
-  /**
-   * When false, results are yielded as each task completes (out-of-submission order, maximum
-   * throughput). Default: true (results are yielded in submission order).
-   */
-  ordered?: boolean;
-};
-
-// ─── WorkerOptions ────────────────────────────────────────────────────────────
-
-export type WorkerOptions = {
-  /** Number of concurrent worker slots. Default: 1. Pass 'auto' to use navigator.hardwareConcurrency. */
-  concurrency?: number | 'auto';
-  /**
-   * Watchdog window in milliseconds applied to every task in the pool.
-   * If the worker does not send a heartbeat message within this window, the task is
-   * killed with FamiliarTimeoutError. Useful for long-running CPU tasks that must stay responsive.
-   * For inline workers the heartbeat is sent automatically at heartbeatWindow / 2 intervals.
-   * Module workers must implement the heartbeat protocol manually.
-   */
-  heartbeatWindow?: number;
-  /** Maximum queued tasks. When onFull='reject', exceeding this limit rejects with FamiliarQueueFullError. Default: unlimited. */
-  maxQueue?: number;
-  /**
-   * When 'wait', run() suspends the caller when the queue is full instead of rejecting.
-   * Useful for large producer→consumer pipelines to apply natural backpressure. Default: 'reject'.
-   */
-  onFull?: 'reject' | 'wait';
-  /**
-   * Called when a Worker slot encounters an unhandled runtime error (worker.onerror).
-   * The slot stops automatically; call restart() to pre-warm the replacement Worker.
-   * If omitted, errors are handled silently and the slot restarts on the next run() call.
-   */
-  onSlotError?: (error: FamiliarRuntimeError, restart: () => void) => void;
-  /** Default task timeout in milliseconds. Can be overridden per-run via RunOptions. Default: none. */
+export type DrainOptions = {
+  /** Maximum time to wait before terminating remaining work. */
   timeout?: number;
 };
 
-// ─── WorkerHandle — flat interface ────────────────────────────────────────────
-
-/**
- * Full handle returned by `createWorker` and `createModuleWorker`.
- * All capabilities are on one flat interface — no need to cross-reference mixin types.
- */
-export interface WorkerHandle<TInput, TOutput> {
-  /** Graceful drain — delegates to `drain()`. Enables `await using` declarations. */
+export interface WorkerPool<TInput, TOutput> {
   [Symbol.asyncDispose](): Promise<void>;
-  /** Immediate terminate — delegates to `dispose()`. Enables `using` declarations. */
   [Symbol.dispose](): void;
-  /** Number of slots currently executing a task. */
-  readonly active: number;
-  /**
-   * Run all inputs through the pool and yield results.
-   * By default yields in submission order. Pass ordered: false to yield as-completed.
-   */
-  batch(inputs: TInput[], options?: BatchOptions): AsyncIterable<TOutput>;
-  /** Number of successfully completed tasks since creation. */
-  readonly completed: number;
-  /** Number of worker slots. */
-  readonly concurrency: number;
-  /** `AbortSignal` aborted when the pool is terminated (via `dispose()` or `drain()` settling). */
-  readonly disposalSignal: AbortSignal;
-  /** Terminate immediately, rejecting all in-flight and queued tasks. */
-  dispose(): void;
-  /** `true` after `dispose()` has been called or `drain()` has settled. */
   readonly disposed: boolean;
-  /** Gracefully drain queued/in-flight tasks then terminate workers. Rejects if timeoutMs elapses. */
-  drain(timeoutMs?: number): Promise<void>;
-  /** Number of tasks that failed with a task / timeout / worker error (excludes aborts and terminations). */
-  readonly failed: number;
-  /** Create a task group. All tasks share an AbortController and can be drained together. */
-  group(name?: string, options?: GroupOptions): TaskGroup<TInput, TOutput>;
-  /** Number of active groups (created but not yet fully drained or aborted). */
-  readonly groupCount: number;
-  /** Pre-initialize all worker slots to reduce first-task latency. */
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  drain(options?: DrainOptions): Promise<void>;
   prime(): Promise<void>;
-  /** Number of queued tasks waiting to run (excludes cancelled/aborted items). */
-  readonly queued: number;
-  /** Execute the task. Tasks are queued when all slots are busy. */
   run(input: TInput, options?: RunOptions): Promise<TOutput>;
-  /**
-   * Run a streaming task and yield partial results as they arrive.
-   * The worker function must return an async iterable; each yielded value is forwarded as a chunk.
-   *
-   * Unlike run(), streaming tasks cannot be queued — they require an immediately available slot.
-   * Throws FamiliarRuntimeError synchronously if all slots are busy.
-   * Note: `signal` is not supported for streaming tasks (cannot be queued); use `break` to stop early.
-   */
-  runStream(input: TInput, options?: Omit<RunOptions, 'signal'>): AsyncIterable<TOutput>;
-  /** Current lifecycle state of the pool. */
+  readonly stats: WorkerStats;
   readonly status: WorkerStatus;
 }
 
-// ─── TaskGroup ────────────────────────────────────────────────────────────────
+export interface StreamWorkerPool<TInput, TChunk> {
+  [Symbol.asyncDispose](): Promise<void>;
+  [Symbol.dispose](): void;
+  readonly disposed: boolean;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  drain(options?: DrainOptions): Promise<void>;
+  prime(): Promise<void>;
+  runStream(input: TInput, options?: RunOptions): AsyncIterable<TChunk>;
+  readonly stats: WorkerStats;
+  readonly status: WorkerStatus;
+}
 
-export type GroupOptions = {
-  /**
-   * When this signal is aborted, the group is aborted automatically.
-   * Composable with `WorkerHandle.disposalSignal` to tie the group lifetime to the pool.
-   */
+export type BatchOptions = RunOptions;
+
+export type TaskGroup<TInput, TOutput> = {
+  abort(reason?: unknown): void;
+  drain(): Promise<PromiseSettledResult<TOutput>[]>;
+  readonly name: string | undefined;
+  readonly pending: number;
+  run(input: TInput, options?: Omit<RunOptions, 'signal'>): Promise<TOutput>;
+  readonly size: number;
+};
+
+export type TaskGroupOptions = {
   signal?: AbortSignal;
 };
 
-export type TaskGroup<TInput, TOutput> = {
-  /** Cancel all pending tasks in this group. In-flight tasks run to natural completion. */
-  abort(reason?: unknown): void;
-  /**
-   * Wait for all tasks submitted so far to settle.
-   * Returns settled results — both fulfilled values and rejection reasons.
-   * Tasks added after drain() starts are not included in this call.
-   */
-  drain(): Promise<PromiseSettledResult<TOutput>[]>;
-  /** Optional name provided when the group was created. */
-  readonly name: string | undefined;
-  /** Number of tasks not yet settled (decrements as tasks complete). */
-  readonly pending: number;
-  /**
-   * Submit a task to the pool, associating it with this group.
-   * Throws `FamiliarTerminatedError` synchronously if the pool has been disposed or is closing.
-   */
-  run(input: TInput, options?: Omit<RunOptions, 'signal'>): Promise<TOutput>;
-  /** Total number of tasks ever submitted to this group (never decrements). */
-  readonly size: number;
+export type SlotStrategy<TInput, TOutput> = {
+  cancel(reason: unknown): void;
+  prime(): Promise<void>;
+  run(input: TInput, transferables: Transferable[], timeout: number | undefined): Promise<TOutput>;
+  terminate(): void;
 };

@@ -11,7 +11,7 @@ export class FamiliarError extends Error {
   }
 }
 
-/** Thrown when invalid options are passed to `createWorker` or `createModuleWorker`. */
+/** Thrown when invalid options are passed to a Familiar pool factory. */
 export class FamiliarInvalidOptionsError extends FamiliarError {}
 
 /** Thrown when run() is called and the queue is full (`onFull='reject'`). */

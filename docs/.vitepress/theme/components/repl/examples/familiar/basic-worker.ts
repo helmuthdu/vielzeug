@@ -1,14 +1,8 @@
-export const basicWorkerExample = {
-  code: `import { createWorker, task } from '@vielzeug/familiar'
+export const protocolErrorExample = {
+  code: `import { FamiliarTimeoutError } from '@vielzeug/familiar'
 
-// Single-slot worker (concurrency=1 by default)
-const upper = task((text) => text.toUpperCase())
-const worker = createWorker(upper)
-
-console.log(await worker.run('hello'))
-console.log(await worker.run('world'))
-
-console.log('completed:', worker.completed)
-worker.dispose()`,
-  name: 'Basic Worker',
+const error = new FamiliarTimeoutError(500)
+console.log(error.name)
+console.log(error.timeoutMs)`,
+  name: 'Familiar Error Contracts',
 };
