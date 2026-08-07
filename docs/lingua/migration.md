@@ -6,6 +6,15 @@ title: Lingua 2.0 Migration
 
 Lingua 2.0 uses explicit locale catalogs and replaces the 1.x I18n API.
 
+| Before | After |
+| --- | --- |
+| `createI18n(options)` | `createTranslationStore({ catalogs, ...options })` |
+| `hydrateI18n(state)` | `hydrateTranslationStore(state)` |
+| `I18n` / `I18nSnapshot` | `TranslationStore` / `TranslationSnapshot` |
+| `I18nState` version `2` | `TranslationState` version `3` |
+| Named resources and namespaces | One catalog source per locale |
+| `LinguaMissingResourceError` | `LinguaMissingCatalogError` |
+
 ## Replace store creation and hydration
 
 ```ts

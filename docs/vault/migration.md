@@ -12,6 +12,16 @@ Vault 2.0 redesigns storage around portable keys, fixed envelopes, capability-sp
 - Remove codecs and versioned codecs. Start a new storage namespace or migrate data outside Vault before construction.
 - Move atomic code to `createIndexedDB().batch()`.
 
+## Replace removed APIs
+
+| Before | After |
+| --- | --- |
+| `Adapter` / `MemoryAdapter` | `VaultStore` from `createMemory()`, `createLocalStorage()`, or `createSessionStorage()` |
+| `IndexedDbAdapter` | `IndexedDbVaultStore` from `createIndexedDB()` |
+| Codecs and versioned codecs | Fixed envelopes; migrate existing encoded data before construction |
+| `watch`, `observeMany`, signals, and streams | Per-table `store.observe()` |
+| Atomic adapter operations | `createIndexedDB().batch()` |
+
 ## Move to portable keys and fixed envelopes
 
 Update persisted records and key construction to the 2.0 portable-key and fixed-envelope contracts. Plan and test data migration before deploying the new storage format.

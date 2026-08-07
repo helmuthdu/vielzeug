@@ -126,6 +126,7 @@ if (!result.ok && result.type === 'validation') console.log(result.errors);
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [Migration Guide](./migration.md)
 
 </div>
 

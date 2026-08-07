@@ -91,6 +91,10 @@ Use `---` to separate top-level API entries within a group.
 
 Diátaxis role: **Navigation only**. No prose next to links — titles must be self-explanatory. No `#` heading. List recipes basic → advanced.
 
+## `migration.md` — Breaking Migration Guide
+
+Create this page whenever a package has a breaking public API release. Keep migration guidance out of `usage.md`, `api.md`, and recipes so current-version documentation stays focused. Model the page on `docs/arsenal/migration.md`: name the target major version in frontmatter and heading, organize it by removed or changed contract, and show concise Before/After code for every migration path. Link it from the package overview's Documentation section.
+
 ## `examples/<slug>.md` — Individual Recipes
 
 Diátaxis type: **How-to**, problem-oriented. Self-contained and copy-paste ready.
@@ -114,5 +118,6 @@ Run before declaring a docs pass done:
 - [ ] Each `examples/*.md` has Problem/Solution/Pitfalls/Related
 - [ ] No dead internal links (`](./` targets all exist)
 - [ ] No references to removed APIs
+- [ ] Breaking releases have a standalone `migration.md` linked from the package overview
 - [ ] Sidebar config (`docs/.vitepress/config.ts`) updated if examples were added/removed
 - [ ] If `src/_dev.ts` exists, `@security` JSDoc tags are present on messages carrying user-supplied data

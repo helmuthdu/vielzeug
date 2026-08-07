@@ -38,6 +38,7 @@ npx -y @vielzeug/codex
 - [Usage](./usage.md)
 - [API](./api.md)
 - [Examples](./examples.md)
+- [Migration Guide](./migration.md)
 
 ## See Also
 

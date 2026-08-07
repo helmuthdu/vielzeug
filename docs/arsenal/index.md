@@ -105,6 +105,7 @@ console.log(pages, byRole, health, profile);
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [Migration Guide](./migration.md)
 
 </div>
 

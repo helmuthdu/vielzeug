@@ -62,7 +62,3 @@ const schema = { sessions: table<Session>('id').ttl(ttl.hours(1)).index('userId'
 ```
 
 `ttl.ms`, `seconds`, `minutes`, `hours`, and `days` return branded positive durations. IndexedDB indexes always target `value.<field>` because the storage envelope is fixed.
-
-## Migration from Vault 1
-
-`Adapter`, `MemoryAdapter`, `IndexedDbAdapter`, codecs, `watch`, `observeMany`, constructor signals, and `toReadableStream` are removed. Use `VaultStore`, `IndexedDbVaultStore`, fixed envelopes, and `observe()` instead. Existing custom-encoded data must be migrated or cleared before use with this release.
