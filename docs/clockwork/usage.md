@@ -302,9 +302,9 @@ onDestroy(stop);
 Use Herald when separate actors exchange application events. Bridge Clockwork snapshots into Ripple only at a UI or application boundary.
 
 ```ts
-import { createEventBus } from '@vielzeug/herald';
+import { createBus } from '@vielzeug/herald';
 
-const bus = createEventBus<{ type: 'REFRESH' }>();
+const bus = createBus<{ REFRESH: void }>();
 bus.on('REFRESH', () => actor.send({ type: 'FETCH' }));
 ```
 

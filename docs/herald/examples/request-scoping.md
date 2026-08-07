@@ -27,7 +27,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
 ### Pitfalls
 
-- Reusing one bus and calling `removeAllListeners()` between requests is not safe — it can remove listeners registered by a concurrent request. Create a new bus per request instead.
+- Reusing one bus across requests is not safe — subscriptions from concurrent requests can cross boundaries. Create and dispose one bus per request instead.
 - Not calling `dispose()` at the end of the request handler leaks the bus. Ensure disposal runs in a `finally` block so it fires even when the handler throws.
 - Passing the scoped bus through function arguments is safer than storing it on a shared object where concurrent requests can accidentally share a reference.
 

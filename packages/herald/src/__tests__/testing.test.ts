@@ -354,61 +354,6 @@ describe('createTestBus - on() SubscribeOptions forwarding', () => {
   });
 });
 
-describe('createTestBus - removeAllListeners()', () => {
-  it('removes all on() listeners for the given event', () => {
-    const bus = createTestBus<TestEvents>();
-    const a = vi.fn();
-    const b = vi.fn();
-
-    bus.on('count', a);
-    bus.on('count', b);
-    bus.removeAllListeners('count');
-    bus.emit('count', 1);
-
-    expect(a).not.toHaveBeenCalled();
-    expect(b).not.toHaveBeenCalled();
-
-    bus.dispose();
-  });
-
-  it('does not affect listeners on other events', () => {
-    const bus = createTestBus<TestEvents>();
-    const countListener = vi.fn();
-    const greetListener = vi.fn();
-
-    bus.on('count', countListener);
-    bus.on('greet', greetListener);
-    bus.removeAllListeners('count');
-    bus.emit('count', 1);
-    bus.emit('greet', { name: 'Alice' });
-
-    expect(countListener).not.toHaveBeenCalled();
-    expect(greetListener).toHaveBeenCalledOnce();
-
-    bus.dispose();
-  });
-
-  it('is a no-op when no listeners are registered for the event', () => {
-    const bus = createTestBus<TestEvents>();
-
-    expect(() => bus.removeAllListeners('count')).not.toThrow();
-
-    bus.dispose();
-  });
-
-  it('preserves emitted records after removing listeners', () => {
-    const bus = createTestBus<TestEvents>();
-
-    bus.on('count', vi.fn());
-    bus.emit('count', 42);
-    bus.removeAllListeners('count');
-
-    expect(bus.emitted('count')).toEqual([42]);
-
-    bus.dispose();
-  });
-});
-
 describe('createTestBus - Bus API passthrough', () => {
   it('supports on/off via returned unsubscribe', () => {
     const bus = createTestBus<TestEvents>();

@@ -1,7 +1,6 @@
-import type { Bus, BusOptions, EventKey, EventMap, SubscribeOptions } from '..';
+import type { Bus, BusOptions, EventKey, EventMap } from '..';
 import type { InternalBusOptions } from '../bus';
 
-import { makeBusDelegate } from '../_delegate';
 import { isUnsafeObjectKey } from '../_prototype';
 import { createBus } from '../bus';
 
@@ -13,16 +12,12 @@ export type TestBus<T extends EventMap> = Bus<T> & {
   emitted<K extends EventKey<T>>(event: K): T[K][];
   /** Number of times the given event was successfully dispatched. Shorthand for `emitted(event).length`. */
   emittedCount<K extends EventKey<T>>(event: K): number;
-  /** Unsubscribe all listeners for the given event. Emission records are preserved. */
-  removeAllListeners<K extends EventKey<T>>(event: K): void;
   /** Clear emitted records without disposing the bus. */
   reset(): void;
 };
 
-export function createTestBus<T extends EventMap>(options?: BusOptions<T>): TestBus<T> {
+export function createTestBus<T extends EventMap = Record<string, unknown>>(options?: BusOptions<T>): TestBus<T> {
   const records = new Map<string, unknown[]>();
-  const unsubs = new Map<string, Set<() => void>>();
-
   const bus = createBus<T>({
     ...options,
     _onDispatch: (event: EventKey<T>, payload: unknown) => {
@@ -32,13 +27,12 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
       else records.set(event, [payload]);
     },
   } as InternalBusOptions<T>);
+  const disposeBus = bus.dispose;
 
   function allEmitted(): { [K in EventKey<T>]?: T[K][] } {
     const result: { [K in EventKey<T>]?: T[K][] } = {};
 
     for (const [key, list] of records) {
-      // Guard against a `__proto__`/`constructor`/`prototype` event name hijacking result's
-      // own prototype via the bracket-assignment accessor — see _prototype.ts.
       if (isUnsafeObjectKey(key)) continue;
 
       (result as Record<string, unknown[]>)[key] = [...list];
@@ -56,47 +50,16 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
   }
 
   function dispose(): void {
-    bus.dispose();
+    disposeBus();
     records.clear();
   }
 
-  const delegate = makeBusDelegate<T>(bus) as TestBus<T>;
-
-  const originalOn = delegate.on.bind(delegate);
-
-  delegate.on = <K extends EventKey<T>>(event: K, listener: (payload: T[K]) => void, opts?: SubscribeOptions) => {
-    const unsub = originalOn(event, listener, opts);
-    const key = event as string;
-    let set = unsubs.get(key);
-
-    if (!set) {
-      set = new Set();
-      unsubs.set(key, set);
-    }
-
-    set.add(unsub);
-
-    return unsub;
-  };
-
-  function removeAllListeners<K extends EventKey<T>>(event: K): void {
-    const key = event as string;
-    const set = unsubs.get(key);
-
-    if (!set) return;
-
-    for (const unsub of set) unsub();
-
-    set.clear();
-  }
-
-  delegate.allEmitted = allEmitted;
-  delegate.dispose = dispose;
-  delegate.emitted = emitted;
-  delegate.emittedCount = emittedCount;
-  delegate.removeAllListeners = removeAllListeners;
-  delegate.reset = () => records.clear();
-  delegate[Symbol.dispose] = dispose;
-
-  return delegate;
+  return Object.assign(bus, {
+    allEmitted,
+    dispose,
+    emitted,
+    emittedCount,
+    reset: () => records.clear(),
+    [Symbol.dispose]: dispose,
+  }) as TestBus<T>;
 }

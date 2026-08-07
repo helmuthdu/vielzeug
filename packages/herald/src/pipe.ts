@@ -1,6 +1,6 @@
-import type { BehaviorBus, Bus, EventKey, EventMap, PipeEntry, PipeableKey, Unsubscribe } from './types';
+import type { Bus, EventKey, EventMap, PipeEntry, PipeableKey, Unsubscribe } from './types';
 
-import { combineSignals } from './bus';
+import { createSignalScope } from './bus';
 import { HeraldConfigError } from './errors';
 
 /**
@@ -23,15 +23,14 @@ import { HeraldConfigError } from './errors';
  * pipeEvents(authBus, appBus, [{ from: 'auth:login', to: 'user:authenticated' }]);
  */
 export function pipeEvents<S extends EventMap, T extends EventMap>(
-  source: Bus<S> | BehaviorBus<S>,
+  source: Bus<S>,
   target: Bus<T>,
   entries: readonly [NoInfer<PipeEntry<S, T>>, ...NoInfer<PipeEntry<S, T>>[]],
   opts?: { signal?: AbortSignal },
 ): Unsubscribe {
   if (entries.length === 0) throw new HeraldConfigError('pipeEvents() requires at least one entry');
 
-  // Stop when target disposes or when the caller's signal fires.
-  const pipeSignal = opts?.signal ? combineSignals(target.disposalSignal, opts.signal) : target.disposalSignal;
+  const scope = createSignalScope(source.disposalSignal, target.disposalSignal, opts?.signal);
 
   // Cast needed: emit's conditional rest args (void vs payload) cannot be resolved in a generic
   // context. At runtime, passing undefined for void events is safe — the bus ignores it.
@@ -42,14 +41,17 @@ export function pipeEvents<S extends EventMap, T extends EventMap>(
       const key = entry as PipeableKey<S, T>;
 
       return source.on(key as EventKey<S>, (payload) => emitTarget(key as unknown as EventKey<T>, payload), {
-        signal: pipeSignal,
+        signal: scope.signal,
       });
     }
 
     const { from, to } = entry as { from: EventKey<S>; to: EventKey<T> };
 
-    return source.on(from, (payload) => emitTarget(to, payload), { signal: pipeSignal });
+    return source.on(from, (payload) => emitTarget(to, payload), { signal: scope.signal });
   });
 
-  return () => unsubs.forEach((u) => u());
+  return () => {
+    for (const unsub of unsubs) unsub();
+    scope.dispose();
+  };
 }

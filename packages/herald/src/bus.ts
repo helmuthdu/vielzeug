@@ -21,46 +21,49 @@ import { BusDisposedError, HeraldConfigError } from './errors';
 export const noop = () => {};
 
 /** @internal */
-function mergeTwo(a: AbortSignal, b: AbortSignal): AbortSignal {
-  if (a.aborted) return a;
+export type SignalScope = { dispose(): void; signal: AbortSignal };
 
-  if (b.aborted) return b;
+/** @internal */
+export function createSignalScope(...candidates: Array<AbortSignal | undefined>): SignalScope {
+  const signals = candidates.filter((signal): signal is AbortSignal => signal !== undefined);
 
-  const ctrl = new AbortController();
-  const onA = (): void => ctrl.abort(a.reason);
-  const onB = (): void => ctrl.abort(b.reason);
+  if (signals.length === 1) return { dispose: noop, signal: signals[0]! };
 
-  a.addEventListener('abort', onA, { once: true });
-  b.addEventListener('abort', onB, { once: true });
-  ctrl.signal.addEventListener(
-    'abort',
-    () => {
-      a.removeEventListener('abort', onA);
-      b.removeEventListener('abort', onB);
-    },
-    { once: true },
-  );
+  const aborted = signals.find((signal) => signal.aborted);
 
-  return ctrl.signal;
+  if (aborted) return { dispose: noop, signal: aborted };
+
+  const controller = new AbortController();
+  const listeners = new Map<AbortSignal, () => void>();
+  let disposed = false;
+
+  function dispose(): void {
+    if (disposed) return;
+
+    disposed = true;
+    for (const [signal, listener] of listeners) signal.removeEventListener('abort', listener);
+    listeners.clear();
+  }
+
+  for (const signal of signals) {
+    const listener = () => {
+      controller.abort(signal.reason);
+      dispose();
+    };
+
+    listeners.set(signal, listener);
+    signal.addEventListener('abort', listener, { once: true });
+  }
+
+  return { dispose, signal: controller.signal };
 }
 
 /**
- * Returns a signal that aborts as soon as any of the provided signals abort.
- * With a single argument, returns it directly (no allocation).
- * Registers and cleans up its own event listeners — no leaks when no signal fires.
- *
- * @example
- * const signal = combineSignals(timeoutSignal, bus.disposalSignal);
- * bus.on('event', handler, { signal });
- *
- * @example
- * // Three signals — no nesting required
- * const signal = combineSignals(userSignal, timeoutSignal, bus.disposalSignal);
+ * Returns a signal that aborts as soon as any provided signal aborts.
+ * Input listeners remain active until one input aborts; use signal-owning APIs for early cleanup.
  */
 export function combineSignals(first: AbortSignal, ...rest: AbortSignal[]): AbortSignal {
-  if (rest.length === 0) return first;
-
-  return rest.reduce(mergeTwo, first);
+  return createSignalScope(first, ...rest).signal;
 }
 
 // Each registration gets a unique Entry object, allowing the same listener function
@@ -79,11 +82,11 @@ function makeEventStream<V>(gen: AsyncGenerator<V>, onDispose: () => Promise<voi
 
 /** @internal */
 export type InternalBusOptions<T extends EventMap> = BusOptions<T> & {
-  /** @internal Called after middleware passes, before listeners run. Used by BehaviorBus. */
+  /** @internal Called after middleware passes, before listeners run. Used by TestBus. */
   _onDispatch?: (event: EventKey<T>, payload: unknown) => void;
 };
 
-export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): Bus<T> {
+export function createBus<T extends EventMap = Record<string, unknown>>(options?: InternalBusOptions<T>): Bus<T> {
   // Per-event set of Entry objects. Set identity prevents accidental dedup of entries;
   // the same fn can appear in multiple entries with independent lifetimes.
   const listeners = new Map<string, Set<Entry>>();
@@ -105,8 +108,10 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
     }
   }
 
-  function mergeSignal(signal?: AbortSignal): AbortSignal {
-    return signal ? combineSignals(disposeController.signal, signal) : disposeController.signal;
+  function createSubscriptionScope(signal?: AbortSignal): SignalScope {
+    return signal
+      ? createSignalScope(disposeController.signal, signal)
+      : { dispose: noop, signal: disposeController.signal };
   }
 
   // callSafe is defined once per bus (not per emit) — avoids re-allocating on every emission.
@@ -162,7 +167,12 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
     return unsub;
   }
 
-  function onWithSignal<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal: AbortSignal): () => void {
+  function onWithSignal<K extends EventKey<T>>(
+    event: K,
+    listener: Listener<T[K]>,
+    signal: AbortSignal,
+    onRemove?: () => void,
+  ): () => void {
     let set = listeners.get(event);
 
     if (!set) {
@@ -179,16 +189,22 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
       onLog: `on("${event}")`,
       onRemove: () => {
         if (capturedSet.size === 0) listeners.delete(event);
+
+        onRemove?.();
       },
     });
   }
 
-  function onAnyWithSignal(listener: (event: EventKey<T>, payload: unknown) => void, signal: AbortSignal): () => void {
+  function onAnyWithSignal(
+    listener: (event: EventKey<T>, payload: unknown) => void,
+    signal: AbortSignal,
+    onRemove?: () => void,
+  ): () => void {
     return registerEntry(
       wildcards,
       (unsub) => ({ fn: listener as (event: string, payload: unknown) => void, unsub }),
       signal,
-      { offLog: 'onAny off', onLog: 'onAny' },
+      { offLog: 'onAny off', onLog: 'onAny', onRemove },
     );
   }
 
@@ -196,7 +212,12 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
   // TypeScript cannot prove safe with `const unsub = f(() => unsub)`. The `ref` binding never
   // changes (only its property is mutated), satisfying prefer-const. By the time the inner
   // callback fires (only possible after onWithSignal returns), ref.unsub is the real handle.
-  function onceWithSignal<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, signal: AbortSignal): () => void {
+  function onceWithSignal<K extends EventKey<T>>(
+    event: K,
+    listener: Listener<T[K]>,
+    signal: AbortSignal,
+    onRemove?: () => void,
+  ): () => void {
     const ref = { unsub: noop as Unsubscribe };
 
     ref.unsub = onWithSignal(
@@ -206,68 +227,80 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
         listener(payload);
       },
       signal,
+      onRemove,
     );
 
     return ref.unsub;
   }
 
   // onAny with once — fires the wildcard listener exactly once, then auto-removes.
-  function onAnyWithOnce(listener: (event: EventKey<T>, payload: unknown) => void, signal: AbortSignal): () => void {
+  function onAnyWithOnce(
+    listener: (event: EventKey<T>, payload: unknown) => void,
+    signal: AbortSignal,
+    onRemove?: () => void,
+  ): () => void {
     const ref = { unsub: noop as Unsubscribe };
 
-    ref.unsub = onAnyWithSignal((event, payload) => {
-      ref.unsub();
-      listener(event, payload);
-    }, signal);
+    ref.unsub = onAnyWithSignal(
+      (event, payload) => {
+        ref.unsub();
+        listener(event, payload);
+      },
+      signal,
+      onRemove,
+    );
 
     return ref.unsub;
   }
 
   function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): () => void {
-    const signal = mergeSignal(opts?.signal);
+    const scope = createSubscriptionScope(opts?.signal);
 
-    if (opts?.once) return onceWithSignal(event, listener, signal);
+    if (opts?.once) return onceWithSignal(event, listener, scope.signal, scope.dispose);
 
-    return onWithSignal(event, listener, signal);
+    return onWithSignal(event, listener, scope.signal, scope.dispose);
   }
 
-  // once() and onAny() take an options object — consistent with on(), extensible for future options.
   function once<K extends EventKey<T>>(
     event: K,
     listener: Listener<T[K]>,
     opts?: { signal?: AbortSignal },
   ): () => void {
-    return onceWithSignal(event, listener, mergeSignal(opts?.signal));
+    const scope = createSubscriptionScope(opts?.signal);
+
+    return onceWithSignal(event, listener, scope.signal, scope.dispose);
   }
 
   function onAny(listener: (event: EventKey<T>, payload: unknown) => void, opts?: SubscribeOptions): () => void {
-    const signal = mergeSignal(opts?.signal);
+    const scope = createSubscriptionScope(opts?.signal);
 
-    if (opts?.once) return onAnyWithOnce(listener, signal);
+    if (opts?.once) return onAnyWithOnce(listener, scope.signal, scope.dispose);
 
-    return onAnyWithSignal(listener, signal);
+    return onAnyWithSignal(listener, scope.signal, scope.dispose);
   }
 
   function wait<K extends EventKey<T>>(event: K, opts?: { signal?: AbortSignal }): Promise<T[K]> {
-    const activeSignal = mergeSignal(opts?.signal);
+    const scope = createSubscriptionScope(opts?.signal);
 
-    if (activeSignal.aborted) return Promise.reject(activeSignal.reason);
+    if (scope.signal.aborted) return Promise.reject(scope.signal.reason);
 
     return new Promise<T[K]>((resolve, reject) => {
-      function onAbort() {
-        reject(activeSignal.reason);
-      }
+      const onAbort = () => {
+        scope.dispose();
+        reject(scope.signal.reason);
+      };
 
       onceWithSignal(
         event,
         (payload) => {
-          activeSignal.removeEventListener('abort', onAbort);
+          scope.signal.removeEventListener('abort', onAbort);
+          scope.dispose();
           resolve(payload);
         },
-        activeSignal,
+        scope.signal,
       );
 
-      activeSignal.addEventListener('abort', onAbort, { once: true });
+      scope.signal.addEventListener('abort', onAbort, { once: true });
     });
   }
 
@@ -282,7 +315,8 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
 
     if (!(maxBuffer > 0)) throw new HeraldConfigError('maxBuffer must be a positive number');
 
-    const activeSignal = mergeSignal(opts?.signal);
+    const scope = createSubscriptionScope(opts?.signal);
+    const activeSignal = scope.signal;
 
     if (activeSignal.aborted) {
       const empty = (async function* (): AsyncGenerator<T[K]> {})();
@@ -302,6 +336,7 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
         wake?.();
       },
       activeSignal,
+      scope.dispose,
     );
 
     async function* generate(): AsyncGenerator<T[K]> {
@@ -408,29 +443,34 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
       );
     }
 
-    // Middleware pipeline — each middleware calls next() to proceed.
     const middleware = options?.middleware;
 
-    if (middleware?.length) {
-      let dispatched = 0;
-      let i = 0;
+    if (!middleware?.length) return dispatch(event, payload, timestamp);
 
-      // Guard prevents a misbehaving middleware from calling next() twice and
-      // triggering a double-dispatch to listeners. Note: a middleware calling next()
-      // more than twice can still invoke downstream middleware multiple times.
-      function next(): void {
-        const idx = i++;
+    const middlewareList = middleware;
 
-        if (idx < middleware!.length) middleware![idx](event, payload, next);
-        else if (idx === middleware!.length) dispatched = dispatch(event, payload, timestamp);
-      }
+    function run(index: number): number {
+      const current = middlewareList[index];
 
-      next();
+      if (!current) return dispatch(event, payload, timestamp);
 
-      return dispatched;
+      let result = 0;
+      let continued = false;
+      let synchronous = true;
+
+      current(event, payload, () => {
+        if (!synchronous || continued) return;
+
+        continued = true;
+        result = run(index + 1);
+      });
+
+      synchronous = false;
+
+      return result;
     }
 
-    return dispatch(event, payload, timestamp);
+    return run(0);
   }
 
   // listenerCount counts specific-event listeners only.
@@ -459,30 +499,47 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
   ): Promise<WaitAnyResult<T, K>> {
     if (eventList.length < 2) throw new HeraldConfigError('waitAny() requires at least 2 event keys');
 
-    const activeSignal = mergeSignal(opts?.signal);
+    const activeScope = createSubscriptionScope(opts?.signal);
 
-    if (activeSignal.aborted) return Promise.reject(activeSignal.reason);
+    if (activeScope.signal.aborted) return Promise.reject(activeScope.signal.reason);
 
     return new Promise<WaitAnyResult<T, K>>((resolve, reject) => {
       const raceController = new AbortController();
-      const raceSignal = combineSignals(activeSignal, raceController.signal);
+      const raceScope = createSignalScope(activeScope.signal, raceController.signal);
+      const unsubs: Unsubscribe[] = [];
+      let settled = false;
 
-      function onAbort() {
+      function cleanup(): void {
+        activeScope.signal.removeEventListener('abort', onAbort);
         raceController.abort();
-        reject(activeSignal.reason);
+        raceScope.dispose();
+        activeScope.dispose();
+        for (const unsub of unsubs) unsub();
       }
 
-      activeSignal.addEventListener('abort', onAbort, { once: true });
+      function onAbort(): void {
+        if (settled) return;
+
+        settled = true;
+        cleanup();
+        reject(activeScope.signal.reason);
+      }
+
+      activeScope.signal.addEventListener('abort', onAbort, { once: true });
 
       for (const event of eventList) {
-        onceWithSignal(
-          event as EventKey<T>,
-          (payload) => {
-            activeSignal.removeEventListener('abort', onAbort);
-            raceController.abort();
-            resolve({ event, payload } as WaitAnyResult<T, K>);
-          },
-          raceSignal,
+        unsubs.push(
+          onceWithSignal(
+            event as EventKey<T>,
+            (payload) => {
+              if (settled) return;
+
+              settled = true;
+              cleanup();
+              resolve({ event, payload } as WaitAnyResult<T, K>);
+            },
+            raceScope.signal,
+          ),
         );
       }
     });

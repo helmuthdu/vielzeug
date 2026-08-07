@@ -41,7 +41,7 @@ Pass an `AbortSignal` to stop forwarding after a condition:
 
 ```ts
 const controller = new AbortController();
-pipeEvents(appBus, auditBus, ['user:login'], controller.signal);
+pipeEvents(appBus, auditBus, ['user:login'], { signal: controller.signal });
 
 // Stop forwarding after 60 seconds
 setTimeout(() => controller.abort(), 60_000);
@@ -69,7 +69,7 @@ const parentBus = createBus<AppEvents>();
 const childBus = createBus<AppEvents>();
 
 // Forward events; stop when parent disposes
-pipeEvents(parentBus, childBus, ['user:login'], parentBus.disposalSignal);
+pipeEvents(parentBus, childBus, ['user:login'], { signal: parentBus.disposalSignal });
 ```
 
 ### Pitfalls

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Simplify event bus and remove retained-state APIs",
+      "packageName": "@vielzeug/herald",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/herald"
+}

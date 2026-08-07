@@ -26,7 +26,7 @@ bus.on('message', (payload) => console.log(payload.body));
 ### Pitfalls
 
 - Calling `emit()` before any listener is registered silently discards the event. There is no event queue — register listeners before emitting.
-- `on()` returns an unsubscribe function. Ignoring the return value means the listener can only be removed with `removeAllListeners()`.
+- `on()` returns an unsubscribe function. Keep it or pass `{ signal }` when subscription lifetime is owned elsewhere.
 - The type parameter on `createBus<T>()` is compile-time only. Emitting an event name not in `T` is a TypeScript error but has no runtime guard.
 
 ### Related

@@ -2,8 +2,6 @@ import { abortSignalExample } from './abort-signal';
 import { asyncGeneratorExample } from './async-generator';
 import { asyncWaitExample } from './async-wait';
 import { basicBusExample } from './basic-bus';
-import { behaviorBusExample } from './behavior-bus';
-import { behaviorSnapshotExample } from './behavior-snapshot';
 import { busBasicsExample } from './bus-basics';
 import { disposalSignalExample } from './disposal-signal';
 import { errorHandlingExample } from './error-handling';
@@ -21,8 +19,6 @@ export const heraldExamples = {
   'async-generator': asyncGeneratorExample,
   'async-wait': asyncWaitExample,
   'basic-bus': basicBusExample,
-  'behavior-bus': behaviorBusExample,
-  'behavior-snapshot': behaviorSnapshotExample,
   'bus-basics': busBasicsExample,
   'disposal-signal': disposalSignalExample,
   'error-handling': errorHandlingExample,

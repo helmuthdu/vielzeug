@@ -1,5 +1,5 @@
-export type EventMap = Record<string, unknown>;
-export type EventKey<T extends EventMap> = keyof T & string;
+export type EventMap = object;
+export type EventKey<T extends EventMap> = Extract<keyof T, string>;
 export type Listener<T> = (payload: T) => void;
 export type Unsubscribe = () => void;
 
@@ -120,8 +120,13 @@ export type PipeableKey<S extends EventMap, T extends EventMap> = {
  * - A `PipeableKey` string — forward the event under the same name.
  * - A `{ from, to }` object — forward the event under a different name on the target bus.
  */
-export type PipeEntry<S extends EventMap, T extends EventMap> =
-  PipeableKey<S, T> | { from: EventKey<S>; to: EventKey<T> };
+export type RenamedPipeEntry<S extends EventMap, T extends EventMap> = {
+  [From in EventKey<S>]: {
+    [To in EventKey<T>]: S[From] extends T[To] ? { from: From; to: To } : never;
+  }[EventKey<T>];
+}[EventKey<S>];
+
+export type PipeEntry<S extends EventMap, T extends EventMap> = PipeableKey<S, T> | RenamedPipeEntry<S, T>;
 
 /**
  * An `AsyncGenerator` extended with `AsyncDisposable`. Returned by `bus.events()`.
@@ -236,47 +241,4 @@ export type Bus<T extends EventMap> = {
    * These fire on every emission regardless of event key.
    */
   wildcardCount(): number;
-};
-
-/** Map of event names to their initial values for `createBehaviorBus`. */
-export type BehaviorInitial<T extends EventMap> = {
-  [K in EventKey<T>]?: T[K];
-};
-
-/** Options for `createBehaviorBus` — extends standard `BusOptions`. */
-export type BehaviorBusOptions<T extends EventMap = EventMap> = BusOptions<T>;
-
-/**
- * A bus that remembers the last emitted value for each event.
- * New subscribers immediately receive the current value via `on()` and `once()`.
- */
-export type BehaviorBus<T extends EventMap> = Bus<T> & {
-  /**
-   * Returns the most recently emitted value for the given event, or `undefined` if no value has
-   * been emitted yet (and no initial value was provided).
-   */
-  current<K extends EventKey<T>>(event: K): T[K] | undefined;
-  /**
-   * Clear the current value for a specific event, or for all events when called without arguments.
-   * After reset, new subscribers will not receive a replayed value until the next emit.
-   * Does not affect active subscriptions or the disposed state of the bus.
-   *
-   * @example
-   * bus.reset('count');   // clear only 'count'
-   * bus.reset();          // clear all buffers
-   */
-  reset(event?: EventKey<T>): void;
-  /**
-   * Returns a plain object snapshot of the most recently emitted value for every currently
-   * buffered event. Events with no value in the buffer are omitted from the result.
-   *
-   * Useful for serialization, hydration, and debugging multiple channels at once.
-   *
-   * @example
-   * const bus = createBehaviorBus<{ theme: string; zoom: number }>({ theme: 'light', zoom: 1 });
-   * bus.snapshot(); // { theme: 'light', zoom: 1 }
-   * bus.emit('theme', 'dark');
-   * bus.snapshot(); // { theme: 'dark', zoom: 1 }
-   */
-  snapshot(): Partial<T>;
 };

@@ -25,7 +25,7 @@ type AppEvents = {
 };
 
 export const appBus = createBus<AppEvents>({
-  onError: (err, event, payload) => console.error(`[bus] error in "${event}"`, err, payload),
+  onError: ({ err, event, payload }) => console.error(`[bus] error in "${event}"`, err, payload),
 });
 
 // src/cart/cart-module.ts
