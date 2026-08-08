@@ -3,14 +3,14 @@
  *
  * Import from the dedicated sub-path so it is tree-shaken from production bundles:
  * ```ts
- * import { debugFloat } from '@vielzeug/orbit/devtools';
+ * import { debugPositioner } from '@vielzeug/orbit/devtools';
  * ```
  */
 
-import type { FloatOptions } from './float';
-import type { ComputePositionResult, FloatHandle, ReferenceElement } from './types';
+import type { Positioner, PositionerOptions } from './float';
+import type { ComputePositionResult, ReferenceElement } from './types';
 
-import { float, makeHandle } from './float';
+import { createPositioner } from './float';
 
 // ── Overlay helpers ───────────────────────────────────────────────────────────
 
@@ -73,7 +73,7 @@ function createOutlineBox(x: number, y: number, width: number, height: number, c
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Wraps `float()` and attaches a persistent visual debug overlay to the document.
+ * Wraps `createPositioner()` and attaches a persistent visual debug overlay to the document.
  *
  * The overlay renders on every position update:
  * - **Blue dashed outline** — the viewport boundary used by overflow detection.
@@ -86,9 +86,9 @@ function createOutlineBox(x: number, y: number, width: number, height: number, c
  *
  * @example
  * ```ts
- * import { debugFloat } from '@vielzeug/orbit/devtools';
+ * import { debugPositioner } from '@vielzeug/orbit/devtools';
  *
- * const handle = debugFloat(reference, tooltip, {
+ * const handle = debugPositioner(reference, tooltip, {
  *   placement: 'top',
  *   middleware: [offset(8), flip(), shift({ padding: 6 })],
  * });
@@ -96,11 +96,11 @@ function createOutlineBox(x: number, y: number, width: number, height: number, c
  * handle.dispose();
  * ```
  */
-export function debugFloat(
+export function debugPositioner(
   reference: ReferenceElement,
   floating: HTMLElement,
-  options: FloatOptions = {},
-): FloatHandle {
+  options: PositionerOptions = {},
+): Positioner {
   const overlay = createOverlay();
 
   document.body.appendChild(overlay);
@@ -137,14 +137,15 @@ export function debugFloat(
     renderOverlay(result);
   }
 
-  const handle = float(reference, floating, { ...options, apply: wrappedApply });
+  const positioner = createPositioner(reference, floating, { ...options, apply: wrappedApply });
+  const dispose = positioner.dispose.bind(positioner);
 
-  return makeHandle(
-    () => {
-      handle.dispose();
+  positioner.start();
+
+  return Object.assign(positioner, {
+    dispose(): void {
+      dispose();
       overlay.remove();
     },
-    () => handle.getPosition(),
-    () => handle.update(),
-  );
+  });
 }

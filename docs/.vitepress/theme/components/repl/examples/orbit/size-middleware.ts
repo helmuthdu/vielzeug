@@ -1,5 +1,5 @@
 export const sizeMiddlewareExample = {
-  code: `import { float, offset, flip, size } from '@vielzeug/orbit'
+  code: `import { createPositioner, offset, flip, size } from '@vielzeug/orbit'
 
 const button = document.createElement('button')
 button.textContent = 'Open dropdown'
@@ -18,8 +18,8 @@ for (let i = 1; i <= 20; i++) {
 document.body.appendChild(dropdown)
 
 // size() writes availableHeight/availableWidth to middlewareData.size.
-// Read it in the float() apply callback to constrain the floating element.
-const handle = float(button, dropdown, {
+// Read it in the positioner apply callback to constrain the floating element.
+const positioner = createPositioner(button, dropdown, {
   placement: 'bottom-start',
   middleware: [offset(4), flip(), size({ padding: 8 })],
   apply(result) {
@@ -33,6 +33,7 @@ const handle = float(button, dropdown, {
     console.log('Resolved placement:', result.placement)
   },
 })
+positioner.start()
 
 console.log('size() constrains dropdown height to available space')`,
   name: 'size() - Constrain Height',

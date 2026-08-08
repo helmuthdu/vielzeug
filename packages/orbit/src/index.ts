@@ -4,18 +4,14 @@ export { OrbitConfigError, OrbitError } from './errors';
 // Core engine
 export { computePosition, computePositionAsync, computePositionRaf, getRects } from './core';
 export { detectOverflow, getClippingAncestorRect } from './overflow';
-export { getContainingBlock } from './containing-block';
 
 // High-level API
-export { float, floatWithAnchor, isCssAnchorSupported } from './float';
-export type { CssAnchorHandle, FloatOptions } from './float';
+export { createPositioner } from './float';
+export type { Positioner, PositionerOptions, PositionStrategy } from './float';
 
 // Auto-update
 export { autoUpdate } from './auto-update';
 export type { AutoUpdateOptions } from './auto-update';
-
-// Middleware composition utility
-export { compose } from './compose';
 
 // Middleware
 export { arrow } from './middleware/arrow';
@@ -56,7 +52,6 @@ export type {
   ComputePositionResult,
   DetectOverflowOptions,
   FlipData,
-  FloatHandle,
   HideData,
   Middleware,
   MiddlewareData,
@@ -71,6 +66,5 @@ export type {
   Side,
   SideObject,
   SizeData,
-  TypedMiddleware,
   VirtualReference,
 } from './types';

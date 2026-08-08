@@ -113,17 +113,26 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
 
   function updatePosition(): void {
     const panel = getPanel();
+    const trigger =
+      currentTrigger ?? (resolveSlot()?.assignedElements({ flatten: true })[0] as HTMLElement | undefined);
 
-    if (!panel || !currentTrigger) return;
+    if (!panel || !trigger) return;
 
-    const result = computePosition(currentTrigger, panel, {
+    const previousTransition = panel.style.transition;
+    const previousTransform = panel.style.transform;
+
+    panel.style.transition = 'none';
+    panel.style.transform = 'none';
+
+    const result = computePosition(trigger, panel, {
       middleware: [offset(getOffset()), flip(), shift({ padding: 8 })],
       placement: placement.value,
     });
 
     panel.style.left = `${result.x}px`;
     panel.style.top = `${result.y}px`;
-
+    panel.style.transition = previousTransition;
+    panel.style.transform = previousTransform;
     panel.dataset.placement = result.placement;
 
     onPlacementChange?.(result.placement as Placement);
@@ -277,7 +286,15 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
 
   const mount = (): (() => void) => {
     let initializedOpenProp = false;
+    const triggerSlot = resolveSlot();
+    const rebind = (): void => {
+      queueMicrotask(() => {
+        if (!abortSignal.aborted) bindEvents();
+      });
+    };
 
+    triggerSlot?.addEventListener('slotchange', rebind);
+    rebind();
     watch(slotElements, bindEvents, { immediate: true });
 
     watch(
@@ -317,6 +334,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
     });
 
     return () => {
+      triggerSlot?.removeEventListener('slotchange', rebind);
       triggerBinding?.();
       triggerBinding = null;
 

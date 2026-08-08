@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Fix floating overlays in deferred slot and preview lifecycles",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

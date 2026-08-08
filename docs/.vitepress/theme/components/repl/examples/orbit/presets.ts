@@ -1,9 +1,9 @@
 export const presetsExample = {
-  code: `import { float } from '@vielzeug/orbit'
+  code: `import { createPositioner } from '@vielzeug/orbit'
 import { tooltip, dropdown, popover, contextMenu } from '@vielzeug/orbit/presets'
 
 // Presets are pre-configured middleware stacks for common UI patterns.
-// Each factory returns { placement, middleware } — spread directly into float().
+// Each factory returns { placement, middleware } — spread into createPositioner().
 
 // --- tooltip() ---
 const tooltipPreset = tooltip()
@@ -32,7 +32,7 @@ console.log('contextMenu placement:', menuPreset.placement)
 const menuTopStart = contextMenu({ placement: 'top-start' })
 console.log('contextMenu custom placement:', menuTopStart.placement)
 
-// --- Spread a preset into float() ---
+// --- Spread a preset into createPositioner() ---
 const trigger = document.createElement('button')
 trigger.textContent = 'Hover me'
 trigger.style.cssText = 'margin: 80px; padding: 8px 16px;'
@@ -43,16 +43,17 @@ tip.textContent = 'tooltip()'
 tip.style.cssText = 'position: fixed; background: #1e293b; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 13px; display: none;'
 document.body.appendChild(tip)
 
-let handle = null
+let positioner = null
 
 trigger.addEventListener('mouseenter', () => {
   tip.style.display = 'block'
-  handle = float(trigger, tip, tooltip())
+  positioner = createPositioner(trigger, tip, tooltip())
+  positioner.start()
 })
 trigger.addEventListener('mouseleave', () => {
   tip.style.display = 'none'
-  handle?.dispose()
-  handle = null
+  positioner?.dispose()
+  positioner = null
 })
 
 console.log('Hover the button to see tooltip() in action')`,

@@ -1,6 +1,6 @@
 import type { Middleware, Padding, Rect, ReferenceElement } from './types';
 
-import { getSide, tagMiddleware, toRect, toSideObject } from './utils';
+import { getSide, toRect, toSideObject } from './utils';
 
 // ── Private helpers (only used by inline) ────────────────────────────────────────────
 
@@ -52,12 +52,13 @@ export interface InlineOptions {
  *
  * @example Tooltip on selected text:
  * ```ts
- * import { inline, float, flip, shift } from '@vielzeug/orbit';
+ * import { createPositioner, inline, flip, shift } from '@vielzeug/orbit';
  *
- * float(selectionRef, tooltip, {
+ * const positioner = createPositioner(selectionRef, tooltip, {
  *   placement: 'top',
  *   middleware: [inline({ x: cursorX, y: cursorY }), flip(), shift({ padding: 6 })],
  * });
+ * positioner.start();
  * ```
  */
 export function inline(options: InlineOptions = {}): Middleware {
@@ -97,5 +98,5 @@ export function inline(options: InlineOptions = {}): Middleware {
     return { reset: { rects: { ...state.rects, reference: nextRect } } };
   }
 
-  return tagMiddleware(inlineMiddleware, 'inline');
+  return inlineMiddleware;
 }

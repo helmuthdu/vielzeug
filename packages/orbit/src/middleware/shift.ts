@@ -1,7 +1,7 @@
-import type { DetectOverflowOptions, Middleware, MiddlewareState, ShiftData, TypedMiddleware } from '../types';
+import type { DetectOverflowOptions, Middleware, MiddlewareState } from '../types';
 
 import { detectOverflow } from '../overflow';
-import { clamp, getSide, tagMiddleware } from '../utils';
+import { clamp, getSide } from '../utils';
 
 /**
  * A limiter function passed to `shift()` that constrains the maximum allowed drift.
@@ -95,7 +95,7 @@ export interface ShiftOptions extends DetectOverflowOptions {
  * | `top` / `bottom` | horizontal | vertical  |
  * | `left` / `right` | vertical   | horizontal|
  */
-export function shift(options: ShiftOptions = {}): TypedMiddleware<'shift', ShiftData> {
+export function shift(options: ShiftOptions = {}): Middleware {
   const { crossAxis = true, limiter, mainAxis = false } = options;
 
   function shiftMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
@@ -124,5 +124,5 @@ export function shift(options: ShiftOptions = {}): TypedMiddleware<'shift', Shif
     return { data: { shift: { x: dx, y: dy } }, x: state.x + dx, y: state.y + dy };
   }
 
-  return tagMiddleware<'shift', ShiftData, typeof shiftMiddleware>(shiftMiddleware, 'shift');
+  return shiftMiddleware;
 }

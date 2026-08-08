@@ -115,15 +115,6 @@ export interface MiddlewareResult {
 
 export type Middleware = (state: MiddlewareState) => MiddlewareResult | void;
 
-/**
- * A middleware branded with the key it writes to `middlewareData`.
- * Built-in middleware return this type. Custom middleware can cast to it if needed.
- */
-export type TypedMiddleware<K extends string, D> = Middleware & {
-  /** @internal brand — identifies the middleware data key for compile-time inference. Never accessed at runtime. */
-  readonly __brand: readonly [K, D];
-};
-
 // ── Public API types ──────────────────────────────────────────────────────────
 
 export interface ComputePositionResult {
@@ -134,8 +125,8 @@ export interface ComputePositionResult {
 }
 
 export interface ComputePositionOptions {
-  /** Middleware pipeline to run. Falsy entries are ignored. */
-  middleware?: Array<Middleware | null | undefined | false>;
+  /** Middleware pipeline to run in the supplied order. */
+  middleware?: readonly Middleware[];
   /** Initial placement. Defaults to `'bottom'`. */
   placement?: Placement;
   /**
@@ -156,29 +147,6 @@ export interface ComputePositionOptions {
    * Per-middleware `padding` takes precedence. Defaults to `0` when omitted.
    */
   padding?: Padding;
-}
-
-/**
- * Handle returned by `float()`.
- *
- * - `dispose()` — removes all event listeners and observers. Always call this on teardown.
- * - `update()` — manually trigger a position recalculation.
- * - `getPosition()` — returns the most recently computed position.
- *   - When `autoUpdate: false`, the position is computed synchronously during `float()`, so
- *     `getPosition()` is **never `null`** immediately after `float()` returns.
- *   - When using the `autoUpdate` loop (default), `getPosition()` returns `null` only before
- *     the very first update fires, which happens synchronously on construction.
- *   - Always returns `null` in SSR environments (via `@vielzeug/orbit/ssr`).
- */
-export interface FloatHandle {
-  /** `AbortSignal` aborted when `dispose()` is called. Use to tie external lifetimes to this handle. */
-  readonly disposalSignal: AbortSignal;
-  dispose(): void;
-  /** `true` after `dispose()` has been called. */
-  readonly disposed: boolean;
-  getPosition(): ComputePositionResult | null;
-  update(): void;
-  [Symbol.dispose](): void;
 }
 
 export interface DetectOverflowOptions {

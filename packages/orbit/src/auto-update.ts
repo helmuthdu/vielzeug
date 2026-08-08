@@ -1,8 +1,44 @@
-import { throttle } from '@vielzeug/arsenal/function';
-
 import type { ReferenceElement } from './types';
 
 import { flatTreeParent, isElement } from './utils';
+
+type ThrottledUpdate = (() => void) & { cancel(): void };
+
+function throttle(update: () => void, delay: number): ThrottledUpdate {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let lastCall = 0;
+
+  const throttled = (() => {
+    const now = Date.now();
+    const remaining = delay - (now - lastCall);
+
+    if (remaining <= 0) {
+      if (timer !== undefined) clearTimeout(timer);
+
+      timer = undefined;
+      lastCall = now;
+      update();
+
+      return;
+    }
+
+    if (timer !== undefined) return;
+
+    timer = setTimeout(() => {
+      timer = undefined;
+      lastCall = Date.now();
+      update();
+    }, remaining);
+  }) as ThrottledUpdate;
+
+  throttled.cancel = (): void => {
+    if (timer !== undefined) clearTimeout(timer);
+
+    timer = undefined;
+  };
+
+  return throttled;
+}
 
 export interface AutoUpdateOptions {
   /** Watch the floating element for size changes. Default: `true`. */
@@ -96,7 +132,7 @@ export function autoUpdate(
     throttle: throttleMs = 0,
   }: AutoUpdateOptions = {},
 ): () => void {
-  const throttled = throttleMs > 0 ? throttle(update, throttleMs, { leading: true, trailing: true }) : null;
+  const throttled = throttleMs > 0 ? throttle(update, throttleMs) : null;
   const notify = throttled ?? update;
 
   // ── Visibility guard ─────────────────────────────────────────────────────────

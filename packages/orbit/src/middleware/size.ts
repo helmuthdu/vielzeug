@@ -1,7 +1,7 @@
-import type { DetectOverflowOptions, Middleware, SizeData, TypedMiddleware } from '../types';
+import type { DetectOverflowOptions, Middleware } from '../types';
 
 import { resolveBoundary } from '../overflow';
-import { getSide, tagMiddleware } from '../utils';
+import { getSide } from '../utils';
 
 export type SizeOptions = DetectOverflowOptions;
 
@@ -10,20 +10,21 @@ export type SizeOptions = DetectOverflowOptions;
  *
  * Available dimensions are written to `middlewareData.size`.
  *
- * Read `result.middlewareData.size` in the `float()` `apply` option or after `computePosition()`
+ * Read `result.middlewareData.size` in the positioner `apply` option or after `computePosition()`
  * to constrain the floating element's dimensions.
  *
  * @example
  * ```ts
- * const cleanup = float(ref, el, {
+ * const positioner = createPositioner(ref, el, {
  *   middleware: [offset(8), flip(), shift(), size()],
  *   apply(result) {
- *     el.style.maxHeight = `${result.middlewareData.size!.availableHeight}px`;
+ *     el.style.maxHeight = `${(result.middlewareData.size as SizeData).availableHeight}px`;
  *   },
  * });
+ * positioner.start();
  * ```
  */
-export function size(options: SizeOptions = {}): TypedMiddleware<'size', SizeData> {
+export function size(options: SizeOptions = {}): Middleware {
   function sizeMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const { boundary, padding } = resolveBoundary(options, state);
     const side = getSide(state.placement);
@@ -46,10 +47,8 @@ export function size(options: SizeOptions = {}): TypedMiddleware<'size', SizeDat
           ? Math.max(0, state.rects.reference.x - left)
           : Math.max(0, right - left);
 
-    const sizeData: SizeData = { availableHeight, availableWidth };
-
-    return { data: { size: sizeData } };
+    return { data: { size: { availableHeight, availableWidth } } };
   }
 
-  return tagMiddleware<'size', SizeData, typeof sizeMiddleware>(sizeMiddleware, 'size');
+  return sizeMiddleware;
 }

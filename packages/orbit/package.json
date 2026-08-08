@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/orbit",
   "version": "1.1.5",
-  "description": "Floating element positioning — tooltip, dropdown, popover, and menu placement with middleware",
+  "description": "Dependency-free floating UI positioning with lifecycle-owned geometry and middleware",
   "type": "module",
   "files": [
     "dist"
@@ -29,11 +29,6 @@
       "types": "./dist/reactive.d.ts",
       "import": "./dist/reactive.js",
       "require": "./dist/reactive.cjs"
-    },
-    "./ssr": {
-      "types": "./dist/ssr.d.ts",
-      "import": "./dist/ssr.js",
-      "require": "./dist/ssr.cjs"
     }
   },
   "scripts": {
@@ -52,12 +47,17 @@
   "engines": {
     "node": ">=22"
   },
-  "dependencies": {
-    "@vielzeug/arsenal": "workspace:*",
-    "@vielzeug/ripple": "workspace:*"
+  "peerDependencies": {
+    "@vielzeug/ripple": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@vielzeug/ripple": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
+    "@vielzeug/ripple": "workspace:*",
     "typescript": "^6.0.3",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
@@ -72,9 +72,6 @@
       ],
       "reactive": [
         "dist/reactive.d.ts"
-      ],
-      "ssr": [
-        "dist/ssr.d.ts"
       ]
     }
   }

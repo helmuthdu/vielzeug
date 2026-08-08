@@ -1,10 +1,8 @@
-import { clamp } from '@vielzeug/arsenal/math';
+import type { Alignment, Padding, Placement, Rect, Side, SideObject } from './types';
 
-import type { Alignment, Middleware, Padding, Placement, Rect, Side, SideObject, TypedMiddleware } from './types';
-
-import { OrbitConfigError } from './errors';
-
-export { clamp };
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
 
 export const OPPOSITE: Record<Side, Side> = { bottom: 'top', left: 'right', right: 'left', top: 'bottom' };
 
@@ -69,66 +67,6 @@ export function flatTreeParent(node: Element): Element | null {
   return (
     node.parentElement ?? (node.getRootNode() instanceof ShadowRoot ? (node.getRootNode() as ShadowRoot).host : null)
   );
-}
-
-// ── Middleware helpers ────────────────────────────────────────────────────────
-
-/**
- * Ordering rules for dev-mode middleware validation.
- * Each tuple is `[mustFollow, mustPrecede]` — `mustFollow` must appear **after** `mustPrecede`
- * in the pipeline. Validation throws if `mustFollow` is found at a lower index than `mustPrecede`.
- * @internal
- */
-export const MIDDLEWARE_ORDER_RULES: Array<[mustFollow: string, mustPrecede: string]> = [
-  ['arrow', 'flip'],
-  ['arrow', 'shift'],
-  ['arrow', 'autoPlacement'],
-  ['flip', 'inline'],
-  ['shift', 'inline'],
-  ['autoPlacement', 'inline'],
-  ['size', 'flip'],
-  ['size', 'autoPlacement'],
-];
-
-/**
- * Validates a list of middleware names for known-bad orderings.
- * Throws a descriptive error in dev mode if an invalid ordering is detected.
- * @internal
- */
-export function validateMiddlewareNames(names: Array<string | null>): void {
-  for (const [mustFollow, mustPrecede] of MIDDLEWARE_ORDER_RULES) {
-    const followIdx = names.indexOf(mustFollow);
-    const precedeIdx = names.indexOf(mustPrecede);
-
-    if (followIdx !== -1 && precedeIdx !== -1 && followIdx < precedeIdx) {
-      throw new OrbitConfigError(
-        `"${mustFollow}" must come after "${mustPrecede}" in the middleware pipeline. ` +
-          `Recommended order: inline → offset → flip/autoPlacement → shift → size → arrow.`,
-      );
-    }
-  }
-
-  if (names.includes('flip') && names.includes('autoPlacement')) {
-    throw new OrbitConfigError('use either flip() or autoPlacement() in the middleware pipeline, not both.');
-  }
-}
-
-/**
- * Unique symbol used to tag middleware with a name for dev-mode ordering validation.
- * Using a Symbol avoids collisions with any `__name` property set by transpilers or wrappers.
- * @internal
- */
-export const MIDDLEWARE_NAME = Symbol.for('@vielzeug/orbit/name');
-
-/**
- * Tags a middleware function with a name for dev-mode ordering validation and brands it
- * as a `TypedMiddleware<K, D>` for compile-time `middlewareData` inference.
- * @internal
- */
-export function tagMiddleware<K extends string, D, F extends Middleware>(fn: F, name: K): F & TypedMiddleware<K, D> {
-  (fn as Record<symbol, unknown>)[MIDDLEWARE_NAME] = name;
-
-  return fn as F & TypedMiddleware<K, D>;
 }
 
 // ── Geometry ──────────────────────────────────────────────────────────────────

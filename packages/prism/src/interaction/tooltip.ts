@@ -85,15 +85,14 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
         },
       };
 
-      const { x: posX, y: posY } = computePosition(virtualRef, el, {
+      const { x: positionX, y: positionY } = computePosition(virtualRef, el, {
+        containingBlock: container,
         middleware: [offset(tooltipOffset), flip(), shift({ padding: 8 })],
         placement: 'top',
       });
 
-      const rect = container.getBoundingClientRect();
-
-      el.style.left = `${posX - rect.left}px`;
-      el.style.top = `${posY - rect.top}px`;
+      el.style.left = `${positionX}px`;
+      el.style.top = `${positionY}px`;
       el.style.opacity = '1';
     },
     [Symbol.dispose]: disposeHandle,

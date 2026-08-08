@@ -1,9 +1,9 @@
-import { float, type FloatHandle } from '@vielzeug/orbit';
+import { createPositioner, type Positioner } from '@vielzeug/orbit';
 import { tooltip as tooltipPreset } from '@vielzeug/orbit/presets';
 import { define, getHost, html, onCleanup, onMounted, prop, ref } from '@vielzeug/ore';
 
 /**
- * A spec/package explainer tooltip, positioned directly with `@vielzeug/orbit`'s `float()` +
+ * A spec/package explainer tooltip, positioned directly with `@vielzeug/orbit`'s `createPositioner()` +
  * `tooltip` preset — used instead of `<ore-tooltip>` (refine's own wrapper around the same
  * primitive) specifically to exercise orbit's positioning API at the app layer, as requested.
  * Wraps arbitrary trigger content via a real `<slot>`, so it needs shadow DOM (the default for
@@ -22,7 +22,7 @@ define<{ text: string }>('spec-tooltip', {
     // is DOM-adjacent but programmatically invisible to assistive tech.
     const panelId = `spec-tooltip-${Math.random().toString(36).slice(2, 9)}`;
 
-    let floatHandle: FloatHandle | null = null;
+    let positioner: Positioner | null = null;
 
     function show(): void {
       const panel = panelRef.value;
@@ -30,13 +30,14 @@ define<{ text: string }>('spec-tooltip', {
       if (!panel) return;
 
       panel.classList.add('visible');
-      floatHandle?.dispose();
-      floatHandle = float(host, panel, tooltipPreset({ offset: 8 }));
+      positioner?.dispose();
+      positioner = createPositioner(host, panel, tooltipPreset({ offset: 8 }));
+      positioner.start();
     }
 
     function hide(): void {
-      floatHandle?.dispose();
-      floatHandle = null;
+      positioner?.dispose();
+      positioner = null;
       panelRef.value?.classList.remove('visible');
     }
 
@@ -51,7 +52,7 @@ define<{ text: string }>('spec-tooltip', {
         host.removeEventListener('pointerleave', hide);
         host.removeEventListener('focusin', show);
         host.removeEventListener('focusout', hide);
-        floatHandle?.dispose();
+        positioner?.dispose();
       });
     });
 

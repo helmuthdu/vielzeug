@@ -1,39 +1,12 @@
 ---
-title: Orbit — Lightweight floating element positioning
-description: Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
+title: Orbit — Floating UI positioning
+description: Dependency-free floating positioning with lifecycle-owned geometry and middleware.
 package: orbit
 category: ui
-keywords: [floating-ui, tooltip, popover, dropdown, positioning, middleware, placement, presets]
-related: [ore, refine, dnd]
-exports:
-  [
-    float,
-    floatWithAnchor,
-    isCssAnchorSupported,
-    computePosition,
-    computePositionAsync,
-    computePositionRaf,
-    getRects,
-    autoUpdate,
-    detectOverflow,
-    offset,
-    flip,
-    shift,
-    arrow,
-    size,
-    hide,
-    inline,
-    autoPlacement,
-    compose,
-    limitShift,
-    getAlignment,
-    getSide,
-    OrbitError,
-    OrbitConfigError,
-    createFloatState,
-    debugFloat,
-  ]
-environments: [browser, ssr]
+keywords: [positioning, tooltip, popover, dropdown, middleware, floating-ui]
+exports: [autoUpdate, computePosition, createPositioner]
+related: [ore, refine, prism]
+environments: [browser]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -42,24 +15,32 @@ environments: [browser, ssr]
 
 ## Why Orbit?
 
-Positioning floating UI by hand quickly turns into repeated math for viewport boundaries, arrow offsets, and scroll/resize tracking.
+Floating UI needs one owner for CSS coordinates, clipping boundaries, updates, and cleanup. Orbit provides a lifecycle positioner for normal UI and a pure computation API for advanced integrations.
 
-| Feature                  | Orbit                                       | Floating UI                                | Popper                                     |
-| ------------------------ | ------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
-| Bundle size              | <PackageInfo package="orbit" type="size" /> | ~10 kB                                     | ~6 kB                                      |
-| Middleware pipeline      | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Direct compute API       | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| High-level follow API    | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | Partial                                    |
-| Inline anchor middleware | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
-| Auto-update helpers      | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Framework agnostic       | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
-| Zero dependencies        | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+```ts
+// Before
+const { x, y } = computeSomehow(trigger, panel);
+panel.style.left = `${x}px`;
+panel.style.top = `${y}px`;
+
+// After
+const positioner = createPositioner(trigger, panel);
+positioner.start();
+```
+
+| Feature | Manual DOM positioning | Orbit |
+| --- | --- | --- |
+| Bundle size | 0 B | <PackageInfo package="orbit" type="size" /> |
+| Root dependencies | Application-defined | <ore-icon name="check" size="16"></ore-icon> |
+| Clipping boundary | Manual geometry | `clippingAncestors` default |
+| Coordinate strategy | Consumer logic | `fixed` / `absolute` |
+| Cleanup | Manual listeners | `dispose()` |
 
 <div class="decision-callout">
 
-**Use Orbit when** you want a lightweight, DOM-first positioning engine with direct control and no framework adapter requirements.
+**Use Orbit when** floating UI needs robust placement, collision handling, or reactive updates.
 
-**Consider larger alternatives when** you need their existing integration ecosystem or migration compatibility.
+**Consider direct CSS when** placement is static and never depends on element geometry.
 
 </div>
 
@@ -83,66 +64,32 @@ yarn add @vielzeug/orbit
 
 ## Quick Start
 
-Use `float()` for the common case — it writes `left`/`top` and keeps the position in sync. It returns a `FloatHandle`; always call `handle.dispose()` on teardown.
+Start a positioner only after its reference and floating elements mount.
 
 ```ts
-import { flip, float, offset, shift } from '@vielzeug/orbit';
+import { createPositioner, flip, offset, shift } from '@vielzeug/orbit';
 
-const trigger = document.querySelector<HTMLElement>('#trigger')!;
-const tooltip = document.querySelector<HTMLElement>('#tooltip')!;
-
-const handle = float(trigger, tooltip, {
-  placement: 'top',
+const positioner = createPositioner(trigger, tooltip, {
   middleware: [offset(8), flip(), shift({ padding: 6 })],
+  placement: 'top',
 });
 
-// Call dispose when the tooltip is removed
-handle.dispose();
-```
-
-Or use `presets` for ready-made middleware stacks:
-
-```ts
-import { float } from '@vielzeug/orbit';
-import { tooltip as tooltipPreset } from '@vielzeug/orbit/presets';
-
-const handle = float(trigger, tooltip, tooltipPreset());
-handle.dispose();
+positioner.start();
+positioner.dispose();
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- `float()` covers the common position-and-follow case; returns a `FloatHandle` with `dispose()`, `update()`, and `getPosition()`
-- Custom `apply(result)` callback on `float()` for transforms or custom rendering
-- `computePosition()` returns `x`, `y`, `placement`, and `middlewareData` without touching the DOM
-- `detectOverflow()` returns per-side overflow offsets; used by built-in middleware and available for custom middleware
-- Global `boundary` and `padding` on `computePosition()` and `float()` — set once, all overflow-aware middleware inherit them
-- `containingBlock` option for `position: absolute` floating elements
-- Built-in middleware: `offset`, `flip`, `autoPlacement`, `shift`, `size`, `arrow`, `hide`
-- `compose()` — falsy-filter helper for building middleware arrays
-- `limitShift()` — constrains `shift()` drift to keep the float visually connected to its reference
-- `inline` middleware for multi-line inline references (now part of main entry)
-- Pre-configured presets (sub-path `@vielzeug/orbit/presets`): `tooltip`, `dropdown`, `popover`, `contextMenu`
-- `autoUpdate()` supports scroll, resize, ResizeObserver, visualViewport, animation frames, throttle, ancestor scroll containers, and `pauseWhenHidden` via IntersectionObserver
-- `getSide()` and `getAlignment()` utilities for reading placement components
-- `floatWithAnchor()` — CSS Anchor Positioning progressive enhancement (browser-native, no JS loop)
-- Reactive signal adapter (sub-path `@vielzeug/orbit/reactive`) — wraps `float()` with a `@vielzeug/ripple` signal
-- SSR-safe no-op stubs (sub-path `@vielzeug/orbit/ssr`)
-- Zero dependencies (optional peer: `@vielzeug/ripple` for the reactive sub-path)
+- `createPositioner()` — Lifecycle-owned floating positioning
+- `computePosition()` — Low-level calculation for advanced integrations
+- `autoUpdate()` — Scroll, viewport, resize, and animation-frame updates
+- Middleware — Offset, flip, shift, size, hide, arrow, inline, auto-placement
+- `strategy` — Explicit `fixed` or `absolute` coordinate behavior
+- `/reactive` — Optional Ripple position readable
 
 </div>
-
-## Sub-paths
-
-| Import                     | Purpose                                                    |
-| -------------------------- | ---------------------------------------------------------- |
-| `@vielzeug/orbit`          | Core API, middleware (`inline` included), utilities, types |
-| `@vielzeug/orbit/presets`  | Pre-configured middleware stacks                           |
-| `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`)               |
-| `@vielzeug/orbit/devtools` | Visual debug overlay (development only)                    |
-| `@vielzeug/orbit/ssr`      | No-op stubs for server-side rendering                      |
 
 ## Documentation
 
@@ -151,6 +98,7 @@ handle.dispose();
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [Migration Guide](./migration.md)
 
 </div>
 
@@ -158,9 +106,9 @@ handle.dispose();
 
 <div class="see-also">
 
-- [Refine](/refine/) — accessible web components that use Orbit internally for dropdown, tooltip, and popover positioning
-- [Dnd](/dnd/) — drag-and-drop engine; use Orbit to reposition drop targets and drag previews relative to containers
-- [Ore](/ore/) — web-component authoring framework; Orbit integrates as a positioning primitive for overlay elements
+- [Refine](/refine/) — Accessible components using floating UI behavior.
+- [Ore](/ore/) — Lifecycle ownership for custom-element positioning.
+- [Prism](/prism/) — Chart tooltips positioned from virtual references.
 
 </div>
 

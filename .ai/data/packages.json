@@ -156,10 +156,10 @@
       "slug": "orbit",
       "name": "@vielzeug/orbit",
       "category": "UI",
-      "description": "Floating element positioning (tooltip, popover)",
+      "description": "Dependency-free floating UI positioning with lifecycle-owned geometry",
       "domOutput": false,
-      "dependencies": ["arsenal", "ripple"],
-      "optionalPeers": [],
+      "dependencies": [],
+      "optionalPeers": ["ripple"],
       "peerDependencies": []
     },
     {

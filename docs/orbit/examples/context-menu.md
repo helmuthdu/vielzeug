@@ -1,60 +1,42 @@
 ---
-title: 'Orbit Examples — Context Menu'
-description: 'Context Menu example for @vielzeug/orbit.'
+title: Context Menu
+description: Anchor a context menu to pointer coordinates with @vielzeug/orbit.
 ---
 
 ## Context Menu
 
 ### Problem
 
-A right-click anywhere on a surface should open a context menu pinned to the cursor position. The anchor is not a DOM element — it is a coordinate pair that changes with each click.
+A context menu needs positioning from pointer coordinates rather than a DOM trigger.
 
 ### Solution
 
-Right-click context menu pinned to the cursor position using a virtual reference element.
+Use a virtual reference and start a positioner after rendering the menu.
 
 ```ts
-import { computePosition } from '@vielzeug/orbit';
-import { contextMenu } from '@vielzeug/orbit/presets';
+import { createPositioner, flip, offset, shift } from '@vielzeug/orbit';
 
-const menu = document.querySelector<HTMLElement>('#context-menu')!;
+document.addEventListener('contextmenu', (event) => {
+  event.preventDefault();
 
-document.addEventListener('contextmenu', (e) => {
-  e.preventDefault();
-
-  const virtualRef = {
-    getBoundingClientRect: () => DOMRect.fromRect({ x: e.clientX, y: e.clientY, width: 0, height: 0 }),
+  const reference = {
+    getBoundingClientRect: () => ({ height: 0, width: 0, x: event.clientX, y: event.clientY }),
   };
+  const positioner = createPositioner(reference, menu, {
+    middleware: [offset(2), flip(), shift({ padding: 8 })],
+    placement: 'bottom-start',
+  });
 
-  menu.style.display = 'block';
-
-  const { x, y } = computePosition(virtualRef, menu, contextMenu());
-
-  menu.style.left = `${x}px`;
-  menu.style.top = `${y}px`;
+  positioner.start();
 });
-
-document.addEventListener(
-  'pointerdown',
-  (e) => {
-    if (!menu.contains(e.target as Node)) {
-      menu.style.display = 'none';
-    }
-  },
-  { capture: true },
-);
 ```
-
----
 
 ### Pitfalls
 
-- The virtual reference must be created fresh with the current coordinates on each `contextmenu` event. A stale reference positions the menu at the previous click location.
-- Context menus triggered by keyboard (`Shift+F10`) have no cursor coordinates. Handle the keyboard case by positioning relative to the focused element using `getBoundingClientRect()`.
-- Outside-click detection should use `pointerdown` in the capture phase (`{ capture: true }`) so it fires before the menu's own click handlers.
+- Dispose prior menu positioner before opening another menu.
+- Keep menu lifecycle separate from virtual-reference creation.
 
 ### Related
 
-- [Custom Middleware](./custom-middleware.md)
-- [Dropdown / Select](./dropdown-select.md)
-- [Popover with Arrow](./popover-with-arrow.md)
+- [Dropdown Select](./dropdown-select.md)
+- [Orbit Usage Guide](../usage.md)

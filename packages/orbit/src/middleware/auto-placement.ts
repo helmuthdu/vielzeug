@@ -2,7 +2,6 @@ import type { Alignment, DetectOverflowOptions, Middleware, Placement, Side } fr
 
 import { warn } from '../_dev';
 import { getAvailableSpace, getPlacementOverflow, resolveBoundary, totalOverflow } from '../overflow';
-import { tagMiddleware } from '../utils';
 
 export interface AutoPlacementOptions extends DetectOverflowOptions {
   /**
@@ -43,7 +42,7 @@ function getDefaultPlacements(alignment?: Alignment | null): Placement[] {
  * @see {@link flip} for simple opposite-side flipping.
  */
 export function autoPlacement(options: AutoPlacementOptions = {}): Middleware {
-  return tagMiddleware(function autoPlacementMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
+  return function autoPlacementMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const { boundary, padding } = resolveBoundary(options, state);
     const placements = options.allowedPlacements ?? getDefaultPlacements(options.alignment);
 
@@ -70,5 +69,5 @@ export function autoPlacement(options: AutoPlacementOptions = {}): Middleware {
     if (bestPlacement !== state.placement) {
       return { reset: { placement: bestPlacement } };
     }
-  }, 'autoPlacement');
+  };
 }

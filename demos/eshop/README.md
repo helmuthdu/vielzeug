@@ -96,7 +96,7 @@ signal, so the whole realtime layer (`core/realtime.ts`) was dropped.
 | `forge` | `ui/views/checkout.ts` — shipping address form (values/validation/submit) |
 | `herald` | `core/events.ts` — app-wide toast/cart/order event bus |
 | `lingua` | `core/i18n.ts` — en/de catalog |
-| `orbit` | `ui/components/spec-tooltip.ts` — positioned directly with `float()` + the `tooltip` preset (not via refine's own tooltip wrapper) |
+| `orbit` | `ui/components/spec-tooltip.ts` — positioned directly with `createPositioner()` + the `tooltip` preset (not via refine's own tooltip wrapper) |
 | `ore` | Every custom element in `ui/` |
 | `prism` | `ui/views/admin.ts` — revenue bar chart |
 | `refine` | Every UI component + the theme (`styles/app.css` overrides `--color-primary-hue`) |

@@ -1,6 +1,6 @@
-import type { ArrowData, Middleware, Padding, TypedMiddleware } from '../types';
+import type { Middleware, Padding } from '../types';
 
-import { clamp, getSide, tagMiddleware, toRect, toSideObject } from '../utils';
+import { clamp, getSide, toRect, toSideObject } from '../utils';
 
 export interface ArrowOptions {
   /** The arrow DOM element. Must be a child of the floating element. */
@@ -25,7 +25,7 @@ export interface ArrowOptions {
  * arrowEl.style.top  = y != null ? `${y}px` : '';
  * ```
  */
-export function arrow({ element, padding = 0 }: ArrowOptions): TypedMiddleware<'arrow', ArrowData> {
+export function arrow({ element, padding = 0 }: ArrowOptions): Middleware {
   function arrowMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const side = getSide(state.placement);
     const inset = toSideObject(padding);
@@ -48,5 +48,5 @@ export function arrow({ element, padding = 0 }: ArrowOptions): TypedMiddleware<'
     return { data: { arrow: { centerOffset: idealY - y, constrained: y !== idealY, y } } };
   }
 
-  return tagMiddleware<'arrow', ArrowData, typeof arrowMiddleware>(arrowMiddleware, 'arrow');
+  return arrowMiddleware;
 }

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: replace float helpers with lifecycle-owned positioners",
+      "packageName": "@vielzeug/orbit",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/orbit"
+}

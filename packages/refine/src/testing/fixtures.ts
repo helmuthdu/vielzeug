@@ -17,12 +17,14 @@ import { test as base } from '@playwright/test';
  * No dev server is required — all scripts are inlined from the built dist/ outputs.
  */
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../../../..');
 const PKG = path.resolve(__dirname, '../../..');
+const require = createRequire(import.meta.url);
 const PNPM_STORE = path.join(ROOT, 'common/temp/node_modules/.pnpm');
 
 // Paths to UMD/IIFE bundles — mirrors verify-layout.mjs's resolveDepScripts()
@@ -30,7 +32,7 @@ const TEMPORAL_UMD = path.join(
   PNPM_STORE,
   '@js-temporal+polyfill@0.5.1/node_modules/@js-temporal/polyfill/dist/index.umd.js',
 );
-const LUCIDE_UMD = path.join(PNPM_STORE, 'lucide@1.23.0/node_modules/lucide/dist/umd/lucide.js');
+const LUCIDE_UMD = require.resolve('lucide/dist/umd/lucide.js');
 
 const IIFE_ENTRIES: Array<{ path: string; shim?: string }> = [
   { path: TEMPORAL_UMD, shim: 'if(typeof temporal!=="undefined"){window.Temporal=temporal;}' },

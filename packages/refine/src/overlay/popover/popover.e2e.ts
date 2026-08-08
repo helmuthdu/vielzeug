@@ -8,7 +8,7 @@
 import { expect, test } from '../../testing/fixtures';
 
 test.describe('Interaction', () => {
-  test('shows when trigger is clicked', async ({ page, refinePage }) => {
+  test('shows below its trigger when clicked', async ({ page, refinePage }) => {
     await refinePage.mountComponent(
       // Default slot = trigger element; slot="content" = panel content
       '<ore-popover>' +
@@ -18,7 +18,7 @@ test.describe('Interaction', () => {
     );
 
     await page.locator('ore-button').click();
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(300);
 
     // ore-popover wires aria-expanded onto the slotted trigger (ore-button host)
     const isOpen = await page.evaluate(() => {
@@ -28,5 +28,21 @@ test.describe('Interaction', () => {
     });
 
     expect(isOpen).toBe(true);
+
+    const positions = await page.evaluate(() => {
+      const popover = document.querySelector('ore-popover')!;
+      const trigger = document.querySelector('ore-button')!.getBoundingClientRect();
+      const panel = popover.shadowRoot!.querySelector<HTMLElement>('.panel')!.getBoundingClientRect();
+
+      return { panel, trigger };
+    });
+
+    expect(positions.panel.top).toBeGreaterThanOrEqual(positions.trigger.bottom);
+    expect(Math.abs(positions.panel.top - positions.trigger.bottom - 8)).toBeLessThan(2);
+    expect(
+      Math.abs(
+        positions.panel.left + positions.panel.width / 2 - (positions.trigger.left + positions.trigger.width / 2),
+      ),
+    ).toBeLessThan(4);
   });
 });

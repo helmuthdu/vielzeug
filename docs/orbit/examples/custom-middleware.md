@@ -36,7 +36,7 @@ floating.style.top = `${y}px`;
 
 ### Pitfalls
 
-- Custom middleware runs after built-in middleware in declaration order. Returning `reset: true` restarts the full pipeline — use this only when the middleware must react to another middleware's result, and guard against infinite loops with a `middlewareData` flag.
+- Middleware runs in declaration order. Return `reset: {}` to restart the pipeline; use it only when another pass is required and guard against repeated resets.
 - Return `undefined` (or nothing) when you make no change. Returning `{ x, y }` with the original values is valid but redundant and slightly less efficient.
 - Middleware share `middlewareData` through the `data` return field. Use a unique namespace key (e.g., your middleware's name) to avoid collisions with built-ins.
 

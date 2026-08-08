@@ -7,7 +7,7 @@ import { size } from './middleware/size';
 
 /**
  * A positioning preset — a pre-configured `placement` and `middleware` array
- * ready to spread into `float()` or `computePosition()` options.
+ * ready to spread into `createPositioner()` or `computePosition()` options.
  */
 export interface PositioningPreset {
   placement: Placement;
@@ -30,7 +30,8 @@ export interface PresetOptions {
  * @example
  * ```ts
  * import { tooltip } from '@vielzeug/orbit/presets';
- * const cleanup = float(trigger, tooltipEl, tooltip());
+ * const positioner = createPositioner(trigger, tooltipEl, tooltip());
+ * positioner.start();
  * ```
  */
 export function tooltip(options: PresetOptions = {}): PositioningPreset {
@@ -49,7 +50,8 @@ export function tooltip(options: PresetOptions = {}): PositioningPreset {
  * @example
  * ```ts
  * import { dropdown } from '@vielzeug/orbit/presets';
- * const cleanup = float(trigger, panel, dropdown());
+ * const positioner = createPositioner(trigger, panel, dropdown());
+ * positioner.start();
  * ```
  */
 export function dropdown(options: PresetOptions = {}): PositioningPreset {
@@ -68,7 +70,8 @@ export function dropdown(options: PresetOptions = {}): PositioningPreset {
  * @example
  * ```ts
  * import { popover } from '@vielzeug/orbit/presets';
- * const cleanup = float(trigger, panel, popover());
+ * const positioner = createPositioner(trigger, panel, popover());
+ * positioner.start();
  * ```
  */
 export function popover(options: PresetOptions = {}): PositioningPreset {
@@ -89,7 +92,8 @@ export function popover(options: PresetOptions = {}): PositioningPreset {
  * import { contextMenu } from '@vielzeug/orbit/presets';
  * document.addEventListener('contextmenu', (e) => {
  *   const vref = { getBoundingClientRect: () => ({ x: e.clientX, y: e.clientY, width: 0, height: 0, ... }) };
- *   float(vref, menu, contextMenu());
+ *   const positioner = createPositioner(vref, menu, contextMenu());
+ *   positioner.start();
  * });
  * ```
  */

@@ -1,7 +1,6 @@
 import type {
   ComputePositionOptions,
   ComputePositionResult,
-  Middleware,
   MiddlewareData,
   MiddlewareReset,
   MiddlewareResult,
@@ -11,7 +10,7 @@ import type {
 
 import { devOnly, warn } from './_dev';
 import { OrbitConfigError } from './errors';
-import { baseCoords, MIDDLEWARE_NAME, toRect, validateMiddlewareNames } from './utils';
+import { baseCoords, toRect } from './utils';
 
 // ── DOM helpers ────────────────────────────────────────────────────────────────────────────────
 
@@ -111,19 +110,11 @@ export function computePosition(
   floating: HTMLElement,
   { boundary, containingBlock, middleware = [], padding, placement = 'bottom' }: ComputePositionOptions = {},
 ): ComputePositionResult {
-  const mws = middleware.filter(Boolean) as Middleware[];
+  const mws = middleware;
 
   if (reference === floating) {
     warn('computePosition: reference and floating are the same element.');
   }
-
-  const names = mws.map((mw) => {
-    const tag = (mw as unknown as Record<symbol, unknown>)[MIDDLEWARE_NAME];
-
-    return typeof tag === 'string' ? tag : null;
-  });
-
-  validateMiddlewareNames(names);
 
   let currentPlacement = placement;
   let middlewareData: MiddlewareData = {};

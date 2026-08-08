@@ -1,7 +1,7 @@
-import type { DetectOverflowOptions, FlipData, Middleware, Placement, TypedMiddleware } from '../types';
+import type { DetectOverflowOptions, Middleware, Placement } from '../types';
 
 import { detectOverflow, getPlacementOverflow, hasOverflow, totalOverflow } from '../overflow';
-import { getAlignment, getSide, OPPOSITE, tagMiddleware, withPlacement } from '../utils';
+import { getAlignment, getSide, OPPOSITE, withPlacement } from '../utils';
 
 export interface FlipOptions extends DetectOverflowOptions {
   /**
@@ -15,7 +15,7 @@ export interface FlipOptions extends DetectOverflowOptions {
  * Flips the floating element to the opposite side when it overflows the boundary.
  * Falls back to the candidate with the least total overflow when no candidate fits.
  */
-export function flip(options: FlipOptions = {}): TypedMiddleware<'flip', FlipData> {
+export function flip(options: FlipOptions = {}): Middleware {
   function flipMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
     const currentOverflow = detectOverflow(state, options);
 
@@ -55,5 +55,5 @@ export function flip(options: FlipOptions = {}): TypedMiddleware<'flip', FlipDat
     }
   }
 
-  return tagMiddleware<'flip', FlipData, typeof flipMiddleware>(flipMiddleware, 'flip');
+  return flipMiddleware;
 }

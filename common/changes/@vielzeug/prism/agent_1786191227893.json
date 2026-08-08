@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Keep chart tooltip positioning on the one-shot Orbit computation path",
+      "packageName": "@vielzeug/prism",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/prism"
+}

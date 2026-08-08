@@ -1,16 +1,15 @@
 ---
 title: Orbit — Examples
-description: Practical examples and recipes for orbit.
+description: Worked examples for @vielzeug/orbit.
 ---
 
 ## Examples
 
-- [Tooltip](./examples/tooltip.md)
-- [Dropdown Select](./examples/dropdown-select.md)
 - [Context Menu](./examples/context-menu.md)
-- [Popover With Arrow](./examples/popover-with-arrow.md)
-- [Using Presets](./examples/using-presets.md)
 - [Custom Middleware](./examples/custom-middleware.md)
-- [With Ore Component](./examples/with-ore-component.md)
+- [Dropdown Select](./examples/dropdown-select.md)
+- [Popover with Arrow](./examples/popover-with-arrow.md)
 - [Reactive Adapter](./examples/reactive-adapter.md)
-- [SSR Setup](./examples/ssr-setup.md)
+- [Tooltip](./examples/tooltip.md)
+- [Using Presets](./examples/using-presets.md)
+- [With Ore Component](./examples/with-ore-component.md)

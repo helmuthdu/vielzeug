@@ -42,8 +42,8 @@ importers:
         specifier: link:../../packages/lingua
         version: link:../../packages/lingua
       '@vielzeug/orbit':
-        specifier: ^1.1.3
-        version: 1.1.3
+        specifier: link:../../packages/orbit
+        version: link:../../packages/orbit
       '@vielzeug/ore':
         specifier: ^2.0.0
         version: 2.0.0(@vielzeug/assay@2.0.0)(@vielzeug/ripple@1.3.0)
