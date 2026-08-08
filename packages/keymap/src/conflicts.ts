@@ -30,11 +30,12 @@ export function findShortcutConflicts(
   options: ConflictOptions = {},
 ): BindingEntry[] {
   const { modKey, trigger = 'keydown' } = options;
-  const steps = parseShortcut(shortcut, modKey);
 
-  // An empty/whitespace-only shortcut parses to zero steps, which would otherwise be treated as
-  // a trivial prefix of every entry — never report that as a conflict.
-  if (steps.length === 0) return [];
+  // An empty/whitespace-only shortcut would be a trivial prefix of every entry — never report it
+  // as a conflict.
+  if (shortcut.trim() === '') return [];
+
+  const steps = parseShortcut(shortcut, modKey);
 
   return entries.filter(
     (entry) => entry.trigger === trigger && (isPrefixOf(steps, entry.shortcut) || isPrefixOf(entry.shortcut, steps)),

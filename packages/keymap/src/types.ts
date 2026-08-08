@@ -1,18 +1,17 @@
 import type { ShortcutStep } from './parser';
 
 export type BindingEntry = {
-  readonly priority: number;
   readonly shortcut: readonly ShortcutStep[];
   readonly trigger: 'keydown' | 'keyup';
 };
 
 export type Handler = (event: KeyboardEvent) => void;
+export type When = (event: KeyboardEvent) => boolean;
 
 export type BindingOptions = {
   handler: Handler;
-  priority?: number;
   trigger?: 'keydown' | 'keyup';
-  when?: () => boolean;
+  when?: When;
 };
 
 export type BindingValue = Handler | BindingOptions;
@@ -22,7 +21,7 @@ export interface KeymapOptions {
   modKey?: 'ctrl' | 'meta';
   preventDefault?: boolean;
   stopPropagation?: boolean;
-  when?: () => boolean;
+  when?: When;
 }
 
 export interface Keymap {

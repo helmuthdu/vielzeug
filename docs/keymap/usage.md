@@ -1,99 +1,129 @@
 ---
 title: Keymap — Usage Guide
-description: How to use createKeymap for single shortcuts, chord sequences, context guards, and framework integration.
+description: Bind keyboard shortcuts, chords, event-aware guards, and target-local listeners with @vielzeug/keymap.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-Pass a record of shortcut strings to handlers:
+Mount one keymap, then release its target listener and dispose its owner during teardown.
 
 ```ts
 import { createKeymap } from '@vielzeug/keymap';
 
 const map = createKeymap({
-  'ctrl+s': () => save(),
-  'ctrl+z': () => undo(),
-  'ctrl+shift+z': () => redo(),
-  escape: () => closeModal(),
+  'ctrl+s': () => console.log('save'),
+  'ctrl+z': () => console.log('undo'),
+  escape: () => console.log('close'),
 });
 
 const unmount = map.mount(document);
+
+// Call this when the owning UI scope ends.
+unmount();
+map.dispose();
 ```
 
-The returned `unmount` function detaches listeners from that target only. Call `map.dispose()` to remove from all mounted targets at once.
+`unmount()` only releases that target. `dispose()` releases every target, aborts `disposalSignal`, and makes `bind()`, `unbind()`, and `mount()` unavailable.
 
 ## Modifier Aliases
 
-You can write shortcuts in the style that feels natural — Keymap normalises everything:
+Use aliases to accept platform terminology while Keymap stores one canonical shortcut.
 
-| You write               | Canonical form |
-| ----------------------- | -------------- |
-| `cmd`, `command`, `win` | `meta`         |
-| `opt`, `option`         | `alt`          |
-| `ctrl`, `control`       | `ctrl`         |
-| `shift`                 | `shift`        |
+| Input | Canonical modifier |
+| --- | --- |
+| `cmd`, `command`, `win` | `meta` |
+| `opt`, `option` | `alt` |
+| `ctrl`, `control` | `ctrl` |
+| `mod` | `meta` on Mac; `ctrl` elsewhere |
+
+Pass `modKey` when rendering or testing a specific platform.
 
 ```ts
-// All three are equivalent:
-createKeymap({ 'cmd+k': handler });
-createKeymap({ 'command+k': handler });
-createKeymap({ 'meta+k': handler });
+import { createKeymap } from '@vielzeug/keymap';
+
+const map = createKeymap(
+  { 'mod+k': () => console.log('open palette') },
+  { modKey: 'ctrl' },
+);
+
+map.mount(document);
 ```
 
 ## Chord Sequences
 
-Separate chord steps with a space. The default timeout between steps is 1 s:
+Separate chord steps with spaces. Keymap resets an incomplete sequence after `chordTimeout` milliseconds.
 
 ```ts
 const map = createKeymap(
   {
-    'ctrl+k ctrl+s': () => save(), // VS Code–style
-    'g g': () => goToTop(), // Vim-style
-    'g G': () => goToBottom(),
+    'ctrl+k ctrl+s': () => console.log('save'),
+    'g g': () => window.scrollTo({ top: 0 }),
+    'g e': () => window.scrollTo({ top: document.body.scrollHeight }),
   },
-  {
-    chordTimeout: 750, // ms — reset partial chord if exceeded
-  },
+  { chordTimeout: 800 },
 );
 ```
 
-> **Tip:** A shorter binding always fires immediately when typed, even if a longer chord shares its prefix — binding order doesn't matter. `'g'` and `'g g'` together means `'g g'` can never be reached, because `'g'` fires the instant it's pressed. Use `findShortcutConflicts()` (see below) to detect this before it surprises a user.
+Do not bind a complete shortcut and a longer chord beginning with that shortcut. `g` fires immediately, so `g g` cannot complete. Check proposed user bindings with `findShortcutConflicts()`.
 
-## `BindingOptions` — Per-binding Configuration
+## Binding Options
 
-Pass a `BindingOptions` object instead of a plain handler to add guards, trigger control, or priority:
+Add a guard or choose `keyup` with `BindingOptions`.
 
 ```ts
 const map = createKeymap({
-  'ctrl+s': () => save(), // plain handler
-  escape: { handler: closePanel, when: () => isOpen() }, // per-binding guard
-  space: { handler: togglePlay, trigger: 'keyup' }, // fires on keyup
-  'ctrl+z': { handler: undo, priority: 10 }, // wins over lower-priority bindings
+  'ctrl+s': () => saveDocument(),
+  escape: { handler: closePanel, when: (event) => event.target === panel },
+  space: { handler: togglePlayback, trigger: 'keyup' },
 });
 ```
+
+A matching binding calls `preventDefault()` by default. Set `preventDefault: false` for shortcuts that must retain browser behavior.
 
 ## Context Guards
 
-Use a global `when()` in `KeymapOptions` to disable an entire keymap conditionally:
+Use global `when(event)` for policy shared by every binding. Use per-binding `when(event)` when one shortcut needs a narrower policy.
 
 ```ts
-const map = createKeymap({ escape: () => closePanel() }, { when: () => panelIsOpen() });
+const map = createKeymap(
+  {
+    escape: { handler: closePanel, when: (event) => event.target === panel },
+    'ctrl+s': () => saveDocument(),
+  },
+  { when: (event) => !modalIsOpen() && event.isTrusted },
+);
 ```
 
-For per-binding guards, use `BindingOptions.when`:
+Zero-argument callbacks continue to work. Accept `KeyboardEvent` when guard logic needs target, modifier, composition, or shadow-DOM context.
+
+### Preserve Native Text Editing
+
+Use `event.composedPath()` to keep browser undo and redo inside inputs, textareas, and `contenteditable` elements. Kanban app shell uses this policy for its global undo and redo shortcuts.
 
 ```ts
-const map = createKeymap({
-  escape: { handler: closePanel, when: () => isPanelOpen() },
-  backspace: { handler: deleteLine, when: () => isEditorFocused() },
-});
+const isTypingInField = (event: KeyboardEvent): boolean =>
+  event.composedPath().some(
+    (target) =>
+      target instanceof HTMLElement &&
+      (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable),
+  );
+
+const map = createKeymap(
+  {
+    'mod+z': () => undo(),
+    'mod+shift+z': () => redo(),
+  },
+  { when: (event) => !isTypingInField(event) },
+);
 ```
+
+Do not make editable-field suppression a hidden package default. Applications may intentionally bind shortcuts inside editable controls.
 
 ## Trigger Control
 
-Bindings default to `keydown`. Use `trigger: 'keyup'` for actions that should fire on release:
+Bind on `keyup` when an action must run after key release.
 
 ```ts
 const map = createKeymap({
@@ -101,167 +131,166 @@ const map = createKeymap({
 });
 ```
 
-Keydown and keyup chord trackers are independent — a `'g g'` chord on `keyup` does not interfere with a `'g g'` chord on `keydown`.
+`keydown` and `keyup` maintain independent chord state.
 
-## Replacing a Binding at Runtime
+## Replace Bindings at Runtime
 
-`bind()` always replaces any existing binding for the same shortcut — the most recent call wins, regardless of `priority`:
+Bind replaces an existing binding with same canonical shortcut and returns a targeted removal callback.
 
 ```ts
-const map = createKeymap({
-  'ctrl+k': defaultAction,
-});
+const map = createKeymap({ 'ctrl+k': defaultAction });
+const removePluginBinding = map.bind('ctrl+k', pluginAction);
 
-// A plugin registers an override at runtime — this replaces the default binding outright:
-map.bind('ctrl+k', pluginOverride);
+removePluginBinding();
+map.bind('ctrl+k', defaultAction);
 ```
 
-> `BindingOptions.priority` doesn't affect this — because bindings are keyed by their canonical shortcut, two _live_ bindings can never actually compete for the same event, so there's no tie for `priority` to break. It's a validated, reserved field kept for forward compatibility — see the note in [`api.md`](./api.md#bindingoptions).
+`unbind(shortcut)` removes canonicalized aliases and warns in development when no binding exists.
 
-## Display with `formatShortcut`
+## Format Shortcut Labels
 
-Format shortcut strings for display in tooltips, menus, or documentation:
+Format labels with explicit platform behavior when your UI is cross-platform.
 
 ```ts
 import { formatShortcut } from '@vielzeug/keymap';
 
-formatShortcut('mod+shift+p', 'meta'); // '⇧⌘P'
-formatShortcut('mod+shift+p', 'ctrl'); // 'Ctrl+Shift+P'
-formatShortcut('ctrl+k ctrl+s'); // platform-detected
+console.log(formatShortcut('mod+shift+p', 'meta')); // ⇧⌘P
+console.log(formatShortcut('mod+shift+p', 'ctrl')); // Ctrl+Shift+P
 ```
 
-Returns `''` and emits a dev warning for empty or invalid shortcuts.
+`formatShortcut()` returns `''` and emits a development warning for invalid input.
 
-## Detecting Conflicts
+## Detect Conflicts
 
-Before binding a user-customized shortcut, check whether it would shadow (or be shadowed by) an
-existing binding — most useful for a shortcut-customization UI where the shortcut string comes
-from user input:
+Check a custom shortcut before binding it to prevent duplicate or unreachable chord paths.
 
 ```ts
 import { createKeymap, findShortcutConflicts } from '@vielzeug/keymap';
 
 const map = createKeymap({ g: () => scrollToTop() });
-
 const conflicts = findShortcutConflicts('g g', map.listBindings());
 
-if (conflicts.length > 0) {
-  warnUser('This shortcut would never fire — "g" already handles the first key.');
-} else {
-  map.bind('g g', () => scrollToBottom());
-}
+if (conflicts.length === 0) map.bind('g g', () => scrollToBottom());
 ```
 
-`findShortcutConflicts()` catches both directions: a shorter existing binding shadowing your
-proposal, and your proposal shadowing an existing longer chord.
+Conflict detection compares only bindings with same trigger. An empty proposal returns no conflicts; other invalid proposals throw `KeymapParseError`.
 
-## Keymap Layers
+## Mount Targets
 
-Stack a scoped keymap on top of a base keymap for modal UIs. Mount each independently:
+Mount one keymap on multiple independent targets when each target should own its own chord progression.
 
 ```ts
-import { createKeymap, createKeymapLayer } from '@vielzeug/keymap';
-
-const base = createKeymap({ 'ctrl+z': undo, 'ctrl+s': save });
-const modal = createKeymapLayer(base, {
-  escape: { handler: closeModal, when: () => isModalOpen() },
-  'ctrl+enter': () => confirm(),
-});
-
-const unmountBase = base.mount(document);
-const unmountModal = modal.mount(document);
-
-modal.deactivate(); // base handles everything; layer is suspended
-modal.activate(); // layer resumes
-
-modal.parent === base; // true
-
-unmountModal();
-unmountBase();
+const map = createKeymap({ 'g g': () => console.log('go to top') });
+const unmountEditor = map.mount(editor);
+const unmountPreview = map.mount(preview);
 ```
 
-## Mounting to a Specific Element
+A chord started on `editor` cannot complete on `preview`. Repeated `mount(editor)` calls share one listener and require one unmount call each. For nested targets, Keymap handles one bubbled event at its innermost mounted target.
 
-Pass any `EventTarget` — not just `document`:
+## Scoped Maps
 
-```ts
-const editorEl = document.getElementById('editor')!;
-const unmount = map.mount(editorEl); // only fires when focus is inside editor
-```
-
-One keymap can be mounted to multiple targets simultaneously:
+Create separate keymaps for separate UI owners. If maps share a target and shortcut, guards must be mutually exclusive because Keymap has no implicit layer precedence.
 
 ```ts
-const u1 = map.mount(editorA);
-const u2 = map.mount(editorB);
-// u1() removes from editorA only
-// map.dispose() removes from both
-```
-
-Mounting the _same_ target twice without unmounting first (e.g. a forgotten cleanup in an effect) still works — handlers just fire twice — and emits a dev warning to flag the likely mistake.
-
-## `preventDefault` and `stopPropagation`
-
-```ts
-const map = createKeymap(
-  { 'ctrl+s': () => save() },
-  {
-    preventDefault: true, // default: true — prevents browser save dialog
-    stopPropagation: false, // default: false
-  },
+const baseMap = createKeymap(
+  { escape: () => closeSidebar() },
+  { when: () => !modalIsOpen() },
 );
+
+const modalMap = createKeymap(
+  { escape: () => closeModal() },
+  { when: () => modalIsOpen() },
+);
+
+const unmountBase = baseMap.mount(document);
+const unmountModal = modalMap.mount(document);
 ```
+
+## Testing
+
+Dispatch `KeyboardEvent` instances against a mounted DOM target to test handlers and default prevention.
+
+```ts
+import { expect, it, vi } from 'vitest';
+
+import { createKeymap } from '@vielzeug/keymap';
+
+it('handles save', () => {
+  const save = vi.fn();
+  const target = document.createElement('button');
+  const map = createKeymap({ 'ctrl+s': save });
+  const unmount = map.mount(target);
+
+  target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, ctrlKey: true, key: 's' }));
+
+  expect(save).toHaveBeenCalledOnce();
+  unmount();
+  map.dispose();
+});
+```
+
+Mount nested DOM targets in tests when your application uses both a container and a descendant listener. This verifies one bubbled event cannot complete a chord twice.
 
 ## Framework Integration
+
+Create map during framework lifecycle, then dispose it during teardown.
 
 ::: code-group
 
 ```tsx [React]
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
+
 import { createKeymap } from '@vielzeug/keymap';
 
-function App() {
+export function App() {
   useEffect(() => {
-    const map = createKeymap({
-      'ctrl+k': () => setOpen(true),
-      escape: () => setOpen(false),
-    });
+    const map = createKeymap({ 'ctrl+k': () => console.log('open palette') });
     const unmount = map.mount(document);
-    return () => unmount();
+
+    return () => {
+      unmount();
+      map.dispose();
+    };
   }, []);
+
+  return null;
 }
 ```
 
 ```vue [Vue 3]
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
+
 import { createKeymap } from '@vielzeug/keymap';
 
-const map = createKeymap({
-  'ctrl+k': () => openPalette(),
-  escape: () => closePalette(),
-});
-
+const map = createKeymap({ escape: () => console.log('close palette') });
 let unmount: (() => void) | undefined;
+
 onMounted(() => {
   unmount = map.mount(document);
 });
-onUnmounted(() => unmount?.());
+
+onUnmounted(() => {
+  unmount?.();
+  map.dispose();
+});
 </script>
 ```
 
 ```ts [Svelte]
 import { onMount } from 'svelte';
+
 import { createKeymap } from '@vielzeug/keymap';
 
-const map = createKeymap({
-  'ctrl+k': () => openPalette(),
-  escape: () => closePalette(),
-});
+const map = createKeymap({ escape: () => console.log('close palette') });
 
 onMount(() => {
   const unmount = map.mount(document);
-  return () => unmount();
+
+  return () => {
+    unmount();
+    map.dispose();
+  };
 });
 ```
 
@@ -271,7 +300,7 @@ onMount(() => {
 
 ### Keymap + Ledger
 
-Wire undo/redo shortcuts to a `Ledger` instance:
+Connect undo and redo handlers to a Ledger owner.
 
 ```ts
 import { createKeymap } from '@vielzeug/keymap';
@@ -279,32 +308,35 @@ import { createLedger } from '@vielzeug/ledger';
 
 const ledger = createLedger();
 const map = createKeymap({
-  'ctrl+z': () => ledger.undo(),
-  'ctrl+shift+z': () => ledger.redo(),
-  'ctrl+y': () => ledger.redo(), // Windows alias
+  'mod+z': () => void ledger.undo(),
+  'mod+shift+z': () => void ledger.redo(),
 });
+
 map.mount(document);
 ```
 
 ### Keymap + Herald
 
-Publish shortcut events to a bus instead of calling handlers directly:
+Emit domain events instead of calling application actions from shortcut handlers.
 
 ```ts
-import { createKeymap } from '@vielzeug/keymap';
 import { createBus } from '@vielzeug/herald';
+import { createKeymap } from '@vielzeug/keymap';
 
-const bus = createBus<{ 'shortcut:save': void; 'shortcut:palette': void }>();
+const bus = createBus<{ 'shortcut:save': void }>();
 const map = createKeymap({
   'ctrl+s': () => bus.emit('shortcut:save'),
-  'meta+shift+p': () => bus.emit('shortcut:palette'),
 });
+
 map.mount(document);
 ```
 
 ## Best Practices
 
-- **One keymap per scope**: create separate keymaps for global shortcuts, panel shortcuts, and editor shortcuts — mount/unmount them as the relevant UI state changes.
-- **Dispose on teardown**: always call `unmount()` or `map.dispose()` when the component unmounts or the scope is destroyed.
-- **Avoid modifier-only shortcuts**: shortcuts like `shift` alone (no key) can't be reliably parsed — always include a non-modifier key.
-- **Use `when()` for toggleable scopes**: simpler than manually mounting and unmounting on every state change.
+- **Dispose** every map when its owner ends.
+- **Unmount** temporary target listeners instead of disposing reusable maps.
+- **Guard** global text-editing shortcuts with `event.composedPath()`.
+- **Check** conflicts before accepting customized shortcuts.
+- **Keep** shared-target guards mutually exclusive.
+- **Use** `mod` for primary cross-platform shortcuts.
+- **Avoid** prefix pairs such as `g` and `g g`.

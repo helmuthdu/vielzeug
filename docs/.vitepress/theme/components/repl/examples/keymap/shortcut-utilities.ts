@@ -30,7 +30,7 @@ console.log('Same canonical?', a === b)
 const map = createKeymap(
   {
     'ctrl+k': () => console.log('ctrl+k fired'),
-    'ctrl+shift+s': { handler: () => console.log('save fired'), priority: 5, trigger: 'keyup' },
+    'ctrl+shift+s': { handler: () => console.log('save fired'), trigger: 'keyup' },
   },
   { modKey },
 )
@@ -40,7 +40,7 @@ console.log('Bindings:', entries.length)
 
 for (const entry of entries) {
   const canonical = canonicalizeShortcut(entry.shortcut)
-  console.log(\`  \${canonical} — trigger: \${entry.trigger}, priority: \${entry.priority}\`)
+  console.log(\`  \${canonical} — trigger: \${entry.trigger}\`)
 }
 
 // bind() returns an unbind closure — uses canonical key internally.

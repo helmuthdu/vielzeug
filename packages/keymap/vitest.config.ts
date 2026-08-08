@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   test: {
-    environment: 'node',
+    environment: 'jsdom',
     globals: true,
     name: 'keymap',
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],

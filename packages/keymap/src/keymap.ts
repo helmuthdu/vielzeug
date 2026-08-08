@@ -1,31 +1,31 @@
 import type { Shortcut } from './parser';
-import type { BindingEntry, BindingOptions, BindingValue, Handler, Keymap, KeymapOptions } from './types';
+import type { BindingEntry, BindingValue, Handler, Keymap, KeymapOptions, When } from './types';
 
 import { warn } from './_dev';
+import { KeymapError } from './errors';
 import { canonicalizeShortcut, detectModKey, matchStep, parseShortcut } from './parser';
 
 type ParsedBinding = {
   handler: Handler;
-  priority: number;
   shortcut: Shortcut;
   trigger: 'keydown' | 'keyup';
-  when?: () => boolean;
+  when?: When;
+};
+
+type ChordTracker = ReturnType<typeof createChordTracker>;
+type MountedTarget = {
+  keydown: ChordTracker;
+  keyup: ChordTracker;
+  onKeydown: EventListener;
+  onKeyup: EventListener;
+  refs: number;
 };
 
 function resolveBinding(value: BindingValue): Omit<ParsedBinding, 'shortcut'> {
-  if (typeof value === 'function') {
-    return { handler: value, priority: 0, trigger: 'keydown' };
-  }
-
-  const priority = value.priority ?? 0;
-
-  if (!Number.isFinite(priority)) {
-    warn(`binding priority must be a finite number; received ${priority}. Using 0.`);
-  }
+  if (typeof value === 'function') return { handler: value, trigger: 'keydown' };
 
   return {
     handler: value.handler,
-    priority: Number.isFinite(priority) ? priority : 0,
     trigger: value.trigger ?? 'keydown',
     when: value.when,
   };
@@ -34,53 +34,37 @@ function resolveBinding(value: BindingValue): Omit<ParsedBinding, 'shortcut'> {
 function createChordTracker(getBindings: () => ParsedBinding[], chordTimeout: number) {
   let pendingIndex = 0;
   let candidates: ParsedBinding[] = [];
-  let timer: ReturnType<typeof setTimeout> | null = null;
-
-  function clearTimer(): void {
-    if (timer !== null) {
-      clearTimeout(timer);
-      timer = null;
-    }
-  }
+  let timer: ReturnType<typeof setTimeout> | undefined;
 
   function reset(): void {
-    clearTimer();
+    if (timer !== undefined) clearTimeout(timer);
+
+    timer = undefined;
     pendingIndex = 0;
     candidates = [];
   }
 
-  function advance(event: KeyboardEvent): ParsedBinding | null {
-    // At the root of a chord, re-scan every binding. Mid-chord, narrow only within bindings that
-    // already matched every prior step — never re-admit a binding whose earlier step didn't match.
+  function advance(event: KeyboardEvent): ParsedBinding | undefined {
     const pool = pendingIndex === 0 ? getBindings() : candidates;
-    const matched: ParsedBinding[] = [];
-
-    for (const binding of pool) {
+    const matched = pool.filter((binding) => {
       const step = binding.shortcut[pendingIndex];
 
-      if (step && matchStep(event, step)) {
-        matched.push(binding);
-      }
-    }
+      return step !== undefined && matchStep(event, step);
+    });
 
     if (matched.length === 0) {
-      const wasPartial = pendingIndex !== 0;
+      const retryFromRoot = pendingIndex !== 0;
 
       reset();
 
-      if (wasPartial) {
-        return advance(event);
-      }
-
-      return null;
+      return retryFromRoot ? advance(event) : undefined;
     }
 
-    clearTimer();
+    if (timer !== undefined) clearTimeout(timer);
 
-    // At most one binding can complete here — the bindings map is keyed by canonical shortcut,
-    // so two live bindings can never share an identical step sequence. `priority` therefore never
-    // has a real tie to resolve; the shortest completing match always fires immediately.
-    const completed = matched.find((b) => b.shortcut.length === pendingIndex + 1);
+    timer = undefined;
+
+    const completed = matched.find((binding) => binding.shortcut.length === pendingIndex + 1);
 
     if (completed) {
       reset();
@@ -89,29 +73,29 @@ function createChordTracker(getBindings: () => ParsedBinding[], chordTimeout: nu
     }
 
     candidates = matched;
-    pendingIndex++;
+    pendingIndex += 1;
     timer = setTimeout(reset, chordTimeout);
 
-    return null;
+    return undefined;
   }
 
   return { advance, reset };
 }
 
 /**
- * Creates a headless keyboard shortcut manager.
+ * Creates a headless keyboard shortcut manager with target-local chord state.
  *
  * Pass a bindings map of shortcut strings to handlers or `BindingOptions`, then call
  * `.mount(target)` to attach to any `EventTarget`. Supports chord sequences
  * (e.g. `"ctrl+k ctrl+s"`), per-binding `when` guards, `trigger` (keydown/keyup),
- * `priority`, and dynamic `bind`/`unbind`.
+ * and dynamic `bind`/`unbind`.
  *
  * @example
  * const map = createKeymap({
  *   'mod+k mod+s': () => save(),
  *   'mod+shift+p': () => openPalette(),
  *   'g g': () => goToTop(),
- *   esc: { handler: closePanel, when: () => isPanelOpen() },
+ *   esc: { handler: closePanel, when: (event) => !isEditableTarget(event.target) },
  *   space: { handler: togglePlay, trigger: 'keyup' },
  * }, { modKey: 'ctrl' });
  * const unmount = map.mount(document);
@@ -124,7 +108,6 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
     stopPropagation = false,
     when: globalWhen,
   } = options;
-
   const chordTimeout = Number.isFinite(rawChordTimeout) && rawChordTimeout > 0 ? rawChordTimeout : 1000;
 
   if (chordTimeout !== rawChordTimeout) {
@@ -132,24 +115,35 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
   }
 
   const bindings = new Map<string, ParsedBinding>();
+  const mounted = new Map<EventTarget, MountedTarget>();
+  const disposalController = new AbortController();
   let bindingsDown: ParsedBinding[] = [];
   let bindingsUp: ParsedBinding[] = [];
+  let disposed = false;
+
+  function assertActive(): void {
+    if (disposed) throw new KeymapError('Keymap is disposed');
+  }
 
   function rebuildTriggerCaches(): void {
     bindingsDown = [];
     bindingsUp = [];
 
-    for (const b of bindings.values()) {
-      if (b.trigger === 'keydown') bindingsDown.push(b);
-      else bindingsUp.push(b);
+    for (const binding of bindings.values()) {
+      if (binding.trigger === 'keydown') bindingsDown.push(binding);
+      else bindingsUp.push(binding);
     }
   }
 
-  function addBinding(shortcutStr: string, value: BindingValue): string {
-    const shortcut = parseShortcut(shortcutStr, modKey);
-    const key = canonicalizeShortcut(shortcut);
+  function bindingKey(shortcut: string): string {
+    return canonicalizeShortcut(parseShortcut(shortcut, modKey));
+  }
 
-    bindings.set(key, { shortcut, ...resolveBinding(value) });
+  function addBinding(shortcut: string, value: BindingValue): string {
+    const parsed = parseShortcut(shortcut, modKey);
+    const key = canonicalizeShortcut(parsed);
+
+    bindings.set(key, { shortcut: parsed, ...resolveBinding(value) });
     rebuildTriggerCaches();
 
     return key;
@@ -163,126 +157,123 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
     return existed;
   }
 
-  function removeBinding(shortcutStr: string): boolean {
-    const shortcut = parseShortcut(shortcutStr, modKey);
-    const key = canonicalizeShortcut(shortcut);
+  function makeHandler(target: EventTarget, chord: ChordTracker): EventListener {
+    return (event) => {
+      const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+      const nearestMountedTarget = path.find((pathTarget) => mounted.has(pathTarget));
 
-    return removeByKey(key);
-  }
+      if (nearestMountedTarget && nearestMountedTarget !== target) return;
 
-  for (const [shortcutStr, value] of Object.entries(initialBindings)) {
-    const shortcut = parseShortcut(shortcutStr, modKey);
-    const key = canonicalizeShortcut(shortcut);
+      const keyboardEvent = event as KeyboardEvent;
 
-    bindings.set(key, { shortcut, ...resolveBinding(value) });
-  }
+      if (disposed || (globalWhen && !globalWhen(keyboardEvent))) return;
 
-  rebuildTriggerCaches();
+      const binding = chord.advance(keyboardEvent);
 
-  const chordDown = createChordTracker(() => bindingsDown, chordTimeout);
-  const chordUp = createChordTracker(() => bindingsUp, chordTimeout);
-  const unmounts = new Set<() => void>();
-  const mountCounts = new Map<EventTarget, number>();
+      if (!binding || (binding.when && !binding.when(keyboardEvent))) return;
 
-  function makeHandler(chord: ReturnType<typeof createChordTracker>) {
-    return function handleEvent(event: KeyboardEvent): void {
-      if (globalWhen && !globalWhen()) return;
+      if (preventDefault) keyboardEvent.preventDefault();
 
-      const binding = chord.advance(event);
+      if (stopPropagation) keyboardEvent.stopPropagation();
 
-      if (!binding) return;
-
-      if (binding.when && !binding.when()) return;
-
-      if (preventDefault) event.preventDefault();
-
-      if (stopPropagation) event.stopPropagation();
-
-      binding.handler(event);
+      binding.handler(keyboardEvent);
     };
   }
 
-  const handleKeydown = makeHandler(chordDown);
-  const handleKeyup = makeHandler(chordUp);
-  const ac = new AbortController();
-  let isDisposed = false;
+  for (const [shortcut, value] of Object.entries(initialBindings)) addBinding(shortcut, value);
 
   return {
-    bind(shortcutStr: string, value: BindingValue): () => void {
-      const key = addBinding(shortcutStr, value);
+    bind(shortcut: string, value: BindingValue): () => void {
+      assertActive();
+
+      const key = addBinding(shortcut, value);
 
       return () => {
-        removeByKey(key);
+        if (!disposed) removeByKey(key);
       };
     },
 
     get disposalSignal(): AbortSignal {
-      return ac.signal;
+      return disposalController.signal;
     },
 
     dispose(): void {
-      if (isDisposed) return;
+      if (disposed) return;
 
-      isDisposed = true;
-      ac.abort();
-      for (const unmount of unmounts) unmount();
-      unmounts.clear();
-      chordDown.reset();
-      chordUp.reset();
+      disposed = true;
+      disposalController.abort();
+
+      for (const [target, record] of mounted) {
+        target.removeEventListener('keydown', record.onKeydown);
+        target.removeEventListener('keyup', record.onKeyup);
+        record.keydown.reset();
+        record.keyup.reset();
+      }
+
+      mounted.clear();
+      bindings.clear();
+      bindingsDown = [];
+      bindingsUp = [];
     },
 
     get disposed(): boolean {
-      return isDisposed;
+      return disposed;
     },
 
     listBindings(): readonly BindingEntry[] {
-      return [...bindings.values()].map((b) => ({
-        priority: b.priority,
-        shortcut: b.shortcut.map((s) => ({ key: s.key, modifiers: new Set(s.modifiers) })),
-        trigger: b.trigger,
+      return [...bindings.values()].map((binding) => ({
+        shortcut: binding.shortcut.map((step) => ({ key: step.key, modifiers: new Set(step.modifiers) })),
+        trigger: binding.trigger,
       }));
     },
 
     mount(target: EventTarget): () => void {
-      const priorCount = mountCounts.get(target) ?? 0;
+      assertActive();
 
-      if (priorCount > 0) {
-        warn('mount() called for a target that is already mounted — this registers a duplicate listener');
+      let record = mounted.get(target);
+
+      if (!record) {
+        const keydown = createChordTracker(() => bindingsDown, chordTimeout);
+        const keyup = createChordTracker(() => bindingsUp, chordTimeout);
+        const onKeydown = makeHandler(target, keydown);
+        const onKeyup = makeHandler(target, keyup);
+
+        record = { keydown, keyup, onKeydown, onKeyup, refs: 0 };
+        mounted.set(target, record);
+        target.addEventListener('keydown', onKeydown);
+        target.addEventListener('keyup', onKeyup);
       }
 
-      mountCounts.set(target, priorCount + 1);
+      record.refs += 1;
 
-      target.addEventListener('keydown', handleKeydown as EventListener);
-      target.addEventListener('keyup', handleKeyup as EventListener);
+      let unmounted = false;
 
-      const unmount = (): void => {
-        target.removeEventListener('keydown', handleKeydown as EventListener);
-        target.removeEventListener('keyup', handleKeyup as EventListener);
-        unmounts.delete(unmount);
+      return () => {
+        if (unmounted) return;
 
-        const remaining = (mountCounts.get(target) ?? 1) - 1;
+        unmounted = true;
+        record!.refs -= 1;
 
-        if (remaining <= 0) mountCounts.delete(target);
-        else mountCounts.set(target, remaining);
+        if (record!.refs > 0) return;
+
+        target.removeEventListener('keydown', record!.onKeydown);
+        target.removeEventListener('keyup', record!.onKeyup);
+        record!.keydown.reset();
+        record!.keyup.reset();
+        mounted.delete(target);
       };
-
-      unmounts.add(unmount);
-
-      return unmount;
     },
 
     [Symbol.dispose](): void {
       this.dispose();
     },
 
-    unbind(shortcutStr: string): void {
-      const existed = removeBinding(shortcutStr);
+    unbind(shortcut: string): void {
+      assertActive();
 
-      if (!existed) {
-        warn(`unbind() called for unknown shortcut: "${shortcutStr}"`);
+      if (!removeByKey(bindingKey(shortcut))) {
+        warn(`unbind() called for unknown shortcut: "${shortcut}"`);
       }
     },
   };
 }
-
-export type { BindingOptions };

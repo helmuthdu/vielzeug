@@ -1,21 +1,15 @@
 # @vielzeug/keymap
 
-Headless keyboard shortcut manager with chord sequences, per-binding context guards, dynamic bindings, trigger control, conflict detection, and disposable lifecycle.
+Headless keyboard shortcut manager with target-local chord state, event-aware guards, conflict detection, and terminal disposal.
 
 ## Features
 
-- **Chord sequences** — `"g g"`, `"ctrl+k ctrl+s"` with a configurable timeout
-- **Special key aliases** — `space`, `esc`, `up`, `down`, `left`, `right`, `del`
-- **Modifier aliases** — `cmd`/`command`/`win` → `meta`; `opt`/`option` → `alt`; `control` → `ctrl`; `mod` → `meta` on Mac, `ctrl` elsewhere
-- **`modKey` option** — explicit platform override for cross-platform tests and SSR
-- **Per-binding `BindingOptions`** — `{ handler, when?, trigger?, priority? }` object syntax
-- **`trigger` option** — `'keydown'` (default) or `'keyup'` per binding
-- **Dynamic bindings** — `map.bind()` / `map.unbind()` at any time — the most recent `bind()` for a shortcut always wins
-- **`findShortcutConflicts()`** — detect prefix/duplicate conflicts before binding a user-customized shortcut
-- **`formatShortcut()`** — platform-aware display formatter (`⇧⌘P` on Mac, `Ctrl+Shift+P` elsewhere)
-- **`createKeymapLayer()`** — scoped keymap stack with `activate()` / `deactivate()`
-- **Headless** — accepts any `EventTarget`; works without a DOM (SSR, Node tests)
-- **Disposable** — `dispose()` + `[Symbol.dispose]` for `using` declarations
+- `createKeymap()` manages bindings on one or more `EventTarget`s.
+- Chords support sequences such as `"g g"` and `"ctrl+k ctrl+s"`.
+- `when(event)` guards inspect event target and composed path.
+- `findShortcutConflicts()` detects duplicate and unreachable prefix paths.
+- `formatShortcut()` produces Mac symbols or platform labels.
+- `dispose()` releases all listeners and permanently ends manager lifecycle.
 
 ## Install
 
@@ -23,56 +17,31 @@ Headless keyboard shortcut manager with chord sequences, per-binding context gua
 pnpm add @vielzeug/keymap
 ```
 
-## Quick start
+## Quick Start
 
-```typescript
+Create one map for an application scope, then mount and dispose it with that scope.
+
+```ts
 import { createKeymap, formatShortcut } from '@vielzeug/keymap';
 
+const isEditableTarget = (target: EventTarget | null): boolean =>
+  target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLElement && target.isContentEditable;
+
 const map = createKeymap({
-  'mod+k mod+s': () => save(),          // ⌘K⌘S on Mac, Ctrl+K Ctrl+S elsewhere
-  'mod+shift+p': () => openPalette(),
-  'g g':         () => goToTop(),
-  esc:           { handler: closePanel, when: () => isPanelOpen() },
-  space:         { handler: togglePlay, trigger: 'keyup' },
-}, { modKey: 'ctrl' }); // explicit platform for tests / SSR
-
-const unmount = map.mount(document);
-
-// Dynamic bindings:
-const unbind = map.bind('ctrl+z', () => undo());
-unbind(); // or: map.unbind('ctrl+z')
-
-// Display helper:
-formatShortcut('mod+shift+p', 'meta'); // '⇧⌘P'
-formatShortcut('mod+shift+p', 'ctrl'); // 'Ctrl+Shift+P'
-
-// Cleanup:
-unmount();     // remove from this target only
-map.dispose(); // or: using map = createKeymap(…)
-```
-
-## Keymap layers
-
-Stack keymaps for modal UI. Mount the base and the layer independently — each manages its own listeners:
-
-```typescript
-import { createKeymap, createKeymapLayer } from '@vielzeug/keymap';
-
-const base = createKeymap({ 'ctrl+z': undo });
-const modal = createKeymapLayer(base, {
-  esc: { handler: closeModal, when: () => isModalOpen() },
+  'mod+k mod+s': () => console.log('save'),
+  'mod+shift+p': () => console.log('open palette'),
+  'g g': () => window.scrollTo({ top: 0 }),
+  escape: { handler: () => console.log('close panel'), when: (event) => !isEditableTarget(event.target) },
+  space: { handler: () => console.log('toggle playback'), trigger: 'keyup' },
 });
 
-const unmountBase = base.mount(document);
-const unmountModal = modal.mount(document);
+const unmount = map.mount(document);
+console.log(formatShortcut('mod+shift+p', 'meta')); // ⇧⌘P
 
-modal.deactivate(); // base handles everything; layer is suspended
-modal.activate();   // layer takes over again
-
-modal.parent === base; // true — parent reference is accessible
-
-unmountModal();
-unmountBase();
+unmount();
+map.dispose();
 ```
 
-[Full docs →](https://vielzeug.dev/keymap/)
+Use separate maps with mutually exclusive `when(event)` guards for independent UI owners that share shortcuts. `dispose()` is terminal; temporary detachment uses mount callbacks.
+
+[Full documentation](https://vielzeug.dev/keymap/)

@@ -67,21 +67,17 @@ function itemsForQuery(query: string): PaletteItem[] {
 }
 
 /**
- * True while focus is inside a text field — including one behind a shadow boundary, like every
- * refine input (`document.activeElement` reports only the outer custom element; the real native
- * `<input>` is one `shadowRoot.activeElement` hop deeper). Guards the global undo/redo shortcut
- * below from hijacking the browser's own native text-undo while editing a field.
+ * True when event originated from a text field — including native inputs behind a shadow boundary.
+ * Guards global undo/redo from hijacking browser text-undo while editing a field.
  */
-function isTypingInField(): boolean {
-  let el: Element | null = document.activeElement;
-
-  while (el) {
-    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || (el as HTMLElement).isContentEditable) return true;
-
-    el = el.shadowRoot?.activeElement ?? null;
-  }
-
-  return false;
+function isTypingInField(event: KeyboardEvent): boolean {
+  return event
+    .composedPath()
+    .some(
+      (target) =>
+        target instanceof HTMLElement &&
+        (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable),
+    );
 }
 
 define('app-shell', {
@@ -168,7 +164,7 @@ define('app-shell', {
           if (ledger.canUndo.value) void ledger.undo();
         },
       },
-      { when: () => !isTypingInField() },
+      { when: (event) => !isTypingInField(event) },
     );
     const unmountKeymap = keymap.mount(document);
 

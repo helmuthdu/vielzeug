@@ -177,22 +177,17 @@ describe('chord sequences', () => {
     unmount();
   });
 
-  describe('priority and prefix chords', () => {
-    it('a shorter binding always wins over a longer chord sharing its prefix, regardless of priority', () => {
-      const short = mockHandler();
-      const long = mockHandler();
-      // `'g g'` has a higher priority than `'g'`, but can never be reached: the bindings map is
-      // keyed by canonical shortcut, so two live bindings can never tie at the same completion
-      // step — `priority` has nothing to resolve here. Documents the current, honest contract.
-      const map = createKeymap({ g: { handler: short, priority: 0 }, 'g g': { handler: long, priority: 10 } });
-      const unmount = map.mount(target);
+  it('a shorter binding fires before a longer chord sharing its prefix', () => {
+    const short = mockHandler();
+    const long = mockHandler();
+    const map = createKeymap({ g: short, 'g g': long });
+    const unmount = map.mount(target);
 
-      target.dispatch(makeEvent('g'));
-      expect(short).toHaveBeenCalledOnce();
-      expect(long).not.toHaveBeenCalled();
+    target.dispatch(makeEvent('g'));
+    expect(short).toHaveBeenCalledOnce();
+    expect(long).not.toHaveBeenCalled();
 
-      unmount();
-    });
+    unmount();
   });
 
   it('keyup and keydown chord trackers are independent', () => {

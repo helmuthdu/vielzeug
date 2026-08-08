@@ -40,8 +40,8 @@ describe('parseStep', () => {
     expect(parseStep('alt')).toBeNull();
   });
 
-  it('throws on ambiguous multi-key step (ctrl+k+j)', () => {
-    expect(() => parseStep('ctrl+k+j')).toThrow('Ambiguous shortcut step');
+  it('returns null for ambiguous multi-key input', () => {
+    expect(parseStep('ctrl+k+j')).toBeNull();
   });
 
   it('resolves mod to ctrl when modKey is ctrl', () => {
@@ -99,8 +99,12 @@ describe('parseShortcut', () => {
     expect(parseShortcut('ctrl+k  ctrl+s')).toHaveLength(2);
   });
 
-  it('throws when a non-empty step has no valid key (modifier-only)', () => {
+  it('throws when a step has no valid key', () => {
     expect(() => parseShortcut('ctrl+k ctrl')).toThrow('Invalid shortcut step');
+  });
+
+  it('throws for an empty shortcut', () => {
+    expect(() => parseShortcut('   ')).toThrow('Shortcut must contain at least one key step');
   });
 });
 

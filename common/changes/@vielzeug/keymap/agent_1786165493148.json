@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: Remove layers and priority; make keymap lifecycle and guards explicit",
+      "packageName": "@vielzeug/keymap",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/keymap"
+}

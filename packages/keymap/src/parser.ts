@@ -44,76 +44,60 @@ const SPECIAL_KEY_ALIASES: Record<string, string> = {
   up: 'arrowup',
 };
 
-function buildModifierAliases(modKey: 'ctrl' | 'meta'): Record<string, ModifierKey> {
-  return { ...MODIFIER_ALIASES_BASE, mod: modKey };
-}
-
-function normalizeModifier(token: string, aliases: Record<string, ModifierKey>): ModifierKey | null {
-  const lower = token.toLowerCase();
-
-  return Object.hasOwn(aliases, lower) ? aliases[lower]! : null;
-}
-
-function normalizeKey(raw: string): string {
-  return Object.hasOwn(SPECIAL_KEY_ALIASES, raw) ? SPECIAL_KEY_ALIASES[raw]! : raw;
-}
-
-export function parseStep(raw: string, modKey: 'ctrl' | 'meta' = detectModKey()): ShortcutStep | null {
+function parseStepStrict(raw: string, modKey: 'ctrl' | 'meta'): ShortcutStep {
   const parts = raw
     .trim()
     .split('+')
     .filter(Boolean)
-    .map((p) => p.toLowerCase());
+    .map((part) => part.toLowerCase());
 
-  if (parts.length === 0) return null;
+  if (parts.length === 0) throw new KeymapParseError(`Invalid shortcut step: "${raw}"`);
 
-  const aliases = buildModifierAliases(modKey);
+  const aliases: Record<string, ModifierKey> = { ...MODIFIER_ALIASES_BASE, mod: modKey };
   const modifiers = new Set<ModifierKey>();
   const keyParts: string[] = [];
 
   for (const part of parts) {
-    const mod = normalizeModifier(part, aliases);
+    const modifier = Object.hasOwn(aliases, part) ? aliases[part]! : undefined;
 
-    if (mod) {
-      modifiers.add(mod);
-    } else {
-      keyParts.push(part);
-    }
+    if (modifier) modifiers.add(modifier);
+    else keyParts.push(part);
   }
 
-  if (keyParts.length === 0) return null;
+  if (keyParts.length === 0) throw new KeymapParseError(`Invalid shortcut step: "${raw}"`);
 
   if (keyParts.length > 1) {
     throw new KeymapParseError(`Ambiguous shortcut step: "${raw}" — multiple non-modifier keys found`);
   }
 
-  const key = normalizeKey(keyParts[0]);
+  const rawKey = keyParts[0]!;
+  const key = Object.hasOwn(SPECIAL_KEY_ALIASES, rawKey) ? SPECIAL_KEY_ALIASES[rawKey]! : rawKey;
 
   return { key, modifiers };
 }
 
+export function parseStep(raw: string, modKey: 'ctrl' | 'meta' = detectModKey()): ShortcutStep | null {
+  try {
+    return parseStepStrict(raw, modKey);
+  } catch {
+    return null;
+  }
+}
+
 export function parseShortcut(raw: string, modKey: 'ctrl' | 'meta' = detectModKey()): Shortcut {
-  return raw
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((step) => {
-      const result = parseStep(step, modKey);
+  const steps = raw.trim().split(/\s+/).filter(Boolean);
 
-      if (result === null) {
-        throw new KeymapParseError(`Invalid shortcut step: "${step}" in "${raw}"`);
-      }
+  if (steps.length === 0) throw new KeymapParseError('Shortcut must contain at least one key step');
 
-      return result;
-    });
+  return steps.map((step) => parseStepStrict(step, modKey));
 }
 
 export function canonicalizeShortcut(steps: readonly ShortcutStep[]): string {
   return steps
-    .map((s) => {
-      const mods = [...s.modifiers].sort().join('+');
+    .map((step) => {
+      const modifiers = [...step.modifiers].sort().join('+');
 
-      return mods ? `${mods}+${s.key}` : s.key;
+      return modifiers ? `${modifiers}+${step.key}` : step.key;
     })
     .join(' ');
 }
@@ -128,13 +112,10 @@ export function matchStep(event: KeyboardEvent, step: ShortcutStep): boolean {
 
   const { modifiers } = step;
 
-  if (event.altKey !== modifiers.has('alt')) return false;
-
-  if (event.ctrlKey !== modifiers.has('ctrl')) return false;
-
-  if (event.metaKey !== modifiers.has('meta')) return false;
-
-  if (event.shiftKey !== modifiers.has('shift')) return false;
-
-  return true;
+  return (
+    event.altKey === modifiers.has('alt') &&
+    event.ctrlKey === modifiers.has('ctrl') &&
+    event.metaKey === modifiers.has('meta') &&
+    event.shiftKey === modifiers.has('shift')
+  );
 }

@@ -72,19 +72,17 @@ describe('createKeymap', () => {
     unmount();
   });
 
-  it('respects global when() guard', () => {
+  it('passes dispatched event to global when() guard', () => {
     const handler = mockHandler();
-    let active = false;
-    const map = createKeymap({ 'ctrl+k': handler }, { when: () => active });
+    const guard = vi.fn(() => true);
+    const map = createKeymap({ 'ctrl+k': handler }, { when: guard });
     const unmount = map.mount(target);
+    const event = makeEvent('k', { ctrlKey: true });
 
-    target.dispatch(makeEvent('k', { ctrlKey: true }));
-    expect(handler).not.toHaveBeenCalled();
+    target.dispatch(event);
 
-    active = true;
-    target.dispatch(makeEvent('k', { ctrlKey: true }));
+    expect(guard).toHaveBeenCalledWith(event);
     expect(handler).toHaveBeenCalledOnce();
-
     unmount();
   });
 
@@ -217,14 +215,17 @@ describe('createKeymap', () => {
   });
 
   describe('per-binding when guard (BindingOptions syntax)', () => {
-    it('fires handler when per-binding guard passes', () => {
+    it('passes dispatched event to per-binding guard', () => {
       const handler = mockHandler();
-      const map = createKeymap({ 'ctrl+k': { handler, when: () => true } });
+      const guard = vi.fn(() => true);
+      const map = createKeymap({ 'ctrl+k': { handler, when: guard } });
       const unmount = map.mount(target);
+      const event = makeEvent('k', { ctrlKey: true });
 
-      target.dispatch(makeEvent('k', { ctrlKey: true }));
+      target.dispatch(event);
+
+      expect(guard).toHaveBeenCalledWith(event);
       expect(handler).toHaveBeenCalledOnce();
-
       unmount();
     });
 
@@ -281,22 +282,6 @@ describe('createKeymap', () => {
       target.dispatch(makeEvent('g'));
       target.dispatch(makeEvent('g'));
       expect(handler).toHaveBeenCalledOnce();
-
-      unmount();
-    });
-  });
-
-  describe('priority', () => {
-    it('bind() with higher priority overwrites lower priority for same shortcut', () => {
-      const h1 = mockHandler();
-      const h2 = mockHandler();
-      const map = createKeymap({ 'ctrl+k': { handler: h1, priority: 0 } });
-      const unmount = map.mount(target);
-
-      map.bind('ctrl+k', { handler: h2, priority: 10 });
-      target.dispatch(makeEvent('k', { ctrlKey: true }));
-      expect(h2).toHaveBeenCalledOnce();
-      expect(h1).not.toHaveBeenCalled();
 
       unmount();
     });
@@ -513,21 +498,13 @@ describe('createKeymap', () => {
     });
   });
 
-  describe('dispose + remount lifecycle', () => {
-    it('handler fires after dispose() then mount() again', () => {
-      const handler = mockHandler();
-      const map = createKeymap({ 'ctrl+k': handler });
-      const unmount = map.mount(target);
+  describe('dispose lifecycle', () => {
+    it('rejects remounting after disposal', () => {
+      const map = createKeymap({ 'ctrl+k': mockHandler() });
 
-      unmount();
       map.dispose();
 
-      const unmount2 = map.mount(target);
-
-      target.dispatch(makeEvent('k', { ctrlKey: true }));
-      expect(handler).toHaveBeenCalledOnce();
-
-      unmount2();
+      expect(() => map.mount(target)).toThrow('Keymap is disposed');
     });
 
     it('dispose() removes all mounts; further events do not fire', () => {
@@ -554,24 +531,21 @@ describe('createKeymap', () => {
       expect(map.listBindings()).toHaveLength(2);
     });
 
-    it('entry contains shortcut, trigger, and priority', () => {
+    it('entry contains shortcut and trigger', () => {
       const map = createKeymap({
-        'ctrl+k': { handler: mockHandler(), priority: 5, trigger: 'keyup' },
+        'ctrl+k': { handler: mockHandler(), trigger: 'keyup' },
       });
       const [entry] = map.listBindings();
 
       expect(entry.trigger).toBe('keyup');
-      expect(entry.priority).toBe(5);
       expect(entry.shortcut).toHaveLength(1);
       expect(entry.shortcut[0]).toEqual({ key: 'k', modifiers: new Set(['ctrl']) });
     });
 
-    it('defaults trigger to keydown and priority to 0', () => {
+    it('defaults trigger to keydown', () => {
       const map = createKeymap({ 'ctrl+k': mockHandler() });
-      const [entry] = map.listBindings();
 
-      expect(entry.trigger).toBe('keydown');
-      expect(entry.priority).toBe(0);
+      expect(map.listBindings()[0]!.trigger).toBe('keydown');
     });
 
     it('reflects bind() and unbind() changes', () => {
@@ -624,49 +598,6 @@ describe('createKeymap', () => {
     });
   });
 
-  describe('mount() duplicate-target warning', () => {
-    it('warns when the same target is mounted twice', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const map = createKeymap({});
-
-      const u1 = map.mount(target);
-      const u2 = map.mount(target);
-
-      expect(warnSpy).toHaveBeenCalledWith(
-        '[@vielzeug/keymap] mount() called for a target that is already mounted — this registers a duplicate listener',
-      );
-
-      u1();
-      u2();
-      warnSpy.mockRestore();
-    });
-
-    it('does not warn for a fresh mount after a full unmount', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const map = createKeymap({});
-
-      map.mount(target)();
-      map.mount(target)();
-
-      expect(warnSpy).not.toHaveBeenCalled();
-      warnSpy.mockRestore();
-    });
-
-    it('does not warn when mounting different targets', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const map = createKeymap({});
-      const t2 = new FakeTarget();
-
-      const u1 = map.mount(target);
-      const u2 = map.mount(t2);
-
-      expect(warnSpy).not.toHaveBeenCalled();
-      u1();
-      u2();
-      warnSpy.mockRestore();
-    });
-  });
-
   describe('numeric option validation', () => {
     it('clamps a non-positive chordTimeout to the default and warns', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -694,17 +625,6 @@ describe('createKeymap', () => {
       createKeymap({}, { chordTimeout: 250 });
 
       expect(warnSpy).not.toHaveBeenCalled();
-      warnSpy.mockRestore();
-    });
-
-    it('falls back a non-finite priority to 0 and warns', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const map = createKeymap({ 'ctrl+k': { handler: mockHandler(), priority: NaN } });
-
-      expect(warnSpy).toHaveBeenCalledWith(
-        '[@vielzeug/keymap] binding priority must be a finite number; received NaN. Using 0.',
-      );
-      expect(map.listBindings()[0]!.priority).toBe(0);
       warnSpy.mockRestore();
     });
   });

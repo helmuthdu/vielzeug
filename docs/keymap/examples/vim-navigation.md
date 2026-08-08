@@ -13,8 +13,7 @@ whole document.
 
 ### Solution
 
-Pass chord sequences as space-separated shortcut strings and mount to the target element. Keymap
-tracks partial chords per mounted keymap and resets them after `chordTimeout` milliseconds.
+Pass chord sequences as space-separated shortcut strings and mount to target element. Keymap tracks partial chords per mounted target and resets them after `chordTimeout` milliseconds.
 
 ```ts
 import { createKeymap } from '@vielzeug/keymap';
@@ -48,7 +47,7 @@ without eating `x`.
 ### Pitfalls
 
 - Shortcut strings are lowercased before matching, so a chord like `'g g'` and a *different* string that happens to canonicalize to the same steps (e.g. differing only by letter case) collide — the second one silently overwrites the first at construction time. Use a distinct key (like `shift+g` above, matching Vim's actual `G` binding) instead of relying on case to distinguish two chords.
-- A single-key binding sharing the first step of a longer chord (e.g. binding `'g'` alongside `'g g'`) always wins immediately — the longer chord becomes unreachable. Use [`findShortcutConflicts()`](/keymap/api.md#findshortcutconflicts-shortcut-entries-options) to catch this before it ships.
+- A single-key binding sharing the first step of a longer chord (e.g. binding `'g'` alongside `'g g'`) always wins immediately — the longer chord becomes unreachable. Use [`findShortcutConflicts()`](/keymap/api.md#findshortcutconflicts) to catch this before it ships.
 - A short `chordTimeout` (under ~300 ms) can make two-step chords feel unreliable for anyone typing at a normal pace; 800 ms–1000 ms is a safer default for navigation chords.
 
 ### Related
