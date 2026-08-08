@@ -1,78 +1,52 @@
 ---
 title: 'Ledger Examples — Form History'
-description: 'Form History example for @vielzeug/ledger.'
+description: 'Record reversible form field edits with @vielzeug/ledger.'
 ---
 
 ## Form History
 
 ### Problem
 
-A form with several fields needs undo/redo per field edit, with a history panel that lists what changed, and reactive undo/redo buttons that stay in sync with the stack.
+A form needs reversible field edits, history labels, and undo/redo controls driven from one state snapshot.
 
 ### Solution
 
-Track each field change as a labelled command via `ledger.do()`; bind `canUndo`/`canRedo`/`historySnapshot` with `effect()` from `@vielzeug/ripple`.
+Capture the old field value and submit a reversible command for each change.
 
 ```ts
 import { createLedger } from '@vielzeug/ledger';
 import { effect } from '@vielzeug/ripple';
 
-const ledger = createLedger({ maxHistory: 20 });
+const ledger = createLedger<{ field: string }>();
+const form = { email: '', name: '' };
 
-type FormData = { bio: string; email: string; name: string };
+async function updateField(field: keyof typeof form, next: string): Promise<void> {
+  const previous = form[field];
 
-const form: FormData = { bio: '', email: '', name: '' };
+  if (previous === next) return;
 
-function updateField<K extends keyof FormData>(field: K, next: FormData[K]): void {
-  const prev = form[field];
-
-  if (prev === next) return;
-
-  ledger.do({
-    execute: () => { form[field] = next; renderField(field); },
+  await ledger.do({
+    apply: () => { form[field] = next; },
     label: `Edit ${field}`,
-    rollback: () => { form[field] = prev; renderField(field); },
+    meta: { field },
+    revert: () => { form[field] = previous; },
   });
 }
 
-// Hook form inputs
-document.querySelectorAll<HTMLInputElement>('[data-field]').forEach((input) => {
-  input.addEventListener('change', () => {
-    updateField(input.dataset.field as keyof FormData, input.value);
-  });
-});
-
-// Reactive undo/redo buttons
-const undoBtn = document.getElementById('undo') as HTMLButtonElement;
-const redoBtn = document.getElementById('redo') as HTMLButtonElement;
-
 effect(() => {
-  undoBtn.disabled = !ledger.canUndo.value;
-  redoBtn.disabled = !ledger.canRedo.value;
+  const { redo, undo } = ledger.state.value;
+  undoButton.disabled = undo.length === 0;
+  redoButton.disabled = redo.length === 0;
 });
-
-undoBtn.addEventListener('click', () => ledger.undo());
-redoBtn.addEventListener('click', () => ledger.redo());
-
-// History list
-effect(() => {
-  const list = document.getElementById('history-list')!;
-  list.innerHTML = ledger.historySnapshot.value
-    .map((entry) => `<li>${entry.label ?? '(unlabelled)'}</li>`)
-    .join('');
-});
-
-function renderField(field: keyof FormData): void {
-  const input = document.querySelector<HTMLInputElement>(`[data-field="${field}"]`);
-  if (input) input.value = form[field];
-}
 ```
 
 ### Pitfalls
 
-- `updateField` bails out early when `prev === next` — without that check, no-op edits (e.g. blur without a change) push a redundant undo step.
-- The rollback in this recipe re-reads `prev` from a closure captured at command-creation time, not at execute time — capture `before`/`after` snapshots up front, don't compute them inside `execute`/`rollback`.
+- Keep server saves and notifications outside the reversible command unless they have real compensators.
+- Catch undo/redo promise failures at the UI boundary.
+- Use `state.value.undo` for a history list; it is an atomic snapshot.
 
 ### Related
 
 - [Text Editor History](./text-editor.md)
+- [Ledger Usage Guide](../usage.md)

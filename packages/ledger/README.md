@@ -1,14 +1,15 @@
 # @vielzeug/ledger
 
-Async undo/redo command history with Ripple signals for reactive `canUndo`/`canRedo` state.
+Serialized reversible command history with cancellation ownership and atomic reactive state.
 
 ## Features
 
-- **Async commands** — `execute` and `rollback` can return `Promise<void>`; operations are serialised
-- **Reactive state** — `canUndo`, `canRedo`, `historySize`, `isProcessing`, `historySnapshot` are Ripple `Computed` values
-- **Batch** — group multiple commands into one undo step
-- **Max history** — configurable cap; oldest entries evicted automatically
-- **Disposable** — `dispose()` + `[Symbol.dispose]` for `using` declarations
+- **Reversible commands** — every recorded command has `apply()` and `revert()`
+- **Atomic state** — one `Readable<LedgerState>` for queue and history observation
+- **Composition** — `compose()` combines reversible commands into one history entry
+- **Cancellation** — queued cancelled work never starts; active work receives `AbortSignal`
+- **Idle ownership** — `whenIdle()` waits for queued and active work to settle
+- **History cap** — non-negative safe-integer retained depth
 
 ## Install
 
@@ -16,35 +17,27 @@ Async undo/redo command history with Ripple signals for reactive `canUndo`/`canR
 pnpm add @vielzeug/ledger
 ```
 
-## Quick start
+## Quick Start
 
-```typescript
-import { compose, createLedger } from '@vielzeug/ledger';
-import { effect } from '@vielzeug/ripple';
+Submit reversible state transitions and dispose the owner at teardown.
 
-const ledger = createLedger({ maxHistory: 50 });
+```ts
+import { createLedger } from '@vielzeug/ledger';
 
-// Execute a command
+let value = 'before';
+const ledger = createLedger();
+
 await ledger.do({
-  execute: async () => { item.name = newName; },
-  rollback: async () => { item.name = oldName; },
-  label: 'Rename item',
+  apply: () => { value = 'after'; },
+  label: 'Rename value',
+  revert: () => { value = 'before'; },
 });
 
-// Undo / redo
 await ledger.undo();
-await ledger.redo();
-
-// Batch — compose multiple commands into one undo step
-await ledger.do(compose([cmd1, cmd2, cmd3], 'Multi-edit'));
-
-// Bind to UI
-effect(() => {
-  undoButton.disabled = !ledger.canUndo.value;
-  redoButton.disabled = !ledger.canRedo.value;
-});
-
-ledger.dispose(); // or: using ledger = createLedger()
+console.log(ledger.state.value.undo.length); // 0
+ledger.dispose();
 ```
 
-[Full docs →](https://vielzeug.dev/ledger/)
+Keep irreversible side effects outside Ledger commands. Catch operation failures at your application boundary.
+
+[Full documentation](https://vielzeug.dev/ledger/)

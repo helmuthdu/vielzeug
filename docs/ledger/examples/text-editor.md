@@ -1,69 +1,53 @@
 ---
 title: 'Ledger Examples — Text Editor History'
-description: 'Text Editor History example for @vielzeug/ledger.'
+description: 'Record debounced reversible text edits with @vielzeug/ledger.'
 ---
 
 ## Text Editor History
 
 ### Problem
 
-Per-keystroke undo for a text editor would create one undo step per character — undo would need dozens of presses to undo a single sentence. Keyboard shortcuts (`ctrl+z` / `ctrl+shift+z`) also need wiring.
+Per-keystroke history creates too many undo entries. Keyboard handlers must also catch asynchronous Ledger failures.
 
 ### Solution
 
-Debounce `input` events so a burst of keystrokes collapses into one `ledger.do()` call, and wire `ctrl+z`/`ctrl+shift+z` with `@vielzeug/keymap`.
+Capture the value before each debounced edit, then submit one reversible command.
 
 ```ts
 import { createKeymap } from '@vielzeug/keymap';
 import { createLedger } from '@vielzeug/ledger';
-import { effect } from '@vielzeug/ripple';
 
-const ledger = createLedger({ maxHistory: 100 });
+const ledger = createLedger();
 const textarea = document.getElementById('editor') as HTMLTextAreaElement;
+let previous = textarea.value;
 
-let lastValue = textarea.value;
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-let burstStart: string | null = null; // value before the current typing burst
+function recordEdit(next: string): Promise<void> {
+  const before = previous;
+  previous = next;
 
-textarea.addEventListener('input', () => {
-  const next = textarea.value;
-  if (debounceTimer === null) {
-    burstStart = lastValue; // first keystroke of burst — snapshot pre-burst state
-  }
-  clearTimeout(debounceTimer!);
-  debounceTimer = setTimeout(() => {
-    debounceTimer = null;
-    const prev = burstStart!;
-    burstStart = null;
-    lastValue = next;
-    ledger.do({
-      execute: () => { textarea.value = next; },
-      rollback: () => { textarea.value = prev; },
-      label: 'Type',
-    });
-  }, 300);
-});
+  return ledger.do({
+    apply: () => { textarea.value = next; },
+    label: 'Type',
+    revert: () => { textarea.value = before; },
+  });
+}
 
-// Wire keyboard shortcuts
+const reportHistoryError = (error: unknown): void => console.error(error);
 const map = createKeymap({
-  'ctrl+z':       () => ledger.undo(),
-  'ctrl+shift+z': () => ledger.redo(),
-  'ctrl+y':       () => ledger.redo(),
+  'ctrl+z': () => void ledger.undo().catch(reportHistoryError),
+  'ctrl+shift+z': () => void ledger.redo().catch(reportHistoryError),
 });
-map.mount(textarea);
 
-// Reactive toolbar buttons
-effect(() => {
-  (document.getElementById('undo-btn') as HTMLButtonElement).disabled = !ledger.canUndo.value;
-  (document.getElementById('redo-btn') as HTMLButtonElement).disabled = !ledger.canRedo.value;
-});
+map.mount(textarea);
 ```
 
 ### Pitfalls
 
-- Snapshot `burstStart` on the **first** keystroke of a burst, not the last — otherwise rollback restores the wrong (mid-burst) value.
-- `ctrl+y` is a Windows-only redo alias; don't rely on it as the only redo shortcut on macOS/Linux.
+- Capture the prior value before submitting the command.
+- Keep debouncing outside Ledger; Ledger records the reversible transition, not input timing.
+- Dispose the keymap and ledger with the editor owner.
 
 ### Related
 
 - [Form History](./form-history.md)
+- [Ledger Usage Guide](../usage.md)

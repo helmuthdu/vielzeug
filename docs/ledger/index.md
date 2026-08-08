@@ -1,10 +1,10 @@
 ---
-title: Ledger — Async undo/redo command history
-description: Command-pattern undo/redo with async operations, Ripple signals for reactive state, and composable commands.
+title: Ledger — Reversible async history
+description: Serialized reversible command history with cancellation ownership and atomic reactive snapshots.
 package: ledger
 category: utilities
-keywords: [undo, redo, history, command-pattern, async, reactive, ripple]
-exports: [createLedger, compose]
+keywords: [undo, redo, history, commands, async, reactive, ripple]
+exports: [compose, createLedger]
 related: [ripple, keymap, forge, vault]
 environments: [browser, node, ssr, deno]
 ---
@@ -15,23 +15,34 @@ environments: [browser, node, ssr, deno]
 
 ## Why Ledger?
 
-Undo/redo is deceptively complex: you need to handle async side-effects, prevent concurrent mutations from racing, cap history size, and keep UI buttons reactive. Ledger solves all of this with a clean command-pattern API and Ripple signals.
+Undo and redo require more than array manipulation when operations are asynchronous, cancellable, and visible in a UI. Ledger serializes only reversible commands, owns queue lifecycle, and publishes one atomic state snapshot.
 
-| Feature                | Roll your own                         | Ledger                                                    |
-| ---------------------- | ------------------------------------- | --------------------------------------------------------- |
-| Bundle size            | 0 B                                   | <PackageInfo package="ledger" type="size" />              |
-| Async commands         | Manual promise chaining               | <ore-icon name="check" size="16"></ore-icon> serialised queue |
-| Race prevention        | Manual locks                          | <ore-icon name="check" size="16"></ore-icon> built-in queue |
-| Reactive `canUndo`     | Poll or manual events                 | `Computed<boolean>` from Ripple                           |
-| Composable commands    | Custom wrapper                        | <ore-icon name="check" size="16"></ore-icon> `compose()`   |
-| History cap            | Array slice                           | `maxHistory` option                                       |
-| Disposable             | Manual                                | `dispose()` + `using`                                     |
+```ts
+// Before
+const undo = () => changes.pop()?.revert();
+
+// After
+import { createLedger } from '@vielzeug/ledger';
+
+const ledger = createLedger();
+await ledger.do({ apply: saveNext, revert: restorePrevious });
+await ledger.undo();
+```
+
+| Feature | Roll your own | Ledger |
+| --- | --- | --- |
+| Bundle size | 0 B | <PackageInfo package="ledger" type="size" /> |
+| Reversible history | Manual arrays | <ore-icon name="check" size="16"></ore-icon> |
+| Serialized async work | Manual queue | <ore-icon name="check" size="16"></ore-icon> |
+| Queue cancellation | Manual ownership | Abort-aware lifecycle |
+| Reactive state | Manual events | `Readable<LedgerState>` |
+| Composition | Custom transaction code | `compose()` |
 
 <div class="decision-callout">
 
-**Use Ledger when** you need undo/redo for editors, design tools, form state, or any app with reversible mutations — especially with async side-effects like server persistence.
+**Use Ledger when** you own reversible asynchronous state transitions and need undo, redo, or history UI.
 
-**Consider a simpler approach when** you only need one synchronous client-side mutation and do not need command semantics, async sequencing, or reactive history state.
+**Consider direct application code when** work is irreversible, fire-and-forget, or does not need history.
 
 </div>
 
@@ -55,37 +66,36 @@ yarn add @vielzeug/ledger
 
 ## Quick Start
 
+Submit a reversible command, read state, then dispose its owner.
+
 ```ts
 import { createLedger } from '@vielzeug/ledger';
 
-const ledger = createLedger({ maxHistory: 50 });
+let value = 'before';
+const ledger = createLedger();
 
-// Execute a reversible command
 await ledger.do({
-  execute: async () => { item.name = newName; },
-  rollback: async () => { item.name = oldName; },
-  label: 'Rename item',
+  apply: () => { value = 'after'; },
+  label: 'Rename value',
+  revert: () => { value = 'before'; },
 });
 
-await ledger.undo(); // runs rollback
-await ledger.redo(); // runs execute again
-
-ledger.dispose(); // or: using ledger = createLedger()
+await ledger.undo();
+console.log(ledger.state.value.undo.length); // 0
+ledger.dispose();
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- `createLedger<TData>()` — Creates an async command stack; operations are serialised to prevent races
-- Reactive state — `canUndo`, `canRedo`, `historySize`, `isProcessing`, `pendingCount`, `historySnapshot` are Ripple `Computed` values
-- `compose()` — Group multiple commands into one atomic undo step; partial failure rolls back already-executed sub-commands; sub-rollback errors reach `onRollbackError`
-- `maxHistory` — Cap the undo stack; oldest entries evicted automatically
-- Async-safe — `execute()`, `rollback()`, and `clear()` are fully serialised through the queue
-- Typed history — `Command.data` stores custom metadata; `historySnapshot.value[n].data` is typed to `TData`
-- Error-safe rollback — failed `rollback()` warns via dev console; optional `onRollbackError` callback for UI integration
-- Cancellable — `execute`/`rollback` receive an `AbortSignal`, merged from a caller-supplied signal and the ledger's own `disposalSignal`
-- Disposable — `dispose()` + `[Symbol.dispose]` for `using` declarations
+- `createLedger()` — Create serialized reversible command history
+- `state` — Read atomic queue, undo, redo, and acceptance state
+- `compose()` — Combine reversible commands into one reversible command
+- `whenIdle()` — Await queued and active operation settlement
+- `LedgerCancelledError` — Distinguish cancellation from execution failure
+- `maxHistory` — Keep a non-negative safe-integer undo depth
+- `[Symbol.dispose]()` — Seal, abort, and clear a ledger owner
 
 </div>
 
@@ -104,10 +114,10 @@ ledger.dispose(); // or: using ledger = createLedger()
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — `canUndo`, `canRedo`, `isProcessing` are Ripple `Computed` values; use `effect()` or bind directly to templates
-- [Keymap](/keymap/) — Wire `ctrl+z` / `ctrl+shift+z` to `ledger.undo()` / `ledger.redo()` with zero boilerplate
-- [Forge](/forge/) — Combine Ledger with Forge for reversible form mutations
-- [Vault](/vault/) — Persist undo history across sessions by storing commands in IndexedDB
+- [Ripple](/ripple/) — Consume Ledger `state` through effects or framework bindings.
+- [Keymap](/keymap/) — Route undo and redo shortcuts to a Ledger error boundary.
+- [Forge](/forge/) — Record reversible form transitions.
+- [Vault](/vault/) — Persist application snapshots outside transient undo history.
 
 </div>
 

@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/ledger",
   "version": "2.0.1",
-  "description": "Async undo/redo command history with Ripple signals for reactive canUndo/canRedo state",
+  "description": "Serialized reversible command history with atomic Ripple state and cancellation ownership",
   "type": "module",
   "files": [
     "dist"

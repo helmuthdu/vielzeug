@@ -1,6 +1,6 @@
 import type { Signal } from '@vielzeug/ripple';
 
-import { compose, createLedger } from '@vielzeug/ledger';
+import { createLedger } from '@vielzeug/ledger';
 
 import type { Board, Task, TaskStatus } from './types';
 
@@ -39,55 +39,39 @@ export async function reorderTasks(
 
   if (previousOrder.length === orderedIds.length && previousOrder.every((id, i) => id === orderedIds[i])) return;
 
-  await ledger.do(
-    compose(
-      [
-        {
-          execute: () => {
-            const board = boardSignal.value;
+  await ledger.do({
+    apply: () => {
+      const board = boardSignal.value;
 
-            boardSignal.value = { ...board, tasks: applyReorderWithinStatus(board.tasks, status, orderedIds) };
-          },
-          rollback: () => {
-            const board = boardSignal.value;
+      boardSignal.value = { ...board, tasks: applyReorderWithinStatus(board.tasks, status, orderedIds) };
+    },
+    label: `Reorder ${status} tasks`,
+    revert: () => {
+      const board = boardSignal.value;
 
-            boardSignal.value = { ...board, tasks: applyReorderWithinStatus(board.tasks, status, previousOrder) };
-          },
-        },
-      ],
-      `Reorder ${status} tasks`,
-    ),
-  );
+      boardSignal.value = { ...board, tasks: applyReorderWithinStatus(board.tasks, status, previousOrder) };
+    },
+  });
 }
 
 export async function createTask(boardSignal: Signal<Board>, input: NewTask): Promise<string> {
   const id = crypto.randomUUID();
   const task: Task = { ...input, id };
 
-  await ledger.do(
-    compose(
-      [
-        {
-          execute: () => {
-            const board = boardSignal.value;
+  await ledger.do({
+    apply: () => {
+      const board = boardSignal.value;
 
-            boardSignal.value = { ...board, tasks: [...board.tasks, task] };
-          },
-          rollback: () => {
-            const board = boardSignal.value;
+      boardSignal.value = { ...board, tasks: [...board.tasks, task] };
+    },
+    label: `Create task ${id}`,
+    revert: () => {
+      const board = boardSignal.value;
 
-            boardSignal.value = { ...board, tasks: board.tasks.filter((t) => t.id !== id) };
-          },
-        },
-        {
-          execute: () => {
-            bus.emit('board:task-created', { taskId: id });
-          },
-        },
-      ],
-      `Create task ${id}`,
-    ),
-  );
+      boardSignal.value = { ...board, tasks: board.tasks.filter((t) => t.id !== id) };
+    },
+  });
+  bus.emit('board:task-created', { taskId: id });
 
   return id;
 }
@@ -105,36 +89,24 @@ export async function moveTask(
   const previousCompletedAt = boardSignal.value.tasks.find((t) => t.id === taskId)?.completedAt ?? null;
   const nextCompletedAt = to === 'done' ? new Date().toISOString() : null;
 
-  await ledger.do(
-    compose(
-      [
-        {
-          execute: () => {
-            const board = boardSignal.value;
-            const tasks = board.tasks.map((t) =>
-              t.id === taskId ? { ...t, completedAt: nextCompletedAt, status: to } : t,
-            );
+  await ledger.do({
+    apply: () => {
+      const board = boardSignal.value;
+      const tasks = board.tasks.map((t) => (t.id === taskId ? { ...t, completedAt: nextCompletedAt, status: to } : t));
 
-            boardSignal.value = { ...board, tasks };
-          },
-          rollback: () => {
-            const board = boardSignal.value;
-            const tasks = board.tasks.map((t) =>
-              t.id === taskId ? { ...t, completedAt: previousCompletedAt, status: from } : t,
-            );
+      boardSignal.value = { ...board, tasks };
+    },
+    label: `Move task ${taskId} from ${from} to ${to}`,
+    revert: () => {
+      const board = boardSignal.value;
+      const tasks = board.tasks.map((t) =>
+        t.id === taskId ? { ...t, completedAt: previousCompletedAt, status: from } : t,
+      );
 
-            boardSignal.value = { ...board, tasks };
-          },
-        },
-        {
-          execute: () => {
-            bus.emit('board:task-moved', { from, taskId, to });
-          },
-        },
-      ],
-      `Move task ${taskId} from ${from} to ${to}`,
-    ),
-  );
+      boardSignal.value = { ...board, tasks };
+    },
+  });
+  bus.emit('board:task-moved', { from, taskId, to });
 }
 
 export async function editTask(boardSignal: Signal<Board>, taskId: string, patch: Partial<Task>): Promise<void> {
@@ -148,32 +120,22 @@ export async function editTask(boardSignal: Signal<Board>, taskId: string, patch
     (previousValues as Record<string, unknown>)[key] = previous[key];
   }
 
-  await ledger.do(
-    compose(
-      [
-        {
-          execute: () => {
-            const board = boardSignal.value;
-            const tasks = board.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t));
+  await ledger.do({
+    apply: () => {
+      const board = boardSignal.value;
+      const tasks = board.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t));
 
-            boardSignal.value = { ...board, tasks };
-          },
-          rollback: () => {
-            const board = boardSignal.value;
-            const tasks = board.tasks.map((t) => (t.id === taskId ? { ...t, ...previousValues } : t));
+      boardSignal.value = { ...board, tasks };
+    },
+    label: `Edit task ${taskId}`,
+    revert: () => {
+      const board = boardSignal.value;
+      const tasks = board.tasks.map((t) => (t.id === taskId ? { ...t, ...previousValues } : t));
 
-            boardSignal.value = { ...board, tasks };
-          },
-        },
-        {
-          execute: () => {
-            bus.emit('board:task-updated', { taskId });
-          },
-        },
-      ],
-      `Edit task ${taskId}`,
-    ),
-  );
+      boardSignal.value = { ...board, tasks };
+    },
+  });
+  bus.emit('board:task-updated', { taskId });
 }
 
 export async function deleteTask(boardSignal: Signal<Board>, taskId: string): Promise<void> {
@@ -184,30 +146,20 @@ export async function deleteTask(boardSignal: Signal<Board>, taskId: string): Pr
 
   const taskIndex = board.tasks.indexOf(task);
 
-  await ledger.do(
-    compose(
-      [
-        {
-          execute: () => {
-            const current = boardSignal.value;
+  await ledger.do({
+    apply: () => {
+      const current = boardSignal.value;
 
-            boardSignal.value = { ...current, tasks: current.tasks.filter((t) => t.id !== taskId) };
-          },
-          rollback: () => {
-            const current = boardSignal.value;
-            const tasks = [...current.tasks];
+      boardSignal.value = { ...current, tasks: current.tasks.filter((t) => t.id !== taskId) };
+    },
+    label: `Delete task ${taskId}`,
+    revert: () => {
+      const current = boardSignal.value;
+      const tasks = [...current.tasks];
 
-            tasks.splice(taskIndex, 0, task);
-            boardSignal.value = { ...current, tasks };
-          },
-        },
-        {
-          execute: () => {
-            bus.emit('board:task-deleted', { taskId });
-          },
-        },
-      ],
-      `Delete task ${taskId}`,
-    ),
-  );
+      tasks.splice(taskIndex, 0, task);
+      boardSignal.value = { ...current, tasks };
+    },
+  });
+  bus.emit('board:task-deleted', { taskId });
 }

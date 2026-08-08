@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore: update atomic operation state",
+      "packageName": "@vielzeug/ledger",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ledger"
+}

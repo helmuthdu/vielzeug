@@ -1,30 +1,23 @@
 export const rollbackErrorExample = {
-  code: `import { createLedger } from '@vielzeug/ledger'
+  code: `import { LedgerRollbackError, createLedger } from '@vielzeug/ledger'
 
-// onRollbackError surfaces undo failures without silently swallowing them
-const errors = []
-
-const ledger = createLedger({
-  onRollbackError: (err, meta) => {
-    errors.push({ label: meta.label, message: err.message })
-  },
-})
+const ledger = createLedger()
 
 await ledger.do({
-  execute:  async () => { console.log('executed') },
-  rollback: async () => { throw new Error('server unreachable') },
+  apply: () => console.log('applied'),
   label: 'Save to server',
+  revert: () => { throw new Error('server unreachable') },
 })
 
-await ledger.undo()
-// rollback threw — stack position is unchanged, onRollbackError was called
+try {
+  await ledger.undo()
+} catch (error) {
+  if (error instanceof LedgerRollbackError) {
+    console.log('revert failed:', error.message)
+  }
+}
 
-console.log('rollback errors:', errors)
-// [{ label: 'Save to server', message: 'server unreachable' }]
-
-// The entry stays on the undo stack so the operation can be retried
-console.log('canUndo (still true):', ledger.canUndo.value)
-
+console.log('undo entries:', ledger.state.value.undo.length)
 ledger.dispose()`,
-  name: 'onRollbackError Hook',
+  name: 'Rollback Error',
 };

@@ -3,7 +3,7 @@ title: Ledger — Examples
 description: Worked examples for @vielzeug/ledger.
 ---
 
-# Examples
+## Examples
 
-- [Text Editor History](./examples/text-editor.md) — Per-keystroke undo with debouncing and Keymap integration
-- [Form History](./examples/form-history.md) — Reversible form field mutations with reactive undo/redo buttons
+- [Text Editor History](./examples/text-editor.md)
+- [Form History](./examples/form-history.md)

@@ -1,218 +1,300 @@
-import { computed, signal } from '@vielzeug/ripple';
+import { signal } from '@vielzeug/ripple';
 
-import type { Command, CommandMeta, Ledger, LedgerCallOptions, LedgerOptions } from './types';
+import type {
+  CommandContext,
+  HistoryEntry,
+  Ledger,
+  LedgerCallOptions,
+  LedgerOptions,
+  LedgerState,
+  ReversibleCommand,
+} from './types';
 
-import { warn } from './_dev';
-import { LedgerDisposedError, LedgerExecutionError, LedgerRollbackError } from './errors';
+import {
+  LedgerCancelledError,
+  LedgerDisposedError,
+  LedgerError,
+  LedgerExecutionError,
+  LedgerRollbackError,
+} from './errors';
 
-function toMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
-type StackEntry<TData = unknown> = {
-  execute: (signal?: AbortSignal) => Promise<void>;
-  meta: CommandMeta<TData>;
-  rollback?: (signal?: AbortSignal) => Promise<void>;
+type StoredCommand<TMeta> = {
+  apply: (context: CommandContext) => Promise<void> | void;
+  entry: HistoryEntry<TMeta>;
+  revert: (context: CommandContext) => Promise<void> | void;
 };
 
-function entryFromCommand<TData>(command: Command<TData>): StackEntry<TData> {
-  const { rollback } = command;
+type Operation = {
+  cancel: () => void;
+  reject: (reason?: unknown) => void;
+  resolve: () => void;
+  settled: boolean;
+  start: () => Promise<void>;
+  started: boolean;
+};
 
-  return {
-    execute: async (signal) => command.execute(signal),
-    meta: { data: command.data, label: command.label },
-    rollback: rollback != null ? async (signal) => rollback(signal) : undefined,
-  };
+function toMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function snapshotCommand<TMeta>(command: ReversibleCommand<TMeta>): StoredCommand<TMeta> {
+  const { apply, label, meta, revert } = command;
+
+  return { apply, entry: Object.freeze({ label, meta }), revert };
+}
+
+function snapshotState<TMeta>(state: LedgerState<TMeta>): LedgerState<TMeta> {
+  return Object.freeze({
+    ...state,
+    redo: Object.freeze([...state.redo]),
+    undo: Object.freeze([...state.undo]),
+  });
+}
+
+function operationError(method: string, disposed: boolean): LedgerCancelledError | LedgerDisposedError {
+  return disposed
+    ? new LedgerDisposedError(`Cannot call ${method}() on a disposed ledger.`)
+    : new LedgerCancelledError(`${method}() was cancelled before it started.`);
 }
 
 /**
- * Creates an async undo/redo command history.
+ * Creates a serialized history of reversible commands.
  *
- * Each command is `{ execute, rollback? }`. `rollback` is optional — commands
- * without one are still tracked in history but undo skips the reversal step.
- * Operations are serialised — concurrent calls queue behind each other.
- * All state signals are Ripple `Computed` values for zero-glue UI binding.
- *
- * `execute`/`rollback` receive an `AbortSignal` — merged from the ledger's own
- * `disposalSignal` and any `signal` passed to `do()`/`undo()`/`redo()` — so long-running
- * commands can observe cancellation or disposal.
+ * Commands are snapshotted when submitted. Queued commands cancelled before their queue turn do
+ * not invoke user code. Active commands receive an abort signal and stop cooperatively.
  *
  * @example
  * const ledger = createLedger({ maxHistory: 50 });
- * await ledger.do({ execute: () => { item.name = next; }, rollback: () => { item.name = prev; } });
+ * await ledger.do({
+ *   apply: () => { item.name = next; },
+ *   revert: () => { item.name = previous; },
+ * });
  * await ledger.undo();
  * await ledger.redo();
  * using ledger = createLedger();
  */
-export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}): Ledger<TData> {
-  const { maxHistory = 100, onRollbackError } = options;
+export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Ledger<TMeta> {
+  const { maxHistory = 100 } = options;
 
-  if (maxHistory < 1) warn('maxHistory must be >= 1; history tracking is disabled for this ledger.');
+  if (!Number.isSafeInteger(maxHistory) || maxHistory < 0) {
+    throw new RangeError('maxHistory must be a non-negative safe integer');
+  }
 
-  const undoStack = signal<StackEntry<TData>[]>([], { name: 'ledger:undoStack' });
-  const redoStack = signal<StackEntry<TData>[]>([], { name: 'ledger:redoStack' });
-  const pending = signal(0, { name: 'ledger:pending' });
-  const processing = signal(false, { name: 'ledger:processing' });
-
-  const canUndo = computed(() => undoStack.value.length > 0, { name: 'ledger:canUndo' });
-  const canRedo = computed(() => redoStack.value.length > 0, { name: 'ledger:canRedo' });
-  const historySize = computed(() => undoStack.value.length, { name: 'ledger:historySize' });
-  const isProcessing = computed(() => processing.value, { name: 'ledger:isProcessing' });
-  const pendingCount = computed(() => pending.value, { name: 'ledger:pendingCount' });
-  const historySnapshot = computed(
-    (): readonly CommandMeta<TData>[] => [...undoStack.value].reverse().map((e) => e.meta),
-    { name: 'ledger:historySnapshot' },
+  const state = signal<LedgerState<TMeta>>(
+    snapshotState({ accepting: true, queued: 0, redo: [], running: 0, undo: [] }),
+    { name: 'ledger:state' },
   );
-
-  let isDisposed = false;
+  const commandStore = new WeakMap<HistoryEntry<TMeta>, StoredCommand<TMeta>>();
+  const disposalController = new AbortController();
+  const idleWaiters = new Set<() => void>();
+  const operations = new Set<Operation>();
+  let disposed = false;
   let queue = Promise.resolve();
 
-  const ac = new AbortController();
+  function updateState(update: (current: LedgerState<TMeta>) => LedgerState<TMeta>): void {
+    state.value = snapshotState(update(state.value));
 
-  function operationSignal(external?: AbortSignal): AbortSignal {
-    return external ? AbortSignal.any([external, ac.signal]) : ac.signal;
-  }
-
-  function enqueue(method: string, task: () => Promise<void>): Promise<void> {
-    if (isDisposed) return Promise.reject(new LedgerDisposedError(`Cannot call ${method}() on a disposed ledger.`));
-
-    pending.value++;
-
-    const current = queue.then(task).finally(() => {
-      if (!isDisposed) pending.value--;
-    });
-
-    queue = current.catch(() => {});
-
-    return current;
-  }
-
-  async function withProcessing(fn: () => Promise<void>): Promise<void> {
-    processing.value = true;
-
-    try {
-      await fn();
-    } finally {
-      if (!isDisposed) processing.value = false;
+    if (state.value.queued === 0 && state.value.running === 0) {
+      for (const resolve of idleWaiters) resolve();
+      idleWaiters.clear();
     }
   }
 
-  async function runDo(entry: StackEntry<TData>, signal: AbortSignal): Promise<void> {
-    await withProcessing(async () => {
-      try {
-        await entry.execute(signal);
-      } catch (err) {
-        throw new LedgerExecutionError(toMessage(err), { cause: err });
-      }
+  function settle(operation: Operation, error?: unknown): void {
+    if (operation.settled) return;
 
-      if (isDisposed) return;
+    operation.settled = true;
+    operations.delete(operation);
+    operation.cancel();
 
-      const next = [...undoStack.value, entry];
+    if (error === undefined) operation.resolve();
+    else operation.reject(error);
+  }
 
-      if (next.length > maxHistory) next.shift();
+  function enqueue(
+    method: string,
+    externalSignal: AbortSignal | undefined,
+    task: (context: CommandContext) => Promise<void>,
+  ): Promise<void> {
+    if (disposed) return Promise.reject(operationError(method, true));
 
-      undoStack.value = next;
-      redoStack.value = [];
+    const signal = externalSignal
+      ? AbortSignal.any([externalSignal, disposalController.signal])
+      : disposalController.signal;
+
+    return new Promise<void>((resolve, reject) => {
+      const operation = {} as Operation;
+      const onAbort = (): void => {
+        if (operation.started || operation.settled || disposed) return;
+
+        updateState((current) => ({ ...current, queued: current.queued - 1 }));
+        settle(operation, operationError(method, false));
+      };
+
+      Object.assign(operation, {
+        cancel: () => signal.removeEventListener('abort', onAbort),
+        reject,
+        resolve,
+        settled: false,
+        start: async () => {
+          if (operation.settled) return;
+
+          if (disposed || signal.aborted) {
+            updateState((current) => ({ ...current, queued: current.queued - 1 }));
+            settle(operation, operationError(method, disposed));
+
+            return;
+          }
+
+          operation.started = true;
+          updateState((current) => ({ ...current, queued: current.queued - 1, running: current.running + 1 }));
+
+          try {
+            await task({ signal });
+            settle(operation);
+          } catch (error) {
+            settle(operation, error);
+          } finally {
+            updateState((current) => ({ ...current, running: current.running - 1 }));
+          }
+        },
+        started: false,
+      });
+
+      signal.addEventListener('abort', onAbort, { once: true });
+      operations.add(operation);
+      updateState((current) => ({ ...current, queued: current.queued + 1 }));
+      queue = queue.then(operation.start, operation.start);
     });
   }
 
-  async function runUndo(signal: AbortSignal): Promise<void> {
-    const stack = undoStack.value;
+  async function runDo(command: StoredCommand<TMeta>, context: CommandContext): Promise<void> {
+    try {
+      await command.apply(context);
+    } catch (error) {
+      throw context.signal.aborted
+        ? new LedgerCancelledError('do() was cancelled while running.', { cause: error })
+        : new LedgerExecutionError(toMessage(error), { cause: error });
+    }
 
-    if (stack.length === 0) return;
+    if (disposed || context.signal.aborted) {
+      throw new LedgerCancelledError('do() was cancelled while running.');
+    }
 
-    const entry = stack[stack.length - 1];
+    updateState((current) => {
+      if (maxHistory === 0) return { ...current, redo: [] };
 
-    await withProcessing(async () => {
-      if (entry.rollback) {
-        try {
-          await entry.rollback(signal);
-        } catch (err) {
-          warn(`rollback() threw for "${entry.meta.label ?? '(unlabelled)'}". Stack position unchanged.`);
-          onRollbackError?.(new LedgerRollbackError(toMessage(err), { cause: err }), entry.meta);
+      const undo = [...current.undo, command.entry];
 
-          return;
-        }
-      }
+      if (undo.length > maxHistory) undo.shift();
 
-      if (isDisposed) return;
-
-      undoStack.value = stack.slice(0, -1);
-      redoStack.value = [...redoStack.value, entry];
+      return { ...current, redo: [], undo };
     });
+    commandStore.set(command.entry, command);
   }
 
-  async function runRedo(signal: AbortSignal): Promise<void> {
-    const stack = redoStack.value;
+  async function runUndo(context: CommandContext): Promise<void> {
+    const entry = state.value.undo[state.value.undo.length - 1];
 
-    if (stack.length === 0) return;
+    if (!entry) return;
 
-    const entry = stack[stack.length - 1];
+    const command = commandStore.get(entry);
 
-    await withProcessing(async () => {
-      try {
-        await entry.execute(signal);
-      } catch (err) {
-        throw new LedgerExecutionError(toMessage(err), { cause: err });
-      }
+    if (!command) throw new LedgerError('Undo history is corrupted.');
 
-      if (isDisposed) return;
+    try {
+      await command.revert(context);
+    } catch (error) {
+      throw context.signal.aborted
+        ? new LedgerCancelledError('undo() was cancelled while running.', { cause: error })
+        : new LedgerRollbackError(toMessage(error), { cause: error });
+    }
 
-      redoStack.value = stack.slice(0, -1);
-      undoStack.value = [...undoStack.value, entry];
-    });
+    if (disposed || context.signal.aborted) {
+      throw new LedgerCancelledError('undo() was cancelled while running.');
+    }
+
+    updateState((current) => ({ ...current, redo: [...current.redo, entry], undo: current.undo.slice(0, -1) }));
   }
 
-  function clear(): Promise<void> {
-    return enqueue('clear', async () => {
-      if (isDisposed) return;
+  async function runRedo(context: CommandContext): Promise<void> {
+    const entry = state.value.redo[state.value.redo.length - 1];
 
-      undoStack.value = [];
-      redoStack.value = [];
-    });
-  }
+    if (!entry) return;
 
-  function dispose(): void {
-    isDisposed = true;
-    ac.abort();
+    const command = commandStore.get(entry);
 
-    undoStack.value = [];
-    redoStack.value = [];
+    if (!command) throw new LedgerError('Redo history is corrupted.');
+
+    try {
+      await command.apply(context);
+    } catch (error) {
+      throw context.signal.aborted
+        ? new LedgerCancelledError('redo() was cancelled while running.', { cause: error })
+        : new LedgerExecutionError(toMessage(error), { cause: error });
+    }
+
+    if (disposed || context.signal.aborted) {
+      throw new LedgerCancelledError('redo() was cancelled while running.');
+    }
+
+    updateState((current) => ({ ...current, redo: current.redo.slice(0, -1), undo: [...current.undo, entry] }));
   }
 
   return {
-    canRedo,
-    canUndo,
-
-    clear,
+    clear(): Promise<void> {
+      return enqueue('clear', undefined, async () => {
+        updateState((current) => ({ ...current, redo: [], undo: [] }));
+      });
+    },
 
     get disposalSignal(): AbortSignal {
-      return ac.signal;
+      return disposalController.signal;
     },
-    dispose,
+
+    dispose(): void {
+      if (disposed) return;
+
+      disposed = true;
+      disposalController.abort();
+
+      const queued = [...operations].filter((operation) => !operation.started);
+
+      for (const operation of queued) settle(operation, operationError('operation', true));
+
+      updateState((current) => ({ ...current, accepting: false, queued: 0, redo: [], undo: [] }));
+    },
+
     get disposed(): boolean {
-      return isDisposed;
+      return disposed;
     },
 
-    do(command: Command<TData>, callOptions?: LedgerCallOptions): Promise<void> {
-      return enqueue('do', () => runDo(entryFromCommand<TData>(command), operationSignal(callOptions?.signal)));
-    },
+    do(command: ReversibleCommand<TMeta>, callOptions?: LedgerCallOptions): Promise<void> {
+      const snapshot = snapshotCommand(command);
 
-    historySize,
-    historySnapshot,
-    isProcessing,
-    pendingCount,
+      return enqueue('do', callOptions?.signal, (context) => runDo(snapshot, context));
+    },
 
     redo(callOptions?: LedgerCallOptions): Promise<void> {
-      return enqueue('redo', () => runRedo(operationSignal(callOptions?.signal)));
+      return enqueue('redo', callOptions?.signal, runRedo);
+    },
+
+    get state() {
+      return state;
     },
 
     [Symbol.dispose](): void {
-      dispose();
+      this.dispose();
     },
 
     undo(callOptions?: LedgerCallOptions): Promise<void> {
-      return enqueue('undo', () => runUndo(operationSignal(callOptions?.signal)));
+      return enqueue('undo', callOptions?.signal, runUndo);
+    },
+
+    whenIdle(): Promise<void> {
+      if (state.value.queued === 0 && state.value.running === 0) return Promise.resolve();
+
+      return new Promise((resolve) => idleWaiters.add(resolve));
     },
   };
 }

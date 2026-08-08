@@ -1,61 +1,71 @@
-import type { Command } from './types';
+import type { CommandContext, ReversibleCommand } from './types';
+
+function snapshotCommand<TMeta>(command: ReversibleCommand<TMeta>): ReversibleCommand<TMeta> {
+  const { apply, label, meta, revert } = command;
+
+  return { apply, label, meta, revert };
+}
 
 /**
- * Composes multiple commands into a single reversible command.
+ * Composes reversible commands into one reversible command.
  *
- * `execute` runs all sub-commands in order. `rollback` runs them in reverse,
- * skipping any that have no rollback defined. The composed command counts as
- * one undo step.
+ * `apply` runs each child in order. `revert` runs children in reverse order.
+ * A failed child application compensates completed children before rethrowing.
  *
  * @example
  * await ledger.do(compose([
- *   { execute: () => { node.x = newX; }, rollback: () => { node.x = oldX; } },
- *   { execute: () => { node.y = newY; }, rollback: () => { node.y = oldY; } },
+ *   { apply: () => { node.x = newX; }, revert: () => { node.x = oldX; } },
+ *   { apply: () => { node.y = newY; }, revert: () => { node.y = oldY; } },
  * ], 'Move node'));
  */
-export function compose<TData = unknown>(commands: Command<TData>[], label?: string): Command<TData> {
-  const anyHasRollback = commands.some((c) => c.rollback != null);
+export function compose<TMeta = undefined>(
+  commands: readonly ReversibleCommand<TMeta>[],
+  label?: string,
+): ReversibleCommand<TMeta> {
+  const steps = commands.map(snapshotCommand);
 
   return {
-    execute: async (signal) => {
-      const done: Command<TData>[] = [];
+    apply: async (context: CommandContext) => {
+      const applied: ReversibleCommand<TMeta>[] = [];
 
       try {
-        for (const c of commands) {
-          await c.execute(signal);
-          done.push(c);
+        for (const command of steps) {
+          await command.apply(context);
+          applied.push(command);
         }
-      } catch (err) {
-        for (const c of [...done].reverse()) {
+      } catch (error) {
+        const compensationFailures: unknown[] = [];
+
+        for (const command of [...applied].reverse()) {
           try {
-            await c.rollback?.(signal);
-          } catch {
-            // best-effort: suppress compensation errors
+            await command.revert(context);
+          } catch (compensationError) {
+            compensationFailures.push(compensationError);
           }
         }
 
-        throw err;
+        if (compensationFailures.length > 0) {
+          throw new AggregateError([error, ...compensationFailures], 'Command application and compensation failed', {
+            cause: error,
+          });
+        }
+
+        throw error;
       }
     },
     label,
-    rollback: anyHasRollback
-      ? async (signal) => {
-          let firstError: unknown;
-          let hasError = false;
+    revert: async (context: CommandContext) => {
+      const failures: unknown[] = [];
 
-          for (const c of [...commands].reverse()) {
-            try {
-              await c.rollback?.(signal);
-            } catch (err) {
-              if (!hasError) {
-                firstError = err;
-                hasError = true;
-              }
-            }
-          }
-
-          if (hasError) throw firstError;
+      for (const command of [...steps].reverse()) {
+        try {
+          await command.revert(context);
+        } catch (error) {
+          failures.push(error);
         }
-      : undefined,
+      }
+
+      if (failures.length > 0) throw new AggregateError(failures, 'Command reversion failed');
+    },
   };
 }

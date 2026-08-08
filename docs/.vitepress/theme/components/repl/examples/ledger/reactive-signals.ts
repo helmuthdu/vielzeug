@@ -1,35 +1,23 @@
 export const reactiveSignalsExample = {
   code: `import { createLedger } from '@vielzeug/ledger'
 
-// historySnapshot exposes command labels — useful for undo history UI panels
 const ledger = createLedger({ maxHistory: 5 })
+let value = 0
 
-const ops = [
-  { label: 'Rename node', execute: () => {}, rollback: () => {} },
-  { label: 'Move node',   execute: () => {}, rollback: () => {} },
-  { label: 'Resize node', execute: () => {}, rollback: () => {} },
-]
-
-for (const op of ops) {
-  await ledger.do(op)
+for (const label of ['Increase', 'Increase again']) {
+  const previous = value
+  await ledger.do({
+    apply: () => { value += 1 },
+    label,
+    revert: () => { value = previous },
+  })
 }
 
-// historySnapshot is newest-first
-console.log('labels:', ledger.historySnapshot.value.map(e => e.label))
-// ['Resize node', 'Move node', 'Rename node']
+console.log('undo labels:', ledger.state.value.undo.map(entry => entry.label))
+console.log('queued/running:', ledger.state.value.queued, ledger.state.value.running)
 
-console.log('historySize:', ledger.historySize.value)   // 3
-console.log('canUndo:', ledger.canUndo.value)            // true
-console.log('canRedo:', ledger.canRedo.value)            // false
-
-await ledger.undo()
-console.log('canRedo after undo:', ledger.canRedo.value) // true
-console.log('labels after undo:', ledger.historySnapshot.value.map(e => e.label))
-// ['Move node', 'Rename node']
-
-ledger.clear()
-console.log('historySize after clear:', ledger.historySize.value) // 0
-
+await ledger.clear()
+console.log('undo entries after clear:', ledger.state.value.undo.length)
 ledger.dispose()`,
-  name: 'Reactive Signals & historySnapshot',
+  name: 'Reactive State',
 };

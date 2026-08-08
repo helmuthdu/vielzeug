@@ -136,7 +136,7 @@
       "slug": "ledger",
       "name": "@vielzeug/ledger",
       "category": "State",
-      "description": "Async undo/redo command history with Ripple reactive state",
+      "description": "Serialized reversible command history with atomic reactive state and cancellation ownership",
       "domOutput": false,
       "dependencies": ["ripple"],
       "optionalPeers": [],

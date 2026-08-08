@@ -155,13 +155,19 @@ define('app-shell', {
     // app-level binding for the same combo raced with it: this handler's `openPalette()` opened
     // the palette, then the component's own internal binding — reacting to that same keypress —
     // saw it as already open and closed it right back, net result "nothing visibly happens".
+    const runHistory = (operation: () => Promise<void>): void => {
+      void operation().catch((error: unknown) => {
+        toast.add({ color: 'error', message: error instanceof Error ? error.message : 'History operation failed.' });
+      });
+    };
+
     const keymap = createKeymap(
       {
         'mod+shift+z': () => {
-          if (ledger.canRedo.value) void ledger.redo();
+          if (ledger.state.value.redo.length > 0) runHistory(() => ledger.redo());
         },
         'mod+z': () => {
-          if (ledger.canUndo.value) void ledger.undo();
+          if (ledger.state.value.undo.length > 0) runHistory(() => ledger.undo());
         },
       },
       { when: (event) => !isTypingInField(event) },
@@ -210,11 +216,17 @@ define('app-shell', {
             </ore-navbar-item>
           `,
         )}
-        <ore-navbar-item slot="mobile-menu" ?disabled=${() => !ledger.canUndo.value} @click=${() => void ledger.undo()}>
+        <ore-navbar-item
+          slot="mobile-menu"
+          ?disabled=${() => ledger.state.value.undo.length === 0}
+          @click=${() => runHistory(() => ledger.undo())}>
           <ore-icon name="undo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
           ${() => t('action.undo')}
         </ore-navbar-item>
-        <ore-navbar-item slot="mobile-menu" ?disabled=${() => !ledger.canRedo.value} @click=${() => void ledger.redo()}>
+        <ore-navbar-item
+          slot="mobile-menu"
+          ?disabled=${() => ledger.state.value.redo.length === 0}
+          @click=${() => runHistory(() => ledger.redo())}>
           <ore-icon name="redo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
           ${() => t('action.redo')}
         </ore-navbar-item>
@@ -247,8 +259,8 @@ define('app-shell', {
             size="sm"
             icon-only
             label=${() => t('action.undo')}
-            ?disabled=${() => !ledger.canUndo.value}
-            @click=${() => void ledger.undo()}>
+            ?disabled=${() => ledger.state.value.undo.length === 0}
+            @click=${() => runHistory(() => ledger.undo())}>
             <ore-icon name="undo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
           </ore-button>
           <ore-button
@@ -256,8 +268,8 @@ define('app-shell', {
             size="sm"
             icon-only
             label=${() => t('action.redo')}
-            ?disabled=${() => !ledger.canRedo.value}
-            @click=${() => void ledger.redo()}>
+            ?disabled=${() => ledger.state.value.redo.length === 0}
+            @click=${() => runHistory(() => ledger.redo())}>
             <ore-icon name="redo-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
           </ore-button>
           <ore-button variant="ghost" size="sm" @click=${() => void exportTasksAsCsv()}>

@@ -1,239 +1,127 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { LedgerRollbackError, compose, createLedger } from '../index';
+import { compose, createLedger } from '../index';
 
 describe('compose()', () => {
-  it('executes all sub-commands in order', async () => {
+  it('applies commands in order and reverts them in reverse order', async () => {
     const ledger = createLedger();
-    const order: number[] = [];
+    const order: string[] = [];
 
     await ledger.do(
       compose([
-        {
-          execute: async () => {
-            order.push(1);
-          },
-          rollback: vi.fn(),
-        },
-        {
-          execute: async () => {
-            order.push(2);
-          },
-          rollback: vi.fn(),
-        },
-        {
-          execute: async () => {
-            order.push(3);
-          },
-          rollback: vi.fn(),
-        },
+        { apply: () => void order.push('apply:first'), revert: () => void order.push('revert:first') },
+        { apply: () => void order.push('apply:second'), revert: () => void order.push('revert:second') },
       ]),
     );
-
-    expect(order).toEqual([1, 2, 3]);
-    expect(ledger.historySize.value).toBe(1);
-
-    ledger.dispose();
-  });
-
-  it('rolls back sub-commands in reverse order', async () => {
-    const ledger = createLedger();
-    const order: number[] = [];
-
-    await ledger.do(
-      compose([
-        {
-          execute: vi.fn(),
-          rollback: async () => {
-            order.push(1);
-          },
-        },
-        {
-          execute: vi.fn(),
-          rollback: async () => {
-            order.push(2);
-          },
-        },
-        {
-          execute: vi.fn(),
-          rollback: async () => {
-            order.push(3);
-          },
-        },
-      ]),
-    );
-
     await ledger.undo();
-    expect(order).toEqual([3, 2, 1]);
 
+    expect(order).toEqual(['apply:first', 'apply:second', 'revert:second', 'revert:first']);
     ledger.dispose();
   });
 
-  it('counts as one undo step', async () => {
-    const ledger = createLedger();
-
-    await ledger.do(
-      compose([
-        { execute: vi.fn(), rollback: vi.fn() },
-        { execute: vi.fn(), rollback: vi.fn() },
-      ]),
-    );
-
-    expect(ledger.historySize.value).toBe(1);
-    await ledger.undo();
-    expect(ledger.historySize.value).toBe(0);
-
-    ledger.dispose();
-  });
-
-  it('stores label in historySnapshot', async () => {
+  it('creates one history entry', async () => {
     const ledger = createLedger();
 
     await ledger.do(
       compose(
         [
-          { execute: vi.fn(), rollback: vi.fn() },
-          { execute: vi.fn(), rollback: vi.fn() },
+          { apply: vi.fn(), revert: vi.fn() },
+          { apply: vi.fn(), revert: vi.fn() },
         ],
         'multi-edit',
       ),
     );
 
-    expect(ledger.historySnapshot.value[0].label).toBe('multi-edit');
-
+    expect(ledger.state.value.undo).toEqual([{ label: 'multi-edit', meta: undefined }]);
     ledger.dispose();
   });
 
-  it('skips rollback for sub-commands with no rollback defined', async () => {
+  it('snapshots composition inputs', async () => {
     const ledger = createLedger();
-    const order: number[] = [];
+    const original = vi.fn();
+    const replacement = vi.fn();
+    const commands = [{ apply: original, revert: vi.fn() }];
+    const command = compose(commands);
 
-    await ledger.do(
-      compose([
-        {
-          execute: vi.fn(),
-          rollback: async () => {
-            order.push(1);
-          },
-        },
-        { execute: vi.fn() },
-        {
-          execute: vi.fn(),
-          rollback: async () => {
-            order.push(3);
-          },
-        },
-      ]),
-    );
+    commands[0]!.apply = replacement;
 
-    await ledger.undo();
-    expect(order).toEqual([3, 1]);
-
-    ledger.dispose();
-  });
-
-  it('compose with no-rollback commands can still be re-executed via redo', async () => {
-    const execute = vi.fn();
-    const ledger = createLedger();
-
-    await ledger.do(compose([{ execute }, { execute: vi.fn() }]));
+    await ledger.do(command);
     await ledger.undo();
     await ledger.redo();
-    expect(execute).toHaveBeenCalledTimes(2);
 
+    expect(original).toHaveBeenCalledTimes(2);
+    expect(replacement).not.toHaveBeenCalled();
     ledger.dispose();
   });
 
-  it('compose([]) produces no-op execute and undefined rollback', async () => {
-    const cmd = compose([]);
-
-    await expect(cmd.execute()).resolves.toBeUndefined();
-    expect(cmd.rollback).toBeUndefined();
-  });
-
-  it('produces undefined rollback when no sub-commands have rollback', () => {
-    const cmd = compose([{ execute: vi.fn() }, { execute: vi.fn() }]);
-
-    expect(cmd.rollback).toBeUndefined();
-  });
-
-  it('produces defined rollback when at least one sub-command has rollback', () => {
-    const cmd = compose([{ execute: vi.fn() }, { execute: vi.fn(), rollback: vi.fn() }]);
-
-    expect(cmd.rollback).toBeDefined();
-  });
-
-  it('compose sub-rollback error reaches onRollbackError', async () => {
-    const onRollbackError = vi.fn();
-    const ledger = createLedger({ onRollbackError });
-    const err = new Error('sub-rollback failed');
-
-    await ledger.do(
-      compose([
-        { execute: vi.fn(), rollback: vi.fn() },
-        {
-          execute: vi.fn(),
-          rollback: async () => {
-            throw err;
-          },
-        },
-      ]),
-    );
-
-    await ledger.undo();
-    expect(onRollbackError).toHaveBeenCalledWith(
-      expect.objectContaining({ cause: err, message: err.message }),
-      expect.objectContaining({ label: undefined }),
-    );
-    expect(onRollbackError.mock.calls[0][0]).toBeInstanceOf(LedgerRollbackError);
-    expect(ledger.canUndo.value).toBe(true);
-    expect(ledger.canRedo.value).toBe(false);
-
-    ledger.dispose();
-  });
-
-  it('rolls back already-executed sub-commands when a later execute fails', async () => {
-    const rb = vi.fn();
+  it('preserves apply and compensation failures', async () => {
     const ledger = createLedger();
+    const applyFailure = new Error('apply failed');
+    const compensationFailure = new Error('compensation failed');
 
     await expect(
       ledger.do(
         compose([
-          { execute: vi.fn(), rollback: rb },
           {
-            execute: async () => {
-              throw new Error('boom');
+            apply: vi.fn(),
+            revert: () => {
+              throw compensationFailure;
             },
+          },
+          {
+            apply: () => {
+              throw applyFailure;
+            },
+            revert: vi.fn(),
           },
         ]),
       ),
-    ).rejects.toThrow('boom');
+    ).rejects.toSatisfy((error: unknown) => {
+      if (!(error instanceof Error) || !(error.cause instanceof AggregateError)) return false;
 
-    expect(rb).toHaveBeenCalledOnce();
-    expect(ledger.canUndo.value).toBe(false);
-
+      return error.cause.errors.includes(applyFailure) && error.cause.errors.includes(compensationFailure);
+    });
+    expect(ledger.state.value.undo).toHaveLength(0);
     ledger.dispose();
   });
 
-  it('forwards the same AbortSignal to every sub-command execute/rollback', async () => {
+  it('continues reversion after one child fails', async () => {
     const ledger = createLedger();
-    const executeSignals: (AbortSignal | undefined)[] = [];
-    const rollbackSignals: (AbortSignal | undefined)[] = [];
+    const firstRevert = vi.fn();
+    const failure = new Error('revert failed');
 
     await ledger.do(
       compose([
-        { execute: (s) => void executeSignals.push(s), rollback: (s) => void rollbackSignals.push(s) },
-        { execute: (s) => void executeSignals.push(s), rollback: (s) => void rollbackSignals.push(s) },
+        { apply: vi.fn(), revert: firstRevert },
+        {
+          apply: vi.fn(),
+          revert: () => {
+            throw failure;
+          },
+        },
+      ]),
+    );
+
+    await expect(ledger.undo()).rejects.toMatchObject({ cause: expect.any(AggregateError) });
+    expect(firstRevert).toHaveBeenCalledOnce();
+    expect(ledger.state.value.undo).toHaveLength(1);
+    ledger.dispose();
+  });
+
+  it('forwards one command context to every child', async () => {
+    const ledger = createLedger();
+    const contexts: AbortSignal[] = [];
+
+    await ledger.do(
+      compose([
+        { apply: ({ signal }) => void contexts.push(signal), revert: ({ signal }) => void contexts.push(signal) },
+        { apply: ({ signal }) => void contexts.push(signal), revert: ({ signal }) => void contexts.push(signal) },
       ]),
     );
     await ledger.undo();
 
-    expect(executeSignals).toHaveLength(2);
-    expect(executeSignals[0]).toBeInstanceOf(AbortSignal);
-    expect(executeSignals[0]).toBe(executeSignals[1]);
-    expect(rollbackSignals).toHaveLength(2);
-    expect(rollbackSignals[0]).toBe(rollbackSignals[1]);
-
+    expect(contexts).toHaveLength(4);
+    expect(new Set(contexts)).toHaveLength(1);
     ledger.dispose();
   });
 });

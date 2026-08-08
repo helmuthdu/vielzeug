@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@vielzeug/clockwork':
-        specifier: ^1.1.2
-        version: 1.1.2
+        specifier: link:../../packages/clockwork
+        version: link:../../packages/clockwork
       '@vielzeug/coins':
         specifier: link:../../packages/coins
         version: link:../../packages/coins
@@ -24,62 +24,62 @@ importers:
         specifier: link:../../packages/familiar
         version: link:../../packages/familiar
       '@vielzeug/flux':
-        specifier: ^1.0.8
-        version: 1.0.8(@vielzeug/courier@..+packages+courier)(@vielzeug/herald@1.0.5)(@vielzeug/pulse@1.0.8)
+        specifier: link:../../packages/flux
+        version: link:../../packages/flux
       '@vielzeug/herald':
-        specifier: ^1.0.5
-        version: 1.0.5
+        specifier: link:../../packages/herald
+        version: link:../../packages/herald
       '@vielzeug/keymap':
         specifier: link:../../packages/keymap
         version: link:../../packages/keymap
       '@vielzeug/ledger':
-        specifier: ^1.1.6
-        version: 1.1.6
+        specifier: link:../../packages/ledger
+        version: link:../../packages/ledger
       '@vielzeug/lingua':
-        specifier: ^1.1.4
-        version: 1.1.4
+        specifier: link:../../packages/lingua
+        version: link:../../packages/lingua
       '@vielzeug/ore':
-        specifier: ^1.3.0
-        version: 1.3.0
+        specifier: link:../../packages/ore
+        version: link:../../packages/ore
       '@vielzeug/prism':
-        specifier: ^1.1.7
-        version: 1.1.7
+        specifier: link:../../packages/prism
+        version: link:../../packages/prism
       '@vielzeug/pulse':
-        specifier: ^1.0.8
-        version: 1.0.8
+        specifier: link:../../packages/pulse
+        version: link:../../packages/pulse
       '@vielzeug/refine':
-        specifier: ^1.8.0
-        version: 1.8.0
+        specifier: link:../../packages/refine
+        version: link:../../packages/refine
       '@vielzeug/ripple':
-        specifier: ^1.3.0
-        version: 1.3.0
+        specifier: link:../../packages/ripple
+        version: link:../../packages/ripple
       '@vielzeug/rune':
-        specifier: ^1.1.2
-        version: 1.1.2
+        specifier: link:../../packages/rune
+        version: link:../../packages/rune
       '@vielzeug/scout':
         specifier: link:../../packages/scout
         version: link:../../packages/scout
       '@vielzeug/scroll':
-        specifier: ^1.1.4
-        version: 1.1.5
+        specifier: link:../../packages/scroll
+        version: link:../../packages/scroll
       '@vielzeug/sourcerer':
         specifier: link:../../packages/sourcerer
         version: link:../../packages/sourcerer
       '@vielzeug/spell':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: link:../../packages/spell
+        version: link:../../packages/spell
       '@vielzeug/tempo':
-        specifier: ^1.0.5
-        version: 1.0.5
+        specifier: link:../../packages/tempo
+        version: link:../../packages/tempo
       '@vielzeug/vault':
-        specifier: ^1.0.4
-        version: 1.0.4
+        specifier: link:../../packages/vault
+        version: link:../../packages/vault
       '@vielzeug/ward':
-        specifier: ^1.0.5
-        version: 1.0.5
+        specifier: link:../../packages/ward
+        version: link:../../packages/ward
       '@vielzeug/wayfinder':
-        specifier: ^1.0.4
-        version: 1.0.4
+        specifier: link:../../packages/wayfinder
+        version: link:../../packages/wayfinder
     devDependencies:
       typescript:
         specifier: ^6.0.3
@@ -89,10 +89,6 @@ importers:
         version: 8.2.0
 
 packages:
-
-  '@js-temporal/polyfill@0.5.1':
-    resolution: {integrity: sha512-hloP58zRVCRSpgDxmqCWJNlizAlUgJFqG2ypq79DCvyv9tHjRYMDOcPFjzfl/A1/YxDvRCZz8wvZvmapQnKwFQ==}
-    engines: {node: '>=12'}
 
   '@oxc-project/types@0.143.0':
     resolution: {integrity: sha512-u6JZdLBTLotrNC9Vd6vPssINdzcCzleKAH6EJKImQb7GtYvX5keN2dxkoK44stCc4tffE6QQRtZTXVSzsLUlWA==}
@@ -190,109 +186,6 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
-  '@vielzeug/arsenal@1.1.2':
-    resolution: {integrity: sha512-kRQAvOHalL8aiTAqBWUWPyALq+oZiay+eNHfCe0hlutRMvHuA7TZ12P3eyoej3/eMeJD4FL/4HiSoip9BbXVXA==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/assay@1.0.0':
-    resolution: {integrity: sha512-TFe7ZghIv9NwI6oAJpeplOnjRdiVm4U3AtIk5Pt83qDFPwW3DGyOAHIEbkbS069tSncHg+L9CUWuFeFCG77AFQ==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/clockwork@1.1.2':
-    resolution: {integrity: sha512-B/oAEypYTiGzPq2GGqeVqP264g5rHzB05EpsdmALwULuzfoG/6cUDbDpdOmRCcFSFLaatzvXXcC91L7JPEga3Q==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/dnd@1.2.2':
-    resolution: {integrity: sha512-2Vus2/hYj46OzGTD+XUAqZaOlIzVQ+8zqPoFePctEXjB1GqU8bxTaYtLBF+h5lMtrwyEnglPHXcuQIlyxo3Zaw==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/flux@1.0.8':
-    resolution: {integrity: sha512-VQAlM+bKWMnm+QX12TgRS/Mpmbl07sfLAgQ4ZJeo2l10lY0uYXLT28rORJQ7JHajSAYZCzSPoeY0W7DRzbtp9Q==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      '@vielzeug/courier': 1.1.5
-      '@vielzeug/herald': 1.0.5
-      '@vielzeug/pulse': 1.0.8
-    peerDependenciesMeta:
-      '@vielzeug/courier':
-        optional: true
-      '@vielzeug/herald':
-        optional: true
-      '@vielzeug/pulse':
-        optional: true
-
-  '@vielzeug/herald@1.0.5':
-    resolution: {integrity: sha512-sUhzfWkuFCoYUjxoZ70jl2uXr2W4xUzofJ73Ot9vWsiiTwY6ucyqrRMofFIYp3/iC5sezyCTWIck//hLDOaA3w==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/keymap@1.1.2':
-    resolution: {integrity: sha512-+PsSA/yFDSh/X+5CVV8e6ZlOEU8zAsuZIO6ZokXyvHG+LvBYyqJMmdbTQUvnUGvSKXyaTHwO6nCjBqlbUCyzYg==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/ledger@1.1.6':
-    resolution: {integrity: sha512-dc7LjbYcWbDnEUMwrixevpuoMQnx+8cFOObaWqkSGLwBpTEbdeFkmRO63Iqd9rDUqvauEIOwo9Eo9hRsIaTPgQ==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/lingua@1.1.4':
-    resolution: {integrity: sha512-LYxaRnUdO0A9Tc4dlduOC4Y2ynGXuPnsedWVVl3h53wv4sfO3i+5FMMQJKZbH8pErDLl80sv6iwFgvk0eMQdlQ==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/orbit@1.1.3':
-    resolution: {integrity: sha512-iGaX2PUxbZ7G/bn1M/vBDoIv/wksbB1GiosWZWAyzyVvrf2ag+dDiqDdi2vh0cr7IT/QQZPqq7grFwePMh30Jw==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/ore@1.3.0':
-    resolution: {integrity: sha512-mPUwu3YMRq7mFN3KRLc9xr9V+5AMAiyODLdGCnSiaUKazgg4jdylpk4Rsh+GI21ZtFNtcuvl0cyeUoju1WjiAA==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/prism@1.1.7':
-    resolution: {integrity: sha512-IOBHvHcdyYzlfHPwO0TXxSisDDEtfFgsO8kX5r5VpVC7KB+G2lJ3zAWRtUpa1kF6xK/hxOni7g3J8JSymU/6pw==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/pulse@1.0.8':
-    resolution: {integrity: sha512-6dmcmzjeSU5hMc4yVLLYzeMos9dQ59iuCxiDThxUceEIQQ+WgEu+4vqQtl9VMTrQ6HRPCHCRX1YDWHhU86GeaQ==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/refine@1.8.0':
-    resolution: {integrity: sha512-dTbeHZ/LSnNZ+a3x1ua7nDI8GhUu2tWw0e7TUfTjfjkCW8kKHlVe9nY9fy34cZ/Gacdw+HtCUGyKNpylVcQ0dQ==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/ripple@1.3.0':
-    resolution: {integrity: sha512-UVcawCHlddDhsMqtSsTnmIzTkNZeHjligb1A3/vkBOmmNQ8/qW9+JWXBHlIR++qsycL1eoMAPSajYl6GmrhcEA==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/ripple@2.0.0':
-    resolution: {integrity: sha512-rLBJVgsbnzFl5yjFymqhx4wwM/F8OxFRwHJ7018JxMGyDs90ePNMRQStodxG3MVR4AWp0VBa/A0GpIcjzV9qSw==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/rune@1.1.2':
-    resolution: {integrity: sha512-3CEfE8q6v4mJonV9Y6LQffoKzdP/vFHclEQTtZaHoSmfDhqSN0rqKjBk5mpG0nRntQ5GF/00rNbJS50adVH4Vw==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/scroll@1.1.5':
-    resolution: {integrity: sha512-hoL4ZUCqrI6GmZsGyZ287iChfGgLAYnhzSST9U8+JUOSUpBgKa+fgi4elaQr9sqj+zeVzLcqc58/FfbCHPQvyA==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/spell@1.2.2':
-    resolution: {integrity: sha512-SHkPDUK7qRd4afac2dpDvC8lrMtEDIh3Ti7vwoO+dpDAvLUlGT/er2yGzWDmmu7/AvVrF3mUHo+hhLeSR7d4bg==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/tempo@1.0.5':
-    resolution: {integrity: sha512-8cpqMfqHJhlzRLmrRdojVyL1tOctVG+Mi/sySwSm34F3hVBwYmGOXiL2XTfR+55XPgD/Dg4nJsY6sLO74iERlw==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/vault@1.0.4':
-    resolution: {integrity: sha512-hDBS8d+gD7JCjF1h7aHRY9p18+tiRIWcpY3yefMiESsk3jz9JW8ZZ8BMNRAV5NCq7vBARsfDALmQRp3n8yrSmg==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/ward@1.0.5':
-    resolution: {integrity: sha512-rtVj6dC9ZdihpMIfuQvcJh/TmbbnaVXkAjv92YH0lK/RMktgpvLSbSDSFHqyqjOojULzysg3YNgwKY5d4R03LQ==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/wayfinder@1.0.4':
-    resolution: {integrity: sha512-bEiZb2Vpw+8MZb1vpgQtikNI5iiq2QN+qzp+jQGELNny/BTB1mAlednk7ZFXbMtJa9HqQFuHiWu+QAxEbh/swA==}
-    engines: {node: '>=22'}
-
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
@@ -310,9 +203,6 @@ packages:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
-
-  jsbi@4.3.2:
-    resolution: {integrity: sha512-9fqMSQbhJykSeii05nxKl4m6Eqn2P6rOlYiS+C5Dr/HPIU/7yZxu5qzbs40tgaFORiw2Amd0mirjxatXYMkIew==}
 
   lightningcss-android-arm64@1.33.0:
     resolution: {integrity: sha512-gEpRTalKdosp4Bb8qWtc2iOgE5SeIHlpS1up9bFq2wAyYhl1UdTObYiHe98zEM9SQvSoqQZ1IQD0JNpg3Ml5pg==}
@@ -387,9 +277,6 @@ packages:
   lightningcss@1.33.0:
     resolution: {integrity: sha512-WkUDrojuJs0xkgGf2udWxa3yGBRxPtxUkB79i6aCZLRgc7PM8fZe9TosfPDcvEpQZbuFASnHYmRLBLUbmLOIIA==}
     engines: {node: '>= 12.0.0'}
-
-  lucide@1.24.0:
-    resolution: {integrity: sha512-oMAaeuNDc5VCnBb3IjwKYGRT56tqanUm1fyDFT5Tl8hWSZND59gztgjvXje08jKLPVAq0gHJcwZUE8GCQxzBeg==}
 
   nanoid@3.3.16:
     resolution: {integrity: sha512-bzlKTyNJ7+LdGIIwy8ijFpIqEQIvafahV7eYykJ8Cvh42EdJeODoJ6gUJXpQJvej1BddH8OqTXZNE/KfbWAu8Q==}
@@ -470,10 +357,6 @@ packages:
 
 snapshots:
 
-  '@js-temporal/polyfill@0.5.1':
-    dependencies:
-      jsbi: 4.3.2
-
   '@oxc-project/types@0.143.0': {}
 
   '@rolldown/binding-android-arm64@1.2.3':
@@ -520,89 +403,6 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@vielzeug/arsenal@1.1.2': {}
-
-  '@vielzeug/assay@1.0.0': {}
-
-  '@vielzeug/clockwork@1.1.2':
-    dependencies:
-      '@vielzeug/ripple': 1.3.0
-
-  '@vielzeug/dnd@1.2.2': {}
-
-  '@vielzeug/flux@1.0.8(@vielzeug/courier@..+packages+courier)(@vielzeug/herald@1.0.5)(@vielzeug/pulse@1.0.8)':
-    dependencies:
-      '@vielzeug/ripple': 1.3.0
-    optionalDependencies:
-      '@vielzeug/courier': link:../../packages/courier
-      '@vielzeug/herald': 1.0.5
-      '@vielzeug/pulse': 1.0.8
-
-  '@vielzeug/herald@1.0.5': {}
-
-  '@vielzeug/keymap@1.1.2': {}
-
-  '@vielzeug/ledger@1.1.6':
-    dependencies:
-      '@vielzeug/ripple': 1.3.0
-
-  '@vielzeug/lingua@1.1.4': {}
-
-  '@vielzeug/orbit@1.1.3':
-    dependencies:
-      '@vielzeug/arsenal': 1.1.2
-      '@vielzeug/ripple': 1.3.0
-
-  '@vielzeug/ore@1.3.0':
-    dependencies:
-      '@vielzeug/assay': 1.0.0
-      '@vielzeug/ripple': 1.3.0
-
-  '@vielzeug/prism@1.1.7':
-    dependencies:
-      '@vielzeug/orbit': 1.1.3
-      '@vielzeug/ripple': 1.3.0
-
-  '@vielzeug/pulse@1.0.8':
-    dependencies:
-      '@vielzeug/ripple': 1.3.0
-
-  '@vielzeug/refine@1.8.0':
-    dependencies:
-      '@vielzeug/arsenal': 1.1.2
-      '@vielzeug/assay': 1.0.0
-      '@vielzeug/dnd': 1.2.2
-      '@vielzeug/keymap': 1.1.2
-      '@vielzeug/orbit': 1.1.3
-      '@vielzeug/ore': 1.3.0
-      '@vielzeug/ripple': 1.3.0
-      '@vielzeug/tempo': 1.0.5
-      lucide: 1.24.0
-
-  '@vielzeug/ripple@1.3.0': {}
-
-  '@vielzeug/ripple@2.0.0': {}
-
-  '@vielzeug/rune@1.1.2': {}
-
-  '@vielzeug/scroll@1.1.5':
-    dependencies:
-      '@vielzeug/ripple': 2.0.0
-
-  '@vielzeug/spell@1.2.2':
-    dependencies:
-      '@vielzeug/arsenal': 1.1.2
-
-  '@vielzeug/tempo@1.0.5':
-    dependencies:
-      '@js-temporal/polyfill': 0.5.1
-
-  '@vielzeug/vault@1.0.4': {}
-
-  '@vielzeug/ward@1.0.5': {}
-
-  '@vielzeug/wayfinder@1.0.4': {}
-
   detect-libc@2.1.2: {}
 
   fdir@6.5.0(picomatch@4.0.5):
@@ -611,8 +411,6 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
-
-  jsbi@4.3.2: {}
 
   lightningcss-android-arm64@1.33.0:
     optional: true
@@ -662,8 +460,6 @@ snapshots:
       lightningcss-linux-x64-musl: 1.33.0
       lightningcss-win32-arm64-msvc: 1.33.0
       lightningcss-win32-x64-msvc: 1.33.0
-
-  lucide@1.24.0: {}
 
   nanoid@3.3.16: {}
 

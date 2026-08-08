@@ -307,9 +307,10 @@ import { createKeymap } from '@vielzeug/keymap';
 import { createLedger } from '@vielzeug/ledger';
 
 const ledger = createLedger();
+const reportHistoryError = (error: unknown): void => console.error(error);
 const map = createKeymap({
-  'mod+z': () => void ledger.undo(),
-  'mod+shift+z': () => void ledger.redo(),
+  'mod+z': () => void ledger.undo().catch(reportHistoryError),
+  'mod+shift+z': () => void ledger.redo().catch(reportHistoryError),
 });
 
 map.mount(document);

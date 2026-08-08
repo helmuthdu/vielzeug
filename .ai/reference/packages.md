@@ -19,7 +19,7 @@ Human-readable package catalogue derived from `.ai/data/packages.json`.
 | `@vielzeug/forge` | Forms | no | Typed form state, validation, submission | `arsenal` | — | `spell`, `vault` | — |
 | `@vielzeug/herald` | Events | no | Typed event bus, pub/sub, async streams | — | — | — | — |
 | `@vielzeug/keymap` | Input | no | Headless keyboard shortcut manager with chord sequences | — | — | — | — |
-| `@vielzeug/ledger` | State | no | Async undo/redo command history with Ripple reactive state | `ripple` | — | — | — |
+| `@vielzeug/ledger` | State | no | Serialized reversible command history with atomic reactive state and cancellation ownership | `ripple` | — | — | — |
 | `@vielzeug/lingua` | i18n | no | Typed i18n with pluralization and async loading | — | — | — | — |
 | `@vielzeug/orbit` | UI | no | Floating element positioning (tooltip, popover) | `arsenal`, `ripple` | — | — | — |
 | `@vielzeug/ore` | UI | yes | Functional web-component authoring on top of ripple | — | `ripple` | `assay` | — |
