@@ -437,6 +437,26 @@ pnpm add @vielzeug/orbit
 
 ---
 
+### [@vielzeug/necromancer](packages/necromancer) – DOM Animations
+
+Lifecycle-owned Web Animations API primitives for element, group, and positional FLIP layout animation.
+
+```bash
+pnpm add @vielzeug/necromancer
+```
+
+**Key Features:**
+
+- `animate()` with direct native animation access; `animateEach()` with group ownership
+- Self-contained, one-shot positional FLIP transitions
+- System reduced-motion support with instant keyframes and explicit reduced outcomes
+- SSR-safe root import with browser-only animation execution
+- Zero runtime dependencies (3.2 KB min / 1.5 KB gz)
+
+[📖 Documentation](https://vielzeug.dev/necromancer/) • [Examples](https://vielzeug.dev/necromancer/examples)
+
+---
+
 ### [@vielzeug/prism](packages/prism) – Reactive SVG Charts
 
 Reactive SVG charting library with signal-driven updates — line, bar, area, pie, and sparkline charts.
@@ -796,6 +816,7 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/keymap`       | —                            | —              | 0            |
 | `@vielzeug/ledger`       | —                            | —              | 1\*          |
 | `@vielzeug/lingua`       | **9.1 KB**                   | **3.7 KB**     | 0            |
+| `@vielzeug/necromancer`        | **3.2 KB**                   | **1.5 KB**     | 0            |
 | `@vielzeug/orbit`        | **12.7 KB**                  | **4.8 KB**     | 0            |
 | `@vielzeug/prism`        | **33.7 KB**                  | **11.0 KB**    | 2\*          |
 | `@vielzeug/pulse`        | **13.4 KB**                  | **4.6 KB**     | 1\*          |

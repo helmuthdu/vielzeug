@@ -197,6 +197,12 @@
       "projectFolder": "packages/assay",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/necromancer",
+      "projectFolder": "packages/necromancer",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     }
   ],
   "repository": {

@@ -288,7 +288,7 @@ Makes the direct children of a container element reorderable via drag. Returns a
 - `disabled`: `boolean`. Blocks drag interactions. If a list becomes disabled mid-drag, Dnd cancels the drag and restores the original order.
 - `onDragStart`: `(id: string, event: DragEvent) => void`. Called when a drag starts.
 - `onDragEnd`: `(id: string, event: DragEvent) => void`. Called when a drag ends, whether completed or cancelled.
-- `onBeforeReorder`: `(from: string[], to: string[]) => void`. Called with the before/after order snapshots just before a successful reorder commits — for both drag and keyboard. Items are still in their pre-commit positions at the time of the call, making it ideal for FLIP animation setup.
+- `onBeforeReorder`: `(from: string[], to: string[]) => void`. Called with the before/after order snapshots just before a successful reorder commits — for both drag and keyboard. Items are still in their pre-commit positions at the time of the call, making it ideal for [`captureLayout()`](/necromancer/api.md#capturelayout) setup.
 - `onReorder`: `(event: ReorderEvent) => void`. Called after a successful reorder (drag or keyboard), only when the order changed. Use `event.setRevert(fn)` to register a revert function that `sortable.revert()` will invoke.
 
 **Returns:** `Sortable`

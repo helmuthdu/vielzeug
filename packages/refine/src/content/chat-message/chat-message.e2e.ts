@@ -1,10 +1,10 @@
 /**
- * CSS layout regression tests for `ore-chat-message`. Supersedes `scripts/verify-layout.mjs`'s
- * chat-message scenarios — jsdom has no layout engine and silently drops `@layer` rules, so
+ * CSS layout regression tests for `ore-chat-message`. jsdom has no layout engine and silently
+ * drops `@layer` rules, so
  * flex/box-model regressions here are invisible to `pnpm test`. Complements
  * `chat-message.test.ts`'s jsdom coverage.
  *
- * Run with: pnpm test:e2e (requires built dist — run pnpm build first)
+ * Run with: pnpm --filter @vielzeug/refine test:e2e (requires built dist).
  */
 import { expect, test } from '../../testing/fixtures';
 

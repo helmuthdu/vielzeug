@@ -141,7 +141,7 @@ using sortable = createSortable({
 - **Sortable lists** — reorders DOM children with a placeholder indicator; fires `onReorder` only when the order actually changes
 - **Drag handles** — scope dragging to a child selector via `handle`; whole item is draggable when omitted
 - **Custom drag preview** — pass an element or a `(id, item, event) => element | null` factory; control hotspot with `dragImageOffset`
-- **`onBeforeReorder` FLIP hook** — fires before commit for both drag and keyboard moves; items are still in pre-commit positions, making it ideal for FLIP animation setup
+- **`onBeforeReorder` FLIP hook** — fires before commit for both drag and keyboard moves; pair it with [`captureLayout()`](/necromancer/api.md#capturelayout) for lifecycle-owned FLIP animation
 - **`sortable.revert()`** — register a revert function via `event.setRevert(fn)` inside `onReorder`; `sortable.revert()` invokes it and clears it for rolling back optimistic updates on server failure
 - **Boundary-safe keyboard reordering** — arrow keys at the first/last item no longer suppress `preventDefault`, so the browser can scroll the page normally
 - **Transactional connected scopes** — one `onMove` callback receives each cross-list transfer with both final orders

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(necromancer)!: add lifecycle-owned Web Animations API primitives with per-handle group results and additive FLIP",
+      "packageName": "@vielzeug/necromancer",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/necromancer"
+}

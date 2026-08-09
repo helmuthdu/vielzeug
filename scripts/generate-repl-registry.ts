@@ -29,7 +29,7 @@
 
 import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
@@ -278,6 +278,35 @@ export function extractApi(pkg: string, packagesDir = PACKAGES_DIR): ExtractedAp
   const printer = ts.createPrinter({ removeComments: false });
   const printedByNode = new Map<ts.Node, string>();
   const valueExports: string[] = [];
+  const pending = new Set<ts.Node>();
+  const distDir = resolve(dirname(entry));
+
+  const belongsToPackage = (decl: ts.Declaration): boolean => {
+    const sourcePath = resolve(decl.getSourceFile().fileName);
+
+    return sourcePath === distDir || sourcePath.startsWith(`${distDir}${sep}`);
+  };
+
+  const addDeclaration = (rawDecl: ts.Declaration): void => {
+    const decl = toPrintableNode(rawDecl);
+    if (
+      !ts.isClassDeclaration(decl) &&
+      !ts.isEnumDeclaration(decl) &&
+      !ts.isFunctionDeclaration(decl) &&
+      !ts.isInterfaceDeclaration(decl) &&
+      !ts.isModuleDeclaration(decl) &&
+      !ts.isTypeAliasDeclaration(decl) &&
+      !ts.isVariableStatement(decl)
+    ) {
+      return;
+    }
+
+    if (printedByNode.has(decl)) return;
+
+    const printed = printer.printNode(ts.EmitHint.Unspecified, decl, decl.getSourceFile());
+    printedByNode.set(decl, normalizeAmbientText(printed));
+    pending.add(decl);
+  };
 
   for (const exported of checker.getExportsOfModule(moduleSymbol)) {
     const resolved = exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported;
@@ -285,11 +314,34 @@ export function extractApi(pkg: string, packagesDir = PACKAGES_DIR): ExtractedAp
     if (resolved.flags & VALUE_FLAGS) valueExports.push(exported.getName());
 
     for (const rawDecl of resolved.getDeclarations() ?? []) {
-      const decl = toPrintableNode(rawDecl);
-      if (printedByNode.has(decl)) continue;
-      const printed = printer.printNode(ts.EmitHint.Unspecified, decl, decl.getSourceFile());
-      printedByNode.set(decl, normalizeAmbientText(printed));
+      addDeclaration(rawDecl);
     }
+  }
+
+  // A public declaration may reference an intentionally unexported helper from
+  // another declaration chunk. Include the local declaration closure so Monaco's
+  // flattened ambient module has no dangling names.
+  while (pending.size > 0) {
+    const next = pending.values().next();
+    if (next.done) break;
+
+    const decl = next.value;
+    pending.delete(decl);
+
+    const visit = (node: ts.Node): void => {
+      if (ts.isIdentifier(node)) {
+        const symbol = checker.getSymbolAtLocation(node);
+        const resolved = symbol?.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
+
+        for (const dependency of resolved?.getDeclarations() ?? []) {
+          if (belongsToPackage(dependency)) addDeclaration(dependency);
+        }
+      }
+
+      ts.forEachChild(node, visit);
+    };
+
+    visit(decl);
   }
 
   const body = [...printedByNode.values()].sort().join('\n\n');

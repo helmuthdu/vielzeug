@@ -26,7 +26,6 @@
     "check:ai-data": "node scripts/sync-ai-data.mjs --check",
     "check:package-manifests": "node scripts/sync-package-manifests.mjs --check",
     "sync:package-manifests": "node scripts/sync-package-manifests.mjs",
-    "verify:layout": "node scripts/verify-layout.mjs",
     "verify:packed": "node scripts/verify-packed-packages.mjs",
     "worktree:add": "node scripts/worktree.mjs add",
     "worktree:list": "node scripts/worktree.mjs list",

@@ -153,6 +153,16 @@
       "peerDependencies": []
     },
     {
+      "slug": "necromancer",
+      "name": "@vielzeug/necromancer",
+      "category": "Animation",
+      "description": "Lifecycle-owned Web Animations API primitives with native access, per-handle groups, and additive FLIP",
+      "domOutput": false,
+      "dependencies": [],
+      "optionalPeers": [],
+      "peerDependencies": []
+    },
+    {
       "slug": "orbit",
       "name": "@vielzeug/orbit",
       "category": "UI",

@@ -202,12 +202,15 @@ describe('readDistFile()', () => {
 function makeFakePackage(
   packagesDir: string,
   name: string,
-  { declaration, external = [] }: { declaration: string; external?: string[] },
+  { declaration, external = [], files = {} }: { declaration: string; external?: string[]; files?: Record<string, string> },
 ) {
   const dir = path.join(packagesDir, name);
   mkdirSync(path.join(dir, 'dist'), { recursive: true });
   writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: `@vielzeug/${name}`, version: '1.0.0' }));
   writeFileSync(path.join(dir, 'dist', 'index.d.ts'), declaration);
+  for (const [file, content] of Object.entries(files)) {
+    writeFileSync(path.join(dir, 'dist', file), content);
+  }
   writeFileSync(path.join(dir, 'dist', `${name}.iife.js`), 'var IIFE = {};');
   writeFileSync(
     path.join(dir, 'vite.bundle.config.ts'),
@@ -237,6 +240,35 @@ describe('extractApi() — real TS compiler Program against a fixture dist/index
     expect(typeDeclaration).toContain('export function greet(name: string): string;');
     expect(typeDeclaration).toContain('export const VERSION: string;');
     expect(typeDeclaration).not.toContain('declare function');
+  });
+
+  it('includes private local declaration dependencies and type-checks the flattened module', () => {
+    root = mkdtempSync(path.join(tmpdir(), 'repl-registry-test-'));
+    makeFakePackage(root, 'fixture', {
+      declaration: `export { animate } from './animate';\nexport type { LayoutSnapshot } from './types';\n`,
+      files: {
+        'animate.d.ts': `import type { Keyframes, LayoutSnapshot } from './types';\nexport declare function animate(keyframes: Keyframes): LayoutSnapshot;\n`,
+        'types.d.ts':
+          `declare const layoutSnapshotBrand: unique symbol;\nexport type Keyframes = Keyframe[] | PropertyIndexedKeyframes;\nexport interface LayoutSnapshot { readonly [layoutSnapshotBrand]: true; }\n`,
+      },
+    });
+
+    const { typeDeclaration } = extractApi('fixture', root);
+    const declarationPath = path.join(root, 'repl-types.d.ts');
+    const consumerPath = path.join(root, 'consumer.ts');
+
+    writeFileSync(declarationPath, typeDeclaration);
+    writeFileSync(
+      consumerPath,
+      `import { animate, type LayoutSnapshot } from '@vielzeug/fixture';\nconst snapshot: LayoutSnapshot = animate([]);\nvoid snapshot;\n`,
+    );
+
+    const program = ts.createProgram([declarationPath, consumerPath], { noEmit: true, strict: true });
+    const diagnostics = ts.getPreEmitDiagnostics(program);
+
+    expect(diagnostics.map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'))).toEqual([]);
+    expect(typeDeclaration).toContain('type Keyframes = Keyframe[] | PropertyIndexedKeyframes;');
+    expect(typeDeclaration).toContain('const layoutSnapshotBrand: unique symbol;');
   });
 });
 

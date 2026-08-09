@@ -138,6 +138,7 @@ const categories = [
     packages: [
       { id: 'ore', tagline: 'Web component primitives' },
       { id: 'dnd', tagline: 'Drag & drop' },
+      { id: 'necromancer', tagline: 'Web Animations API primitives' },
       { id: 'orbit', tagline: 'Floating positioning' },
       { id: 'prism', tagline: 'SVG charts' },
       { id: 'scroll', tagline: 'Virtual lists' },
@@ -176,6 +177,12 @@ const heroPackages = [
   { id: 'keymap', name: 'keymap', cmd: 'pnpm add @vielzeug/keymap', tagline: 'Keyboard shortcuts & chords' },
   { id: 'ledger', name: 'ledger', cmd: 'pnpm add @vielzeug/ledger', tagline: 'Async undo / redo history' },
   { id: 'lingua', name: 'lingua', cmd: 'pnpm add @vielzeug/lingua', tagline: 'i18n & pluralization' },
+  {
+    id: 'necromancer',
+    name: 'necromancer',
+    cmd: 'pnpm add @vielzeug/necromancer',
+    tagline: 'Web Animations API primitives',
+  },
   { id: 'orbit', name: 'orbit', cmd: 'pnpm add @vielzeug/orbit', tagline: 'Floating positioning' },
   { id: 'ore', name: 'ore', cmd: 'pnpm add @vielzeug/ore', tagline: 'Web component primitives' },
   { id: 'prism', name: 'prism', cmd: 'pnpm add @vielzeug/prism', tagline: 'SVG charts' },

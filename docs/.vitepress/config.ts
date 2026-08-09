@@ -121,6 +121,7 @@ export default defineConfig({
             items: [
               { link: '/ore/', text: 'Ore' },
               { link: '/dnd/', text: 'Dnd' },
+              { link: '/necromancer/', text: 'Necromancer' },
               { link: '/orbit/', text: 'Orbit' },
               { link: '/prism/', text: 'Prism' },
               { link: '/scroll/', text: 'Scroll' },
@@ -1047,6 +1048,44 @@ export default defineConfig({
             { link: '/lingua/examples/ssr-hydration', text: 'SSR Hydration' },
           ],
           link: '/lingua/examples',
+          text: 'Examples',
+        },
+      ],
+      '/necromancer/': [
+        { link: '/necromancer/', text: 'Overview' },
+        {
+          items: [
+            { link: '/necromancer/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/necromancer/usage#motion-preferences', text: 'Motion Preferences' },
+            { link: '/necromancer/usage#parent-cancellation', text: 'Parent Cancellation' },
+            { link: '/necromancer/usage#staggering-a-group', text: 'Staggering a Group' },
+            { link: '/necromancer/usage#serial-application-flow', text: 'Serial Application Flow' },
+            { link: '/necromancer/usage#animating-a-reorder-with-flip', text: 'Animating a Reorder with FLIP' },
+            { link: '/necromancer/usage#framework-integration', text: 'Framework Integration' },
+            { link: '/necromancer/usage#best-practices', text: 'Best Practices' },
+          ],
+          link: '/necromancer/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/necromancer/api#api-overview', text: 'Overview' },
+            { link: '/necromancer/api#package-entry-point', text: 'Entry Point' },
+            { link: '/necromancer/api#animation-functions', text: 'Animation Functions' },
+            { link: '/necromancer/api#layout-functions', text: 'Layout Functions' },
+            { link: '/necromancer/api#types', text: 'Types' },
+            { link: '/necromancer/api#errors', text: 'Errors' },
+          ],
+          link: '/necromancer/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/necromancer/examples/animate-on-mount', text: 'Animate on Mount' },
+            { link: '/necromancer/examples/stagger-a-list', text: 'Stagger a List' },
+            { link: '/necromancer/examples/animate-a-reorder', text: 'Animate a Reorder' },
+          ],
+          link: '/necromancer/examples',
           text: 'Examples',
         },
       ],

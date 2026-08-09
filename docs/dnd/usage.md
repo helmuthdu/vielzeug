@@ -345,35 +345,34 @@ using sortable = createSortable({
 
 ### FLIP animation hook
 
-`onBeforeReorder` fires just before the DOM reorder commits, for both drag and keyboard moves. At the time of the call items are still in their pre-commit positions, making it the right place to record element bounds for FLIP animations.
+`onBeforeReorder` fires just before the DOM reorder commits, for both drag and keyboard moves. Pair it with [`captureLayout()`](/necromancer/api.md#capturelayout) to animate the resulting layout without managing rectangles, transforms, or animation frames yourself.
 
 ```ts
+import { captureLayout, type LayoutTransition } from '@vielzeug/necromancer';
+
+let layout: LayoutTransition | undefined;
+
 const sortable = createSortable({
   element: listEl,
-  onBeforeReorder: (from, to) => {
-    // snapshot bounds before the DOM moves
-    const snapshots = new Map(getItems().map((el) => [el.dataset.sortId!, el.getBoundingClientRect()]));
-
-    requestAnimationFrame(() => {
-      // animate from snapshot to new position
-      for (const [id, before] of snapshots) {
-        const el = listEl.querySelector(`[data-sort-id="${id}"]`) as HTMLElement;
-        const after = el.getBoundingClientRect();
-        const dy = before.top - after.top;
-        if (dy === 0) continue;
-        el.style.transform = `translateY(${dy}px)`;
-        el.style.transition = 'none';
-        requestAnimationFrame(() => {
-          el.style.transition = 'transform 200ms ease';
-          el.style.transform = '';
-        });
-      }
+  getKey: (el) => el.dataset.sortId!,
+  onBeforeReorder: () => {
+    layout = captureLayout(listEl.querySelectorAll('[data-sort-id]'), {
+      getKey: (el) => el.dataset.sortId!,
     });
   },
-  getKey: (el) => el.dataset.sortId!,
-  onReorder: ({ ids }) => saveOrder(ids),
+  onReorder: ({ ids }) => {
+    saveOrder(ids); // Commit a framework render here when needed.
+    layout?.animate({
+      duration: 200,
+      easing: 'ease-out',
+      elements: listEl.querySelectorAll('[data-sort-id]'),
+    });
+    layout = undefined;
+  },
 });
 ```
+
+If `saveOrder()` triggers a render that replaces list items, call `layout?.animate({ elements: committedItems })` after that render commits. When DnD's own reordered elements remain in the DOM, call `layout?.animate()` directly. DnD stays dependency-free: the application chooses to install and import Necromancer when it wants this integration.
 
 ### Optimistic updates and revert
 

@@ -11,7 +11,7 @@ You want drag-and-drop reordering to feel instant: the UI updates immediately wi
 
 ### Solution
 
-Use `onBeforeReorder` to snapshot element positions for a FLIP animation and call `event.setRevert(fn)` inside `onReorder` so `sortable.revert()` can roll back on failure:
+Use `onBeforeReorder` with Necromancer's `captureLayout()` for a FLIP animation and call `event.setRevert(fn)` inside `onReorder` so `sortable.revert()` can roll back on failure:
 
 ```html
 <ul id="task-list">
@@ -22,14 +22,9 @@ Use `onBeforeReorder` to snapshot element positions for a FLIP animation and cal
 </ul>
 ```
 
-```css
-[data-sort-id] {
-  transition: transform 200ms ease;
-}
-```
-
 ```ts
 import { applyReorder, createSortable } from '@vielzeug/dnd';
+import { captureLayout, type LayoutTransition } from '@vielzeug/necromancer';
 
 interface Task {
   id: string;
@@ -45,41 +40,15 @@ let tasks: Task[] = [
 
 const listEl = document.getElementById('task-list') as HTMLUListElement;
 const saveTasks = async (_orderedIds: string[]) => undefined;
+let layout: LayoutTransition | undefined;
 
 const sortable = createSortable({
   element: listEl,
   keyboard: true,
 
-  onBeforeReorder: (_from, _to) => {
-    // Items are still in their pre-commit DOM positions here.
-    // Snapshot the bounding rect of every item for the FLIP animation.
-    const rects = new Map<string, DOMRect>();
-
-    for (const item of listEl.querySelectorAll<HTMLElement>('[data-sort-id]')) {
-      rects.set(item.dataset.sortId!, item.getBoundingClientRect());
-    }
-
-    // After the DOM commits, animate from the old rect to the new one.
-    requestAnimationFrame(() => {
-      for (const item of listEl.querySelectorAll<HTMLElement>('[data-sort-id]')) {
-        const before = rects.get(item.dataset.sortId!);
-        const after = item.getBoundingClientRect();
-
-        if (!before) continue;
-
-        const dy = before.top - after.top;
-
-        if (dy === 0) continue;
-
-        // Jump to old position, then transition to new.
-        item.style.transition = 'none';
-        item.style.transform = `translateY(${dy}px)`;
-
-        requestAnimationFrame(() => {
-          item.style.transition = 'transform 200ms ease';
-          item.style.transform = '';
-        });
-      }
+  onBeforeReorder: () => {
+    layout = captureLayout(listEl.querySelectorAll('[data-sort-id]'), {
+      getKey: (item) => item.dataset.sortId!,
     });
   },
 
@@ -87,6 +56,15 @@ const sortable = createSortable({
   onReorder: ({ ids, setRevert }) => {
     const previous = tasks;
     tasks = applyReorder(tasks, ids, (t) => t.id);
+
+    // DnD has committed the reorder. Passing items also supports renderers
+    // that replaced the original nodes while applying the new task order.
+    layout?.animate({
+      duration: 200,
+      easing: 'ease-out',
+      elements: listEl.querySelectorAll('[data-sort-id]'),
+    });
+    layout = undefined;
 
     // Register a revert function — sortable.revert() will call this on failure.
     setRevert(() => {
@@ -115,9 +93,9 @@ function renderList(next: Task[]) {
 
 ### How it works
 
-1. `onBeforeReorder(from, to)` fires before the DOM reorders. Record element positions here.
-2. The DOM commits (items move to their new positions).
-3. `onReorder({ ids, setRevert })` fires. Update your data array optimistically and call `setRevert()` with a rollback function.
+1. `onBeforeReorder(from, to)` fires before the DOM reorders. `captureLayout()` records the item positions by stable key.
+2. The DOM commits (or your renderer replaces the items).
+3. `onReorder({ ids, setRevert })` updates the data array, then `layout.animate()` targets the committed items.
 4. If the server call fails, call `sortable.revert()`. It invokes the stored revert function and clears it so subsequent failures are no-ops.
 
 Only the **most recent** reorder can be reverted — a new reorder overwrites the stored revert function.
@@ -128,7 +106,7 @@ Only the **most recent** reorder can be reverted — a new reorder overwrites th
 
 - Do not call `sortable.revert()` after a successful save — it is a destructive operation.
 - If items are removed from the DOM between `onReorder` and the server response, `renderList` must reconcile the current DOM state before syncing, then call `sortable.sync()`.
-- The CSS `transition` on `[data-sort-id]` must be applied **after** the initial `translateY` is set (the `requestAnimationFrame` double-raf pattern ensures this).
+- Call `layout.animate()` only after the renderer has committed the new elements. Its keys must be unique and non-empty in both the captured and committed collections.
 
 ### Related
 

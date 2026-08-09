@@ -1,0 +1,44 @@
+{
+  "name": "@vielzeug/necromancer",
+  "version": "1.0.0",
+  "description": "Dependency-free, lifecycle-owned animation primitives built on the Web Animations API",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "eslint --fix src",
+    "lint": "eslint src",
+    "prepublishOnly": "pnpm run build",
+    "test": "vitest",
+    "test:e2e": "pnpm run build && playwright test"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.1.2",
+    "jsdom": "^30.0.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
+  }
+}

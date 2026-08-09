@@ -104,7 +104,7 @@ describe('ore-chat-message', () => {
     // of the parsed CSSOM isn't possible either. Layout-dependent checks like this are
     // explicitly out of this package's automated test scope — see `packages/refine/AGENTS.md`.
     // This exact class of bug (and two siblings — bubble stretch, phantom blank lines) is
-    // covered instead by `scripts/verify-layout.mjs` (`pnpm verify:layout`, repo root).
+    // covered instead by chat-message.e2e.ts in a real browser.
 
     it('hides the name element when no name is set', async () => {
       fixture = await mount('ore-chat-message');

@@ -6,8 +6,8 @@ import { test as base } from '@playwright/test';
  * instead of jsdom-only. It remains private test infrastructure so every `*.e2e.ts` file's
  * harness lives next to its jsdom equivalent.
  *
- * Loads the full IIFE dependency stack (same load order as verify-layout.mjs and the
- * docs component preview) via page.setContent() with inline scripts. Tests call
+ * Loads the full IIFE dependency stack (same load order as the docs component preview) via
+ * page.setContent() with inline scripts. Tests call
  * mountComponent(html) to render arbitrary HTML inside a styled frame element.
  *
  * e2e specs are co-located next to the component they cover (`<component>.e2e.ts`, matching
@@ -27,7 +27,7 @@ const PKG = path.resolve(__dirname, '../../..');
 const require = createRequire(import.meta.url);
 const PNPM_STORE = path.join(ROOT, 'common/temp/node_modules/.pnpm');
 
-// Paths to UMD/IIFE bundles — mirrors verify-layout.mjs's resolveDepScripts()
+// Paths to UMD/IIFE bundles loaded by the browser fixture.
 const TEMPORAL_UMD = path.join(
   PNPM_STORE,
   '@js-temporal+polyfill@0.5.1/node_modules/@js-temporal/polyfill/dist/index.umd.js',

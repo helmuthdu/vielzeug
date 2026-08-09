@@ -13,6 +13,7 @@ import { heraldExamples } from './herald';
 import { keymapExamples } from './keymap';
 import { ledgerExamples } from './ledger';
 import { linguaExamples } from './lingua';
+import { necromancerExamples } from './necromancer';
 import { orbitExamples } from './orbit';
 import { pulseExamples } from './pulse';
 import { rippleExamples } from './ripple';
@@ -41,6 +42,7 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   keymap: keymapExamples,
   ledger: ledgerExamples,
   lingua: linguaExamples,
+  necromancer: necromancerExamples,
   orbit: orbitExamples,
   pulse: pulseExamples,
   ripple: rippleExamples,
