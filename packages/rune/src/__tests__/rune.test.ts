@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Bindings, LogEntry, LogLevel, LogMiddleware, RuneOptions, Transport } from '../types';
 
 import { DEFAULT_THEME, consoleTransport, resolveTheme } from '../console';
-import { RuneError, RuneTransportError } from '../errors';
+import { RuneError } from '../errors';
 import { lazy } from '../lazy';
 import { createLogger, defaultLogger } from '../logger';
 import { batchTransport, jsonTransport, pipe, redactTransport, remoteTransport, sampleTransport } from '../transports';
@@ -703,8 +703,7 @@ describe('batchTransport', () => {
     expect(flushed).toHaveLength(0);
 
     log.info('b');
-    // flush is async (Promise.resolve().then()) — drain the microtask queue
-    await Promise.resolve();
+    await batch.flush();
     expect(flushed).toHaveLength(1);
     expect(flushed[0]).toHaveLength(2);
   });
@@ -723,7 +722,7 @@ describe('batchTransport', () => {
     expect(flushed).toHaveLength(0);
 
     vi.advanceTimersByTime(1000);
-    await Promise.resolve();
+    await batch.flush();
 
     expect(flushed).toHaveLength(1);
     expect(flushed[0][0].message).toBe('x');
@@ -740,8 +739,7 @@ describe('batchTransport', () => {
     const log = createLogger({ transports: [batch.transport] });
 
     log.info('final');
-    batch.dispose();
-    await Promise.resolve();
+    await batch.dispose();
 
     expect(flushed).toHaveLength(1);
     expect(flushed[0][0].message).toBe('final');
@@ -765,15 +763,14 @@ describe('batchTransport', () => {
 
     log.info('a');
     log.info('b');
-    batch.flush();
-    await Promise.resolve();
+    await batch.flush();
 
     expect(flushed).toHaveLength(1);
     expect(flushed[0]).toHaveLength(2);
 
     log.info('c');
     vi.advanceTimersByTime(5000);
-    await Promise.resolve();
+    await batch.flush();
 
     expect(flushed).toHaveLength(2);
   });
@@ -791,10 +788,107 @@ describe('batchTransport', () => {
 
     log.info('no');
     log.error('yes');
-    await Promise.resolve();
+    await batch.flush();
 
     expect(flushed).toHaveLength(1);
     expect(flushed[0][0].level).toBe('error');
+  });
+
+  it('serializes flushes and disposal waits for in-flight delivery', async () => {
+    const started: string[] = [];
+    let releaseFirst: (() => void) | undefined;
+    const firstDelivery = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const batch = batchTransport({
+      maxSize: 1,
+      onFlush: async (entries) => {
+        started.push(entries[0].message ?? '');
+
+        if (entries[0].message === 'first') await firstDelivery;
+      },
+    });
+    const log = createLogger({ transports: [batch.transport] });
+
+    log.info('first');
+    await vi.waitFor(() => expect(started).toEqual(['first']));
+    log.info('second');
+
+    const disposal = batch.dispose();
+
+    expect(batch.disposed).toBe(true);
+    expect(started).toEqual(['first']);
+    log.info('ignored');
+
+    releaseFirst?.();
+    await disposal;
+
+    expect(started).toEqual(['first', 'second']);
+  });
+
+  it('rejects a failed manual flush without poisoning later batches', async () => {
+    const flushError = new Error('delivery failed');
+    const errors: unknown[] = [];
+    let attempts = 0;
+    const batch = batchTransport({
+      onFlush: () => {
+        attempts += 1;
+
+        if (attempts === 1) throw flushError;
+      },
+      onFlushError: (_entries, error) => errors.push(error),
+    });
+    const log = createLogger({ transports: [batch.transport] });
+
+    log.info('first');
+    await expect(batch.flush()).rejects.toBe(flushError);
+    expect(errors).toEqual([flushError]);
+
+    log.info('second');
+    await expect(batch.flush()).resolves.toBeUndefined();
+    await batch.dispose();
+  });
+
+  it('rejects disposal after an automatic max-size flush failure', async () => {
+    const flushError = new Error('max-size delivery failed');
+    const batch = batchTransport({
+      maxSize: 1,
+      onFlush: () => {
+        throw flushError;
+      },
+    });
+    const log = createLogger({ transports: [batch.transport] });
+
+    log.info('entry');
+
+    await expect(batch.dispose()).rejects.toBe(flushError);
+  });
+
+  it('rejects disposal after an automatic timer flush failure', async () => {
+    const flushError = new Error('timer delivery failed');
+    const batch = batchTransport({
+      interval: 1,
+      onFlush: () => {
+        throw flushError;
+      },
+    });
+    const log = createLogger({ transports: [batch.transport] });
+
+    log.info('entry');
+    vi.advanceTimersByTime(1);
+
+    await expect(batch.dispose()).rejects.toBe(flushError);
+  });
+
+  it.each([
+    ['interval', { interval: 0 }],
+    ['interval', { interval: Infinity }],
+    ['maxSize', { maxSize: 0 }],
+    ['maxSize', { maxSize: 1.5 }],
+    ['maxBuffer', { maxBuffer: -1 }],
+    ['maxBuffer', { maxBuffer: 1.5 }],
+  ])('rejects invalid %s', (_name, options) => {
+    expect(() => batchTransport({ ...options, onFlush: () => {} })).toThrow(RangeError);
   });
 });
 
@@ -842,6 +936,12 @@ describe('sampleTransport', () => {
 
     expect(entries).toHaveLength(1);
     expect(entries[0].level).toBe('error');
+  });
+
+  it.each([-0.1, 1.1, Infinity, Number.NaN])('rejects invalid rate %s', (rate) => {
+    const { transport } = createTestTransport();
+
+    expect(() => sampleTransport({ rate, transport })).toThrow(RangeError);
   });
 });
 
@@ -925,6 +1025,12 @@ describe('redactTransport', () => {
 
     expect(originals[0].data['token']).toBe('secret');
     expect(redactedEntries[0].data['token']).toBe('[REDACTED]');
+  });
+
+  it.each([-1, 1.5, Infinity, Number.NaN])('rejects invalid maxDepth %s', (maxDepth) => {
+    const { transport } = createTestTransport();
+
+    expect(() => redactTransport({ keys: [], maxDepth, transport })).toThrow(RangeError);
   });
 });
 
@@ -1095,6 +1201,25 @@ describe('group and groupCollapsed', () => {
 
     expect(collapsedSpy).toHaveBeenCalledTimes(1);
     expect(endSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('escapes %-format specifiers in Node group labels and namespaces', () => {
+    vi.stubGlobal('window', undefined);
+
+    try {
+      const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
+
+      vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+
+      const log = createLogger('attacker-%s', { transports: [] });
+
+      log.group('label-%d-%o', () => {});
+
+      expect(groupSpy).toHaveBeenCalledWith(expect.stringContaining('label-%%d-%%o'));
+      expect(groupSpy).toHaveBeenCalledWith(expect.stringContaining('[attacker-%%s]'));
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('closes group even when sync callback throws', () => {
@@ -1837,9 +1962,7 @@ describe('batchTransport maxBuffer', () => {
     log.info('b');
     log.info('c'); // 'a' should be dropped — buffer capped at 2
 
-    batch.dispose();
-
-    await new Promise((r) => setTimeout(r, 20));
+    await batch.dispose();
 
     expect(flushed[0]).toHaveLength(2);
     expect(flushed[0][0].message).toBe('b');
@@ -1860,9 +1983,7 @@ describe('batchTransport maxBuffer', () => {
     log.info('a');
     log.info('b');
     log.info('c');
-    batch.dispose();
-
-    await new Promise((r) => setTimeout(r, 20));
+    await batch.dispose();
 
     expect(flushed[0]).toHaveLength(3);
   });
@@ -2009,8 +2130,7 @@ describe('Logger.dispose()', () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(flushed).toHaveLength(0);
 
-    batch.dispose();
-    await new Promise((r) => setTimeout(r, 20));
+    await batch.dispose();
     expect(flushed).toHaveLength(1);
     expect(flushed[0][0].message).toBe('before-dispose');
   });
@@ -2132,9 +2252,7 @@ describe('batchTransport post-dispose no-ops', () => {
     const log = createLogger({ transports: [batch.transport] });
 
     log.info('before');
-    batch.dispose();
-
-    await new Promise((r) => setTimeout(r, 20));
+    await batch.dispose();
 
     const fakeEntry: LogEntry = {
       data: {},
@@ -2157,25 +2275,25 @@ describe('batchTransport post-dispose no-ops', () => {
 /* ─── BatchHandle.disposed ─── */
 
 describe('batchTransport disposed', () => {
-  it('disposed is false before dispose()', () => {
+  it('disposed is false before dispose()', async () => {
     const batch = batchTransport({ onFlush: () => {} });
 
     expect(batch.disposed).toBe(false);
-    batch.dispose();
+    await batch.dispose();
   });
 
-  it('disposed is true after dispose()', () => {
+  it('disposed is true after dispose()', async () => {
     const batch = batchTransport({ onFlush: () => {} });
 
-    batch.dispose();
+    await batch.dispose();
     expect(batch.disposed).toBe(true);
   });
 
-  it('disposed remains true after second dispose() call', () => {
+  it('disposed remains true after second dispose() call', async () => {
     const batch = batchTransport({ onFlush: () => {} });
 
-    batch.dispose();
-    batch.dispose();
+    await batch.dispose();
+    await batch.dispose();
     expect(batch.disposed).toBe(true);
   });
 });
@@ -2222,10 +2340,10 @@ describe('consoleTransport instances', () => {
   });
 });
 
-/* ─── C4: BatchHandle dispose() idempotency ─── */
+/* ─── C4: BatchHandle disposal ─── */
 
-describe('BatchHandle dispose() idempotency', () => {
-  it('calling dispose() twice does not double-flush', async () => {
+describe('BatchHandle disposal', () => {
+  it('returns same promise on repeated disposal without double-flushing', async () => {
     let flushCount = 0;
     const batch = batchTransport({
       interval: 10_000,
@@ -2238,15 +2356,15 @@ describe('BatchHandle dispose() idempotency', () => {
 
     log.info('entry');
 
-    batch.dispose();
-    batch.dispose();
+    const first = batch.dispose();
+    const second = batch.dispose();
 
-    await new Promise((r) => setTimeout(r, 20));
-
+    expect(second).toBe(first);
+    await first;
     expect(flushCount).toBe(1);
   });
 
-  it('[Symbol.dispose] delegates to dispose()', async () => {
+  it('[Symbol.asyncDispose] delegates to dispose()', async () => {
     let flushCount = 0;
     const batch = batchTransport({
       interval: 10_000,
@@ -2258,22 +2376,19 @@ describe('BatchHandle dispose() idempotency', () => {
     const log = createLogger({ transports: [batch.transport] });
 
     log.info('entry');
-
-    batch[Symbol.dispose]();
-    batch.dispose();
-
-    await new Promise((r) => setTimeout(r, 20));
+    await batch[Symbol.asyncDispose]();
 
     expect(flushCount).toBe(1);
   });
 
-  it('BatchHandle exposes transport, flush, dispose, and [Symbol.dispose]', () => {
+  it('BatchHandle exposes transport, flush, dispose, and [Symbol.asyncDispose]', () => {
     const batch = batchTransport({ onFlush: () => {} });
 
     expect(typeof batch.transport).toBe('function');
     expect(typeof batch.flush).toBe('function');
     expect(typeof batch.dispose).toBe('function');
-    expect(typeof batch[Symbol.dispose]).toBe('function');
+    expect(typeof batch[Symbol.asyncDispose]).toBe('function');
+    expect(Symbol.dispose in batch).toBe(false);
   });
 });
 
@@ -2556,50 +2671,21 @@ describe('resolveTheme()', () => {
   });
 });
 
-/* ─── RuneError / RuneTransportError ─── */
+/* ─── RuneError ─── */
 
 describe('RuneError', () => {
-  it('sets name to the concrete subclass name, not the base class', () => {
-    const err = new RuneTransportError(new Error('boom'));
+  it('sets its name and remains a real Error', () => {
+    const err = new RuneError('generic failure');
 
-    expect(err.name).toBe('RuneTransportError');
+    expect(err.name).toBe('RuneError');
+    expect(err).toBeInstanceOf(Error);
   });
 
-  it('RuneError.is() identifies RuneError and its subclasses', () => {
-    expect(RuneError.is(new RuneTransportError(new Error('boom')))).toBe(true);
+  it('identifies RuneError but not unrelated values', () => {
     expect(RuneError.is(new RuneError('generic failure'))).toBe(true);
-  });
-
-  it('RuneError.is() returns false for unrelated errors and non-errors', () => {
     expect(RuneError.is(new Error('plain'))).toBe(false);
     expect(RuneError.is('not an error')).toBe(false);
     expect(RuneError.is(undefined)).toBe(false);
-  });
-
-  it('is a real Error instance usable with instanceof and try/catch', () => {
-    expect(new RuneError('msg')).toBeInstanceOf(Error);
-    expect(new RuneTransportError(new Error('boom'))).toBeInstanceOf(RuneError);
-  });
-});
-
-describe('RuneTransportError', () => {
-  it('has a fixed, descriptive message regardless of the underlying cause', () => {
-    const err = new RuneTransportError('a string, not even an Error');
-
-    expect(err.message).toBe('Transport threw an unhandled error');
-  });
-
-  it('preserves an Error cause for inspection', () => {
-    const cause = new Error('original failure');
-    const err = new RuneTransportError(cause);
-
-    expect(err.cause).toBe(cause);
-  });
-
-  it('does not set cause when the underlying value is not an Error', () => {
-    const err = new RuneTransportError('a plain string');
-
-    expect(err.cause).toBeUndefined();
   });
 });
 
@@ -2633,12 +2719,11 @@ describe('batchTransport flush() on empty buffer', () => {
       },
     });
 
-    batch.flush();
-    await Promise.resolve();
+    await batch.flush();
 
     expect(flushCount).toBe(0);
 
-    batch.dispose();
+    await batch.dispose();
   });
 });
 

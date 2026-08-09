@@ -18,7 +18,7 @@ export type {
   Transport,
 } from './types';
 
-export { RuneError, RuneTransportError } from './errors';
+export { RuneError } from './errors';
 export { isLevelEnabled, PRIORITY } from './types';
 export type { LazyBinding } from './lazy';
 export { lazy } from './lazy';

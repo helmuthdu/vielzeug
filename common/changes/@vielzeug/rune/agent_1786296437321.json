@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: make batch lifecycle awaitable and remove RuneTransportError",
+      "packageName": "@vielzeug/rune",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/rune"
+}

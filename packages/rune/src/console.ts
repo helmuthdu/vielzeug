@@ -244,9 +244,9 @@ export function renderGroup(collapsed: boolean, label: string, namespace: string
   const isNode = typeof window === 'undefined';
 
   if (isNode) {
-    const meta = [theme.group.badge, label];
+    const meta = [theme.group.badge, escapeConsoleFormat(label)];
 
-    if (namespace) meta.push(`[${namespace}]`);
+    if (namespace) meta.push(`[${escapeConsoleFormat(namespace)}]`);
 
     fn(meta.join(' | '));
 

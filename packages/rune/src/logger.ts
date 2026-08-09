@@ -3,7 +3,6 @@ import type { Bindings, LogEntry, Logger, LogLevel, LogMiddleware, LogType, Rune
 import { warn } from './_dev';
 import { isUnsafeObjectKey } from './_prototype';
 import { DEFAULT_THEME, consoleTransport, renderGroup } from './console';
-import { RuneTransportError } from './errors';
 import { resolveBindings } from './lazy';
 import { isLevelEnabled } from './types';
 
@@ -131,9 +130,7 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
       try {
         t(current);
       } catch (err) {
-        const transportErr = new RuneTransportError(err);
-
-        warn(`${transportErr.message}${namespaceSuffix()}: ${String(err)}`);
+        warn(`Transport threw an unhandled error${namespaceSuffix()}: ${String(err)}`);
       }
     }
   };

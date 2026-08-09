@@ -28,7 +28,7 @@ log.auth.warn('token expiring');
 
 ### Pitfalls
 
-- Using the same namespace string in two different modules makes their log entries indistinguishable. Use hierarchical namespaces (e.g., `app:orders:service`) to ensure uniqueness.
+- Using the same namespace string in two different modules makes their log entries indistinguishable. Use dot-joined namespaces such as `app.orders.service` to keep scopes distinct.
 - Creating the logger at module load time means its namespace and bindings are fixed for that module instance. Prefer request-scoped child loggers when fields vary per request.
 - Structured context is first-argument only: use `logger.info({ userId }, 'event')`. String-first calls accept only the message.
 

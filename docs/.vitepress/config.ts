@@ -1542,6 +1542,7 @@ export default defineConfig({
       ],
       '/rune/': [
         { link: '/rune/', text: 'Overview' },
+        { link: '/rune/migration', text: 'Migration' },
         {
           items: [
             { link: '/rune/usage#basic-usage', text: 'Basic Usage' },

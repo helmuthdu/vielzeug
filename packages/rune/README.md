@@ -11,7 +11,7 @@
 
 **Key exports:** `createLogger`, `defaultLogger`, `lazy`, `consoleTransport`, `remoteTransport`, `jsonTransport`, `batchTransport`, `sampleTransport`, `redactTransport`, `pipe`, `isLevelEnabled`
 
-**When to use:** Structured browser/Node logging with log levels, namespaced scopes, lazy bindings, and a pluggable transport pipeline.
+**When to use:** Structured browser/Node logging with log levels, namespaced scopes, lazy bindings, and pluggable transport pipelines.
 
 **Related:** [@vielzeug/courier](https://vielzeug.dev/courier/) · [@vielzeug/herald](https://vielzeug.dev/herald/) · [@vielzeug/familiar](https://vielzeug.dev/familiar/)
 
@@ -30,57 +30,34 @@ yarn add @vielzeug/rune
 ## Quick Start
 
 ```ts
-import { createLogger, defaultLogger, lazy } from '@vielzeug/rune';
-import { consoleTransport, jsonTransport, remoteTransport, sampleTransport } from '@vielzeug/rune';
+import { batchTransport, consoleTransport, createLogger, lazy, remoteTransport } from '@vielzeug/rune';
 
-// Default singleton — uses consoleTransport() automatically
-defaultLogger.info({ port: 3000 }, 'server started');
-defaultLogger.warn('cache stale');
-defaultLogger.error(new Error('connection lost')); // auto-serializes Error
-
-// Namespaced child loggers
-const api = createLogger('api');
-api.info({ method: 'GET', path: '/users' }, 'request');
-
-// Pinned bindings — lazy() evaluates only when the level passes
-const reqLog = api.withBindings({
-  requestId: 'abc-123',
-  diagnostics: lazy(() => buildDiagnostics()),
-});
-reqLog.debug('processing'); // diagnostics() called only here
-
-// Structured timing — label is the message; emits { duration_ms } in context
-const users = await reqLog.time('db.query', () => db.query('SELECT * FROM users'));
-
-// Custom transport pipeline
 const log = createLogger({
-  logLevel: 'info',
+  logLevel: 'debug',
   namespace: 'server',
   transports: [
     consoleTransport({ timestamp: true }),
     remoteTransport({
-      handler: async (type, data) => {
-        await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
-      },
+      handler: (_type, data) => console.debug('remote log', data),
       level: 'error',
     }),
   ],
 });
 
-// Node.js: NDJSON for log aggregation (ELK, Datadog, etc.)
-const nodeLog = createLogger({
-  transports: [jsonTransport({ level: 'warn' })],
+const requestLog = log.withBindings({
+  diagnostics: lazy(() => ({ queueDepth: 0 })),
+  requestId: 'abc-123',
 });
 
-// Fan-out to multiple transports independently (errors in one don't block others)
-import { pipe } from '@vielzeug/rune';
-const fanout = pipe(consoleTransport(), remoteTransport({ handler, level: 'error' }));
+requestLog.info('request started');
+const users = await requestLog.time('load users', () => Promise.resolve(['user-1']));
+console.log(users);
 
-// Sampling — drop 90 % of debug entries before they reach the downstream transport
-const sampledLog = createLogger({
-  logLevel: 'debug',
-  transports: [sampleTransport({ rate: 0.1, transport: consoleTransport() })],
-});
+const batch = batchTransport({ onFlush: (entries) => console.debug('batch', entries) });
+const bufferedLog = createLogger({ transports: [batch.transport] });
+
+bufferedLog.info('queued for delivery');
+await batch.dispose();
 ```
 
 ## Documentation
@@ -89,6 +66,7 @@ const sampledLog = createLogger({
 - [Usage Guide](https://vielzeug.dev/rune/usage)
 - [API Reference](https://vielzeug.dev/rune/api)
 - [Examples](https://vielzeug.dev/rune/examples)
+- [Migration Guide](https://vielzeug.dev/rune/migration)
 
 ## License
 

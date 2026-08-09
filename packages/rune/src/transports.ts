@@ -131,6 +131,24 @@ export function jsonTransport(options: JsonTransportOptions = {}): Transport {
   };
 }
 
+/* ─── Transport option validation ─── */
+
+function assertFiniteNumber(value: number, name: string): void {
+  if (!Number.isFinite(value)) throw new RangeError(`${name} must be a finite number`);
+}
+
+function assertNonNegativeInteger(value: number, name: string): void {
+  assertFiniteNumber(value, name);
+
+  if (!Number.isInteger(value) || value < 0) throw new RangeError(`${name} must be a non-negative integer`);
+}
+
+function assertPositiveInteger(value: number, name: string): void {
+  assertFiniteNumber(value, name);
+
+  if (!Number.isInteger(value) || value <= 0) throw new RangeError(`${name} must be a positive integer`);
+}
+
 /* ─── batchTransport ─── */
 
 /**
@@ -139,10 +157,10 @@ export function jsonTransport(options: JsonTransportOptions = {}): Transport {
  *
  * Returns a `BatchHandle` with `.transport`, `.flush()`, and `.dispose()` methods:
  * - `.transport` — pass to `createLogger({ transports: [handle.transport] })`
- * - `.flush()` — immediately send buffered entries without stopping the timer
- * - `.dispose()` — stop the interval and flush remaining entries (call on shutdown)
+ * - `.flush()` — immediately send buffered entries and wait for delivery without stopping the timer
+ * - `.dispose()` — stop the interval, flush remaining entries, and wait for delivery
  *
- * Use `onFlushError` to observe or retry failed flushes (e.g. dead-letter queue).
+ * Use `onFlushError` to observe failed flushes (e.g. dead-letter queue).
  *
  * @example
  * const batch = batchTransport({
@@ -152,7 +170,7 @@ export function jsonTransport(options: JsonTransportOptions = {}): Transport {
  *   maxSize: 100,
  * });
  * createLogger({ transports: [batch.transport] });
- * batch.dispose(); // call on app shutdown
+ * await batch.dispose(); // call during graceful shutdown
  */
 export function batchTransport(options: BatchTransportOptions): BatchHandle {
   const level = options.level ?? 'debug';
@@ -160,28 +178,65 @@ export function batchTransport(options: BatchTransportOptions): BatchHandle {
   const maxBuffer = options.maxBuffer;
   const interval = options.interval ?? 5000;
 
+  assertFiniteNumber(interval, 'batchTransport interval');
+
+  if (interval <= 0) throw new RangeError('batchTransport interval must be greater than zero');
+
+  assertPositiveInteger(maxSize, 'batchTransport maxSize');
+
+  if (maxBuffer !== undefined) assertNonNegativeInteger(maxBuffer, 'batchTransport maxBuffer');
+
   let buffer: LogEntry[] = [];
   let timer: ReturnType<typeof setInterval> | undefined;
+  let automaticFailure: { error: unknown } | undefined;
   let batchDisposed = false;
+  let deliveryTail: Promise<void> = Promise.resolve();
+  let disposePromise: Promise<void> | undefined;
 
-  function flush(): void {
-    if (buffer.length === 0) return;
+  const deliver = async (entries: LogEntry[]): Promise<void> => {
+    try {
+      await options.onFlush(entries);
+    } catch (err) {
+      try {
+        options.onFlushError?.(entries, err);
+      } catch (observerErr) {
+        warn(`batch transport error observer threw: ${String(observerErr)}`);
+      }
+
+      throw err;
+    }
+  };
+
+  const enqueue = (entries: LogEntry[]): Promise<void> => {
+    const delivery = deliveryTail.then(() => deliver(entries));
+
+    deliveryTail = delivery.catch(() => undefined);
+
+    return delivery;
+  };
+
+  const flush = (): Promise<void> => {
+    if (buffer.length === 0) return deliveryTail;
 
     const entries = buffer;
 
     buffer = [];
 
-    Promise.resolve()
-      .then(() => options.onFlush(entries))
-      .catch((err: unknown) => options.onFlushError?.(entries, err));
-  }
+    return enqueue(entries);
+  };
+
+  const flushAutomatically = (): void => {
+    void flush().catch((error: unknown) => {
+      automaticFailure ??= { error };
+    });
+  };
 
   const transportFn: Transport = (entry: LogEntry): void => {
     if (batchDisposed) return;
 
     if (!isLevelEnabled(level, entry.level)) return;
 
-    if (!timer) timer = setInterval(flush, interval);
+    if (!timer) timer = setInterval(flushAutomatically, interval);
 
     buffer.push(entry);
 
@@ -189,12 +244,12 @@ export function batchTransport(options: BatchTransportOptions): BatchHandle {
       buffer = buffer.slice(buffer.length - maxBuffer);
     }
 
-    if (buffer.length >= maxSize) flush();
+    if (buffer.length >= maxSize) flushAutomatically();
   };
 
   const handle: BatchHandle = {
-    dispose(): void {
-      if (batchDisposed) return;
+    dispose(): Promise<void> {
+      if (disposePromise) return disposePromise;
 
       batchDisposed = true;
 
@@ -203,14 +258,18 @@ export function batchTransport(options: BatchTransportOptions): BatchHandle {
         timer = undefined;
       }
 
-      flush();
+      disposePromise = flush().then(() => {
+        if (automaticFailure) throw automaticFailure.error;
+      });
+
+      return disposePromise;
     },
     get disposed(): boolean {
       return batchDisposed;
     },
     flush,
-    [Symbol.dispose](): void {
-      handle.dispose();
+    [Symbol.asyncDispose](): Promise<void> {
+      return handle.dispose();
     },
     transport: transportFn,
   };
@@ -230,6 +289,10 @@ export function batchTransport(options: BatchTransportOptions): BatchHandle {
 export function sampleTransport(options: SampleTransportOptions): Transport {
   const { rate, transport } = options;
   const level = options.level ?? 'debug';
+
+  assertFiniteNumber(rate, 'sampleTransport rate');
+
+  if (rate < 0 || rate > 1) throw new RangeError('sampleTransport rate must be between zero and one');
 
   return (entry: LogEntry): void => {
     if (!isLevelEnabled(level, entry.level)) return;
@@ -253,6 +316,8 @@ export function sampleTransport(options: SampleTransportOptions): Transport {
  */
 export function redactTransport(options: RedactTransportOptions): Transport {
   const { keys, maxDepth = 20, replacement = '[REDACTED]', transport } = options;
+
+  assertNonNegativeInteger(maxDepth, 'redactTransport maxDepth');
 
   for (const key of keys) {
     if (key.includes('.')) {

@@ -52,9 +52,9 @@ export type LogEntry = {
 
 /**
  * A transport receives a log entry and is responsible for its own delivery and formatting.
- * If a transport throws, the logger catches it, reports it via a dev-only warning (wrapped in
- * `RuneTransportError`), and continues dispatching the entry to remaining transports — a single
- * misbehaving transport can never crash the caller of `log.info()`/etc. or block its siblings.
+ * If a transport throws, the logger catches it, reports it via a dev-only warning, and continues
+ * dispatching the entry to remaining transports — a single misbehaving transport can never crash
+ * the caller of `log.info()`/etc. or block its siblings.
  */
 export type Transport = (entry: LogEntry) => void;
 
@@ -121,40 +121,37 @@ export type JsonTransportOptions = {
 
 /** Handle returned by `batchTransport()`. Pass `handle.transport` to `createLogger({ transports })`. */
 export type BatchHandle = {
-  /** Delegates to `dispose()`. Enables `using` declarations. */
-  [Symbol.dispose]: () => void;
-  /** Stop the interval timer and flush remaining entries. Call on shutdown. Idempotent. */
-  dispose: () => void;
+  /** Delegates to `dispose()`. Enables `await using` declarations. */
+  [Symbol.asyncDispose]: () => Promise<void>;
+  /** Stop the interval timer, flush remaining entries, and wait for all accepted batches. Idempotent. */
+  dispose: () => Promise<void>;
   /** `true` after `dispose()` has been called. */
   readonly disposed: boolean;
-  /** Immediately flush buffered entries to the downstream handler without stopping the timer. */
-  flush: () => void;
+  /** Immediately flush buffered entries and wait for their downstream delivery without stopping the timer. */
+  flush: () => Promise<void>;
   /** The transport function to pass to `createLogger({ transports: [handle.transport] })`. */
   transport: Transport;
 };
 
 export type BatchTransportOptions = {
-  /** Flush interval in milliseconds. Default: 5000. */
+  /** Flush interval in milliseconds. Must be finite and greater than zero. Default: 5000. */
   interval?: number;
   /** Minimum level to buffer. Default: 'debug'. */
   level?: LogLevel;
   /**
-   * Hard limit on the in-memory buffer size. When the buffer exceeds this value,
-   * the oldest entries are dropped to prevent unbounded memory growth.
-   * Unlike `maxSize`, this does NOT trigger a flush — it silently drops.
+   * Hard limit on the in-memory buffer size. Must be a finite non-negative integer.
+   * When the buffer exceeds this value, the oldest entries are dropped to prevent
+   * unbounded memory growth. Unlike `maxSize`, this does NOT trigger a flush.
    * Default: unbounded.
    */
   maxBuffer?: number;
-  /** Maximum buffer size before an early flush. Default: 50. */
+  /** Maximum buffer size before an early flush. Must be a finite positive integer. Default: 50. */
   maxSize?: number;
-  /**
-   * Callback to receive flushed batches. May return a Promise — async rejections
-   * are forwarded to `onFlushError` in addition to synchronous throws.
-   */
+  /** Callback to receive flushed batches. May return a Promise. */
   onFlush: (entries: LogEntry[]) => void | Promise<void>;
   /**
-   * Called when onFlush throws synchronously or rejects asynchronously.
-   * Allows retry/dead-letter logic. Default: silent.
+   * Called when onFlush throws synchronously or rejects asynchronously. Observes the
+   * failure; the corresponding `flush()` or `dispose()` promise still rejects.
    */
   onFlushError?: (entries: LogEntry[], error: unknown) => void;
 };
@@ -171,7 +168,7 @@ export type PipeOptions = {
 export type SampleTransportOptions = {
   /** Minimum level to sample. Default: 'debug'. */
   level?: LogLevel;
-  /** Fraction of entries to forward (0–1). */
+  /** Finite fraction of entries to forward (0–1). */
   rate: number;
   /** Downstream transport to receive sampled entries. */
   transport: Transport;
@@ -185,7 +182,7 @@ export type RedactTransportOptions = {
    */
   keys: string[];
   /**
-   * Maximum object nesting depth to traverse during redaction.
+   * Finite non-negative integer maximum object nesting depth to traverse during redaction.
    * Objects deeper than this limit are returned as-is (not redacted).
    * A dev-only warning is emitted when the cap is hit.
    * Default: 20.

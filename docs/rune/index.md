@@ -22,7 +22,6 @@ exports:
     DEFAULT_THEME,
     PRIORITY,
     RuneError,
-    RuneTransportError,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -37,22 +36,25 @@ Plain `console.log` lacks structure: no log levels, no namespacing, no remote de
 
 ```ts
 // Before — manual approach
-if (process.env.NODE_ENV !== 'production') {
-  console.log('[api] GET /users', data);
-}
-fetch('/api/logs', { method: 'POST', body: JSON.stringify({ level: 'error', msg }) });
+const path = '/users';
+console.log(`[api] GET ${path}`);
+fetch('/api/logs', { body: JSON.stringify({ level: 'error', path }), method: 'POST' });
 
 // After — Rune
-import { createLogger } from '@vielzeug/rune';
-import { consoleTransport, pipe, remoteTransport } from '@vielzeug/rune';
+import { consoleTransport, createLogger, remoteTransport } from '@vielzeug/rune';
 
 const api = createLogger({
   namespace: 'api',
   transports: [
-    pipe(consoleTransport({ level: 'debug' }), remoteTransport({ handler: sendToCollector, level: 'error' })),
+    consoleTransport({ level: 'debug' }),
+    remoteTransport({
+      handler: (_type, data) => console.debug('remote log', data),
+      level: 'error',
+    }),
   ],
 });
-api.info({ data }, 'GET /users');
+
+api.info({ method: 'GET', path }, 'request');
 ```
 
 | Feature              | Rune                                                          | Winston                                               | Pino                                               | console                                    |
@@ -95,47 +97,34 @@ yarn add @vielzeug/rune
 ## Quick Start
 
 ```ts
-import { createLogger, defaultLogger, lazy } from '@vielzeug/rune';
-import { consoleTransport, pipe, remoteTransport, jsonTransport } from '@vielzeug/rune';
+import { batchTransport, consoleTransport, createLogger, lazy, remoteTransport } from '@vielzeug/rune';
 
-// Default logger — uses consoleTransport() automatically
-defaultLogger.info('Boot complete');
-defaultLogger.warn('Cache stale');
-defaultLogger.fatal({ err: new Error('unrecoverable') }, 'startup failed');
-
-// Namespaced child loggers
-const api = createLogger('api');
-api.info({ method: 'GET', path: '/users' }, 'request');
-
-// Pinned bindings — lazy() only evaluates when the level passes
-const reqLog = api.withBindings({
-  requestId: 'abc-123',
-  diagnostics: lazy(() => buildDiagnostics()),
-});
-reqLog.debug('processing'); // diagnostics() called only here
-
-// Structured timing — label is the message; emits { duration_ms } in context
-await reqLog.time('db.query', () => runQuery());
-
-// Custom transport pipeline
-const serverLog = createLogger({
-  logLevel: 'info',
+const log = createLogger({
+  logLevel: 'debug',
   namespace: 'server',
   transports: [
     consoleTransport({ timestamp: true }),
     remoteTransport({
-      handler: async (type, data) => {
-        await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
-      },
+      handler: (_type, data) => console.debug('remote log', data),
       level: 'error',
     }),
   ],
 });
 
-// Node.js: structured JSON for log aggregation
-const nodeLog = createLogger({
-  transports: [jsonTransport({ level: 'warn' })],
+const requestLog = log.withBindings({
+  diagnostics: lazy(() => ({ queueDepth: 0 })),
+  requestId: 'abc-123',
 });
+
+requestLog.info({ method: 'GET', path: '/users' }, 'request');
+const users = await requestLog.time('load users', () => Promise.resolve(['user-1']));
+console.log(users);
+
+const batch = batchTransport({ onFlush: (entries) => console.debug('batch', entries) });
+const bufferedLog = createLogger({ transports: [batch.transport] });
+
+bufferedLog.info('queued for delivery');
+await batch.dispose();
 ```
 
 ## Features
@@ -166,6 +155,7 @@ const nodeLog = createLogger({
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [Migration Guide](./migration.md)
 
 </div>
 

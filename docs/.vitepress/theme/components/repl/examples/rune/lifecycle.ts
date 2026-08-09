@@ -28,8 +28,8 @@ const batchLog = createLogger('batch', { transports: [batch.transport] });
 batchLog.info('entry-1');
 batchLog.warn('entry-2');
 
-batch.dispose(); // flushes once
-batch.dispose(); // no-op — already disposed
+await batch.dispose(); // flushes once and waits for delivery
+await batch.dispose(); // same settled promise — no double flush
 
 console.log('flushed messages:', flushed);
 `,

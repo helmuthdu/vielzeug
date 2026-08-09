@@ -17,11 +17,10 @@ description: API reference for @vielzeug/rune exports, logger methods, configura
 | `PRIORITY`           | Numeric priority table backing `isLevelEnabled()`| —              | Lower number = more verbose                                  |
 | `resolveTheme()`     | Merge a partial theme onto the default           | Sync           | Returns a fully-populated `ResolvedTheme`                    |
 | `RuneError`          | Base class for all `rune`-originated errors      | —              | Use `RuneError.is(err)` as the type guard                    |
-| `RuneTransportError` | Internal transport-failure error (never thrown)  | —              | Inspect via dev-only warnings, not `try`/`catch`              |
 | `consoleTransport()` | Styled console output                            | Sync           | Theme is resolved once at factory call, not per entry        |
 | `remoteTransport()`  | Async HTTP/webhook delivery                      | Async          | Handler errors are swallowed to `console.warn`               |
 | `jsonTransport()`    | NDJSON to stdout or a custom sink                | Sync           | `process.stdout` is unavailable in browsers                  |
-| `batchTransport()`   | Buffered batch delivery with flush interval      | Sync/Interval  | Must call `.dispose()` on shutdown to flush remaining        |
+| `batchTransport()`   | Buffered batch delivery with flush interval      | Async          | Await `.dispose()` and handle rejected delivery             |
 | `sampleTransport()`  | Probabilistic entry forwarding                   | Sync           | `rate: 1` forwards all entries; `rate: 0` forwards none      |
 | `redactTransport()`  | Sensitive field stripping before forwarding      | Sync           | Place this closest to the remote transport, not console      |
 
@@ -46,7 +45,7 @@ createLogger(options?: RuneOptions): Logger
 
 > **Note — disposed loggers:** after `dispose()` is called, all log methods (`debug`, `info`, `warn`, `error`, `fatal`), `time()`, and `group()` / `groupCollapsed()` silently no-op. The `fn` callback in `group()` still runs — only the group header is suppressed.
 
-> **Note — transport/middleware fault isolation:** if a transport or middleware function throws, the logger catches it, reports it via a dev-only warning (the transport case wraps the error in `RuneTransportError`), and continues — a single misbehaving transport can never crash the caller of `log.info()`/etc., and sibling transports still receive the entry. A throwing middleware drops just that one entry.
+> **Note — transport/middleware fault isolation:** if a transport or middleware function throws, the logger catches it, reports it via a dev-only warning, and continues — a single misbehaving transport can never crash the caller of `log.info()`/etc., and sibling transports still receive the entry. A throwing middleware drops just that one entry.
 
 **Returns:** `Logger`
 
@@ -63,7 +62,7 @@ const serverLog = createLogger({
   transports: [
     consoleTransport(),
     remoteTransport({
-      handler: async (type, data) => {
+      handler: async (_type, data) => {
         await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
       },
       level: 'error',
@@ -228,7 +227,7 @@ import { createLogger, remoteTransport } from '@vielzeug/rune';
 const log = createLogger({
   transports: [
     remoteTransport({
-      handler: async (type, data) => {
+      handler: async (_type, data) => {
         await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
       },
       level: 'error',
@@ -276,24 +275,24 @@ log.info({ path: '/users', status: 200 }, 'request');
 batchTransport(options: BatchTransportOptions): BatchHandle
 ```
 
-Buffers entries and delivers them in batches. Flushes when the buffer reaches `maxSize` or after `interval` elapses.
+Buffers entries and delivers them in order. Flushes when the buffer reaches `maxSize` or after `interval` elapses; `flush()` and `dispose()` wait for accepted batch delivery.
 
-| Option         | Type                                             | Default   | Description                                                                             |
-| -------------- | ------------------------------------------------ | --------- | --------------------------------------------------------------------------------------- |
-| `onFlush`      | `(entries: LogEntry[]) => void \| Promise<void>` | —         | Required. Receives each batch (may be async)                                            |
-| `onFlushError` | `(entries: LogEntry[], error: unknown) => void`  | —         | Called when `onFlush` throws or rejects                                                 |
-| `level`        | `LogLevel`                                       | `'debug'` | Minimum level to buffer                                                                 |
-| `interval`     | `number`                                         | `5000`    | Flush interval in milliseconds                                                          |
-| `maxSize`      | `number`                                         | `50`      | Max buffer size before an early flush                                                   |
-| `maxBuffer`    | `number`                                         | unbounded | Hard cap — oldest entries are dropped silently when exceeded. Does not trigger a flush. |
+| Option         | Type                                             | Default   | Description                                                                                  |
+| -------------- | ------------------------------------------------ | --------- | -------------------------------------------------------------------------------------------- |
+| `onFlush`      | `(entries: LogEntry[]) => void \| Promise<void>` | —         | Required. Receives each batch; implement retry here when successful retry must fulfill drain |
+| `onFlushError` | `(entries: LogEntry[], error: unknown) => void`  | —         | Observes delivery failure; matching `flush()` or later `dispose()` rejects                   |
+| `level`        | `LogLevel`                                       | `'debug'` | Minimum level to buffer                                                                      |
+| `interval`     | `number`                                         | `5000`    | Finite interval in milliseconds greater than zero                                            |
+| `maxSize`      | `number`                                         | `50`      | Finite positive integer batch size before early flush                                        |
+| `maxBuffer`    | `number`                                         | unbounded | Finite non-negative integer hard cap; oldest entries drop when exceeded                      |
 
 Returns a `BatchHandle` with:
 
 - `.transport` — the `Transport` function to pass to `createLogger({ transports: [handle.transport] })`.
-- `.flush()` — immediately send buffered entries without stopping the timer.
-- `.dispose()` — stop the interval and flush remaining entries. **Call on shutdown.** Idempotent.
-- `.disposed` — `true` after `dispose()` has been called.
-- `[Symbol.dispose]()` — delegates to `.dispose()`. Enables `using` declarations.
+- `.flush()` — immediately send buffered entries and resolve after delivery; rejects when delivery fails.
+- `.dispose()` — stop the interval, reject new entries, and settle after every accepted batch completes. Rejects if any automatic or final delivery fails. Idempotent.
+- `.disposed` — `true` when disposal starts.
+- `[Symbol.asyncDispose]()` — delegates to `.dispose()`. Enables `await using` declarations.
 
 After `dispose()`, the transport becomes inert: new entries are silently dropped.
 
@@ -305,15 +304,16 @@ After `dispose()`, the transport becomes inert: new entries are silently dropped
 import { batchTransport, createLogger } from '@vielzeug/rune';
 
 const batch = batchTransport({
-  onFlush: (entries) => sendToCollector(entries),
   interval: 10_000,
   maxSize: 100,
+  onFlush: (entries) => console.debug('batch', entries),
 });
 
-// Pass batch.transport to the logger — batch holds flush/dispose
 const log = createLogger({ transports: [batch.transport] });
 
-process.on('exit', () => batch.dispose());
+async function shutdown() {
+  await batch.dispose();
+}
 ```
 
 ### sampleTransport(options)
@@ -326,7 +326,7 @@ Probabilistically forwards entries to a downstream transport.
 
 | Option      | Type        | Default   | Description                                    |
 | ----------- | ----------- | --------- | ---------------------------------------------- |
-| `rate`      | `number`    | —         | Required. Fraction of entries to forward (0–1) |
+| `rate`      | `number`    | —         | Required finite fraction of entries to forward (0–1) |
 | `transport` | `Transport` | —         | Required. Downstream transport                 |
 | `level`     | `LogLevel`  | `'debug'` | Minimum level to sample                        |
 
@@ -341,7 +341,7 @@ const log = createLogger({
   transports: [
     sampleTransport({
       rate: 0.1,
-      transport: remoteTransport({ handler }),
+      transport: remoteTransport({ handler: (_type, data) => console.debug('sampled log', data) }),
     }),
   ],
 });
@@ -376,7 +376,7 @@ const log = createLogger({
   transports: [
     redactTransport({
       keys: ['password', 'token', 'ssn'],
-      transport: remoteTransport({ handler }),
+      transport: remoteTransport({ handler: (_type, data) => console.debug('redacted log', data) }),
     }),
   ],
 });
@@ -407,9 +407,12 @@ import { consoleTransport, createLogger, pipe, remoteTransport } from '@vielzeug
 const log = createLogger({
   transports: [
     pipe(
-      { onError: (err) => metrics.increment('log.transport.error') },
+      { onError: (error) => console.warn('transport error', error) },
       consoleTransport(),
-      remoteTransport({ handler, level: 'error' }),
+      remoteTransport({
+        handler: (_type, data) => console.debug('remote log', data),
+        level: 'error',
+      }),
     ),
   ],
 });
@@ -485,14 +488,6 @@ try {
 | Method       | Returns                | Description                                  |
 | ------------ | ----------------------- | --------------------------------------------- |
 | `is(err)`    | `err is RuneError`      | Type guard — `true` for `RuneError` and subclasses |
-
-### RuneTransportError
-
-```ts
-class RuneTransportError extends RuneError {}
-```
-
-Constructed internally when a transport function throws during log entry emission. It is **never thrown or propagated** to application code — the logger catches the underlying error, wraps it here (available as `.cause`), and reports it via a dev-only warning. See the transport/middleware fault-isolation note under `createLogger()` above.
 
 ## Types
 
@@ -593,15 +588,15 @@ Opaque type returned by `lazy()`. Pass as a value inside `withBindings()`. The f
 
 ```ts
 type BatchHandle = {
-  [Symbol.dispose]: () => void;
-  dispose: () => void;
+  [Symbol.asyncDispose]: () => Promise<void>;
+  dispose: () => Promise<void>;
   readonly disposed: boolean;
-  flush: () => void;
+  flush: () => Promise<void>;
   transport: Transport;
 };
 ```
 
-Returned by `batchTransport()`. Pass `handle.transport` to `createLogger({ transports })`; call `handle.dispose()` on shutdown. `disposed` is `true` after `dispose()` has been called.
+Returned by `batchTransport()`. Pass `handle.transport` to `createLogger({ transports })`; await `handle.dispose()` during graceful shutdown. `disposed` is `true` when disposal starts.
 
 ### Logger
 
@@ -667,18 +662,18 @@ type Logger = {
 
 | Field          | Type                                             | Default   | Description                                               |
 | -------------- | ------------------------------------------------ | --------- | --------------------------------------------------------- |
-| `onFlush`      | `(entries: LogEntry[]) => void \| Promise<void>` | —         | Required. Receives each batch (may be async)              |
-| `onFlushError` | `(entries: LogEntry[], error: unknown) => void`  | —         | Called when `onFlush` throws or rejects                   |
-| `level`        | `LogLevel`                                       | `'debug'` | Minimum level to buffer                                   |
-| `interval`     | `number`                                         | `5000`    | Flush interval in milliseconds                            |
-| `maxSize`      | `number`                                         | `50`      | Max buffer size before an early flush                     |
-| `maxBuffer`    | `number`                                         | unbounded | Hard cap — drops oldest when exceeded, no flush triggered |
+| `onFlush`      | `(entries: LogEntry[]) => void \| Promise<void>` | —         | Required. Receives each batch (may be async)                         |
+| `onFlushError` | `(entries: LogEntry[], error: unknown) => void`  | —         | Observes delivery failure; matching `flush()` or later `dispose()` rejects |
+| `level`        | `LogLevel`                                       | `'debug'` | Minimum level to buffer                                              |
+| `interval`     | `number`                                         | `5000`    | Finite interval in milliseconds greater than zero                    |
+| `maxSize`      | `number`                                         | `50`      | Finite positive integer batch size before early flush                |
+| `maxBuffer`    | `number`                                         | unbounded | Finite non-negative integer cap; drops oldest entries when exceeded |
 
 ### SampleTransportOptions
 
 | Field       | Type        | Default   | Description                                    |
 | ----------- | ----------- | --------- | ---------------------------------------------- |
-| `rate`      | `number`    | —         | Required. Fraction of entries to forward (0–1) |
+| `rate`      | `number`    | —         | Required finite fraction of entries to forward (0–1) |
 | `transport` | `Transport` | —         | Required. Downstream transport                 |
 | `level`     | `LogLevel`  | `'debug'` | Minimum level to sample                        |
 
@@ -687,6 +682,6 @@ type Logger = {
 | Field         | Type        | Default        | Description                                                                                                                                                                                                                                   |
 | ------------- | ----------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `keys`        | `string[]`  | —              | Required. Field names to redact at any depth                                                                                                                                                                                                  |
-| `maxDepth`    | `number`    | `20`           | Maximum object nesting depth to traverse. Fields deeper than this are not redacted — a dev-only warning is emitted when hit. **Security:** the warning is suppressed in production; ensure sensitive fields are not nested beyond this limit. |
+| `maxDepth`    | `number`    | `20`           | Finite non-negative integer nesting depth. Fields deeper than this are not redacted — a dev-only warning is emitted when hit. **Security:** the warning is suppressed in production; ensure sensitive fields are not nested beyond this limit. |
 | `replacement` | `string`    | `'[REDACTED]'` | Replacement value                                                                                                                                                                                                                             |
 | `transport`   | `Transport` | —              | Required. Downstream transport                                                                                                                                                                                                                |

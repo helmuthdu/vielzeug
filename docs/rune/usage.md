@@ -34,19 +34,14 @@ const log = createLogger('api', { logLevel: 'warn', transports: [transport] });
 Transports are the delivery layer. Every `LogEntry` that passes the logger's level threshold is dispatched to each transport in order. Transports handle their own formatting, level filtering, and delivery.
 
 ```ts
-import { createLogger } from '@vielzeug/rune';
-import { consoleTransport, pipe, remoteTransport, jsonTransport } from '@vielzeug/rune';
+import { consoleTransport, createLogger, remoteTransport } from '@vielzeug/rune';
 
 const log = createLogger({
   logLevel: 'debug',
   transports: [
-    // Console output with CSS badges (browser) or plain text (Node)
     consoleTransport({ timestamp: true }),
-    // Remote delivery — only errors and above
     remoteTransport({
-      handler: async (type, data) => {
-        await fetch('/api/logs', { body: JSON.stringify(data), method: 'POST' });
-      },
+      handler: (_type, data) => console.debug('remote log', data),
       level: 'error',
     }),
   ],
@@ -71,38 +66,44 @@ When `transports` is omitted, `consoleTransport()` is used automatically.
 
 Transport factories are composable wrappers. Chain them to build a pipeline.
 
-`pipe()` dispatches a single entry to multiple transports independently — an error in one transport does not prevent the others from running:
+Wrap a downstream transport to redact fields, sample volume, and batch delivery:
 
 ```ts
-import { batchTransport, pipe, redactTransport, remoteTransport, sampleTransport } from '@vielzeug/rune';
+import { batchTransport, consoleTransport, createLogger, redactTransport, sampleTransport } from '@vielzeug/rune';
+
+const batch = batchTransport({
+  interval: 30_000,
+  onFlush: (entries) => console.debug('batch', entries),
+});
 
 const log = createLogger({
   transports: [
     consoleTransport({ level: 'debug' }),
-    // redact sensitive fields, sample at 10 %, batch + flush every 30 s
     redactTransport({
       keys: ['password', 'token'],
       transport: sampleTransport({
         rate: 0.1,
-        transport: batchTransport({
-          onFlush: (entries) => sendToDatadog(entries),
-          interval: 30_000,
-        }),
+        transport: batch.transport,
       }),
     }),
   ],
 });
+
+await batch.dispose();
 ```
 
-Use `pipe()` when you want all transports to receive every entry regardless of per-transport failures:
+Use `pipe()` when every downstream transport must receive an entry despite sibling transport failures:
 
 ```ts
-import { pipe } from '@vielzeug/rune';
+import { consoleTransport, createLogger, pipe, remoteTransport } from '@vielzeug/rune';
 
 const fanout = pipe(
-  { onError: (err) => console.warn('transport error', err) },
+  { onError: (error) => console.warn('transport error', error) },
   consoleTransport(),
-  remoteTransport({ handler, level: 'error' }),
+  remoteTransport({
+    handler: (_type, data) => console.debug('remote log', data),
+    level: 'error',
+  }),
 );
 
 const log = createLogger({ transports: [fanout] });
@@ -110,26 +111,33 @@ const log = createLogger({ transports: [fanout] });
 
 ### Batch Transport Lifecycle
 
-`batchTransport` starts an interval timer on first use. Call `.dispose()` on application shutdown to flush remaining entries and stop the timer:
+`batchTransport` starts an interval timer on first use. Await `.dispose()` during graceful application shutdown to stop the timer and finish delivery for every accepted batch:
 
 ```ts
+import { batchTransport, createLogger } from '@vielzeug/rune';
+
 const batch = batchTransport({
-  onFlush: (entries) => sendToCollector(entries),
   interval: 10_000,
   maxSize: 100,
+  onFlush: (entries) => console.debug('batch', entries),
 });
 
-// Pass batch.transport to the logger — batch itself holds flush/dispose
 const log = createLogger({ transports: [batch.transport] });
 
-// on shutdown — dispose the batch directly
-process.on('exit', () => batch.dispose());
+async function shutdown() {
+  try {
+    await batch.dispose();
+  } catch (error) {
+    console.error('log delivery failed during shutdown', error);
+    throw error;
+  }
+}
 ```
 
-`batchTransport.dispose()` is idempotent — calling it twice is safe and will not double-flush. `[Symbol.dispose]` is also available for `using` declarations.
+`batchTransport.dispose()` is idempotent — repeated calls return the same drain promise and never double-flush. It rejects when an accepted batch cannot deliver. `[Symbol.asyncDispose]` is available for `await using` declarations. Do not use a Node `exit` handler: Node cannot await asynchronous cleanup there.
 
 ::: warning
-`log.dispose()` silences the logger but does **not** flush or stop batch transports. Always hold a reference to the `batchTransport` and call `.dispose()` on it explicitly at shutdown.
+`log.dispose()` silences the logger but does not flush or stop batch transports. Keep a direct batch reference and `await batch.dispose()` during shutdown.
 :::
 
 ::: warning
@@ -507,7 +515,7 @@ const bus = createBus<AppEvents>({
 - Use `enabled()` before expensive payload construction that `lazy()` cannot defer.
 - Configure transports at the application root; pass scoped loggers via DI or context.
 - Keep remote handlers resilient — network failures should not block app flow.
-- Call `batchTransport.dispose()` on shutdown to flush remaining buffered entries.
+- Await `batchTransport.dispose()` during graceful shutdown to drain remaining accepted entries.
 - Use `redactTransport` closest to any remote/persistent transport — never strip before console.
 - To style console output, pass `consoleTransport({ theme })` explicitly in `transports`.
 - Use `fatal()` only for genuinely unrecoverable states.

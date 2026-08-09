@@ -14,13 +14,22 @@ You need to measure how long a code block takes and group the related log entrie
 Use `time(label, fn)` to measure execution and `groupCollapsed(label, fn)` to nest related log lines under a collapsible group in the console.
 
 ```ts
-import { defaultLogger } from '@vielzeug/rune';
+import { createLogger } from '@vielzeug/rune';
 
-const result = await defaultLogger.groupCollapsed('Checkout', async () => {
-  defaultLogger.info('validating cart');
+const log = createLogger('checkout');
+const order = { id: 'order-42' };
 
-  return defaultLogger.time('process-order', () => processOrder(cart));
+async function processOrder(value: typeof order): Promise<string> {
+  return value.id;
+}
+
+const result = await log.groupCollapsed('Checkout', async () => {
+  log.info('validating cart');
+
+  return log.time('process order', () => processOrder(order));
 });
+
+console.log(result);
 ```
 
 ### Pitfalls
