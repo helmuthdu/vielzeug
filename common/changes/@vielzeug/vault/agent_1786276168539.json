@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add driver-neutral SQLite storage",
+      "packageName": "@vielzeug/vault",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/vault"
+}

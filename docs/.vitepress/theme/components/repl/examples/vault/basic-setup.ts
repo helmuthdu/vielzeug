@@ -1,5 +1,6 @@
 export const basicSetupExample = {
-  code: `import { createLocalStorage, table } from '@vielzeug/vault'
+  code: `import { table } from '@vielzeug/vault'
+import { createLocalStorage } from '@vielzeug/vault/local-storage'
 
 const schema = {
   users: table('id'),

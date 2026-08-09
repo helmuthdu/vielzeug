@@ -1,4 +1,5 @@
-import { createLocalStorage, table, ttl, type TtlMs } from '../index';
+import { table, ttl, type TtlMs } from '../index';
+import { createLocalStorage } from '../local-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };
 
@@ -68,6 +69,22 @@ describe('ttl helpers', () => {
       await delay(5);
 
       expect(await db.get('users', 1)).toBeUndefined();
+    });
+
+    test('count and isEmpty exclude records that expire after an earlier count', async () => {
+      window.localStorage.clear();
+      vi.useFakeTimers({ toFake: ['Date'] });
+
+      const db = createLocalStorage({ name: 'TtlHelper', schema: userSchema });
+
+      await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(100));
+      expect(await db.count('users')).toBe(1);
+
+      vi.advanceTimersByTime(100);
+
+      await expect(db.count('users')).resolves.toBe(0);
+      await expect(db.isEmpty('users')).resolves.toBe(true);
+      vi.useRealTimers();
     });
 
     test('put rejects invalid ttl values', async () => {

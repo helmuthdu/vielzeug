@@ -1,12 +1,12 @@
 ---
-title: Vault — Typed browser storage
-description: Typed browser storage with portable keys, TTL, observation, and explicit IndexedDB transactions.
+title: Vault — Typed storage
+description: Typed browser storage and opt-in driver-neutral SQLite with portable keys, TTL, observation, and transactions.
 package: vault
 category: Storage
-keywords: [storage, indexeddb, localstorage, sessionstorage, ttl, browser]
+keywords: [storage, indexeddb, localstorage, sessionstorage, sqlite, ttl, browser, node, deno]
 related: [courier, forge, ripple]
-exports: [createMemory, createLocalStorage, createSessionStorage, createIndexedDB, table, ttl, scheduleExpiredPrune, defineMigration, isExpired]
-environments: [browser]
+exports: [table, ttl, scheduleExpiredPrune, isExpired, createMemory, createLocalStorage, createSessionStorage, createIndexedDB, createSQLite]
+environments: [browser, node, deno]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -15,7 +15,7 @@ environments: [browser]
 
 ## Why Vault?
 
-Vault gives browser storage one typed schema while keeping backend guarantees explicit. Use `VaultStore` for portable CRUD and observation; choose IndexedDB only when you need atomic transactions or cursor iteration.
+Vault gives browser and SQLite persistence one typed schema while keeping backend guarantees explicit. Use `VaultStore` for portable CRUD and observation; choose IndexedDB or the opt-in SQLite subpath when you need atomic transactions or lazy iteration.
 
 ```ts
 // Before
@@ -34,10 +34,11 @@ const theme = await store.get('preferences', 'theme');
 | Typed schema and keys | <ore-icon name="check" size="16"></ore-icon> | Application-defined | <ore-icon name="check" size="16"></ore-icon> |
 | Portable Memory/Web Storage API | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> | IndexedDB only |
 | Explicit atomic transactions | IndexedDB capability | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Driver-neutral SQLite | Opt-in subpath | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
-**Use Vault when** you need typed browser persistence with one portable CRUD API and explicit IndexedDB-only capabilities.
+**Use Vault when** you need typed browser persistence or application-owned SQLite with one portable CRUD API and explicit storage capabilities.
 
 **Consider raw Web Storage when** you only persist one or two unstructured values. **Consider Dexie when** you need a broader IndexedDB ecosystem.
 
@@ -66,7 +67,8 @@ yarn add @vielzeug/vault
 Define a schema, create a portable store, and dispose it with its owner.
 
 ```ts
-import { createLocalStorage, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createLocalStorage } from '@vielzeug/vault/local-storage';
 
 const store = createLocalStorage({
   name: 'app-v2',
@@ -86,11 +88,12 @@ try {
 <div class="features-grid">
 
 - `table()` defines typed records with portable string or number keys.
-- `createMemory()`, `createLocalStorage()`, and `createSessionStorage()` return portable `VaultStore` instances.
+- `/memory`, `/local-storage`, and `/session-storage` return portable `VaultStore` instances without loading other adapters.
 - `observe()` emits current and changed table snapshots.
 - `ttl` creates validated expiration durations.
-- `createIndexedDB()` returns `IndexedDbVaultStore` with `batch()` and `iterate()`.
-- `defineMigration()` handles IndexedDB schema upgrades.
+- `/indexeddb` returns `IndexedDbVaultStore` with `batch()` and `iterate()`.
+- `createSQLite()` is an opt-in, driver-neutral subpath for Node, Bun, and Deno SQLite drivers.
+- `/indexeddb` also exports `defineMigration()` for schema upgrades.
 - `scheduleExpiredPrune()` removes stale TTL entries on an owned schedule.
 
 </div>

@@ -1,6 +1,8 @@
 import { vi } from 'vitest';
 
-globalThis.window.URL.createObjectURL = vi.fn();
+if (typeof window !== 'undefined') {
+  window.URL.createObjectURL = vi.fn();
+}
 
 function createStorageMock(): Storage {
   const store = new Map<string, string>();

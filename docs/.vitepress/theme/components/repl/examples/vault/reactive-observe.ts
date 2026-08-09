@@ -1,5 +1,6 @@
 export const reactiveObserveExample = {
-  code: `import { createMemory, table } from '@vielzeug/vault'
+  code: `import { table } from '@vielzeug/vault'
+import { createMemory } from '@vielzeug/vault/memory'
 
 const db = createMemory({ schema: { users: table('id') } })
 const snapshots = []
@@ -11,6 +12,6 @@ await Promise.resolve()
 
 console.log(snapshots) // [[], ['Ada']]
 stop()
-db.dispose()`,
+await db.dispose()`,
   name: 'Reactive — observe()',
 };

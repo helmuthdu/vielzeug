@@ -1,16 +1,27 @@
 ---
-title: Vault 2.0 Migration
+title: Vault Migration
+description: Move Vault adapter imports to focused entry points and update capability-specific storage code.
 ---
 
 # Vault 2.0 Migration
 
-Vault 2.0 redesigns storage around portable keys, fixed envelopes, capability-specific stores, and `observe()`.
+Vault 2.0 redesigns browser storage around portable keys, fixed envelopes, capability-specific stores, `observe()` and makes the root entry adapter-free. Import schemas, shared types, TTL, errors, and pruning from `@vielzeug/vault`; import exactly one storage adapter from a dedicated subpath.
+
+## Split adapter imports
+
+| Before | After |
+| --- | --- |
+| `import { createMemory, table } from '@vielzeug/vault'` | `import { table } from '@vielzeug/vault'; import { createMemory } from '@vielzeug/vault/memory'` |
+| `createLocalStorage` / `createSessionStorage` from the root | `/local-storage` or `/session-storage` |
+| `createIndexedDB`, `defineMigration`, or IndexedDB types from the root | `@vielzeug/vault/indexeddb` |
+
+The `/browser` aggregate was removed. Import each browser adapter from its focused subpath. `@vielzeug/vault/sqlite` remains the opt-in SQLite entry.
 
 - Replace `Adapter` with `VaultStore`.
 - Replace `IndexedDbAdapter` with `IndexedDbVaultStore`.
 - Replace `watch`, `observeMany`, signals, and streams with per-table `observe()`.
 - Remove codecs and versioned codecs. Start a new storage namespace or migrate data outside Vault before construction.
-- Move atomic code to `createIndexedDB().batch()`.
+- Move atomic code to `createIndexedDB().batch()` in the browser or `createSQLite().batch()` with an application-provided SQLite connection.
 
 ## Replace removed APIs
 
@@ -20,11 +31,11 @@ Vault 2.0 redesigns storage around portable keys, fixed envelopes, capability-sp
 | `IndexedDbAdapter` | `IndexedDbVaultStore` from `createIndexedDB()` |
 | Codecs and versioned codecs | Fixed envelopes; migrate existing encoded data before construction |
 | `watch`, `observeMany`, signals, and streams | Per-table `store.observe()` |
-| Atomic adapter operations | `createIndexedDB().batch()` |
+| Atomic adapter operations | `createIndexedDB().batch()` in browser code, or `createSQLite().batch()` with an injected SQLite connection |
 
-## Move to portable keys and fixed envelopes
+## Migrate browser storage to portable keys and fixed envelopes
 
-Update persisted records and key construction to the 2.0 portable-key and fixed-envelope contracts. Plan and test data migration before deploying the new storage format.
+Update browser-stored records and key construction to the 2.0 portable-key and fixed-envelope contracts. Plan and test data migration before deploying the new storage format.
 
 ## Use capability-specific stores
 

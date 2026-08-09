@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/vault",
   "version": "2.0.1",
-  "description": "Typed browser storage with portable keys, TTL, observation, and IndexedDB transactions",
+  "description": "Typed storage core with explicit browser and SQLite adapter entry points",
   "type": "module",
   "files": [
     "dist"
@@ -14,6 +14,31 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./indexeddb": {
+      "types": "./dist/indexeddb.d.ts",
+      "import": "./dist/indexeddb.js",
+      "require": "./dist/indexeddb.cjs"
+    },
+    "./local-storage": {
+      "types": "./dist/local-storage.d.ts",
+      "import": "./dist/local-storage.js",
+      "require": "./dist/local-storage.cjs"
+    },
+    "./memory": {
+      "types": "./dist/memory.d.ts",
+      "import": "./dist/memory.js",
+      "require": "./dist/memory.cjs"
+    },
+    "./session-storage": {
+      "types": "./dist/session-storage.d.ts",
+      "import": "./dist/session-storage.js",
+      "require": "./dist/session-storage.cjs"
+    },
+    "./sqlite": {
+      "types": "./dist/sqlite.d.ts",
+      "import": "./dist/sqlite.js",
+      "require": "./dist/sqlite.cjs"
     }
   },
   "scripts": {
@@ -24,6 +49,8 @@
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
     "test": "vitest",
+    "test:sqlite:bun": "bun test runtime-smoke/bun-sqlite.ts",
+    "test:sqlite:deno": "deno test --allow-read --allow-env --allow-ffi runtime-smoke/deno-sqlite.ts",
     "build:bundle": "vite build --config vite.bundle.config.ts"
   },
   "publishConfig": {
@@ -39,5 +66,24 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
+  },
+  "typesVersions": {
+    "*": {
+      "indexeddb": [
+        "dist/indexeddb.d.ts"
+      ],
+      "local-storage": [
+        "dist/local-storage.d.ts"
+      ],
+      "memory": [
+        "dist/memory.d.ts"
+      ],
+      "session-storage": [
+        "dist/session-storage.d.ts"
+      ],
+      "sqlite": [
+        "dist/sqlite.d.ts"
+      ]
+    }
   }
 }

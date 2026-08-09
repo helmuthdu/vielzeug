@@ -1,4 +1,5 @@
-import { createMemory, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createMemory } from '@vielzeug/vault/memory';
 
 import { createForm } from '../index';
 import { loadForm, saveForm } from '../vault';

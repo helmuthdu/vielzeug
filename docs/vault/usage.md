@@ -1,6 +1,6 @@
 ---
 title: Vault — Usage Guide
-description: Persist typed browser data, observe table snapshots, and use IndexedDB transactions.
+description: Persist typed browser or SQLite data, observe table snapshots, and use atomic transactions.
 ---
 
 [[toc]]
@@ -10,7 +10,8 @@ description: Persist typed browser data, observe table snapshots, and use Indexe
 Create a portable store with one schema and write a typed row.
 
 ```ts
-import { createLocalStorage, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createLocalStorage } from '@vielzeug/vault/local-storage';
 
 interface Preference {
   id: string;
@@ -28,7 +29,9 @@ console.log(await store.get('preferences', 'theme'));
 
 ## Create a Portable Store
 
-Memory, LocalStorage, and SessionStorage return `VaultStore`. They share portable string/number keys, fixed `{ value, expiresAt? }` envelopes, CRUD methods, queries, TTL, and `observe()`.
+Memory, LocalStorage, and SessionStorage return `VaultStore`. They share portable string/number keys, CRUD methods, queries, TTL, and `observe()`. Vault keeps record values and expiry metadata separate; the physical storage layout is adapter-specific.
+
+The root entry is adapter-free. Import `createMemory` from `@vielzeug/vault/memory`, `createLocalStorage` from `@vielzeug/vault/local-storage`, or `createSessionStorage` from `@vielzeug/vault/session-storage`. Import each adapter from its focused subpath so unused backends stay out of the bundle.
 
 Use a new storage name when upgrading from Vault 1. Old key and envelope formats are not read by Vault 2.
 
@@ -55,6 +58,20 @@ console.log(updated);
 ```
 
 `update()` returns `undefined` for a missing key. `upsert()` always writes the record returned by its callback.
+
+## Query Records
+
+Build a query from a table, then finish it with a terminal method. `totalCount()` ignores pagination, which makes it suitable for page controls.
+
+```ts
+const query = store.query('preferences').startsWith('id', 'theme');
+const preferences = await query.orderBy('id').limit(10).toArray();
+const total = await query.totalCount();
+
+console.log({ preferences, total });
+```
+
+Memory and Web Storage queries scan the table. IndexedDB can use declared secondary indexes, while SQLite pushes primary-key equality, range, and case-sensitive prefix filters to the database.
 
 ## Use TTL and Pruning
 
@@ -83,12 +100,13 @@ store.observe('preferences', (preferences) => {
 controller.abort();
 ```
 
-## Use IndexedDB for Atomic Work
+## Use IndexedDB for Browser Transactions
 
-Choose IndexedDB when multiple writes must commit together or when you need cursor iteration.
+Choose IndexedDB when browser storage needs multiple writes to commit together or cursor iteration.
 
 ```ts
-import { createIndexedDB, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createIndexedDB } from '@vielzeug/vault/indexeddb';
 
 const db = createIndexedDB({
   name: 'app-v2',
@@ -103,12 +121,46 @@ await db.batch(['events'], async (tx) => {
 
 Only await `tx.*` operations inside a batch callback. Do not await timers, fetches, or other external asynchronous work; IndexedDB can commit an inactive transaction.
 
-## Handle Schema Migrations
+## Use SQLite Outside the Browser
 
-Declare indexes in schema. Use `migrate` only for version upgrades and mirror Vault’s fixed `value.<field>` index path.
+Import SQLite from the opt-in subpath so the browser root stays free of runtime drivers. Vault never opens a connection or configures its SQLite process behavior for you.
 
 ```ts
-import { createIndexedDB, table, type MigrationFn } from '@vielzeug/vault';
+import { DatabaseSync } from 'node:sqlite';
+
+import { table } from '@vielzeug/vault';
+import { createSQLite } from '@vielzeug/vault/sqlite';
+
+const database = new DatabaseSync('app.db', { timeout: 5_000 });
+const store = createSQLite({
+  database,
+  name: 'app-v2',
+  schema: { events: table<{ id: number; type: string }>('id') },
+});
+
+await store.batch(['events'], async (tx) => {
+  await tx.put('events', { id: 1, type: 'opened' });
+  await tx.put('events', { id: 2, type: 'saved' });
+});
+```
+
+Node's `node:sqlite` API is experimental. Bun's `bun:sqlite` `Database` satisfies the same positional `exec()` and `prepare()` contract; configure WAL from your application when the deployment needs it. Deno does not include SQLite, but `jsr:@db/sqlite`'s `Database` satisfies the same contract when its FFI, filesystem, and environment permissions are granted.
+
+SQLite stores serialize all access through the injected connection. `batch()` starts `BEGIN IMMEDIATE` and rolls back callback failures. While its callback runs, calls on any store sharing that connection reject rather than waiting behind the transaction; use `tx.*` instead. The underlying drivers are synchronous, so move large scans and writes to a worker or isolate when event-loop latency matters.
+
+## Store SQLite Values and Observe Changes
+
+SQLite accepts JSON-compatible plain-object records only. Circular values, `bigint`, dates, class instances, functions, and non-finite numbers are rejected before writing. Number and string primary keys remain distinct.
+
+`observe()` sees mutations written through Vault stores sharing the same injected connection after a commit. It cannot detect direct SQL changes, writes from another process, or writes through another connection. The connection belongs to the caller by default; use `closeOnDispose: true` only when the store owns it.
+
+## Handle IndexedDB Schema Migrations
+
+Declare IndexedDB indexes in the schema. Use `migrate` only for IndexedDB version upgrades and mirror Vault’s fixed `value.<field>` index path.
+
+```ts
+import { table } from '@vielzeug/vault';
+import { createIndexedDB, type MigrationFn } from '@vielzeug/vault/indexeddb';
 
 const schema = { users: table<{ id: number; name: string }>('id').index('name') };
 const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
@@ -173,7 +225,8 @@ Use Forge’s Vault helpers for explicit form-draft persistence. Keep Ripple sig
 - Use string or finite-number primary keys only.
 - Choose a new namespace for Vault 1 storage unless you migrate it yourself.
 - Use `observe()` for table snapshots.
-- Use IndexedDB for atomic work.
+- Use IndexedDB or SQLite for atomic work.
 - Keep external asynchronous work outside `batch()` callbacks.
 - Use `ttl.*` instead of raw durations.
+- Keep SQLite scans and writes off latency-sensitive event loops, and dispose stores with their owner.
 - Dispose stores when their owner ends.

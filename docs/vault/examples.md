@@ -1,6 +1,6 @@
 ---
 title: Vault — Examples
-description: Portable storage, observation, and IndexedDB transactions.
+description: Portable storage, observation, transactions, iteration, and SQLite.
 ---
 
 - [CRUD](./examples/crud.md)
@@ -9,4 +9,5 @@ description: Portable storage, observation, and IndexedDB transactions.
 - [Reactive observation](./examples/reactive.md)
 - [IndexedDB iteration](./examples/iterate.md)
 - [IndexedDB batch transactions](./examples/batch.md)
+- [SQLite transactions and iteration](./examples/sqlite.md)
 - [Plugin validation](./examples/plugins.md)

@@ -65,6 +65,7 @@ import { computed, effect, signal } from '@vielzeug/ripple'; // reactive state
 import { createForm } from '@vielzeug/forge'; // forms
 import { s } from '@vielzeug/spell'; // validation
 import { createCourier } from '@vielzeug/courier'; // HTTP + caching
-import { createLocalStorage, table } from '@vielzeug/vault'; // storage
+import { table } from '@vielzeug/vault';
+import { createLocalStorage } from '@vielzeug/vault/local-storage'; // storage
 import { createContainer, token } from '@vielzeug/conduit'; // DI container
 ```

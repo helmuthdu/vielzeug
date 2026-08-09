@@ -12,7 +12,8 @@ Change several records as one durable operation.
 ### Solution
 
 ```ts
-import { createIndexedDB, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createIndexedDB } from '@vielzeug/vault/indexeddb';
 
 const db = createIndexedDB({
   name: 'blog',

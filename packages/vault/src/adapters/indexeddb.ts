@@ -1,3 +1,5 @@
+/// <reference lib="dom" />
+
 import type {
   AnySchema,
   BaseAdapterOptions,
@@ -10,6 +12,7 @@ import type {
 } from '../types';
 
 import {
+  assertBatchTables,
   buildAdapterOps,
   buildTxContext,
   withIndexedDbTransactions,
@@ -612,6 +615,8 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     notifyMutation: (table: K) => void,
     validateFn: <T extends K>(table: T, value: RecordOf<S, T>) => RecordOf<S, T>,
   ): Promise<R> => {
+    assertBatchTables(tables);
+
     const idb = await requireDb();
     const idbTx = idb.transaction([...tables] as string[], 'readwrite');
     const dirtyTables = new Set<K>();

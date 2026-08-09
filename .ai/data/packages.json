@@ -298,7 +298,7 @@
       "slug": "vault",
       "name": "@vielzeug/vault",
       "category": "Storage",
-      "description": "IndexedDB + LocalStorage unified typed API",
+      "description": "Adapter-free typed storage core with focused browser and SQLite subpaths",
       "domOutput": false,
       "dependencies": [],
       "optionalPeers": [],

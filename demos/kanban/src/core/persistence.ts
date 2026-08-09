@@ -1,7 +1,8 @@
 import type { VaultStore } from '@vielzeug/vault';
 
 import { effect } from '@vielzeug/ripple';
-import { createLocalStorage, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createLocalStorage } from '@vielzeug/vault/local-storage';
 
 import type { ThemePreference } from './theme';
 import type { Board } from './types';

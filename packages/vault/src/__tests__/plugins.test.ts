@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
-import { createMemory, table, VaultError } from '../index';
+import { table, VaultError } from '../index';
+import { createMemory } from '../memory';
 
 type User = { id: number; name: string };
 

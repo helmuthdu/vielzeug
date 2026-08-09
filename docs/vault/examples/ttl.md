@@ -14,7 +14,8 @@ You need records to expire automatically after a fixed duration. You also want t
 Pass a `TtlMs` value as the third argument to `put()` or `putAll()`. Use `ttl.*` helpers to create the value — raw numbers are rejected by the type system. For per-table defaults, chain `.ttl()` on the `table()` call. For explicit cleanup, call `pruneExpired()` or schedule it with `scheduleExpiredPrune`.
 
 ```ts
-import { createMemory, scheduleExpiredPrune, table, ttl } from '@vielzeug/vault';
+import { scheduleExpiredPrune, table, ttl } from '@vielzeug/vault';
+import { createMemory } from '@vielzeug/vault/memory';
 
 type Session = { id: string; userId: number };
 
@@ -43,16 +44,12 @@ await db.put('sessions', { id: 's5', userId: 5 }, ttl.days(7));
 const pruned = await db.pruneExpired();
 console.log(pruned); // { sessions: 0 } — none have expired yet
 
-// Prune only specific tables
-const partial = await db.pruneExpired(['sessions']);
-console.log(partial); // { sessions: 0 }
-
 // Schedule periodic pruning for write-heavy tables
-const stop = scheduleExpiredPrune(db, { interval: ttl.hours(1) });
+const stop = scheduleExpiredPrune(db, { interval: ttl.hours(1), signal: db.disposalSignal });
 
 // On app teardown (before dispose)
 stop();
-db.dispose();
+await db.dispose();
 ```
 
 #### Checking Expired Record Counts
@@ -78,5 +75,5 @@ for (const t of info.tables) {
 
 - [CRUD](./crud.md)
 - [Plugins — metrics and validators](./plugins.md)
-- [Usage Guide — Use TTL](/vault/usage.md#use-ttl)
+- [Usage Guide — Use TTL and Pruning](/vault/usage.md#use-ttl-and-pruning)
 - [API Reference — `scheduleExpiredPrune`](/vault/api.md#scheduleexpiredprune)

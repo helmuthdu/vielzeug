@@ -11,7 +11,7 @@ You need to integrate storage with your app's existing logging, validation, and 
 
 ### Solution
 
-All four adapter factories accept the same optional plugin options at construction time. Each plugin uses a structural interface — pass the real library object directly.
+All Vault factories accept `logger`, `validators`, and `onMetrics` at construction time. The Web Storage factories also accept `onQuotaExceeded`. Each plugin uses a structural interface, so you can pass the real library object directly.
 
 #### Logger
 
@@ -19,7 +19,8 @@ Pass any object with an `error(...)` method. Observer notification errors are ro
 
 ```ts
 import { createLogger } from '@vielzeug/rune';
-import { createIndexedDB, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createIndexedDB } from '@vielzeug/vault/indexeddb';
 
 type User = { id: number; name: string };
 const schema = { users: table<User>('id') };
@@ -38,7 +39,8 @@ Pass any object with a `parse(value): T` method. Validators run before every `pu
 
 ```ts
 import { s } from '@vielzeug/spell';
-import { createMemory, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createMemory } from '@vielzeug/vault/memory';
 
 type User = { id: number; name: string; age: number };
 const schema = { users: table<User>('id') };
@@ -63,7 +65,8 @@ await db.put('users', { id: 1, name: 'Alice', age: -5 });
 `onMetrics` is called after every completed operation with table name, operation name, and duration.
 
 ```ts
-import { createMemory, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createMemory } from '@vielzeug/vault/memory';
 
 type User = { id: number; name: string };
 const schema = { users: table<User>('id') };
@@ -79,7 +82,8 @@ const db = createMemory({
 #### Quota exceeded hook (LocalStorage / SessionStorage)
 
 ```ts
-import { createLocalStorage, table, type VaultQuotaError } from '@vielzeug/vault';
+import { table, type VaultQuotaError } from '@vielzeug/vault';
+import { createLocalStorage } from '@vielzeug/vault/local-storage';
 
 type CacheEntry = { id: string; payload: string };
 const schema = { cache: table<CacheEntry>('id') };
@@ -97,7 +101,8 @@ const db = createLocalStorage({
 #### IndexedDB migration hook
 
 ```ts
-import { createIndexedDB, table, type MigrationFn } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createIndexedDB, type MigrationFn } from '@vielzeug/vault/indexeddb';
 
 type User = { id: number; name: string };
 const schema = { users: table<User>('id').index('name') };
@@ -116,7 +121,6 @@ void db;
 
 ```ts
 import {
-  createMemory,
   table,
   VaultDisposedError,
   VaultError,
@@ -124,6 +128,7 @@ import {
   VaultQuotaError,
   VaultScopeError,
 } from '@vielzeug/vault';
+import { createMemory } from '@vielzeug/vault/memory';
 
 type User = { id: number; name: string };
 const schema = { users: table<User>('id') };

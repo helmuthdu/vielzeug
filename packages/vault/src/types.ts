@@ -1,3 +1,5 @@
+/// <reference lib="dom" />
+
 import type { QueryBuilder } from './query';
 
 import { VaultError } from './errors';
@@ -205,11 +207,18 @@ export interface VaultStore<S extends AnySchema> {
   [Symbol.asyncDispose](): Promise<void>;
 }
 
-/** IndexedDB-only guarantees: cursor iteration and atomic, scoped transactions. */
-export interface IndexedDbVaultStore<S extends AnySchema> extends VaultStore<S> {
+/** Atomic, scoped transactions supplied by storage engines that support them. */
+export interface TransactionalVaultStore<S extends AnySchema> extends VaultStore<S> {
   batch<K extends keyof S & string, R>(
     tables: readonly K[],
     fn: (tx: TransactionContext<S, K>) => Promise<R>,
   ): Promise<R>;
+}
+
+/** Lazy record iteration supplied by storage engines that support it. */
+export interface IterableVaultStore<S extends AnySchema> extends VaultStore<S> {
   iterate<K extends keyof S & string>(table: K): AsyncIterable<RecordOf<S, K>>;
 }
+
+/** IndexedDB-only guarantees: cursor iteration and atomic, scoped transactions. */
+export interface IndexedDbVaultStore<S extends AnySchema> extends TransactionalVaultStore<S>, IterableVaultStore<S> {}

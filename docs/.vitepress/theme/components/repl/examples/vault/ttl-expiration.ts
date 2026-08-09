@@ -1,5 +1,6 @@
 export const ttlExpirationExample = {
-  code: `import { createLocalStorage, table, ttl } from '@vielzeug/vault'
+  code: `import { table, ttl } from '@vielzeug/vault'
+import { createLocalStorage } from '@vielzeug/vault/local-storage'
 
 const schema = {
   cache: table('id'),

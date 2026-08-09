@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
-import { createIndexedDB, table } from '../index';
+import { table } from '../index';
+import { createIndexedDB } from '../indexeddb';
 
 type User = { id: number | string; name: string };
 
@@ -31,6 +32,13 @@ describe('IndexedDbVaultStore', () => {
       { id: '1', name: 'Grace' },
       { id: 1, name: 'Ada' },
     ]);
+    await db.dispose();
+  });
+
+  test('rejects empty batch scopes before opening an IndexedDB transaction', async () => {
+    const db = createIndexedDB({ name: `vault-test-${crypto.randomUUID()}`, schema });
+
+    await expect(db.batch([], async () => undefined)).rejects.toThrow('declare at least one table');
     await db.dispose();
   });
 });

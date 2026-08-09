@@ -35,7 +35,7 @@ Human-readable package catalogue derived from `.ai/data/packages.json`.
 | `@vielzeug/sourcerer` | Data | no | Reactive data sources with pagination and search | — | — | — | — |
 | `@vielzeug/spell` | Validation | no | Zero-dep schema validation (Zod-like) | `arsenal` | — | — | — |
 | `@vielzeug/tempo` | Date/Time | no | Temporal-powered date utilities | — | — | — | — |
-| `@vielzeug/vault` | Storage | no | IndexedDB + LocalStorage unified typed API | — | — | — | — |
+| `@vielzeug/vault` | Storage | no | Adapter-free typed storage core with focused browser and SQLite subpaths | — | — | — | — |
 | `@vielzeug/ward` | Auth | no | RBAC engine with wildcards and predicates | — | — | — | — |
 | `@vielzeug/wayfinder` | Routing | no | Client-side router with middleware and guards | — | — | — | — |
 

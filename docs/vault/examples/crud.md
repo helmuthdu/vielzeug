@@ -11,10 +11,11 @@ You need to create, read, update, and delete typed records in browser storage ac
 
 ### Solution
 
-Use `put`, `get`, `getAll`, `update`, `delete`, `clear`, `has`, `count`, and `isEmpty` for single-record operations. For bulk operations, use `putAll`, `getMany`, and `deleteMany`. All methods work identically across all four adapters.
+Use `put`, `get`, `getAll`, `update`, `delete`, `clear`, `has`, `count`, and `isEmpty` for single-record operations. For bulk operations, use `putAll`, `getMany`, and `deleteMany`. These methods are available on every Vault adapter.
 
 ```ts
-import { createMemory, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createMemory } from '@vielzeug/vault/memory';
 
 type User = { id: number; name: string; age: number };
 const schema = { users: table<User>('id') };
@@ -58,15 +59,15 @@ await db.clear('users'); // removes all records
 
 ### Pitfalls
 
-- `update()` throws `VaultError` when the key does not exist — it does not insert. Use `upsert()` for read-or-insert semantics.
+- `update()` returns `undefined` when the key does not exist — it does not insert. Use `upsert()` for read-or-insert semantics.
 - `deleteMany()` returns the count of records that actually existed and were deleted, not the length of the keys array. Keys that are not found are silently skipped.
 - `isEmpty(table)` is a convenience shorthand for `(await count(table)) === 0` — useful for seeding default data on first run.
-- `count()` returns only live (non-expired) records. If you have many TTL-expired records that have not been pruned, `count()` may be lower than `getAll()` would suggest at first glance — both exclude expired records, but expired records still occupy storage until pruned.
-- `putAll()` writes all records in a single atomic IDB transaction on IndexedDB. On LocalStorage and Memory adapters, each record is written individually — a failure mid-array does not roll back earlier writes.
+- `count()` and `getAll()` both return only live records. Expired records can still occupy storage until you prune them.
+- `putAll()` is not an atomic unit across adapters. Use `batch()` on an IndexedDB or SQLite store when all writes must commit or roll back together.
 
 ### Related
 
 - [Querying](./querying.md)
 - [TTL and Pruning](./ttl.md)
 - [Batch Writes](./batch.md)
-- [Usage Guide — Basic CRUD](/vault/usage.md#basic-crud)
+- [Usage Guide — Read and Change Records](/vault/usage.md#read-and-change-records)

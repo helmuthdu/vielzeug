@@ -1,5 +1,6 @@
 export const pruneScheduleExample = {
-  code: `import { createMemory, scheduleExpiredPrune, table, ttl } from '@vielzeug/vault'
+  code: `import { scheduleExpiredPrune, table, ttl } from '@vielzeug/vault'
+import { createMemory } from '@vielzeug/vault/memory'
 
 // scheduleExpiredPrune runs pruneExpired() on an interval and stops
 // automatically when the adapter is disposed (VaultDisposedError).
@@ -20,12 +21,13 @@ await db.put('sessions', { token: 'def', user: 2 }) // no TTL — permanent
 console.log('before prune:', await db.count('sessions')) // 2 (lazy eviction: both exist physically)
 
 // Manual prune to demonstrate the API
+await new Promise((resolve) => setTimeout(resolve, 5))
 const pruned = await db.pruneExpired()
 console.log('pruned:', pruned.sessions) // 1 (the expired session)
 console.log('after prune:', await db.count('sessions')) // 1
 
 // When the adapter is disposed, the schedule stops automatically
-db.dispose()
+await db.dispose()
 stop() // or call stop() explicitly before dispose`,
   name: 'TTL — scheduleExpiredPrune with onError',
 };

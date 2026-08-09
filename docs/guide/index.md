@@ -173,7 +173,8 @@ courier.queries.invalidate(key);
 Storage adapter for IndexedDB and localStorage — TTL expiration, reactive signals, schema validation, and a query builder.
 
 ```typescript
-import { createLocalStorage, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createLocalStorage } from '@vielzeug/vault/local-storage';
 
 type User = { id: string; name: string; role: string };
 

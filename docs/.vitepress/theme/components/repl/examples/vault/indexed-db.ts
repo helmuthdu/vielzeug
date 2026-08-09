@@ -1,5 +1,6 @@
 export const indexedDbExample = {
-  code: `import { createIndexedDB, table, ttl } from '@vielzeug/vault'
+  code: `import { table, ttl } from '@vielzeug/vault'
+import { createIndexedDB } from '@vielzeug/vault/indexeddb'
 
 const schema = {
   logs: table('id'),
@@ -42,6 +43,6 @@ for (const t of info.tables) {
   console.log(t.name + ':', t.recordCount, 'live,', t.expiredCount, 'expired')
 }
 
-db.dispose()`,
+await db.dispose()`,
   name: 'IndexedDB — Atomic Batch & iterate()',
 };

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
-import { createMemory, table } from '../index';
+import { table } from '../index';
+import { createMemory } from '../memory';
 
 type Entry = { id: number | string; name: string };
 

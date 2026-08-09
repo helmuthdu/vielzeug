@@ -1,5 +1,5 @@
 ---
-title: Vault Examples — Reactive Tables
+title: 'Vault Examples — Reactive Tables'
 description: React to a table's current and future snapshots with observe().
 ---
 
@@ -11,8 +11,11 @@ Render a table whenever its data changes without polling.
 
 ### Solution
 
+Subscribe to the table, then stop the subscription when its owner ends.
+
 ```ts
-import { createMemory, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createMemory } from '@vielzeug/vault/memory';
 
 const store = createMemory({ schema: { users: table<{ id: number; name: string }>('id') } });
 const stop = store.observe('users', (users) => console.log(users));

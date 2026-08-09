@@ -16,7 +16,8 @@ Use `db.query(table)` to build a lazy pipeline. Chain filter operators (`filter`
 `count()` respects `limit` and `offset` — it returns records in the current page slice. `totalCount()` ignores `limit`, `offset`, and `orderBy`, returning the full filtered-set size. Use both together for "page X of N" UIs.
 
 ```ts
-import { createMemory, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createMemory } from '@vielzeug/vault/memory';
 
 type Product = { id: number; name: string; price: number; category: string };
 const schema = { products: table<Product>('id') };
@@ -76,11 +77,12 @@ const deleted = await db
 - `count()` respects `limit` and `offset`. If you only want the filter count without pagination, call `totalCount()` on a pipeline without `limit`/`offset`, or call `totalCount()` on the paginated pipeline (it ignores them automatically).
 - `totalCount()` still applies all filter operators (`filter`, `equals`, `between`, `startsWith`). Only presentation-only operators (`limit`, `offset`, `orderBy`) are excluded. A bare `db.query('products').totalCount()` returns all live records.
 - `between(field, lower, upper)` is inclusive on both ends. For exclusive ranges, use `.filter()` with a custom predicate.
-- On `createMemory` and `createLocalStorage` / `createSessionStorage`, queries always scan the full table in memory. On `createIndexedDB`, a leading `equals()`, `between()`, or case-sensitive `startsWith()` on the primary key or a field registered with `.index()` uses a native IDB range/index fetch instead of a full-table scan — see [API Reference — Secondary Index Push-down](/vault/api.md#secondary-index-push-down). For very large tables without a matching index, prefer `db.iterate(table)` (IndexedDB only) to stream records without materialising the full table.
+- Memory and Web Storage queries always scan the full table. IndexedDB can push an initial `equals()`, `between()`, or case-sensitive `startsWith()` filter to a primary key or declared secondary index. SQLite provides the same push-down for primary keys; other SQLite fields filter in memory. For large tables, prefer `iterate()` on IndexedDB or SQLite instead of materializing every record.
 
 ### Related
 
 - [CRUD](./crud.md)
 - [Lazy Iteration — IndexedDB](./iterate.md)
-- [Usage Guide — Query Data](/vault/usage.md#query-data)
+- [SQLite Transactions and Iteration](./sqlite.md)
+- [Usage Guide — Query Records](/vault/usage.md#query-records)
 - [API Reference — QueryBuilder](/vault/api.md#querybuilder)

@@ -1,5 +1,6 @@
 export const cacheFirstExample = {
-  code: `import { createLocalStorage, table, ttl } from '@vielzeug/vault'
+  code: `import { table, ttl } from '@vielzeug/vault'
+import { createLocalStorage } from '@vielzeug/vault/local-storage'
 
 const db = createLocalStorage({ name: 'cache-demo', schema: { cache: table('id') } })
 

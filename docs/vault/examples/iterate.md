@@ -1,5 +1,5 @@
 ---
-title: Vault Examples — IndexedDB Iteration
+title: 'Vault Examples — IndexedDB Iteration'
 description: Traverse an IndexedDB table with a cursor.
 ---
 
@@ -11,8 +11,11 @@ Process an IndexedDB table without materializing it first.
 
 ### Solution
 
+Create an IndexedDB store and consume its cursor-backed asynchronous iterator.
+
 ```ts
-import { createIndexedDB, table } from '@vielzeug/vault';
+import { table } from '@vielzeug/vault';
+import { createIndexedDB } from '@vielzeug/vault/indexeddb';
 
 const db = createIndexedDB({
   name: 'diagnostics',
@@ -24,7 +27,7 @@ for await (const log of db.iterate('logs')) console.log(log.message);
 
 ### Pitfalls
 
-Memory and Web Storage return portable `VaultStore` instances without `iterate()`; use `getAll()` or `query().toArray()` there.
+Memory and Web Storage return portable `VaultStore` instances without `iterate()`; use `getAll()` or `query().toArray()` there. SQLite also supports `iterate()` through its opt-in subpath.
 
 ### Related
 

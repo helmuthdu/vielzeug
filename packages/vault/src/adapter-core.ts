@@ -81,6 +81,10 @@ export type BatchImpl<S extends AnySchema> = <K extends keyof S & string, R>(
 
 const getTimestamp: () => number = typeof performance !== 'undefined' ? () => performance.now() : () => Date.now();
 
+export function assertBatchTables(tables: readonly string[]): void {
+  if (tables.length === 0) throw new VaultError('batch: declare at least one table');
+}
+
 function resolveTtl<S extends AnySchema, K extends keyof S & string>(
   schema: S,
   table: K,
@@ -345,30 +349,14 @@ export function buildAdapterOps<S extends AnySchema>(
       : undefined,
   );
 
-  // Per-table live-count cache. Populated lazily on first count() call.
-  // Invalidated on every mutation via notifyMutation.
-  const countCache = new Map<string, number>();
-
-  const getCachedCount = async (table: keyof S & string): Promise<number> => {
-    if (countCache.has(table)) return countCache.get(table)!;
-
-    const n = await core.count(table);
-
-    countCache.set(table, n);
-
-    return n;
-  };
-
   const notifyMutation = (table: keyof S & string): void => {
-    countCache.delete(table); // invalidate on any mutation
     observers.notify(table);
     options?.onMutation?.(table);
   };
 
   // Cross-tab notifications must NOT call onMutation (which would re-publish to BroadcastChannel,
-  // creating an infinite loop). They only need to invalidate the count cache and notify observers.
+  // creating an infinite loop). They only notify local observers.
   const notifyExternal = (table: keyof S & string): void => {
-    countCache.delete(table);
     observers.notify(table);
   };
 
@@ -414,13 +402,12 @@ export function buildAdapterOps<S extends AnySchema>(
     async clear(table) {
       checkDisposed();
       await timed(table, 'clear', () => txCtx.clear(table));
-      countCache.set(table, 0); // we know count is 0 after clear
     },
 
     async count(table) {
       checkDisposed();
 
-      return timed(table, 'count', () => getCachedCount(table));
+      return timed(table, 'count', () => core.count(table));
     },
 
     async debug() {
@@ -433,9 +420,6 @@ export function buildAdapterOps<S extends AnySchema>(
           // lazy-eviction side effects (deletes expired entries from the store).
           const raw = rawCountFn ? await rawCountFn(name) : undefined;
           const live = await core.count(name);
-
-          // Warm the count cache so subsequent adapter.count() calls don't re-hit the backend.
-          countCache.set(name, live);
 
           const expiredCount = raw !== undefined ? Math.max(0, raw - live) : 0;
 
@@ -517,7 +501,7 @@ export function buildAdapterOps<S extends AnySchema>(
     async isEmpty(table) {
       checkDisposed();
 
-      return timed(table, 'isEmpty', async () => (await getCachedCount(table)) === 0);
+      return timed(table, 'isEmpty', async () => (await core.count(table)) === 0);
     },
 
     async keys(table, filter) {
@@ -532,26 +516,19 @@ export function buildAdapterOps<S extends AnySchema>(
       return observers.observe(table, listener, opts);
     },
 
-    async pruneExpired(tables?: readonly (keyof S & string)[]) {
+    async pruneExpired() {
       checkDisposed();
 
-      const tableNames = tables ?? (Object.keys(schema) as Array<keyof S & string>);
-
-      if (!tables && pruneAll) {
+      if (pruneAll) {
         const result = await pruneAll();
-
-        for (const [name, count] of Object.entries(result)) {
-          if (count > 0) countCache.delete(name);
-        }
 
         return result as { [K in keyof S & string]: number };
       }
 
+      const tableNames = Object.keys(schema) as Array<keyof S & string>;
       const pairs = await Promise.all(
         tableNames.map(async (name) => {
           const pruned = await core.pruneExpiredInTable(name);
-
-          if (pruned > 0) countCache.delete(name);
 
           return [name, pruned] as const;
         }),

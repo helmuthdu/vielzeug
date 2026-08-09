@@ -366,7 +366,8 @@ log.info({ timestamp: formatInstant(now('UTC')) }, 'server started');
 Use TTL values derived from Tempo duration helpers.
 
 ```ts
-import { createLocalStorage, table, ttl } from '@vielzeug/vault';
+import { table, ttl } from '@vielzeug/vault';
+import { createLocalStorage } from '@vielzeug/vault/local-storage';
 import { shift, now } from '@vielzeug/tempo';
 
 type Session = { id: string; token: string };
