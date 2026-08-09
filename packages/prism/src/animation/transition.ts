@@ -1,6 +1,7 @@
 import type { TransitionConfig } from '../types';
 
 import { resolveEasing } from './easing';
+import { resolveMotion } from './motion';
 import { tweenNumber } from './tween';
 
 export interface AnimationTarget {
@@ -19,9 +20,10 @@ export function animate(
   onComplete?: () => void,
   signal?: AbortSignal,
 ): () => void {
-  const duration = config?.duration ?? 300;
-  const easing = resolveEasing(config?.easing);
-  const stagger = Math.max(0, config?.stagger ?? 0);
+  const motion = resolveMotion(config);
+  const duration = motion.duration;
+  const easing = resolveEasing(motion.easing);
+  const stagger = motion.stagger;
 
   if (duration === 0 || targets.length === 0) {
     for (const target of targets) {

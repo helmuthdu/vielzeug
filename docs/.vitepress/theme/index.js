@@ -13,7 +13,7 @@ import Repl from './components/REPL.vue';
 // Import Refine styles - using direct paths for monorepo
 import '@vielzeug/refine/tokens.css';
 // Import Prism chart styles
-import '@vielzeug/prism/theme/prism.css';
+import '@vielzeug/prism/theme';
 
 import './theme.css';
 

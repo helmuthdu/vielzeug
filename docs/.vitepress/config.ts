@@ -2054,7 +2054,10 @@ export default defineConfig({
       // published `dist`) so editing package source is reflected immediately in `docs:dev`
       // without a build step. Derived from the `packages/` directory listing — see
       // scripts/vielzeug-packages.ts — instead of a hand-maintained list.
-      alias: buildVielzeugSrcAliases(PACKAGES_DIR),
+      alias: [
+        { find: '@vielzeug/prism/theme', replacement: resolve(PACKAGES_DIR, 'prism/src/theme/prism.css') },
+        ...Object.entries(buildVielzeugSrcAliases(PACKAGES_DIR)).map(([find, replacement]) => ({ find, replacement })),
+      ],
     },
   },
   vue: {

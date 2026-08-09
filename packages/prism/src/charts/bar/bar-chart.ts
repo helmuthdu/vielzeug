@@ -6,6 +6,7 @@ import type { BarScaleContext } from './bar-scale-context';
 import { warn } from '../../_dev';
 import { renderAxis, resolveTickCount } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
+import { normalizeCartesianSeries } from '../../core/cartesian-model';
 import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
 import { getMousePosition } from '../../interaction/events';
@@ -31,8 +32,23 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
     const dims = ctx.dimensions.value;
     const area = chartArea(dims.width, dims.height, dims.margin);
     const seriesList = isReactive(config.series) ? config.series.value : config.series;
-    const allData = seriesList.map((s) => (isReactive(s.data) ? s.data.value : s.data));
-    const categories = [...new Set(allData.flat().map((d) => String(d.key)))];
+    const sourceData = seriesList.map((series) => (isReactive(series.data) ? series.data.value : series.data));
+    const model = normalizeCartesianSeries(seriesList, sourceData);
+    const categories = model.domain;
+    const allData = model.series.map(({ byKey }) => categories.map((key) => byKey.get(key)));
+    const categoryAxis = (axis: BarChartConfig['xAxis'] | BarChartConfig['yAxis']) => {
+      if (!axis) return undefined;
+
+      return {
+        ...axis,
+        tickFormat: (value: Date | number | string) => {
+          const key = String(value);
+          const label = model.labels.get(key) ?? value;
+
+          return axis.tickFormat ? axis.tickFormat(label) : String(label);
+        },
+      };
+    };
 
     if (categories.length === 0) {
       warn('createBarChart: no data');
@@ -48,24 +64,20 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
     let vMin: number;
 
     if (stacked) {
-      if (allData.some((sd) => sd.some((d) => d.value < 0))) {
+      if (allData.some((seriesData) => seriesData.some((datum) => (datum?.value ?? 0) < 0))) {
         warn(
           'createBarChart: negative values in a stacked/stacked-horizontal series are clamped to 0 — stacking mixed-sign data is not supported.',
         );
       }
 
-      const sums = categories.map((cat) =>
-        allData.reduce((sum, sd) => {
-          const pt = sd.find((d) => String(d.key) === cat);
-
-          return sum + (pt ? Math.max(0, pt.value) : 0);
-        }, 0),
+      const sums = categories.map((_, categoryIndex) =>
+        allData.reduce((sum, seriesData) => sum + Math.max(0, seriesData[categoryIndex]?.value ?? 0), 0),
       );
 
       vMax = Math.max(...sums);
       vMin = 0;
     } else {
-      const allY = allData.flat().map((d) => d.value);
+      const allY = allData.flatMap((seriesData) => seriesData.flatMap((datum) => (datum ? [datum.value] : [])));
 
       vMax = Math.max(...allY);
       vMin = Math.min(0, ...allY);
@@ -108,7 +120,9 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
         );
       }
 
-      if (config.yAxis) renderAxis(groups.yAxis, catScale, config.yAxis, area.height, 'left');
+      const yAxis = categoryAxis(config.yAxis);
+
+      if (yAxis) renderAxis(groups.yAxis, catScale, yAxis, area.height, 'left');
 
       if (config.xAxis) {
         groups.xAxis.setAttribute('transform', `translate(0,${area.height})`);
@@ -126,9 +140,11 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
         );
       }
 
-      if (config.xAxis) {
+      const xAxis = categoryAxis(config.xAxis);
+
+      if (xAxis) {
         groups.xAxis.setAttribute('transform', `translate(0,${area.height})`);
-        renderAxis(groups.xAxis, catScale, config.xAxis, area.width, 'bottom');
+        renderAxis(groups.xAxis, catScale, xAxis, area.width, 'bottom');
       }
 
       if (config.yAxis) renderAxis(groups.yAxis, valScale, config.yAxis, area.height, 'left');
@@ -150,19 +166,19 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
         groups.series.appendChild(group);
       }
 
-      const barData = allData[i].map((d) => {
-        const key = String(d.key);
+      const barData = categories.map((key, categoryIndex) => {
+        const datum = allData[i]?.[categoryIndex];
 
         if (stacked) {
           const base = stackTops[key] ?? 0;
-          const top = base + Math.max(0, d.value);
+          const top = base + Math.max(0, datum?.value ?? 0);
 
           stackTops[key] = top;
 
-          return { base, key, y: top };
+          return { base, key, present: datum !== undefined, y: top };
         }
 
-        return { base: 0, key, y: d.value };
+        return { base: 0, key, present: datum !== undefined, y: datum?.value ?? 0 };
       });
 
       stackedTops[i] = barData.map((d) => d.y);

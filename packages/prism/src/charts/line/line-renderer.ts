@@ -3,6 +3,7 @@ import type { Datum, Scale, TransitionConfig } from '../../types';
 
 import { warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
+import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import { linePath, monotonePath, stepPath } from '../../svg/path';
@@ -25,8 +26,9 @@ function buildPath(pts: Point[], curve: LineRenderOptions['curve']): string {
 }
 
 export function renderLine(parent: SVGGElement, points: Point[], options: LineRenderOptions): void {
-  const dur = options.transition?.duration ?? (options.transition ? 300 : 0);
-  const easing = resolveEasing(options.transition?.easing);
+  const motion = resolveMotion(options.transition, 0);
+  const dur = motion.duration;
+  const easing = resolveEasing(motion.easing);
 
   let path = parent.querySelector<SVGPathElement>('.prism-line-path');
 

@@ -62,6 +62,7 @@ const data = signal([
   { key: 3, value: 28 },
 ]);
 const chart = createLineChart(document.getElementById('chart')!, {
+  a11y: { ariaLabel: 'Users by day' },
   series: [{ name: 'Users', data }],
   tooltip: true,
 });
@@ -73,7 +74,7 @@ data.value = [...data.value, { key: 4, value: 65 }];
 | ------------------ | -------------------------------------------- | ---------------------------------------- | -------------------------------------------- | -------------------------------------------- |
 | Bundle size        | <PackageInfo package="prism" type="size" />  | ~60 kB                                   | ~45 kB                                       | ~30 kB (core)                                |
 | Renderer           | SVG                                          | Canvas                                   | Canvas                                       | SVG/Canvas                                   |
-| Zero dependencies  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Reactive data model | Ripple signals | Plugin-specific | Plugin-specific | Manual |
 | CSS themeable      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Limited                                      | <ore-icon name="check" size="16"></ore-icon> |
 | Reactive (signals) | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
 | Accessible SVG     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | Manual                                       |
@@ -120,6 +121,7 @@ const data = signal([
 ]);
 
 const chart = createLineChart(document.getElementById('chart')!, {
+  a11y: { ariaLabel: 'Revenue by month' },
   series: [{ name: 'Revenue', data, color: '#3b82f6' }],
   xAxis: { position: 'bottom' },
   yAxis: { position: 'left', grid: true },

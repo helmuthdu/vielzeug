@@ -84,6 +84,56 @@ describe('createBarChart', () => {
     chart.dispose();
   });
 
+  it('aligns sparse and reordered series by datum key', () => {
+    const chart = createBarChart(container, {
+      series: [
+        {
+          data: [
+            { key: 'A', value: 10 },
+            { key: 'B', value: 20 },
+          ],
+          name: 'First',
+        },
+        {
+          data: [
+            { key: 'B', value: 30 },
+            { key: 'A', value: 40 },
+          ],
+          name: 'Reordered',
+        },
+      ],
+    });
+
+    const bars = chart.el.querySelectorAll<SVGRectElement>('.prism-bar-series:nth-child(2) .prism-bar');
+
+    expect(bars).toHaveLength(2);
+    expect(bars[0]?.style.display).not.toBe('none');
+    expect(bars[1]?.style.display).not.toBe('none');
+    chart.dispose();
+  });
+
+  it('renders missing keyed values as absent bars', () => {
+    const chart = createBarChart(container, {
+      series: [
+        {
+          data: [
+            { key: 'A', value: 10 },
+            { key: 'B', value: 20 },
+          ],
+          name: 'First',
+        },
+        { data: [{ key: 'B', value: 30 }], name: 'Sparse' },
+      ],
+    });
+
+    const bars = chart.el.querySelectorAll<SVGRectElement>('.prism-bar-series:nth-child(2) .prism-bar');
+
+    expect(bars).toHaveLength(2);
+    expect(bars[0]?.style.display).toBe('none');
+    expect(bars[1]?.style.display).not.toBe('none');
+    chart.dispose();
+  });
+
   it('renders a legend when legend is true', () => {
     const chart = createBarChart(container, {
       legend: true,

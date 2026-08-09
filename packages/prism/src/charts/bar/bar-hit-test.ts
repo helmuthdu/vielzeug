@@ -50,7 +50,7 @@ export function findSeriesIdx(
 export function isOutsideBars(
   pos: { x: number; y: number },
   catIdx: number,
-  allData: Datum[][],
+  allData: (Datum | undefined)[][],
   sc: BarScaleContext,
   seriesCount: number,
 ): boolean {

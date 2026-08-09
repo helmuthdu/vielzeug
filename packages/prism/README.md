@@ -1,6 +1,6 @@
 # @vielzeug/prism
 
-> Reactive SVG charting library — line, bar, area, pie, and sparkline charts. Zero external dependencies, signal-driven updates.
+> Reactive SVG charting library — line, bar, area, pie, and sparkline charts with keyed data, accessible interactions, and signal-driven updates.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/prism)](https://www.npmjs.com/package/@vielzeug/prism) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -17,7 +17,7 @@
 
 </details>
 
-`@vielzeug/prism` is part of Vielzeug. It depends on `@vielzeug/ripple` for reactivity and ships as a TypeScript package with ESM+CJS output.
+`@vielzeug/prism` is part of Vielzeug. It depends on Orbit for tooltips and Ripple for reactivity, and ships as a TypeScript package with ESM+CJS output.
 
 ## Installation
 
@@ -56,6 +56,7 @@ const data = signal([
 ]);
 
 const chart = createLineChart(document.getElementById('chart')!, {
+  a11y: { ariaLabel: 'Revenue by month' },
   series: [{ name: 'Revenue', data, color: '#3b82f6' }],
   xAxis: { position: 'bottom' },
   yAxis: { position: 'left', grid: true },

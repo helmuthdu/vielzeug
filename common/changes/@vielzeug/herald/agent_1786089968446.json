@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Simplify event bus and remove retained-state APIs",
+      "comment": "refactor!: simplify event bus and remove retained-state APIs",
       "packageName": "@vielzeug/herald",
       "type": "major"
     }

@@ -39,7 +39,27 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
     );
   }
 
+  let revealFrame: number | null = null;
+  let clearTimer: ReturnType<typeof setTimeout> | null = null;
+  let visible = false;
+
+  const cancelClear = (): void => {
+    if (clearTimer === null) return;
+
+    clearTimeout(clearTimer);
+    clearTimer = null;
+  };
+
+  const cancelReveal = (): void => {
+    if (revealFrame === null) return;
+
+    cancelAnimationFrame(revealFrame);
+    revealFrame = null;
+  };
+
   const disposeHandle = (): void => {
+    cancelReveal();
+    cancelClear();
     el.remove();
   };
 
@@ -47,13 +67,20 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
     dispose: disposeHandle,
     el,
     hide() {
+      cancelReveal();
+      cancelClear();
+      visible = false;
       el.style.opacity = '0';
-      // Clear the live region's text too — otherwise assistive tech keeps announcing the
-      // last-hovered value as "current" even after the pointer leaves the chart.
-      el.textContent = '';
+      clearTimer = setTimeout(() => {
+        clearTimer = null;
+
+        if (!visible) el.textContent = '';
+      }, 150);
     },
     show(x: number, y: number, datum: Datum, series: Series) {
       if (!container.isConnected) return;
+
+      cancelClear();
 
       if (render) {
         const html = render(datum, series);
@@ -93,7 +120,20 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
 
       el.style.left = `${positionX}px`;
       el.style.top = `${positionY}px`;
-      el.style.opacity = '1';
+
+      if (visible) {
+        if (revealFrame === null) el.style.opacity = '1';
+
+        return;
+      }
+
+      visible = true;
+      el.style.opacity = '0';
+      revealFrame = requestAnimationFrame(() => {
+        revealFrame = null;
+
+        if (visible) el.style.opacity = '1';
+      });
     },
     [Symbol.dispose]: disposeHandle,
   };

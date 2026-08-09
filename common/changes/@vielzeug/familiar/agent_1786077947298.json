@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "Replace inline workers with module-worker pools",
+      "comment": "refactor!: replace inline workers with module-worker pools",
       "packageName": "@vielzeug/familiar",
       "type": "major"
     }

@@ -4,6 +4,7 @@ import type { ChartEventHandlers } from '../../core/chart-scaffold';
 import type { ChartHandle, PieChartConfig, PieSliceConfig } from '../../types';
 
 import { resolveEasing } from '../../animation/easing';
+import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
 import { createRadialScaffold } from '../../core/chart-scaffold';
 import { createSvgElement, setAttributes } from '../../svg/element';
@@ -70,7 +71,13 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
 
   const handle = createRadialScaffold(
     container,
-    { ariaLabel: config.ariaLabel, legend: config.legend, plugins: config.plugins, tooltip: config.tooltip },
+    {
+      a11y: config.a11y,
+      ariaLabel: config.ariaLabel,
+      legend: config.legend,
+      plugins: config.plugins,
+      tooltip: config.tooltip,
+    },
     (ctx): ChartEventHandlers => {
       const { legend, svg, tooltip } = ctx;
 
@@ -115,8 +122,9 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
 
       while (labelGroup.children.length > currentArcs.length) labelGroup.removeChild(labelGroup.lastChild!);
 
-      const dur = config.transition?.duration ?? 400;
-      const easing = resolveEasing(config.transition?.easing);
+      const motion = resolveMotion(config.transition, 0);
+      const dur = motion.duration;
+      const easing = resolveEasing(motion.easing);
 
       for (let i = 0; i < currentArcs.length; i++) {
         const arc = currentArcs[i];

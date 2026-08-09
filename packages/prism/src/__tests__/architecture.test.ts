@@ -320,7 +320,18 @@ describe('tooltip — ARIA live region (B14)', () => {
     chart.dispose();
   });
 
-  it('clears the tooltip live region text on hide (Lens A fix)', () => {
+  it('reveals the tooltip on the next animation frame', async () => {
+    const tooltip = createTooltip(container, true);
+
+    tooltip.show(10, 10, { key: 1, value: 10 }, { data: [], name: 'S' });
+
+    expect(tooltip.el?.style.opacity).toBe('0');
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(tooltip.el?.style.opacity).toBe('1');
+    tooltip.dispose();
+  });
+
+  it('clears tooltip text after its exit fade completes', async () => {
     const chart = createLineChart(container, {
       series: [{ data: [{ key: 1, value: 10 }], name: 'S' }],
       tooltip: true,
@@ -337,6 +348,8 @@ describe('tooltip — ARIA live region (B14)', () => {
     expect(tooltipEl.textContent).toContain('S:');
 
     chart.el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    expect(tooltipEl.textContent).toContain('S:');
+    await new Promise((resolve) => setTimeout(resolve, 160));
     expect(tooltipEl.textContent).toBe('');
     chart.dispose();
   });

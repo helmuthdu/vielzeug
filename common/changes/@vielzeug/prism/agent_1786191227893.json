@@ -1,9 +1,9 @@
 {
   "changes": [
     {
-      "comment": "Keep chart tooltip positioning on the one-shot Orbit computation path",
+      "comment": "chore!: use keyed chart data, explicit accessibility, and reduced-motion-aware transitions",
       "packageName": "@vielzeug/prism",
-      "type": "patch"
+      "type": "minor"
     }
   ],
   "email": "agent@vielzeug",

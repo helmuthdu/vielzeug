@@ -4,9 +4,9 @@ import type { ChartDimensions, ChartEvent, Datum, Series } from '../types';
 import type { CrosshairState } from './crosshair';
 import type { TooltipState } from './tooltip';
 
+import { keyId } from '../core/cartesian-model';
 import { chartArea } from '../core/layout';
 import { getMousePosition } from './events';
-import { nearestPointX } from './hit-test';
 
 export interface SeriesInteractionOptions {
   crosshair?: CrosshairState | null;
@@ -20,27 +20,62 @@ export interface SeriesInteractionOptions {
   tooltip?: TooltipState | null;
 }
 
-function findNearestSeries(allPoints: Point[][], idx: number, posY: number): number {
-  let nearestSi = 0;
-  let minYDist = Infinity;
+type SeriesPoint = { datum: Datum; point: Point; seriesIndex: number };
 
-  for (let si = 0; si < allPoints.length; si++) {
-    const pt = allPoints[si]?.[idx];
+function findNearestKey(allData: Datum[][], allPoints: Point[][], posX: number): Datum['key'] | null {
+  let nearest: Datum['key'] | null = null;
+  let minXDistance = Infinity;
 
-    if (pt) {
-      const d = Math.abs(pt.y - posY);
+  for (let seriesIndex = 0; seriesIndex < allPoints.length; seriesIndex++) {
+    for (let datumIndex = 0; datumIndex < (allPoints[seriesIndex]?.length ?? 0); datumIndex++) {
+      const datum = allData[seriesIndex]?.[datumIndex];
+      const point = allPoints[seriesIndex]?.[datumIndex];
 
-      if (d < minYDist) {
-        minYDist = d;
-        nearestSi = si;
+      if (!datum || !point) continue;
+
+      const distance = Math.abs(point.x - posX);
+
+      if (distance < minXDistance) {
+        minXDistance = distance;
+        nearest = datum.key;
       }
     }
   }
 
-  return nearestSi;
+  return nearest;
+}
+
+function findNearestSeries(
+  allData: Datum[][],
+  allPoints: Point[][],
+  key: Datum['key'],
+  posY: number,
+): SeriesPoint | null {
+  const id = keyId(key);
+  let nearest: { datum: Datum; point: Point; seriesIndex: number } | null = null;
+  let minYDist = Infinity;
+
+  for (let seriesIndex = 0; seriesIndex < allPoints.length; seriesIndex++) {
+    const datumIndex = allData[seriesIndex]?.findIndex((datum) => keyId(datum.key) === id) ?? -1;
+    const datum = datumIndex === -1 ? undefined : allData[seriesIndex]?.[datumIndex];
+    const point = datumIndex === -1 ? undefined : allPoints[seriesIndex]?.[datumIndex];
+
+    if (!datum || !point) continue;
+
+    const distance = Number.isFinite(posY) ? Math.abs(point.y - posY) : 0;
+
+    if (distance < minYDist) {
+      minYDist = distance;
+      nearest = { datum, point, seriesIndex };
+    }
+  }
+
+  return nearest;
 }
 
 export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEventHandlers {
+  let keyboardIndex = 0;
+
   const onMouseMove = (event: MouseEvent) => {
     const allPoints = opts.getPoints();
 
@@ -57,31 +92,26 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
       return;
     }
 
-    const baseSeries = allPoints[0] ?? [];
-    const idx = nearestPointX(baseSeries, pos.x);
+    const key = findNearestKey(opts.getData(), allPoints, pos.x);
 
-    if (idx < 0) return;
+    if (key === null) return;
 
-    const pt = baseSeries[idx];
-    const crosshairX = opts.crosshair?.snap === false ? pos.x : pt.x;
-    const crosshairY = opts.crosshair?.snap === false ? pos.y : pt.y;
-
-    const nearestSi = findNearestSeries(allPoints, idx, pos.y);
-    const siPt = allPoints[nearestSi]?.[idx];
-    const dataPoint = opts.getData()[nearestSi]?.[idx];
-    const series = opts.getSeriesList()[nearestSi];
+    const nearest = findNearestSeries(opts.getData(), allPoints, key, pos.y);
+    const series = nearest ? opts.getSeriesList()[nearest.seriesIndex] : undefined;
+    const crosshairX = opts.crosshair?.snap === false ? pos.x : (nearest?.point.x ?? pos.x);
+    const crosshairY = opts.crosshair?.snap === false ? pos.y : (nearest?.point.y ?? pos.y);
 
     opts.crosshair?.show(
       crosshairX,
       crosshairY,
       area.width,
       area.height,
-      series && dataPoint ? `${series.name}: ${dataPoint.value}` : undefined,
+      series && nearest ? `${series.name}: ${nearest.datum.value}` : undefined,
     );
 
-    if (siPt && dataPoint && series) {
-      opts.tooltip?.show(siPt.x + dims.margin.left, siPt.y + dims.margin.top, dataPoint, series);
-      opts.onHover?.({ datum: dataPoint, originalEvent: event, series });
+    if (nearest && series) {
+      opts.tooltip?.show(nearest.point.x + dims.margin.left, nearest.point.y + dims.margin.top, nearest.datum, series);
+      opts.onHover?.({ datum: nearest.datum, originalEvent: event, series });
     }
   };
 
@@ -104,18 +134,67 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
 
     if (pos.x < 0 || pos.x > area.width || pos.y < 0 || pos.y > area.height) return;
 
-    const idx = nearestPointX(allPoints[0], pos.x);
+    const key = findNearestKey(opts.getData(), allPoints, pos.x);
 
-    if (idx < 0) return;
+    if (key === null) return;
 
-    const nearestSi = findNearestSeries(allPoints, idx, pos.y);
-    const dataPoint = opts.getData()[nearestSi]?.[idx];
-    const series = opts.getSeriesList()[nearestSi];
+    const nearest = findNearestSeries(opts.getData(), allPoints, key, pos.y);
+    const series = nearest ? opts.getSeriesList()[nearest.seriesIndex] : undefined;
 
-    if (dataPoint && series) {
-      opts.onClick({ datum: dataPoint, originalEvent: event, series });
+    if (nearest && series) {
+      opts.onClick({ datum: nearest.datum, originalEvent: event, series });
     }
   };
 
-  return { onClick, onMouseLeave, onMouseMove };
+  const onKeyDown = (event: KeyboardEvent) => {
+    const allData = opts.getData();
+    const allPoints = opts.getPoints();
+    const domain = [...new Map(allData.flat().map((datum) => [keyId(datum.key), datum.key])).values()];
+
+    if (domain.length === 0) return;
+
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault();
+      keyboardIndex = Math.max(0, Math.min(domain.length - 1, keyboardIndex + (event.key === 'ArrowLeft' ? -1 : 1)));
+
+      const key = domain[keyboardIndex]!;
+      const candidate = findNearestSeries(allData, allPoints, key, Number.POSITIVE_INFINITY);
+      const series = candidate ? opts.getSeriesList()[candidate.seriesIndex] : undefined;
+
+      if (!candidate || !series) return;
+
+      opts.crosshair?.show(
+        candidate.point.x,
+        candidate.point.y,
+        opts.dims().width,
+        opts.dims().height,
+        `${series.name}: ${candidate.datum.value}`,
+      );
+      opts.tooltip?.show(
+        candidate.point.x + opts.dims().margin.left,
+        candidate.point.y + opts.dims().margin.top,
+        candidate.datum,
+        series,
+      );
+      opts.onHover?.({ datum: candidate.datum, originalEvent: event, series });
+    }
+
+    if ((event.key === 'Enter' || event.key === ' ') && opts.onClick) {
+      event.preventDefault();
+
+      const key = domain[keyboardIndex]!;
+      const candidate = findNearestSeries(allData, allPoints, key, Number.POSITIVE_INFINITY);
+      const series = candidate ? opts.getSeriesList()[candidate.seriesIndex] : undefined;
+
+      if (candidate && series) opts.onClick({ datum: candidate.datum, originalEvent: event, series });
+    }
+
+    if (event.key === 'Escape') {
+      opts.crosshair?.hide();
+      opts.tooltip?.hide();
+      opts.onHover?.(null);
+    }
+  };
+
+  return { onClick, onKeyDown, onMouseLeave, onMouseMove };
 }

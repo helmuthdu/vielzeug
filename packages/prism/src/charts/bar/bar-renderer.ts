@@ -21,7 +21,7 @@ const activeBarAnimations = new WeakMap<SVGGElement, () => void>();
 
 export function renderBars(
   parent: SVGGElement,
-  data: { base: number; key: string; y: number }[],
+  data: { base: number; key: string; present: boolean; y: number }[],
   xScale: BandScale,
   yScale: Scale<number>,
   baselineY: number,
@@ -55,6 +55,8 @@ export function renderBars(
       rect = createSvgElement('rect', { class: 'prism-bar' });
       parent.appendChild(rect);
     }
+
+    rect.style.display = d.present ? '' : 'none';
 
     if (horizontal) {
       // Horizontal: category on Y axis, value on X axis

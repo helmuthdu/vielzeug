@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { resolveEasing } from '../animation/easing';
+import { resolveMotion } from '../animation/motion';
 import { animate } from '../animation/transition';
 import { tweenColor, tweenNumber } from '../animation/tween';
 
@@ -119,6 +120,16 @@ describe('resolveEasing', () => {
       expect(fn(0)).toBeCloseTo(0, 5);
       expect(fn(1)).toBeCloseTo(1, 5);
     }
+  });
+});
+
+describe('resolveMotion', () => {
+  it('disables motion when explicitly requested', () => {
+    expect(resolveMotion({ duration: 300, preference: 'never' }).duration).toBe(0);
+  });
+
+  it('uses explicit duration when motion is always enabled', () => {
+    expect(resolveMotion({ duration: 300, preference: 'always' }).duration).toBe(300);
   });
 });
 

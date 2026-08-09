@@ -3,6 +3,7 @@ import type { Datum, Scale, TransitionConfig } from '../../types';
 
 import { warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
+import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
@@ -25,8 +26,9 @@ function buildLinePath(pts: Point[], curve: AreaRenderOptions['curve']): string 
 }
 
 export function renderArea(parent: SVGGElement, points: Point[], baselineY: number, options: AreaRenderOptions): void {
-  const dur = options.transition?.duration ?? (options.transition ? 300 : 0);
-  const easing = resolveEasing(options.transition?.easing);
+  const motion = resolveMotion(options.transition, 0);
+  const dur = motion.duration;
+  const easing = resolveEasing(motion.easing);
 
   let fill = parent.querySelector<SVGPathElement>('.prism-area-fill');
 

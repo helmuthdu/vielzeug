@@ -64,6 +64,7 @@ export interface RadialScaffoldContext {
 
 export interface ChartEventHandlers {
   onClick?: (event: MouseEvent) => void;
+  onKeyDown?: (event: KeyboardEvent) => void;
   onMouseLeave?: (event: MouseEvent) => void;
   onMouseMove?: (event: MouseEvent) => void;
 }
@@ -83,7 +84,7 @@ function runScaffold<TCtx>(
   ) => TCtx,
   renderFn: (ctx: TCtx) => ChartEventHandlers | void,
 ): ChartHandle {
-  const base = createChartBase(container, { ariaLabel: config.ariaLabel, margin: config.margin });
+  const base = createChartBase(container, { a11y: config.a11y, ariaLabel: config.ariaLabel, margin: config.margin });
   const tooltip = config.tooltip ? createTooltip(container, config.tooltip) : null;
   const legend = config.legend ? createLegend(container, config.legend) : null;
   const ac = new AbortController();
@@ -178,6 +179,8 @@ function makeEventManager(svg: SVGSVGElement): {
 
         if (active.onClick) svg.removeEventListener('click', active.onClick);
 
+        if (active.onKeyDown) svg.removeEventListener('keydown', active.onKeyDown);
+
         active = null;
       }
 
@@ -190,6 +193,8 @@ function makeEventManager(svg: SVGSVGElement): {
       if (handlers.onMouseLeave) svg.addEventListener('mouseleave', handlers.onMouseLeave);
 
       if (handlers.onClick) svg.addEventListener('click', handlers.onClick);
+
+      if (handlers.onKeyDown) svg.addEventListener('keydown', handlers.onKeyDown);
     },
     detach() {
       this.attach(undefined);

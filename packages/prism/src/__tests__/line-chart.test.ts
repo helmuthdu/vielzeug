@@ -244,6 +244,31 @@ describe('createLineChart', () => {
     chart.dispose();
   });
 
+  it('supports keyboard exploration and activation', () => {
+    const onClick = vi.fn();
+    const onHover = vi.fn();
+    const chart = createLineChart(container, {
+      onClick,
+      onHover,
+      series: [
+        {
+          data: [
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
+          ],
+          name: 'Test',
+        },
+      ],
+    });
+
+    chart.el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
+    chart.el.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }));
+
+    expect(onHover).toHaveBeenCalled();
+    expect(onClick).toHaveBeenCalledWith(expect.objectContaining({ datum: { key: 2, value: 20 } }));
+    chart.dispose();
+  });
+
   it('calls onHover(null) on mouseleave', () => {
     const onHover = vi.fn();
     const chart = createLineChart(container, {

@@ -4,6 +4,7 @@ import type { Point } from '../../svg/path';
 import type { ChartHandle, SparklineConfig, StackSegment } from '../../types';
 
 import { resolveEasing } from '../../animation/easing';
+import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
 import { createChartBase } from '../../core/chart-base';
 import { createSvgElement, setAttributes } from '../../svg/element';
@@ -60,8 +61,9 @@ function renderSparkBars(
   const min = Math.min(0, ...data);
   const max = Math.max(...data);
   const yRange = max - min || 1;
-  const dur = transition?.duration ?? 0;
-  const easing = resolveEasing(transition?.easing);
+  const motion = resolveMotion(transition, 0);
+  const dur = motion.duration;
+  const easing = resolveEasing(motion.easing);
 
   while (parent.children.length > count) {
     const last = parent.lastElementChild;

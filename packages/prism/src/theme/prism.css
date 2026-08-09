@@ -338,5 +338,6 @@
     box-shadow: var(--prism-tooltip-shadow);
     opacity: 0;
     transition: opacity var(--prism-transition-fast);
+    will-change: opacity;
   }
 }

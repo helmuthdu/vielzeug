@@ -129,7 +129,7 @@ export interface CrosshairConfig {
 
 export interface ChartEvent {
   datum: Datum;
-  originalEvent: MouseEvent;
+  originalEvent: Event;
   series: Series;
 }
 
@@ -146,6 +146,7 @@ export interface LegendConfig {
 export interface TransitionConfig {
   duration?: number;
   easing?: 'ease-in' | 'ease-in-out' | 'ease-out' | 'linear' | ((t: number) => number);
+  preference?: 'always' | 'never' | 'system';
   stagger?: number;
 }
 
@@ -166,7 +167,18 @@ export interface ChartPlugin {
 
 // ─── Chart Config Types ──────────────────────────────────────────────────────
 
+export type ChartA11y =
+  | { readonly decorative: true }
+  | {
+      readonly ariaLabel: string;
+      readonly decorative?: false;
+      readonly description?: string;
+    };
+
 export interface BaseChartConfig {
+  /** Explicit decorative/informative accessibility intent. */
+  a11y?: ChartA11y;
+  /** @deprecated Use `a11y: { ariaLabel }` instead. */
   ariaLabel?: string;
   legend?: LegendConfig | boolean;
   margin?: Partial<ChartMargin>;
@@ -229,7 +241,7 @@ export interface PieSliceConfig {
   value: number;
 }
 
-export interface PieChartConfig extends Omit<BaseChartConfig, 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
+export interface PieChartConfig extends Omit<BaseChartConfig, 'margin' | 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
   cornerRadius?: number;
   data: MaybeSignal<PieSliceConfig[]>;
   innerRadius?: number;

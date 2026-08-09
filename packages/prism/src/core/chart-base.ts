@@ -2,7 +2,7 @@ import type { Readable } from '@vielzeug/ripple';
 
 import { signal } from '@vielzeug/ripple';
 
-import type { ChartDimensions, ChartMargin } from '../types';
+import type { ChartA11y, ChartDimensions, ChartMargin } from '../types';
 
 import { warn } from '../_dev';
 import { PrismRenderError } from '../errors';
@@ -19,7 +19,7 @@ export interface ChartBase {
 
 export function createChartBase(
   container: HTMLElement,
-  options: { ariaHidden?: boolean; ariaLabel?: string; margin?: Partial<ChartMargin> },
+  options: { a11y?: ChartA11y; ariaHidden?: boolean; ariaLabel?: string; margin?: Partial<ChartMargin> },
 ): ChartBase {
   // Duck-typed rather than `instanceof Element` — an `instanceof` check would reject a
   // structurally valid Element from a different realm (e.g. an Element created via
@@ -46,10 +46,14 @@ export function createChartBase(
   }
 
   const margin = resolveMargin(options.margin);
+  const a11y = options.a11y ?? (options.ariaLabel ? { ariaLabel: options.ariaLabel } : undefined);
   const svg = createSvgElement('svg', {
-    ...(options.ariaHidden
+    ...(options.ariaHidden || a11y?.decorative
       ? { 'aria-hidden': 'true' }
-      : { ...(options.ariaLabel ? { 'aria-label': options.ariaLabel } : {}), role: 'img' }),
+      : {
+          ...(a11y ? { 'aria-label': a11y.ariaLabel, tabindex: '0' } : {}),
+          role: 'img',
+        }),
     class: 'prism-chart',
     style: 'display:block;width:100%;height:100%',
   });
