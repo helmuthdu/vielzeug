@@ -1,6 +1,6 @@
 ---
-title: Pulse — Typed WebSocket client with channels, rooms, and presence
-description: Full-featured WebSocket client with typed messaging, channel multiplexing, room management, reactive presence, auto-reconnect, and heartbeat — built on ripple signals.
+title: Pulse — Typed WebSocket sessions
+description: Explicitly connected, typed WebSocket sessions with scoped channels, presence, reconnect restoration, and heartbeat.
 package: pulse
 category: websockets
 keywords: [websocket, realtime, channels, presence, reconnect, heartbeat, typed-messaging, ripple]
@@ -12,7 +12,11 @@ exports:
     PulseChannel,
     PresenceChannel,
     PulseOptions,
-    BufferOptions,
+    ChannelDefinition,
+    ChannelDefinitions,
+    PresenceDefinitions,
+    OutgoingMessage,
+    OutgoingTransform,
     PulseError,
     PulseConnectionError,
     PulseTimeoutError,
@@ -29,45 +33,38 @@ environments: [browser, node]
 
 ## Why Pulse?
 
-Raw WebSocket gives you an untyped message stream — no event routing, no reconnection, no presence, no lifecycle management. Building those primitives for every project is repetitive and error-prone.
+Native WebSocket leaves connection ownership, event routing, reconnect restoration, and cleanup to each application. Pulse provides those boundaries while making readiness explicit: applications connect before sending, and disconnected messages never disappear silently.
 
 ```ts
-// Before — raw WebSocket
-const ws = new WebSocket('wss://api.example.com/ws');
-ws.addEventListener('message', (ev) => {
-  const { type, payload } = JSON.parse(ev.data); // untyped
-  if (type === 'chat:message') renderMessage(payload); // manual routing
-});
-ws.addEventListener('close', () => setTimeout(reconnect, 3_000)); // manual reconnect
-// No channels, no presence, no heartbeat, no disposal
+// Before
+const socket = new WebSocket('wss://api.example.com/ws');
+socket.addEventListener('message', (event) => route(JSON.parse(event.data)));
+socket.addEventListener('close', () => setTimeout(() => reconnect(), 1_000));
 
-// After — Pulse
-const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws', {
-  reconnect: { maxAttempts: 5 },
-  heartbeat: true,
-});
-pulse.on('chat:message', ({ user, text }) => renderMessage({ user, text })); // fully typed
-pulse.send('chat:send', { text: 'Hello!' });
-effect(() => console.log('status:', pulse.status.value)); // reactive via ripple
+// After
+const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws', { reconnect: true });
+try {
+  await pulse.connect();
+  pulse.on('chat:message', (message) => console.log(message.text));
+  pulse.send('chat:send', { text: 'Hello!' });
+} catch (error) {
+  console.error('Pulse connection failed:', error);
+}
 ```
 
-| Feature               | Pulse                                                      | Native WebSocket                                | socket.io-client                                           |
-| --------------------- | ---------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------- |
-| Bundle size           | <PackageInfo package="pulse" type="size" />                | 0 B (native)                                    | ~44 kB gzip                                                |
-| TypeScript inference  | <ore-icon name="check" size="16"></ore-icon> Full            | <ore-icon name="x" size="16"></ore-icon> None     | <ore-icon name="triangle-alert" size="16"></ore-icon> Basic  |
-| Auto-reconnect        | <ore-icon name="check" size="16"></ore-icon>                 | <ore-icon name="x" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon>                 |
-| Heartbeat (ping/pong) | <ore-icon name="check" size="16"></ore-icon>                 | <ore-icon name="x" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon>                 |
-| Channel multiplexing  | <ore-icon name="check" size="16"></ore-icon>                 | <ore-icon name="x" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon>                 |
-| Reactive presence     | <ore-icon name="check" size="16"></ore-icon>                 | <ore-icon name="x" size="16"></ore-icon>          | <ore-icon name="triangle-alert" size="16"></ore-icon> Manual |
-| Reactive status       | <ore-icon name="check" size="16"></ore-icon>                 | <ore-icon name="x" size="16"></ore-icon>          | <ore-icon name="x" size="16"></ore-icon>                     |
-| Server lock-in        | <ore-icon name="check" size="16"></ore-icon> None            | <ore-icon name="check" size="16"></ore-icon> None | <ore-icon name="x" size="16"></ore-icon> Required            |
-| Zero dependencies     | <ore-icon name="triangle-alert" size="16"></ore-icon> ripple | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>                     |
+| Feature | Pulse | Native WebSocket | socket.io-client |
+| --- | --- | --- | --- |
+| Bundle size | <PackageInfo package="pulse" type="size" /> | 0 B | ~44 kB gzip |
+| Explicit readiness | <ore-icon name="check" size="16"></ore-icon> | Manual | <ore-icon name="check" size="16"></ore-icon> |
+| Session restoration | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Protocol-specific |
+| Typed scoped channels | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Basic |
+| Zero runtime dependencies | <ore-icon name="triangle-alert" size="16"></ore-icon> ripple | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
-**Use Pulse when** you need typed, multiplexed real-time messaging with reactive state and a clean disposal lifecycle — without being locked to a specific server stack.
+**Use Pulse when** you need a typed WebSocket session whose reconnect and cleanup behavior must be deterministic.
 
-**Consider native WebSocket when** you need the absolute minimum footprint and are building a one-off, untyped connection with no reuse patterns.
+**Consider native WebSocket when** a single untyped connection does not need retry, routing, or session restoration.
 
 </div>
 
@@ -91,66 +88,51 @@ yarn add @vielzeug/pulse @vielzeug/ripple
 
 ## Quick Start
 
+Define the protocol at construction time, create scopes, then connect before sending.
+
 ```ts
 import { createPulse } from '@vielzeug/pulse';
-import { effect } from '@vielzeug/ripple';
 
-type ServerEvents = {
-  'chat:message': { user: string; text: string };
-  'user:joined': { userId: string };
+type ServerEvents = { 'chat:message': { text: string } };
+type ClientEvents = { 'chat:send': { text: string } };
+type Channels = {
+  chat: {
+    client: { send: { text: string } };
+    server: { message: { text: string } };
+  };
 };
+type Presence = { lobby: { name: string } };
 
-type ClientEvents = {
-  'chat:send': { text: string };
-};
-
-const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws', {
-  reconnect: { maxAttempts: 5, delay: (n) => Math.min(1000 * 2 ** n, 30_000) },
-  heartbeat: true,
+const pulse = createPulse<ServerEvents, ClientEvents, Channels, Presence>('wss://api.example.com/ws', {
+  reconnect: true,
+  onError: (error) => console.error(error),
 });
+const chat = pulse.channel('chat');
+const lobby = pulse.presence('lobby');
 
-// Reactive status via ripple signal
-effect(() => console.log('connection:', pulse.status.value));
+try {
+  await pulse.connect();
+  chat.send('send', { text: 'Hello!' });
+  lobby.update({ name: 'Ada' });
+} catch (error) {
+  console.error('Pulse connection failed:', error);
+}
 
-// Typed server events
-pulse.on('chat:message', ({ user, text }) => console.log(`${user}: ${text}`));
-
-// Typed client messages
-pulse.send('chat:send', { text: 'Hello!' });
-
-// Isolated channel namespace
-const notif = pulse.channel<{ alert: { level: string; msg: string } }>('notifications');
-notif.on('alert', ({ level, msg }) => showNotification(level, msg));
-
-// Reactive presence tracking
-const lobby = pulse.presence<{ name: string; status: string }>('lobby');
-effect(() => console.log('online:', [...lobby.state.value.keys()]));
-lobby.update({ name: 'Alice', status: 'active' });
-
-// Clean disposal
-using _ = pulse;
+pulse.dispose();
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- **Typed event maps** — `TServer` and `TClient` generics enforce payload types on both sides of the wire
-- **`on()` / `once()` / `wait()`** — persistent, one-shot, and async-await event subscriptions
-- **`channel()`** — isolated namespaces multiplexed over the shared connection; **same name returns the same object** (memoized); auto-resubscribed on reconnect; `dispose()` sends an `unsubscribe` frame
-- **`join()` / `leave()`** — room membership with server-confirmation promises; optional `timeout` and `AbortSignal` support
-- **`presence()`** — reactive `Signal<Map<memberId, T>>` state, with `onJoin`/`onLeave` callbacks and `update()` for broadcasting state
-- **Middleware pipeline** — intercept every outgoing `send()` call; omit `next()` to suppress
-- **Auto-reconnect** — exponential backoff (full-jitter by default), configurable `maxAttempts`, custom `delay` function, and `onReconnect` callback
-- **Heartbeat** — configurable ping/pong keep-alive with dead-connection detection and automatic reconnect trigger
-- **Reactive `status` signal** — `'connecting' | 'open' | 'reconnecting' | 'closed'` exposed as a ripple `Readable`
-- **Reactive `rooms` signal** — current room membership as a `Readable<ReadonlySet<string>>`
-- **`disposalSignal`** — `AbortSignal` that fires on `dispose()`; ties external cleanup to the connection lifetime
-- **`dispose()` and `[Symbol.dispose]`** — deterministic teardown; closes the socket, clears all listeners, aborts pending `wait()` calls
-- **Message buffering** — `buffer: true` queues outgoing frames while disconnected and flushes on reconnect; configurable `maxSize`
-- **Lazy connection** — `lazy: true` defers the initial connection until `connect()` is called explicitly
-- **Protocol-agnostic** — works with any WebSocket server that speaks the Pulse JSON frame format
-- **Single dependency** — only requires `@vielzeug/ripple` for reactive state
+- **`connect()`** — explicit readiness; application messages throw while disconnected.
+- **`channel()`** — named, schema-bound scopes with independent disposal and reference-counted server subscriptions.
+- **`presence()`** — named, schema-bound reactive presence scopes with reference-counted room membership.
+- **`reconnect`** — ordered restoration of channel subscriptions, rooms, and local presence state.
+- **`transform`** — one synchronous transform or filter for application messages.
+- **`onError`** — typed connection and protocol errors.
+- **`heartbeat`** — ping/pong liveness detection that uses the same reconnect controller.
+- **`status` and `rooms`** — ripple readables for transport and confirmed membership state.
 
 </div>
 
@@ -161,6 +143,7 @@ using _ = pulse;
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [Pulse 3.0 Migration](./migration.md)
 
 </div>
 
@@ -168,10 +151,10 @@ using _ = pulse;
 
 <div class="see-also">
 
-- [Ripple](/ripple/) — the reactive signal library powering `pulse.status`, `pulse.rooms`, and `presence.state`
-- [Herald](/herald/) — typed in-process event bus; complement Pulse by bridging incoming WebSocket events to application-wide bus dispatches
-- [Courier](/courier/) — typed HTTP client for the request/response traffic that runs alongside your WebSocket connection
-- [Clockwork](/clockwork/) — finite state machine; model complex reconnection or auth-handshake logic as a proper state machine
+- [Ripple](/ripple/) — provides the reactive values exposed by Pulse.
+- [Herald](/herald/) — receives routed Pulse events in an in-process application bus.
+- [Courier](/courier/) — handles request/response traffic alongside a Pulse session.
+- [Clockwork](/clockwork/) — models application-level authentication or session workflows.
 
 </div>
 

@@ -1,359 +1,151 @@
 ---
 title: Pulse — Usage Guide
-description: Connection management, typed messaging, channels, rooms, presence, middleware, reconnect, and heartbeat for @vielzeug/pulse.
+description: Explicit connection, schema-bound scopes, rooms, presence, transforms, reconnect, and heartbeat for @vielzeug/pulse.
 ---
 
 [[toc]]
 
-::: tip New to Pulse?
-Start with the [Overview](./index.md) for installation and a quick start, then return here for in-depth usage patterns.
-:::
-
 ## Basic Usage
 
-A message map is a plain TypeScript type where each key is an event name and each value is the payload type. Define separate maps for server-to-client and client-to-server traffic.
+Define every event map at creation time. This lets named channels and presence rooms infer their types without per-call generic arguments.
 
 ```ts
 import { createPulse } from '@vielzeug/pulse';
 
-type ServerEvents = {
-  'chat:message': { user: string; text: string };
-  'user:joined': { userId: string };
+type ServerEvents = { 'chat:message': { text: string } };
+type ClientEvents = { 'chat:send': { text: string } };
+type Channels = {
+  chat: {
+    client: { send: { text: string } };
+    server: { message: { text: string } };
+  };
 };
+type Presence = { lobby: { name: string; status: 'online' | 'away' } };
 
-type ClientEvents = {
-  'chat:send': { text: string };
-};
-
-const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws');
-
-pulse.on('chat:message', ({ user, text }) => {
-  console.log(`${user}: ${text}`); // payload is fully typed
+const pulse = createPulse<ServerEvents, ClientEvents, Channels, Presence>('wss://api.example.com/ws', {
+  reconnect: true,
+  onError: (error) => console.error(error),
 });
 
-pulse.send('chat:send', { text: 'Hello!' });
+pulse.on('chat:message', ({ text }) => console.log(text));
+const chat = pulse.channel('chat');
+const lobby = pulse.presence('lobby');
+
+try {
+  await pulse.connect();
+  chat.send('send', { text: 'Hello!' });
+  lobby.update({ name: 'Ada', status: 'online' });
+} catch (error) {
+  console.error('Pulse connection failed:', error);
+}
 ```
 
 ## Connection Management
 
-### Reactive status
+`createPulse()` does not create a socket. `connect()` resolves only after the socket has opened and existing session state has been restored. Application sends and room operations throw `PulseConnectionError` until then.
 
-`pulse.status` is a ripple `Reactive<PulseStatus>`. Use `effect()` to react to connection state changes.
+```ts
+await pulse.connect();
+console.log(pulse.status.value); // 'open'
+
+pulse.disconnect(1000, 'signed out');
+console.log(pulse.status.value); // 'closed'
+```
+
+Observe `status` with Ripple when UI needs to reflect reconnecting state.
 
 ```ts
 import { effect } from '@vielzeug/ripple';
 
-// 'connecting' | 'open' | 'reconnecting' | 'closed'
 effect(() => {
-  document.title = pulse.status.value === 'open' ? 'Live' : 'Reconnecting…';
+  statusBadge.textContent = pulse.status.value;
 });
 ```
 
-### Explicit connect and disconnect
+## Scoped Channels
 
-By default the connection opens as soon as `createPulse` is called. Pass `lazy: true` to defer it until you call `connect()` explicitly — useful when the connection should not open until after a user gesture or auth check.
-
-```ts
-// Default — connects immediately
-const pulse = createPulse('wss://api.example.com/ws');
-
-// Lazy — deferred until connect() is called
-const pulse = createPulse('wss://api.example.com/ws', { lazy: true });
-await pulse.connect(); // resolves when the socket is open
-
-pulse.disconnect(1000, 'user logged out'); // clean close, no reconnect
-```
-
-`disconnect()` closes the socket and sets status to `'closed'` without triggering auto-reconnect.
-
-## Subscribing to Server Events
-
-### `on()` — Persistent listener
-
-`on()` subscribes to every future emission of an event. It returns an `Unsubscribe` function.
+Each `channel(name)` call creates an independently disposable listener scope. Pulse sends one server `subscribe` frame for the name and unsubscribes only after the final scope is disposed.
 
 ```ts
-const unsub = pulse.on('chat:message', ({ user, text }) => {
-  appendToChat(user, text);
-});
+const composer = pulse.channel('chat');
+const transcript = pulse.channel('chat');
 
-// Remove the listener when no longer needed
-unsub();
+composer.send('send', { text: 'Hello!' });
+transcript.on('message', ({ text }) => console.log(text));
+
+composer.dispose(); // transcript remains subscribed
+transcript.dispose(); // now Pulse sends unsubscribe
 ```
 
-### `once()` — One-shot listener
+## Rooms and Presence
 
-`once()` fires exactly once, then removes itself.
+`join()` and `leave()` require an open connection and resolve after server confirmation. `presence(room)` acquires a reference-counted room scope; create it before or after `connect()`.
 
 ```ts
-pulse.once('user:joined', ({ userId }) => {
-  showWelcomeBanner(userId);
-});
+const lobby = pulse.presence('lobby');
+
+await pulse.connect();
+await pulse.join('announcements');
+lobby.update({ name: 'Ada', status: 'online' });
+
+lobby.onJoin((memberId, member) => console.log('joined', memberId, member.name));
+lobby.onLeave((memberId) => console.log('left', memberId));
+
+await pulse.leave('announcements');
+lobby.dispose();
 ```
 
-### `wait()` — Async one-shot
+`rooms` contains only server-confirmed membership. It clears immediately on transport loss and repopulates as the restored session receives `joined` frames.
 
-`wait()` returns a promise that resolves with the next emitted payload. Pass `signal` or `timeout` to add a deadline.
+## Outgoing Transforms
 
-```ts
-// Wait for the next server-push notification
-const msg = await pulse.wait('chat:message');
-
-// With a timeout (ms)
-const msg = await pulse.wait('chat:message', { timeout: 5_000 });
-
-// With an AbortSignal
-const msg = await pulse.wait('chat:message', { signal: AbortSignal.timeout(5_000) });
-```
-
-`wait()` rejects with `PulseTimeoutError` when `timeout` elapses, with `PulseAbortError` when the signal fires, and with `PulseAbortError` when the pulse is disposed before the event arrives.
-
-## Channels
-
-A channel is an isolated message namespace multiplexed over the same WebSocket connection. Use separate channels to scope events to logical subsystems.
-
-```ts
-// Separate type maps per channel
-type NotifServer = { alert: { level: 'info' | 'warn' | 'error'; msg: string } };
-type ChatServer = { message: { user: string; text: string } };
-type ChatClient = { send: { text: string } };
-
-const notif = pulse.channel<NotifServer>('notifications');
-const chat = pulse.channel<ChatServer, ChatClient>('chat');
-
-notif.on('alert', ({ level, msg }) => showToast(level, msg));
-
-chat.on('message', ({ user, text }) => appendToLog(user, text));
-chat.send('send', { text: 'hi' });
-```
-
-Multiple calls with the same name return the **same channel object** — the channel is memoized. Dispose it once to fully remove the subscription and send an `unsubscribe` frame. After disposal, calling `pulse.channel()` with the same name creates a fresh channel.
-
-### Channel disposal
-
-Disposing a channel removes all its listeners, sends an `unsubscribe` frame to the server, and evicts it from the cache. The underlying connection is unaffected.
-
-```ts
-using chat = pulse.channel<ChatServer, ChatClient>('chat');
-
-// — or manually:
-chat.dispose();
-chat.disposed; // true
-// pulse.channel('chat') now returns a fresh channel
-```
-
-## Rooms
-
-`join()` requests membership in a named room. It resolves when the server confirms with a `joined` frame.
-
-```ts
-await pulse.join('lobby');
-console.log(pulse.rooms.value.has('lobby')); // true — reactive signal
-
-await pulse.leave('lobby');
-console.log(pulse.rooms.value.has('lobby')); // false
-```
-
-Pass a `timeout` or `AbortSignal` to bound the wait:
-
-```ts
-// Reject with PulseTimeoutError if server doesn't confirm within 5 s
-await pulse.join('lobby', { timeout: 5_000 });
-
-// Or cancel with an AbortSignal
-const ctrl = new AbortController();
-const joinP = pulse.join('arena', { signal: ctrl.signal });
-ctrl.abort(); // rejects joinP with PulseAbortError
-```
-
-`pulse.rooms` is a `Readable<ReadonlySet<string>>`. Derive computed views with ripple:
-
-```ts
-import { computed } from '@vielzeug/ripple';
-
-const roomCount = computed(() => pulse.rooms.value.size);
-```
-
-## Presence
-
-`presence()` returns a presence channel for a room. It implicitly joins the room and begins tracking members.
-
-```ts
-type MemberState = { name: string; status: 'online' | 'away' };
-
-const lobby = pulse.presence<MemberState>('lobby');
-
-// Reactive member map — updates on every join, leave, or state change
-import { effect } from '@vielzeug/ripple';
-effect(() => {
-  for (const [id, state] of lobby.state.value) {
-    console.log(id, state.name, state.status);
-  }
-});
-
-// React to membership events
-lobby.onJoin((memberId, state) => showJoinBanner(state.name));
-lobby.onLeave((memberId) => removeAvatarFromList(memberId));
-
-// Broadcast your own state (also serves as join confirmation)
-lobby.update({ name: 'Alice', status: 'online' });
-```
-
-### Presence disposal
-
-Disposing a presence channel stops tracking, removes all join/leave callbacks, and sends a `leave` frame to the server.
-
-```ts
-using _ = lobby;
-// — or —
-lobby.dispose(); // also sends 'leave' frame
-```
-
-## Middleware
-
-Middleware intercepts every outgoing `send()` before the message hits the socket. Call `next()` to allow the send; omit it to suppress.
+Use one `transform` to enrich or filter application messages. Internal `subscribe`, `join`, presence, and heartbeat frames bypass it.
 
 ```ts
 const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws', {
-  middleware: [
-    // Logging middleware
-    (event, payload, next) => {
-      console.debug('[ws out]', event, payload);
-      next();
-    },
-    // Rate-limiting middleware
-    (event, _payload, next) => {
-      if (rateLimiter.allow(event)) next();
-      // omit next() to drop the message
-    },
-  ],
-});
-```
+  transform: (message) => {
+    if (message.event.startsWith('debug:')) return null;
 
-Middleware only applies to application messages sent via `send()`. Internal frames (ping, join, subscribe) bypass the pipeline.
-
-## Reconnect & Heartbeat
-
-### Auto-reconnect
-
-Enable reconnect with `true` (uses defaults) or a `ReconnectOptions` object.
-
-```ts
-const pulse = createPulse('wss://api.example.com/ws', {
-  reconnect: {
-    maxAttempts: 10, // default: 5
-    delay: 1_000, // fixed 1 s delay — or a function:
-    // delay: (n) => Math.min(500 * 2 ** n, 30_000)
+    return { ...message, payload: { sentAt: Date.now(), value: message.payload } };
   },
 });
 ```
 
-When reconnect is enabled, an unexpected close transitions `status` to `'reconnecting'`. After the budget is exhausted without success, `status` moves to `'closed'`.
+## Reconnect and Heartbeat
 
-The default `delay` is full-jitter exponential backoff: `Math.random() * Math.min(1000 * 2^n, 30_000)`.
-
-### Heartbeat
-
-Enable heartbeat with `true` (uses defaults) or a `HeartbeatOptions` object.
+Reconnect uses full-jitter exponential backoff by default. On a replacement socket, Pulse sends channel subscriptions, desired rooms, and local presence state in that order. Use `status` to render transport state; do not treat it as server confirmation of restored rooms.
 
 ```ts
 const pulse = createPulse('wss://api.example.com/ws', {
-  heartbeat: {
-    interval: 30_000, // ms between pings — default: 30_000
-    timeout: 5_000, // ms to wait for pong before treating connection as dead — default: 5_000
-  },
+  heartbeat: { interval: 30_000, timeout: 5_000 },
+  reconnect: { delay: (attempt) => Math.min(1_000 * 2 ** attempt, 30_000), maxAttempts: 5 },
+  onError: console.error,
 });
 ```
 
-When a pong is not received within `timeout` ms, the socket is closed and — if reconnect is enabled — a reconnect attempt is triggered.
-
-## Disposal
-
-Disposing a pulse instance closes the WebSocket, clears all listeners, rejects pending `wait()` / `join()` / `leave()` promises, and aborts the `disposalSignal`.
-
-```ts
-// using declaration — dispose() called automatically at block exit
-using pulse = createPulse('wss://api.example.com/ws');
-
-// — or manually:
-pulse.dispose();
-pulse.disposed; // true
-```
-
-### `disposalSignal`
-
-`pulse.disposalSignal` is an `AbortSignal` that fires when `dispose()` is called. Use it to tie external cleanup to the connection lifetime.
-
-```ts
-// Automatically cancel a fetch when the pulse is disposed
-fetch('/api/init', { signal: pulse.disposalSignal });
-
-// Unsubscribe from another system when pulse tears down
-externalBus.on('theme', applyTheme, { signal: pulse.disposalSignal });
-```
+When the reconnect budget is exhausted, `status` becomes `'closed'` and `onError` receives `PulseConnectionError`.
 
 ## Framework Integration
 
 ::: code-group
 
 ```ts [React]
-import { createPulse } from '@vielzeug/pulse';
-import { useEffect, useSyncExternalStore } from 'react';
-
-function usePulseStatus(pulse: ReturnType<typeof createPulse>) {
-  return useSyncExternalStore(
-    (cb) => {
-      const unsub = pulse.status.subscribe(cb);
-      return unsub;
-    },
-    () => pulse.status.value,
-  );
-}
-
-function Chat() {
-  const status = usePulseStatus(pulse);
-
-  useEffect(() => {
-    const unsub = pulse.on('chat:message', ({ user, text }) => {
-      appendToLog(user, text);
-    });
-    return unsub;
-  }, []);
-
-  return <div>Status: {status}</div>;
-}
+useEffect(() => {
+  const pulse = createPulse(url, { reconnect: true });
+  void pulse.connect().catch(console.error);
+  return () => pulse.dispose();
+}, [url]);
 ```
 
 ```ts [Vue 3]
-import { createPulse } from '@vielzeug/pulse';
-import { onUnmounted, ref, watchEffect } from 'vue';
-
-export function usePulse(url: string) {
-  const pulse = createPulse(url, { reconnect: true });
-  const status = ref(pulse.status.value);
-
-  const unsub = pulse.status.subscribe((s) => {
-    status.value = s;
-  });
-
-  onUnmounted(() => pulse.dispose());
-
-  return { pulse, status };
-}
+const pulse = createPulse(url, { reconnect: true });
+void pulse.connect().catch(console.error);
+onUnmounted(() => pulse.dispose());
 ```
 
 ```ts [Svelte]
-import { createPulse } from '@vielzeug/pulse';
-import { onDestroy } from 'svelte';
-import { readable } from 'svelte/store';
-
-const pulse = createPulse('wss://api.example.com/ws', { reconnect: true });
-
-// Wrap ripple signal in a Svelte readable store
-const status = readable(pulse.status.value, (set) => {
-  return pulse.status.subscribe(set);
-});
-
+const pulse = createPulse(url, { reconnect: true });
+void pulse.connect().catch(console.error);
 onDestroy(() => pulse.dispose());
 ```
 
@@ -361,70 +153,24 @@ onDestroy(() => pulse.dispose());
 
 ## Working with Other Vielzeug Libraries
 
-### Herald — bridge WebSocket events to an app bus
-
-Route incoming server events through a Herald bus so the rest of your application doesn't need to know about the WebSocket.
+Bridge typed server events into Herald when the rest of the application should not depend on transport details.
 
 ```ts
-import { createPulse } from '@vielzeug/pulse';
 import { createBus } from '@vielzeug/herald';
 
-type AppEvents = {
-  'chat:message': { user: string; text: string };
-};
+const bus = createBus<ServerEvents>();
+const stop = pulse.on('chat:message', (message) => bus.emit('chat:message', message));
 
-const pulse = createPulse<AppEvents>('wss://api.example.com/ws');
-const bus = createBus<AppEvents>();
-
-// Forward all WebSocket events to the Herald bus
-pulse.on('chat:message', (payload) => bus.emit('chat:message', payload));
-
-// The rest of the app only knows about the bus
-bus.on('chat:message', ({ user, text }) => appendToLog(user, text));
-
-// Dispose both together
-pulse.disposalSignal.addEventListener('abort', () => bus.dispose(), { once: true });
+pulse.disposalSignal.addEventListener('abort', stop, { once: true });
 ```
-
-### Ripple — derive computed views from reactive signals
-
-```ts
-import { computed, effect } from '@vielzeug/ripple';
-
-const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws');
-const lobby = pulse.presence<{ name: string }>('lobby');
-
-const memberCount = computed(() => lobby.state.value.size);
-const memberNames = computed(() => [...lobby.state.value.values()].map((s) => s.name));
-
-effect(() => {
-  document.querySelector('#count')!.textContent = String(memberCount.value);
-});
-```
-
-## Message Buffering
-
-Enable `buffer: true` to queue outgoing frames while the connection is not open. The queue is flushed automatically on the next successful open.
-
-```ts
-const pulse = createPulse('wss://api.example.com/ws', {
-  reconnect: true,
-  buffer: true, // queue up to 50 frames (default)
-  // buffer: { maxSize: 20 }, // or a custom limit
-});
-
-// Messages sent during reconnect are queued, not dropped
-pulse.send('chat:send', { text: 'Queued while offline' });
-```
-
-When the buffer is full, the **oldest** frame is evicted to make room for the new one. With buffering disabled (default), a `send()` while disconnected is a no-op and emits a dev-mode warning.
 
 ## Best Practices
 
-- **Define message maps upfront.** Separate `ServerEvents` and `ClientEvents` types make protocol changes a compile error, not a runtime surprise.
-- **One `createPulse` instance per connection.** Multiple instances to the same URL open multiple sockets. Share a single instance across your application.
-- **Always dispose.** Call `pulse.dispose()` or use `using` to prevent socket and listener leaks in component/module teardown.
-- **Use `disposalSignal` to chain cleanups.** Pass `pulse.disposalSignal` to any external subscription or fetch so teardown is automatic.
-- **Enable reconnect for production.** `reconnect: true` uses sensible defaults; override `maxAttempts` and `delay` only when you have measured the right values.
-- **Scope messages with channels.** Use `channel()` when building features that own a domain namespace — it keeps listener cleanup isolated.
-- **Enable buffering when ordering matters.** Use `buffer: true` with reconnect so messages sent during brief disconnects are not silently dropped.
+- Define named channel and presence schemas when creating Pulse.
+- Call and await `connect()` before every application send path becomes available.
+- Treat `PulseConnectionError` as a user-visible retry or offline state.
+- Create channel and presence scopes near their consumer, then dispose those scopes independently.
+- Subscribe to `status` and `rooms` instead of inferring transport state.
+- Use `transform` only for synchronous application-message policies.
+- Handle `onError` in production.
+- Dispose Pulse when its owning application session ends.

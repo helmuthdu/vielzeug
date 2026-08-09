@@ -10,8 +10,13 @@ chat.on('message', ({ from, text }) => {
   console.log('[chat] ' + from + ': ' + text)
 })
 
-// Send scoped to the channel
-chat.send('send', { text: 'hey!' })
+try {
+  await pulse.connect()
+  // Send scoped to the channel
+  chat.send('send', { text: 'hey!' })
+} catch (err) {
+  console.log('connect failed:', err.message)
+}
 
 // Wait with a per-event timeout
 try {

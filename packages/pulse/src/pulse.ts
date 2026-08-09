@@ -1,10 +1,11 @@
 import { signal } from '@vielzeug/ripple';
 
 import type {
+  ChannelDefinitions,
   EventKey,
   MessageMap,
-  Middleware,
   PresenceChannel,
+  PresenceDefinitions,
   Pulse,
   PulseChannel,
   PulseOptions,
@@ -12,12 +13,18 @@ import type {
   Unsubscribe,
 } from './types';
 
-import { warn } from './_dev';
-import { combineSignals } from './_utils';
+import { createConnection } from './_connection';
 import { createWaitPromise } from './_wait';
 import { createChannel } from './channel';
-import { PulseAbortError, PulseConnectionError, PulseDisposedError, PulseTimeoutError } from './errors';
-import { createHeartbeat } from './heartbeat';
+import {
+  PulseAbortError,
+  PulseConnectionError,
+  PulseDisposedError,
+  PulseError,
+  PulseProtocolError,
+  PulseTimeoutError,
+} from './errors';
+import { createHeartbeat, type HeartbeatHandle } from './heartbeat';
 import { createPresence } from './presence';
 import {
   type DecodedInFrame,
@@ -27,20 +34,16 @@ import {
   decodeValidated,
   encode,
 } from './protocol';
-import { createReconnect } from './reconnect';
-
-// ─── Internal routing map ─────────────────────────────────────────────────────
 
 type Handler = (payload: unknown) => void;
+type RoomOperation = 'join' | 'leave';
+type RoomWaiter = { reject(error: PulseError): void; resolve(): void };
+type PendingRoom = { callbacks: Set<RoomWaiter>; next?: PendingRoom; operation: RoomOperation };
 
-/**
- * A two-level listener map: channel (null = root) → event → Set<handler>.
- * @internal
- */
 class ListenerMap {
   private readonly map = new Map<string | null, Map<string, Set<Handler>>>();
 
-  add(channel: string | null, event: string, handler: Handler): () => void {
+  add(channel: string | null, event: string, handler: Handler): Unsubscribe {
     let events = this.map.get(channel);
 
     if (!events) {
@@ -66,441 +69,433 @@ class ListenerMap {
     };
   }
 
-  dispatch(channel: string | null, event: string, payload: unknown): void {
-    this.map
-      .get(channel)
-      ?.get(event)
-      ?.forEach((h) => h(payload));
-  }
-
   clear(): void {
     this.map.clear();
   }
+
+  dispatch(channel: string | null, event: string, payload: unknown): void {
+    for (const handler of this.map.get(channel)?.get(event) ?? []) handler(payload);
+  }
 }
 
-// ─── createPulse ──────────────────────────────────────────────────────────────
-
 /**
- * Create a managed WebSocket connection with typed messaging, channels,
- * rooms, and presence.
- *
- * @example
- * ```ts
- * const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws', {
- *   reconnect: true,
- *   heartbeat: true,
- * });
- * pulse.on('message', (data) => console.log(data));
- * ```
+ * Create a typed, explicitly connected WebSocket client with scoped channels,
+ * rooms, presence, reconnect, and heartbeat support.
  */
-export function createPulse<TServer extends MessageMap = MessageMap, TClient extends MessageMap = MessageMap>(
-  url: string,
-  opts: PulseOptions = {},
-): Pulse<TServer, TClient> {
-  // ── State ──────────────────────────────────────────────────────────────────
-
+export function createPulse<
+  TServer extends MessageMap = MessageMap,
+  TClient extends MessageMap = MessageMap,
+  TChannels extends ChannelDefinitions = ChannelDefinitions,
+  TPresence extends PresenceDefinitions = PresenceDefinitions,
+>(url: string, options: PulseOptions = {}): Pulse<TServer, TClient, TChannels, TPresence> {
   const disposalCtrl = new AbortController();
-  const status = signal<PulseStatus>('connecting');
+  const status = signal<PulseStatus>('closed');
   const rooms = signal<ReadonlySet<string>>(new Set());
   const listeners = new ListenerMap();
-  const middleware: readonly Middleware[] = opts.middleware ?? [];
+  const channelReferences = new Map<string, number>();
+  const presenceReferences = new Map<string, number>();
+  const manualRooms = new Set<string>();
+  const localPresence = new Map<string, unknown>();
+  const presenceResetters = new Map<string, Set<() => void>>();
+  const pendingRooms = new Map<string, PendingRoom>();
 
-  const pendingJoins = new Map<string, Set<() => void>>();
-  const pendingLeaves = new Map<string, Set<() => void>>();
-
-  let ws: WebSocket | null = null;
   let disposed = false;
-  let intentionalClose = false;
 
-  const pendingOpens: Array<{ reject: (e: Error) => void; resolve: () => void }> = [];
+  function report(error: PulseError): void {
+    options.onError?.(error);
+  }
 
-  // Memoized channel cache — same name returns the same object
-  const channelCache = new Map<string, PulseChannel<MessageMap, MessageMap>>();
-  // Memoized presence cache — same room returns the same object
-  const presenceCache = new Map<string, PresenceChannel<unknown>>();
+  function sendInternal(frame: string): void {
+    connection.send(frame);
+  }
 
-  // Message buffer (null = disabled)
-  const bufferCfg = opts.buffer;
-  const buffer: string[] | null = bufferCfg ? [] : null;
-  const bufferMaxSize: number = typeof bufferCfg === 'object' && bufferCfg !== null ? (bufferCfg.maxSize ?? 50) : 50;
+  function desiredRoom(room: string): boolean {
+    return manualRooms.has(room) || (presenceReferences.get(room) ?? 0) > 0;
+  }
 
-  // ── Reconnect / Heartbeat ──────────────────────────────────────────────────
+  function setRoom(room: string, joined: boolean): void {
+    const next = new Set(rooms.value);
 
-  const reconnect = createReconnect(opts.reconnect);
+    if (joined) next.add(room);
+    else next.delete(room);
 
-  const heartbeat = createHeartbeat(
-    opts.heartbeat,
+    rooms.value = next;
+  }
+
+  function resetRemoteSession(): void {
+    rooms.value = new Set();
+
+    for (const resetters of presenceResetters.values()) {
+      for (const reset of resetters) reset();
+    }
+  }
+
+  function rejectPendingRooms(error: PulseError, reportFailure = true): void {
+    let rejected = false;
+
+    for (const [room, firstPending] of pendingRooms) {
+      let pending: PendingRoom | undefined = firstPending;
+
+      while (pending) {
+        if (pending.operation === 'join') manualRooms.delete(room);
+
+        for (const waiter of pending.callbacks) {
+          waiter.reject(error);
+          rejected = true;
+        }
+
+        pending = pending.next;
+      }
+    }
+
+    pendingRooms.clear();
+
+    if (rejected && reportFailure) report(error);
+  }
+
+  function handleTransportClose(): void {
+    heartbeat.stop();
+    resetRemoteSession();
+    rejectPendingRooms(new PulseConnectionError('Connection closed before room confirmation', url));
+  }
+
+  function restoreSession(): void {
+    for (const channel of channelReferences.keys()) {
+      sendInternal(encode({ channel, type: 'subscribe' }));
+    }
+
+    for (const room of new Set([...manualRooms, ...presenceReferences.keys()])) {
+      if (desiredRoom(room)) sendInternal(encode({ room, type: 'join' }));
+    }
+
+    for (const [room, state] of localPresence) {
+      if (desiredRoom(room)) sendInternal(encode({ room, state, type: 'presence' }));
+    }
+  }
+
+  const connection = createConnection(url, options.protocols, options.reconnect, {
+    onClose() {
+      handleTransportClose();
+    },
+    onError: report,
+    onMessage(event) {
+      let decoded: DecodedInFrame;
+
+      try {
+        decoded = decodeValidated(event.data);
+      } catch (error) {
+        report(
+          error instanceof PulseProtocolError ? error : new PulseProtocolError('Failed to decode frame', event.data),
+        );
+
+        return;
+      }
+
+      if (decoded.kind === 'unknown') {
+        report(new PulseProtocolError(`Unknown frame type "${decoded.type}"`, event.data));
+
+        return;
+      }
+
+      try {
+        handleFrame(decoded);
+      } catch (error) {
+        report(new PulseProtocolError('Frame handler threw', decoded.frame, { cause: error }));
+      }
+    },
+    onOpen() {
+      restoreSession();
+      heartbeat.start();
+    },
+    onStatus(nextStatus) {
+      status.value = nextStatus;
+    },
+  });
+
+  const heartbeat: HeartbeatHandle = createHeartbeat(
+    options.heartbeat,
     (frame) => {
-      if (ws?.readyState === WebSocket.OPEN) ws.send(frame);
+      if (connection.open) sendInternal(frame);
     },
-    () => {
-      warn('Heartbeat dead — closing socket for reconnect');
-      ws?.close(4000, 'heartbeat timeout');
-    },
+    () => connection.forceReconnect(4000, 'heartbeat timeout'),
   );
 
-  // ── Raw send helper ────────────────────────────────────────────────────────
+  function resolvePendingRoom(room: string, operation: RoomOperation): void {
+    const pending = pendingRooms.get(room);
 
-  function rawSend(frame: string): void {
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(frame);
-    } else if (buffer !== null) {
-      if (buffer.length >= bufferMaxSize) buffer.shift();
+    if (!pending || pending.operation !== operation) return;
 
-      buffer.push(frame);
-    } else {
-      warn(`send() called while connection is ${status.value} — message dropped`);
-    }
-  }
+    for (const waiter of pending.callbacks) waiter.resolve();
 
-  // ── Middleware pipeline ────────────────────────────────────────────────────
+    const nextPending = pending.next;
 
-  function runMiddleware(event: string, payload: unknown, final: () => void): void {
-    let idx = 0;
+    if (!nextPending) {
+      pendingRooms.delete(room);
 
-    function next(): void {
-      if (idx >= middleware.length) {
-        final();
+      const followUpOperation =
+        operation === 'join' && !desiredRoom(room)
+          ? 'leave'
+          : operation === 'leave' && desiredRoom(room)
+            ? 'join'
+            : undefined;
 
-        return;
+      if (followUpOperation) {
+        const followUpPending: PendingRoom = { callbacks: new Set<RoomWaiter>(), operation: followUpOperation };
+
+        pendingRooms.set(room, followUpPending);
+
+        try {
+          sendInternal(encode({ room, type: followUpOperation }));
+        } catch (error) {
+          pendingRooms.delete(room);
+
+          if (followUpOperation === 'join') manualRooms.delete(room);
+
+          report(error instanceof PulseError ? error : new PulseConnectionError('Failed to send room request', url));
+        }
       }
-
-      const mw = middleware[idx++]!;
-
-      mw(event, payload, next);
-    }
-
-    next();
-  }
-
-  // ── WebSocket lifecycle ────────────────────────────────────────────────────
-
-  function openSocket(): void {
-    if (disposed) return;
-
-    ws = new WebSocket(url, opts.protocols);
-
-    ws.onopen = (): void => {
-      intentionalClose = false;
-      status.value = 'open';
-      reconnect.reset();
-      heartbeat.start();
-      opts.onOpen?.();
-
-      const pending = pendingOpens.splice(0);
-
-      for (const p of pending) p.resolve();
-
-      if (buffer && buffer.length > 0) {
-        const queued = buffer.splice(0);
-
-        for (const f of queued) ws!.send(f);
-      }
-
-      for (const name of channelCache.keys()) {
-        ws!.send(encode({ channel: name, type: 'subscribe' }));
-      }
-    };
-
-    ws.onmessage = (ev: MessageEvent): void => {
-      opts.onMessage?.(ev);
-
-      let frame: DecodedInFrame;
-
-      try {
-        frame = decodeValidated(ev.data);
-      } catch (err) {
-        warn(`Protocol error: ${String(err)}`);
-
-        return;
-      }
-
-      try {
-        handleFrame(frame);
-      } catch (err) {
-        warn(`Frame handling error: ${String(err)}`);
-      }
-    };
-
-    ws.onerror = (): void => {
-      if (opts.onError) {
-        opts.onError(new PulseConnectionError('WebSocket error', url));
-      } else {
-        warn('WebSocket error — pass onError to observe it (see onClose for recovery logic)');
-      }
-
-      const pending = pendingOpens.splice(0);
-
-      for (const p of pending) p.reject(new PulseConnectionError('WebSocket error', url));
-    };
-
-    ws.onclose = (ev: CloseEvent): void => {
-      heartbeat.stop();
-      opts.onClose?.(ev.code, ev.reason);
-
-      const pending = pendingOpens.splice(0);
-
-      for (const p of pending) p.reject(new PulseConnectionError('Connection closed before open', url));
-
-      if (intentionalClose || disposed) {
-        status.value = 'closed';
-
-        return;
-      }
-
-      handleUnexpectedClose();
-    };
-  }
-
-  async function handleUnexpectedClose(): Promise<void> {
-    status.value = 'reconnecting';
-
-    const result = await reconnect.attempt(
-      () =>
-        new Promise<void>((resolve, reject) => {
-          pendingOpens.push({ reject, resolve });
-          openSocket();
-        }),
-      disposalCtrl.signal,
-      opts.onReconnect,
-    );
-
-    if (!result.ok && !disposed) {
-      if (result.error) {
-        warn(`Reconnect attempt failed: ${String(result.error)}`);
-      }
-
-      warn('Reconnect budget exhausted — connection permanently closed');
-      status.value = 'closed';
-    }
-  }
-
-  // ── Frame routing ──────────────────────────────────────────────────────────
-
-  function handleFrame(decoded: DecodedInFrame): void {
-    if (decoded.kind === 'unknown') {
-      warn(`Received frame with an unrecognized type: ${decoded.type}`);
 
       return;
     }
 
+    pendingRooms.set(room, nextPending);
+
+    try {
+      sendInternal(encode({ room, type: nextPending.operation }));
+    } catch (error) {
+      pendingRooms.delete(room);
+
+      if (nextPending.operation === 'join') manualRooms.delete(room);
+
+      for (const waiter of nextPending.callbacks) {
+        waiter.reject(
+          error instanceof PulseError ? error : new PulseConnectionError('Failed to send room request', url),
+        );
+      }
+    }
+  }
+
+  function handleFrame(decoded: Extract<DecodedInFrame, { kind: 'known' }>): void {
     const frame = decoded.frame;
 
     switch (frame.type) {
       case 'error':
-        warn(`Server error [${frame.code}]: ${frame.message}`);
+        report(new PulseProtocolError(`Server error [${frame.code}]: ${frame.message}`, frame));
 
         break;
+      case 'joined':
+        if (desiredRoom(frame.room)) setRoom(frame.room, true);
 
-      case 'joined': {
-        const next = new Set(rooms.value);
-
-        next.add(frame.room);
-        rooms.value = next;
-
-        const joinCbs = pendingJoins.get(frame.room);
-
-        if (joinCbs) {
-          pendingJoins.delete(frame.room);
-
-          for (const cb of joinCbs) cb();
-        }
+        resolvePendingRoom(frame.room, 'join');
 
         break;
-      }
-
-      case 'left': {
-        const next = new Set(rooms.value);
-
-        next.delete(frame.room);
-        rooms.value = next;
-
-        const leaveCbs = pendingLeaves.get(frame.room);
-
-        if (leaveCbs) {
-          pendingLeaves.delete(frame.room);
-
-          for (const cb of leaveCbs) cb();
-        }
+      case 'left':
+        setRoom(frame.room, false);
+        resolvePendingRoom(frame.room, 'leave');
 
         break;
-      }
-
       case 'message':
         listeners.dispatch(frame.channel ?? null, frame.event, frame.payload);
 
         break;
-
       case 'pong':
         heartbeat.onPong();
 
         break;
-
       case 'presence_join':
-        listeners.dispatch(null, frame.type, frame);
-
-        break;
-
       case 'presence_leave':
-        listeners.dispatch(null, frame.type, frame);
-
-        break;
-
       case 'presence_state':
         listeners.dispatch(null, frame.type, frame);
 
         break;
-
       case 'subscribed':
       case 'unsubscribed':
         break;
     }
   }
 
-  // ── Shared room confirmation helper ───────────────────────────────────────
-
-  function awaitRoomConfirmation(
-    pending: Map<string, Set<() => void>>,
+  function awaitRoom(
     room: string,
-    frameType: 'join' | 'leave',
-    roomOpts?: { signal?: AbortSignal; timeout?: number },
+    operation: RoomOperation,
+    opts?: { signal?: AbortSignal; timeout?: number },
   ): Promise<void> {
-    if (disposed) return Promise.reject(new PulseDisposedError());
+    if (disposed) {
+      if (operation === 'join') manualRooms.delete(room);
+
+      return Promise.reject(new PulseDisposedError());
+    }
+
+    if (!connection.open) {
+      if (operation === 'join') manualRooms.delete(room);
+
+      return Promise.reject(new PulseConnectionError('Connection is not open', url));
+    }
+
+    const existing = pendingRooms.get(room);
+
+    if (operation === 'join' && rooms.value.has(room) && !existing) return Promise.resolve();
+
+    if (operation === 'leave' && !rooms.value.has(room) && !existing) return Promise.resolve();
+
+    let pending = existing;
+
+    if (pending) {
+      while (pending.next) pending = pending.next;
+
+      if (pending.operation !== operation) {
+        const nextPending: PendingRoom = { callbacks: new Set<RoomWaiter>(), operation };
+
+        pending.next = nextPending;
+        pending = nextPending;
+      }
+    } else {
+      pending = { callbacks: new Set<RoomWaiter>(), operation };
+    }
 
     return new Promise((resolve, reject) => {
-      const extraSignals: AbortSignal[] = [];
+      const timeoutCtrl = opts?.timeout === undefined ? undefined : new AbortController();
+      const signal =
+        opts?.signal && timeoutCtrl
+          ? AbortSignal.any([opts.signal, timeoutCtrl.signal])
+          : (opts?.signal ?? timeoutCtrl?.signal);
+      const timeoutId = opts?.timeout === undefined ? undefined : setTimeout(() => timeoutCtrl?.abort(), opts.timeout);
+      const waiter: RoomWaiter = {
+        reject(error) {
+          clearTimeout(timeoutId);
+          signal?.removeEventListener('abort', rejectRoom);
+          reject(error);
+        },
+        resolve() {
+          clearTimeout(timeoutId);
+          signal?.removeEventListener('abort', rejectRoom);
+          resolve();
+        },
+      };
+      const rejectRoom = (): void => {
+        pending.callbacks.delete(waiter);
 
-      if (roomOpts?.signal) extraSignals.push(roomOpts.signal);
+        if (pending.callbacks.size === 0 && operation === 'join') manualRooms.delete(room);
 
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        waiter.reject(timeoutCtrl?.signal.aborted ? new PulseTimeoutError(operation) : new PulseAbortError());
+      };
 
-      if (roomOpts?.timeout !== undefined) {
-        const tc = new AbortController();
-
-        timeoutId = setTimeout(() => tc.abort(new PulseTimeoutError(frameType)), roomOpts.timeout);
-        extraSignals.push(tc.signal);
-      }
-
-      const sig =
-        extraSignals.length === 0 ? disposalCtrl.signal : combineSignals(disposalCtrl.signal, ...extraSignals);
-
-      if (sig.aborted) {
-        clearTimeout(timeoutId);
-        reject(sig.reason instanceof PulseTimeoutError ? sig.reason : new PulseAbortError());
+      if (signal?.aborted) {
+        rejectRoom();
 
         return;
       }
 
-      let onAbort: () => void = () => {};
+      pending.callbacks.add(waiter);
+      signal?.addEventListener('abort', rejectRoom, { once: true });
 
-      const onConfirm = (): void => {
-        clearTimeout(timeoutId);
-        sig.removeEventListener('abort', onAbort);
-        resolve();
-      };
+      if (existing) return;
 
-      onAbort = (): void => {
-        clearTimeout(timeoutId);
+      pendingRooms.set(room, pending);
 
-        const set = pending.get(room);
+      try {
+        sendInternal(encode({ room, type: operation }));
+      } catch (error) {
+        pending.callbacks.delete(waiter);
 
-        set?.delete(onConfirm);
+        if (pending.callbacks.size === 0) pendingRooms.delete(room);
 
-        if (set?.size === 0) pending.delete(room);
-
-        reject(sig.reason instanceof PulseTimeoutError ? sig.reason : new PulseAbortError());
-      };
-
-      let pendingSet = pending.get(room);
-      const shouldSendFrame = !pendingSet;
-
-      if (!pendingSet) {
-        pendingSet = new Set();
-        pending.set(room, pendingSet);
-      }
-
-      pendingSet.add(onConfirm);
-      sig.addEventListener('abort', onAbort, { once: true });
-
-      const sendFrame = (): void => rawSend(encode({ room, type: frameType }));
-
-      if (!shouldSendFrame) return;
-
-      if (ws?.readyState === WebSocket.OPEN) {
-        sendFrame();
-      } else {
-        pulse
-          .connect()
-          .then(sendFrame)
-          .catch((err: unknown) => {
-            clearTimeout(timeoutId);
-            sig.removeEventListener('abort', onAbort);
-
-            const set = pending.get(room);
-
-            set?.delete(onConfirm);
-
-            if (set?.size === 0) pending.delete(room);
-
-            reject(err);
-          });
+        waiter.reject(
+          error instanceof PulseError ? error : new PulseConnectionError('Failed to send room request', url),
+        );
       }
     });
   }
 
-  // ── Public API ─────────────────────────────────────────────────────────────
+  function acquireChannel(name: string): void {
+    const references = channelReferences.get(name) ?? 0;
 
-  const pulse: Pulse<TServer, TClient> = {
-    channel<TChServer extends MessageMap = TServer, TChClient extends MessageMap = TClient>(
-      name: string,
-    ): PulseChannel<TChServer, TChClient> {
-      const cached = channelCache.get(name);
+    channelReferences.set(name, references + 1);
 
-      if (cached) return cached as PulseChannel<TChServer, TChClient>;
+    if (references === 0 && connection.open) sendInternal(encode({ channel: name, type: 'subscribe' }));
+  }
 
-      if (disposed) {
-        warn(`channel('${name}') called on a disposed Pulse — returning an already-disposed channel`);
-      }
+  function releaseChannel(name: string): void {
+    const references = channelReferences.get(name);
 
-      const ch = createChannel<TChServer, TChClient>(
+    if (!references) return;
+
+    if (references > 1) {
+      channelReferences.set(name, references - 1);
+
+      return;
+    }
+
+    channelReferences.delete(name);
+
+    if (connection.open) sendInternal(encode({ channel: name, type: 'unsubscribe' }));
+  }
+
+  function acquirePresence(room: string, reset: () => void): void {
+    const references = presenceReferences.get(room) ?? 0;
+    const resetters = presenceResetters.get(room) ?? new Set<() => void>();
+
+    resetters.add(reset);
+    presenceResetters.set(room, resetters);
+    presenceReferences.set(room, references + 1);
+
+    if (references === 0 && connection.open) sendInternal(encode({ room, type: 'join' }));
+  }
+
+  function releasePresence(room: string, reset: () => void): void {
+    presenceResetters.get(room)?.delete(reset);
+
+    if (presenceResetters.get(room)?.size === 0) presenceResetters.delete(room);
+
+    const references = presenceReferences.get(room);
+
+    if (!references) return;
+
+    if (references > 1) {
+      presenceReferences.set(room, references - 1);
+
+      return;
+    }
+
+    presenceReferences.delete(room);
+    localPresence.delete(room);
+
+    if (!manualRooms.has(room) && connection.open) sendInternal(encode({ room, type: 'leave' }));
+  }
+
+  const pulse: Pulse<TServer, TClient, TChannels, TPresence> = {
+    channel<K extends keyof TChannels & string>(name: K): PulseChannel<TChannels[K]['server'], TChannels[K]['client']> {
+      if (disposed) throw new PulseDisposedError();
+
+      acquireChannel(name);
+
+      return createChannel<TChannels[K]['server'], TChannels[K]['client']>(
         name,
-        (chan, event, payload) => {
-          runMiddleware(event, payload, () => {
-            rawSend(encode({ channel: chan, event, payload, type: 'message' }));
-          });
+        (channel, event, payload) => {
+          const transformed = options.transform
+            ? options.transform({ channel, event, payload })
+            : { channel, event, payload };
+
+          if (transformed === null) return;
+
+          sendInternal(encode({ ...transformed, type: 'message' }));
         },
-        (chan, event, handler) => listeners.add(chan, event, handler),
+        (channel, event, handler) => listeners.add(channel, event, handler),
         disposalCtrl.signal,
-        () => {
-          channelCache.delete(name);
-          rawSend(encode({ channel: name, type: 'unsubscribe' }));
-        },
+        () => releaseChannel(name),
       );
-
-      if (!disposed) channelCache.set(name, ch as PulseChannel<MessageMap, MessageMap>);
-
-      if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(encode({ channel: name, type: 'subscribe' }));
-      }
-
-      return ch;
     },
 
     connect(): Promise<void> {
       if (disposed) return Promise.reject(new PulseDisposedError());
 
-      if (ws?.readyState === WebSocket.OPEN) return Promise.resolve();
-
-      return new Promise((resolve, reject) => {
-        pendingOpens.push({ reject, resolve });
-
-        if (!ws || ws.readyState > WebSocket.OPEN) openSocket();
-      });
+      return connection.connect();
     },
 
     disconnect(code = 1000, reason = ''): void {
-      intentionalClose = true;
-      ws?.close(code, reason);
+      if (disposed) return;
+
+      handleTransportClose();
+      connection.disconnect(code, reason);
     },
 
     get disposalSignal() {
@@ -511,19 +506,16 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       if (disposed) return;
 
       disposed = true;
-      intentionalClose = true;
       heartbeat.stop();
-      ws?.close(1000, 'disposed');
-      ws = null;
-
-      const pending = pendingOpens.splice(0);
-
-      for (const p of pending) p.reject(new PulseDisposedError());
-
-      channelCache.clear();
-      presenceCache.clear();
-      pendingJoins.clear();
-      pendingLeaves.clear();
+      resetRemoteSession();
+      rejectPendingRooms(new PulseDisposedError(), false);
+      connection.dispose();
+      channelReferences.clear();
+      presenceReferences.clear();
+      manualRooms.clear();
+      localPresence.clear();
+      presenceResetters.clear();
+      pendingRooms.clear();
       listeners.clear();
       disposalCtrl.abort();
     },
@@ -532,77 +524,73 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       return disposed;
     },
 
-    join(room: string, roomOpts?: { signal?: AbortSignal; timeout?: number }): Promise<void> {
-      return awaitRoomConfirmation(pendingJoins, room, 'join', roomOpts);
+    join(room: string, opts?: { signal?: AbortSignal; timeout?: number }): Promise<void> {
+      manualRooms.add(room);
+
+      return awaitRoom(room, 'join', opts);
     },
 
-    leave(room: string, roomOpts?: { signal?: AbortSignal; timeout?: number }): Promise<void> {
-      return awaitRoomConfirmation(pendingLeaves, room, 'leave', roomOpts);
+    leave(room: string, opts?: { signal?: AbortSignal; timeout?: number }): Promise<void> {
+      manualRooms.delete(room);
+
+      if (desiredRoom(room)) return Promise.resolve();
+
+      return awaitRoom(room, 'leave', opts);
     },
 
     on<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe {
-      if (disposed) {
-        warn(`on('${String(event)}') called on a disposed Pulse — listener ignored`);
-
-        return () => {};
-      }
+      if (disposed) throw new PulseDisposedError();
 
       return listeners.add(null, event, handler as Handler);
     },
 
     once<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe {
-      if (disposed) {
-        warn(`once('${String(event)}') called on a disposed Pulse — listener ignored`);
+      if (disposed) throw new PulseDisposedError();
 
-        return () => {};
-      }
+      let unsubscribe: Unsubscribe = () => {};
 
-      let unsub: Unsubscribe = () => {};
-
-      const wrapped: Handler = (payload) => {
-        unsub();
+      unsubscribe = listeners.add(null, event, (payload) => {
+        unsubscribe();
         (handler as Handler)(payload);
-      };
+      });
 
-      unsub = listeners.add(null, event, wrapped);
-
-      return unsub;
+      return unsubscribe;
     },
 
-    presence<T>(room: string): PresenceChannel<T> {
-      const cached = presenceCache.get(room);
+    presence<K extends keyof TPresence & string>(room: K): PresenceChannel<TPresence[K]> {
+      if (disposed) throw new PulseDisposedError();
 
-      if (cached) return cached as PresenceChannel<T>;
+      let reset: (() => void) | undefined;
 
-      const ch = createPresence<T>(
+      const presence = createPresence<TPresence[K]>(
         room,
-        rawSend,
+        (presenceRoom, state) => {
+          sendInternal(encode({ room: presenceRoom, state, type: 'presence' }));
+          localPresence.set(presenceRoom, state);
+        },
         {
-          onJoin: (handler) => listeners.add(null, 'presence_join', (p) => handler(p as InPresenceJoinFrame)),
-          onLeave: (handler) => listeners.add(null, 'presence_leave', (p) => handler(p as InPresenceLeaveFrame)),
-          onState: (handler) => listeners.add(null, 'presence_state', (p) => handler(p as InPresenceStateFrame)),
+          onJoin: (handler) => listeners.add(null, 'presence_join', (value) => handler(value as InPresenceJoinFrame)),
+          onLeave: (handler) =>
+            listeners.add(null, 'presence_leave', (value) => handler(value as InPresenceLeaveFrame)),
+          onState: (handler) =>
+            listeners.add(null, 'presence_state', (value) => handler(value as InPresenceStateFrame)),
         },
         disposalCtrl.signal,
-        () => {
-          presenceCache.delete(room);
+        (createdReset) => {
+          reset = createdReset;
         },
+        () => release(),
       );
 
-      if (!disposed) {
-        presenceCache.set(room, ch as PresenceChannel<unknown>);
-      }
+      const resetPresence = reset;
 
-      if (disposed) {
-        warn(`presence('${room}') called on a disposed Pulse — returning an already-disposed presence channel`);
-      } else {
-        pulse.join(room).catch((err: unknown) => {
-          if (err instanceof PulseAbortError || err instanceof PulseDisposedError) return;
+      if (!resetPresence) throw new Error('Presence reset callback was not initialized');
 
-          warn(`presence() join failed for room '${room}': ${String(err)}`);
-        });
-      }
+      const release = () => releasePresence(room, resetPresence);
 
-      return ch;
+      acquirePresence(room, resetPresence);
+
+      return presence;
     },
 
     get rooms() {
@@ -610,15 +598,13 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
     },
 
     send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void {
-      if (disposed) {
-        warn(`send('${String(event)}') called on a disposed Pulse — message dropped`);
+      if (disposed) throw new PulseDisposedError();
 
-        return;
-      }
+      const transformed = options.transform ? options.transform({ event, payload }) : { event, payload };
 
-      runMiddleware(event, payload, () => {
-        rawSend(encode({ event, payload, type: 'message' }));
-      });
+      if (transformed === null) return;
+
+      sendInternal(encode({ ...transformed, type: 'message' }));
     },
 
     get status() {
@@ -631,15 +617,13 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
 
     wait<K extends EventKey<TServer>>(
       event: K,
-      waitOpts?: { signal?: AbortSignal; timeout?: number },
+      opts?: { signal?: AbortSignal; timeout?: number },
     ): Promise<TServer[K]> {
-      return createWaitPromise<TServer[K]>(event as string, disposalCtrl.signal, waitOpts, (ev, handler) =>
-        listeners.add(null, ev, handler),
+      return createWaitPromise<TServer[K]>(event, disposalCtrl.signal, opts, (waitEvent, handler) =>
+        listeners.add(null, waitEvent, handler),
       );
     },
   };
-
-  if (!opts.lazy) openSocket();
 
   return pulse;
 }

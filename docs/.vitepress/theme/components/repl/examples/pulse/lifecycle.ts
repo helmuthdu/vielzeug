@@ -5,17 +5,23 @@ export const lifecycleExample = {
 const pulse = createPulse('wss://api.example.com/ws', {
   reconnect: { delay: 1_000, maxAttempts: 3 },
   heartbeat: { interval: 30_000, timeout: 5_000 },
-  onOpen:  () => console.log('connected'),
-  onClose: (code, reason) => console.log('closed', code, reason),
+  onError: (error) => console.log('Pulse error:', error.message),
 })
 
-// status is a reactive signal: 'connecting' | 'open' | 'reconnecting' | 'closed'
+// Construction is closed. connect() makes the transport available.
 console.log('initial status:', pulse.status.value)
 
 // disposalSignal aborts when dispose() is called
 pulse.disposalSignal.addEventListener('abort', () => {
   console.log('disposal signal fired')
 })
+
+try {
+  await pulse.connect()
+  console.log('connected:', pulse.status.value)
+} catch (err) {
+  console.log('connect failed:', err.message)
+}
 
 // dispose() is idempotent — safe to call multiple times
 pulse.dispose()

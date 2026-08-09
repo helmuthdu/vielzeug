@@ -2,11 +2,11 @@ import { type Signal, signal } from '@vielzeug/ripple';
 
 import type { PresenceChannel, Unsubscribe } from './types';
 
-import { warn } from './_dev';
 import { deriveAbortController } from './_utils';
-import { type InPresenceJoinFrame, type InPresenceLeaveFrame, type InPresenceStateFrame, encode } from './protocol';
+import { PulseDisposedError } from './errors';
+import { type InPresenceJoinFrame, type InPresenceLeaveFrame, type InPresenceStateFrame } from './protocol';
 
-type RawSendFn = (frame: string) => void;
+type UpdateFn<T> = (room: string, state: T) => void;
 
 export type PresenceEvents = {
   onJoin(handler: (frame: InPresenceJoinFrame) => void): Unsubscribe;
@@ -20,9 +20,10 @@ export type PresenceEvents = {
  */
 export function createPresence<T>(
   room: string,
-  rawSend: RawSendFn,
+  update: UpdateFn<T>,
   events: PresenceEvents,
   disposalSignal: AbortSignal,
+  registerReset?: (reset: () => void) => void,
   onDispose?: () => void,
 ): PresenceChannel<T> {
   const ctrl = deriveAbortController(disposalSignal);
@@ -38,6 +39,11 @@ export function createPresence<T>(
   );
 
   const members: Signal<Map<string, T>> = signal(new Map<string, T>());
+
+  registerReset?.(() => {
+    members.value = new Map<string, T>();
+  });
+
   const joinHandlers = new Set<(memberId: string, state: T) => void>();
   const leaveHandlers = new Set<(memberId: string) => void>();
 
@@ -88,7 +94,6 @@ export function createPresence<T>(
       if (disposed) return;
 
       disposed = true;
-      rawSend(encode({ room, type: 'leave' }));
       ctrl.abort();
 
       for (const unsub of unsubs) unsub();
@@ -105,9 +110,7 @@ export function createPresence<T>(
 
     onJoin(handler: (memberId: string, state: T) => void): Unsubscribe {
       if (disposed) {
-        warn(`onJoin() called on a disposed presence channel '${room}' — listener ignored`);
-
-        return () => {};
+        throw new PulseDisposedError(`Presence "${room}"`);
       }
 
       joinHandlers.add(handler);
@@ -117,9 +120,7 @@ export function createPresence<T>(
 
     onLeave(handler: (memberId: string) => void): Unsubscribe {
       if (disposed) {
-        warn(`onLeave() called on a disposed presence channel '${room}' — listener ignored`);
-
-        return () => {};
+        throw new PulseDisposedError(`Presence "${room}"`);
       }
 
       leaveHandlers.add(handler);
@@ -140,9 +141,9 @@ export function createPresence<T>(
     },
 
     update(state: T): void {
-      if (disposed) return;
+      if (disposed) throw new PulseDisposedError(`Presence "${room}"`);
 
-      rawSend(encode({ room, state, type: 'presence' }));
+      update(room, state);
     },
   };
 

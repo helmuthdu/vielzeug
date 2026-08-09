@@ -1,93 +1,47 @@
 ---
 title: 'Pulse Examples — Basic Connection'
-description: 'Basic connection lifecycle example for @vielzeug/pulse.'
+description: 'Explicit connection lifecycle example for @vielzeug/pulse.'
 ---
 
 ## Basic Connection
 
 ### Problem
 
-You need to open a typed WebSocket connection, receive server events, send client events, react to connection status changes, and clean up reliably on component or module teardown.
+You need one typed session whose messages are sent only after the transport is ready and whose lifecycle can be cleaned up deterministically.
 
 ### Solution
 
-Use `createPulse()` with typed `ServerEvents` and `ClientEvents` maps. Subscribe to status via a ripple `effect()` and call `dispose()` — or use a `using` declaration — for cleanup.
+Subscribe before connecting, then await `connect()` before sending.
 
 ```ts
 import { createPulse } from '@vielzeug/pulse';
-import { effect } from '@vielzeug/ripple';
 
-type ServerEvents = {
-  'chat:message': { user: string; text: string };
-  'user:joined': { userId: string };
-  'user:left': { userId: string };
-};
+type ServerEvents = { 'chat:message': { text: string } };
+type ClientEvents = { 'chat:send': { text: string } };
 
-type ClientEvents = {
-  'chat:send': { text: string };
-};
-
-// Connection opens immediately
 const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws', {
-  onOpen: () => console.log('connection established'),
-  onClose: (code, reason) => console.log('closed', code, reason),
+  onError: (error) => console.error(error),
+  reconnect: true,
 });
 
-// React to status changes
-effect(() => {
-  const el = document.querySelector('#status')!;
-  el.textContent = pulse.status.value;
-  el.dataset.open = String(pulse.status.value === 'open');
-});
+const stop = pulse.on('chat:message', ({ text }) => console.log(text));
 
-// Subscribe to typed server events
-const unsubChat = pulse.on('chat:message', ({ user, text }) => {
-  appendMessage(user, text);
-});
-
-pulse.on('user:joined', ({ userId }) => showToast(`${userId} joined`));
-pulse.on('user:left', ({ userId }) => showToast(`${userId} left`));
-
-// One-shot: await the first message before rendering the chat UI
-const firstMessage = await pulse.wait('chat:message', { timeout: 10_000 });
-renderChatUI(firstMessage);
-
-// Send a typed client event
-document.querySelector('#send-btn')!.addEventListener('click', () => {
-  const input = document.querySelector<HTMLInputElement>('#msg')!;
-  pulse.send('chat:send', { text: input.value });
-  input.value = '';
-});
-
-// Explicit cleanup when the page/component unmounts
-function teardown() {
-  unsubChat(); // optional — pulse.dispose() also removes all listeners
-  pulse.dispose();
+try {
+  await pulse.connect();
+  pulse.send('chat:send', { text: 'Hello!' });
+} catch (error) {
+  console.error('Pulse connection failed:', error);
 }
-```
 
-#### With `using` (TypeScript 5.2+)
-
-When you want automatic cleanup at block or function exit:
-
-```ts
-import { createPulse } from '@vielzeug/pulse';
-
-async function startSession() {
-  using pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws');
-
-  pulse.on('chat:message', ({ user, text }) => appendMessage(user, text));
-
-  await pulse.wait('user:joined', { timeout: 30_000 });
-  console.log('someone joined the session');
-} // dispose() called automatically here
+stop();
+pulse.dispose();
 ```
 
 ### Pitfalls
 
-- **`send()` is a no-op before the socket is open.** If you need to send immediately on construction, `await pulse.connect()` first.
-- **Disposing does not buffer pending messages.** Any `send()` call after `dispose()` is silently dropped.
-- **Multiple instances = multiple sockets.** Create one `createPulse` instance per URL and share it across your application.
+- **Construction does not connect.** Always await `connect()` before sending.
+- **Sends do not buffer.** Disconnected sends throw `PulseConnectionError`.
+- **`disconnect()` cancels retries.** Call `connect()` again to begin a new session.
 
 ### Related
 

@@ -1,10 +1,5 @@
 import type { Readable } from '@vielzeug/ripple';
 
-// ─── Utility types ─────────────────────────────────────────────────────────────
-
-/** A read-only view of a Map — callers cannot mutate the entries. */
-export type ReadonlyMap<K, V> = Omit<Map<K, V>, 'clear' | 'delete' | 'set'>;
-
 // ─── Core map types ────────────────────────────────────────────────────────────
 
 /** A map of event name → payload type. Use as the generic parameter for Pulse. */
@@ -44,67 +39,31 @@ export type HeartbeatOptions = {
   timeout?: number;
 };
 
-// ─── Middleware ────────────────────────────────────────────────────────────────
+/** An outgoing application message before it is serialized. Return `null` to drop it. */
+export type OutgoingMessage = { channel?: string; event: string; payload: unknown };
 
-/**
- * Intercepts outgoing messages. Call `next()` to allow the message to be sent;
- * omit to suppress it.
- */
-export type Middleware = (event: string, payload: unknown, next: () => void) => void;
+/** Transform or filter outgoing application messages. Internal protocol frames bypass this hook. */
+export type OutgoingTransform = (message: Readonly<OutgoingMessage>) => OutgoingMessage | null;
 
-// ─── Buffer ────────────────────────────────────────────────────────────────────
+/** Server and client event maps for one named channel. */
+export type ChannelDefinition = { client: MessageMap; server: MessageMap };
 
-export type BufferOptions = {
-  /**
-   * Maximum number of outgoing frames to buffer while disconnected.
-   * Oldest frames are evicted when the buffer is full. Default: 50.
-   */
-  maxSize?: number;
-};
+/** Named channel schemas supplied when creating Pulse. */
+export type ChannelDefinitions = Record<string, ChannelDefinition>;
+
+/** Named presence-state schemas supplied when creating Pulse. */
+export type PresenceDefinitions = Record<string, unknown>;
 
 // ─── Options ───────────────────────────────────────────────────────────────────
 
 export type PulseOptions = {
   /**
-   * Buffer outgoing messages while the connection is not open, then flush on
-   * reconnect. `true` uses defaults (`maxSize: 50`). `false` disables (default).
-   * Dropped messages are discarded with a dev warning when buffering is off.
-   */
-  buffer?: boolean | BufferOptions;
-  /**
    * Heartbeat ping/pong keep-alive.
    * `true` uses defaults. `false` disables. Default: `false`.
    */
   heartbeat?: boolean | HeartbeatOptions;
-  /**
-   * Defer the initial WebSocket connection until `connect()` is called explicitly.
-   * Default: `false` (connects immediately on creation).
-   */
-  lazy?: boolean;
-  /**
-   * Middleware functions run on every outgoing `send()`, before the message is
-   * written to the socket. Call `next()` to proceed or omit to suppress.
-   */
-  middleware?: readonly Middleware[];
-  /** Called when the connection is closed by either side. */
-  onClose?: (code: number, reason: string) => void;
-  /**
-   * Called on a WebSocket error event. Note: WebSocket errors almost always
-   * precede a close event — use `onClose` for recovery logic.
-   */
-  onError?: (error: Error) => void;
-  /**
-   * Called with every raw `MessageEvent` before any parsing occurs.
-   * Useful for low-level debugging.
-   */
-  onMessage?: (event: MessageEvent) => void;
-  /** Called when the connection is established (or re-established). */
-  onOpen?: () => void;
-  /**
-   * Called at the start of each reconnect attempt.
-   * `attempt` is 1-based (1 = first retry).
-   */
-  onReconnect?: (attempt: number) => void;
+  /** Receives typed transport and protocol failures. */
+  onError?: (error: import('./errors').PulseError) => void;
   /** Sub-protocols to pass to the WebSocket constructor. */
   protocols?: string | string[];
   /**
@@ -112,17 +71,19 @@ export type PulseOptions = {
    * `true` uses defaults. `false` disables. Default: `false`.
    */
   reconnect?: boolean | ReconnectOptions;
+  /** Transform or filter application messages before serialization. */
+  transform?: OutgoingTransform;
 };
 
 // ─── Channel ───────────────────────────────────────────────────────────────────
 
 /**
  * An isolated message namespace multiplexed over the shared WebSocket connection.
- * Obtain one via `pulse.channel(name)`. Multiple calls with the same name return
- * the **same** channel object — dispose it once to fully remove the subscription.
+ * Obtain one via `pulse.channel(name)`. Each call returns an independent scope;
+ * the server subscription remains active until every scope is disposed.
  *
  * @example
- * const notif = pulse.channel<{ alert: string }>('notifications');
+ * const notif = pulse.channel('notifications');
  * notif.on('alert', (msg) => console.log(msg));
  * notif.send('alert', 'Hello!');
  */
@@ -131,7 +92,7 @@ export type PulseChannel<TServer extends MessageMap = MessageMap, TClient extend
   [Symbol.dispose](): void;
   /** `AbortSignal` aborted when `dispose()` is called. */
   readonly disposalSignal: AbortSignal;
-  /** Permanently unsubscribes all listeners and prevents future sends. */
+  /** Releases this scope's listeners and subscription reference. */
   dispose(): void;
   /** Whether this channel has been disposed. */
   readonly disposed: boolean;
@@ -146,7 +107,7 @@ export type PulseChannel<TServer extends MessageMap = MessageMap, TClient extend
   once<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe;
   /**
    * Send a typed message to the server, scoped to this channel.
-   * No-op if the pulse connection is not open and buffering is disabled.
+   * Throws `PulseConnectionError` unless the connection is open.
    */
   send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void;
   /**
@@ -163,7 +124,7 @@ export type PulseChannel<TServer extends MessageMap = MessageMap, TClient extend
  * Obtain one via `pulse.presence(room)`.
  *
  * @example
- * const lobby = pulse.presence<{ name: string; status: string }>('lobby');
+ * const lobby = pulse.presence('lobby');
  * effect(() => console.log('Online:', [...lobby.state.value.keys()]));
  * lobby.update({ name: 'Alice', status: 'online' });
  */
@@ -172,7 +133,7 @@ export type PresenceChannel<T = unknown> = {
   [Symbol.dispose](): void;
   /** `AbortSignal` aborted when `dispose()` is called. */
   readonly disposalSignal: AbortSignal;
-  /** Permanently stops tracking. Sends a leave frame to the server. */
+  /** Releases this scope's listeners and room reference. */
   dispose(): void;
   /** Whether this presence channel has been disposed. */
   readonly disposed: boolean;
@@ -192,33 +153,35 @@ export type PresenceChannel<T = unknown> = {
   readonly state: Readable<ReadonlyMap<string, T>>;
   /**
    * Broadcast this client's presence state to all room members.
-   * Calling this also implicitly joins the room if not already joined.
+   * Throws `PulseConnectionError` unless the connection is open.
    */
   update(state: T): void;
 };
 
 // ─── Main Pulse interface ──────────────────────────────────────────────────────
 
-export type Pulse<TServer extends MessageMap = MessageMap, TClient extends MessageMap = MessageMap> = {
+export type Pulse<
+  TServer extends MessageMap = MessageMap,
+  TClient extends MessageMap = MessageMap,
+  TChannels extends ChannelDefinitions = ChannelDefinitions,
+  TPresence extends PresenceDefinitions = PresenceDefinitions,
+> = {
   /** Delegates to `dispose()`. Enables `using` declarations. */
   [Symbol.dispose](): void;
 
   // ── Channels ───────────────────────────────────────────────────────────────
 
   /**
-   * Return an isolated message namespace over the shared connection.
-   * Multiple calls with the same name return the **same** channel object —
-   * dispose it once to remove the subscription.
+   * Create an isolated message namespace over the shared connection.
+   * Each call returns an independently disposable scope. The server subscription
+   * remains active until every scope for this name is disposed.
    */
-  channel<TChServer extends MessageMap = TServer, TChClient extends MessageMap = TClient>(
-    name: string,
-  ): PulseChannel<TChServer, TChClient>;
+  channel<K extends keyof TChannels & string>(name: K): PulseChannel<TChannels[K]['server'], TChannels[K]['client']>;
 
   // ── Connection ─────────────────────────────────────────────────────────────
 
   /**
-   * Explicitly open the connection. Resolves when `'open'` fires.
-   * Required when `lazy: true`; otherwise called automatically on creation.
+   * Explicitly open the connection. Resolves after session restoration completes.
    * Rejects if the connection closes before opening.
    */
   connect(): Promise<void>;
@@ -264,16 +227,16 @@ export type Pulse<TServer extends MessageMap = MessageMap, TClient extends Messa
   // ── Presence ───────────────────────────────────────────────────────────────
 
   /**
-   * Return a presence channel that tracks all members' state in a room.
-   * Multiple calls with the same room return the **same** presence object.
-   * Calling `presence()` implicitly joins the room.
+   * Create a presence scope that tracks all members' state in a room.
+   * Each call returns an independently disposable scope. The room remains joined
+   * until every scope for this name is disposed.
    */
-  presence<T>(room: string): PresenceChannel<T>;
+  presence<K extends keyof TPresence & string>(room: K): PresenceChannel<TPresence[K]>;
   /** Reactive set of rooms the client is currently a member of. */
   readonly rooms: Readable<ReadonlySet<string>>;
   /**
-   * Send a typed event to the server. If buffering is enabled, the message is
-   * queued when the connection is not open and flushed on reconnect.
+   * Send a typed event to the server.
+   * Throws `PulseConnectionError` unless the connection is open.
    */
   send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void;
   /** Reactive connection status. */

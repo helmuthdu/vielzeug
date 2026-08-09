@@ -1,6 +1,6 @@
 # @vielzeug/pulse
 
-Typed WebSocket client with channel multiplexing, room management, reactive presence, auto-reconnect, and heartbeat — built on `@vielzeug/ripple` signals.
+Typed WebSocket sessions with explicit connection ownership, scoped channels, reactive presence, reconnect restoration, and heartbeat support.
 
 ## Install
 
@@ -12,58 +12,53 @@ pnpm add @vielzeug/pulse @vielzeug/ripple
 
 ```ts
 import { createPulse } from '@vielzeug/pulse';
-import { effect } from '@vielzeug/ripple';
 
-type ServerEvents = {
-  'chat:message': { user: string; text: string };
-  'user:joined': { userId: string };
+type ServerEvents = { 'chat:message': { text: string } };
+type ClientEvents = { 'chat:send': { text: string } };
+type Channels = {
+  chat: {
+    client: { send: { text: string } };
+    server: { message: { text: string } };
+  };
 };
+type Presence = { lobby: { name: string } };
 
-type ClientEvents = {
-  'chat:send': { text: string };
-};
-
-const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws', {
-  reconnect: { maxAttempts: 5 },
-  heartbeat: true,
+const pulse = createPulse<ServerEvents, ClientEvents, Channels, Presence>('wss://api.example.com/ws', {
+  reconnect: true,
+  onError: (error) => console.error(error),
 });
 
-// Reactive status via ripple signal
-effect(() => console.log('status:', pulse.status.value));
+const chat = pulse.channel('chat');
+const lobby = pulse.presence('lobby');
 
-// Typed server events
-pulse.on('chat:message', ({ user, text }) => console.log(`${user}: ${text}`));
+try {
+  await pulse.connect();
+  chat.send('send', { text: 'Hello!' });
+  lobby.update({ name: 'Ada' });
+} catch (error) {
+  console.error('Pulse connection failed:', error);
+}
 
-// Typed client messages
-pulse.send('chat:send', { text: 'Hello!' });
-
-// Isolated channel namespace
-const notif = pulse.channel<{ alert: { level: string; msg: string } }>('notifications');
-notif.on('alert', ({ level, msg }) => console.log(`[${level}] ${msg}`));
-
-// Reactive presence tracking
-const lobby = pulse.presence<{ name: string; status: string }>('lobby');
-effect(() => console.log('online:', [...lobby.state.value.keys()]));
-lobby.update({ name: 'Alice', status: 'active' });
-
-// Clean disposal
-using _ = pulse;
+pulse.dispose();
 ```
 
-## Features
+## Key Behavior
 
-- **Typed event maps** — `TServer` and `TClient` generics enforce payload types at compile time
-- **`on()` / `once()` / `wait()`** — persistent, one-shot, and async-await subscriptions
-- **`channel()`** — isolated namespaces multiplexed over the shared connection
-- **`presence()`** — room-scoped presence channels are memoized by room name
-- **`join()` / `leave()`** — room membership with server-confirmation promises
-- **`presence()`** — reactive `Signal<Map<memberId, T>>` with `onJoin`/`onLeave` callbacks
-- **Middleware** — intercept outgoing `send()` calls; omit `next()` to suppress
-- **Auto-reconnect** — exponential backoff, configurable `maxAttempts` and `delay`
-- **Heartbeat** — ping/pong keep-alive with dead-connection detection
-- **Reactive signals** — `pulse.status` and `pulse.rooms` are ripple `Reactive`s
-- **`dispose()` + `[Symbol.dispose]`** — deterministic teardown via `using` declarations
+- Call `connect()` before sending, joining rooms, or publishing presence.
+- Define root events, channel events, and presence state at `createPulse()` so named scopes are type-safe.
+- Each `channel()` and `presence()` call returns an independent disposable scope. Server subscriptions and rooms use reference counting.
+- Reconnect restores channels, desired rooms, and the last successfully published local presence state.
+- `send()` throws `PulseConnectionError` while disconnected; Pulse never silently drops or buffers application messages.
+- `onError` receives typed transport and protocol errors.
+
+## Migration
+
+See the [Pulse migration guide](https://vielzeug.dev/pulse/migration).
 
 ## Documentation
 
-Full docs at [vielzeug.dev/pulse](https://vielzeug.dev/pulse/).
+- [Overview](https://vielzeug.dev/pulse/)
+- [Usage](https://vielzeug.dev/pulse/usage)
+- [API](https://vielzeug.dev/pulse/api)
+- [Examples](https://vielzeug.dev/pulse/examples)
+- [Pulse 3.0 Migration](https://vielzeug.dev/pulse/migration)

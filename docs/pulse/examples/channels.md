@@ -1,92 +1,47 @@
 ---
 title: 'Pulse Examples — Channel Multiplexing'
-description: 'Channel multiplexing example for @vielzeug/pulse.'
+description: 'Schema-bound channel scopes for @vielzeug/pulse.'
 ---
 
 ## Channel Multiplexing
 
 ### Problem
 
-Your application has several independent subsystems (chat, notifications, live data) that all share one WebSocket connection. Mixing their events into a single flat event map creates coupling and makes per-feature teardown difficult.
+Several features share a WebSocket but need independently disposable listeners without allowing each feature to define a conflicting protocol for the same channel.
 
 ### Solution
 
-Use `pulse.channel(name)` with per-channel typed message maps to scope each subsystem to its own namespace. Dispose channels independently without affecting the connection.
+Declare channel maps once at session construction. Each call creates an independent scope and Pulse reference-counts the server subscription.
 
 ```ts
 import { createPulse } from '@vielzeug/pulse';
 
-// Per-channel message maps — each subsystem owns its own contract
-type ChatServer = { message: { user: string; text: string } };
-type ChatClient = { send: { text: string } };
+type Channels = {
+  chat: {
+    client: { send: { text: string } };
+    server: { message: { text: string } };
+  };
+};
 
-type NotifServer = { alert: { level: 'info' | 'warn' | 'error'; msg: string } };
+const pulse = createPulse<{}, {}, Channels>('wss://api.example.com/ws');
+const composer = pulse.channel('chat');
+const transcript = pulse.channel('chat');
 
-type PriceServer = { tick: { symbol: string; price: number; change: number } };
-type PriceClient = { subscribe: { symbols: string[] } };
+await pulse.connect();
 
-// One shared connection
-const pulse = createPulse('wss://api.example.com/ws', { reconnect: true });
+composer.send('send', { text: 'Hello!' });
+transcript.on('message', ({ text }) => console.log(text));
 
-// Three independent channels
-const chat = pulse.channel<ChatServer, ChatClient>('chat');
-const notif = pulse.channel<NotifServer>('notifications');
-const prices = pulse.channel<PriceServer, PriceClient>('market');
-
-// Each channel has its own typed API
-chat.on('message', ({ user, text }) => appendMessage(user, text));
-
-notif.on('alert', ({ level, msg }) => {
-  showToast(level, msg);
-});
-
-prices.on('tick', ({ symbol, price, change }) => {
-  updatePriceCell(symbol, price, change);
-});
-
-// Send is scoped to the channel
-chat.send('send', { text: 'Hello from chat!' });
-prices.send('subscribe', { symbols: ['AAPL', 'GOOGL'] });
-
-// Dispose a channel without closing the connection
-notif.dispose();
-notif.disposed; // true — chat and prices still active
-```
-
-#### Channel `wait()` and `once()`
-
-```ts
-// Await the next message within this channel only
-const first = await chat.wait('message', { signal: AbortSignal.timeout(5_000) });
-console.log('first chat message:', first.text);
-
-// One-shot within a channel
-prices.once('tick', ({ symbol, price }) => {
-  console.log('initial tick for', symbol, price);
-});
-```
-
-#### `using` for automatic channel cleanup
-
-```ts
-async function runPriceWidget(symbols: string[]) {
-  using priceChannel = pulse.channel<PriceServer, PriceClient>('market');
-
-  priceChannel.send('subscribe', { symbols });
-
-  for (const symbol of symbols) {
-    priceChannel.on('tick', ({ price }) => updateWidget(symbol, price));
-  }
-
-  await someUserAction(); // wait until the widget is hidden
-} // priceChannel.dispose() called automatically — listeners removed, underlying connection intact
+composer.dispose(); // transcript still owns the subscription
+transcript.dispose(); // Pulse now sends unsubscribe
+pulse.dispose();
 ```
 
 ### Pitfalls
 
-- **`pulse.channel()` is memoized by name.** Two calls with the same name return the **same object**. Dispose it once to remove all listeners and send the `unsubscribe` frame — then a fresh call will return a new channel.
-- **Disposing a channel does not close the WebSocket.** Only `pulse.dispose()` does that.
-- **Channel `send()` respects the pulse-level buffer setting.** With `buffer: false` (default), `send()` is a no-op when the underlying pulse is not open. Enable `buffer: true` on the pulse to queue frames during reconnects.
+- **Channel types belong to `createPulse()`.** `channel()` no longer accepts per-call event map generics.
+- **Each call returns a new scope.** Do not compare channel objects for identity.
+- **A scope can send only while connected.** Reconnect restores active subscriptions before messages can be sent.
 
 ### Related
 

@@ -1,6 +1,6 @@
 import { fromPresence } from '@vielzeug/flux/pulse';
 import { toSignal } from '@vielzeug/flux/ripple';
-import { createPulse } from '@vielzeug/pulse';
+import { createPulse, type ChannelDefinitions } from '@vielzeug/pulse';
 import { computed } from '@vielzeug/ripple';
 
 // ---------------------------------------------------------------------------
@@ -10,6 +10,8 @@ import { computed } from '@vielzeug/ripple';
 export interface PresenceUser {
   name: string;
 }
+
+type RealtimePresence = { board: PresenceUser };
 
 // ---------------------------------------------------------------------------
 // Mock WebSocket
@@ -137,9 +139,13 @@ export function setupRealtime(): void {
   // Replace the real WebSocket with the mock BEFORE createPulse() constructs one.
   (globalThis as Record<string, unknown>).WebSocket = MockWebSocket;
 
-  const pulse = createPulse<Record<string, never>>('wss://kanban-demo/ws');
+  const pulse = createPulse<Record<string, never>, Record<string, never>, ChannelDefinitions, RealtimePresence>(
+    'wss://kanban-demo/ws',
+  );
 
-  const presenceChannel = pulse.presence<PresenceUser>('board');
+  void pulse.connect().catch(console.error);
+
+  const presenceChannel = pulse.presence('board');
 
   const presence$ = fromPresence(presenceChannel);
 

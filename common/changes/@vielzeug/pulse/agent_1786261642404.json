@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: WebSocket lifecycle around explicit connection readiness and schema-bound scopes",
+      "packageName": "@vielzeug/pulse",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/pulse"
+}

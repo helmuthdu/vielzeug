@@ -1,6 +1,5 @@
 import type { HeartbeatOptions } from './types';
 
-import { warn } from './_dev';
 import { encode } from './protocol';
 
 const DEFAULT_INTERVAL = 30_000;
@@ -44,7 +43,6 @@ export function createHeartbeat(
       send(encode({ ts, type: 'ping' }));
 
       pongTimer = setTimeout(() => {
-        warn(`Heartbeat timed out after ${timeout}ms — treating connection as dead`);
         onDead();
       }, timeout);
     }, interval);

@@ -9,4 +9,4 @@ description: Practical examples and recipes for @vielzeug/pulse.
 - [Channel Multiplexing](./examples/channels.md)
 - [Rooms and Presence](./examples/rooms-and-presence.md)
 - [Reconnect and Heartbeat](./examples/reconnect-and-heartbeat.md)
-- [Outgoing Middleware](./examples/middleware.md)
+- [Outgoing Transform](./examples/middleware.md)

@@ -1,15 +1,10 @@
 export const reconnectExample = {
   code: `import { createPulse, PulseConnectionError } from '@vielzeug/pulse'
 
-// onReconnect fires at the start of each reconnect attempt (1-based)
-// Channels are automatically re-subscribed when the socket reopens.
+// Channels, rooms, and local presence state are restored on reconnect.
 const pulse = createPulse('wss://api.example.com/ws', {
   reconnect: { delay: 500, maxAttempts: 3 },
-  onReconnect: (attempt) => {
-    console.log('reconnect attempt #' + attempt)
-  },
-  onOpen:  () => console.log('open — status:', pulse.status.value),
-  onClose: (code) => console.log('closed, code:', code),
+  onError: (error) => console.log('transport error:', error.message),
 })
 
 // Channel is tracked: re-subscribed automatically after every reconnect
@@ -34,5 +29,5 @@ chat.dispose()
 console.log('channel disposed, pulse still running:', !pulse.disposed)
 
 pulse.dispose()`,
-  name: 'Reconnect & onReconnect',
+  name: 'Reconnect & Restoration',
 };

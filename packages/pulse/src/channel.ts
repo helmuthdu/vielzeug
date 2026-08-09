@@ -1,8 +1,8 @@
 import type { EventKey, MessageMap, PulseChannel, Unsubscribe } from './types';
 
-import { warn } from './_dev';
 import { deriveAbortController } from './_utils';
 import { createWaitPromise } from './_wait';
+import { PulseDisposedError } from './errors';
 
 type SendFn = (channel: string, event: string, payload: unknown) => void;
 type SubscribeFn = (channel: string, event: string, handler: (payload: unknown) => void) => () => void;
@@ -58,9 +58,7 @@ export function createChannel<TServer extends MessageMap, TClient extends Messag
 
     on<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe {
       if (disposed) {
-        warn(`on('${String(event)}') called on a disposed channel '${name}' — listener ignored`);
-
-        return () => {};
+        throw new PulseDisposedError(`Channel "${name}"`);
       }
 
       const unsub = subscribe(name, event, handler as (payload: unknown) => void);
@@ -75,9 +73,7 @@ export function createChannel<TServer extends MessageMap, TClient extends Messag
 
     once<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe {
       if (disposed) {
-        warn(`once('${String(event)}') called on a disposed channel '${name}' — listener ignored`);
-
-        return () => {};
+        throw new PulseDisposedError(`Channel "${name}"`);
       }
 
       let unsub: Unsubscribe = () => {};
@@ -99,9 +95,7 @@ export function createChannel<TServer extends MessageMap, TClient extends Messag
 
     send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void {
       if (disposed) {
-        warn(`send('${String(event)}') called on a disposed channel '${name}' — message dropped`);
-
-        return;
+        throw new PulseDisposedError(`Channel "${name}"`);
       }
 
       send(name, event, payload);

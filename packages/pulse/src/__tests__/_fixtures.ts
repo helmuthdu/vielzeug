@@ -1,68 +1,100 @@
+import type { ChannelDefinitions, MessageMap, PresenceDefinitions, PulseOptions } from '../types';
+
 import { createPulse } from '../pulse';
 
-// ─── MockWebSocket ─────────────────────────────────────────────────────────────
-
 export class MockWebSocket {
-  static OPEN = 1;
-  static CLOSING = 2;
   static CLOSED = 3;
-
+  static CLOSING = 2;
+  static CONNECTING = 0;
+  static deferClose = false;
+  static OPEN = 1;
   static instances: MockWebSocket[] = [];
 
-  readonly OPEN = MockWebSocket.OPEN;
-  readonly CLOSING = MockWebSocket.CLOSING;
   readonly CLOSED = MockWebSocket.CLOSED;
+  readonly CLOSING = MockWebSocket.CLOSING;
+  readonly CONNECTING = MockWebSocket.CONNECTING;
+  readonly OPEN = MockWebSocket.OPEN;
 
-  readyState: number = 0;
-  url: string;
-  sentMessages: string[] = [];
+  onclose: ((event: CloseEvent) => void) | null = null;
+  onerror: ((event: Event) => void) | null = null;
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onopen: ((event: Event) => void) | null = null;
+  readyState = MockWebSocket.CONNECTING;
+  readonly sentMessages: string[] = [];
 
-  onopen: (() => void) | null = null;
-  onclose: ((ev: { code: number; reason: string }) => void) | null = null;
-  onerror: ((ev: unknown) => void) | null = null;
-  onmessage: ((ev: { data: string }) => void) | null = null;
-
-  constructor(url: string) {
-    this.url = url;
+  constructor(
+    readonly url: string,
+    readonly protocols?: string | string[],
+  ) {
     MockWebSocket.instances.push(this);
   }
 
-  send(data: string): void {
-    this.sentMessages.push(data);
-  }
-
   close(code = 1000, reason = ''): void {
-    this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.({ code, reason });
+    if (MockWebSocket.deferClose) {
+      this.readyState = MockWebSocket.CLOSING;
+
+      return;
+    }
+
+    this.finishClose(code, reason);
   }
 
-  /** Simulate the server opening the connection. */
+  finishClose(code = 1000, reason = ''): void {
+    this.readyState = MockWebSocket.CLOSED;
+    this.onclose?.({ code, reason } as CloseEvent);
+  }
+
+  drop(code = 1006, reason = 'network error'): void {
+    this.close(code, reason);
+  }
+
+  error(): void {
+    this.onerror?.(new Event('error'));
+  }
+
   open(): void {
     this.readyState = MockWebSocket.OPEN;
-    this.onopen?.();
+    this.onopen?.(new Event('open'));
   }
 
-  /** Simulate a message arriving from the server. */
-  receive(data: unknown): void {
-    this.onmessage?.({ data: JSON.stringify(data) });
+  receive(frame: unknown): void {
+    this.onmessage?.({ data: JSON.stringify(frame) } as MessageEvent);
   }
 
-  /** Simulate an unexpected close (e.g. network drop). */
-  drop(code = 1006, reason = 'network error'): void {
-    this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.({ code, reason });
+  send(frame: string): void {
+    this.sentMessages.push(frame);
   }
 }
 
-export type ServerEvents = { greet: { name: string }; ping: void };
+export type ServerEvents = { greet: { name: string }; notice: string };
 export type ClientEvents = { reply: { text: string } };
+export type Channels = {
+  chat: {
+    client: { send: { text: string } };
+    server: { message: { text: string } };
+  };
+};
+export type Presence = { lobby: { name: string } };
 
-export function setup() {
+export async function openPulse<
+  TServer extends MessageMap = ServerEvents,
+  TClient extends MessageMap = ClientEvents,
+  TChannels extends ChannelDefinitions = Channels,
+  TPresence extends PresenceDefinitions = Presence,
+>(options: PulseOptions = {}) {
+  MockWebSocket.deferClose = false;
   MockWebSocket.instances = [];
 
-  const pulse = createPulse<ServerEvents, ClientEvents>('ws://test', {});
+  const pulse = createPulse<TServer, TClient, TChannels, TPresence>('ws://test', options);
+  const connected = pulse.connect();
+  const socket = MockWebSocket.instances[0]!;
 
-  const ws = MockWebSocket.instances[0]!;
+  socket.open();
+  await connected;
 
-  return { pulse, ws };
+  return { pulse, socket };
+}
+
+export function frames(socket: MockWebSocket): Array<Record<string, unknown>> {
+  return socket.sentMessages.map((frame) => JSON.parse(frame) as Record<string, unknown>);
 }
