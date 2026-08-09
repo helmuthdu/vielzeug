@@ -1,7 +1,7 @@
 import { signal } from '@vielzeug/ripple';
 
 import { prop, onCleanup, onMounted, watchEffect } from '../index';
-import { renderHook } from '../testing';
+import { cleanup, renderHook } from '../testing';
 
 describe('renderHook()', () => {
   it('returns the value from the setup function', async () => {
@@ -80,6 +80,18 @@ describe('renderHook()', () => {
     expect(cleanupSpy).not.toHaveBeenCalled();
 
     dispose();
+
+    expect(cleanupSpy).toHaveBeenCalledOnce();
+  });
+
+  it('runs onCleanup when test cleanup disposes an undisposed fixture', async () => {
+    const cleanupSpy = vi.fn();
+
+    await renderHook((_props) => {
+      onCleanup(cleanupSpy);
+    });
+
+    cleanup();
 
     expect(cleanupSpy).toHaveBeenCalledOnce();
   });

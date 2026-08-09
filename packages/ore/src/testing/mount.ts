@@ -8,9 +8,11 @@ import { type QueryScope, within } from '@vielzeug/assay';
 
 import { type ComponentDefinition } from '../component-types';
 import { define } from '../define';
+import { getHost } from '../runtime';
 import { type HTMLResult } from '../template/result';
 import { setAttr } from '../utils/dom';
 import { flush, type FlushOptions } from './flush';
+import { _disposeRenderHooks } from './render-hook';
 import { resetOreForTests } from './reset';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -65,6 +67,39 @@ export type MountSetup = {
 // ─── Test environment state ───────────────────────────────────────────────────
 
 export const _mountedElements: HTMLElement[] = [];
+
+const INLINE_FIXTURE_TAG = 'ore-test-inline-fixture';
+const FORM_INLINE_FIXTURE_TAG = 'ore-test-form-inline-fixture';
+
+// Custom-element registrations are permanent. The common no-prop fixture shapes
+// therefore reuse one registered class and keep each setup function weakly owned
+// by its element instead of registering a new trial-N class for every test.
+const inlineSetups = new WeakMap<HTMLElement, MountSetup>();
+
+const getInlineSetup = (): MountSetup => {
+  const setup = inlineSetups.get(getHost());
+
+  if (!setup) throw new Error('Inline fixture setup is unavailable.');
+
+  return setup;
+};
+
+const ensureInlineFixture = (tag: string, formAssociated: boolean): void => {
+  if (customElements.get(tag)) return;
+
+  define(tag, {
+    formAssociated,
+    setup: () => getInlineSetup()({}),
+  });
+};
+
+const getReusableInlineFixtureTag = (options: MountOptions['componentOptions']): string | undefined => {
+  if (!options || Object.keys(options).length === 0) return INLINE_FIXTURE_TAG;
+
+  if (Object.keys(options).length === 1 && options.formAssociated === true) return FORM_INLINE_FIXTURE_TAG;
+
+  return undefined;
+};
 
 // Monotonic across the whole test run — never reset: custom element registrations
 // are permanent, so a re-used tag name would throw on re-define. Deterministic
@@ -144,15 +179,26 @@ export async function mount<T extends HTMLElement = HTMLElement>(
 
   let tagName: string;
   let inlineDefinition: ComponentDefinition<Record<string, unknown>> | undefined;
+  let inlineSetup: MountSetup | undefined;
 
   if (typeof tagOrSetup === 'string') {
     tagName = tagOrSetup;
   } else {
-    tagName = `trial-${++_componentTagCounter}`;
-    inlineDefinition = {
-      ...(componentOptions ?? {}),
-      setup: tagOrSetup,
-    };
+    const reusableTag = getReusableInlineFixtureTag(componentOptions);
+
+    if (reusableTag) {
+      const formAssociated = reusableTag === FORM_INLINE_FIXTURE_TAG;
+
+      ensureInlineFixture(reusableTag, formAssociated);
+      inlineSetup = tagOrSetup;
+      tagName = reusableTag;
+    } else {
+      tagName = `trial-${++_componentTagCounter}`;
+      inlineDefinition = {
+        ...(componentOptions ?? {}),
+        setup: tagOrSetup,
+      };
+    }
   }
 
   if (inlineDefinition) {
@@ -160,6 +206,8 @@ export async function mount<T extends HTMLElement = HTMLElement>(
   }
 
   const element = document.createElement(tagName) as T;
+
+  if (inlineSetup) inlineSetups.set(element, inlineSetup);
 
   if (html) element.innerHTML = html;
 
@@ -175,6 +223,7 @@ export async function mount<T extends HTMLElement = HTMLElement>(
     });
   } catch (err) {
     element.remove();
+    inlineSetups.delete(element);
 
     const i = _mountedElements.indexOf(element);
 
@@ -190,6 +239,7 @@ export async function mount<T extends HTMLElement = HTMLElement>(
 
     isDisposed = true;
     element.remove();
+    inlineSetups.delete(element);
 
     const i = _mountedElements.indexOf(element);
 
@@ -287,6 +337,7 @@ export function mock(tagName: string, template = ''): void {
 export function cleanup(): void {
   for (const el of _mountedElements) el.remove();
   _mountedElements.length = 0;
+  _disposeRenderHooks();
   resetOreForTests();
 }
 

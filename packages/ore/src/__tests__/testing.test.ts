@@ -48,6 +48,35 @@ describe('Testing: Render Utilities', () => {
       expect(element.innerHTML).toContain('Content');
     });
 
+    it('reuses fixture classes for no-prop and form-associated inline setups', async () => {
+      const plainA = await mount(
+        () => html`
+          <div>plain A</div>
+        `,
+      );
+      const plainB = await mount(
+        () => html`
+          <div>plain B</div>
+        `,
+      );
+      const formA = await mount(
+        () => html`
+          <div>form A</div>
+        `,
+        { componentOptions: { formAssociated: true } },
+      );
+      const formB = await mount(
+        () => html`
+          <div>form B</div>
+        `,
+        { componentOptions: { formAssociated: true } },
+      );
+
+      expect(plainA.element.constructor).toBe(plainB.element.constructor);
+      expect(formA.element.constructor).toBe(formB.element.constructor);
+      expect(plainA.element.constructor).not.toBe(formA.element.constructor);
+    });
+
     it('removes the element from the DOM if setup throws, instead of leaking a half-mounted fixture', async () => {
       const before = document.body.childElementCount;
 

@@ -23,6 +23,13 @@ export interface HookFixture<T> {
   result: T;
 }
 
+const hookDisposers = new Set<() => void>();
+
+/** @internal Dispose every active hook fixture for test isolation. */
+export const _disposeRenderHooks = (): void => {
+  for (const dispose of [...hookDisposers]) dispose();
+};
+
 /**
  * Run a setup function in a component-like context and return the result.
  * `onMounted`/`onCleanup`/`bind`/... work exactly as they would inside a real
@@ -127,7 +134,10 @@ export async function renderHook<D extends PropInputDefs, T>(
     isDisposed = true;
     hostScope.dispose();
     hostEl.remove();
+    hookDisposers.delete(dispose);
   }
+
+  hookDisposers.add(dispose);
 
   return {
     dispose,

@@ -1,6 +1,6 @@
 import { html } from '@vielzeug/ore';
 import { mount } from '@vielzeug/ore/testing';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { RefineConfigError } from '../../errors';
 import { createListboxDropdown, type ListboxDropdownOptions } from '../option-list';
@@ -13,11 +13,26 @@ const ITEMS: Item[] = [
   { label: 'Cherry', value: 'cherry' },
 ];
 
+const activeHandleDisposers = new Set<() => void>();
+
+afterEach(() => {
+  for (const dispose of [...activeHandleDisposers]) dispose();
+});
+
 function makeHandle(overrides: Partial<ListboxDropdownOptions<Item>> = {}) {
   let boundary!: HTMLElement;
   let panel!: HTMLElement;
   let reference!: HTMLElement;
   let handle!: ReturnType<typeof createListboxDropdown<Item>>;
+  const controller = new AbortController();
+
+  const dispose = () => {
+    controller.abort();
+    boundary?.remove();
+    panel?.remove();
+    reference?.remove();
+    activeHandleDisposers.delete(dispose);
+  };
 
   const setup = () => {
     boundary = document.createElement('div');
@@ -26,13 +41,14 @@ function makeHandle(overrides: Partial<ListboxDropdownOptions<Item>> = {}) {
     document.body.appendChild(boundary);
     document.body.appendChild(panel);
     document.body.appendChild(reference);
+    activeHandleDisposers.add(dispose);
 
     handle = createListboxDropdown<Item>({
       getBoundary: () => boundary,
       getItems: () => ITEMS,
       getPanel: () => panel,
       getReference: () => reference,
-      signal: new AbortController().signal,
+      signal: controller.signal,
       ...overrides,
     });
   };

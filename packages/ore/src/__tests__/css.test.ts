@@ -1,4 +1,5 @@
 import { css, type CSSResult } from '../index';
+import { _clearStylesheetCache, _getStylesheetCacheSize, loadStylesheet } from '../utils/css';
 
 describe('css()', () => {
   it('returns an object with the rendered CSS string as content', () => {
@@ -86,5 +87,15 @@ describe('css()', () => {
 
       expect(result.content).toBe('color: red;');
     });
+  });
+
+  it('bounds the constructed stylesheet cache', () => {
+    _clearStylesheetCache();
+
+    for (let index = 0; index < 300; index++) {
+      loadStylesheet(`.rule-${index} { color: red; }`);
+    }
+
+    expect(_getStylesheetCacheSize()).toBe(256);
   });
 });
