@@ -37,20 +37,19 @@ function createPreview({ container, onError, onReady }: PreviewOptions) {
     if (msg.type === 'error') onError(msg.message);
   });
 
-  // render() sets up the document once — scripts, styles, and listeners are initialized here.
-  // patch() streams incremental body updates without reinitialising the page.
+  // render() sets up the document once — head scripts, styles, and listeners initialize here.
   let initialized = false;
 
   return {
     async initialize() {
       if (initialized) return;
-      // Empty body — content arrives via patch()
+      // Empty body — streamed content replaces body descendants later
       await sandbox.render('');
       initialized = true;
       onReady();
     },
-    patch(html: string) {
-      sandbox.patch(html);
+    replaceBody(html: string) {
+      sandbox.replaceBody(html);
     },
     setTheme(theme: 'light' | 'dark') {
       sandbox.setState('theme', theme);
@@ -74,7 +73,7 @@ await preview.initialize();
 let accumulated = '';
 for await (const chunk of streamUI(userPrompt)) {
   accumulated += chunk;
-  preview.patch(accumulated);  // live update, no page reset
+  preview.replaceBody(accumulated);  // live update, no page reset
 }
 
 // Push theme without re-render
@@ -84,19 +83,19 @@ preview.setTheme('dark');
 ### How streaming works
 
 1. `initialize()` calls `render('')` once — this sets up the bridge, `namedStyles`, and any injected scripts.
-2. Each `patch(html)` call sends `document.body.innerHTML = html` via postMessage. The iframe never navigates — scripts keep running, styles stay applied.
+2. Each `replaceBody(html)` call sends `document.body.innerHTML = html` via postMessage. The iframe never navigates; head scripts and styles remain, while body descendants are replaced.
 3. The bridge's built-in `ResizeObserver` fires automatically as content grows, so the container can auto-size without additional wiring.
 
 ### Pitfalls
 
-- **`patch()` requires `render()` first** — the bridge must be initialized before patches are received. Call `patch()` only after the Promise from `render()` resolves.
-- **`patch()` replaces the entire body** — it's `innerHTML`, not an append. If you want to append incrementally, accumulate on the host side (as shown above) and send the full accumulated string each time.
+- **`replaceBody()` requires `render()` first** — the bridge must initialize before replacement messages are received. Call it only after `render()` resolves.
+- **`replaceBody()` replaces the entire body** — it is `innerHTML`, not append. Accumulate markup on the host and send full content each time. Do not retain body element references or expect descendant listeners to survive.
 - **Error strings are untrusted** — `msg.message` and `msg.stack` come from AI-generated code. Display them in the UI, but do not evaluate or pass them to `Function()` or `eval()`.
-- **`render()` still needed for structural resets** — if the user submits a new prompt and you want a fresh page (clear all script state), call `render('')` again before patching.
+- **`render()` still needed for structural resets** — if a new prompt needs fresh script state, call `render('')` again before replacing body content.
 
 ### Related
 
-- [Usage Guide — Incremental Updates with patch()](../usage.md#incremental-updates-with-patch)
+- [Usage Guide — Incremental Updates with replaceBody()](../usage.md#incremental-updates-with-replacebody)
 - [Usage Guide — Handling Errors](../usage.md#handling-errors)
 - [Usage Guide — Passing State](../usage.md#passing-state)
 - [API Reference — SandboxHandle](../api.md#sandboxhandle)

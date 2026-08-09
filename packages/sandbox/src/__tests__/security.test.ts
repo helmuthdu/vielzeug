@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { buildCsp, buildDocument, createSandbox } from '../_sandbox.js';
+import { SandboxConfigurationError } from '../errors.js';
 import { createSandboxTestHelpers } from '../testing.js';
 
 // ---------------------------------------------------------------------------
@@ -27,56 +28,21 @@ function getCspContent(doc: string): string {
 // F1: CSP directive injection via allowed*Origins
 // ---------------------------------------------------------------------------
 
-describe('buildCsp — origin sanitization (CSP directive injection)', () => {
-  it('strips a semicolon from allowedScriptOrigins to prevent directive injection', () => {
-    const csp = buildCsp({ allowedScriptOrigins: ['evil.com; connect-src *'] });
-
-    expect(csp).not.toContain('evil.com; connect-src *');
-    expect(csp).toContain('evil.com connect-src *');
+describe('buildCsp — origin validation', () => {
+  it.each([
+    ['allowedScriptOrigins', { allowedScriptOrigins: ['evil.com; connect-src *'] }],
+    ['allowedStyleOrigins', { allowedStyleOrigins: ['evil.com; script-src *'] }],
+    ['allowedImageOrigins', { allowedImageOrigins: ['evil.com; connect-src *'] }],
+    ['allowedFontOrigins', { allowedFontOrigins: ['evil.com; connect-src *'] }],
+    ['attribute breakout', { allowedScriptOrigins: ['evil.com"><script>alert(1)</script>'] }],
+    ['CSP token breakout', { allowedScriptOrigins: ["evil.com' 'unsafe-eval"] }],
+    ['line break', { allowedScriptOrigins: ['evil.com\r\nSet-Cookie: pwned=1'] }],
+  ])('rejects %s instead of changing policy meaning', (_name, options) => {
+    expect(() => buildCsp(options)).toThrow(SandboxConfigurationError);
   });
 
-  it('strips a semicolon from allowedStyleOrigins to prevent directive injection', () => {
-    const csp = buildCsp({ allowedStyleOrigins: ['evil.com; script-src *'] });
-
-    expect(csp).not.toContain('evil.com; script-src *');
-  });
-
-  it('strips a semicolon from allowedImageOrigins to prevent directive injection', () => {
-    const csp = buildCsp({ allowedImageOrigins: ['evil.com; connect-src *'] });
-
-    expect(csp).not.toContain('evil.com; connect-src *');
-  });
-
-  it('strips a semicolon from allowedFontOrigins to prevent directive injection', () => {
-    const csp = buildCsp({ allowedFontOrigins: ['evil.com; connect-src *'] });
-
-    expect(csp).not.toContain('evil.com; connect-src *');
-  });
-
-  it('strips double-quote characters from origins to prevent attribute breakout', () => {
-    const csp = buildCsp({ allowedScriptOrigins: ['evil.com"><script>alert(1)</script>'] });
-
-    expect(csp).not.toContain('"');
-  });
-
-  it('strips single-quote characters from origins to prevent CSP token breakout', () => {
-    const csp = buildCsp({ allowedScriptOrigins: ["evil.com' 'unsafe-eval"] });
-
-    // The literal single-quoted 'unsafe-eval' token must not survive sanitization.
-    expect(csp).not.toContain("'unsafe-eval'");
-  });
-
-  it('strips newline and carriage-return characters from origins', () => {
-    const csp = buildCsp({ allowedScriptOrigins: ['evil.com\r\nSet-Cookie: pwned=1'] });
-
-    expect(csp).not.toContain('\r');
-    expect(csp).not.toContain('\n');
-  });
-
-  it("the connect-src directive remains 'none' even with a malicious allowedScriptOrigins entry", () => {
-    const csp = buildCsp({ allowedScriptOrigins: ['evil.com; connect-src *'] });
-
-    expect(csp).toContain("connect-src 'none'");
+  it('normalizes a valid origin', () => {
+    expect(buildCsp({ allowedScriptOrigins: ['https://cdn.example.com/'] })).toContain('https://cdn.example.com');
   });
 });
 
@@ -84,25 +50,13 @@ describe('buildCsp — origin sanitization (CSP directive injection)', () => {
 // F1 (nonce): nonce sanitization
 // ---------------------------------------------------------------------------
 
-describe('buildCsp — nonce sanitization', () => {
-  it('strips a single-quote from the nonce before embedding it as a CSP token', () => {
-    const csp = buildCsp({ nonce: "abc' 'unsafe-eval" });
-
-    expect(csp).not.toContain("'unsafe-eval'");
-    expect(csp).toContain("'nonce-abc unsafe-eval'");
-  });
-
-  it('strips a semicolon from the nonce', () => {
-    const csp = buildCsp({ nonce: 'abc;connect-src *' });
-
-    expect(csp).not.toContain(';connect-src *');
-  });
-
-  it('strips newlines from the nonce', () => {
-    const csp = buildCsp({ nonce: 'abc\r\ndef' });
-
-    expect(csp).toContain("'nonce-abcdef'");
-  });
+describe('buildCsp — nonce validation', () => {
+  it.each(["abc' 'unsafe-eval", 'abc;connect-src *', 'abc\r\ndef', 'abc" onmouseover="alert(1)'])(
+    'rejects invalid nonce %s',
+    (nonce) => {
+      expect(() => buildCsp({ nonce })).toThrow(SandboxConfigurationError);
+    },
+  );
 
   it('does not include a nonce token when nonce is not provided', () => {
     expect(buildCsp()).not.toContain('nonce-');
@@ -150,17 +104,10 @@ describe('buildDocument — CSP meta content attribute integrity', () => {
     expect(metaMatch).not.toBeNull();
   });
 
-  it('sanitized malicious allowedScriptOrigins never breaks the content attribute out of the meta tag', () => {
-    const doc = buildDocument('<p>hi</p>', {
-      allowedScriptOrigins: ['evil.com"><script>alert(1)</script>'],
-    });
-
-    expect(doc).not.toContain('<script>alert(1)</script>');
-
-    // The meta tag must still be well-formed — exactly one <meta ... CSP ...> element.
-    const metaMatches = doc.match(/<meta http-equiv="Content-Security-Policy"/g) ?? [];
-
-    expect(metaMatches).toHaveLength(1);
+  it('rejects CSP attribute breakout input before serializing the document', () => {
+    expect(() => buildDocument('<p>hi</p>', { allowedScriptOrigins: ['evil.com"><script>alert(1)</script>'] })).toThrow(
+      SandboxConfigurationError,
+    );
   });
 });
 
@@ -181,44 +128,26 @@ describe('buildDocument — title escaping (escapeText)', () => {
   });
 });
 
-describe('buildDocument — lang escaping (escapeAttr)', () => {
-  it('escapes a double-quote attribute-breakout attempt in lang', () => {
-    const doc = buildDocument('<p>hi</p>', { lang: 'en" onmouseover="alert(1)' });
-
-    expect(doc).not.toContain('en" onmouseover="alert(1)');
-    expect(doc).toContain('lang="en&quot; onmouseover=&quot;alert(1)"');
+describe('buildDocument — lang validation', () => {
+  it('rejects an attribute-breakout attempt in lang', () => {
+    expect(() => buildDocument('<p>hi</p>', { lang: 'en" onmouseover="alert(1)' })).toThrow(SandboxConfigurationError);
   });
 });
 
-describe('buildDocument — namedStyles id escaping (escapeAttr)', () => {
-  it('escapes a double-quote attribute-breakout attempt in a namedStyles key', () => {
-    const doc = buildDocument('<p>hi</p>', {
-      namedStyles: { ['theme" onmouseover="alert(1)']: 'body {}' },
-    });
-
-    expect(doc).not.toContain('id="theme" onmouseover="alert(1)"');
-    expect(doc).toContain('id="theme&quot; onmouseover=&quot;alert(1)"');
-  });
-
-  it('escapes a tag-breakout attempt in a namedStyles key', () => {
-    const doc = buildDocument('<p>hi</p>', {
-      namedStyles: { ['theme"><script>alert(1)</script>']: 'body {}' },
-    });
-
-    expect(doc).not.toContain('<script>alert(1)</script>');
-  });
+describe('buildDocument — namedStyles id validation', () => {
+  it.each(['theme" onmouseover="alert(1)', 'theme"><script>alert(1)</script>', 'theme id'])(
+    'rejects invalid style id %s',
+    (id) => {
+      expect(() => buildDocument('<p>hi</p>', { namedStyles: { [id]: 'body {}' } })).toThrow(SandboxConfigurationError);
+    },
+  );
 });
 
-describe('buildDocument — nonce attribute escaping/sanitization', () => {
-  it('strips (not just escapes) a double-quote attribute-breakout attempt in nonce', () => {
-    // The nonce is sanitized with the same stripping function used for the CSP
-    // token (sanitizeNonce) — not just HTML-attribute-escaped — so the bridge
-    // <script nonce="..."> attribute always matches the CSP header's nonce token
-    // byte-for-byte (a mismatch would make the browser silently reject the script).
-    const doc = buildDocument('<p>hi</p>', { nonce: 'abc" onmouseover="alert(1)' });
-
-    expect(doc).not.toContain('nonce="abc" onmouseover="alert(1)"');
-    expect(doc).toContain('nonce="abc onmouseover=alert(1)"');
+describe('buildDocument — nonce validation', () => {
+  it('rejects an attribute-breakout attempt in nonce', () => {
+    expect(() => buildDocument('<p>hi</p>', { nonce: 'abc" onmouseover="alert(1)' })).toThrow(
+      SandboxConfigurationError,
+    );
   });
 });
 
@@ -253,8 +182,12 @@ describe('createSandbox — prototype-safe message dispatch (F4 regression)', ()
 
   function fireRaw(container_: HTMLElement, data: unknown): void {
     const iframe = container_.querySelector('iframe') as HTMLIFrameElement;
+    const payload =
+      typeof data === 'object' && data !== null
+        ? { ...data, channel: iframe.dataset.sandboxChannel, generation: Number(iframe.dataset.sandboxGeneration) }
+        : data;
 
-    window.dispatchEvent(new MessageEvent('message', { data, source: iframe.contentWindow }));
+    window.dispatchEvent(new MessageEvent('message', { data: payload, source: iframe.contentWindow }));
   }
 
   it('does not throw when a message has type "__proto__"', () => {
@@ -348,8 +281,12 @@ describe('createSandbox — malformed message payload guard (isMsgObject)', () =
 
   function fireRaw(data: unknown): void {
     const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    const payload =
+      typeof data === 'object' && data !== null
+        ? { ...data, channel: iframe.dataset.sandboxChannel, generation: Number(iframe.dataset.sandboxGeneration) }
+        : data;
 
-    window.dispatchEvent(new MessageEvent('message', { data, source: iframe.contentWindow }));
+    window.dispatchEvent(new MessageEvent('message', { data: payload, source: iframe.contentWindow }));
   }
 
   it('ignores a null message payload without throwing', () => {

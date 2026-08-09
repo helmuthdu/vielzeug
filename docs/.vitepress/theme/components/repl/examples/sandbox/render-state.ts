@@ -25,7 +25,7 @@ await sandbox.render(\`
 
 sandbox.setStateAll({ user: { name: 'Ada' }, theme: 'dark' }) // one postMessage for several values
 sandbox.setState('locale', 'en-GB') // single value
-sandbox.patch('<div id="root">Ready ✓</div>') // swap body, keep the listener
+sandbox.replaceBody('<div id="root">Ready ✓</div>') // replaces body descendants
 sandbox.updateStyle('theme', ':root { --accent: seagreen; }') // hot-patch CSS, no re-render
 
 await new Promise((resolve) => setTimeout(resolve, 50)) // let the postMessage round-trips arrive

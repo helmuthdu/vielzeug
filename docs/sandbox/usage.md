@@ -40,11 +40,11 @@ await sandbox.render(`
 
 Each call to `render()` is a full page reset — scripts reinitialise, CSS is re-applied, and any DOM state is lost. For incremental updates, push state via `setState()` or patch styles via `updateStyle()` rather than re-rendering.
 
-## Incremental Updates with patch()
+## Incremental Updates with replaceBody()
 
-`patch(html)` replaces `document.body.innerHTML` in the live document without a full page reset. Scripts, event listeners, `namedStyles` CSS blocks, and any injected global state are all preserved.
+`replaceBody(html)` replaces `document.body.innerHTML` in the live document without navigating the iframe. Head scripts, document/window listeners, named styles, and global state survive. Body descendants, their listeners, references, form state, and scripts inside replacement HTML do not survive.
 
-Use it for streaming AI-generated output, live editor previews, or any scenario where you want to push new content without reinitialising the page.
+Use it for streaming AI-generated output or live previews when the host owns accumulated markup.
 
 ```ts
 // Initial render — sets up the document, scripts, and styles
@@ -57,24 +57,24 @@ await sandbox.render(`
   <p>Loading…</p>
 `);
 
-// Subsequent updates — body swapped, script listener preserved
-sandbox.patch('<p>First chunk arrived</p>');
-sandbox.patch('<p>First chunk arrived</p><p>Second chunk…</p>');
-sandbox.patch('<p>Complete response</p>');
+// Subsequent updates replace body descendants
+sandbox.replaceBody('<p>First chunk arrived</p>');
+sandbox.replaceBody('<p>First chunk arrived</p><p>Second chunk…</p>');
+sandbox.replaceBody('<p>Complete response</p>');
 ```
 
-**`patch()` vs `render()`:**
+**`replaceBody()` vs `render()`:**
 
-| | `render()` | `patch()` |
+| | `render()` | `replaceBody()` |
 |---|---|---|
 | Full page reset | Yes | No |
 | Returns a Promise | Yes | No |
-| Scripts re-run | Yes | No |
+| Head scripts re-run | Yes | No |
 | `namedStyles` preserved | Re-injected | Yes |
-| State listeners preserved | No (must re-register) | Yes |
-| When to use | Initial load, major content change | Streaming, live updates |
+| Body descendants/listeners | Recreated | Replaced |
+| When to use | Initial load, structural reset | Streaming markup, live preview |
 
-**`patch()` must be called after `render()` resolves.** The bridge must be initialized before patches can be received. A dev warning fires if called before the document is ready.
+**`replaceBody()` must be called after `render()` resolves.** The bridge must be initialized before it can receive the replacement.
 
 ## Passing State
 
@@ -182,7 +182,7 @@ const sandbox = createSandbox(container, {
 });
 ```
 
-`lang` defaults to `'en'`, `title` defaults to `''`. Both values are HTML-escaped automatically before being written into the document.
+`lang` defaults to `'en'`; use a 2–3 letter primary language with optional 2–8 character subtags, such as `de` or `zh-Hant`. `title` defaults to `''` and is HTML-escaped before document generation. Invalid language tags throw `SandboxConfigurationError`.
 
 ## Hot-patching Named Styles
 
@@ -259,7 +259,7 @@ await sandbox.render(`
 `);
 ```
 
-Origin values and the `nonce` are sanitized before being written into the policy, and the generated CSP always includes `base-uri 'none'` to block `<base>`-tag injection — you do not need to strip untrusted characters yourself.
+Origins must be absolute `http:` or `https:` origins without paths, query strings, fragments, or credentials. Script URLs must be absolute `http:` or `https:` URLs. Nonces must be non-empty base64/base64url-style tokens. Invalid configuration throws `SandboxConfigurationError`; generated CSP always includes `base-uri 'none'` to block `<base>`-tag injection.
 
 ## Disposal
 
@@ -352,7 +352,7 @@ If the signal is already aborted when `render()` is called, the render is skippe
 
 ## Building Sandbox Documents Directly
 
-To generate a complete sandbox HTML document outside of `createSandbox` (for example in a server context or `@vielzeug/codex`), use `buildDocument`.
+Use `buildDocument` when you need static isolated markup outside `createSandbox`, such as server-generated HTML or a Codex template. Use `createSandbox` instead when the host needs state updates, body replacement, style updates, readiness, or disposal.
 
 ```ts
 import { buildDocument } from '@vielzeug/sandbox';
@@ -512,10 +512,10 @@ await sandbox.render('<ore-card><ore-button>Save</ore-button></ore-card>');
 
 - **Await `render()` before calling `setState()`/`setStateAll()`** — both warn in dev if called before the bridge is ready. Use `setStateAll()` to bootstrap several values in one postMessage instead of calling `setState()` repeatedly.
 - **Use `await sandbox.render(html)` for each render** — `render()` returns a `Promise<void>` that resolves when the document is ready. No separate readiness API is needed.
-- **Use `updateStyle()` for theme switching** — patching a named style is faster than a full `render()` and preserves all script and DOM state.
+- **Use `updateStyle()` for theme switching** — updating a named style avoids a full `render()` and preserves current document state.
 - **Check `disposed` before deferred calls** — across async operations, check `sandbox.disposed` before calling any method to avoid spurious dev warnings.
 - **Tie async work to `disposalSignal`** — pass `disposalSignal` to `fetch` and other async operations so they cancel automatically on dispose.
 - **Treat all messages as untrusted** — sandbox code controls `SandboxMessage` payloads. Do not `eval()` or execute any message field.
 - **One sandbox per preview** — `createSandbox()` is a cheap factory; create a new sandbox per user session or component rather than reusing across unrelated renders.
 - **Use `using` in functions** — in TypeScript 5.2+ contexts, `using` guarantees cleanup even on exceptions.
-- **Prefer `patch()` or `setState()` over re-renders for incremental updates** — `render()` resets all script state. Use `patch()` to swap body content and `setState()` to push data without losing listeners or CSS state.
+- **Use `replaceBody()` or `setState()` for incremental updates** — `render()` resets document state. `replaceBody()` replaces body descendants; `setState()` updates live code without replacing DOM.

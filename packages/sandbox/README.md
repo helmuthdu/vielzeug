@@ -24,8 +24,8 @@ await sandbox.render('<ore-button variant="primary">Click me</ore-button>');
 // Subsequent renders — same contract, a fresh Promise each time
 await sandbox.render(newHtml);
 
-// Incrementally update the body without a full page reset (preserves scripts/state)
-sandbox.patch('<p>updated</p>');
+// Replace body descendants without a full page reset
+sandbox.replaceBody('<p>updated</p>');
 
 // Push state into the sandbox
 sandbox.setState('theme', 'dark');
@@ -60,15 +60,15 @@ Creates an isolated `<iframe sandbox="allow-scripts">` inside `container`.
 
 | Option                 | Type                     | Description                                                                    |
 | ---------------------- | ------------------------ | ------------------------------------------------------------------------------- |
-| `scripts`               | `string[]`               | External scripts injected with `crossorigin="anonymous"`; origins auto-added   |
-| `namedStyles`           | `Record<string, string>` | Named CSS blocks injected as `<style id="key">`; hot-patchable via `updateStyle(id, css)` |
-| `nonce`                 | `string`                 | Cryptographic nonce for the bridge `<script>` tag and `script-src` CSP        |
-| `lang`                  | `string`                 | BCP 47 language tag for `<html lang="…">`. Default: `'en'`                    |
-| `title`                 | `string`                 | Document `<title>`. Default: `''`                                              |
-| `allowedScriptOrigins`  | `string[]`               | Extra origins added to `script-src`                                            |
-| `allowedStyleOrigins`   | `string[]`               | Extra origins added to `style-src`                                             |
-| `allowedImageOrigins`   | `string[]`               | Extra origins added to `img-src`                                               |
-| `allowedFontOrigins`    | `string[]`               | Extra origins added to `font-src`                                              |
+| `scripts`               | `string[]`               | Absolute `http:` or `https:` script URLs injected with `crossorigin="anonymous"`; origins auto-added |
+| `namedStyles`           | `Record<string, string>` | Named `<style>` blocks; keys start with a letter and use only letters, digits, `_`, or `-` |
+| `nonce`                 | `string`                 | Non-empty base64/base64url-style token for both bridge scripts and `script-src` |
+| `lang`                  | `string`                 | Basic language tag, such as `en`, `de`, or `zh-Hant`. Default: `'en'` |
+| `title`                 | `string`                 | Document `<title>`. Default: `''` |
+| `allowedScriptOrigins`  | `string[]`               | Absolute `http:` or `https:` origins added to `script-src` |
+| `allowedStyleOrigins`   | `string[]`               | Absolute `http:` or `https:` origins added to `style-src` |
+| `allowedImageOrigins`   | `string[]`               | Absolute `http:` or `https:` origins added to `img-src` |
+| `allowedFontOrigins`    | `string[]`               | Absolute `http:` or `https:` origins added to `font-src` |
 
 ### `SandboxHandle`
 
@@ -78,7 +78,7 @@ Creates an isolated `<iframe sandbox="allow-scripts">` inside `container`.
 | `disposalSignal`             | `AbortSignal` aborted on `dispose()` — tie async operations to the sandbox's lifetime |
 | `ready`                      | Resolves on the **first** load or dispose; does not reset on re-renders            |
 | `render(html, options?)`     | Full page reset; lazy iframe creation. Returns a Promise that resolves on ready or rejects with `SandboxTimeoutError` after 5s. Pass `signal` to skip if already aborted |
-| `patch(html)`                | Incrementally replace the body without a full page reset — scripts/state survive. Call after `render()` resolves |
+| `replaceBody(html)`          | Replace body descendants without navigating. Head scripts/styles survive; descendant listeners and state do not. Call after `render()` resolves |
 | `setState(key, value)`       | Push a single state value into the sandbox; warns if called before ready           |
 | `setStateAll(record)`        | Push multiple state values in one message; more efficient than repeated `setState()` |
 | `updateStyle(id, css)`       | Hot-patch a `namedStyles` block by id, live and in the baseline for the next render |
@@ -92,7 +92,7 @@ Builds a strict Content-Security-Policy string from `SandboxOptions`. Origins fr
 
 ### `buildDocument(html, options?): string`
 
-Builds a complete, standalone sandbox HTML document including CSP meta tag, bridge script, and injected scripts/styles. Useful for server-side generation or direct `srcdoc` assignment.
+Builds isolated markup with CSP meta tag, bridge script, and injected scripts/styles. It does not return a host runtime handle; use `createSandbox()` for state updates, body replacement, style updates, readiness, or disposal.
 
 ## Bridge Protocol
 
@@ -133,7 +133,7 @@ declare interface Window {
 
 ## Errors
 
-`SandboxError` is the base class for all errors thrown by this package; `SandboxTimeoutError extends SandboxError` and is thrown by `render()`'s returned Promise when no `'ready'` signal arrives within 5 seconds (usually a document missing the bridge script — generate documents with `buildDocument()` to avoid this). This rejection happens in every build, not just dev — always handle it:
+`SandboxError` is the base class for package errors. `SandboxConfigurationError` rejects malformed CSP/document options during construction. `SandboxTimeoutError extends SandboxError` and is thrown by `render()` when no `'ready'` signal arrives within 5 seconds (usually a document missing the bridge script). This rejection happens in every build, not just dev — always handle it:
 
 ```ts
 import { SandboxTimeoutError } from '@vielzeug/sandbox';

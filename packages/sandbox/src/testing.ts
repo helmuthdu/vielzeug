@@ -34,12 +34,22 @@ export interface SandboxTestHelpers {
  * ```
  */
 export function createSandboxTestHelpers(container: HTMLElement): SandboxTestHelpers {
-  function getSource(): Window | null {
-    return (container.querySelector('iframe') as HTMLIFrameElement | null)?.contentWindow ?? null;
+  function getIframe(): HTMLIFrameElement | null {
+    return container.querySelector('iframe');
   }
 
-  function fire(data: unknown): void {
-    window.dispatchEvent(new MessageEvent('message', { data, source: getSource() }));
+  function fire(data: Record<string, unknown>): void {
+    const iframe = getIframe();
+    const channel = iframe?.dataset.sandboxChannel;
+    const generation = Number(iframe?.dataset.sandboxGeneration);
+
+    if (!iframe || !channel || !Number.isInteger(generation)) {
+      throw new Error('createSandboxTestHelpers requires a rendered sandbox.');
+    }
+
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { ...data, channel, generation }, source: iframe.contentWindow }),
+    );
   }
 
   return {

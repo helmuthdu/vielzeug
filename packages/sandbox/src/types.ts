@@ -140,15 +140,13 @@ export interface SandboxHandle {
    */
   onMessage(handler: (msg: SandboxMessage) => void): Unsubscribe;
   /**
-   * Incrementally update the body of the live sandbox document without a full page reset.
-   * Replaces `document.body.innerHTML` inside the iframe via postMessage — scripts,
-   * event listeners, and CSS state are preserved. The `ResizeObserver` fires automatically
-   * after the DOM update.
+   * Replace the live document body without navigating the iframe. Document/window listeners,
+   * head scripts, and named styles remain; body descendants, their listeners, references, and
+   * form state are replaced. Scripts included in `html` do not execute through innerHTML.
    *
-   * Call after the first `render()` has resolved — warns in dev if the bridge is not yet ready.
-   * No-ops if disposed. Does NOT accept an AbortSignal — patches are instantaneous once sent.
+   * Call after `render()` resolves — warns in dev if the bridge is not ready. No-ops if disposed.
    */
-  patch(html: string): void;
+  replaceBody(html: string): void;
   /**
    * Replace the entire sandbox document (full page reset). Creates the iframe lazily
    * on the first call — no DOM is created until render() is invoked.

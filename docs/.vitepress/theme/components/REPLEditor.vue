@@ -384,7 +384,7 @@ async function initializeEditor(): Promise<void> {
 
   if (!editorContainer.value) return;
 
-  monaco.languages.typescript.typescriptDefaults.setExtraLibs(extraLibsFor(librariesInLoadOrder.value));
+  monaco.typescript.typescriptDefaults.setExtraLibs(extraLibsFor(librariesInLoadOrder.value));
 
   editor = monaco.editor.create(editorContainer.value, {
     automaticLayout: true,
@@ -428,7 +428,7 @@ watch(
 
     if (!editor || !monaco) return;
 
-    monaco.languages.typescript.typescriptDefaults.setExtraLibs(extraLibsFor(librariesInLoadOrder.value));
+    monaco.typescript.typescriptDefaults.setExtraLibs(extraLibsFor(librariesInLoadOrder.value));
     editor.setValue(persistedCode.get(props.library.id) ?? defaultCodeFor(props.library.id));
   },
 );

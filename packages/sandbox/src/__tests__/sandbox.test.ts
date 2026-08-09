@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildCsp, buildDocument, createSandbox } from '../_sandbox.js';
-import { SandboxTimeoutError } from '../errors.js';
+import { SandboxConfigurationError, SandboxTimeoutError } from '../errors.js';
 import { createSandboxTestHelpers } from '../testing.js';
 
 // ---------------------------------------------------------------------------
@@ -88,17 +88,12 @@ describe('buildCsp', () => {
     expect(buildCsp({ nonce: 'abc123' })).toContain("'nonce-abc123'");
   });
 
-  it('handles data: script URLs without adding null origin', () => {
-    expect(buildCsp({ scripts: ['data:text/javascript,console.log(1)'] })).not.toContain('null');
-  });
-
-  it('handles non-URL script entries without crashing', () => {
-    expect(buildCsp({ scripts: ['not-a-valid-url'] })).not.toContain('null');
-  });
-
-  it('handles blob: URLs by extracting origin correctly', () => {
-    expect(buildCsp({ scripts: ['blob:https://cdn.example.com/abc-123'] })).toContain('https://cdn.example.com');
-  });
+  it.each(['data:text/javascript,console.log(1)', 'not-a-valid-url', 'blob:https://cdn.example.com/abc-123'])(
+    'rejects unsupported script URL %s',
+    (script) => {
+      expect(() => buildCsp({ scripts: [script] })).toThrow(SandboxConfigurationError);
+    },
+  );
 
   it('does not include a nonce token when nonce is not provided', () => {
     expect(buildCsp()).not.toContain('nonce-');
@@ -712,7 +707,7 @@ describe('createSandbox — onMessage', () => {
     sandbox.dispose();
   });
 
-  it('does not forward resize messages with non-numeric height', () => {
+  it.each(['bad', Number.NaN, Infinity, -1])('does not forward invalid resize height %s', (height) => {
     const sandbox = createSandbox(container);
 
     sandbox.render('<p>Hello</p>');
@@ -721,14 +716,23 @@ describe('createSandbox — onMessage', () => {
 
     sandbox.onMessage((msg) => received.push(msg));
 
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    if (typeof height === 'number') helpers.fireResize(height);
+    else {
+      const iframe = container.querySelector('iframe') as HTMLIFrameElement;
 
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        data: { height: 'bad', type: 'resize' },
-        source: iframe.contentWindow,
-      }),
-    );
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: {
+            channel: iframe.dataset.sandboxChannel,
+            generation: Number(iframe.dataset.sandboxGeneration),
+            height,
+            type: 'resize',
+          },
+          source: iframe.contentWindow,
+        }),
+      );
+    }
+
     expect(received).toHaveLength(0);
     sandbox.dispose();
   });
@@ -809,7 +813,10 @@ describe('createSandbox — setState', () => {
     const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
 
     sandbox.setState('theme', 'dark');
-    expect(postSpy).toHaveBeenCalledWith({ key: 'theme', type: 'state-update', value: 'dark' }, '*');
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ key: 'theme', type: 'state-update', value: 'dark' }),
+      '*',
+    );
     sandbox.dispose();
   });
 
@@ -886,7 +893,10 @@ describe('createSandbox — setStateAll', () => {
     const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
 
     sandbox.setStateAll({ count: 1, theme: 'dark' });
-    expect(postSpy).toHaveBeenCalledWith({ record: { count: 1, theme: 'dark' }, type: 'state-update-all' }, '*');
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ record: { count: 1, theme: 'dark' }, type: 'state-update-all' }),
+      '*',
+    );
     sandbox.dispose();
   });
 
@@ -977,7 +987,10 @@ describe('createSandbox — updateStyle', () => {
     const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
 
     sandbox.updateStyle('theme-css', 'body { color: blue; }');
-    expect(postSpy).toHaveBeenCalledWith({ css: 'body { color: blue; }', id: 'theme-css', type: 'style-patch' }, '*');
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ css: 'body { color: blue; }', id: 'theme-css', type: 'style-patch' }),
+      '*',
+    );
     sandbox.dispose();
   });
 
@@ -1055,10 +1068,10 @@ describe('createSandbox — updateStyle', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — patch()
+// createSandbox — replaceBody()
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — patch()', () => {
+describe('createSandbox — replaceBody()', () => {
   let container: HTMLElement;
   let helpers: ReturnType<typeof makeHelpers>;
 
@@ -1071,7 +1084,7 @@ describe('createSandbox — patch()', () => {
     container.remove();
   });
 
-  it('posts an html-patch message to iframe.contentWindow', async () => {
+  it('posts an html-replace message to iframe.contentWindow', async () => {
     const sandbox = createSandbox(container);
     const p = sandbox.render('<p>initial</p>');
     const iframe = container.querySelector('iframe') as HTMLIFrameElement;
@@ -1081,8 +1094,11 @@ describe('createSandbox — patch()', () => {
 
     const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
 
-    sandbox.patch('<p>updated</p>');
-    expect(postSpy).toHaveBeenCalledWith({ html: '<p>updated</p>', type: 'html-patch' }, '*');
+    sandbox.replaceBody('<p>updated</p>');
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ html: '<p>updated</p>', type: 'html-replace' }),
+      '*',
+    );
     sandbox.dispose();
   });
 
@@ -1091,7 +1107,7 @@ describe('createSandbox — patch()', () => {
     const sandbox = createSandbox(container);
 
     sandbox.render('<p>initial</p>');
-    sandbox.patch('<p>too early</p>');
+    sandbox.replaceBody('<p>too early</p>');
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sandbox]'));
     warnSpy.mockRestore();
     sandbox.dispose();
@@ -1101,7 +1117,7 @@ describe('createSandbox — patch()', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const sandbox = createSandbox(container);
 
-    sandbox.patch('<p>no render yet</p>');
+    sandbox.replaceBody('<p>no render yet</p>');
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sandbox]'));
     warnSpy.mockRestore();
     sandbox.dispose();
@@ -1112,7 +1128,7 @@ describe('createSandbox — patch()', () => {
     const sandbox = createSandbox(container);
 
     sandbox.dispose();
-    sandbox.patch('<p>after dispose</p>');
+    sandbox.replaceBody('<p>after dispose</p>');
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sandbox]'));
     warnSpy.mockRestore();
   });
@@ -1127,26 +1143,26 @@ describe('createSandbox — patch()', () => {
 
     const srcdocBefore = iframe.srcdoc;
 
-    sandbox.patch('<p>updated</p>');
+    sandbox.replaceBody('<p>updated</p>');
     expect(iframe.srcdoc).toBe(srcdocBefore);
     sandbox.dispose();
   });
 
-  it('does not reset bridgeReady — setState still works after patch()', async () => {
+  it('does not reset bridgeReady — setState still works after replaceBody()', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const sandbox = createSandbox(container);
     const p = sandbox.render('<p>initial</p>');
 
     helpers.fireReady();
     await p;
-    sandbox.patch('<p>patched</p>');
+    sandbox.replaceBody('<p>patched</p>');
     sandbox.setState('key', 'value');
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
     sandbox.dispose();
   });
 
-  it('patch() after re-render (before ready) warns', async () => {
+  it('replaceBody() after re-render (before ready) warns', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const sandbox = createSandbox(container);
     const p1 = sandbox.render('<p>v1</p>');
@@ -1156,8 +1172,8 @@ describe('createSandbox — patch()', () => {
 
     // Start a new full render — bridgeReady resets
     sandbox.render('<p>v2</p>');
-    sandbox.patch('<p>too early again</p>');
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('bridge is not yet initialized'));
+    sandbox.replaceBody('<p>too early again</p>');
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('bridge is not ready'));
     warnSpy.mockRestore();
     sandbox.dispose();
   });
@@ -1190,7 +1206,7 @@ describe('createSandboxTestHelpers', () => {
     window.addEventListener('message', spy);
     h.fireReady();
     window.removeEventListener('message', spy);
-    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ data: { type: 'ready' } }));
+    expect(spy).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ type: 'ready' }) }));
     sandbox.dispose();
   });
 
@@ -1316,22 +1332,8 @@ describe('buildDocument — nonce in CSP meta tag', () => {
     expect(contentMatch![1]).toContain("'nonce-abc123'");
   });
 
-  it('the bridge <script nonce="..."> attribute matches the CSP nonce token exactly for a nonce with special characters', () => {
-    // Regression: buildCsp() and buildDocument() previously sanitized the nonce
-    // differently (strip vs escape-only) — a mismatch here means the browser
-    // rejects the nonce and the bridge script silently never executes.
-    const doc = buildDocument('<p>hi</p>', { nonce: `abc;"'\ndef` });
-    const contentMatch = doc.match(/http-equiv="Content-Security-Policy"\s+content="([^"]*)"/);
-    const scriptNonceMatch = doc.match(/<script nonce="([^"]*)">/);
-
-    expect(contentMatch).not.toBeNull();
-    expect(scriptNonceMatch).not.toBeNull();
-
-    const cspNonceMatch = contentMatch![1]!.match(/'nonce-([^']*)'/);
-
-    expect(cspNonceMatch).not.toBeNull();
-    expect(scriptNonceMatch![1]).toBe(cspNonceMatch![1]);
-    expect(scriptNonceMatch![1]).toBe('abcdef');
+  it('rejects a nonce with characters outside the supported token grammar', () => {
+    expect(() => buildDocument('<p>hi</p>', { nonce: `abc;"'\ndef` })).toThrow(SandboxConfigurationError);
   });
 });
 
@@ -1483,7 +1485,10 @@ describe('createSandbox — render generation', () => {
     // Simulate a leftover 'ready' message from a document a newer render() already
     // superseded (generation 0 predates the current render's generation 1).
     window.dispatchEvent(
-      new MessageEvent('message', { data: { generation: 0, type: 'ready' }, source: iframe.contentWindow }),
+      new MessageEvent('message', {
+        data: { channel: iframe.dataset.sandboxChannel, generation: 0, type: 'ready' },
+        source: iframe.contentWindow,
+      }),
     );
 
     let resolved = false;
@@ -1497,20 +1502,46 @@ describe('createSandbox — render generation', () => {
 
     // The current generation's ready message must still resolve the render.
     window.dispatchEvent(
-      new MessageEvent('message', { data: { generation: 1, type: 'ready' }, source: iframe.contentWindow }),
+      new MessageEvent('message', {
+        data: { channel: iframe.dataset.sandboxChannel, generation: 1, type: 'ready' },
+        source: iframe.contentWindow,
+      }),
     );
     await renderPromise;
     expect(resolved).toBe(true);
     sandbox.dispose();
   });
 
-  it('accepts messages with no generation field (e.g. from test helpers)', async () => {
+  it('rejects messages with a missing channel or generation', async () => {
     const sandbox = createSandbox(container);
-    const helpers = makeHelpers(container);
-
     const renderPromise = sandbox.render('<p>hi</p>');
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
 
-    helpers.fireReady();
+    window.dispatchEvent(new MessageEvent('message', { data: { type: 'ready' }, source: iframe.contentWindow }));
+
+    let resolved = false;
+
+    void renderPromise.then(() => {
+      resolved = true;
+    });
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { channel: 'wrong-channel', generation: 1, type: 'ready' },
+        source: iframe.contentWindow,
+      }),
+    );
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: { channel: iframe.dataset.sandboxChannel, generation: 1, type: 'ready' },
+        source: iframe.contentWindow,
+      }),
+    );
     await expect(renderPromise).resolves.toBeUndefined();
     sandbox.dispose();
   });

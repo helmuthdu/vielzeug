@@ -196,11 +196,17 @@ window.fetch = async function (input, init) {
 // snippet that calls console.log() before its first `await` would hit `__sandbox__` as
 // undefined. Emitting messages by hand via the same postMessage shape the bridge itself
 // uses (see @vielzeug/sandbox's internal `post()`) sidesteps that ordering dependency
-// entirely: it only needs `window.__sandboxGeneration`, which render() sets in <head> —
-// always before any body script runs.
+// entirely: it only needs bridge channel and generation metadata, which render() sets in <head>
+// before any body script runs.
 const EMIT_HELPER_SCRIPT = `
 function __replEmit(event, detail) {
-  parent.postMessage({ type: 'custom', event: event, detail: detail, generation: window.__sandboxGeneration }, '*');
+  parent.postMessage({
+    type: 'custom',
+    event: event,
+    detail: detail,
+    channel: window.__sandboxChannel,
+    generation: window.__sandboxGeneration,
+  }, '*');
 }
 `;
 

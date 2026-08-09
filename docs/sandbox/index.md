@@ -9,6 +9,7 @@ exports:
     createSandbox,
     buildCsp,
     buildDocument,
+    SandboxConfigurationError,
     SandboxError,
     SandboxTimeoutError,
     SandboxHandle,
@@ -125,12 +126,12 @@ sandbox.dispose();
 - `SandboxHandle.disposalSignal` — `AbortSignal` aborted when the sandbox is disposed; tie async work to sandbox lifetime
 - `SandboxHandle.disposed` — Observable disposed state; check before deferred calls
 - `render(html, { signal? })` — Lazy iframe creation; returns `Promise<void>` resolving when ready, or rejecting with `SandboxTimeoutError` if the bridge never signals ready; pass `AbortSignal` to skip cancelled renders
-- `patch(html)` — Incremental body update without page reset; preserves scripts, listeners, and CSS state; ideal for streaming content
+- `replaceBody(html)` — Replace body descendants without navigating; head scripts/styles survive while descendant state is replaced; suited to host-owned streaming markup
 - `updateStyle(id, css)` — Hot-patch a named `<style id="…">` block live without re-rendering; also updates baseline for next render
 - `setState(key, value)` — Push state into the sandbox; received as `sandbox:state-update` CustomEvent
 - `setStateAll(record)` — Push multiple state values in a single postMessage; more efficient than repeated `setState()` calls for initial setup
 - `namedStyles` option — Named `<style id="key">` blocks in document `<head>`; individually patchable via `updateStyle()`
-- `lang` / `title` options — Set `<html lang="…">` and `<title>` on the generated document for screen-reader correctness
+- `lang` / `title` options — Set basic language tag and `<title>` on generated documents for screen-reader correctness
 - `SandboxBridge` type — Ambient type for `window.__sandbox__` in sandbox-side TypeScript; `onState(key, handler)` subscribes to state pushed via `setState()`/`setStateAll()`
 - `custom` messages — Sandbox code emits `window.__sandbox__.emit(event, detail)` to the host
 - `resize` messages — Auto-emitted by the bridge's built-in `ResizeObserver`; no manual wiring needed
@@ -138,7 +139,7 @@ sandbox.dispose();
 - `nonce` option — Cryptographic nonce for bridge `<script>` tag and `script-src` CSP
 - `scripts` option — Inject CDN scripts with `crossorigin="anonymous"`; origins auto-added to `script-src`
 - `buildCsp()` — Build a standalone CSP string using the same `SandboxOptions`
-- `buildDocument()` — Build a complete sandbox HTML document for server-side or offline use
+- `buildDocument()` — Build static isolated sandbox markup for server-side or offline use; use `createSandbox()` for host-managed runtime controls
 - Error forwarding — `onerror` + `unhandledrejection` forwarded as `{ type: 'error' }` messages
 - Disposable — `dispose()` + `[Symbol.dispose]` for `using` declarations
 
@@ -151,6 +152,7 @@ sandbox.dispose();
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [Migration Guide](./migration.md)
 
 </div>
 

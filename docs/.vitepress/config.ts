@@ -1594,6 +1594,7 @@ export default defineConfig({
       ],
       '/sandbox/': [
         { link: '/sandbox/', text: 'Overview' },
+        { link: '/sandbox/migration', text: 'Migration' },
         {
           items: [
             { link: '/sandbox/usage#basic-usage', text: 'Basic Usage' },

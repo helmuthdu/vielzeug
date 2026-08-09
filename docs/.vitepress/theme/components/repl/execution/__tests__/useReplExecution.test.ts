@@ -183,15 +183,20 @@ describe('useReplExecution', () => {
       // drops this before it reaches handleMessage().
       window.dispatchEvent(
         new MessageEvent('message', {
-          data: { detail: { level: 'log', parts: ['stale'] }, event: 'repl:console', generation: 0, type: 'custom' },
+          data: {
+            channel: container.querySelector('iframe')?.dataset.sandboxChannel,
+            detail: { level: 'log', parts: ['stale'] },
+            event: 'repl:console',
+            generation: 1,
+            type: 'custom',
+          },
           source: container.querySelector('iframe')?.contentWindow,
         }),
       );
       expect(execution.output.value).toEqual([]);
 
-      // A message with no generation tag (as the test helper sends) is always trusted —
-      // proves the pipeline still works normally after a cancel(), not just that it drops
-      // stale messages.
+      // The helper reads current iframe metadata and emits a valid current-generation message.
+      // This proves the pipeline still works after cancellation, not only that stale messages drop.
       helpers.fireCustom('repl:console', { level: 'log', parts: ['fresh'] });
       expect(execution.output.value).toEqual([expect.objectContaining({ text: "'fresh'" })]);
     });

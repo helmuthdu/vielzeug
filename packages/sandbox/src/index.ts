@@ -1,5 +1,5 @@
 export { buildCsp, buildDocument, createSandbox } from './_sandbox.js';
-export { SandboxError, SandboxTimeoutError } from './errors.js';
+export { SandboxConfigurationError, SandboxError, SandboxTimeoutError } from './errors.js';
 export type {
   SandboxBridge,
   SandboxHandle,

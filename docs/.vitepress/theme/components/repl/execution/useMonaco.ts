@@ -16,6 +16,33 @@ import type * as Monaco from 'monaco-editor';
 
 let monacoPromise: Promise<typeof Monaco> | null = null;
 
+interface MonacoTypeScriptApi {
+  typescript: {
+    ModuleKind: { ESNext: number };
+    ModuleResolutionKind: { NodeJs: number };
+    ScriptTarget: { ESNext: number };
+    typescriptDefaults: {
+      setCompilerOptions(options: {
+        allowNonTsExtensions: boolean;
+        esModuleInterop: boolean;
+        module: number;
+        moduleResolution: number;
+        target: number;
+      }): void;
+    };
+  };
+}
+
+export function configureTypeScript(monaco: MonacoTypeScriptApi): void {
+  monaco.typescript.typescriptDefaults.setCompilerOptions({
+    allowNonTsExtensions: true,
+    esModuleInterop: true,
+    module: monaco.typescript.ModuleKind.ESNext,
+    moduleResolution: monaco.typescript.ModuleResolutionKind.NodeJs,
+    target: monaco.typescript.ScriptTarget.ESNext,
+  });
+}
+
 /** Loads Monaco, wires up its web workers, and configures the TS compiler exactly once. */
 export function loadMonaco(): Promise<typeof Monaco> {
   monacoPromise ??= (async () => {
@@ -33,13 +60,7 @@ export function loadMonaco(): Promise<typeof Monaco> {
 
     // Module stays ESNext (not CommonJS) so emitted JS keeps `import`/`export` syntax —
     // rewriteVielzeugImports() expects to see real import statements to translate.
-    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-      allowNonTsExtensions: true,
-      esModuleInterop: true,
-      module: monaco.languages.typescript.ModuleKind.ESNext,
-      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-      target: monaco.languages.typescript.ScriptTarget.ESNext,
-    });
+    configureTypeScript(monaco);
 
     return monaco;
   })();
@@ -54,7 +75,7 @@ export function loadMonaco(): Promise<typeof Monaco> {
  * the same permissive "just run it" behaviour a Babel-style playground would give.
  */
 export async function transpileTypeScript(monaco: typeof Monaco, model: Monaco.editor.ITextModel): Promise<string> {
-  const workerFactory = await monaco.languages.typescript.getTypeScriptWorker();
+  const workerFactory = await monaco.typescript.getTypeScriptWorker();
   const client = await workerFactory(model.uri);
   const { outputFiles } = await client.getEmitOutput(model.uri.toString());
   const jsFile = outputFiles.find((file) => file.name.endsWith('.js'));

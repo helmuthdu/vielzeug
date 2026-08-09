@@ -17,3 +17,6 @@ export class SandboxError extends Error {
  * use buildDocument() to generate documents that include it.
  */
 export class SandboxTimeoutError extends SandboxError {}
+
+/** Thrown when Sandbox configuration cannot produce a valid document or CSP policy. */
+export class SandboxConfigurationError extends SandboxError {}

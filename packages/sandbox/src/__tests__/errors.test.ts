@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { SandboxError } from '../errors.js';
+import { SandboxConfigurationError, SandboxError } from '../errors.js';
 
 describe('SandboxError', () => {
   it('is instanceof Error and SandboxError with correct name and message', () => {
@@ -36,6 +36,14 @@ describe('SandboxError', () => {
     const err = new SandboxFooError('foo failed');
 
     expect(Object.getPrototypeOf(err)).toBe(SandboxFooError.prototype);
+  });
+
+  it('identifies configuration errors as SandboxError instances', () => {
+    const err = new SandboxConfigurationError('invalid origin');
+
+    expect(err).toBeInstanceOf(SandboxError);
+    expect(err.name).toBe('SandboxConfigurationError');
+    expect(SandboxError.is(err)).toBe(true);
   });
 
   describe('is()', () => {
