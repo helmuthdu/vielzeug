@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor(ripple): stop re-exporting resource/createStore/watch from package root — subpath-only (./async, ./store, ./watch), one canonical import path per primitive instead of two resolving to the same binding",
+      "packageName": "@vielzeug/ripple",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

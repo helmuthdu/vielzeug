@@ -1,2 +1,5 @@
 export type { Store, StoreOptions } from './_store';
-export { createStore } from './index';
+
+import { defaultRipple } from './_default';
+
+export const createStore = defaultRipple.createStore;

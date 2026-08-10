@@ -1,2 +1,5 @@
 export type { WatchOptions } from './_watch';
-export { watch } from './index';
+
+import { defaultRipple } from './_default';
+
+export const watch = defaultRipple.watch;
