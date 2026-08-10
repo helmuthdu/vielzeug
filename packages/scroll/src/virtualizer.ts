@@ -14,6 +14,12 @@ import {
   toPositiveNumber,
   type VirtualKey,
 } from './_utils';
+import {
+  requireNonNegativeInteger,
+  requireNonNegativeNumber,
+  requirePositiveNumber,
+  validateOverscan,
+} from './_validation';
 
 export {
   createMeasurementCache,
@@ -43,22 +49,11 @@ export interface VirtualizerOptions {
   initialOffset?: number;
   /** External measurement cache for scroll restoration or SSR pre-measurement. */
   measurementCache?: MeasurementCache;
-  /**
-   * Called after every render cycle with the new state.
-   * **Fixed at construction** — passing `onChange` to `update()` has no effect.
-   * To replace the callback, dispose and re-create the virtualizer.
-   */
+  /** Called after every render cycle with the new state. Replace through `update()`. */
   onChange?: (state: VirtualizerState) => void;
-  /**
-   * Called when scrolling has settled (no scroll events for `scrollEndDelay` ms,
-   * or immediately on the native `scrollend` event when available).
-   * Fixed at construction.
-   */
+  /** Called when scrolling has settled. Replace through `update()`. */
   onScrollEnd?: (offset: number) => void;
-  /**
-   * Called when the scrolling state changes.
-   * Fixed at construction.
-   */
+  /** Called when the scrolling state changes. Replace through `update()`. */
   onScrollingChange?: (isScrolling: boolean) => void;
   overscan?: Overscan;
   /**
@@ -73,9 +68,8 @@ export interface VirtualizerOptions {
  * Options accepted by `update()`. Explicit interface instead of Omit<...>
  * for better IDE hover and autocomplete (R7).
  *
- * Intentionally excludes: `horizontal` (axis cannot change at runtime),
- * `initialOffset` (one-time bootstrap value), and `onChange` (fixed at
- * construction — see `VirtualizerOptions.onChange`).
+ * Intentionally excludes `horizontal` (axis cannot change at runtime) and
+ * `initialOffset` (one-time bootstrap value).
  */
 export interface VirtualizerUpdateOptions {
   count?: number;
@@ -84,7 +78,11 @@ export interface VirtualizerUpdateOptions {
   getItemKey?: ((index: number) => VirtualKey) | undefined;
   /** Replace the active measurement cache. Existing entries in the new cache are used immediately on the next rebuild. */
   measurementCache?: MeasurementCache;
+  onChange?: ((state: VirtualizerState) => void) | undefined;
+  onScrollEnd?: ((offset: number) => void) | undefined;
+  onScrollingChange?: ((isScrolling: boolean) => void) | undefined;
   overscan?: Overscan;
+  scrollEndDelay?: number;
   sticky?: ((index: number) => boolean) | undefined;
 }
 
@@ -134,22 +132,30 @@ export interface Virtualizer {
 // ─── Implementation ────────────────────────────────────────────────────────────
 
 export function createVirtualizer(target: ScrollTarget, options: VirtualizerOptions): Virtualizer {
+  if (typeof options.estimateSize === 'number') requirePositiveNumber(options.estimateSize, 'estimateSize');
+
+  if (options.gap !== undefined) requireNonNegativeInteger(options.gap, 'gap');
+
+  if (options.initialOffset !== undefined) requireNonNegativeNumber(options.initialOffset, 'initialOffset');
+
+  if (options.overscan !== undefined) validateOverscan(options.overscan);
+
+  if (options.scrollEndDelay !== undefined) requireNonNegativeNumber(options.scrollEndDelay, 'scrollEndDelay');
+
   const horizontal = !!options.horizontal;
   const defaultItemKey = (index: number): VirtualKey => index;
 
-  let count = toNonNegativeInt(options.count);
+  let count = requireNonNegativeInteger(options.count, 'count');
   let estimateFn = resolveEstimateFn(options.estimateSize, DEFAULT_ESTIMATE_SIZE);
   let gap = toNonNegativeInt(options.gap ?? 0);
   let getItemKey = options.getItemKey ?? defaultItemKey;
   let overscan = normalizeOverscan(options.overscan, DEFAULT_OVERSCAN);
   let stickyFn: ((index: number) => boolean) | null = options.sticky ?? null;
 
-  // Callbacks fixed at construction — not swappable via update().
-  const onChange = options.onChange;
-  const onScrollEnd = options.onScrollEnd;
-  const onScrollingChange = options.onScrollingChange;
-  const scrollEndDelay =
-    typeof options.scrollEndDelay === 'number' && options.scrollEndDelay >= 0 ? options.scrollEndDelay : 150;
+  let onChange = options.onChange;
+  let onScrollEnd = options.onScrollEnd;
+  let onScrollingChange = options.onScrollingChange;
+  let scrollEndDelay = options.scrollEndDelay ?? 150;
 
   let isScrolling = false;
   let scrollEndTimer: ReturnType<typeof setTimeout> | null = null;
@@ -395,11 +401,31 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   // ─── Option updates ───────────────────────────────────────────────────────────
 
   function applyOptions(next: VirtualizerUpdateOptions): void {
+    if (next.count !== undefined) requireNonNegativeInteger(next.count, 'count');
+
+    if (typeof next.estimateSize === 'number') requirePositiveNumber(next.estimateSize, 'estimateSize');
+
+    if (next.gap !== undefined) requireNonNegativeInteger(next.gap, 'gap');
+
+    if (next.overscan !== undefined) validateOverscan(next.overscan);
+
+    if (next.scrollEndDelay !== undefined) requireNonNegativeNumber(next.scrollEndDelay, 'scrollEndDelay');
+
     let needsRebuild = false;
     let needsCompute = false;
 
+    if (Object.hasOwn(next, 'onChange')) onChange = next.onChange;
+
+    if (Object.hasOwn(next, 'onScrollEnd')) onScrollEnd = next.onScrollEnd;
+
+    if (Object.hasOwn(next, 'onScrollingChange')) onScrollingChange = next.onScrollingChange;
+
+    if (next.scrollEndDelay !== undefined) {
+      scrollEndDelay = next.scrollEndDelay;
+    }
+
     if (next.count !== undefined) {
-      const nextCount = toNonNegativeInt(next.count);
+      const nextCount = next.count;
 
       if (nextCount !== count) {
         count = nextCount;
@@ -415,7 +441,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     }
 
     if (next.gap !== undefined) {
-      const nextGap = toNonNegativeInt(next.gap);
+      const nextGap = next.gap;
 
       if (nextGap !== gap) {
         gap = nextGap;

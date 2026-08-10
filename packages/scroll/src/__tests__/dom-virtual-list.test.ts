@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createDomVirtualList, createVirtualScroller } from '../dom-virtual-list';
-import { ScrollRangeError } from '../errors';
+import { ScrollConfigurationError, ScrollRangeError } from '../errors';
 import { flushMicrotasks, makeContainer } from './test-utils';
 
 type Row = { id: number; label: string; size: number };
@@ -18,6 +18,23 @@ function makeList(scrollHeight = 120) {
 }
 
 // ─── Basic rendering ───────────────────────────────────────────────────────────
+
+describe('createDomVirtualList – configuration', () => {
+  it('rejects malformed stick-to-bottom configuration before attaching', () => {
+    const { listEl, scrollEl } = makeList();
+
+    for (const stickToBottom of [{ threshold: -1 }, null as never]) {
+      expect(() =>
+        createDomVirtualList<Row>({
+          listElement: listEl,
+          render: () => {},
+          scrollElement: scrollEl,
+          stickToBottom,
+        }),
+      ).toThrow(ScrollConfigurationError);
+    }
+  });
+});
 
 describe('createDomVirtualList – rendering', () => {
   it('calls render with visible virtual items and totalSize', () => {
@@ -826,7 +843,7 @@ describe('createVirtualScroller', () => {
 
     expect(ctrl.count).toBe(0);
     ctrl.setItems(makeRows(10));
-    // With spread snapshot this returns 0; Proxy returns the current value.
+    // With a spread snapshot this returns 0; copied descriptors return the current value.
     expect(ctrl.count).toBe(10);
     ctrl.dispose();
   });

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ScrollConfigurationError } from '../errors';
 import { createMeasurementCache, createVirtualizer, DEFAULT_ESTIMATE_SIZE, DEFAULT_OVERSCAN } from '../virtualizer';
 import { flushMicrotasks, makeContainer, makeWindow } from './test-utils';
 
@@ -13,13 +14,23 @@ function scrollEl(el: HTMLElement, top: number) {
 // ─── Normalization ────────────────────────────────────────────────────────────
 
 describe('createVirtualizer – normalization', () => {
-  it('clamps negative count to 0', () => {
+  it('rejects invalid static construction options', () => {
     const el = makeContainer({ clientHeight: 200 });
-    const v = createVirtualizer(el, { count: -5, estimateSize: 20 });
 
-    expect(v.count).toBe(0);
-    expect(v.items).toHaveLength(0);
-    v.dispose();
+    for (const options of [
+      { count: -5 },
+      { count: 1.5 },
+      { count: Number.NaN },
+      { count: 1, estimateSize: 0 },
+      { count: 1, gap: -1 },
+      { count: 1, initialOffset: -1 },
+      { count: 1, overscan: Number.POSITIVE_INFINITY },
+      { count: 1, overscan: null as never },
+      { count: 1, overscan: 'bad' as never },
+      { count: 1, scrollEndDelay: -1 },
+    ]) {
+      expect(() => createVirtualizer(el, options)).toThrow(ScrollConfigurationError);
+    }
   });
 
   it('uses DEFAULT_ESTIMATE_SIZE for missing estimateSize', () => {
@@ -46,11 +57,11 @@ describe('createVirtualizer – normalization', () => {
     v.dispose();
   });
 
-  it('clamps negative gap to 0', () => {
+  it('accepts runtime estimator fallback without treating it as configuration failure', () => {
     const el = makeContainer({ clientHeight: 100 });
-    const v = createVirtualizer(el, { count: 5, estimateSize: 20, gap: -99 });
+    const v = createVirtualizer(el, { count: 5, estimateSize: () => -99 });
 
-    expect(v.totalSize).toBe(5 * 20);
+    expect(v.totalSize).toBe(5 * DEFAULT_ESTIMATE_SIZE);
     v.dispose();
   });
 });
@@ -465,6 +476,30 @@ describe('createVirtualizer – refresh', () => {
 // ─── update ───────────────────────────────────────────────────────────────────
 
 describe('createVirtualizer – update', () => {
+  it('rejects an invalid update without applying any fields', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    expect(() => v.update({ count: 10, gap: -1 })).toThrow(ScrollConfigurationError);
+    expect(v.count).toBe(5);
+    expect(v.totalSize).toBe(100);
+    v.dispose();
+  });
+
+  it('replaces callbacks through update()', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const initial = vi.fn();
+    const replacement = vi.fn();
+    const v = createVirtualizer(el, { count: 5, estimateSize: 20, onChange: initial });
+
+    v.update({ onChange: replacement });
+    v.refresh();
+
+    expect(initial).toHaveBeenCalledTimes(1);
+    expect(replacement).toHaveBeenCalledTimes(1);
+    v.dispose();
+  });
+
   it('applies count, estimateSize, gap, overscan atomically', () => {
     const el = makeContainer({ clientHeight: 200 });
     const v = createVirtualizer(el, { count: 10, estimateSize: 20, gap: 0 });
@@ -1039,12 +1074,10 @@ describe('createVirtualizer – Infinity estimate guard', () => {
     v.dispose();
   });
 
-  it('falls back to DEFAULT_ESTIMATE_SIZE when estimateSize is a huge number (> 1e7)', () => {
+  it('rejects a static estimateSize above the supported maximum', () => {
     const el = makeContainer({ clientHeight: 200 });
-    const v = createVirtualizer(el, { count: 3, estimateSize: 2e7 });
 
-    expect(v.totalSize).toBe(3 * DEFAULT_ESTIMATE_SIZE);
-    v.dispose();
+    expect(() => createVirtualizer(el, { count: 3, estimateSize: 2e7 })).toThrow(ScrollConfigurationError);
   });
 });
 

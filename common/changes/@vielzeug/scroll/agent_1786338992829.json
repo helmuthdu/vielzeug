@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat!: validate static virtualizer configuration and support callback updates",
+      "packageName": "@vielzeug/scroll",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/scroll"
+}

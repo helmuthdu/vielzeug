@@ -1,5 +1,11 @@
 import { DEFAULT_ESTIMATE_SIZE, DEFAULT_OVERSCAN, type MeasurementCache, type Overscan } from './_utils';
-import { ScrollRangeError } from './errors';
+import {
+  requireNonNegativeInteger,
+  requireNonNegativeNumber,
+  requirePositiveNumber,
+  validateOverscan,
+} from './_validation';
+import { ScrollConfigurationError, ScrollRangeError } from './errors';
 import {
   createVirtualizer,
   type ScrollToIndexOptions,
@@ -152,6 +158,22 @@ function createNodePool() {
 // ─── Implementation ────────────────────────────────────────────────────────────
 
 export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomVirtualListController<T> {
+  if (typeof options.estimateSize === 'number') requirePositiveNumber(options.estimateSize, 'estimateSize');
+
+  if (options.gap !== undefined) requireNonNegativeInteger(options.gap, 'gap');
+
+  if (options.overscan !== undefined) validateOverscan(options.overscan);
+
+  if (options.stickToBottom !== undefined && typeof options.stickToBottom !== 'boolean') {
+    if (options.stickToBottom === null || Array.isArray(options.stickToBottom)) {
+      throw new ScrollConfigurationError('stickToBottom must be a boolean or options object.');
+    }
+
+    if (options.stickToBottom.threshold !== undefined) {
+      requireNonNegativeNumber(options.stickToBottom.threshold, 'stickToBottom.threshold');
+    }
+  }
+
   let currentItems: T[] = [];
   let isDestroyed = false;
   const ac = new AbortController();

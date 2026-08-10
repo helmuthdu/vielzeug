@@ -1,4 +1,5 @@
 import { createScrollAdapter } from './_adapter';
+import { alignOffset } from './_alignment';
 import { createAxis1D, type VirtualItem } from './_axis1d';
 import {
   DEFAULT_ESTIMATE_SIZE,
@@ -11,6 +12,12 @@ import {
   toNonNegativeInt,
   toPositiveNumber,
 } from './_utils';
+import {
+  requireNonNegativeInteger,
+  requireNonNegativeNumber,
+  requirePositiveNumber,
+  validateOverscan,
+} from './_validation';
 
 export { type VirtualItem };
 
@@ -51,10 +58,7 @@ export interface GridVirtualizerOptions {
   estimateRowSize?: number | ((row: number) => number);
   initialScrollLeft?: number;
   initialScrollTop?: number;
-  /**
-   * Called after every render cycle with the new state.
-   * **Fixed at construction** \u2014 cannot be changed after creation.
-   */
+  /** Called after every render cycle with the new state. Replace through `update()`. */
   onChange?: (state: GridVirtualizerState) => void;
   /** Zero-allocation alternative to onChange for range-based consumers. */
   onRangeChange?: (range: GridRangeChangeEvent) => void;
@@ -75,6 +79,8 @@ export interface GridVirtualizerUpdateOptions {
   colGap?: number;
   estimateColSize?: number | ((col: number) => number);
   estimateRowSize?: number | ((row: number) => number);
+  onChange?: ((state: GridVirtualizerState) => void) | undefined;
+  onRangeChange?: ((range: GridRangeChangeEvent) => void) | undefined;
   overscanX?: Overscan;
   overscanY?: Overscan;
   rowCount?: number;
@@ -112,41 +118,34 @@ export interface GridVirtualizer {
   [Symbol.dispose]: () => void;
 }
 
-// ─── Align helper ─────────────────────────────────────────────────────────────
-
-function alignOffset(
-  itemStart: number,
-  itemEnd: number,
-  itemSize: number,
-  currentOffset: number,
-  viewportSize: number,
-  align: 'auto' | 'center' | 'end' | 'start',
-): number | null {
-  if (align === 'start') return itemStart;
-
-  if (align === 'end') return itemEnd - viewportSize;
-
-  if (align === 'center') return itemStart - (viewportSize - itemSize) / 2;
-
-  // auto: no-op when already fully visible
-  if (itemStart >= currentOffset && itemEnd <= currentOffset + viewportSize) return null;
-
-  return itemStart < currentOffset ? itemStart : itemEnd - viewportSize;
-}
-
 // ─── Implementation ────────────────────────────────────────────────────────────
 
 export function createGridVirtualizer(target: ScrollTarget, options: GridVirtualizerOptions): GridVirtualizer {
-  let rowCount = toNonNegativeInt(options.rowCount);
-  let colCount = toNonNegativeInt(options.colCount);
+  if (typeof options.estimateRowSize === 'number') requirePositiveNumber(options.estimateRowSize, 'estimateRowSize');
+
+  if (typeof options.estimateColSize === 'number') requirePositiveNumber(options.estimateColSize, 'estimateColSize');
+
+  if (options.initialScrollTop !== undefined) requireNonNegativeNumber(options.initialScrollTop, 'initialScrollTop');
+
+  if (options.initialScrollLeft !== undefined) requireNonNegativeNumber(options.initialScrollLeft, 'initialScrollLeft');
+
+  if (options.rowGap !== undefined) requireNonNegativeInteger(options.rowGap, 'rowGap');
+
+  if (options.colGap !== undefined) requireNonNegativeInteger(options.colGap, 'colGap');
+
+  if (options.overscanY !== undefined) validateOverscan(options.overscanY, 'overscanY');
+
+  if (options.overscanX !== undefined) validateOverscan(options.overscanX, 'overscanX');
+
+  let rowCount = requireNonNegativeInteger(options.rowCount, 'rowCount');
+  let colCount = requireNonNegativeInteger(options.colCount, 'colCount');
   let estimateRowFn = resolveEstimateFn(options.estimateRowSize, DEFAULT_ESTIMATE_SIZE);
   let estimateColFn = resolveEstimateFn(options.estimateColSize, DEFAULT_ESTIMATE_SIZE);
   let overscanY = normalizeOverscan(options.overscanY, DEFAULT_OVERSCAN);
   let overscanX = normalizeOverscan(options.overscanX, DEFAULT_OVERSCAN);
 
-  // Callbacks fixed at construction.
-  const onChange = options.onChange;
-  const onRangeChange = options.onRangeChange;
+  let onChange = options.onChange;
+  let onRangeChange = options.onRangeChange;
 
   // External or internal measurement caches (numeric row/col index keys).
   const measuredRows: Map<number, number> = options.rowMeasurementCache ?? new Map();
@@ -502,12 +501,32 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   function update(next: GridVirtualizerUpdateOptions): void {
     if (disposed) return;
 
+    if (next.rowCount !== undefined) requireNonNegativeInteger(next.rowCount, 'rowCount');
+
+    if (next.colCount !== undefined) requireNonNegativeInteger(next.colCount, 'colCount');
+
+    if (typeof next.estimateRowSize === 'number') requirePositiveNumber(next.estimateRowSize, 'estimateRowSize');
+
+    if (typeof next.estimateColSize === 'number') requirePositiveNumber(next.estimateColSize, 'estimateColSize');
+
+    if (next.rowGap !== undefined) requireNonNegativeInteger(next.rowGap, 'rowGap');
+
+    if (next.colGap !== undefined) requireNonNegativeInteger(next.colGap, 'colGap');
+
+    if (next.overscanY !== undefined) validateOverscan(next.overscanY, 'overscanY');
+
+    if (next.overscanX !== undefined) validateOverscan(next.overscanX, 'overscanX');
+
     let rebuildRows = false;
     let rebuildCols = false;
     let needsCompute = false;
 
+    if (Object.hasOwn(next, 'onChange')) onChange = next.onChange;
+
+    if (Object.hasOwn(next, 'onRangeChange')) onRangeChange = next.onRangeChange;
+
     if (next.rowCount !== undefined) {
-      const n = toNonNegativeInt(next.rowCount);
+      const n = next.rowCount;
 
       if (n !== rowCount) {
         rowCount = n;
@@ -517,7 +536,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     }
 
     if (next.colCount !== undefined) {
-      const n = toNonNegativeInt(next.colCount);
+      const n = next.colCount;
 
       if (n !== colCount) {
         colCount = n;
@@ -527,7 +546,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     }
 
     if (next.rowGap !== undefined) {
-      const n = toNonNegativeInt(next.rowGap);
+      const n = next.rowGap;
 
       if (n !== rowAx.gap) {
         rowAx.setGap(n);
@@ -536,7 +555,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     }
 
     if (next.colGap !== undefined) {
-      const n = toNonNegativeInt(next.colGap);
+      const n = next.colGap;
 
       if (n !== colAx.gap) {
         colAx.setGap(n);

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createReactiveGroupedVirtualizer, createReactiveVirtualizer } from '../reactive';
 import { flushMicrotasks, makeContainer } from './test-utils';
@@ -8,7 +8,7 @@ function scrollEl(el: HTMLElement, top: number) {
   el.dispatchEvent(new Event('scroll'));
 }
 
-// ─── Live getter semantics (Proxy correctness) ────────────────────────────────
+// ─── Live getter semantics ───────────────────────────────────────────────────
 
 describe('createReactiveVirtualizer – live getters', () => {
   it('count reflects current value after update', () => {
@@ -75,6 +75,19 @@ describe('createReactiveVirtualizer – state signal', () => {
 
     expect(rv.state.value.totalSize).toBe(100);
     rv.update({ count: 10 });
+    expect(rv.state.value.totalSize).toBe(200);
+    rv.dispose();
+  });
+
+  it('keeps state current after replacing onChange', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const onChange = vi.fn();
+    const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    rv.update({ onChange });
+    rv.update({ count: 10 });
+
+    expect(onChange).toHaveBeenCalled();
     expect(rv.state.value.totalSize).toBe(200);
     rv.dispose();
   });
@@ -212,6 +225,18 @@ describe('createReactiveGroupedVirtualizer', () => {
     rv.dispose();
   });
 
+  it('keeps grouped state current after replacing onChange', () => {
+    const el = makeContainer({ clientHeight: 300 });
+    const onChange = vi.fn();
+    const rv = createReactiveGroupedVirtualizer(el, { estimateItemSize: 30, sections: makeSections() });
+
+    rv.update([{ items: ['a', 'b', 'c', 'd'], label: 'Big Group' }], { onChange });
+
+    expect(onChange).toHaveBeenCalled();
+    expect(rv.state.value.totalSize).toBeGreaterThan(0);
+    rv.dispose();
+  });
+
   it('state signal is the same reference on repeated access', () => {
     const el = makeContainer({ clientHeight: 300 });
     const rv = createReactiveGroupedVirtualizer(el, { estimateItemSize: 30, sections: makeSections() });
@@ -250,7 +275,7 @@ describe('createReactiveGroupedVirtualizer', () => {
   });
 });
 
-// ─── Proxy own-property traps (has / ownKeys / getOwnPropertyDescriptor) ──────
+// ─── State own-property behavior ─────────────────────────────────────────────
 
 describe('createReactiveVirtualizer – state as a real own property', () => {
   it('"state" in rv is true', () => {

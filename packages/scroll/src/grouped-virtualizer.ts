@@ -1,4 +1,5 @@
 import { resolveEstimateFn } from './_utils';
+import { requireNonNegativeNumber, requirePositiveNumber, validateOverscan } from './_validation';
 import {
   createVirtualizer,
   DEFAULT_ESTIMATE_SIZE,
@@ -44,16 +45,19 @@ export interface GroupVirtualizerState<T> {
  * Options accepted by `GroupVirtualizer.update()`. Overrides are applied
  * together with the new sections on the next render cycle.
  *
- * Intentionally excludes: `horizontal` (axis cannot change at runtime),
- * `initialOffset` (one-time bootstrap), `onChange`/`onScrollEnd`/`onScrollingChange`
- * (fixed at construction).
+ * Intentionally excludes `horizontal` (axis cannot change at runtime) and
+ * `initialOffset` (one-time bootstrap).
  */
 export interface GroupVirtualizerUpdateOptions<T> {
   estimateHeaderSize?: number | ((section: GroupSection<T>, sectionIndex: number) => number);
   estimateItemSize?: number | ((item: T, itemIndex: number, sectionIndex: number) => number);
   getItemKey?: (item: T, itemIndex: number, sectionIndex: number) => VirtualKey;
   measurementCache?: MeasurementCache;
+  onChange?: ((state: GroupVirtualizerState<T>) => void) | undefined;
+  onScrollEnd?: ((offset: number) => void) | undefined;
+  onScrollingChange?: ((isScrolling: boolean) => void) | undefined;
   overscan?: Overscan;
+  scrollEndDelay?: number;
 }
 
 export interface GroupVirtualizerOptions<T> {
@@ -62,19 +66,11 @@ export interface GroupVirtualizerOptions<T> {
   getItemKey?: (item: T, itemIndex: number, sectionIndex: number) => VirtualKey;
   horizontal?: boolean;
   measurementCache?: MeasurementCache;
-  /**
-   * Called after every render cycle with the new state.
-   * **Fixed at construction** \u2014 cannot be changed after creation.
-   */
+  /** Called after every render cycle with the new state. Replace through `update()`. */
   onChange?: (state: GroupVirtualizerState<T>) => void;
-  /**
-   * Called when scrolling has settled. Fixed at construction.
-   * See `VirtualizerOptions.onScrollEnd` for details.
-   */
+  /** Called when scrolling settles. Replace through `update()`. */
   onScrollEnd?: (offset: number) => void;
-  /**
-   * Called when the scrolling state changes. Fixed at construction.
-   */
+  /** Called when the scrolling state changes. Replace through `update()`. */
   onScrollingChange?: (isScrolling: boolean) => void;
   overscan?: Overscan;
   /**
@@ -139,6 +135,15 @@ export function createGroupedVirtualizer<T>(
   target: ScrollTarget,
   options: GroupVirtualizerOptions<T>,
 ): GroupVirtualizer<T> {
+  if (typeof options.estimateHeaderSize === 'number')
+    requirePositiveNumber(options.estimateHeaderSize, 'estimateHeaderSize');
+
+  if (typeof options.estimateItemSize === 'number') requirePositiveNumber(options.estimateItemSize, 'estimateItemSize');
+
+  if (options.overscan !== undefined) validateOverscan(options.overscan);
+
+  if (options.scrollEndDelay !== undefined) requireNonNegativeNumber(options.scrollEndDelay, 'scrollEndDelay');
+
   let sections = options.sections;
   let flat = buildFlatEntries(sections);
 
@@ -197,6 +202,9 @@ export function createGroupedVirtualizer<T>(
 
   let destroyed = false;
   let lastItems: Array<GroupVirtualItem<T>> = [];
+  let onChange = options.onChange;
+  let onScrollEnd = options.onScrollEnd;
+  let onScrollingChange = options.onScrollingChange;
 
   function mapState(state: VirtualizerState): GroupVirtualizerState<T> {
     const items: Array<GroupVirtualItem<T>> = [];
@@ -238,10 +246,10 @@ export function createGroupedVirtualizer<T>(
     onChange: (state) => {
       const mapped = mapState(state);
 
-      options.onChange?.(mapped);
+      onChange?.(mapped);
     },
-    onScrollEnd: options.onScrollEnd,
-    onScrollingChange: options.onScrollingChange,
+    onScrollEnd: (offset) => onScrollEnd?.(offset),
+    onScrollingChange: (isScrolling) => onScrollingChange?.(isScrolling),
     overscan: options.overscan ?? DEFAULT_OVERSCAN,
     scrollEndDelay: options.scrollEndDelay,
     sticky: (i) => flat[i]?.isHeader ?? false,
@@ -376,8 +384,23 @@ export function createGroupedVirtualizer<T>(
     update(nextSections, opts?: GroupVirtualizerUpdateOptions<T>) {
       if (destroyed) return;
 
-      // Apply option overrides before rebuilding flat entries.
       if (opts) {
+        if (typeof opts.estimateHeaderSize === 'number')
+          requirePositiveNumber(opts.estimateHeaderSize, 'estimateHeaderSize');
+
+        if (typeof opts.estimateItemSize === 'number') requirePositiveNumber(opts.estimateItemSize, 'estimateItemSize');
+
+        if (opts.overscan !== undefined) validateOverscan(opts.overscan);
+
+        if (opts.scrollEndDelay !== undefined) requireNonNegativeNumber(opts.scrollEndDelay, 'scrollEndDelay');
+
+        if (Object.hasOwn(opts, 'onChange')) onChange = opts.onChange;
+
+        if (Object.hasOwn(opts, 'onScrollEnd')) onScrollEnd = opts.onScrollEnd;
+
+        if (Object.hasOwn(opts, 'onScrollingChange')) onScrollingChange = opts.onScrollingChange;
+
+        // Apply option overrides before rebuilding flat entries.
         if (opts.estimateHeaderSize !== undefined) {
           estimateHeaderFn = buildEstimateHeader(opts.estimateHeaderSize);
         }
@@ -407,7 +430,14 @@ export function createGroupedVirtualizer<T>(
 
       if (opts?.overscan !== undefined) virtUpdateOpts.overscan = opts.overscan;
 
-      if (flat.length !== prevCount || opts?.measurementCache !== undefined || opts?.overscan !== undefined) {
+      if (opts?.scrollEndDelay !== undefined) virtUpdateOpts.scrollEndDelay = opts.scrollEndDelay;
+
+      if (
+        flat.length !== prevCount ||
+        opts?.measurementCache !== undefined ||
+        opts?.overscan !== undefined ||
+        opts?.scrollEndDelay !== undefined
+      ) {
         virtualizer.update(virtUpdateOpts);
       } else {
         virtualizer.refresh();

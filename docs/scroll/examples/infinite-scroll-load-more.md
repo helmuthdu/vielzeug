@@ -35,7 +35,7 @@ const virt = createVirtualizer(scrollEl, {
   estimateSize: 40,
   onChange: ({ items, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
-    listEl.innerHTML = '';
+    listEl.replaceChildren();
 
     for (const item of items) {
       const el = document.createElement('div');

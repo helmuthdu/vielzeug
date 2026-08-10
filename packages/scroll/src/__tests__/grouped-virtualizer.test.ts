@@ -185,6 +185,24 @@ describe('createGroupedVirtualizer – navigation', () => {
 // ─── update() ─────────────────────────────────────────────────────────────────
 
 describe('createGroupedVirtualizer – update', () => {
+  it('replaces callbacks through update()', () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const initial = vi.fn();
+    const replacement = vi.fn();
+    const gv = createGroupedVirtualizer(el, {
+      estimateHeaderSize: 40,
+      estimateItemSize: 30,
+      onChange: initial,
+      sections: [makeSection('A', 3)],
+    });
+
+    gv.update([makeSection('A', 3)], { onChange: replacement });
+
+    expect(initial).toHaveBeenCalledTimes(1);
+    expect(replacement).toHaveBeenCalledTimes(1);
+    gv.dispose();
+  });
+
   it('replaces sections and re-emits', () => {
     const el = makeContainer({ clientHeight: 500 });
     const onChange = vi.fn();

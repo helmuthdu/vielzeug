@@ -1692,6 +1692,7 @@ export default defineConfig({
       ],
       '/scroll/': [
         { link: '/scroll/', text: 'Overview' },
+        { link: '/scroll/migration', text: 'Migration' },
         {
           items: [
             { link: '/scroll/usage#basic-usage', text: 'Basic Usage' },

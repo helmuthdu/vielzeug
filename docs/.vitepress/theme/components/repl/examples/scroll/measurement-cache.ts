@@ -34,7 +34,7 @@ const virtA = createVirtualizer(containerA, {
   measurementCache: cache,
   onChange: ({ items, totalSize }) => {
     spacerA.style.height = totalSize + 'px'
-    contentA.innerHTML = ''
+    contentA.replaceChildren()
     items.forEach(({ index, start, size }) => {
       const row = document.createElement('div')
       row.style.cssText = \`position:absolute;top:\${start}px;left:0;right:0;min-height:\${size}px;padding:8px 12px;border-bottom:1px solid #f0f0f0;word-wrap:break-word;font-size:13px;\`
@@ -52,7 +52,7 @@ const virtB = createVirtualizer(containerB, {
   measurementCache: cache,
   onChange: ({ items, totalSize }) => {
     spacerB.style.height = totalSize + 'px'
-    contentB.innerHTML = ''
+    contentB.replaceChildren()
     items.forEach(({ index, start, size }) => {
       const row = document.createElement('div')
       row.style.cssText = \`position:absolute;top:\${start}px;left:0;right:0;height:\${size}px;display:flex;align-items:center;padding:0 12px;border-bottom:1px solid #f0f0f0;font-size:13px;\`

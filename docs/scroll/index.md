@@ -1,6 +1,6 @@
 ---
 title: Scroll — Virtual list engine for TypeScript
-description: Lightweight, framework-agnostic virtual list engine with variable heights, sticky headers, grid support, and zero dependencies.
+description: Lightweight, framework-agnostic virtual list engine with variable heights, sticky headers, grid support, and reactive integration.
 package: scroll
 category: ui-performance
 keywords: [virtual-list, virtualization, windowing, scroll, performance, large-lists]
@@ -15,6 +15,9 @@ exports:
     createReactiveVirtualizer,
     createReactiveGroupedVirtualizer,
     createMeasurementCache,
+    ScrollConfigurationError,
+    ScrollError,
+    ScrollRangeError,
     DEFAULT_ESTIMATE_SIZE,
     DEFAULT_OVERSCAN,
   ]
@@ -31,7 +34,7 @@ Rendering thousands of items as real DOM nodes freezes the browser. Each node co
 
 ```ts
 // Before — render all 10 000 items (browser freezes)
-list.innerHTML = '';
+list.replaceChildren();
 items.forEach((item) => {
   const el = document.createElement('div');
   el.textContent = item.name;
@@ -40,13 +43,13 @@ items.forEach((item) => {
 
 // After — Scroll (only ~15 visible rows in the DOM at any time)
 import { createVirtualizer } from '@vielzeug/scroll';
-const virt = createVirtualizer(scrollEl, {
+const virtualizer = createVirtualizer(scrollEl, {
   count: items.length,
   estimateSize: 36,
-  onChange: ({ items, totalSize }) => {
+  onChange: ({ items: visibleItems, totalSize }) => {
     list.style.height = `${totalSize}px`;
-    list.innerHTML = '';
-    for (const { index, start } of items) {
+    list.replaceChildren();
+    for (const { index, start } of visibleItems) {
       const el = document.createElement('div');
       el.style.cssText = `position:absolute;top:${start}px;height:36px;`;
       el.textContent = items[index].name;
@@ -63,7 +66,7 @@ const virt = createVirtualizer(scrollEl, {
 | Variable heights   | <ore-icon name="check" size="16"></ore-icon> Measured | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> Static |
 | O(log n) lookup    | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                 |
 | `using` support    | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>                     |
-| Zero dependencies  | <ore-icon name="check" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                 |
+| Zero dependencies | <ore-icon name="x" size="16"></ore-icon> `@vielzeug/ripple` | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
@@ -106,7 +109,7 @@ const virt = createVirtualizer(scrollEl, {
   onChange: ({ items, totalSize }) => {
     // Stretch the container so the scrollbar reflects the full list
     spacer.style.height = `${totalSize}px`;
-    list.innerHTML = '';
+    list.replaceChildren();
 
     for (const item of items) {
       const el = document.createElement('div');
@@ -136,7 +139,7 @@ All APIs export from a single entry: `@vielzeug/scroll`.
 - **Sticky headers** — mark items with `sticky` to pin them at the viewport top; `createGroupedVirtualizer` handles section headers automatically
 - **Grouped sections** — `createGroupedVirtualizer` virtualizes sectioned data with per-section headers, `onChange` state, and `scrollToSection`/`scrollToItem`
 - **Grid virtualization** — `createGridVirtualizer` virtualizes two-dimensional data with independent row/column measurement and `scrollToCell`
-- **Reactive integration** — `createReactiveVirtualizer` and `createReactiveGroupedVirtualizer` expose state as a `Signal` compatible with `@vielzeug/ripple`
+- `createReactiveVirtualizer()` / `createReactiveGroupedVirtualizer()` — Expose current state as a Ripple `Signal`
 - **DOM adapter** — `createDomVirtualList` and `createVirtualScroller` manage virtualizer lifecycle, list-height styles, and DOM node pooling
 - **Skipped re-renders** — `onChange` is not called when a scroll event doesn't move the visible window across an item boundary
 - **Programmatic scrolling** — `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel control; `scrollToRow()`/`scrollToColumn()` for grids; all support `behavior: 'smooth'`
@@ -148,7 +151,7 @@ All APIs export from a single entry: `@vielzeug/scroll`.
 - **Scroll anchor** — viewport position is preserved visually when `estimateSize` changes via `update()`
 - **Prepend support** — `prepend()` adds items at the top while keeping the viewport visually stable
 - **Disposable** — implements `[Symbol.dispose]` for `using` declarations
-- **Zero runtime dependencies** (ripple is a peer dependency used only by `createReactiveVirtualizer`)
+- `ScrollConfigurationError` — Rejects malformed static configuration before listeners attach or updates apply
 
 </div>
 
@@ -173,6 +176,7 @@ The offset array is rebuilt (O(n)) only when layout inputs change: on `measure()
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [Migration Guide](./migration.md)
 
 </div>
 

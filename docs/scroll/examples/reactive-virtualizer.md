@@ -32,7 +32,7 @@ effect(() => {
   const { items, totalSize } = virt.state.value;
 
   listEl.style.height = `${totalSize}px`;
-  listEl.innerHTML = '';
+  listEl.replaceChildren();
 
   for (const item of items) {
     const el = document.createElement('div');
@@ -77,7 +77,7 @@ effect(() => {
 
 - `onChange` must not be passed to `createReactiveVirtualizer` — it is wired internally to update `virt.state`.
 - The `state` signal updates synchronously within the scroll handler. Avoid heavy DOM operations directly inside `effect` — batch DOM writes with `requestAnimationFrame` if needed.
-- All live getters (`count`, `items`, `totalSize`, `scrollOffset`, `stickyItems`) remain current on the returned virtualizer. The implementation uses a `Proxy` rather than snapshotting.
+- All live getters (`count`, `items`, `totalSize`, `scrollOffset`, `stickyItems`) remain current on the returned virtualizer through copied property descriptors rather than snapshotting.
 
 ### Related
 

@@ -31,11 +31,23 @@ export interface ReactiveVirtualizer extends Virtualizer {
   readonly state: Signal<VirtualizerState>;
 }
 
+function withState<THandle extends object, TState>(
+  handle: THandle,
+  state: Signal<TState>,
+): THandle & { readonly state: Signal<TState> } {
+  return Object.defineProperties(
+    {},
+    {
+      ...Object.getOwnPropertyDescriptors(handle),
+      state: { configurable: true, enumerable: true, value: state },
+    },
+  ) as THandle & { readonly state: Signal<TState> };
+}
+
 /**
  * Create a grouped virtualizer whose current state is exposed as a reactive signal.
  *
- * All `GroupVirtualizer` accessors remain live — they are proxied through to the
- * underlying virtualizer on every access.
+ * All `GroupVirtualizer` accessors remain live through copied property descriptors.
  *
  * @example
  * ```ts
@@ -52,40 +64,42 @@ export function createReactiveGroupedVirtualizer<T>(
 ): ReactiveGroupVirtualizer<T> {
   const state = signal<GroupVirtualizerState<T>>({ headers: [], items: [], stickyHeader: null, totalSize: 0 });
 
-  const v = createGroupedVirtualizer<T>(target, {
-    ...options,
-    onChange: (s) => {
-      state.value = s;
+  let userOnChange: ((state: GroupVirtualizerState<T>) => void) | undefined;
+
+  function onChange(next: GroupVirtualizerState<T>): void {
+    state.value = next;
+    userOnChange?.(next);
+  }
+
+  const v = createGroupedVirtualizer<T>(target, { ...options, onChange });
+  const reactive = withState(v, state);
+
+  Object.defineProperty(reactive, 'update', {
+    configurable: true,
+    enumerable: true,
+    value(sections: Array<{ items: T[]; label: string }>, next?: Parameters<typeof v.update>[1]) {
+      if (!next || !Object.hasOwn(next, 'onChange')) {
+        v.update(sections, next);
+
+        return;
+      }
+
+      userOnChange = next.onChange;
+
+      const { onChange: _, ...nextOptions } = next;
+
+      v.update(sections, { ...nextOptions, onChange });
     },
   });
 
-  return new Proxy(v, {
-    get(t, p, r) {
-      if (p === 'state') return state;
-
-      return Reflect.get(t, p, r);
-    },
-    getOwnPropertyDescriptor(t, p) {
-      if (p === 'state') return { configurable: true, enumerable: true, value: state };
-
-      return Reflect.getOwnPropertyDescriptor(t, p);
-    },
-    has(t, p) {
-      return p === 'state' || Reflect.has(t, p);
-    },
-    ownKeys(t) {
-      return [...Reflect.ownKeys(t), 'state'];
-    },
-  }) as unknown as ReactiveGroupVirtualizer<T>;
+  return reactive;
 }
 
 /**
  * Create a virtualizer whose current state is exposed as a reactive signal.
  *
  * All `Virtualizer` accessors (count, items, totalSize, scrollOffset, stickyItems)
- * remain live — they are proxied through to the underlying virtualizer on every
- * access. A Proxy is used instead of object spread, which would snapshot getter
- * values at construction time and cause stale reads after state changes.
+ * remain live through copied property descriptors, avoiding snapshots from object spread.
  *
  * @example
  * ```ts
@@ -102,29 +116,33 @@ export function createReactiveVirtualizer(
 ): ReactiveVirtualizer {
   const state = signal<VirtualizerState>({ items: [], stickyItems: [], totalSize: 0 });
 
-  const v = createVirtualizer(target, {
-    ...options,
-    onChange: (s) => {
-      state.value = s;
+  let userOnChange: ((state: VirtualizerState) => void) | undefined;
+
+  function onChange(next: VirtualizerState): void {
+    state.value = next;
+    userOnChange?.(next);
+  }
+
+  const v = createVirtualizer(target, { ...options, onChange });
+  const reactive = withState(v, state);
+
+  Object.defineProperty(reactive, 'update', {
+    configurable: true,
+    enumerable: true,
+    value(next: Parameters<typeof v.update>[0]) {
+      if (!Object.hasOwn(next, 'onChange')) {
+        v.update(next);
+
+        return;
+      }
+
+      userOnChange = next.onChange;
+
+      const { onChange: _, ...nextOptions } = next;
+
+      v.update({ ...nextOptions, onChange });
     },
   });
 
-  return new Proxy(v, {
-    get(t, p, r) {
-      if (p === 'state') return state;
-
-      return Reflect.get(t, p, r);
-    },
-    getOwnPropertyDescriptor(t, p) {
-      if (p === 'state') return { configurable: true, enumerable: true, value: state };
-
-      return Reflect.getOwnPropertyDescriptor(t, p);
-    },
-    has(t, p) {
-      return p === 'state' || Reflect.has(t, p);
-    },
-    ownKeys(t) {
-      return [...Reflect.ownKeys(t), 'state'];
-    },
-  }) as unknown as ReactiveVirtualizer;
+  return reactive;
 }

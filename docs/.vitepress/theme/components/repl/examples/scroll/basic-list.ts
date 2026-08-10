@@ -19,7 +19,7 @@ const virtualizer = createVirtualizer(container, {
   estimateSize: ROW_HEIGHT,
   onChange: ({ items, totalSize }) => {
     spacer.style.height = totalSize + 'px'
-    content.innerHTML = ''
+    content.replaceChildren()
     items.forEach(({ index, start, size }) => {
       const row = document.createElement('div')
       row.style.cssText = \`position:absolute;top:\${start}px;left:0;right:0;height:\${size}px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid #f0f0f0;background:\${index % 2 ? '#fafafa' : '#fff'};\`

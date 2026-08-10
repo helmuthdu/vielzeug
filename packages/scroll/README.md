@@ -1,6 +1,6 @@
 # @vielzeug/scroll
 
-> Lightweight, framework-agnostic virtual list engine with variable heights, sticky headers, grid support, and zero dependencies.
+> Lightweight, framework-agnostic virtual list engine with variable heights, sticky headers, grid support, and optional reactive integration.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/scroll)](https://www.npmjs.com/package/@vielzeug/scroll) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -40,7 +40,7 @@ const virt = createVirtualizer(scrollEl, {
   estimateSize: 36,
   onChange: ({ items, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
-    listEl.innerHTML = '';
+    listEl.replaceChildren();
 
     for (const item of items) {
       const row = document.createElement('div');
@@ -63,6 +63,11 @@ virt.dispose();
 import { createDomVirtualList } from '@vielzeug/scroll';
 
 type Option = { label: string; value: string };
+
+const dropdownEl = document.querySelector<HTMLElement>('.dropdown')!;
+const listEl = document.querySelector<HTMLElement>('.list')!;
+const options: Option[] = [{ label: 'Ada Lovelace', value: 'ada' }];
+const focusedIndex = 0;
 
 const domList = createDomVirtualList<Option>({
   estimateSize: 36,
@@ -91,6 +96,9 @@ domList.dispose();
 ```ts
 import { createVirtualScroller } from '@vielzeug/scroll';
 
+type Option = { label: string; value: string };
+
+const options: Option[] = [{ label: 'Ada Lovelace', value: 'ada' }];
 const list = createVirtualScroller<Option>(document.getElementById('root')!, {
   estimateSize: 36,
   render: ({ items, listEl, recycle }) => {

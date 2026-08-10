@@ -24,7 +24,7 @@ const virt = createReactiveVirtualizer(scrollEl, {
 function render() {
   const { items, totalSize } = virt.state.value
   listEl.style.height = totalSize + 'px'
-  listEl.innerHTML = ''
+  listEl.replaceChildren()
   for (const item of items) {
     const el = document.createElement('div')
     el.style.cssText = \`position:absolute;top:\${item.start}px;left:0;right:0;height:32px;line-height:32px;padding:0 12px;border-bottom:1px solid #f0f0f0;\`

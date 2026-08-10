@@ -21,7 +21,7 @@ let focusedIndex = 0;
 
 function paint(items = virt.items, totalSize = virt.totalSize) {
   listEl.style.height = `${totalSize}px`;
-  listEl.innerHTML = '';
+  listEl.replaceChildren();
 
   for (const item of items) {
     const el = document.createElement('div');

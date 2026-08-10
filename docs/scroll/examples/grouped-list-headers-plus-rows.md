@@ -42,7 +42,7 @@ const virt = createGroupedVirtualizer<Contact>(scrollEl, {
   sections,
   onChange: ({ headers, items, stickyHeader, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
-    listEl.innerHTML = '';
+    listEl.replaceChildren();
 
     // Sticky header overlay (pinned at top while section is in view)
     if (stickyHeader) {

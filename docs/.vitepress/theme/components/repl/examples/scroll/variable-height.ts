@@ -22,7 +22,7 @@ const virtualizer = createVirtualizer(container, {
   getItemKey: (index) => items[index]?.id ?? index,
   onChange: ({ items: virtualItems, totalSize }) => {
     spacer.style.height = totalSize + 'px'
-    content.innerHTML = ''
+    content.replaceChildren()
     virtualItems.forEach(({ index, start }) => {
       const row = document.createElement('div')
       row.dataset.index = String(index)

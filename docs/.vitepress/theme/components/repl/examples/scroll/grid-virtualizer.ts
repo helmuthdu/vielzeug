@@ -23,7 +23,7 @@ const grid = createGridVirtualizer(scrollEl, {
   rowCount: ROW_COUNT,
   onChange: ({ cols, rows, totalHeight, totalWidth }) => {
     container.style.cssText = \`position:relative;height:\${totalHeight}px;width:\${totalWidth}px;\`
-    container.innerHTML = ''
+    container.replaceChildren()
 
     for (const row of rows) {
       for (const col of cols) {

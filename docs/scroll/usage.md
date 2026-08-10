@@ -20,7 +20,7 @@ const virt = createVirtualizer(scrollEl, {
   estimateSize: 36,
   onChange: ({ items, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
-    listEl.innerHTML = '';
+    listEl.replaceChildren();
 
     for (const item of items) {
       const el = document.createElement('div');
@@ -134,7 +134,7 @@ const virt = createVirtualizer(scrollEl, {
   estimateSize: 36, // every row is 36px
   onChange: ({ items, totalSize }) => {
     list.style.height = `${totalSize}px`;
-    list.innerHTML = '';
+    list.replaceChildren();
 
     for (const item of items) {
       const el = document.createElement('div');
@@ -170,13 +170,13 @@ const virt = createVirtualizer(scrollEl, {
   estimateSize: 60, // initial estimate
   onChange: ({ items, totalSize }) => {
     list.style.height = `${totalSize}px`;
-    list.innerHTML = '';
+    list.replaceChildren();
 
     for (const item of items) {
       const el = document.createElement('div');
       el.dataset.index = String(item.index);
       el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;`;
-      el.innerHTML = rows[item.index].html;
+      el.textContent = rows[item.index].body;
       list.appendChild(el);
     }
 
@@ -297,7 +297,9 @@ console.log(virt.scrollOffset);
 
 ## Updating Options
 
-When your data or render strategy changes, call `update()` with one or more option fields. Updates are applied atomically and trigger re-render when needed.
+When data or render strategy changes, call `update()` with one or more option fields. Updates apply atomically and trigger re-render when needed. Counts, gaps, and overscan must be finite non-negative integers; numeric size estimates must be finite positive values; offsets and `scrollEndDelay` must be finite non-negative numbers. Invalid constructor or `update()` values throw `ScrollConfigurationError` before any change applies.
+
+Runtime layout data stays resilient: estimator callbacks that throw or return invalid sizes fall back to the default estimate, stale measurements are ignored, and out-of-range navigation clamps or no-ops.
 
 ```ts
 // Load more data
@@ -423,7 +425,7 @@ virt = createVirtualizer(scrollEl, {
   estimateSize: 36,
   onChange: ({ items, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
-    listEl.innerHTML = '';
+    listEl.replaceChildren();
 
     for (const item of items) {
       const el = document.createElement('div');
@@ -556,7 +558,7 @@ function VirtualList({ rows }: { rows: Row[] }) {
       estimateSize: 36,
       onChange: ({ items, totalSize }) => {
         listEl.style.height = `${totalSize}px`;
-        listEl.innerHTML = '';
+        listEl.replaceChildren();
         for (const item of items) {
           const el = document.createElement('div');
           el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
@@ -602,7 +604,7 @@ onMounted(() => {
     estimateSize: 36,
     onChange: ({ items, totalSize }) => {
       listEl.style.height = `${totalSize}px`;
-      listEl.innerHTML = '';
+      listEl.replaceChildren();
       for (const item of items) {
         const el = document.createElement('div');
         el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
@@ -643,7 +645,7 @@ onUnmounted(() => virt?.dispose());
       estimateSize: 36,
       onChange: ({ items, totalSize }) => {
         listEl.style.height = `${totalSize}px`;
-        listEl.innerHTML = '';
+        listEl.replaceChildren();
         for (const item of items) {
           const el = document.createElement('div');
           el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
@@ -692,7 +694,7 @@ class VirtualList extends LitElement {
       estimateSize: 36,
       onChange: ({ items, totalSize }) => {
         listEl.style.height = `${totalSize}px`;
-        listEl.innerHTML = '';
+        listEl.replaceChildren();
         for (const item of items) {
           const el = document.createElement('div');
           el.style.cssText = `position:absolute;top:${item.start}px;left:0;right:0;height:36px;`;
@@ -749,7 +751,15 @@ define('virtual-list', {
         estimateSize: 40,
         onChange: ({ items, totalSize }) => {
           listEl.style.height = `${totalSize}px`;
-          listEl.innerHTML = items.map((i) => `<div style="position:absolute;top:${i.start}px;height:40px;">Row ${i.index}</div>`).join('');
+          listEl.replaceChildren();
+
+          for (const item of items) {
+            const row = document.createElement('div');
+
+            row.style.cssText = `position:absolute;top:${item.start}px;height:40px;`;
+            row.textContent = `Row ${item.index}`;
+            listEl.appendChild(row);
+          }
         },
         },
         },

@@ -42,7 +42,7 @@ const virt = createGroupedVirtualizer<Contact>(container, {
   sections,
   onChange: ({ headers, items, stickyHeader, totalSize }) => {
     spacer.style.height = totalSize + 'px'
-    content.innerHTML = ''
+    content.replaceChildren()
     headers.forEach(({ start, size, label: text }) => {
       const el = document.createElement('div')
       el.style.cssText = \`position:absolute;top:\${start}px;left:0;right:0;height:\${size}px;background:#f9fafb;border-bottom:1px solid #e5e5e5;padding:0 14px;line-height:\${size}px;font-size:12px;font-weight:700;color:#374151;\`

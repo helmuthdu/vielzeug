@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { ScrollConfigurationError } from '../errors';
 import { createGridVirtualizer } from '../grid-virtualizer';
 import { flushMicrotasks, makeContainer } from './test-utils';
 
@@ -8,6 +9,19 @@ function makeGrid(clientHeight = 300, clientWidth = 400) {
 }
 
 // ─── Visible rows and cols ───────────────────────────────────────────────────
+
+describe('createGridVirtualizer – configuration', () => {
+  it('rejects invalid static options', () => {
+    const el = makeGrid();
+
+    expect(() => createGridVirtualizer(el, { colCount: 1, estimateRowSize: 20, rowCount: -1 })).toThrow(
+      ScrollConfigurationError,
+    );
+    expect(() => createGridVirtualizer(el, { colCount: 1, colGap: -1, estimateRowSize: 20, rowCount: 1 })).toThrow(
+      ScrollConfigurationError,
+    );
+  });
+});
 
 describe('createGridVirtualizer – visible rows and cols', () => {
   it('emits rows and cols covering the initial viewport', () => {
@@ -98,6 +112,26 @@ describe('createGridVirtualizer – totalSize', () => {
 // ─── onChange ─────────────────────────────────────────────────────────────────
 
 describe('createGridVirtualizer – onChange', () => {
+  it('replaces callbacks through update()', () => {
+    const el = makeGrid(100, 120);
+    const initial = vi.fn();
+    const replacement = vi.fn();
+    const v = createGridVirtualizer(el, {
+      colCount: 5,
+      estimateColSize: 40,
+      estimateRowSize: 30,
+      onChange: initial,
+      rowCount: 5,
+    });
+
+    v.update({ onChange: replacement });
+    v.refresh();
+
+    expect(initial).toHaveBeenCalledTimes(1);
+    expect(replacement).toHaveBeenCalledTimes(1);
+    v.dispose();
+  });
+
   it('calls onChange on creation with initial rows, cols, and size', () => {
     const el = makeGrid(100, 120);
     const onChange = vi.fn();

@@ -46,13 +46,17 @@ Creates and immediately attaches a virtualizer to the provided scroll container.
 ```ts
 import { createVirtualizer } from '@vielzeug/scroll';
 
+const rows = [{ label: 'Ada Lovelace' }, { label: 'Grace Hopper' }];
+const scrollEl = document.querySelector<HTMLElement>('.scroll-container')!;
+const listEl = document.querySelector<HTMLElement>('.list')!;
+
 const virt = createVirtualizer(scrollEl, {
   count: rows.length,
   estimateSize: 36,
   gap: 8,
   onChange: ({ items, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
-    listEl.innerHTML = '';
+    listEl.replaceChildren();
 
     for (const item of items) {
       const row = document.createElement('div');
@@ -82,14 +86,14 @@ const virt = createVirtualizer(scrollEl, {
 | `horizontal`        | `boolean`                                    | `false`          | Virtualize along the X axis instead of Y                                                   |
 | `initialOffset`     | `number`                                     | —                | Initial scroll position; applied once on construction                                      |
 | `measurementCache`  | `MeasurementCache`                           | —                | Shared external cache for scroll restoration or SSR pre-measurement                        |
-| `onChange`          | `(state: VirtualizerState) => void`          | —                | Called when the visible window changes. **Fixed at construction.**                         |
-| `onScrollEnd`       | `(offset: number) => void`                   | —                | Called when scrolling settles (native `scrollend` or debounce). **Fixed at construction.** |
-| `onScrollingChange` | `(isScrolling: boolean) => void`             | —                | Called when scroll activity starts or stops. **Fixed at construction.**                    |
+| `onChange`          | `(state: VirtualizerState) => void`          | —                | Called when the visible window changes; replace through `update()`.                         |
+| `onScrollEnd`       | `(offset: number) => void`                   | —                | Called when scrolling settles; replace through `update()`. |
+| `onScrollingChange` | `(isScrolling: boolean) => void`             | —                | Called when scroll activity starts or stops; replace through `update()`. |
 | `overscan`          | `number \| { start?: number; end?: number }` | `3`              | Extra items outside the viewport; number = symmetric on both sides                         |
 | `scrollEndDelay`    | `number`                                     | `150`            | Debounce delay (ms) used to detect scroll end when native `scrollend` is unavailable       |
 | `sticky`            | `(index: number) => boolean`                 | —                | Mark an item as a sticky header (pinned at viewport top)                                   |
 
-`onChange`, `onScrollEnd`, `onScrollingChange`, and `scrollEndDelay` are fixed at construction — they cannot be changed via `update()`.
+Callbacks and `scrollEndDelay` can be replaced through `update()`; `horizontal` and `initialOffset` remain construction-only.
 
 **Returns:** `Virtualizer`
 
@@ -138,7 +142,7 @@ interface VirtualizerState {
 
 ### `update(next)`
 
-Atomically updates one or more live options. Accepts: `count`, `estimateSize`, `gap`, `getItemKey`, `measurementCache`, `overscan`, `sticky`. Creation-time options (`horizontal`, `initialOffset`, `onChange`, `onScrollEnd`, `onScrollingChange`, `scrollEndDelay`) cannot be changed after construction.
+Atomically updates one or more live options. Accepts: `count`, `estimateSize`, `gap`, `getItemKey`, `measurementCache`, `onChange`, `onScrollEnd`, `onScrollingChange`, `overscan`, `scrollEndDelay`, and `sticky`. `horizontal` and `initialOffset` remain construction-only. Invalid static numeric values throw `ScrollConfigurationError` before any update applies.
 
 When `estimateSize` changes, the measurement cache is cleared and a scroll anchor is applied to keep the current viewport position visually stable.
 
@@ -391,7 +395,7 @@ const virt = createGroupedVirtualizer<Contact>(scrollEl, {
   ],
   onChange: ({ headers, items, stickyHeader, totalSize }) => {
     listEl.style.height = `${totalSize}px`;
-    listEl.innerHTML = '';
+    listEl.replaceChildren();
 
     if (stickyHeader) {
       const el = document.createElement('div');
@@ -426,9 +430,9 @@ virt.dispose();
 | Option               | Type                                                               | Default  | Description                                                             |
 | -------------------- | ------------------------------------------------------------------ | -------- | ----------------------------------------------------------------------- |
 | `sections`           | `Array<GroupSection<T>>`                                           | required | Initial sections                                                        |
-| `onChange`           | `(state: GroupVirtualizerState<T>) => void`                        | —        | Called when the visible window changes. **Fixed at construction.**      |
-| `onScrollEnd`        | `(offset: number) => void`                                         | —        | Called when scrolling settles. **Fixed at construction.**               |
-| `onScrollingChange`  | `(isScrolling: boolean) => void`                                   | —        | Called when scroll activity starts or stops. **Fixed at construction.** |
+| `onChange`           | `(state: GroupVirtualizerState<T>) => void`                        | —        | Called when the visible window changes; replace through `update()`. |
+| `onScrollEnd`        | `(offset: number) => void`                                         | —        | Called when scrolling settles; replace through `update()`. |
+| `onScrollingChange`  | `(isScrolling: boolean) => void`                                   | —        | Called when scroll activity starts or stops; replace through `update()`. |
 | `estimateHeaderSize` | `number \| (section, sectionIndex) => number`                      | `36`     | Header height estimate                                                  |
 | `estimateItemSize`   | `number \| (item, itemIndex, sectionIndex) => number`              | `36`     | Item height estimate                                                    |
 | `getItemKey`         | `(item: T, itemIndex: number, sectionIndex: number) => VirtualKey` | —        | Stable key for measurement cache                                        |
@@ -512,7 +516,7 @@ Passed as the second argument to `groupVirtualizer.update()`. All fields are opt
 | `measurementCache`   | `MeasurementCache`                                            | Hot-swap the measurement cache                           |
 | `overscan`           | `number \| { start?, end? }`                                  | New overscan count                                       |
 
-> **Note:** `onChange`, `onScrollEnd`, `onScrollingChange`, and `horizontal` are fixed at construction and cannot be changed via `update()`.
+> `onChange`, `onScrollEnd`, `onScrollingChange`, and `scrollEndDelay` can be replaced through `update()`. `horizontal` remains construction-only.
 
 ## `createGridVirtualizer(target, options)`
 
@@ -532,7 +536,7 @@ const grid = createGridVirtualizer(scrollEl, {
   estimateColSize: 120,
   onChange: ({ rows, cols, totalHeight, totalWidth }) => {
     containerEl.style.cssText = `position:relative;height:${totalHeight}px;width:${totalWidth}px;`;
-    containerEl.innerHTML = '';
+    containerEl.replaceChildren();
 
     for (const row of rows) {
       for (const col of cols) {
@@ -651,7 +655,7 @@ interface ReactiveGroupVirtualizer<T> extends GroupVirtualizer<T> {
 }
 ```
 
-The `state` signal is updated synchronously on every render cycle. All live getters remain current via Proxy.
+The `state` signal is updated synchronously on every render cycle. All live getters remain current through copied property descriptors.
 
 ## `createReactiveVirtualizer(target, options)`
 
@@ -676,7 +680,7 @@ const virt = createReactiveVirtualizer(scrollEl, {
 effect(() => {
   const { items, totalSize } = virt.state.value;
   listEl.style.height = `${totalSize}px`;
-  listEl.innerHTML = '';
+  listEl.replaceChildren();
   for (const item of items) {
     const el = document.createElement('div');
     el.style.cssText = `position:absolute;top:${item.start}px;height:${item.size}px;`;
@@ -833,6 +837,16 @@ interface GridRangeChangeEvent {
   lastRow: number;
 }
 ```
+
+## Errors
+
+| Class | Thrown when | Notable properties |
+| --- | --- | --- |
+| `ScrollError` | Base class for every Scroll error. | `ScrollError.is(error)` narrows errors from this package. |
+| `ScrollConfigurationError` | A constructor or `update()` receives invalid static configuration. | Extends `ScrollError`; malformed JavaScript values also use this class. |
+| `ScrollRangeError` | A DOM virtual-list render detects that a caller mutated its items array without calling `setItems()` again. | Extends `ScrollError`; message includes stale index and current item count. |
+
+Runtime estimator failures, stale measurements, and out-of-range navigation remain resilient: they fall back, no-op, or clamp as documented.
 
 ### Constants
 
