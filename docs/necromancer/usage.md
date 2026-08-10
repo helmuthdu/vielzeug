@@ -25,6 +25,23 @@ handle.dispose();
 
 `result` distinguishes natural completion, reduced timing, and cancellation. `disposed` reports only whether the owner was explicitly disposed.
 
+When `duration` is omitted, Necromancer uses `180ms`; pass `duration: 0` when the caller intentionally wants an instant native animation.
+
+## Replacing an Active Animation
+
+Animations normally run concurrently, including multiple Necromancer animations on the same element. For state updates where only the newest animation should remain, set `interrupt: 'cancel'`.
+
+```ts
+const first = animate(element, [{ opacity: 0 }, { opacity: 1 }]);
+const latest = animate(element, [{ opacity: 1 }, { opacity: 0 }], {
+  interrupt: 'cancel',
+});
+
+await first.result; // { status: 'cancelled', ... }
+```
+
+Interruption disposes only still-active animations created by Necromancer for that element. It never cancels an animation that your code started directly with `element.animate()`.
+
 ## Motion Preferences
 
 Use `motion` to select how the animation responds to the operating system preference.
@@ -115,7 +132,7 @@ await group.results;
 group.dispose();
 ```
 
-The transition only animates changed, connected elements and can be animated once. It additively composes the individual CSS `translate` property, preserving authored `transform` and `translate`.
+The transition only animates changed, connected elements and can be animated once. It additively composes the individual CSS `translate` and `scale` properties, preserving authored `transform`, `translate`, and `scale`. A resized element (for example a list item whose content changed) animates from its captured size as well as its captured position.
 
 ### Replacing rendered elements
 
@@ -139,6 +156,10 @@ Keys must be unique, non-empty strings in both collections. Items with no matchi
 
 For sortable lists, DnD exposes its pre-commit layout seam through `onBeforeReorder`; see the [DnD optimistic-reorder recipe](/dnd/examples/optimistic-reorder-with-revert.md).
 
+## Scope
+
+Necromancer creates and owns explicit Web Animations API work. It does not observe CSS-authored transitions or animations, inject `@keyframes`, watch DOM mutations, generate springs, interpolate SVG geometry, or provide a JavaScript tween fallback. Keep CSS as the owner of declarative component styling and use a dedicated charting or tweening tool when the animation needs capabilities beyond WAAPI keyframes.
+
 ## Framework Integration
 
 Create handles in a client mount lifecycle and dispose them during unmount. The same composition works with reactive effect systems: start the animation in the effect and return `handle.dispose()` as its cleanup.
@@ -161,6 +182,24 @@ export function Notice() {
   return <div ref={elementRef}>Saved</div>;
 }
 ```
+
+## Testing
+
+jsdom does not implement `Element.animate()`, so code under test needs a fake. `@vielzeug/necromancer/testing` has no test-runner import — it works the same under Vitest, Jest, or any other runner.
+
+```ts
+import { installFakeAnimations } from '@vielzeug/necromancer/testing';
+import { animate } from '@vielzeug/necromancer';
+
+const { calls, restore } = installFakeAnimations();
+const handle = animate(element, [{ opacity: 0 }, { opacity: 1 }]);
+
+calls[0]?.animation.finish();
+await handle.result; // { status: 'finished' }
+restore();
+```
+
+Call `restore()` after each test (for example in `afterEach`) to put back whatever `Element.prototype.animate` was before. Use `createRect()` to mock `Element.getBoundingClientRect()` when testing code that calls `captureLayout()`.
 
 ## Best Practices
 

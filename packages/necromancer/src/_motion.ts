@@ -2,6 +2,8 @@ import type { AnimateOptions, MotionMode } from './types';
 
 import { NecromancerConfigError } from './errors';
 
+const DEFAULT_DURATION = 180;
+
 /** Reports whether the requested motion preference reduces visible movement. */
 export function shouldReduceMotion(mode: MotionMode): boolean {
   if (mode === 'full') return false;
@@ -13,9 +15,11 @@ export function shouldReduceMotion(mode: MotionMode): boolean {
 
 /** Converts ownership options to native timing, collapsing reduced motion to an instant transition. */
 export function resolveAnimationOptions(options: AnimateOptions = {}, reduced = false): KeyframeAnimationOptions {
-  const { motion: _motion = 'system', signal: _signal, ...nativeOptions } = options;
+  const { duration, interrupt: _interrupt, motion: _motion = 'system', signal: _signal, ...nativeOptions } = options;
+  const timing =
+    duration === undefined ? { ...nativeOptions, duration: DEFAULT_DURATION } : { ...nativeOptions, duration };
 
-  return reduced ? { ...nativeOptions, delay: 0, duration: 0, endDelay: 0, iterations: 1 } : nativeOptions;
+  return reduced ? { ...timing, delay: 0, duration: 0, endDelay: 0, iterations: 1 } : timing;
 }
 
 /** Adds an element's stagger offset without changing native nonnumeric delays when no offset is needed. */
@@ -25,7 +29,7 @@ export function withStaggeredDelay(options: AnimateOptions, offset: number): Ani
   const delay = options.delay ?? 0;
 
   if (typeof delay !== 'number') {
-    throw new NecromancerConfigError('animateEach() requires a numeric delay when stagger is non-zero.');
+    throw new NecromancerConfigError(`A non-zero stagger requires a numeric delay; received ${typeof delay}.`);
   }
 
   return { ...options, delay: delay + offset };

@@ -9,7 +9,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig(
   mergeConfig(
     getConfig(__dirname, {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        testing: resolve(__dirname, 'src/testing/index.ts'),
+      },
       external: readWorkspaceDeps(__dirname),
       name: 'Necromancer',
     }),

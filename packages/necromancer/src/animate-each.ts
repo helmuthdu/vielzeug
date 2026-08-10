@@ -1,13 +1,10 @@
 import type { AnimateEachOptions, AnimationGroup, AnimationHandle, KeyframeFactory, Keyframes } from './types';
 
+import { uniqueElements } from './_elements';
 import { createAnimationGroup } from './_handle';
 import { withStaggeredDelay } from './_motion';
 import { animate } from './animate';
 import { NecromancerConfigError } from './errors';
-
-function uniqueElements(elements: Iterable<Element>): Element[] {
-  return [...new Set(elements)];
-}
 
 function validateStagger(stagger: number): void {
   if (!Number.isFinite(stagger) || stagger < 0) {
@@ -40,9 +37,8 @@ export function animateEach(
 
   try {
     for (const [index, element] of unique.entries()) {
-      const currentFrames = frames[index];
-
-      if (!currentFrames) throw new NecromancerConfigError('The animation keyframes could not be resolved.');
+      // `frames` was built above from `unique`, one entry per element, so this index is always in range.
+      const currentFrames = frames[index]!;
 
       handles.push(animate(element, currentFrames, withStaggeredDelay(animationOptions, index * stagger)));
     }

@@ -8,14 +8,32 @@ export type AnimationResult =
   | { readonly reason?: unknown; readonly status: 'cancelled' };
 
 /** Keyframes accepted by the Web Animations API. */
-export type Keyframes = Keyframe[] | PropertyIndexedKeyframes;
+export type Keyframes = readonly Keyframe[] | PropertyIndexedKeyframes;
 
 /**
  * Native Web Animations timing options with Necromancer's ownership controls.
  *
- * `motion` defaults to `'system'`. `signal` disposes the returned handle when aborted.
+ * `duration` defaults to `180` milliseconds. `motion` defaults to `'system'`.
+ * `signal` disposes the returned handle when aborted.
+ *
+ * Deliberately extends native `KeyframeAnimationOptions` in full rather than a narrower,
+ * Necromancer-specific timing type: every native field (`easing`, `fill`, `iterations`, a
+ * string `delay`/`duration`, etc.) reaches `element.animate()` unchanged. Callers already
+ * fluent in the Web Animations API bring that knowledge here directly, instead of learning
+ * a second, smaller timing vocabulary — the option chain below only ever *adds* ownership
+ * fields on top, never narrows what's already native.
+ *
+ * Option chain: `AnimateOptions` -> `AnimateEachOptions` (+`stagger`) -> `LayoutAnimationOptions`
+ * (+`elements`). Each layer's implementation module strips only the field it added before
+ * forwarding the rest down (see `animate-each.ts`, `layout.ts`, and `_motion.ts`'s
+ * `resolveAnimationOptions()`, which is the last stop and strips `interrupt`/`motion`/`signal`).
  */
 export type AnimateOptions = KeyframeAnimationOptions & {
+  /**
+   * Cancels every active Necromancer-owned animation on the element as this
+   * animation begins. Native animations owned outside Necromancer are untouched.
+   */
+  readonly interrupt?: 'cancel';
   readonly motion?: MotionMode;
   readonly signal?: AbortSignal;
 };
@@ -50,8 +68,6 @@ export interface AnimationHandle {
   readonly animation: Animation;
   /** Resolves once the animation finishes, is reduced, or is cancelled. */
   readonly result: Promise<AnimationResult>;
-  /** Aborts when this handle is disposed. */
-  readonly disposalSignal: AbortSignal;
   /** Whether this handle has been disposed. */
   readonly disposed: boolean;
   /** Cancels the native animation and releases owned listeners. */
@@ -66,8 +82,6 @@ export interface AnimationGroup {
   readonly handles: readonly AnimationHandle[];
   /** Resolves after all children have reached a terminal state. */
   readonly results: Promise<readonly AnimationResult[]>;
-  /** Aborts when this group is disposed. */
-  readonly disposalSignal: AbortSignal;
   /** Whether this group has been disposed. */
   readonly disposed: boolean;
   /** Disposes every child and releases group ownership. */

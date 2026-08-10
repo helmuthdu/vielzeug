@@ -14,6 +14,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
     }
   },
   "scripts": {
@@ -32,6 +37,13 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "typesVersions": {
+    "*": {
+      "testing": [
+        "dist/testing/index.d.ts"
+      ]
+    }
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

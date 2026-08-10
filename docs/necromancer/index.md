@@ -15,7 +15,7 @@ environments: [browser]
 
 ## Why Necromancer?
 
-Native Web Animations API calls do not provide lifecycle ownership, reduced-motion policy, grouped playback, or layout transitions. Necromancer retains native keyframes and timing options while making ownership explicit for a component or DOM feature.
+Native Web Animations API calls do not provide lifecycle ownership, reduced-motion policy, grouped playback, or layout transitions. Necromancer retains native keyframes and timing options while making ownership explicit for a component or DOM feature. Its default `180ms` duration makes the smallest call visible without hiding native timing control.
 
 ```ts
 // Before
@@ -31,7 +31,7 @@ animation.dispose();
 | --- | --- | --- | --- |
 | Bundle size | 0 B | <PackageInfo package="necromancer" type="size" /> | ~18 kB |
 | Root dependencies | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
-| Lifecycle handle | Manual | `dispose()` and `disposalSignal` | Library-specific controls |
+| Lifecycle handle | Manual | `dispose()` | Library-specific controls |
 | Reduced motion | Manual | `motion: 'system'` default | Configuration required |
 | Layout transitions | Manual FLIP math | `captureLayout().animate()` | Separate API |
 
@@ -88,12 +88,17 @@ animation.dispose();
 
 - `animate()` — Native element animation with lifecycle ownership and direct native access
 - `animateEach()` — Group ownership with stable keyframe factories and `stagger`
-- `captureLayout()` — One-shot positional FLIP transition with additive `translate`
+- `captureLayout()` — One-shot FLIP transition with additive `translate` (position) and `scale` (size)
 - `motion` — `'system'` reduced-motion support with explicit reduced outcomes
+- `interrupt: 'cancel'` — Replace active Necromancer-owned animation on an element
 - `signal` — Abort a handle from its parent lifecycle
 - `dispose()` — Idempotent cleanup with `[Symbol.dispose]()`
 
 </div>
+
+## Deliberate Scope
+
+Necromancer owns explicit WAAPI keyframes. It does not generate CSS keyframes, observe CSS transitions, watch mutations, simulate springs, interpolate SVG paths, or run a JavaScript tween loop. Use CSS for declarative style changes and choose a dedicated tool when those capabilities are required.
 
 ## Documentation
 

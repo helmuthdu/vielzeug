@@ -72,6 +72,38 @@ test('reports native completion after finish', async ({ page }) => {
   expect(outcome).toEqual({ status: 'finished' });
 });
 
+test('interrupts prior Necromancer-owned animations without touching native caller animations', async ({ page }) => {
+  const outcome = await page.evaluate(async () => {
+    const necromancer = (window as Window & { Necromancer?: NecromancerRuntime }).Necromancer;
+
+    if (!necromancer) throw new Error('Necromancer IIFE did not load.');
+
+    const element = document.body.appendChild(document.createElement('div'));
+    const external = element.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'both' });
+    const first = necromancer.animate(element, [{ opacity: 0 }, { opacity: 1 }], {
+      duration: 120,
+      fill: 'both',
+      motion: 'full',
+    });
+    const second = necromancer.animate(element, [{ opacity: 1 }, { opacity: 0 }], {
+      duration: 120,
+      fill: 'both',
+      interrupt: 'cancel',
+      motion: 'full',
+    });
+    const result = await first.result;
+
+    second.dispose();
+
+    return {
+      externalState: external.playState,
+      firstDisposed: first.disposed,
+      firstStatus: result.status,
+    };
+  });
+
+  expect(outcome).toEqual({ externalState: 'running', firstDisposed: true, firstStatus: 'cancelled' });
+});
 test('reduces motion while preserving its requested keyframes', async ({ page }) => {
   const outcome = await page.evaluate(async () => {
     const necromancer = (window as Window & { Necromancer?: NecromancerRuntime }).Necromancer;
@@ -141,6 +173,64 @@ test('adds FLIP translation without replacing authored transforms or translate',
   expect(outcome.authoredTranslate).toBe('12px 6px');
   expect(outcome.transform).toBe('rotate(12deg)');
   expect(Number.parseFloat(outcome.translate ?? '')).toBe(-40);
+});
+
+test('adds FLIP scaling without replacing an authored scale', async ({ page }) => {
+  // jsdom cannot render layout, so the unit test suite can only assert the keyframe
+  // strings Necromancer generates — not that a real browser actually composes an
+  // additive `scale` by multiplying (per spec) rather than adding the raw numbers.
+  // This test measures the rendered box itself to confirm that composition. No rotation
+  // here deliberately: `getBoundingClientRect()`'s width is the rotated, axis-aligned
+  // bounding box, which would distort a direct width comparison — this test isolates
+  // scale from that (rotation-vs-scale interaction is covered by the layout capture
+  // itself using `offsetWidth`, not `getBoundingClientRect()`, for size — see layout.ts).
+  const outcome = await page.evaluate(() => {
+    const necromancer = (window as Window & { Necromancer?: NecromancerRuntime }).Necromancer;
+
+    if (!necromancer) throw new Error('Necromancer IIFE did not load.');
+
+    const element = document.body.appendChild(document.createElement('div'));
+
+    element.style.cssText = 'height: 20px; scale: 1; width: 20px';
+
+    const transition = necromancer.captureLayout([element]);
+
+    element.style.width = '40px';
+
+    const group = transition.animate({ duration: 120, motion: 'full' });
+    const handle = group.handles[0];
+
+    if (!handle) throw new Error('Expected a FLIP animation.');
+
+    handle.animation.pause();
+
+    const startWidth = element.getBoundingClientRect().width;
+    const frames = handle.animation.effect?.getKeyframes();
+    const firstFrame = frames?.[0];
+
+    handle.animation.finish();
+
+    const endWidth = element.getBoundingClientRect().width;
+
+    group.dispose();
+
+    return {
+      authoredScale: element.style.scale,
+      composite: firstFrame?.['composite'],
+      endWidth,
+      scale: firstFrame?.['scale'],
+      startWidth,
+    };
+  });
+
+  expect(outcome.composite).toBe('add');
+  expect(outcome.scale).toBe('0.5 1');
+  // Additive `scale` composes by multiplying (per the Web Animations spec), so the box
+  // renders at its captured 20px width at the start of the transition...
+  expect(Math.round(outcome.startWidth)).toBe(20);
+  // ...and at its new native 40px width once the animation settles back to `scale: 1`.
+  expect(Math.round(outcome.endWidth)).toBe(40);
+  expect(outcome.authoredScale).toBe('1');
 });
 
 test('matches replacement layout elements by key', async ({ page }) => {

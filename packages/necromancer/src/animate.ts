@@ -1,5 +1,6 @@
 import type { AnimateOptions, AnimationHandle, Keyframes } from './types';
 
+import { interruptAnimations, trackAnimation } from './_active';
 import { createAnimationHandle } from './_handle';
 import { resolveAnimationOptions, shouldReduceMotion } from './_motion';
 import { NecromancerUnsupportedError } from './errors';
@@ -17,8 +18,16 @@ export function animate(element: Element, keyframes: Keyframes, options: Animate
     throw new NecromancerUnsupportedError('The Web Animations API is not available in this environment.');
   }
 
-  const reduced = shouldReduceMotion(options.motion ?? 'system');
-  const nativeAnimation = element.animate(keyframes, resolveAnimationOptions(options, reduced));
+  if (options.interrupt === 'cancel') interruptAnimations(element);
 
-  return createAnimationHandle(nativeAnimation, options.signal, reduced);
+  const reduced = shouldReduceMotion(options.motion ?? 'system');
+  const nativeAnimation = element.animate(
+    keyframes as Keyframe[] | PropertyIndexedKeyframes,
+    resolveAnimationOptions(options, reduced),
+  );
+  const handle = createAnimationHandle(nativeAnimation, options.signal, reduced);
+
+  trackAnimation(element, handle);
+
+  return handle;
 }

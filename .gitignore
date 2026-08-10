@@ -152,7 +152,7 @@ scripts/.repl-tmp/
 
 # Others
 docs/.vitepress/theme/components/repl/registry.generated.ts
-/packages/refine/test-results/
+/test-results/
 /.playwright-mcp/
 /.impeccable/
 

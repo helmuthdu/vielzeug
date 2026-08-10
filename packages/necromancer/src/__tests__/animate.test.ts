@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { animate, NecromancerError, NecromancerUnsupportedError } from '../index';
-import { installWaapi } from './helpers';
+import { installFakeAnimations } from '../testing';
 
 describe('animate', () => {
   let restoreWaapi: (() => void) | undefined;
@@ -13,7 +13,7 @@ describe('animate', () => {
   });
 
   it('forwards keyframes and native timing options through its native animation', () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -30,8 +30,22 @@ describe('animate', () => {
     handle.dispose();
   });
 
+  it('uses a visible duration by default while preserving an explicit zero duration', () => {
+    const { calls, restore } = installFakeAnimations();
+
+    restoreWaapi = restore;
+
+    const element = document.createElement('div');
+    const defaultDuration = animate(element, []);
+    const instant = animate(element, [], { duration: 0 });
+
+    expect(calls.map((call) => call.options?.duration)).toEqual([180, 0]);
+    defaultDuration.dispose();
+    instant.dispose();
+  });
+
   it('resolves its result after a natural native completion', async () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -43,7 +57,7 @@ describe('animate', () => {
   });
 
   it('disposes idempotently and cancels the owned native animation', async () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -53,13 +67,12 @@ describe('animate', () => {
     handle.dispose();
 
     expect(handle.disposed).toBe(true);
-    expect(handle.disposalSignal.aborted).toBe(true);
-    expect(calls[0]?.animation.cancel).toHaveBeenCalledOnce();
+    expect(calls[0]?.animation.cancelCallCount).toBe(1);
     await expect(handle.result).resolves.toEqual({ reason: 'owner ended', status: 'cancelled' });
   });
 
   it('reports the native cancellation reason without treating the handle as disposed', async () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -72,7 +85,7 @@ describe('animate', () => {
   });
 
   it('disposes when a later caller signal aborts', async () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -83,12 +96,67 @@ describe('animate', () => {
 
     controller.abort('route changed');
 
-    expect(calls[0]?.animation.cancel).toHaveBeenCalledOnce();
+    expect(calls[0]?.animation.cancelCallCount).toBe(1);
     await expect(handle.result).resolves.toEqual({ reason: 'route changed', status: 'cancelled' });
   });
 
+  it('optionally interrupts active Necromancer-owned animations on the same element', async () => {
+    const { calls, restore } = installFakeAnimations();
+
+    restoreWaapi = restore;
+
+    const element = document.createElement('div');
+    const first = animate(element, []);
+    const second = animate(element, [], { interrupt: 'cancel' });
+
+    expect(calls[0]?.animation.cancelCallCount).toBe(1);
+    expect(first.disposed).toBe(true);
+    await expect(first.result).resolves.toMatchObject({ status: 'cancelled' });
+
+    expect(calls[1]?.animation.cancelCallCount).toBe(0);
+    second.dispose();
+  });
+
+  it('allows concurrent animations and excludes native animations it does not own', () => {
+    const { calls, restore } = installFakeAnimations();
+
+    restoreWaapi = restore;
+
+    const element = document.createElement('div');
+
+    element.animate([]); // native animation Necromancer does not own — recorded as calls[0]
+    animate(element, []); // calls[1]
+    animate(element, []); // calls[2]
+
+    expect(calls[1]?.animation.cancelCallCount).toBe(0);
+
+    const interrupted = animate(element, [], { interrupt: 'cancel' });
+
+    expect(calls[0]?.animation.cancelCallCount).toBe(0);
+    expect(calls[1]?.animation.cancelCallCount).toBe(1);
+    expect(calls[2]?.animation.cancelCallCount).toBe(1);
+    interrupted.dispose();
+  });
+
+  it('releases a completed animation from later interruption', async () => {
+    const { calls, restore } = installFakeAnimations();
+
+    restoreWaapi = restore;
+
+    const element = document.createElement('div');
+    const first = animate(element, []);
+
+    calls[0]?.animation.finish();
+    await first.result;
+
+    const second = animate(element, [], { interrupt: 'cancel' });
+
+    expect(calls[0]?.animation.cancelCallCount).toBe(0);
+    second.dispose();
+  });
+
   it('throws an already-aborted caller reason without creating an animation', () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -102,7 +170,7 @@ describe('animate', () => {
   });
 
   it('reduces timing while preserving requested frames and native options', async () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
     vi.stubGlobal(
@@ -126,7 +194,7 @@ describe('animate', () => {
   });
 
   it('allows callers to select full or reduced motion', () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
     vi.stubGlobal(
@@ -154,7 +222,7 @@ describe('animate', () => {
   });
 
   it('supports explicit resource disposal', async () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -162,7 +230,7 @@ describe('animate', () => {
 
     handle[Symbol.dispose]();
 
-    expect(calls[0]?.animation.cancel).toHaveBeenCalledOnce();
+    expect(calls[0]?.animation.cancelCallCount).toBe(1);
     await expect(handle.result).resolves.toMatchObject({ reason: expect.any(DOMException), status: 'cancelled' });
   });
 });

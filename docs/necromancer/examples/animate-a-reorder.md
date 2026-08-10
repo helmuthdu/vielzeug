@@ -40,7 +40,7 @@ group.dispose();
 - Call `transition.animate()` only after the DOM change has committed and layout reflects it.
 - When rendering replaces rows, capture with `getKey` and pass the committed rows through `animate({ elements })`. The key must be unique and non-empty.
 - Each layout transition is single-use; capture a new one before every reorder.
-- Necromancer additively animates the individual `translate` property, preserving the row's authored `transform` and `translate`.
+- Necromancer additively animates the individual `translate` and `scale` properties, preserving the row's authored `transform`, `translate`, and `scale`. A row that resized between capture and animate animates its size change too.
 
 ### Related
 

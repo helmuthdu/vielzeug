@@ -1,18 +1,47 @@
 import type { LayoutAnimationOptions, LayoutCaptureOptions, LayoutTransition } from './types';
 
+import { uniqueElements } from './_elements';
 import { animateEach } from './animate-each';
 import { NecromancerConfigError } from './errors';
 
-type LayoutRect = Readonly<Pick<DOMRectReadOnly, 'x' | 'y'>>;
+type LayoutRect = Readonly<Pick<DOMRectReadOnly, 'height' | 'width' | 'x' | 'y'>>;
 type LayoutEntry = Readonly<{ element: Element; rect: LayoutRect }>;
-type LayoutChange = Readonly<{ element: Element; x: number; y: number }>;
+type LayoutChange = Readonly<{ element: Element; scaleX: number; scaleY: number; x: number; y: number }>;
 
-function copyRect(rect: DOMRectReadOnly): LayoutRect {
-  return { x: rect.x, y: rect.y };
+// Rounds before templating into a keyframe string purely for DevTools readability — a `getBoundingClientRect()`
+// subtraction routinely produces values like `12.340000000000002`, which is noise once rendered as CSS.
+// Pixels only need whole-number precision; scale factors (close to 1) need finer precision to stay visually exact.
+function round(value: number, precision: number): number {
+  const factor = 10 ** precision;
+
+  return Math.round(value * factor) / factor;
 }
 
-function uniqueElements(elements: Iterable<Element>): Element[] {
-  return [...new Set(elements)];
+// `getBoundingClientRect()`'s width/height is the rotated, axis-aligned bounding box — using it
+// for size would distort the scale ratio under any rotation. `offsetWidth`/`offsetHeight` report
+// the box's own untransformed layout size instead. Elements without an offset box (e.g. SVG)
+// fall back to the bounding rect, accepting that same distortion as the only option available.
+function measureSize(element: Element): Readonly<{ height: number; width: number }> {
+  if ('offsetWidth' in element && 'offsetHeight' in element) {
+    return { height: (element as HTMLElement).offsetHeight, width: (element as HTMLElement).offsetWidth };
+  }
+
+  const rect = element.getBoundingClientRect();
+
+  return { height: rect.height, width: rect.width };
+}
+
+function measureLayout(element: Element): LayoutRect {
+  const rect = element.getBoundingClientRect();
+  const size = measureSize(element);
+
+  return { height: size.height, width: size.width, x: rect.x, y: rect.y };
+}
+
+// `next` is 0 exactly when the element has collapsed (e.g. `display: none` mid-transition);
+// there's no meaningful ratio to compute then, so treat it as unscaled rather than producing Infinity/NaN.
+function computeScale(captured: number, next: number): number {
+  return next === 0 ? 1 : captured / next;
 }
 
 function readKey(element: Element, getKey: (element: Element) => string, phase: string): string {
@@ -44,11 +73,13 @@ function createKeyMap(entries: readonly LayoutEntry[], getKey: (element: Element
 function changedElement(element: Element, rect: LayoutRect): LayoutChange | undefined {
   if (!element.isConnected) return undefined;
 
-  const next = element.getBoundingClientRect();
+  const next = measureLayout(element);
   const x = rect.x - next.x;
   const y = rect.y - next.y;
+  const scaleX = computeScale(rect.width, next.width);
+  const scaleY = computeScale(rect.height, next.height);
 
-  return x === 0 && y === 0 ? undefined : { element, x, y };
+  return x === 0 && y === 0 && scaleX === 1 && scaleY === 1 ? undefined : { element, scaleX, scaleY, x, y };
 }
 
 function matchByIdentity(entries: readonly LayoutEntry[], elements: readonly Element[]): LayoutChange[] {
@@ -87,15 +118,18 @@ function matchByKey(
 }
 
 /**
- * Captures the current positions of unique elements for a later FLIP animation.
+ * Captures the current position and size of unique elements for a later FLIP animation.
  *
- * Capture before mutating the DOM, then call the returned transition's
- * `animate()` method after the browser has applied the resulting layout.
+ * Each element's `x`/`y` position and `width`/`height` are captured. Rotation and other
+ * transforms are not captured or compensated. Capture before mutating the DOM, then call
+ * the returned transition's `animate()` method after the browser has applied the resulting
+ * layout — position changes animate via translate, and size changes via scale, both
+ * additively composed on top of any authored transform.
  */
 export function captureLayout(elements: Iterable<Element>, options: LayoutCaptureOptions = {}): LayoutTransition {
   const entries: LayoutEntry[] = uniqueElements(elements).map((element) => ({
     element,
-    rect: copyRect(element.getBoundingClientRect()),
+    rect: measureLayout(element),
   }));
   const getKey = options.getKey;
   const captured = getKey ? createKeyMap(entries, getKey, 'captured') : undefined;
@@ -115,15 +149,14 @@ export function captureLayout(elements: Iterable<Element>, options: LayoutCaptur
       return animateEach(
         changed.map(({ element }) => element),
         (_, index) => {
-          const change = changed[index];
-
-          if (!change) {
-            throw new NecromancerConfigError('The captured layout could not be matched to an animation target.');
-          }
+          // `changed` was mapped directly into the elements array above, so this index is always in range.
+          const change = changed[index]!;
+          const translate = `${round(change.x, 2)}px ${round(change.y, 2)}px`;
+          const scale = `${round(change.scaleX, 4)} ${round(change.scaleY, 4)}`;
 
           return [
-            { composite: 'add', translate: `${change.x}px ${change.y}px` },
-            { composite: 'add', translate: '0px 0px' },
+            { composite: 'add', scale, translate },
+            { composite: 'add', scale: '1 1', translate: '0px 0px' },
           ];
         },
         animationOptions,

@@ -6,9 +6,9 @@ Lifecycle-owned DOM animation primitives built on the Web Animations API.
 
 `@vielzeug/necromancer` owns native animations so UI lifecycles can cancel them predictably. It animates one element, coordinates staggered groups, and applies additive FLIP layout transitions.
 
-- `animate()` returns a lifecycle owner with direct access to its native `Animation`.
+- `animate()` defaults to `180ms` and returns a lifecycle owner with direct access to its native `Animation`.
 - `animateEach()` animates unique elements with optional staggered delays.
-- `captureLayout()` returns a one-shot, additive FLIP transition.
+- `captureLayout()` returns a one-shot, additive FLIP transition covering both position and size.
 
 ## Installation
 
@@ -44,10 +44,14 @@ handle.dispose();
 | --- | --- |
 | `animate()` | Animate one element and return an `AnimationHandle`. |
 | `animateEach()` | Animate unique elements in iteration order and return an `AnimationGroup`. |
-| `captureLayout()` | Capture element positions and return a one-shot layout transition, including keyed replacement nodes. |
+| `captureLayout()` | Capture element positions and sizes and return a one-shot layout transition, including keyed replacement nodes. |
 | `NecromancerError` | Base class for Necromancer-originated errors. |
 
-`AnimateOptions` accepts native `KeyframeAnimationOptions`, `motion`, and `signal`. `animateEach()` and layout transitions also accept `stagger`. Pass `captureLayout()` a `getKey` function and its transition the committed `elements` to animate framework-rendered replacement nodes from their captured positions.
+`AnimateOptions` accepts native `KeyframeAnimationOptions`, `interrupt`, `motion`, and `signal`. `duration` defaults to `180` milliseconds; use `interrupt: 'cancel'` to replace active Necromancer-owned animations on one element. `animateEach()` and layout transitions also accept `stagger`. Pass `captureLayout()` a `getKey` function and its transition the committed `elements` to animate framework-rendered replacement nodes from their captured positions.
+
+## Testing
+
+`@vielzeug/necromancer/testing` provides `installFakeAnimations()`, `FakeAnimation`, and `createRect()` for testing code that calls Necromancer without a browser's `Element.animate()`. See the [Usage Guide](https://vielzeug.dev/necromancer/usage#testing).
 
 ## Environment
 
@@ -58,6 +62,10 @@ Necromancer is for browser execution and requires the Web Animations API when an
 ## Peers and Dependencies
 
 Necromancer has no runtime or peer dependencies. It uses browser-provided `Element.animate()`, `AbortSignal`, and `Symbol.dispose`.
+
+## Scope
+
+Necromancer owns explicit Web Animations API keyframes. It does not inject or observe CSS animations, watch DOM mutations, generate springs, interpolate SVG geometry, or provide a JavaScript tween fallback.
 
 ## Documentation
 

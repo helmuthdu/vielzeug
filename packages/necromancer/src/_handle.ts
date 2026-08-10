@@ -17,7 +17,6 @@ function createResultPromise(animation: Animation, onSettled: () => void, reduce
 
 /** Wraps a native Animation with Necromancer's lifecycle contract. */
 export function createAnimationHandle(animation: Animation, signal?: AbortSignal, reduced = false): AnimationHandle {
-  const controller = new AbortController();
   let disposed = false;
   let disposeReason: unknown;
   let hasDisposeReason = false;
@@ -44,7 +43,6 @@ export function createAnimationHandle(animation: Animation, signal?: AbortSignal
     disposed = true;
     disposeReason = reason;
     hasDisposeReason = reason !== undefined;
-    controller.abort(reason);
     removeAbortListener?.();
     removeAbortListener = undefined;
     animation.cancel();
@@ -59,9 +57,6 @@ export function createAnimationHandle(animation: Animation, signal?: AbortSignal
 
   return {
     animation,
-    get disposalSignal() {
-      return controller.signal;
-    },
     dispose,
     get disposed() {
       return disposed;
@@ -75,7 +70,6 @@ export function createAnimationHandle(animation: Animation, signal?: AbortSignal
 
 /** Combines child animation handles under one disposal owner. */
 export function createAnimationGroup(handles: readonly AnimationHandle[], signal?: AbortSignal): AnimationGroup {
-  const controller = new AbortController();
   let disposed = false;
   let removeAbortListener: (() => void) | undefined;
 
@@ -92,7 +86,6 @@ export function createAnimationGroup(handles: readonly AnimationHandle[], signal
     if (disposed) return;
 
     disposed = true;
-    controller.abort(reason);
     removeAbortListener?.();
     removeAbortListener = undefined;
     for (const handle of handles) handle.dispose(reason);
@@ -106,9 +99,6 @@ export function createAnimationGroup(handles: readonly AnimationHandle[], signal
   }
 
   return {
-    get disposalSignal() {
-      return controller.signal;
-    },
     dispose,
     get disposed() {
       return disposed;

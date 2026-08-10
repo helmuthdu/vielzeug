@@ -9,7 +9,7 @@ description: API reference for @vielzeug/necromancer animation ownership, groups
 
 | Symbol | Purpose | Common gotcha |
 | --- | --- | --- |
-| `animate()` | Animate one element | Call only where `Element.animate()` is available |
+| `animate()` | Animate one element | Defaults to a visible `180ms` duration |
 | `animateEach()` | Animate a unique element group | Non-zero `stagger` needs numeric `delay` |
 | `captureLayout()` | Capture positions and create a one-shot FLIP transition | Capture before changing layout |
 | `NecromancerError` | Base package error | Use `NecromancerError.is()` to narrow unknown errors |
@@ -26,7 +26,7 @@ All public functions, errors, and types are exported from `@vielzeug/necromancer
 function animate(element: Element, keyframes: Keyframes, options?: AnimateOptions): AnimationHandle;
 ```
 
-Starts a lifecycle-owned native Web Animation. Playback remains native:
+Starts a lifecycle-owned native Web Animation. Omitted `duration` defaults to `180` milliseconds; explicit native timing values, including `0`, are preserved. Playback remains native:
 
 ```ts
 const handle = animate(element, [{ opacity: 0 }, { opacity: 1 }], { duration: 180 });
@@ -55,7 +55,7 @@ Starts animations for unique elements in first-seen order. Necromancer resolves 
 function captureLayout(elements: Iterable<Element>, options?: LayoutCaptureOptions): LayoutTransition;
 ```
 
-Captures unique element positions and returns a one-shot transition. After changing layout, call `transition.animate(options)` to measure current positions and animate changed, connected elements with CSS `translate`. Pass `getKey` when a framework replaces the captured elements during its render.
+Captures unique elements' positions and sizes and returns a one-shot transition. Rotation and other transforms are not captured or compensated. After changing layout, call `transition.animate(options)` to measure current positions and sizes and animate changed, connected elements with additive CSS `translate` (position) and `scale` (size). Pass `getKey` when a framework replaces the captured elements during its render.
 
 ```ts
 const transition = captureLayout(beforeItems, {
@@ -98,10 +98,13 @@ type AnimationResult =
 
 ```ts
 type AnimateOptions = KeyframeAnimationOptions & {
+  readonly interrupt?: 'cancel';
   readonly motion?: MotionMode;
   readonly signal?: AbortSignal;
 };
 ```
+
+Set `interrupt: 'cancel'` for rapid state changes that should replace every still-active Necromancer-owned animation on the same element. It does not cancel animations created directly with `Element.animate()`.
 
 ### `AnimateEachOptions`
 
@@ -136,9 +139,11 @@ type LayoutAnimationOptions = AnimateEachOptions & {
 ### `Keyframes` and `KeyframeFactory`
 
 ```ts
-type Keyframes = Keyframe[] | PropertyIndexedKeyframes;
+type Keyframes = readonly Keyframe[] | PropertyIndexedKeyframes;
 type KeyframeFactory = (element: Element, index: number, total: number) => Keyframes;
 ```
+
+Accepts a `readonly` array so a reusable `as const` keyframe list can be passed without a cast.
 
 ### `AnimationHandle`
 
@@ -146,7 +151,6 @@ type KeyframeFactory = (element: Element, index: number, total: number) => Keyfr
 interface AnimationHandle {
   readonly animation: Animation;
   readonly result: Promise<AnimationResult>;
-  readonly disposalSignal: AbortSignal;
   readonly disposed: boolean;
   dispose(reason?: unknown): void;
   [Symbol.dispose](): void;
@@ -159,7 +163,6 @@ interface AnimationHandle {
 interface AnimationGroup {
   readonly handles: readonly AnimationHandle[];
   readonly results: Promise<readonly AnimationResult[]>;
-  readonly disposalSignal: AbortSignal;
   readonly disposed: boolean;
   dispose(reason?: unknown): void;
   [Symbol.dispose](): void;
@@ -183,3 +186,48 @@ interface LayoutTransition {
 | `NecromancerError` | Base class for package errors |
 | `NecromancerConfigError` | Invalid stagger, incompatible delay, or reused layout transition |
 | `NecromancerUnsupportedError` | `Element.animate()` is unavailable |
+
+## Testing (`@vielzeug/necromancer/testing`)
+
+jsdom (and most non-browser DOM environments) do not implement `Element.animate()`. Import these from the `/testing` sub-path, not the root entry point.
+
+### `installFakeAnimations()`
+
+```ts
+function installFakeAnimations(): { calls: AnimationCall[]; restore: () => void };
+```
+
+Replaces `Element.prototype.animate` with a deterministic fake for the duration of a test. `calls` records every invocation in order; call `restore()` (for example in `afterEach`) to put the original implementation back.
+
+```ts
+import { installFakeAnimations } from '@vielzeug/necromancer/testing';
+
+const { calls, restore } = installFakeAnimations();
+const handle = animate(element, [{ opacity: 0 }, { opacity: 1 }]);
+
+calls[0]?.animation.finish();
+await handle.result; // { status: 'finished' }
+restore();
+```
+
+### `FakeAnimation`
+
+```ts
+class FakeAnimation {
+  cancelCallCount: number;
+  finishCallCount: number;
+  finished: Promise<void>;
+  cancel(): void;
+  finish(): void;
+}
+```
+
+A minimal `Animation` stand-in. `cancel()` rejects `finished` with an `AbortError`; `finish()` resolves it. `cancelCallCount`/`finishCallCount` track how many times each was called, in place of a test-runner-specific spy.
+
+### `createRect()`
+
+```ts
+function createRect(x: number, y: number, width?: number, height?: number): DOMRect;
+```
+
+Builds a `DOMRect` for mocking `Element.getBoundingClientRect()` in `captureLayout()` tests. `width`/`height` default to `20`.

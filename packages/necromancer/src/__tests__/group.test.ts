@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { animateEach, NecromancerConfigError } from '../index';
-import { installWaapi } from './helpers';
+import { installFakeAnimations } from '../testing';
 
 describe('animateEach', () => {
   let restoreWaapi: (() => void) | undefined;
@@ -12,7 +12,7 @@ describe('animateEach', () => {
   });
 
   it('animates unique elements in stable order with accumulated delays', () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -30,7 +30,7 @@ describe('animateEach', () => {
   });
 
   it('resolves every keyframe factory before the first native animation starts', () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -48,7 +48,7 @@ describe('animateEach', () => {
   });
 
   it('provides a keyframe factory with the unique-element index and total', () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -63,7 +63,7 @@ describe('animateEach', () => {
   });
 
   it('disposes started children when a later native animation fails to start', () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -78,11 +78,11 @@ describe('animateEach', () => {
     });
 
     expect(() => animateEach([first, second], [])).toThrow('native animation failed');
-    expect(calls[0]?.animation.cancel).toHaveBeenCalledOnce();
+    expect(calls[0]?.animation.cancelCallCount).toBe(1);
   });
 
   it('rejects invalid stagger and incompatible nonnumeric delays', () => {
-    const { restore } = installWaapi();
+    const { restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -96,7 +96,7 @@ describe('animateEach', () => {
   });
 
   it('creates an empty group for an empty iterable', async () => {
-    const { restore } = installWaapi();
+    const { restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -107,7 +107,7 @@ describe('animateEach', () => {
   });
 
   it('disposes every child through one lifecycle owner', async () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -116,7 +116,7 @@ describe('animateEach', () => {
     group.dispose('scope ended');
 
     for (const call of calls) {
-      expect(call.animation.cancel).toHaveBeenCalledOnce();
+      expect(call.animation.cancelCallCount).toBe(1);
     }
     await expect(group.results).resolves.toEqual([
       { reason: 'scope ended', status: 'cancelled' },
@@ -125,7 +125,7 @@ describe('animateEach', () => {
   });
 
   it('owns a parent abort signal as one group lifecycle', async () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -137,8 +137,7 @@ describe('animateEach', () => {
     controller.abort('route changed');
 
     expect(group.disposed).toBe(true);
-    expect(group.disposalSignal.aborted).toBe(true);
-    for (const call of calls) expect(call.animation.cancel).toHaveBeenCalledOnce();
+    for (const call of calls) expect(call.animation.cancelCallCount).toBe(1);
     await expect(group.results).resolves.toEqual([
       { reason: 'route changed', status: 'cancelled' },
       { reason: 'route changed', status: 'cancelled' },
@@ -146,7 +145,7 @@ describe('animateEach', () => {
   });
 
   it('preserves every child result', async () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
@@ -160,7 +159,7 @@ describe('animateEach', () => {
   });
 
   it('reports natural child completion and exposes resource disposal', async () => {
-    const { calls, restore } = installWaapi();
+    const { calls, restore } = installFakeAnimations();
 
     restoreWaapi = restore;
 
