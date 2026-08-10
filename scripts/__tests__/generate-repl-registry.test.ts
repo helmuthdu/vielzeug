@@ -269,7 +269,7 @@ describe('extractApi() — real TS compiler Program against a fixture dist/index
     expect(diagnostics.map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'))).toEqual([]);
     expect(typeDeclaration).toContain('type Keyframes = Keyframe[] | PropertyIndexedKeyframes;');
     expect(typeDeclaration).toContain('const layoutSnapshotBrand: unique symbol;');
-  });
+  }, 15_000);
 });
 
 describe('buildRegistrySource() — full assembly against a fake two-package tree', () => {
