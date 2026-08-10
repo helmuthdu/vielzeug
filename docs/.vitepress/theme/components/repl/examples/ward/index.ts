@@ -4,7 +4,6 @@ import { batchDecisionsExample } from './batch-decisions';
 import { boundViewExample } from './bound-view';
 import { conflictDetectionExample } from './conflict-detection';
 import { dynamicPermissionsExample } from './dynamic-permissions';
-import { middlewareGuardExample } from './middleware-guard';
 import { multiRoleRulesExample } from './multi-role-rules';
 import { permissionChecksExample } from './permission-checks';
 import { permissionManagementExample } from './permission-management';
@@ -20,7 +19,6 @@ export const wardExamples = {
   'bound-view': boundViewExample,
   'conflict-detection': conflictDetectionExample,
   'dynamic-permissions': dynamicPermissionsExample,
-  'middleware-guard': middlewareGuardExample,
   'multi-role-rules': multiRoleRulesExample,
   'permission-checks': permissionChecksExample,
   'permission-management': permissionManagementExample,

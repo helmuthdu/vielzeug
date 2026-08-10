@@ -2,7 +2,7 @@ import { vi } from 'vitest';
 
 import type { BoundWard, Principal, Ward, WardLoggerContext, WardPredicate } from '../index';
 
-import { ANONYMOUS, createWard, owns, WardPredicateError, WILDCARD } from '../index';
+import { ANONYMOUS, createWard, owns, WardConfigError, WardPredicateError, WILDCARD } from '../index';
 
 const can = <TAction extends string, TData>(
   ward: Ward<TAction, TData>,
@@ -1920,5 +1920,54 @@ describe('ward: detectConflicts — strict and onConflict options', () => {
     }).not.toThrow();
 
     expect(onConflict).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ward: createWard options validation', () => {
+  it('rejects non-function logger', () => {
+    expect(() => createWard([], { logger: 'bad' as never })).toThrow(WardConfigError);
+  });
+
+  it('rejects non-function onConflict', () => {
+    expect(() => createWard([], { onConflict: true as never })).toThrow(WardConfigError);
+  });
+
+  it('rejects negative maxConflicts', () => {
+    expect(() => createWard([], { maxConflicts: -1 })).toThrow(WardConfigError);
+  });
+
+  it('rejects NaN maxConflicts', () => {
+    expect(() => createWard([], { maxConflicts: Number.NaN })).toThrow(WardConfigError);
+  });
+
+  it('rejects Infinity maxConflicts', () => {
+    expect(() => createWard([], { maxConflicts: Number.POSITIVE_INFINITY })).toThrow(WardConfigError);
+  });
+
+  it('accepts valid options', () => {
+    expect(() => createWard([], { logger: () => {}, maxConflicts: 50, onConflict: () => {} })).not.toThrow();
+  });
+});
+
+describe('ward: anonymous predicate warning', () => {
+  it('warns when an ANONYMOUS-only rule has a when predicate', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ANONYMOUS, when: owns('authorId') }]);
+
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/ward]'));
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining(ANONYMOUS));
+    spy.mockRestore();
+  });
+
+  it('does not warn when ANONYMOUS is mixed with other roles', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    createWard([
+      { action: 'read', effect: 'allow', resource: 'posts', role: [ANONYMOUS, 'viewer'], when: owns('authorId') },
+    ]);
+
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: remove middleware guards, validate createWard options, add anonymous-predicate development warning",
+      "packageName": "@vielzeug/ward",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ward"
+}

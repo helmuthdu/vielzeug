@@ -45,27 +45,6 @@ bound.allowedActions({ resource: 'posts', knownActions: ['read', 'update', 'dele
 bound.explain({ resource: 'posts', action: 'update', data: { authorId: 'u2' } });
 ```
 
-## Middleware Guards
-
-```ts
-import { guardRequest, guardRequestWith } from '@vielzeug/ward';
-
-const direct = guardRequest({
-  ward,
-  principal,
-  resource: 'posts',
-  action: 'read',
-});
-
-const withExtractor = await guardRequestWith({
-  ward,
-  req,
-  extractPrincipal: async (request) => request.user ?? null,
-  resource: 'posts',
-  action: 'read',
-});
-```
-
 ## API Notes
 
 1. `explain()` and `trace()` take object inputs: `{ principal, resource, action, data? }`.
@@ -73,3 +52,4 @@ const withExtractor = await guardRequestWith({
 3. `rulesInScope()` takes `{ principal, resource, data? }`.
 4. `BoundWard` methods use object inputs without `principal`.
 5. `trace()` does not call the logger; `explain()` and `checkAll()` do.
+6. Use `explain()` directly at request boundaries instead of middleware wrappers.

@@ -110,25 +110,17 @@ const canEdit = predicate.and(isOwner, ({ principal }) => principal !== null);
 
 Async predicates are rejected at runtime with `WardPredicateError`.
 
-## Framework Guards
+## Request Guards
+
+Use `explain()` directly at request boundaries. Extract the principal from your framework's request object and pass it to Ward:
 
 ```ts
-import { guardRequest, guardRequestWith } from '@vielzeug/ward';
+const principal = await extractPrincipal(req);
+const decision = ward.explain({ principal, resource: 'posts', action: 'read' });
 
-const direct = guardRequest({
-  ward,
-  principal: { id: 'u1', roles: ['viewer'] },
-  resource: 'posts',
-  action: 'read',
-});
-
-const extracted = await guardRequestWith({
-  ward,
-  req,
-  extractPrincipal: async (request) => request.user ?? null,
-  resource: 'posts',
-  action: 'read',
-});
+if (!decision.allowed) {
+  return res.status(403).json({ error: decision.reason });
+}
 ```
 
 ## Testing
@@ -168,6 +160,27 @@ const actions = ward.forUser(user).allowedActions({ resource: 'posts', knownActi
 ```
 
 :::
+
+## Working with Other Vielzeug Libraries
+
+### With Wayfinder
+
+Enforce Ward decisions in Wayfinder route guards by calling `explain()` inside the guard callback:
+
+```ts
+const decision = ward.explain({ principal, resource: route.meta.resource, action: 'read' });
+
+if (!decision.allowed) return '/forbidden';
+```
+
+### With Conduit
+
+Inject a Ward instance into Conduit-managed services so authorization checks share a single compiled policy:
+
+```ts
+const ward = createWard(rules);
+container.register('ward', ward);
+```
 
 ## Best Practices
 

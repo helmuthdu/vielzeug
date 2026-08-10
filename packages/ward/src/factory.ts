@@ -22,8 +22,11 @@ import type {
 
 import { compileEntry } from './_compile';
 import { computeConflicts } from './_conflict';
+import { warnAnonymousPredicates } from './_dev';
 import { assertUserPrincipal, isOverriddenBy, matchesRule, pickWinner, toDecision, validatePrincipal } from './_match';
 import { WardConfigError } from './errors';
+
+const warn = warnAnonymousPredicates;
 
 // ---------------------------------------------------------------------------
 // Shared loop cores (validation-free; used by both public API and forUser)
@@ -89,8 +92,25 @@ export function createWard<TAction extends string = string, TData = unknown>(
   rules: readonly WardRule<TAction, TData>[] = [],
   options: WardOptions<TAction, TData> = {},
 ): Ward<TAction, TData> {
+  if (options.logger !== undefined && typeof options.logger !== 'function') {
+    throw new WardConfigError('logger must be a function.');
+  }
+
+  if (options.maxConflicts !== undefined) {
+    if (!Number.isFinite(options.maxConflicts) || options.maxConflicts < 0) {
+      throw new WardConfigError('maxConflicts must be a finite non-negative number.');
+    }
+  }
+
+  if (options.onConflict !== undefined && typeof options.onConflict !== 'function') {
+    throw new WardConfigError('onConflict must be a function.');
+  }
+
   const { logger, maxConflicts = Infinity } = options;
   const entries = rules.map((rule, i) => compileEntry(rule, i));
+
+  // Warn in development when an ANONYMOUS-role rule has a predicate.
+  warn(entries);
 
   // -------------------------------------------------------------------------
   // Core decision + logging

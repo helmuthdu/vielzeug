@@ -14,13 +14,13 @@ description: Complete API reference for @vielzeug/ward.
 | `Ward.explain`                      | Returns one decision                   | Sync           | Pass resource data for predicate rules |
 | `Ward.trace`                        | Inspects decision candidates           | Sync           | Does not invoke the logger             |
 | `Ward.forUser`                      | Binds a principal                      | Sync           | Rebind when identity or roles change   |
-| `guardRequest` / `guardRequestWith` | Adapts decisions to request boundaries | Sync / Async   | Enforce again at mutation boundaries   |
+| `checkAll`                          | Batch permission checks                | Sync           | Pass resource data for predicate rules |
 
 ## Package Entry Point
 
 | Import                    | Purpose                                                              |
 | ------------------------- | -------------------------------------------------------------------- |
-| `@vielzeug/ward`          | Rules, factory, predicates, request guards, errors, and public types |
+| `@vielzeug/ward`          | Rules, factory, predicates, errors, and public types |
 | `@vielzeug/ward/devtools` | `debugWard()` diagnostic factory                                     |
 
 ## Core Factory
@@ -34,7 +34,7 @@ createWard<TAction extends string = string, TData = unknown>(
 ): Ward<TAction, TData>;
 ```
 
-Creates an immutable ward instance.
+Creates an immutable ward instance. Validates `logger`, `onConflict`, and `maxConflicts` options before compiling rules; invalid values throw `WardConfigError`.
 
 ## Rule Builders
 
@@ -171,49 +171,6 @@ Predicates run synchronously. Returning a Promise throws `WardPredicateError`.
 
 ### `patternCovers(broad, narrow): boolean`
 
-## Middleware Guards
-
-### `guardRequest(input)`
-
-```ts
-guardRequest<TAction extends string = string, TData = unknown>(
-  input: GuardRequestInput<TAction, TData>,
-): GuardResult<TAction, TData>;
-```
-
-Input:
-
-```ts
-{
-  ward: Ward<TAction, TData>;
-  principal: Principal;
-  resource: string;
-  action: TAction;
-  data?: TData;
-}
-```
-
-### `guardRequestWith(input)`
-
-```ts
-guardRequestWith<TReq, TAction extends string = string, TData = unknown>(
-  input: GuardRequestWithInput<TReq, TAction, TData>,
-): Promise<GuardResult<TAction, TData>>;
-```
-
-Input:
-
-```ts
-{
-  ward: Ward<TAction, TData>;
-  req: TReq;
-  extractPrincipal: PrincipalExtractor<TReq>;
-  resource: string;
-  action: TAction;
-  data?: TData;
-}
-```
-
 ## Devtools
 
 ### `debugWard(rules, options?)`
@@ -251,11 +208,10 @@ export type BoundWardDecisionInput<TAction extends string = string, TData = unkn
 
 `Ward`, `BoundWard`, `WardDecision`, `WardDecisionResult`, `WardTrace`, `WardTraceCandidate`, `WardConflict`,
 `WardOptions`, `WardCheck`, `WardAllowedActionsInput`, `WardRulesInScopeInput`, `RuleContext`,
-`WardLoggerContext`, `ConflictKind`, `GuardRequestInput`, `GuardRequestWithInput`, `GuardResult`,
-`PrincipalExtractor`, and `WardRequest` are exported from the root entry point.
+`WardLoggerContext`, and `ConflictKind` are exported from the root entry point.
 
 ## Errors
 
 - `WardError` is the base error class; use `WardError.is(value)` for narrowing.
-- `WardConfigError` reports malformed rules, principals, and strict conflict initialization.
+- `WardConfigError` reports malformed rules, invalid `createWard` options (`logger`, `onConflict`, `maxConflicts`), invalid principals, and strict conflict initialization.
 - `WardPredicateError` reports a throwing synchronous predicate and includes its `ruleIndex` and cause.

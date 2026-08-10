@@ -1,11 +1,11 @@
 ---
 title: Ward — Deterministic authorization for TypeScript
-description: Typed authorization policies with wildcard matching, deterministic precedence, request guards, and decision tracing.
+description: Typed authorization policies with wildcard matching, deterministic precedence, and decision tracing.
 package: ward
 category: auth
 keywords: [authorization, rbac, permissions, policy, roles, wildcard, predicates]
 related: [wayfinder, conduit, herald]
-exports: [createWard, allow, deny, ruleFor, owns, predicate, guardRequest, guardRequestWith, ANONYMOUS, WILDCARD]
+exports: [createWard, allow, deny, ruleFor, owns, predicate, ANONYMOUS, WILDCARD, WardError, WardConfigError, WardPredicateError, matchesPattern, patternCovers]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -22,6 +22,12 @@ Ward keeps authorization policies declarative and decision ordering deterministi
 const canUpdate = user.roles.includes('editor') && post.authorId === user.id;
 
 // After
+import { createWard, owns } from '@vielzeug/ward';
+
+const ward = createWard([
+  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow', when: owns('authorId') },
+]);
+
 const decision = ward.explain({ principal: user, resource: 'posts', action: 'update', data: post });
 const canUpdate = decision.allowed;
 ```
@@ -91,7 +97,7 @@ else console.log(decision.reason);
 - `owns()` and `predicate` constrain rules with synchronous request data.
 - `explain()`, `trace()`, and `detectConflicts()` make policy decisions diagnosable.
 - `forUser()` creates a principal-bound view for repeated checks.
-- `guardRequest()` and `guardRequestWith()` adapt decisions to request boundaries.
+- `checkAll()` evaluates multiple resource/action pairs in one call.
 
 </div>
 
@@ -102,6 +108,7 @@ else console.log(decision.reason);
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [Migration Guide](./migration.md)
 
 </div>
 
