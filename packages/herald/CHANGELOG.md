@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/herald
 
-This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+
+## 2.0.0
+Mon, 10 Aug 2026 15:11:23 GMT
+
+### Breaking changes
+
+- refactor!: simplify event bus and remove retained-state APIs
 
 ## 1.0.6
 Thu, 06 Aug 2026 07:20:49 GMT

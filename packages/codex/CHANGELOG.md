@@ -1,6 +1,15 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Wed, 05 Aug 2026 19:50:19 GMT and should not be manually modified.
+This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+
+## 2.0.2
+Mon, 10 Aug 2026 15:11:23 GMT
+
+### Patches
+
+- chore: refresh bundled docs data
+- refresh bundled Tempo 2 documentation
+- refresh bundled Wayfinder documentation
 
 ## 2.0.1
 Wed, 05 Aug 2026 19:50:19 GMT

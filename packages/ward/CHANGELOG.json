@@ -2,6 +2,20 @@
   "name": "@vielzeug/ward",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/ward_v2.0.0",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "refactor!: remove middleware guards, validate createWard options, add anonymous-predicate development warning",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "69fbb7ef27481939d56bef435449b9e3cd68dc9c"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.6",
       "tag": "@vielzeug/ward_v1.0.6",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/rune
 
-This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+
+## 2.0.0
+Mon, 10 Aug 2026 15:11:23 GMT
+
+### Breaking changes
+
+- refactor!: make batch lifecycle awaitable and remove RuneTransportError
 
 ## 1.1.3
 Thu, 06 Aug 2026 07:20:49 GMT

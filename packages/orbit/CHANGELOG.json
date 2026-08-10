@@ -2,6 +2,20 @@
   "name": "@vielzeug/orbit",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/orbit_v2.0.0",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "refactor!: replace float helpers with lifecycle-owned positioners",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "e32a868dfc0804ad4eca9e3c9f9678c52382e70e"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.5",
       "tag": "@vielzeug/orbit_v1.1.5",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",

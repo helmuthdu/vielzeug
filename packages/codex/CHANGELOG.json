@@ -2,6 +2,30 @@
   "name": "@vielzeug/codex",
   "entries": [
     {
+      "version": "2.0.2",
+      "tag": "@vielzeug/codex_v2.0.2",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore: refresh bundled docs data",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "8538aec24a6c7bef4382aabdebf2628280c234b3"
+          },
+          {
+            "comment": "refresh bundled Tempo 2 documentation",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "e2f7065b98add9ee90eaa428843d4edb77493b6a"
+          },
+          {
+            "comment": "refresh bundled Wayfinder documentation",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "b086ec9d0425054899992787d40b5de6f63ca220"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.1",
       "tag": "@vielzeug/codex_v2.0.1",
       "date": "Wed, 05 Aug 2026 19:50:19 GMT",

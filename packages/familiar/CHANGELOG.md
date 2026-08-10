@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/familiar
 
-This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+
+## 2.0.0
+Mon, 10 Aug 2026 15:11:23 GMT
+
+### Breaking changes
+
+- refactor!: replace inline workers with module-worker pools
 
 ## 1.0.8
 Thu, 06 Aug 2026 07:20:49 GMT

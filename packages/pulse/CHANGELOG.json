@@ -2,6 +2,20 @@
   "name": "@vielzeug/pulse",
   "entries": [
     {
+      "version": "2.1.0",
+      "tag": "@vielzeug/pulse_v2.1.0",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat: WebSocket lifecycle around explicit connection readiness and schema-bound scopes",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "812603b21c7e35c158ed3131c492e91b20f584cd"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.1",
       "tag": "@vielzeug/pulse_v2.0.1",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",

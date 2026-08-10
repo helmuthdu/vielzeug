@@ -2,6 +2,20 @@
   "name": "@vielzeug/keymap",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/keymap_v2.0.0",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "refactor!: Remove layers and priority; make keymap lifecycle and guards explicit",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "bab05deb91c206683d9f22a3cf805141fc4a1af6"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.3",
       "tag": "@vielzeug/keymap_v1.1.3",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",

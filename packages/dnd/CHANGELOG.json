@@ -2,6 +2,20 @@
   "name": "@vielzeug/dnd",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/dnd_v2.0.0",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "feat!: make sortable scopes own connected moves and touch input",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "bfe005932bb839d1abf35a00f7a81de5259c991c"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.2.3",
       "tag": "@vielzeug/dnd_v1.2.3",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",

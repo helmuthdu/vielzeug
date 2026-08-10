@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/necromancer",
+  "entries": [
+    {
+      "version": "2.0.0",
+      "tag": "@vielzeug/necromancer_v2.0.0",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "feat(necromancer)!: add lifecycle-owned Web Animations API primitives with per-handle group results and additive FLIP; short-lived handles/groups expose dispose()/disposed only, no disposalSignal; captureLayout() also compensates size changes via additive scale, not just position; Keyframes accepts readonly arrays; adds @vielzeug/necromancer/testing (installFakeAnimations/FakeAnimation/createRect)",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "0cb9d88da327820932069f5f6220a273871d71da"
+          }
+        ]
+      }
+    }
+  ]
+}

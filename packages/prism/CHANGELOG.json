@@ -2,6 +2,25 @@
   "name": "@vielzeug/prism",
   "entries": [
     {
+      "version": "2.1.0",
+      "tag": "@vielzeug/prism_v2.1.0",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "chore!: use keyed chart data, explicit accessibility, and reduced-motion-aware transitions",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "8538aec24a6c7bef4382aabdebf2628280c234b3"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/orbit\" to `2.0.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.1",
       "tag": "@vielzeug/prism_v2.0.1",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",

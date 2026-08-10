@@ -2,6 +2,20 @@
   "name": "@vielzeug/ore",
   "entries": [
     {
+      "version": "2.0.2",
+      "tag": "@vielzeug/ore_v2.0.2",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix test fixture resource retention",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "c5081931b918c441750c4c8ebb9ae3f7e69bb1bb"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.1",
       "tag": "@vielzeug/ore_v2.0.1",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",

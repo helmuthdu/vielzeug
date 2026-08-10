@@ -2,6 +2,20 @@
   "name": "@vielzeug/vault",
   "entries": [
     {
+      "version": "2.1.0",
+      "tag": "@vielzeug/vault_v2.1.0",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat: add driver-neutral SQLite storage",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "d8db96e972ca1a6b46f1ec50001bb3ae6f88a403"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.1",
       "tag": "@vielzeug/vault_v2.0.1",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",

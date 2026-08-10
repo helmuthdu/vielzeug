@@ -2,6 +2,20 @@
   "name": "@vielzeug/scroll",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/scroll_v2.0.0",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "feat!: validate static virtualizer configuration and support callback updates",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "379026c6ec11fe70c6ca80129ef967eda091beb6"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.6",
       "tag": "@vielzeug/scroll_v1.1.6",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",

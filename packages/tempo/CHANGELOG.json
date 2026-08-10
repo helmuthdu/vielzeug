@@ -2,6 +2,20 @@
   "name": "@vielzeug/tempo",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/tempo_v2.0.0",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "refactor!: redesign Tempo parsing, timezone semantics, range inputs, and expiry classification",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "e2f7065b98add9ee90eaa428843d4edb77493b6a"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.6",
       "tag": "@vielzeug/tempo_v1.0.6",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",

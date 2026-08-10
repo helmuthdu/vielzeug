@@ -2,6 +2,20 @@
   "name": "@vielzeug/scout",
   "entries": [
     {
+      "version": "2.1.0",
+      "tag": "@vielzeug/scout_v2.1.0",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat: add bulk index reconciliation and validate search configuration",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "53a0e2e20fbb07468b92dcea8a20a078cbb9eb1e"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.1",
       "tag": "@vielzeug/scout_v2.0.1",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",

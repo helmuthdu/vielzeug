@@ -2,6 +2,27 @@
   "name": "@vielzeug/flux",
   "entries": [
     {
+      "version": "2.0.2",
+      "tag": "@vielzeug/flux_v2.0.2",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/herald\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/herald\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.1",
       "tag": "@vielzeug/flux_v2.0.1",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",

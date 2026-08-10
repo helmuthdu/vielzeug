@@ -2,6 +2,20 @@
   "name": "@vielzeug/wayfinder",
   "entries": [
     {
+      "version": "2.0.0",
+      "tag": "@vielzeug/wayfinder_v2.0.0",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "refactor!: redesign navigation coordination, add ready, and rename resolve/match to matchPath/loadPath",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "b086ec9d0425054899992787d40b5de6f63ca220"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.5",
       "tag": "@vielzeug/wayfinder_v1.0.5",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",

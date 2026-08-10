@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+
+## 2.0.2
+Mon, 10 Aug 2026 15:11:23 GMT
+
+### Patches
+
+- Fix floating overlays in deferred slot and preview lifecycles
 
 ## 2.0.1
 Thu, 06 Aug 2026 07:20:49 GMT

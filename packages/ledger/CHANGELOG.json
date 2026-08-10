@@ -2,6 +2,20 @@
   "name": "@vielzeug/ledger",
   "entries": [
     {
+      "version": "2.1.0",
+      "tag": "@vielzeug/ledger_v2.1.0",
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "chore: update atomic operation state",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "b6f845663e227d1311346003365c32124a2c696e"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.1",
       "tag": "@vielzeug/ledger_v2.0.1",
       "date": "Thu, 06 Aug 2026 07:20:49 GMT",
