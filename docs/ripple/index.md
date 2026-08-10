@@ -5,7 +5,7 @@ package: ripple
 category: state
 keywords: [reactive, signals, computed, effects, graph, scope, batch, async]
 related: [ore, clockwork, ledger]
-exports: [createRipple, signal, computed, effect, batch, createScope, createStore, resource, untrack, watch, isReactive]
+exports: [createRipple, signal, computed, effect, batch, createScope, untrack, isReactive]
 environments: [browser, node, ssr, deno]
 ---
 

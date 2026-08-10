@@ -1,16 +1,14 @@
 /// <reference types="vitest" />
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
+// Ripple is platform-neutral: test its scheduler, AbortController lifecycle, and async error
+// semantics under Node. Browser-specific behavior belongs in a separate test project only if the
+// runtime ever acquires a browser API dependency.
 export default defineConfig({
   test: {
-    environment: 'jsdom',
+    environment: 'node',
     globals: true,
     name: 'ripple',
-    setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
     watch: false,
   },
 });

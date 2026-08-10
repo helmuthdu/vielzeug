@@ -16,7 +16,13 @@ export type {
   Unsubscribe,
 } from './types';
 
-export { RippleComputedCycleError, RippleDisposedScopeError, RippleError, RippleInfiniteLoopError } from './errors';
+export {
+  RippleComputedCycleError,
+  RippleDisposedRuntimeError,
+  RippleDisposedScopeError,
+  RippleError,
+  RippleInfiniteLoopError,
+} from './errors';
 export { isReactive } from './runtime';
 
 export { createRipple, type Ripple } from './_default';

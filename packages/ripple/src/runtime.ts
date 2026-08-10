@@ -13,7 +13,12 @@ import type {
   Unsubscribe,
 } from './types';
 
-import { RippleComputedCycleError, RippleDisposedScopeError, RippleInfiniteLoopError } from './errors';
+import {
+  RippleComputedCycleError,
+  RippleDisposedRuntimeError,
+  RippleDisposedScopeError,
+  RippleInfiniteLoopError,
+} from './errors';
 
 const REACTIVE = Symbol('ripple.reactive');
 const SIGNAL = Symbol('ripple.signal');
@@ -48,6 +53,7 @@ abstract class ReactiveNode<T> {
   abstract get value(): T;
 
   subscribe(listener: () => void): Unsubscribe {
+    this.runtime.assertActive();
     this.peek();
 
     const observer: ObserverNode = {
@@ -83,6 +89,8 @@ class SignalNode<T> extends ReactiveNode<T> implements Signal<T> {
   }
 
   set value(next: T) {
+    this.runtime.assertActive();
+
     if (this.equals(this.current, next)) return;
 
     const previous = this.current;
@@ -313,6 +321,7 @@ export class ReactiveRuntime {
   private activeEffectScope: ScopeNode | undefined;
   private activeObserver: ObserverNode | undefined;
   private activeScope: ScopeNode;
+  private isDisposed = false;
   private flushDepth = 0;
   private flushing = false;
   private readonly pending = new Set<EffectNode>();
@@ -334,9 +343,19 @@ export class ReactiveRuntime {
     this.activeScope = this.rootScope;
   }
 
-  readonly signal = <T>(initial: T, options?: SignalOptions<T>): Signal<T> => new SignalNode(this, initial, options);
+  get disposed(): boolean {
+    return this.isDisposed;
+  }
+
+  readonly signal = <T>(initial: T, options?: SignalOptions<T>): Signal<T> => {
+    this.assertActive();
+
+    return new SignalNode(this, initial, options);
+  };
 
   readonly computed = <T>(derive: () => T, options?: ComputedOptions<T>): Readable<T> => {
+    this.assertActive();
+
     const node = new ComputedNode(this, derive, options);
 
     (this.activeEffectScope ?? this.activeScope).owned.add(node);
@@ -345,6 +364,8 @@ export class ReactiveRuntime {
   };
 
   readonly effect = (callback: () => Cleanup | void, options?: EffectOptions): EffectHandle => {
+    this.assertActive();
+
     const node = new EffectNode(this, callback, options);
 
     (this.activeEffectScope ?? this.activeScope).owned.add(node);
@@ -354,19 +375,41 @@ export class ReactiveRuntime {
   };
 
   readonly createScope = (name?: string): Scope => {
+    this.assertActive();
+
     const scope = new ScopeNode(this, name);
 
+    // Scopes model explicit, caller-owned lifetimes. Unlike effects/computeds created during an
+    // effect run, they deliberately attach to the enclosing scope rather than the per-run owner:
+    // keyed DOM directives retain item scopes across reconciliation runs and dispose them only
+    // when the item itself leaves the collection.
     this.activeScope.owned.add(scope);
 
     return scope;
   };
 
-  readonly batch = <T>(fn: () => T): T => this.propagate(fn);
+  readonly batch = <T>(fn: () => T): T => {
+    this.assertActive();
 
-  readonly untrack = <T>(fn: () => T): T => this.withObserver(undefined, fn);
+    return this.propagate(fn);
+  };
+
+  readonly untrack = <T>(fn: () => T): T => {
+    this.assertActive();
+
+    return this.withObserver(undefined, fn);
+  };
 
   dispose(): void {
+    if (this.isDisposed) return;
+
+    this.isDisposed = true;
     this.rootScope.dispose();
+  }
+
+  /** Internal node guard: disposed runtimes allow inert reads but reject graph work and mutation. */
+  assertActive(): void {
+    if (this.isDisposed) throw new RippleDisposedRuntimeError('Cannot use a disposed Ripple runtime.');
   }
 
   track(node: Dependency): void {

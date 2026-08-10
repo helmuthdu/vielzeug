@@ -11,5 +11,6 @@ export class RippleError extends Error {
 }
 
 export class RippleComputedCycleError extends RippleError {}
+export class RippleDisposedRuntimeError extends RippleError {}
 export class RippleDisposedScopeError extends RippleError {}
 export class RippleInfiniteLoopError extends RippleError {}

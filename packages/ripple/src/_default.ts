@@ -21,6 +21,7 @@ export interface Ripple {
   createScope(name?: string): Scope;
   createStore<T>(initial: T, options?: StoreOptions): Store<T>;
   dispose(): void;
+  readonly disposed: boolean;
   effect(callback: () => Cleanup | void, options?: EffectOptions): EffectHandle;
   resource<Source, Value>(
     source: () => Source,
@@ -48,6 +49,9 @@ export const createRipple = (options?: RippleOptions): Ripple => {
     createScope: runtime.createScope,
     createStore,
     dispose: () => runtime.dispose(),
+    get disposed() {
+      return runtime.disposed;
+    },
     effect: runtime.effect,
     resource,
     signal: runtime.signal,

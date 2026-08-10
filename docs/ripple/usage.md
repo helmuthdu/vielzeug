@@ -107,6 +107,7 @@ const user = ripple.resource(
 );
 
 if (user.value.status === 'success') console.log(user.value.value.name);
+if (user.value.status === 'error') console.error(user.value.error);
 user.dispose();
 ```
 
@@ -240,4 +241,4 @@ ripple.dispose();
 - Batch related synchronous writes.
 - Use `watch()` only for selected source transitions.
 - Read dependencies in a resource source, not its loader.
-- Route background failures through `onError`.
+- Use `onError` for runtime callback, cleanup, listener, and observer failures; handle resource source and loader failures through `resource.value.status === 'error'`.

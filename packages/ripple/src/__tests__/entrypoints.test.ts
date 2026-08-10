@@ -1,9 +1,25 @@
 import { resource } from '../async';
+import * as root from '../index';
 import { signal } from '../index';
 import { createStore } from '../store';
 import { watch } from '../watch';
 
 describe('default graph subpaths', () => {
+  it('keeps optional helpers on their dedicated subpaths', () => {
+    expect(root).toMatchObject({
+      batch: expect.any(Function),
+      computed: expect.any(Function),
+      createRipple: expect.any(Function),
+      createScope: expect.any(Function),
+      effect: expect.any(Function),
+      signal: expect.any(Function),
+      untrack: expect.any(Function),
+    });
+    expect('createStore' in root).toBe(false);
+    expect('resource' in root).toBe(false);
+    expect('watch' in root).toBe(false);
+  });
+
   it('shares default graph across root and watch subpath', () => {
     const count = signal(0);
     const values: number[] = [];

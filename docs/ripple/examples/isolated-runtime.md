@@ -38,4 +38,4 @@ async function renderRequest(): Promise<string> {
 ### Related
 
 - [Usage Guide](../usage#isolated-graphs)
-- [API Reference](../api#createripple)
+- [API Reference](../api)

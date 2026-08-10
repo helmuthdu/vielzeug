@@ -30,6 +30,7 @@ const user = ripple.resource(
 );
 
 if (user.value.status === 'success') console.log(user.value.value.name);
+if (user.value.status === 'error') console.error(user.value.error);
 user.dispose();
 ripple.dispose();
 ```
@@ -43,4 +44,4 @@ ripple.dispose();
 ### Related
 
 - [Usage Guide](../usage#async-data)
-- [API Reference](../api#ripple-resource)
+- [API Reference](../api)

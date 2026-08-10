@@ -32,7 +32,7 @@ stop.dispose();
 ripple.dispose();
 ```
 
-Use default exports (`signal`, `computed`, `effect`, `batch`) only when application has one graph for full lifetime.
+`ripple.dispose()` is terminal: create a new graph instead of reusing a disposed one. Use default exports (`signal`, `computed`, `effect`, `batch`) only when application has one graph for full lifetime.
 
 ## Bound helpers
 
@@ -43,6 +43,8 @@ const user = ripple.resource(() => userId.value, loadUser);
 const cart = ripple.createStore({ items: 0 });
 const stop = ripple.watch(() => cart.value.items, renderItems);
 ```
+
+Resource source and loader failures are handled through `resource.value.status === 'error'`; `onError` receives broken runtime callbacks, cleanup, listeners, and observers.
 
 Nested effects and resources created inside an effect automatically dispose before parent effect reruns:
 

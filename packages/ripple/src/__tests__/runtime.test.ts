@@ -1,4 +1,6 @@
-import { createRipple } from '../index';
+import type { Scope } from '../index';
+
+import { createRipple, RippleDisposedRuntimeError } from '../index';
 
 describe('ripple graph', () => {
   it('updates derived values and suppresses unchanged output', () => {
@@ -56,6 +58,45 @@ describe('ripple graph', () => {
     ripple.dispose();
   });
 
+  it('coalesces microtask effects after synchronous writes', async () => {
+    const ripple = createRipple();
+    const count = ripple.signal(0);
+    const values: number[] = [];
+
+    ripple.effect(
+      () => {
+        values.push(count.value);
+      },
+      { scheduler: 'microtask' },
+    );
+    count.value = 1;
+    count.value = 2;
+
+    expect(values).toEqual([0]);
+    await Promise.resolve();
+    expect(values).toEqual([0, 2]);
+    ripple.dispose();
+  });
+
+  it('does not run a queued microtask effect after disposal', async () => {
+    const ripple = createRipple();
+    const count = ripple.signal(0);
+    const values: number[] = [];
+    const stop = ripple.effect(
+      () => {
+        values.push(count.value);
+      },
+      { scheduler: 'microtask' },
+    );
+
+    count.value = 1;
+    stop.dispose();
+    await Promise.resolve();
+
+    expect(values).toEqual([0]);
+    ripple.dispose();
+  });
+
   it('owns nested work through parent effect run', () => {
     const ripple = createRipple();
     const enabled = ripple.signal(true);
@@ -75,6 +116,74 @@ describe('ripple graph', () => {
     expect(values).toEqual([0]);
     stop.dispose();
     ripple.dispose();
+  });
+
+  it('keeps explicit scopes alive across parent effect reruns', () => {
+    const ripple = createRipple();
+    const enabled = ripple.signal(true);
+    const child = ripple.signal(0);
+    const scopes: Scope[] = [];
+    const values: number[] = [];
+
+    ripple.effect(() => {
+      if (!enabled.value) return;
+
+      const scope = ripple.createScope();
+
+      scopes.push(scope);
+      scope.run(() => {
+        ripple.effect(() => {
+          values.push(child.value);
+        });
+      });
+    });
+
+    enabled.value = false;
+    child.value = 1;
+
+    expect(scopes[0]?.disposed).toBe(false);
+    expect(values).toEqual([0, 1]);
+    ripple.dispose();
+    expect(scopes[0]?.disposed).toBe(true);
+  });
+
+  it('makes graph disposal terminal', () => {
+    const ripple = createRipple();
+    const signal = ripple.signal(0);
+    const computed = ripple.computed(() => signal.value * 2);
+    let subscriptionCalls = 0;
+
+    signal.subscribe(() => subscriptionCalls++);
+    expect(computed.value).toBe(0);
+    ripple.dispose();
+
+    expect(ripple.disposed).toBe(true);
+    expect(signal.peek()).toBe(0);
+    expect(computed.peek()).toBe(0);
+    expect(() => (signal.value = 1)).toThrow(RippleDisposedRuntimeError);
+    expect(subscriptionCalls).toBe(0);
+    expect(() => signal.subscribe(() => undefined)).toThrow(RippleDisposedRuntimeError);
+    expect(() => computed.subscribe(() => undefined)).toThrow(RippleDisposedRuntimeError);
+    expect(() => ripple.signal(0)).toThrow(RippleDisposedRuntimeError);
+    expect(() => ripple.computed(() => 0)).toThrow(RippleDisposedRuntimeError);
+    expect(() => ripple.effect(() => undefined)).toThrow(RippleDisposedRuntimeError);
+    expect(() => ripple.createScope()).toThrow(RippleDisposedRuntimeError);
+    expect(() => ripple.batch(() => 0)).toThrow(RippleDisposedRuntimeError);
+    expect(() => ripple.untrack(() => 0)).toThrow(RippleDisposedRuntimeError);
+    expect(() =>
+      ripple.resource(
+        () => 'value',
+        async (value) => value,
+      ),
+    ).toThrow(RippleDisposedRuntimeError);
+    expect(() =>
+      ripple.watch(
+        () => 0,
+        () => undefined,
+      ),
+    ).toThrow(RippleDisposedRuntimeError);
+    expect(() => ripple.createStore(0)).toThrow(RippleDisposedRuntimeError);
+    expect(() => ripple.dispose()).not.toThrow();
   });
 
   it('retries an effect after its first run fails', () => {

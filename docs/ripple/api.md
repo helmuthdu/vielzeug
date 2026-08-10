@@ -9,7 +9,7 @@ description: Complete reference for reactive graphs, signals, effects, scopes, w
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `createRipple()` | Create isolated graph | Sync | Dispose request/test/feature graphs |
+| `createRipple()` | Create isolated graph | Sync | Disposal is terminal; create a new graph instead of reusing it |
 | `signal()` | Create writable value | Sync | Default graph is process-wide |
 | `computed()` | Create lazy derived value | Sync | Keep derivation pure |
 | `effect()` | React to dependency reads | Sync | Dispose handle or return cleanup |
@@ -38,7 +38,7 @@ description: Complete reference for reactive graphs, signals, effects, scopes, w
 function createRipple(options?: RippleOptions): Ripple;
 ```
 
-Creates one isolated reactive graph. Factories on the returned object share scheduling, ownership, observer, and error boundaries.
+Creates one isolated reactive graph. Factories on the returned object share scheduling, ownership, observer, and error boundaries. `dispose()` is terminal: `ripple.disposed` becomes `true`, existing owned work is disposed, and creating more graph work throws `RippleDisposedRuntimeError`. Create a new graph for a new lifetime.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
@@ -243,17 +243,20 @@ function resource<Source, Value>(
 ): Resource<Value>;
 ```
 
-Tracks `source`, aborts stale loader work, and exposes `AsyncState<Value>`.
+Tracks `source`, aborts stale loader work, and exposes `AsyncState<Value>`. Source and loader failures become `status: 'error'` state; handle them from `resource.value` rather than `RippleOptions.onError`, which is reserved for runtime callback, cleanup, listener, and observer failures.
 
 **Returns:** `Resource<Value>`.
 
 **Example:**
 
 ```ts
-import { resource, signal } from '@vielzeug/ripple/async';
+import { signal } from '@vielzeug/ripple';
+import { resource } from '@vielzeug/ripple/async';
 
 const userId = signal('42');
 const user = resource(() => userId.value, async (id) => ({ id }));
+
+if (user.value.status === 'error') console.error(user.value.error);
 user.dispose();
 ```
 
@@ -328,6 +331,7 @@ interface Ripple {
   createScope(name?: string): Scope;
   createStore<T>(initial: T, options?: StoreOptions): Store<T>;
   dispose(): void;
+  readonly disposed: boolean;
   effect(callback: () => Cleanup | void, options?: EffectOptions): EffectHandle;
   resource<Source, Value>(source: () => Source, loader: (source: Source, context: { readonly signal: AbortSignal }) => Promise<Value>, options?: ResourceOptions): Resource<Value>;
   signal<T>(initial: T, options?: SignalOptions<T>): Signal<T>;
@@ -342,5 +346,6 @@ interface Ripple {
 | --- | --- | --- |
 | `RippleError` | Base Ripple error | `RippleError.is(error)` narrows unknown values. |
 | `RippleComputedCycleError` | Computed dependency reads itself through a cycle | Extends `RippleError`. |
+| `RippleDisposedRuntimeError` | Factory or execution API used after `ripple.dispose()` | Extends `RippleError`. |
 | `RippleDisposedScopeError` | `scope.run()` after scope disposal | Extends `RippleError`. |
 | `RippleInfiniteLoopError` | Effect flush exceeds graph iteration limit | Extends `RippleError`. |
