@@ -17,6 +17,9 @@ export { bindRefCallback, type RefCallback } from './ref-callback';
 // ── Cross-shadow-root ARIA relationships ──────────────────────────────────────
 export { setAriaReflection, type AriaReflectionProperty } from './aria-reflection';
 
+// ── Focus management ────────────────────────────────────────────────────────
+export { createFocusManager, type FocusManager, type FocusManagerOptions } from './focus';
+
 // ── Field base ───────────────────────────────────────────────────────────────
 export {
   counterClassName,
@@ -63,18 +66,18 @@ export {
   type SendShortcut,
 } from './composer';
 
-// ── Overlay types ────────────────────────────────────────────────────────────
+// ── Overlay ──────────────────────────────────────────────────────────────────
 export {
+  createOutsidePointerDismissal,
+  restoreTriggerFocus,
   type DialogCloseReason,
   type DropdownCloseReason,
+  type OutsidePointerDismissalOptions,
   type OverlayCloseDetail,
   type OverlayOpenChangeDetail,
   type OverlayOpenDetail,
   type OverlayOpenReason,
 } from './overlay';
-
-// ── Paginated list ────────────────────────────────────────────────────────────
-export { createPaginatedList, type PaginatedListHandle, type PaginatedListOptions } from './paginated-list';
 
 // ── Navigation types ─────────────────────────────────────────────────────────
 export { type ListKeyAction, type ListNavigationAction } from './nav';
@@ -129,7 +132,12 @@ export {
   type PressTrigger,
 } from './keyboard';
 export { createListControl, type ListControl, type ListNavigationOptions } from './nav';
-export { createTypeahead, type Typeahead, type TypeaheadOptions } from './typeahead';
+export {
+  createListboxDropdown,
+  type ListboxDropdown,
+  type ListboxDropdownOptions,
+  type ListboxDropdownPlacementOptions,
+} from './option-list';
 export { elementDirection } from './direction';
 export { parseStringTriggers } from './parse';
 export { syncedSignal } from './signals';

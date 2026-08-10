@@ -1,78 +1,104 @@
-import { readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { refineCemPlugin } from './cem-plugin-refine.mjs';
 
+const packageRoot = fileURLToPath(new URL('..', import.meta.url));
+
 /**
- * Ordered inventory of published refine component entry points.
- * Keep this list as the single internal source of truth for component subpaths.
+ * File basenames that register a custom element (`define(...)`) but are never independently
+ * published — they're absorbed into a sibling's `dist/<name>.js` bundle and registered as a side
+ * effect of importing it. `carousel-slide.ts` is detected automatically (its only importer,
+ * `carousel.ts`, bare-imports it purely for the registration side effect — see the detection
+ * rule below). `datagrid-column.ts` needs this explicit entry instead: `datagrid.ts` imports it
+ * with named bindings (`COLUMN_OBSERVED_ATTRS`, `parseColumnChildren`) it actually needs for its
+ * own logic, not a bare side-effect-only import, so the automatic same-directory/single-importer
+ * heuristic (which only recognizes bare imports) can't detect it — `ore-datagrid-column` still
+ * registers as a consequence of that import, same as any other, but there is no independent
+ * `./datagrid-column` subpath.
  */
-export const componentManifest = [
-  { name: 'accordion', source: './src/disclosure/accordion/accordion' },
-  { name: 'accordion-item', source: './src/disclosure/accordion-item/accordion-item' },
-  { name: 'alert', source: './src/feedback/alert/alert' },
-  { name: 'async', source: './src/feedback/async/async' },
-  { name: 'avatar', source: './src/content/avatar/avatar' },
-  { name: 'avatar-group', source: './src/content/avatar/avatar-group' },
-  { name: 'badge', source: './src/feedback/badge/badge' },
-  { name: 'password-strength', source: './src/feedback/password-strength/password-strength' },
-  { name: 'box', source: './src/layout/box/box' },
-  { name: 'breadcrumb', source: './src/content/breadcrumb/breadcrumb' },
-  { name: 'button', source: './src/inputs/button/button' },
-  { name: 'button-group', source: './src/inputs/button-group/button-group' },
-  { name: 'calendar', source: './src/inputs/calendar/calendar' },
-  { name: 'card', source: './src/content/card/card' },
-  { name: 'carousel', source: './src/content/carousel/carousel' },
-  { name: 'marquee', source: './src/content/marquee/marquee' },
-  { name: 'chat-message', source: './src/content/chat-message/chat-message' },
-  { name: 'checkbox', source: './src/inputs/checkbox/checkbox' },
-  { name: 'checkbox-group', source: './src/inputs/checkbox-group/checkbox-group' },
-  { name: 'chip', source: './src/feedback/chip/chip' },
-  { name: 'code-window', source: './src/content/code-window/code-window' },
-  { name: 'copy-command', source: './src/content/copy-command/copy-command' },
-  { name: 'combobox', source: './src/inputs/combobox/combobox' },
-  { name: 'command-palette', source: './src/overlay/command-palette/command-palette' },
-  { name: 'datagrid', source: './src/inputs/datagrid/datagrid' },
-  { name: 'date-picker', source: './src/inputs/date-picker/date-picker' },
-  { name: 'dialog', source: './src/overlay/dialog/dialog' },
-  { name: 'drawer', source: './src/overlay/drawer/drawer' },
-  { name: 'file-input', source: './src/inputs/file-input/file-input' },
-  { name: 'grid', source: './src/layout/grid/grid' },
-  { name: 'grid-item', source: './src/layout/grid-item/grid-item' },
-  { name: 'icon', source: './src/content/icon/icon' },
-  { name: 'input', source: './src/inputs/input/input' },
-  { name: 'list', source: './src/content/list/list' },
-  { name: 'list-item', source: './src/content/list/list-item' },
-  { name: 'menu', source: './src/overlay/menu/menu' },
-  { name: 'message-composer', source: './src/inputs/message-composer/message-composer' },
-  { name: 'navbar', source: './src/layout/navbar/navbar' },
-  { name: 'number-input', source: './src/inputs/number-input/number-input' },
-  { name: 'otp-input', source: './src/inputs/otp-input/otp-input' },
-  { name: 'pagination', source: './src/content/pagination/pagination' },
-  { name: 'popover', source: './src/overlay/popover/popover' },
-  { name: 'progress', source: './src/feedback/progress/progress' },
-  { name: 'radio', source: './src/inputs/radio/radio' },
-  { name: 'radio-group', source: './src/inputs/radio-group/radio-group' },
-  { name: 'rating', source: './src/inputs/rating/rating' },
-  { name: 'select', source: './src/inputs/select/select' },
-  { name: 'separator', source: './src/content/separator/separator' },
-  { name: 'skeleton', source: './src/feedback/skeleton/skeleton' },
-  { name: 'slider', source: './src/inputs/slider/slider' },
-  { name: 'sidebar', source: './src/layout/sidebar/sidebar' },
-  { name: 'step', source: './src/content/stepper/step' },
-  { name: 'stepper', source: './src/content/stepper/stepper' },
-  { name: 'switch', source: './src/inputs/switch/switch' },
-  { name: 'tab-item', source: './src/disclosure/tab-item/tab-item' },
-  { name: 'tab-panel', source: './src/disclosure/tab-panel/tab-panel' },
-  { name: 'table', source: './src/content/table/table' },
-  { name: 'tabs', source: './src/disclosure/tabs/tabs' },
-  { name: 'text', source: './src/content/text/text' },
-  { name: 'textarea', source: './src/inputs/textarea/textarea' },
-  { name: 'time-picker', source: './src/inputs/time-picker/time-picker' },
-  { name: 'toast', source: './src/feedback/toast/toast' },
-  { name: 'tooltip', source: './src/overlay/tooltip/tooltip' },
-  { name: 'typing-indicator', source: './src/feedback/typing-indicator/typing-indicator' },
-];
+const PRIVATELY_REGISTERED = new Set(['datagrid-column']);
+
+/**
+ * Discovers every published refine component entry point by scanning `src/**` for files that
+ * call `define(...)` — the single source of truth is the filesystem itself (specifically,
+ * "does this file register a custom element"), not a hand-maintained list that can silently
+ * drift from it. Mirrors the same signal the Custom Elements Manifest analyzer's glob already
+ * uses (`customElementsManifestConfig` below), so there's one definition of "what a component
+ * is," not two.
+ */
+function discoverComponentManifest() {
+  const srcDir = join(packageRoot, 'src');
+
+  function* walk(dir) {
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
+
+      if (statSync(full).isDirectory()) {
+        if (entry === '__tests__' || entry === 'testing') continue;
+
+        yield* walk(full);
+      } else if (entry.endsWith('.ts') && !entry.endsWith('.test.ts') && !entry.endsWith('.e2e.ts')) {
+        yield full;
+      }
+    }
+  }
+
+  const allFiles = [...walk(srcDir)];
+  const candidates = allFiles.filter((file) => {
+    const name = basename(file, '.ts');
+
+    if (basename(file) === 'index.ts' || name.startsWith('_') || PRIVATELY_REGISTERED.has(name)) return false;
+
+    return /\bdefine(?:<[^(]*?>)?\s*\(/.test(readFileSync(file, 'utf8'));
+  });
+
+  // A candidate absorbed into a same-directory sibling's bundle (e.g. `carousel-slide.ts`,
+  // bare-imported by `carousel.ts` purely to register `ore-carousel-slide`) isn't independently
+  // published — only a *bare* (no-binding) single importer in the same directory counts; a named
+  // import (real bindings needed for logic) doesn't reliably signal "registration only" and is
+  // handled via `PRIVATELY_REGISTERED` above instead.
+  const importers = new Map();
+
+  for (const file of allFiles) {
+    // Tolerates an optional trailing `// comment` after the semicolon — a bare side-effect import
+    // followed by an inline note (e.g. `import './foo'; // registers ore-foo`) must still count.
+    const bareImportPattern = /^import\s+['"](\.[^'"]+)['"];?\s*(?:\/\/.*)?$/gm;
+    let match;
+
+    while ((match = bareImportPattern.exec(readFileSync(file, 'utf8')))) {
+      const resolved = `${resolve(dirname(file), match[1])}.ts`;
+
+      if (candidates.includes(resolved)) {
+        if (!importers.has(resolved)) importers.set(resolved, new Set());
+
+        importers.get(resolved).add(file);
+      }
+    }
+  }
+
+  const absorbed = new Set();
+
+  for (const [candidate, importerSet] of importers) {
+    if (importerSet.size === 1 && dirname([...importerSet][0]) === dirname(candidate)) absorbed.add(candidate);
+  }
+
+  return candidates
+    .filter((file) => !absorbed.has(file))
+    .map((file) => ({
+      name: basename(file, '.ts'),
+      source: `./${relative(packageRoot, file).replace(/\\/g, '/').replace(/\.ts$/, '')}`,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Discovered inventory of published refine component entry points — drives the package
+ * `exports` map (`check:manifest`/`sync:exports`) and the Vite multi-entry build list
+ * (`getRefineLibraryEntries`). See `discoverComponentManifest`'s doc comment.
+ */
+export const componentManifest = discoverComponentManifest();
 
 export const componentNames = componentManifest.map(({ name }) => name);
 

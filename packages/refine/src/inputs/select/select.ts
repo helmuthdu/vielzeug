@@ -7,8 +7,7 @@ import type { OverlayOpenChangeDetail, OverlayOpenReason } from '../../core';
 import type { SelectableFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
 
-import { lifecycleSignal, createChoiceField } from '../../core';
-import { createListboxDropdown } from '../../core/_internal';
+import { lifecycleSignal, createChoiceField, createListboxDropdown } from '../../core';
 import '../../feedback/chip/chip';
 import '../../content/icon/icon';
 import '../input/input';

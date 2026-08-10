@@ -4,7 +4,7 @@ import { RefineConfigError } from '../errors';
 import { createListControl, type ListKeyAction, type ListNavigationAction } from './nav';
 import {
   createOutsidePointerDismissal,
-  restoreFocus,
+  restoreTriggerFocus,
   type DropdownCloseReason,
   type OverlayOpenReason,
 } from './overlay';
@@ -38,9 +38,14 @@ export type ListboxDropdownOptions<T extends ListboxItem> = {
 };
 
 export type ListboxDropdown<T extends ListboxItem> = {
+  [Symbol.dispose](): void;
   readonly ariaActiveDescendant: Readable<string | null>;
   readonly ariaExpanded: Readable<string>;
   close(reason?: DropdownCloseReason): void;
+  /** Closes the dropdown (without restoring focus) and disposes list navigation state. */
+  dispose(): void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   readonly focusedIndex: Readable<number>;
   getActiveItem(): T | undefined;
   handleKeydown(event: KeyboardEvent): boolean;
@@ -120,7 +125,7 @@ export const createListboxDropdown = <T extends ListboxItem>(
     stopPositioning?.();
     stopPositioning = null;
 
-    if (shouldRestore && shouldRestoreFocus() && options.getTrigger) restoreFocus(options.getTrigger);
+    if (shouldRestore && shouldRestoreFocus() && options.getTrigger) restoreTriggerFocus(options.getTrigger);
 
     options.onClose?.(reason);
   };
@@ -146,18 +151,22 @@ export const createListboxDropdown = <T extends ListboxItem>(
     signal: options.signal,
   });
 
-  options.signal.addEventListener(
-    'abort',
-    () => {
-      if (!isOpen.value) return;
+  let disposed = false;
 
+  const dispose = (): void => {
+    if (disposed) return;
+
+    disposed = true;
+
+    if (isOpen.value) {
       isOpen.value = false;
       list.reset();
       stopPositioning?.();
       stopPositioning = null;
-    },
-    { once: true },
-  );
+    }
+  };
+
+  options.signal.addEventListener('abort', dispose, { once: true });
 
   const handleKeydown = (event: KeyboardEvent): boolean => {
     if (!isOpen.value) return false;
@@ -176,6 +185,10 @@ export const createListboxDropdown = <T extends ListboxItem>(
     ariaActiveDescendant,
     ariaExpanded,
     close,
+    dispose,
+    get disposed() {
+      return disposed;
+    },
     focusedIndex: list.focusedIndex,
     getActiveItem: list.getActiveItem,
     handleKeydown,
@@ -184,6 +197,7 @@ export const createListboxDropdown = <T extends ListboxItem>(
     open,
     scrollFocusedIntoView,
     set: list.set,
+    [Symbol.dispose]: dispose,
     toggle,
     updatePosition: positioner.update,
   };

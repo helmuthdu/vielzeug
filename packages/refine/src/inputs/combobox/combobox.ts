@@ -9,10 +9,10 @@ import {
   lifecycleSignal,
   createChoiceField,
   createInteraction,
+  createListboxDropdown,
   type DropdownCloseReason,
   type OverlayOpenReason,
 } from '../../core';
-import { createListboxDropdown } from '../../core/_internal';
 import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
 import { dispatchNativeFieldEvent } from '../shared/native-field-event';
 import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptions } from './combobox-options';

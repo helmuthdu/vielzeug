@@ -20,13 +20,15 @@ import type { ComponentSize } from '../../types';
 
 import {
   lifecycleSignal,
+  createDropdownPositioner,
   createInteraction,
+  createListControl,
+  createOutsidePointerDismissal,
+  restoreTriggerFocus,
   type DropdownCloseReason,
   type OverlayOpenChangeDetail,
   type OverlayOpenReason,
 } from '../../core';
-import { createListControl, createDropdownPositioner } from '../../core/_internal';
-import { createOutsidePointerDismissal, restoreFocus } from '../../core/overlay';
 import { disablableBundle, MENU_SIZE_PRESET, sizableBundle } from '../../shared';
 import { colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styles';
 import menuItemStyles from './menu-item.css?inline';
@@ -298,7 +300,7 @@ define<OreMenuProps>(MENU_TAG, {
       stopPositioning?.();
       stopPositioning = null;
 
-      if (shouldRestoreFocus) restoreFocus(() => triggerEl);
+      if (shouldRestoreFocus) restoreTriggerFocus(() => triggerEl);
 
       emit('open-change', { open: false, reason });
     };

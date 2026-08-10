@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: collapse core/ barrels, unify composable disposal, derive manifest from filesystem, add --_* CSS contract check",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

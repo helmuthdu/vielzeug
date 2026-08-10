@@ -92,11 +92,6 @@
       "require": "./dist/badge.cjs",
       "types": "./dist/feedback/badge/badge.d.ts"
     },
-    "./password-strength": {
-      "import": "./dist/password-strength.js",
-      "require": "./dist/password-strength.cjs",
-      "types": "./dist/feedback/password-strength/password-strength.d.ts"
-    },
     "./box": {
       "import": "./dist/box.js",
       "require": "./dist/box.cjs",
@@ -132,11 +127,6 @@
       "require": "./dist/carousel.cjs",
       "types": "./dist/content/carousel/carousel.d.ts"
     },
-    "./marquee": {
-      "import": "./dist/marquee.js",
-      "require": "./dist/marquee.cjs",
-      "types": "./dist/content/marquee/marquee.d.ts"
-    },
     "./chat-message": {
       "import": "./dist/chat-message.js",
       "require": "./dist/chat-message.cjs",
@@ -162,11 +152,6 @@
       "require": "./dist/code-window.cjs",
       "types": "./dist/content/code-window/code-window.d.ts"
     },
-    "./copy-command": {
-      "import": "./dist/copy-command.js",
-      "require": "./dist/copy-command.cjs",
-      "types": "./dist/content/copy-command/copy-command.d.ts"
-    },
     "./combobox": {
       "import": "./dist/combobox.js",
       "require": "./dist/combobox.cjs",
@@ -176,6 +161,11 @@
       "import": "./dist/command-palette.js",
       "require": "./dist/command-palette.cjs",
       "types": "./dist/overlay/command-palette/command-palette.d.ts"
+    },
+    "./copy-command": {
+      "import": "./dist/copy-command.js",
+      "require": "./dist/copy-command.cjs",
+      "types": "./dist/content/copy-command/copy-command.d.ts"
     },
     "./datagrid": {
       "import": "./dist/datagrid.js",
@@ -232,6 +222,11 @@
       "require": "./dist/list-item.cjs",
       "types": "./dist/content/list/list-item.d.ts"
     },
+    "./marquee": {
+      "import": "./dist/marquee.js",
+      "require": "./dist/marquee.cjs",
+      "types": "./dist/content/marquee/marquee.d.ts"
+    },
     "./menu": {
       "import": "./dist/menu.js",
       "require": "./dist/menu.cjs",
@@ -261,6 +256,11 @@
       "import": "./dist/pagination.js",
       "require": "./dist/pagination.cjs",
       "types": "./dist/content/pagination/pagination.d.ts"
+    },
+    "./password-strength": {
+      "import": "./dist/password-strength.js",
+      "require": "./dist/password-strength.cjs",
+      "types": "./dist/feedback/password-strength/password-strength.d.ts"
     },
     "./popover": {
       "import": "./dist/popover.js",
@@ -297,6 +297,11 @@
       "require": "./dist/separator.cjs",
       "types": "./dist/content/separator/separator.d.ts"
     },
+    "./sidebar": {
+      "import": "./dist/sidebar.js",
+      "require": "./dist/sidebar.cjs",
+      "types": "./dist/layout/sidebar/sidebar.d.ts"
+    },
     "./skeleton": {
       "import": "./dist/skeleton.js",
       "require": "./dist/skeleton.cjs",
@@ -306,11 +311,6 @@
       "import": "./dist/slider.js",
       "require": "./dist/slider.cjs",
       "types": "./dist/inputs/slider/slider.d.ts"
-    },
-    "./sidebar": {
-      "import": "./dist/sidebar.js",
-      "require": "./dist/sidebar.cjs",
-      "types": "./dist/layout/sidebar/sidebar.d.ts"
     },
     "./step": {
       "import": "./dist/step.js",
@@ -380,8 +380,9 @@
   },
   "scripts": {
     "analyze": "custom-elements-manifest analyze --config scripts/refine-manifest.mjs",
-    "build": "pnpm run check:theme && pnpm run check:manifest && vite build && pnpm run build:bundle && cp -r src/styles/*.css dist/styles && pnpm run build:types && pnpm run analyze",
+    "build": "pnpm run check:theme && pnpm run check:manifest && pnpm run check:css-contract && vite build && pnpm run build:bundle && cp -r src/styles/*.css dist/styles && pnpm run build:types && pnpm run analyze",
     "build:types": "tsc -p tsconfig.declarations.json",
+    "check:css-contract": "node ./scripts/check-css-contract.mjs",
     "check:manifest": "node ./scripts/refine-manifest.mjs check-exports",
     "check:theme": "node ./scripts/theme-tokens.mjs check",
     "dev": "vite",

@@ -1,7 +1,8 @@
-import { computed, type Readable, signal } from '@vielzeug/ripple';
+import { computed, type Readable } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
 
 import { createDirtyTracker, createField, type FieldHandle, type FieldOptions } from './field-base';
+import { syncedSignal } from './signals';
 
 // ── Choice change event payload ──────────────────────────────────────────────────────────────
 
@@ -70,17 +71,20 @@ const parseChoiceValues = (raw: string | string[] | undefined): string[] => {
 };
 
 export const createChoiceField = (options: ChoiceFieldOptions): ChoiceFieldHandle => {
-  const selectedValues = signal<string[]>([]);
   const isMultiple = computed(() => Boolean(options.multiple?.value));
-  const formValue = computed(() =>
-    isMultiple.value ? selectedValues.value.join(',') : (selectedValues.value[0] ?? ''),
-  );
 
   const normalizeValues = (values: string[]): string[] => {
     const normalized = isMultiple.value ? values : values.slice(0, 1);
 
     return [...new Set(normalized.filter(Boolean))];
   };
+
+  // Kept in sync with `options.value` via the shared helper (see `checkable.ts`/`text-field.ts`
+  // for the same pattern) rather than a hand-rolled signal + watch pair.
+  const selectedValues = syncedSignal(options.value, options.signal, (raw) => normalizeValues(parseChoiceValues(raw)));
+  const formValue = computed(() =>
+    isMultiple.value ? selectedValues.value.join(',') : (selectedValues.value[0] ?? ''),
+  );
 
   const dirtyTracker = createDirtyTracker();
 
@@ -132,10 +136,6 @@ export const createChoiceField = (options: ChoiceFieldOptions): ChoiceFieldHandl
   const validationMessage = computed(() =>
     validity.value ? options.requiredMessage?.value || 'Please make a selection.' : '',
   );
-
-  const valueSub = watch(options.value, syncFromProp, { immediate: true });
-
-  options.signal.addEventListener('abort', () => valueSub.dispose(), { once: true });
 
   if (options.multiple) {
     const multipleSub = watch(options.multiple, () => syncFromProp(options.value.value));

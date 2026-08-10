@@ -25,12 +25,17 @@ export type FocusManagerOptions = {
 };
 
 export type FocusManager = {
+  [Symbol.dispose](): void;
   /** Move focus to the element matching `getInitialFocusSelector` (deferred one frame). */
   applyInitialFocus: () => void;
   /** Cancel a pending `applyInitialFocus` rAF, if any. */
   cancelInitialFocus: () => void;
   /** Capture the currently focused element so it can be restored later. */
   captureReturnFocus: () => void;
+  /** Cancels any pending initial-focus frame and clears captured return-focus state. */
+  dispose(): void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   /** Restore focus to the element captured by `captureReturnFocus`. */
   restoreFocus: () => void;
 };
@@ -46,6 +51,7 @@ export type FocusManager = {
 export function createFocusManager(options: FocusManagerOptions): FocusManager {
   let returnFocusEl: HTMLElement | null = null;
   let rafHandle: ReturnType<typeof requestAnimationFrame> | null = null;
+  let disposed = false;
 
   const cancelInitialFocus = (): void => {
     if (rafHandle !== null) {
@@ -54,7 +60,15 @@ export function createFocusManager(options: FocusManagerOptions): FocusManager {
     }
   };
 
-  options.signal?.addEventListener('abort', cancelInitialFocus, { once: true });
+  const dispose = (): void => {
+    if (disposed) return;
+
+    disposed = true;
+    cancelInitialFocus();
+    returnFocusEl = null;
+  };
+
+  options.signal?.addEventListener('abort', dispose, { once: true });
 
   return {
     applyInitialFocus() {
@@ -84,11 +98,16 @@ export function createFocusManager(options: FocusManagerOptions): FocusManager {
         }
       }
     },
-
     cancelInitialFocus,
 
     captureReturnFocus() {
       returnFocusEl = document.activeElement as HTMLElement;
+    },
+
+    dispose,
+
+    get disposed() {
+      return disposed;
     },
 
     restoreFocus() {
@@ -97,5 +116,7 @@ export function createFocusManager(options: FocusManagerOptions): FocusManager {
         returnFocusEl = null;
       }
     },
+
+    [Symbol.dispose]: dispose,
   };
 }
