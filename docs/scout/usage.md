@@ -14,6 +14,11 @@ Pass your item array and field configuration to `createIndex`. All items are ind
 ```ts
 import { createIndex } from '@vielzeug/scout';
 
+const users = [
+  { email: 'ada@example.com', name: 'Ada Lovelace' },
+  { email: 'grace@example.com', name: 'Grace Hopper' },
+];
+
 const index = createIndex(users, {
   fields: ['name', 'email'],
 });
@@ -85,7 +90,7 @@ index.search('日本語'); // matches the first document
 
 ### Limiting results
 
-Pass `limit`, `threshold`, and `minQueryLength` in options to control result count and quality.
+Pass `limit`, `threshold`, and `minQueryLength` in options to control result count and quality. `limit` must be a finite non-negative integer, `threshold` a finite value in `0..1`, and `minQueryLength` a finite positive integer; invalid values throw `ScoutConfigurationError`.
 
 ```ts
 // At most 10 results, minimum overlap score 0.3
@@ -139,7 +144,8 @@ input.addEventListener('input', e => {
 // Add items at runtime via the exposed index
 search.index.add(newUser);
 
-onUnmount(() => search.dispose());
+// Dispose when this owner is no longer needed
+search.dispose();
 ```
 
 ### `createSearch()` — separate index and state
@@ -164,7 +170,7 @@ const search = createSearch(index, { debounce: 150 });
 
 ### Zero debounce for synchronous updates
 
-Pass `debounce: 0` if you want results updated synchronously (no `isSearching` flash).
+Pass `debounce: 0` if you want results updated synchronously (no `isSearching` flash). Other debounce values must be finite non-negative integers; invalid values throw `ScoutConfigurationError`.
 
 ```ts
 const search = createReactiveSearch(users, { fields: ['name'], debounce: 0 });
@@ -191,7 +197,7 @@ const topResult = computed(() => search.results.value[0]?.item ?? null);
 
 ## Incremental Updates
 
-`add()`, `remove()`, and `reindex()` patch the inverted index in O(field_length) — no full rebuild needed.
+Use `add()`, `remove()`, and `reindex()` for individual reference-based mutations. Use `setItems()` when a refreshed collection replaces the current corpus; Scout reconciles membership, current field values, and source order in one notification.
 
 ```ts
 const index = createIndex(products, { fields: ['title'] });
@@ -208,7 +214,17 @@ products[1].title = 'Updated Title';
 index.reindex(products[1]);
 ```
 
-> `remove()` and `reindex()` use **reference equality** (`===`). Pass the same object reference that was originally added.
+> `remove()`, `reindex()`, and `setItems()` use **reference equality** (`===`). Pass retained object references from the current corpus; `setItems()` collapses duplicate references.
+
+### Replacing a refreshed corpus
+
+```ts
+const latestProducts = await loadProducts();
+
+index.setItems(latestProducts);
+```
+
+`setItems()` removes references absent from `latestProducts`, adds new references, reindexes retained references, and adopts the incoming order. It calls `onMutate()` once only when index membership, field values, or order changes.
 
 ### Inspecting the corpus
 
@@ -221,7 +237,7 @@ console.log(index.items); // [{ id: 1, title: ... }, ...]
 
 ### Reacting to mutations directly
 
-`createSearch()` already keeps `results` in sync with `add()`/`remove()`/`reindex()` internally. If you're building your own reactivity on top of a plain `ScoutIndex` (no `ripple` involved), subscribe with `onMutate()`:
+`createSearch()` already keeps `results` in sync with `add()`/`remove()`/`reindex()`/`setItems()` internally. `toSearchMatcher()` also invalidates its query cache after index mutation. If you're building your own reactivity on top of a plain `ScoutIndex` (no `ripple` involved), subscribe with `onMutate()`:
 
 ```ts
 const unsubscribe = index.onMutate(() => {
@@ -237,7 +253,7 @@ unsubscribe(); // when done
 
 ## Match Highlighting
 
-Every `SearchResult` carries `matches` — per-field character ranges where the query was found.
+Every `SearchResult` carries `matches` — per-field literal normalized-token ranges. A fuzzy trigram candidate can have `matches: []` when no literal query token appears in its field text.
 
 ### `highlightField()` — recommended
 

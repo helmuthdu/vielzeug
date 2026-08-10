@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ScoutDisposedError, ScoutError, ScoutIndexError } from '../errors';
+import { ScoutDisposedError, ScoutError, ScoutConfigurationError } from '../errors';
 import { createIndex } from '../scout-index';
 
 type User = { age: number; email: string; name: string };
@@ -26,8 +26,8 @@ describe('createIndex', () => {
     expect(index.size).toBe(0);
   });
 
-  test('throws ScoutIndexError when fields is empty', () => {
-    expect(() => createIndex(USERS, { fields: [] })).toThrow(ScoutIndexError);
+  test('throws ScoutConfigurationError when fields is empty', () => {
+    expect(() => createIndex(USERS, { fields: [] })).toThrow(ScoutConfigurationError);
   });
 });
 
@@ -250,17 +250,11 @@ describe('ScoutIndex.search', () => {
     expect(results).toHaveLength(0);
   });
 
-  test('negative limit is clamped to 0', () => {
+  test('negative limits are rejected', () => {
     const index = createIndex(USERS, { fields: ['name'] });
 
-    expect(index.search('', { limit: -1 })).toHaveLength(0);
-    expect(index.search('alice', { limit: -5 })).toHaveLength(0);
-  });
-
-  test('negative limit set at createIndex() construction time is also clamped to 0', () => {
-    const index = createIndex(USERS, { fields: ['name'], limit: -5 });
-
-    expect(index.search('')).toHaveLength(0);
+    expect(() => index.search('', { limit: -1 })).toThrow(ScoutConfigurationError);
+    expect(() => createIndex(USERS, { fields: ['name'], limit: -5 })).toThrow(ScoutConfigurationError);
   });
 
   test('non-ASCII scripts are searchable (CJK, Cyrillic, accented Latin)', () => {
@@ -528,6 +522,62 @@ describe('ScoutIndex.onMutate', () => {
   });
 });
 
+describe('ScoutIndex.setItems', () => {
+  test('reconciles additions, removals, retained mutations, and incoming order in one operation', () => {
+    const removed = { name: 'Removed' };
+    const retained = { name: 'Before' };
+    const added = { name: 'Added' };
+    const index = createIndex([removed, retained], { fields: ['name'] });
+    const listener = vi.fn();
+
+    index.onMutate(listener);
+    retained.name = 'After';
+    index.setItems([added, retained]);
+
+    expect(index.items).toEqual([added, retained]);
+    expect(index.search('before')).toEqual([]);
+    expect(index.search('after').map((result) => result.item)).toEqual([retained]);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  test('collapses duplicate references and does not notify for an unchanged corpus', () => {
+    const item = { name: 'One' };
+    const index = createIndex([item], { fields: ['name'] });
+    const listener = vi.fn();
+
+    index.onMutate(listener);
+    index.setItems([item, item]);
+
+    expect(index.items).toEqual([item]);
+    expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe('configuration validation', () => {
+  test.each([
+    [{ fields: [{ field: 'name', weight: 0 }] }, 'weight'],
+    [{ fields: [{ field: 'name', weight: Number.NaN }] }, 'weight'],
+    [{ fields: ['name'], threshold: -0.1 }, 'threshold'],
+    [{ fields: ['name'], threshold: Number.POSITIVE_INFINITY }, 'threshold'],
+    [{ fields: ['name'], limit: -1 }, 'limit'],
+    [{ fields: ['name'], limit: 1.5 }, 'limit'],
+    [{ fields: ['name'], minQueryLength: 0 }, 'minQueryLength'],
+    [{ fields: ['name'], minQueryLength: Number.POSITIVE_INFINITY }, 'minQueryLength'],
+  ])('rejects invalid index %s configuration', (options) => {
+    expect(() => createIndex([{ name: 'Alice' }], options)).toThrow(ScoutConfigurationError);
+  });
+
+  test.each([
+    [{ threshold: Number.NaN }, 'threshold'],
+    [{ limit: -1 }, 'limit'],
+    [{ minQueryLength: 0 }, 'minQueryLength'],
+  ])('rejects invalid per-search %s override', (options) => {
+    const index = createIndex([{ name: 'Alice' }], { fields: ['name'] });
+
+    expect(() => index.search('alice', options)).toThrow(ScoutConfigurationError);
+  });
+});
+
 describe('tokenization — punctuation handling', () => {
   test('hyphenated field values are searchable by each part', () => {
     const items = [{ sku: 'WGT-001' }, { sku: 'GAD-002' }];
@@ -564,12 +614,12 @@ describe('ScoutError — named subclasses', () => {
   it('each subclass is instanceof ScoutError and Error', () => {
     expect(new ScoutDisposedError('disposed')).toBeInstanceOf(ScoutError);
     expect(new ScoutDisposedError('disposed')).toBeInstanceOf(Error);
-    expect(new ScoutIndexError('index')).toBeInstanceOf(ScoutError);
+    expect(new ScoutConfigurationError('index')).toBeInstanceOf(ScoutError);
   });
 
   it('each subclass has the correct .name', () => {
     expect(new ScoutDisposedError('').name).toBe('ScoutDisposedError');
-    expect(new ScoutIndexError('').name).toBe('ScoutIndexError');
+    expect(new ScoutConfigurationError('').name).toBe('ScoutConfigurationError');
   });
 
   it('ScoutError.is() returns true for any subclass', () => {
@@ -580,13 +630,13 @@ describe('ScoutError — named subclasses', () => {
   it('ScoutError.is() returns false for non-Error values', () => {
     expect(ScoutError.is(null)).toBe(false);
     expect(ScoutError.is(undefined)).toBe(false);
-    expect(ScoutError.is('ScoutIndexError')).toBe(false);
-    expect(ScoutError.is({ name: 'ScoutIndexError' })).toBe(false);
+    expect(ScoutError.is('ScoutConfigurationError')).toBe(false);
+    expect(ScoutError.is({ name: 'ScoutConfigurationError' })).toBe(false);
   });
 
   it('preserves the cause via ErrorOptions', () => {
     const cause = new Error('underlying failure');
-    const err = new ScoutIndexError('wrapped', { cause });
+    const err = new ScoutConfigurationError('wrapped', { cause });
 
     expect(err.cause).toBe(cause);
   });

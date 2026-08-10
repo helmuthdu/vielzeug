@@ -31,7 +31,7 @@
     "@vielzeug/ripple": "^1.3.0",
     "@vielzeug/rune": "^1.1.2",
     "@vielzeug/sandbox": "^1.2.2",
-    "@vielzeug/scout": "^1.1.7",
+    "@vielzeug/scout": "link:../../packages/scout",
     "@vielzeug/scroll": "^1.1.4",
     "@vielzeug/sourcerer": "link:../../packages/sourcerer",
     "@vielzeug/spell": "^1.2.2",

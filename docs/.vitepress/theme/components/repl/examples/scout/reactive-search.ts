@@ -31,6 +31,6 @@ search.clear()
 show('After clear()')  // all 5 users
 
 search.dispose()
-console.log('Disposed:', search.query.disposed)`,
+console.log('Disposed:', search.disposed)`,
   name: 'Reactive Search',
 };

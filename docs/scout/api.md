@@ -14,14 +14,15 @@ description: Complete API reference for @vielzeug/scout — createIndex, createR
 | `ScoutIndex.add()`        | Add one item to the index                             | Sync           | No-op if same reference already indexed                       |
 | `ScoutIndex.remove()`     | Remove one item by reference                          | Sync           | No-op for unknown references                                  |
 | `ScoutIndex.reindex()`    | Re-index a mutated item in-place; preserves order     | Sync           | Call after mutating item properties; no-op if not in index    |
+| `ScoutIndex.setItems()`   | Reconcile a refreshed corpus in one mutation          | Sync           | Uses reference identity; duplicate references collapse        |
 | `ScoutIndex.items`        | All indexed items in insertion order                  | Sync           | Returns a new array snapshot each call                        |
-| `ScoutIndex.onMutate()`   | Subscribe to `add`/`remove`/`reindex` mutations       | Sync           | Only fires on mutations that actually change the index — not on no-ops |
+| `ScoutIndex.onMutate()`   | Subscribe to changed index mutations                   | Sync           | A changed `setItems()` reconciliation emits once; no-ops emit nothing |
 | `createSearch()`          | Reactive search state backed by a `ScoutIndex`        | Sync           | Requires `@vielzeug/ripple` — dispose when done               |
 | `createReactiveSearch()`  | One-call index + reactive search state                | Sync           | Exposes `.index` for incremental mutations                    |
 | `findMatchRanges()`       | Compute match ranges for a text + query pair          | Sync           | Returns sorted, non-overlapping `[start, end]` ranges         |
 | `highlight()`             | Split text into highlighted/unhighlighted fragments   | Sync           | Ranges must be sorted and non-overlapping                     |
 | `highlightField()`        | Highlight a named field from a `SearchResult`         | Sync           | Shorthand for the `matches.find(…).ranges → highlight()` pattern |
-| `toSearchMatcher()`            | Adapt `ScoutIndex` to Sourcerer's `match` callback    | Sync           | Caches one match set per query                                |
+| `toSearchMatcher()`            | Adapt `ScoutIndex` to Sourcerer's `match` callback    | Sync           | Recomputes cached query matches after index mutation          |
 | `toFilterPredicate()`     | Snapshot predicate from a one-time query              | Sync           | Re-call when query or corpus changes                          |
 | `segmentWords()`          | Split unsegmented-script text (CJK, Thai, ...) into words | Sync       | Uses native `Intl.Segmenter` — not applied inside `tokenize()` itself (see Pitfalls) |
 | `debugSearch()`           | Log a `SearchState`'s query/results transitions       | Sync           | Import from `@vielzeug/scout/devtools`, not the main entry point |
@@ -30,7 +31,7 @@ description: Complete API reference for @vielzeug/scout — createIndex, createR
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/scout` | All exports — `createIndex`, `createReactiveSearch`, `createSearch`, `findMatchRanges`, `highlight`, `highlightField`, `segmentWords`, `toSearchMatcher`, `toFilterPredicate`, all types |
+| `@vielzeug/scout` | All exports — index/search/highlighting/adapters, `ScoutConfigurationError`, `ScoutDisposedError`, `ScoutError`, and all types |
 | `@vielzeug/scout/devtools` | `debugSearch` — reactive search state logger (dev only) |
 
 ---
@@ -49,13 +50,20 @@ function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): ScoutIndex<T
 | --- | --- | --- |
 | `items` | `T[]` | Initial corpus to index. |
 | `options.fields` | `ReadonlyArray<FieldDef<T>>` | Fields to index. Required; at least one entry. |
-| `options.threshold` | `number` | Min overlap score for a result (default `0.2`). |
-| `options.limit` | `number` | Max results returned by `search()` (default `50`). |
-| `options.minQueryLength` | `number` | Min chars before trigram scoring; shorter queries use O(n) containment scan (default `3`). |
+| `options.threshold` | `number` | Finite overlap score in `0..1` (default `0.2`). |
+| `options.limit` | `number` | Finite non-negative integer max results (default `50`). |
+| `options.minQueryLength` | `number` | Finite positive integer min chars before trigram scoring; shorter queries use O(n) containment scan (default `3`). |
 
 **Example**
 
 ```ts
+import { createIndex } from '@vielzeug/scout';
+
+const products = [
+  { sku: 'WGT-001', title: 'Widget Pro' },
+  { sku: 'GAD-002', title: 'Gadget Plus' },
+];
+
 const index = createIndex(products, {
   fields: [
     { field: 'title', weight: 2 },
@@ -102,6 +110,18 @@ item.name = 'new name';
 index.reindex(item);
 ```
 
+### `.setItems(items)`
+
+```ts
+setItems(items: readonly T[]): void
+```
+
+Reconciles the index to a refreshed corpus in one mutation. Existing references are reindexed, missing references are removed, added references are indexed, and incoming first-occurrence order becomes index order. Duplicate references collapse to one item. Calls `onMutate()` once when indexed values, membership, or order changes.
+
+```ts
+index.setItems(latestUsers);
+```
+
 ### `.size`
 
 `number` — current number of indexed items.
@@ -120,7 +140,7 @@ const all = index.items;
 onMutate(listener: () => void): () => void
 ```
 
-Subscribes `listener` to run after every `add()` / `remove()` / `reindex()` call that actually changes the index — no-ops (e.g. removing an item that isn't indexed) don't fire it. Returns an unsubscribe function. `createSearch()` uses this internally to keep `results` in sync with index mutations; most callers building on `createIndex()` directly won't need to call it themselves.
+Subscribes `listener` to run after every changed `add()` / `remove()` / `reindex()` / `setItems()` operation. No-ops, including unchanged bulk reconciliation, do not fire it. A changed `setItems()` reconciliation fires once. `createSearch()` uses this internally to keep `results` in sync with index mutations; most callers building on `createIndex()` directly will not need it.
 
 ```ts
 const unsubscribe = index.onMutate(() => {
@@ -145,10 +165,10 @@ function createSearch<T>(index: ScoutIndex<T>, options?: CreateSearchOptions): S
 
 | Param | Type | Description |
 | --- | --- | --- |
-| `options.debounce` | `number` | ms to wait before committing a query change (default `200`). Pass `0` for immediate updates. |
-| `options.limit` | `number` | Override index-level limit. |
-| `options.threshold` | `number` | Override index-level threshold. |
-| `options.minQueryLength` | `number` | Override index-level minimum query length. |
+| `options.debounce` | `number` | Finite non-negative integer milliseconds before query commit (default `200`). Pass `0` for immediate updates. |
+| `options.limit` | `number` | Finite non-negative integer override of index-level limit. |
+| `options.threshold` | `number` | Finite `0..1` override of index-level threshold. |
+| `options.minQueryLength` | `number` | Finite positive integer override of index-level minimum query length. |
 
 **Returns `SearchState<T>`**
 
@@ -164,14 +184,18 @@ function createSearch<T>(index: ScoutIndex<T>, options?: CreateSearchOptions): S
 **Example**
 
 ```ts
+import { createIndex, createSearch } from '@vielzeug/scout';
+import { effect } from '@vielzeug/ripple';
+
+const users = [{ name: 'Ada Lovelace' }, { name: 'Grace Hopper' }];
+const index = createIndex(users, { fields: ['name'] });
 const search = createSearch(index, { debounce: 150 });
 
 effect(() => {
-  if (search.isSearching.value) showSpinner();
-  else renderList(search.results.value);
+  console.log(search.results.value.map((result) => result.item.name));
 });
 
-search.query.value = 'alice';
+search.query.value = 'ada';
 ```
 
 ---
@@ -193,10 +217,10 @@ function createReactiveSearch<T>(
 | --- | --- | --- |
 | `items` | `T[]` | Initial corpus to index. |
 | `options.fields` | `ReadonlyArray<FieldDef<T>>` | Fields to index. Required. |
-| `options.debounce` | `number` | Debounce ms (default `200`). |
-| `options.threshold` | `number` | Min overlap score (default `0.2`). |
-| `options.limit` | `number` | Max results (default `50`). |
-| `options.minQueryLength` | `number` | Min chars before trigram scoring (default `3`). |
+| `options.debounce` | `number` | Finite non-negative integer debounce milliseconds (default `200`). |
+| `options.threshold` | `number` | Finite overlap score in `0..1` (default `0.2`). |
+| `options.limit` | `number` | Finite non-negative integer max results (default `50`). |
+| `options.minQueryLength` | `number` | Finite positive integer min chars before trigram scoring (default `3`). |
 
 **Returns `ReactiveSearch<T>`** — all `SearchState<T>` members plus:
 
@@ -207,16 +231,18 @@ function createReactiveSearch<T>(
 **Example**
 
 ```ts
+import { createReactiveSearch } from '@vielzeug/scout';
+import { effect } from '@vielzeug/ripple';
+
+const users = [{ email: 'ada@example.com', name: 'Ada Lovelace' }];
 const search = createReactiveSearch(users, {
   fields: [{ field: 'name', weight: 2 }, 'email'],
   debounce: 150,
 });
 
-effect(() => renderList(search.results.value.map(r => r.item)));
+effect(() => console.log(search.results.value.map((result) => result.item.name)));
 
-// Add a new item at runtime
-search.index.add(newUser);
-
+search.index.add({ email: 'grace@example.com', name: 'Grace Hopper' });
 search.dispose();
 ```
 
@@ -224,7 +250,7 @@ search.dispose();
 
 ## `findMatchRanges(text, query)`
 
-Computes sorted, non-overlapping match ranges for each word in `query` within `text`. Useful when you need to apply highlighting to a different string than the indexed field value (e.g. a truncated preview or a differently formatted display string).
+Normalizes raw `query` with Scout's tokenizer, then computes sorted, non-overlapping literal ranges for each normalized token within `text`. Useful when you need to apply highlighting to a different string than the indexed field value (e.g. a truncated preview or a differently formatted display string).
 
 ```ts
 function findMatchRanges(text: string, query: string): [number, number][]
@@ -233,7 +259,9 @@ function findMatchRanges(text: string, query: string): [number, number][]
 **Example**
 
 ```ts
-const ranges = findMatchRanges('Alice Johnson', 'alice');
+import { findMatchRanges, highlight } from '@vielzeug/scout';
+
+const ranges = findMatchRanges('Alice Johnson', 'alice!');
 // [[0, 5]]
 
 const parts = highlight('Alice Johnson', ranges);
@@ -255,6 +283,8 @@ function highlight(text: string, ranges: [number, number][]): HighlightPart[]
 **Example**
 
 ```ts
+import { highlight } from '@vielzeug/scout';
+
 highlight('Hello World', [[0, 5]]);
 // [{ text: 'Hello', highlighted: true }, { text: ' World', highlighted: false }]
 ```
@@ -274,9 +304,14 @@ function highlightField<T>(result: SearchResult<T>, field: keyof T & string, tex
 **Example**
 
 ```ts
+import { createIndex, highlightField } from '@vielzeug/scout';
+
+const users = [{ name: 'Alice Johnson' }];
+const index = createIndex(users, { fields: ['name'] });
+
 for (const result of index.search('alice')) {
   const parts = highlightField(result, 'name', result.item.name);
-  console.log(parts.map(p => p.highlighted ? `[${p.text}]` : p.text).join(''));
+  console.log(parts.map((part) => part.highlighted ? `[${part.text}]` : part.text).join(''));
 }
 ```
 
@@ -292,9 +327,14 @@ Returns an `(item, query) => boolean` matcher compatible with `sourcerer`'s `mat
 function toSearchMatcher<T>(index: ScoutIndex<T>, options?: SearchConstraints): (item: T, query: string) => boolean
 ```
 
-One matching-item set is cached per query, so filtering does not repeat index work per item.
+One matching-item set is cached per query and index revision, so filtering does not repeat index work per item and stays current after index mutation.
 
 ```ts
+import { createIndex, toSearchMatcher } from '@vielzeug/scout';
+import { createLocalSource } from '@vielzeug/sourcerer';
+
+const users = [{ email: 'ada@example.com', name: 'Ada Lovelace' }];
+const index = createIndex(users, { fields: ['name', 'email'] });
 const source = createLocalSource(users, { match: toSearchMatcher(index) });
 ```
 
@@ -315,9 +355,12 @@ function toFilterPredicate<T>(
 The predicate is a snapshot — re-call `toFilterPredicate` if the query or corpus changes.
 
 ```ts
+import { createIndex, toFilterPredicate } from '@vielzeug/scout';
+
+const products = [{ title: 'Widget Pro' }, { title: 'Gadget Plus' }];
+const index = createIndex(products, { fields: ['title'] });
 const results = products.filter(toFilterPredicate(index, 'widget'));
 
-// Cap results via limit
 const top5 = products.filter(toFilterPredicate(index, 'widget', { limit: 5 }));
 ```
 
@@ -336,8 +379,11 @@ function segmentWords(text: string): string
 **Example**
 
 ```ts
+import { createIndex, segmentWords } from '@vielzeug/scout';
+
+const documents = [{ title: '日本語を勉強しています' }];
 const index = createIndex(documents, {
-  fields: [{ field: 'title', stringify: (v) => segmentWords(String(v)) }],
+  fields: [{ field: 'title', stringify: (value) => segmentWords(String(value)) }],
 });
 ```
 
@@ -358,8 +404,10 @@ Logs the full, literal search query string — if your queries may carry PII (na
 **Example**
 
 ```ts
+import { createIndex, createSearch } from '@vielzeug/scout';
 import { debugSearch } from '@vielzeug/scout/devtools';
 
+const index = createIndex([{ name: 'Ada Lovelace' }], { fields: ['name'] });
 const search = createSearch(index);
 const stopDebugging = debugSearch(search);
 
@@ -382,9 +430,9 @@ Shared search-tuning knobs used by `ScoutIndexOptions`, `CreateSearchOptions`, a
 
 ```ts
 type SearchConstraints = {
-  limit?: number;           // default 50
-  minQueryLength?: number;  // default 3
-  threshold?: number;       // default 0.2
+  limit?: number;           // finite non-negative integer; default 50
+  minQueryLength?: number;  // finite positive integer; default 3
+  threshold?: number;       // finite 0..1 value; default 0.2
 };
 ```
 
@@ -412,7 +460,7 @@ type ScoutIndexOptions<T> = SearchConstraints & {
 
 ```ts
 type CreateSearchOptions = SearchConstraints & {
-  debounce?: number;   // default 200
+  debounce?: number;   // finite non-negative integer; default 200
 };
 ```
 
@@ -421,7 +469,7 @@ type CreateSearchOptions = SearchConstraints & {
 ```ts
 type SearchResult<T> = {
   item: T;
-  matches: FieldMatch<keyof T & string>[];  // field is narrowed to indexed field names
+  matches: FieldMatch<keyof T & string>[];  // literal normalized-token ranges; may be empty for fuzzy-only results
   score: number;                            // [0, 1]; 1 when query is empty
 };
 ```
@@ -433,7 +481,7 @@ Generic over the union of field names — `match.field` is typed to the actual f
 ```ts
 type FieldMatch<F extends string = string> = {
   field: F;
-  ranges: [number, number][];  // [start, end] in original field value
+  ranges: [number, number][];  // literal normalized-token [start, end] ranges in original field value
 };
 ```
 
@@ -478,5 +526,5 @@ class ScoutError extends Error {
 
 | Class               | Thrown when                                                            |
 | ------------------- | ---------------------------------------------------------------------- |
-| `ScoutDisposedError` | A method is called on a disposed `SearchState` instance               |
-| `ScoutIndexError`   | An index is built or queried with an invalid configuration (e.g. zero fields) |
+| `ScoutConfigurationError` | An index, search, or reactive search receives invalid fields or numeric options |
+| `ScoutDisposedError` | A method is called on a disposed `SearchState` instance |

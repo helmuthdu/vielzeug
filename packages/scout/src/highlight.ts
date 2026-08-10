@@ -1,5 +1,7 @@
 import type { HighlightPart, SearchResult } from './types';
 
+import { tokenize } from './tokenize';
+
 /**
  * Finds character ranges within `text` where `query` words appear.
  * Ranges are sorted and overlapping ranges are merged.
@@ -8,12 +10,12 @@ import type { HighlightPart, SearchResult } from './types';
  * indexed field value (e.g. a truncated preview or a differently formatted display string).
  *
  * @param text - The string to search within.
- * @param query - The normalized (tokenized) query string. Words are split on spaces.
+ * @param query - Raw query text. It is normalized with Scout's tokenizer before literal lookup.
  * @returns Sorted, non-overlapping `[start, end]` character ranges.
  */
 export function findMatchRanges(text: string, query: string): [number, number][] {
   const lower = text.toLowerCase();
-  const words = query.split(' ').filter(Boolean);
+  const words = tokenize(query).split(' ').filter(Boolean);
   const ranges: [number, number][] = [];
 
   for (const word of words) {

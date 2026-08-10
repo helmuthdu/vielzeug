@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-import { ScoutDisposedError } from '../errors';
+import { ScoutConfigurationError, ScoutDisposedError } from '../errors';
 import { createReactiveSearch, createSearch } from '../reactive';
 import { createIndex } from '../scout-index';
 
@@ -251,6 +251,17 @@ describe('createSearch — reactivity to index mutations', () => {
     search.dispose();
   });
 
+  test('results recompute after index.setItems() with no query change', () => {
+    const retained = { name: 'Alice' };
+    const index = createIndex([retained], { fields: ['name'] });
+    const search = createSearch(index, { debounce: 0 });
+
+    index.setItems([{ name: 'Bob' }, retained]);
+
+    expect(search.results.value.map((result) => result.item.name)).toEqual(['Bob', 'Alice']);
+    search.dispose();
+  });
+
   test('two createSearch() instances over the same index both react to mutations', () => {
     const index = createIndex(USERS, { fields: ['name'] });
     const searchA = createSearch(index, { debounce: 0 });
@@ -286,6 +297,14 @@ describe('createSearch — options', () => {
 
     expect(search.results.value).toHaveLength(0);
     search.dispose();
+  });
+});
+
+describe('createSearch — configuration validation', () => {
+  test.each([[-1], [1.5], [Number.NaN], [Number.POSITIVE_INFINITY]])('rejects invalid debounce %s', (debounce) => {
+    const index = createIndex(USERS, { fields: ['name'] });
+
+    expect(() => createSearch(index, { debounce })).toThrow(ScoutConfigurationError);
   });
 });
 

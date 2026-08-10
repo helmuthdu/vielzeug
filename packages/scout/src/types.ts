@@ -22,7 +22,7 @@ export type FieldDef<T> =
        * Defaults to `String(value)` for numbers and booleans, empty string otherwise.
        */
       stringify?: (value: unknown) => string;
-      /** Relative ranking weight (default `1`). Higher promotes matches on this field. */
+      /** Finite relative ranking weight greater than `0` (default `1`). Invalid values throw `ScoutConfigurationError`. */
       weight?: number;
     };
 
@@ -31,17 +31,17 @@ export type FieldDef<T> =
  * and `createReactiveSearch()`.
  */
 export type SearchConstraints = {
-  /** Maximum results returned. Default: `50`. Negative values are clamped to `0`. */
+  /** Finite non-negative integer maximum results returned. Default: `50`. Invalid values throw `ScoutConfigurationError`. */
   limit?: number;
   /**
-   * Minimum query length (in characters) before trigram scoring is used.
+   * Finite positive integer minimum query length (in characters) before trigram scoring is used.
    * Queries shorter than this value fall back to O(n) substring containment scan.
    * Default: `3`. Increase for large corpora where short queries are too broad;
    * decrease (e.g. `1`) for small corpora or when single-character matching is expected.
    */
   minQueryLength?: number;
   /**
-   * Minimum overlap-coefficient score `[0, 1]` for a candidate to appear in results. Default: `0.2`.
+   * Finite minimum overlap-coefficient score in `[0, 1]` for a candidate to appear in results. Default: `0.2`.
    * Higher values require a closer match; lower values are more permissive.
    */
   threshold?: number;
@@ -56,14 +56,16 @@ export type ScoutIndexOptions<T> = SearchConstraints & {
 /** Options accepted by `createSearch()` and `createReactiveSearch()`. */
 export type CreateSearchOptions = SearchConstraints & {
   /**
-   * Milliseconds to wait after a `query` change before updating `results`. Default: `200`.
-   * Pass `0` for immediate synchronous updates (no `isSearching` flash).
+   * Finite non-negative integer milliseconds to wait after a `query` change before updating `results`.
+   * Default: `200`. Pass `0` for immediate synchronous updates (no `isSearching` flash).
+   * Invalid values throw `ScoutConfigurationError`.
    */
   debounce?: number;
 };
 
 /**
- * Per-field character ranges where the query was found (for highlighting).
+ * Per-field literal normalized-token character ranges where the query was found (for highlighting).
+ * A fuzzy trigram candidate can have no literal ranges.
  *
  * The generic parameter `F` is the union of valid field names from the index,
  * so `match.field` is constrained to the fields that were actually indexed.
@@ -82,7 +84,7 @@ export type FieldMatch<F extends string = string> = {
 export type SearchResult<T> = {
   /** The original item from the index. */
   item: T;
-  /** Per-field match ranges for rendering highlighted snippets. Empty when query is empty. */
+  /** Per-field literal normalized-token ranges for rendering highlighted snippets. Empty for empty or fuzzy-only queries. */
   matches: FieldMatch<keyof T & string>[];
   /**
    * Weighted overlap-coefficient score in `[0, 1]` — the fraction of the smaller trigram set

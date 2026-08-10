@@ -14,5 +14,5 @@ export class ScoutError extends Error {
 /** Thrown when a method is called on a disposed search state instance. */
 export class ScoutDisposedError extends ScoutError {}
 
-/** Thrown when an index is built or queried with an invalid configuration (e.g. zero fields defined). */
-export class ScoutIndexError extends ScoutError {}
+/** Thrown when an index, search, or reactive search receives an invalid configuration. */
+export class ScoutConfigurationError extends ScoutError {}

@@ -33,7 +33,7 @@ source.subscribe(({ data, page }) => {
 
 source.setQuery({ search: 'alice' });
 index.add(newUser);
-source.setData(index.items);
+source.setData(index.items); // same query now sees the new indexed item automatically
 ```
 
 ### Pitfalls

@@ -4,12 +4,12 @@ Fast fuzzy-search. Builds a trigram inverted index at construction — O(candida
 
 ## Features
 
-- **Trigram index** — fast candidate lookup; Dice coefficient scoring
+- **Trigram index** — fast candidate lookup; overlap-coefficient scoring
 - **Multi-field weighted ranking** — per-field weights, custom stringifiers
 - **Match highlighting** — character-range offsets for UI rendering
 - **Reactive layer** — `createSearch()` wraps any index in `ripple` signals with debounce
 - **Framework adapters** — `toSearchMatcher()` for sourcerer, `toFilterPredicate()` for filter pipelines
-- **Incremental updates** — `add()`, `remove()`, `reindex()` patch the index in O(field_length)
+- **Corpus reconciliation** — `setItems()` reconciles reference-based additions, removals, reindexes, and order in one notification
 - **Unsegmented-script helper** — `segmentWords()` pre-splits CJK/Thai text into words via `Intl.Segmenter`
 - **Devtools** — `@vielzeug/scout/devtools`'s `debugSearch()` logs query/results transitions
 
@@ -24,6 +24,11 @@ pnpm add @vielzeug/scout
 ```ts
 import { createIndex } from '@vielzeug/scout';
 
+const users = [
+  { email: 'ada@example.com', name: 'Ada Lovelace' },
+  { email: 'grace@example.com', name: 'Grace Hopper' },
+];
+
 const index = createIndex(users, {
   fields: [
     { field: 'name', weight: 2 },
@@ -31,8 +36,7 @@ const index = createIndex(users, {
   ],
 });
 
-const results = index.search('alice');
-// [{ item: { name: 'Alice', email: '...' }, score: 0.85, matches: [...] }]
+console.log(index.search('ada')[0]?.item.name); // Ada Lovelace
 ```
 
 ## Reactive search
@@ -41,6 +45,7 @@ const results = index.search('alice');
 import { createIndex, createSearch } from '@vielzeug/scout';
 import { effect } from '@vielzeug/ripple';
 
+const users = [{ name: 'Ada Lovelace' }, { name: 'Grace Hopper' }];
 const index = createIndex(users, { fields: ['name'] });
 const search = createSearch(index, { debounce: 150 });
 
@@ -55,7 +60,9 @@ search.query.value = 'alice';
 
 ```ts
 import { createIndex, toSearchMatcher } from '@vielzeug/scout';
+import { createLocalSource } from '@vielzeug/sourcerer';
 
+const users = [{ email: 'ada@example.com', name: 'Ada Lovelace' }];
 const index = createIndex(users, { fields: ['name', 'email'] });
 const source = createLocalSource(users, { match: toSearchMatcher(index) });
 ```

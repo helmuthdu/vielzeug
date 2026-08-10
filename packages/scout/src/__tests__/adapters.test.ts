@@ -1,5 +1,5 @@
 import { toFilterPredicate, toSearchMatcher } from '../adapters';
-import { createIndex } from '../scout-index';
+import { createIndex, type ScoutIndex } from '../scout-index';
 
 type Product = { id: number; sku: string; title: string };
 
@@ -24,6 +24,51 @@ describe('toSearchMatcher', () => {
     const match = toSearchMatcher(index, { threshold: 0.99 });
 
     expect(products.filter((item) => match(item, 'widgetzz'))).toEqual([]);
+  });
+
+  test('accepts a structural ScoutIndex without private metadata', () => {
+    const item = { title: 'Alpha' };
+    const index: ScoutIndex<typeof item> = {
+      add() {},
+      get items() {
+        return [item];
+      },
+      onMutate() {
+        return () => {};
+      },
+      reindex() {},
+      remove() {},
+      search(query) {
+        return query === 'alpha' ? [{ item, matches: [], score: 1 }] : [];
+      },
+      setItems() {},
+      get size() {
+        return 1;
+      },
+    };
+
+    expect(toSearchMatcher(index)(item, 'alpha')).toBe(true);
+  });
+
+  test('recomputes a cached query after index mutation', () => {
+    const items = [{ title: 'Alpha' }];
+    const dynamicIndex = createIndex(items, { fields: ['title'] });
+    const match = toSearchMatcher(dynamicIndex);
+    const added = { title: 'Alphabet' };
+
+    expect(match(added, 'alpha')).toBe(false);
+
+    dynamicIndex.add(added);
+
+    expect(match(added, 'alpha')).toBe(true);
+
+    dynamicIndex.remove(added);
+
+    expect(match(added, 'alpha')).toBe(false);
+
+    dynamicIndex.setItems([added]);
+
+    expect(match(added, 'alpha')).toBe(true);
   });
 });
 

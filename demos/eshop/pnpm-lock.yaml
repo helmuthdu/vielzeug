@@ -66,8 +66,8 @@ importers:
         specifier: ^1.2.2
         version: 1.2.2
       '@vielzeug/scout':
-        specifier: ^1.1.7
-        version: 1.1.7
+        specifier: link:../../packages/scout
+        version: link:../../packages/scout
       '@vielzeug/scroll':
         specifier: ^1.1.4
         version: 1.1.4
@@ -293,10 +293,6 @@ packages:
 
   '@vielzeug/sandbox@1.2.2':
     resolution: {integrity: sha512-Mzr8DZka8vUh97p3zyBGkDhro4LkTuBXoFVoL+dZaFrFdB6EPYtSjad79lfusb0UCpICZn/4pjXvrSmpsl5pRQ==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/scout@1.1.7':
-    resolution: {integrity: sha512-oetoLWiocSZBcGgEW8urVjnDYtvRMbkA6zGJ8e4P1F2YI2YJ4X4wJEGNSMq80ipNTm2ghK9DZ/G7P4X3IQrseQ==}
     engines: {node: '>=22'}
 
   '@vielzeug/scroll@1.1.4':
@@ -644,10 +640,6 @@ snapshots:
   '@vielzeug/rune@1.1.2': {}
 
   '@vielzeug/sandbox@1.2.2': {}
-
-  '@vielzeug/scout@1.1.7':
-    dependencies:
-      '@vielzeug/ripple': 1.3.0
 
   '@vielzeug/scroll@1.1.4':
     dependencies:

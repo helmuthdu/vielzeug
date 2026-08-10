@@ -1,6 +1,8 @@
 import type { ScoutIndex } from './scout-index';
 import type { SearchConstraints } from './types';
 
+import { getIndexRevision } from './_index-state';
+
 /**
  * Adapts a `ScoutIndex` to sourcerer's explicit local `match` callback.
  * Caches one match set per query so local filtering does not repeat index work per item.
@@ -10,11 +12,15 @@ export function toSearchMatcher<T>(
   options?: SearchConstraints,
 ): (item: T, query: string) => boolean {
   let lastQuery: string | undefined;
+  let lastRevision = -1;
   let matches = new Set<T>();
 
   return (item, query) => {
-    if (query !== lastQuery) {
+    const revision = getIndexRevision(index);
+
+    if (query !== lastQuery || revision !== lastRevision) {
       lastQuery = query;
+      lastRevision = revision;
       matches = new Set(index.search(query, options).map((result) => result.item));
     }
 

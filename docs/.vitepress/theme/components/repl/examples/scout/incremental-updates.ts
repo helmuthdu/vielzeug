@@ -9,7 +9,7 @@ const products = [
 
 const index = createIndex(products, { fields: ['title'] })
 
-// onMutate() fires after add()/remove()/reindex() actually change the index —
+// onMutate() fires after changed add()/remove()/reindex()/setItems() operations —
 // not on no-ops like removing an item that isn't indexed
 const unsubscribe = index.onMutate(() => {
   console.log(\`  (index changed — now \${index.size} items)\`)
@@ -26,9 +26,10 @@ products[0].title = 'Wireless Trackball'
 index.reindex(products[0])
 console.log('After reindex():', index.search('trackball').map(r => r.item.title))
 
-// Remove an item by reference
-index.remove(products[2])
-console.log('After remove():', index.search('usb').map(r => r.item.title))
+// Reconcile a refreshed corpus in one mutation — removes missing references,
+// adds new ones, reindexes retained values, and preserves this incoming order
+index.setItems([products[0], { id: 4, title: 'Portable SSD', price: 95 }])
+console.log('After setItems():', index.items.map(item => item.title))
 
 unsubscribe()`,
   name: 'Incremental Updates',

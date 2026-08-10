@@ -131,6 +131,13 @@ describe('findMatchRanges', () => {
 
     expect(ranges.length).toBeGreaterThanOrEqual(2);
   });
+
+  test('normalizes raw punctuation and whitespace in the query', () => {
+    expect(findMatchRanges('Scout Index', 'scout--- index!')).toEqual([
+      [0, 5],
+      [6, 11],
+    ]);
+  });
 });
 
 describe('highlightField', () => {

@@ -2,7 +2,7 @@ import { batch, computed, signal } from '@vielzeug/ripple';
 
 import type { CreateSearchOptions, ScoutIndexOptions, SearchResult, SearchState } from './types';
 
-import { ScoutDisposedError } from './errors';
+import { ScoutConfigurationError, ScoutDisposedError } from './errors';
 import { createIndex, type ScoutIndex } from './scout-index';
 
 /**
@@ -43,7 +43,7 @@ const DEFAULT_DEBOUNCE = 200;
  * ```
  *
  * `results` also updates when the index is mutated directly via `index.add()` / `.remove()`
- * / `.reindex()` (not just when `query` changes), by subscribing to `index.onMutate()`.
+ * / `.reindex()` / `.setItems()` (not just when `query` changes), by subscribing to `index.onMutate()`.
  *
  * @param index - A `ScoutIndex` built with `createIndex()`.
  * @param options.debounce - Milliseconds to wait before committing query changes. Default: `200`.
@@ -53,6 +53,10 @@ const DEFAULT_DEBOUNCE = 200;
  */
 export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptions = {}): SearchState<T> {
   const { debounce: debounceMs = DEFAULT_DEBOUNCE, limit, minQueryLength, threshold } = options;
+
+  if (!Number.isFinite(debounceMs) || !Number.isInteger(debounceMs) || debounceMs < 0) {
+    throw new ScoutConfigurationError('debounce must be a finite non-negative integer.');
+  }
 
   const query = signal<string>('', { name: 'scout:query' });
   const committedQuery = signal<string>('', { name: 'scout:committedQuery' });
@@ -147,7 +151,7 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
  * for the common pattern of `createIndex` + `createSearch`.
  *
  * The returned `ReactiveSearch` exposes the underlying index via `.index` for
- * incremental mutations (`add`, `remove`, `reindex`) after construction.
+ * incremental mutations (`add`, `remove`, `reindex`, `setItems`) after construction.
  *
  * @example
  * ```ts

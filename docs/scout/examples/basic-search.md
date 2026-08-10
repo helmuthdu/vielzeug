@@ -100,7 +100,8 @@ index.search('日本語'); // matches the first document
 - Rebuilding the index per keystroke defeats its purpose — build it once, then call `search()` per query.
 - `threshold` and `limit` interact: a high `threshold` can return fewer than `limit` results even when more items exist below the cutoff.
 - Match `ranges` refer to the **original** field value, not a lowercased or tokenized copy — index into `item[field]`, not a normalized string.
-- `remove()` and `reindex()` use reference equality (`===`) — pass the same object reference that was originally indexed.
+- `remove()`, `reindex()`, and `setItems()` use reference equality (`===`) — retain object references when refreshing a corpus.
+- Fuzzy candidates can have no literal `matches`; render an unhighlighted field when `matches` has no range for it.
 
 ### Related
 
