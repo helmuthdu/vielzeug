@@ -451,9 +451,6 @@
       "badge": [
         "dist/feedback/badge/badge.d.ts"
       ],
-      "password-strength": [
-        "dist/feedback/password-strength/password-strength.d.ts"
-      ],
       "box": [
         "dist/layout/box/box.d.ts"
       ],
@@ -475,9 +472,6 @@
       "carousel": [
         "dist/content/carousel/carousel.d.ts"
       ],
-      "marquee": [
-        "dist/content/marquee/marquee.d.ts"
-      ],
       "chat-message": [
         "dist/content/chat-message/chat-message.d.ts"
       ],
@@ -493,14 +487,14 @@
       "code-window": [
         "dist/content/code-window/code-window.d.ts"
       ],
-      "copy-command": [
-        "dist/content/copy-command/copy-command.d.ts"
-      ],
       "combobox": [
         "dist/inputs/combobox/combobox.d.ts"
       ],
       "command-palette": [
         "dist/overlay/command-palette/command-palette.d.ts"
+      ],
+      "copy-command": [
+        "dist/content/copy-command/copy-command.d.ts"
       ],
       "datagrid": [
         "dist/inputs/datagrid/datagrid.d.ts"
@@ -535,6 +529,9 @@
       "list-item": [
         "dist/content/list/list-item.d.ts"
       ],
+      "marquee": [
+        "dist/content/marquee/marquee.d.ts"
+      ],
       "menu": [
         "dist/overlay/menu/menu.d.ts"
       ],
@@ -552,6 +549,9 @@
       ],
       "pagination": [
         "dist/content/pagination/pagination.d.ts"
+      ],
+      "password-strength": [
+        "dist/feedback/password-strength/password-strength.d.ts"
       ],
       "popover": [
         "dist/overlay/popover/popover.d.ts"
@@ -574,14 +574,14 @@
       "separator": [
         "dist/content/separator/separator.d.ts"
       ],
+      "sidebar": [
+        "dist/layout/sidebar/sidebar.d.ts"
+      ],
       "skeleton": [
         "dist/feedback/skeleton/skeleton.d.ts"
       ],
       "slider": [
         "dist/inputs/slider/slider.d.ts"
-      ],
-      "sidebar": [
-        "dist/layout/sidebar/sidebar.d.ts"
       ],
       "step": [
         "dist/content/stepper/step.d.ts"
