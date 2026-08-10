@@ -1,20 +1,14 @@
 export const meetingDurationExample = {
-  code: `import { difference, parseInstant, timeDiff, within } from '@vielzeug/tempo'
+  code: `import { classifyExpiry, contains, difference, format, inTimeZone, parse, shift, toInstant } from '@vielzeug/tempo'
 
-const start = parseInstant('2026-03-21T10:00:00Z')
-const end = parseInstant('2026-03-21T12:45:00Z')
+const local = parse('2026-03-21T10:00:00', { as: 'plainDateTime' })
+const start = toInstant(local, { timeZone: 'America/New_York' })
+const end = shift(start, { hours: 2 }, { timeZone: 'America/New_York' }).toInstant()
+const check = parse('2026-03-21T11:00:00Z', { as: 'instant' })
 
-// Two Instants with sub-day units — no tz needed
-const duration = difference(start, end, {
-  largestUnit: 'hour',
-  smallestUnit: 'minute',
-})
-
-console.log('Duration ISO:', duration.toString())
-console.log('11:00 in range:', within(parseInstant('2026-03-21T11:00:00Z'), start, end))
-
-// Human-readable largest-unit diff
-const diff = timeDiff(start, end)
-console.log('timeDiff:', diff.value, diff.unit)`,
-  name: 'Meeting Duration',
+console.log('Duration:', difference({ end, largestUnit: 'hour', start }).toString())
+console.log('Contains check:', contains({ end, start, value: check }))
+console.log('New York:', format(inTimeZone(start, 'America/New_York'), { locale: 'en-US', pattern: 'short' }))
+console.log('Expiry:', classifyExpiry({ thresholds: { soon: { days: 3 } }, value: end }))`,
+  name: 'Explicit Parsing and Timezone Arithmetic',
 };

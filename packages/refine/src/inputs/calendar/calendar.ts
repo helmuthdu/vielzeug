@@ -274,7 +274,7 @@ define<OreCalendarProps>(CALENDAR_TAG, {
       const d = Temporal.PlainDate.from({ day: 1, month: displayMonth.value, year: displayYear.value });
       const loc = props.locale.value ?? (typeof navigator !== 'undefined' ? navigator.language : 'en');
 
-      return format(d, { intl: { month: 'long' }, locale: loc, tz: 'UTC' });
+      return format(d, { intl: { month: 'long' }, locale: loc, timeZone: 'UTC' });
     });
 
     const displayYear_ = computed(() => String(displayYear.value));

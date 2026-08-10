@@ -1,4 +1,4 @@
-import { format as formatDate, parsePlainDate, Temporal } from '@vielzeug/tempo';
+import { format as formatDate, parse, Temporal } from '@vielzeug/tempo';
 
 import type { OrderStatus, PaymentMethod } from './types';
 
@@ -35,13 +35,16 @@ export function estimateDeliveryDate(leadDays = 21): string {
 
 /** Renders an ISO (`yyyy-MM-dd`) date as e.g. `Aug 11, 2026`. */
 export function formatLongDate(iso: string): string {
-  return formatDate(parsePlainDate(iso.slice(0, 10)), {
+  return formatDate(parse(iso.slice(0, 10), { as: 'plainDate' }), {
     intl: { day: 'numeric', month: 'long', year: 'numeric' },
-    tz: 'UTC',
+    timeZone: 'UTC',
   });
 }
 
 /** Renders an ISO date/date-time string as e.g. `Jul 20`. */
 export function formatShortDate(iso: string): string {
-  return formatDate(parsePlainDate(iso.slice(0, 10)), { intl: { day: 'numeric', month: 'short' }, tz: 'UTC' });
+  return formatDate(parse(iso.slice(0, 10), { as: 'plainDate' }), {
+    intl: { day: 'numeric', month: 'short' },
+    timeZone: 'UTC',
+  });
 }

@@ -1,4 +1,4 @@
-import { Temporal, format, parsePlainDate } from '@vielzeug/tempo';
+import { Temporal, format, parse } from '@vielzeug/tempo';
 
 // ── Public ISO helpers (single source of truth for both components) ───────────
 
@@ -10,7 +10,7 @@ export function parseIso(iso: string | undefined | null): Temporal.PlainDate | n
   if (!iso) return null;
 
   try {
-    return parsePlainDate(iso);
+    return parse(iso, { as: 'plainDate' });
   } catch {
     return null;
   }
@@ -29,7 +29,7 @@ export function toIsoString(date: Temporal.PlainDate | null): string | null {
  * e.g. "15 Jun 2025" (default medium pattern).
  */
 export function formatDisplayDate(date: Temporal.PlainDate, locale: string): string {
-  return format(date, { intl: { day: 'numeric', month: 'short', year: 'numeric' }, locale, tz: 'UTC' });
+  return format(date, { intl: { day: 'numeric', month: 'short', year: 'numeric' }, locale, timeZone: 'UTC' });
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -279,9 +279,9 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
       cells.push({
         isDisabled,
         isSelected: _selected !== null && _selected.year === _displayYear && _selected.month === m,
-        label: format(plain, { intl: { month: 'long' }, locale: loc, tz: 'UTC' }),
+        label: format(plain, { intl: { month: 'long' }, locale: loc, timeZone: 'UTC' }),
         month: m,
-        shortLabel: format(plain, { intl: { month: 'short' }, locale: loc, tz: 'UTC' }),
+        shortLabel: format(plain, { intl: { month: 'short' }, locale: loc, timeZone: 'UTC' }),
       });
     }
 
@@ -316,11 +316,11 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
 
   function buildWeekdayLabels(): string[] {
     // 2024-01-07 is a Sunday — use it as the Sunday anchor
-    const sunday = parsePlainDate('2024-01-07');
+    const sunday = parse('2024-01-07', { as: 'plainDate' });
     const loc = locale();
 
     return Array.from({ length: 7 }, (_, i) =>
-      format(sunday.add({ days: i }), { intl: { weekday: 'short' }, locale: loc, tz: 'UTC' }),
+      format(sunday.add({ days: i }), { intl: { weekday: 'short' }, locale: loc, timeZone: 'UTC' }),
     );
   }
 

@@ -35,7 +35,7 @@
     "@vielzeug/scroll": "^1.1.4",
     "@vielzeug/sourcerer": "link:../../packages/sourcerer",
     "@vielzeug/spell": "^1.2.2",
-    "@vielzeug/tempo": "^1.0.5",
+    "@vielzeug/tempo": "link:../../packages/tempo",
     "@vielzeug/vault": "^1.0.4",
     "@vielzeug/ward": "^1.0.5",
     "@vielzeug/wayfinder": "^1.0.4"

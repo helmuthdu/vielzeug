@@ -78,8 +78,8 @@ importers:
         specifier: ^1.2.2
         version: 1.2.2
       '@vielzeug/tempo':
-        specifier: ^1.0.5
-        version: 1.0.5
+        specifier: link:../../packages/tempo
+        version: link:../../packages/tempo
       '@vielzeug/vault':
         specifier: ^1.0.4
         version: 1.0.4

@@ -1,63 +1,37 @@
 # @vielzeug/tempo
 
-> Temporal-powered parsing, timezone conversion, arithmetic (DST-safe), and Intl formatting for modern TypeScript.
+Temporal utilities with explicit parsing and timezone rules.
 
-[![npm version](https://img.shields.io/npm/v/@vielzeug/tempo)](https://www.npmjs.com/package/@vielzeug/tempo) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<details>
-<summary>Quick Reference</summary>
-
-**Package:** `@vielzeug/tempo` &nbsp;·&nbsp; **Category:** Date-time
-
-**Key exports:** `now`, `parsePlainDateTime`, `parseInstant`, `parse`, `toInstant`, `inTz`, `shift`, `difference`, `format`, `formatRelative`, `isBefore`, `isAfter`, `isSame`, `startOf`, `endOf`, `expires`, `timeDiff`, `recurrence`
-
-**When to use:** Temporal-powered parsing, timezone conversion, arithmetic (DST-safe), and Intl formatting for modern TypeScript.
-
-**Related:** [@vielzeug/arsenal](https://vielzeug.dev/arsenal/)
-
-</details>
-
-`@vielzeug/tempo` is part of Vielzeug and ships as a zero-dependency TypeScript package with ESM+CJS output.
+`@vielzeug/tempo` ships ESM and CJS output. It depends on `@js-temporal/polyfill` and re-exports `Temporal` so all consumers use one implementation and version.
 
 ## Installation
 
 ```sh
 pnpm add @vielzeug/tempo
-npm install @vielzeug/tempo
-yarn add @vielzeug/tempo
 ```
 
 ## Quick Start
 
-```ts
-import { format, formatInstant, inTz, parsePlainDateTime, shift, toInstant } from '@vielzeug/tempo';
-
-// Parse a wall-clock string (no timezone attached)
-const localMeeting = parsePlainDateTime('2026-03-21T10:30:00');
-
-// Convert to an absolute instant using the user's timezone
-const meetingInstant = toInstant(localMeeting, { tz: 'America/New_York' });
-
-// Project to a zoned view and subtract 15 minutes (DST-safe)
-const meetingNY = inTz(meetingInstant, 'America/New_York');
-const reminder = shift(meetingNY, { minutes: -15 });
-
-// Format for display
-console.log(format(reminder, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' }));
-
-// Format for APIs / logs (stable UTC instant string)
-console.log(formatInstant(reminder));
-```
-
-Since many function names (`now`, `shift`, `clamp`, `difference`, …) are common in application code, use a namespace import to avoid collisions while still getting full tree-shaking:
+Parse a wall-clock input, resolve it to an instant, then format its zoned display value.
 
 ```ts
-import * as tempo from '@vielzeug/tempo';
+import { format, inTimeZone, parse, shift, toInstant } from '@vielzeug/tempo';
 
-tempo.now('UTC');
-tempo.difference(start, end, { largestUnit: 'day', tz: 'UTC' });
-tempo.format(meeting, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' });
+const local = parse('2026-03-21T10:30:00', { as: 'plainDateTime' });
+const meeting = toInstant(local, { timeZone: 'America/New_York' });
+const reminder = shift(meeting, { minutes: -15 }, { timeZone: 'America/New_York' });
+
+console.log(format(inTimeZone(reminder, 'America/New_York'), { locale: 'en-US', pattern: 'short' }));
 ```
+
+## API Rules
+
+- `parse()` always requires `{ as }`; Tempo does not auto-detect strings.
+- `timeZone` is required whenever plain values become instants or zoned values.
+- `disambiguation` controls DST overlaps and gaps.
+- `difference()`, `contains()`, `clamp()`, and `classifyExpiry()` take object inputs.
+- `classifyExpiry()` accepts fixed elapsed-time thresholds only; months and years are rejected.
+- `Temporal` remains exported for advanced Temporal operations and type identity.
 
 ## Documentation
 
@@ -65,7 +39,8 @@ tempo.format(meeting, { pattern: 'short', locale: 'en-US', tz: 'America/New_York
 - [Usage Guide](https://vielzeug.dev/tempo/usage)
 - [API Reference](https://vielzeug.dev/tempo/api)
 - [Examples](https://vielzeug.dev/tempo/examples)
+- [Migration Guide](https://vielzeug.dev/tempo/migration)
 
 ## License
 
-MIT © [Helmuth Saatkamp](https://github.com/helmuthdu) — part of the [Vielzeug](https://github.com/helmuthdu/vielzeug) monorepo.
+MIT © Helmuth Saatkamp — part of Vielzeug.

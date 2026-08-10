@@ -1,56 +1,36 @@
 import { Temporal } from '@js-temporal/polyfill';
 
-// ─── Input types ──────────────────────────────────────────────────────────────
+export type AbsoluteTime = Temporal.Instant | Temporal.ZonedDateTime;
+export type WallTime = Temporal.PlainDate | Temporal.PlainDateTime;
+export type TimeInput = AbsoluteTime | WallTime;
+export type RelativeTimeInput = AbsoluteTime;
 
-export type TimeInput = Temporal.Instant | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-export type RelativeTimeInput = Temporal.Instant | Temporal.ZonedDateTime;
+export type ParseAs = 'instant' | 'plainDate' | 'plainDateTime' | 'zonedDateTime';
+export type Disambiguation = 'compatible' | 'earlier' | 'later' | 'reject';
 
-/** Discriminant for the {@link parse} `as` parameter. Controls the expected return type. */
-export type ParseAs = 'instant' | 'plain-date' | 'plain-datetime' | 'zoned';
-
-// ─── Option types ─────────────────────────────────────────────────────────────
-
-export type DateTimeDisambiguation = 'compatible' | 'earlier' | 'later' | 'reject';
-
-/**
- * Base timezone option. Does NOT include `prefer` (disambiguation) — that only applies
- * to `PlainDateTime` inputs and is intentionally scoped to APIs where it is meaningful
- * (see {@link ShiftOptions} and {@link DifferenceOptions}).
- */
-export interface TimeOptions {
-  tz?: string;
+export interface TimeZoneOptions {
+  timeZone?: string;
 }
 
-/**
- * Options for DST-sensitive operations that accept `PlainDateTime` inputs.
- * `prefer` controls how ambiguous wall-clock times (e.g. during DST fall-back) are resolved.
- * It is silently ignored for `Instant` and `ZonedDateTime` inputs.
- */
 export interface DisambiguationOptions {
-  prefer?: DateTimeDisambiguation;
+  disambiguation?: Disambiguation;
 }
 
-export interface ShiftOptions extends DisambiguationOptions, TimeOptions {}
+export interface ShiftOptions extends DisambiguationOptions, TimeZoneOptions {}
 
-export interface DifferenceOptions extends DisambiguationOptions, TimeOptions {
+export interface DifferenceInput extends DisambiguationOptions, TimeZoneOptions {
+  end: TimeInput;
   largestUnit?: Temporal.DateTimeUnit;
   roundingIncrement?: number;
   roundingMode?: Temporal.RoundingMode;
   smallestUnit?: Temporal.DateTimeUnit;
+  start: TimeInput;
 }
 
-// ─── Format option types ──────────────────────────────────────────────────────
-
 export type FormatPattern = 'date-only' | 'long' | 'medium' | 'short' | 'time-only';
-
-/**
- * Options for {@link format} and {@link formatRange}.
- *
- * `intl` and `pattern` are mutually exclusive — enforced at compile time.
- */
 export type FormatOptions =
-  | { intl: Intl.DateTimeFormatOptions; locale?: Intl.LocalesArgument; pattern?: never; tz?: string }
-  | { intl?: never; locale?: Intl.LocalesArgument; pattern?: FormatPattern; tz?: string };
+  | { intl: Intl.DateTimeFormatOptions; locale?: Intl.LocalesArgument; pattern?: never; timeZone?: string }
+  | { intl?: never; locale?: Intl.LocalesArgument; pattern?: FormatPattern; timeZone?: string };
 
 export interface RelativeFormatOptions {
   base?: RelativeTimeInput;
@@ -64,45 +44,47 @@ export interface DurationFormatOptions {
   style?: 'digital' | 'long' | 'narrow' | 'short';
 }
 
-// ─── Unit vocabulary ──────────────────────────────────────────────────────────
-
-/** Master set of all temporal units recognised by tempo. */
 export type TempoUnit =
   'day' | 'hour' | 'microsecond' | 'millisecond' | 'minute' | 'month' | 'nanosecond' | 'second' | 'week' | 'year';
-
-/** Calendar-significant units (not sub-day). Used internally by CALENDAR_UNITS set. */
 export type CalendarUnit = Extract<TempoUnit, 'day' | 'month' | 'week' | 'year'>;
-
-// ─── Boundary / comparison types ──────────────────────────────────────────────
-
 export type BoundaryUnit = Exclude<TempoUnit, 'microsecond' | 'millisecond' | 'nanosecond' | 'second'>;
 export type WeekStartDay = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
-export interface BoundaryOptions extends TimeOptions {
+export interface BoundaryOptions extends TimeZoneOptions {
   weekStartsOn?: WeekStartDay;
 }
 
-export interface CompareOptions extends TimeOptions {
+export interface CompareOptions extends TimeZoneOptions {
   unit?: BoundaryUnit;
   weekStartsOn?: WeekStartDay;
 }
 
-// ─── Classify types ───────────────────────────────────────────────────────────
+export interface ContainsInput extends CompareOptions {
+  end: TimeInput;
+  start: TimeInput;
+  value: TimeInput;
+}
 
-/** Structured output of {@link timeDiff}. Excludes sub-millisecond units. */
+export interface ClampInput extends CompareOptions {
+  end: TimeInput;
+  start: TimeInput;
+  value: TimeInput;
+}
+
+export type FixedDuration = Pick<
+  Temporal.DurationLike,
+  'days' | 'hours' | 'microseconds' | 'milliseconds' | 'minutes' | 'nanoseconds' | 'seconds' | 'weeks'
+>;
+export type ExpiryThresholds<K extends string> = Record<K, FixedDuration>;
+export interface ClassifyExpiryInput<K extends string> extends TimeZoneOptions {
+  relativeTo?: Temporal.Instant;
+  thresholds: ExpiryThresholds<K>;
+  value: TimeInput;
+}
+
 export type TimeDiffUnit = Exclude<TempoUnit, 'microsecond' | 'nanosecond'>;
 export type TimeDiffResult = { unit: TimeDiffUnit; value: number };
 
-// ─── Recurrence types ─────────────────────────────────────────────────────────
-
-type RecurrenceBase = {
-  frequency: 'daily' | 'monthly' | 'weekly' | 'yearly';
-  interval?: number;
-};
-
-/**
- * Rule governing {@link recurrence} generation.
- * Either `count` or `until` (or both) must be provided — enforced at the type level.
- */
+type RecurrenceBase = { frequency: 'daily' | 'monthly' | 'weekly' | 'yearly'; interval?: number };
 export type RecurrenceRule = RecurrenceBase &
   ({ count: number; until?: TimeInput } | { count?: number; until: TimeInput });

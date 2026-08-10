@@ -1,7 +1,6 @@
-// Re-export Temporal namespace so consumers never need to import @js-temporal/polyfill directly.
+// Tempo keeps this re-export so all consumers share one Temporal implementation and version.
 export { Temporal } from '@js-temporal/polyfill';
 
-// ─── Errors ───────────────────────────────────────────────────────────────────
 export {
   TempoError,
   TempoInvalidInputError,
@@ -9,31 +8,10 @@ export {
   TempoMissingTzError,
   TempoUnsupportedInputError,
 } from './errors';
-
-// ─── Core ─────────────────────────────────────────────────────────────────────
-export {
-  difference,
-  isValid,
-  now,
-  nowInstant,
-  parse,
-  parseInstant,
-  parsePlainDate,
-  parsePlainDateTime,
-  parseZoned,
-  shift,
-} from './core';
-
-// ─── Conversion utilities ─────────────────────────────────────────────────────
-export { inTz, toInstant } from './_convert';
-
-// ─── Boundary ─────────────────────────────────────────────────────────────────
+export { difference, isValid, now, nowInstant, parse, shift } from './core';
+export { inTimeZone, toInstant } from './_convert';
 export { endOf, startOf } from './boundary';
-
-// ─── Compare ──────────────────────────────────────────────────────────────────
-export { clamp, isAfter, isBefore, isSame, within } from './compare';
-
-// ─── Format ───────────────────────────────────────────────────────────────────
+export { clamp, contains, isAfter, isBefore, isSame } from './compare';
 export {
   format,
   formatDuration,
@@ -46,23 +24,23 @@ export {
   humanize,
   parseDuration,
 } from './format';
-
-// ─── Classify ─────────────────────────────────────────────────────────────────
-export { expires, timeDiff } from './classify';
-
-// ─── Range ────────────────────────────────────────────────────────────────────
+export { classifyExpiry, timeDiff } from './classify';
 export { dateRange, recurrence } from './range';
-
-// ─── Public types ─────────────────────────────────────────────────────────────
 export type {
+  AbsoluteTime,
   BoundaryOptions,
   BoundaryUnit,
   CalendarUnit,
+  ClampInput,
+  ClassifyExpiryInput,
   CompareOptions,
-  DateTimeDisambiguation,
-  DifferenceOptions,
+  ContainsInput,
+  DifferenceInput,
+  Disambiguation,
   DisambiguationOptions,
   DurationFormatOptions,
+  ExpiryThresholds,
+  FixedDuration,
   FormatOptions,
   FormatPattern,
   ParseAs,
@@ -74,6 +52,7 @@ export type {
   TimeDiffResult,
   TimeDiffUnit,
   TimeInput,
-  TimeOptions,
+  TimeZoneOptions,
+  WallTime,
   WeekStartDay,
 } from './types';

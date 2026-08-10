@@ -8,7 +8,7 @@ import type {
   RelativeTimeInput,
   TimeDiffResult,
   TimeInput,
-  TimeOptions,
+  TimeZoneOptions,
 } from './types';
 
 import { toInstant, toZoned } from './_convert';
@@ -71,26 +71,26 @@ function serializeIntlOptions(options: Intl.DateTimeFormatOptions): string {
 }
 
 function makeFormatter(options: FormatOptions, fallbackTz?: string): Intl.DateTimeFormat {
-  const tz = options.tz ?? fallbackTz;
+  const timeZone = options.timeZone ?? fallbackTz;
   const locale = options.locale;
 
   if (options.intl !== undefined) {
-    const cacheKey = `${String(locale ?? '')}|intl|${tz ?? ''}|${serializeIntlOptions(options.intl)}`;
+    const cacheKey = `${String(locale ?? '')}|intl|${timeZone ?? ''}|${serializeIntlOptions(options.intl)}`;
 
     return cappedGetOrCreate(DATE_TIME_FORMATTER_CACHE, cacheKey, () => {
-      const intlOptions = tz !== undefined ? { ...options.intl, timeZone: tz } : options.intl;
+      const intlOptions = timeZone !== undefined ? { ...options.intl, timeZone: timeZone } : options.intl;
 
       return new Intl.DateTimeFormat(locale, intlOptions);
     });
   }
 
   const pattern = options.pattern ?? 'medium';
-  const cacheKey = `${String(locale ?? '')}|${pattern}|${tz ?? ''}`;
+  const cacheKey = `${String(locale ?? '')}|${pattern}|${timeZone ?? ''}`;
 
   return cappedGetOrCreate(
     DATE_TIME_FORMATTER_CACHE,
     cacheKey,
-    () => new Intl.DateTimeFormat(locale, { ...FORMAT_PRESETS[pattern], timeZone: tz }),
+    () => new Intl.DateTimeFormat(locale, { ...FORMAT_PRESETS[pattern], timeZone: timeZone }),
   );
 }
 
@@ -198,16 +198,16 @@ function buildDurationFallback(duration: Temporal.Duration): string {
 
 /**
  * Resolves a shared display timezone for two-input range functions.
- * Throws when both inputs are `ZonedDateTime` with different zones and no `options.tz` override.
+ * Throws when both inputs are `ZonedDateTime` with different zones and no `options.timeZone` override.
  */
 function resolveRangeTz(start: TimeInput, end: TimeInput, options: FormatOptions, caller: string): string | undefined {
-  if (options.tz) return options.tz;
+  if (options.timeZone) return options.timeZone;
 
   const startTz = start instanceof Temporal.ZonedDateTime ? start.timeZoneId : undefined;
   const endTz = end instanceof Temporal.ZonedDateTime ? end.timeZoneId : undefined;
 
   if (startTz && endTz && startTz !== endTz) {
-    fail(`${caller} received ZonedDateTime inputs with different time zones. Pass options.tz explicitly.`);
+    fail(`${caller} received ZonedDateTime inputs with different time zones. Pass options.timeZone explicitly.`);
   }
 
   return startTz ?? endTz;
@@ -219,18 +219,18 @@ function resolveRangeTz(start: TimeInput, end: TimeInput, options: FormatOptions
  * Formats `input` using `Intl.DateTimeFormat`. Defaults to `pattern: 'medium'`.
  *
  * Pass `intl` for full `Intl.DateTimeFormatOptions` control (mutually exclusive with `pattern`).
- * The timezone is inferred from a `ZonedDateTime` input or from `options.tz`.
+ * The timezone is inferred from a `ZonedDateTime` input or from `options.timeZone`.
  *
  * @example
  * ```ts
- * format(parseInstant('2026-03-21T10:15:30Z'), { locale: 'en-GB', pattern: 'short', tz: 'UTC' })
+ * format(parse('2026-03-21T10:15:30Z', { as: 'instant' }), { locale: 'en-GB', pattern: 'short', timeZone: 'UTC' })
  * // '21/03/2026, 10:15'
  * ```
  */
 export function format(input: TimeInput, options: FormatOptions = {}): string {
-  const tz = options.tz ?? (input instanceof Temporal.ZonedDateTime ? input.timeZoneId : undefined);
+  const timeZone = options.timeZone ?? (input instanceof Temporal.ZonedDateTime ? input.timeZoneId : undefined);
 
-  return makeFormatter(options, tz).format(new Date(toInstant(input, { tz }).epochMilliseconds));
+  return makeFormatter(options, timeZone).format(new Date(toInstant(input, { timeZone }).epochMilliseconds));
 }
 
 /**
@@ -238,17 +238,17 @@ export function format(input: TimeInput, options: FormatOptions = {}): string {
  *
  * @example
  * ```ts
- * formatRange(start, end, { locale: 'en-GB', pattern: 'short', tz: 'UTC' })
+ * formatRange(start, end, { locale: 'en-GB', pattern: 'short', timeZone: 'UTC' })
  * // '21/03/2026, 10:00 – 12:00'
  * ```
  */
 export function formatRange(start: TimeInput, end: TimeInput, options: FormatOptions = {}): string {
-  const tz = resolveRangeTz(start, end, options, 'formatRange');
-  const formatter = makeFormatter(options, tz);
+  const timeZone = resolveRangeTz(start, end, options, 'formatRange');
+  const formatter = makeFormatter(options, timeZone);
 
   return formatter.formatRange(
-    new Date(toInstant(start, { tz }).epochMilliseconds),
-    new Date(toInstant(end, { tz }).epochMilliseconds),
+    new Date(toInstant(start, { timeZone }).epochMilliseconds),
+    new Date(toInstant(end, { timeZone }).epochMilliseconds),
   );
 }
 
@@ -258,7 +258,7 @@ export function formatRange(start: TimeInput, end: TimeInput, options: FormatOpt
  *
  * @example
  * ```ts
- * formatRangeParts(start, end, { locale: 'en-US', pattern: 'short', tz: 'UTC' })
+ * formatRangeParts(start, end, { locale: 'en-US', pattern: 'short', timeZone: 'UTC' })
  * // [{ type: 'month', value: '3', source: 'startRange' }, ...]
  * ```
  */
@@ -267,50 +267,50 @@ export function formatRangeParts(
   end: TimeInput,
   options: FormatOptions = {},
 ): ReturnType<Intl.DateTimeFormat['formatRangeToParts']> {
-  const tz = resolveRangeTz(start, end, options, 'formatRangeParts');
-  const formatter = makeFormatter(options, tz);
+  const timeZone = resolveRangeTz(start, end, options, 'formatRangeParts');
+  const formatter = makeFormatter(options, timeZone);
 
   return formatter.formatRangeToParts(
-    new Date(toInstant(start, { tz }).epochMilliseconds),
-    new Date(toInstant(end, { tz }).epochMilliseconds),
+    new Date(toInstant(start, { timeZone }).epochMilliseconds),
+    new Date(toInstant(end, { timeZone }).epochMilliseconds),
   );
 }
 
 /**
  * Serializes `input` to a UTC ISO 8601 instant string (`2026-03-21T10:15:30Z`).
- * Requires `options.tz` when input is a `PlainDate` or `PlainDateTime`.
+ * Requires `options.timeZone` when input is a `PlainDate` or `PlainDateTime`.
  *
  * @example
  * ```ts
- * formatInstant(parseZoned('2026-03-21T11:15:30+01:00[Europe/Berlin]'))
+ * formatInstant(parse('2026-03-21T11:15:30+01:00[Europe/Berlin]', { as: 'zonedDateTime' }))
  * // '2026-03-21T10:15:30Z'
  * ```
  */
-export function formatInstant(input: TimeInput, options: TimeOptions = {}): string {
+export function formatInstant(input: TimeInput, options: TimeZoneOptions = {}): string {
   return toInstant(input, options).toString();
 }
 
 /**
  * Serializes `input` to a zoned ISO 8601 string (`2026-03-21T11:15:30+01:00[Europe/Berlin]`).
  *
- * @param options.tz - Required when `input` is a `PlainDate` or `PlainDateTime`.
+ * @param options.timeZone - Required when `input` is a `PlainDate` or `PlainDateTime`.
  *   Inferred automatically from a `ZonedDateTime` or `Instant` input.
  *
- * @throws {TempoError} When `input` is a `PlainDate` or `PlainDateTime` and `options.tz` is omitted.
+ * @throws {TempoError} When `input` is a `PlainDate` or `PlainDateTime` and `options.timeZone` is omitted.
  *
  * @example
  * ```ts
- * formatZoned(parseInstant('2026-03-21T10:15:30Z'), { tz: 'Europe/Berlin' })
+ * formatZoned(parse('2026-03-21T10:15:30Z', { as: 'instant' }), { timeZone: 'Europe/Berlin' })
  * // '2026-03-21T11:15:30+01:00[Europe/Berlin]'
  *
- * formatZoned(parseZoned('2026-03-21T11:15:30+01:00[Europe/Berlin]'))
- * // '2026-03-21T11:15:30+01:00[Europe/Berlin]'  (tz inferred)
+ * formatZoned(parse('2026-03-21T11:15:30+01:00[Europe/Berlin]', { as: 'zonedDateTime' }))
+ * // '2026-03-21T11:15:30+01:00[Europe/Berlin]'  (timeZone inferred)
  * ```
  */
-export function formatZoned(input: TimeInput, options: TimeOptions = {}): string {
-  const tz = inferTimeZone(input, options);
+export function formatZoned(input: TimeInput, options: TimeZoneOptions = {}): string {
+  const timeZone = inferTimeZone(input, options);
 
-  return toZoned(input, { tz }).toString();
+  return toZoned(input, { timeZone }).toString();
 }
 
 /**
@@ -318,8 +318,8 @@ export function formatZoned(input: TimeInput, options: TimeOptions = {}): string
  *
  * @example
  * ```ts
- * formatRelative(parseInstant('2026-03-21T12:00:00Z'), {
- *   base: parseInstant('2026-03-21T10:00:00Z'),
+ * formatRelative(parse('2026-03-21T12:00:00Z', { as: 'instant' }), {
+ *   base: parse('2026-03-21T10:00:00Z', { as: 'instant' }),
  *   locale: 'en-US',
  *   numeric: 'always',
  * })
@@ -382,14 +382,14 @@ export function formatDuration(input: string | Temporal.DurationLike, options: D
  *
  * @example
  * ```ts
- * formatParts(parseInstant('2026-03-21T10:15:30Z'), { pattern: 'medium', tz: 'UTC' })
+ * formatParts(parse('2026-03-21T10:15:30Z', { as: 'instant' }), { pattern: 'medium', timeZone: 'UTC' })
  * // [{ type: 'month', value: 'Mar' }, { type: 'literal', value: ' ' }, ...]
  * ```
  */
 export function formatParts(input: TimeInput, options: FormatOptions = {}): Intl.DateTimeFormatPart[] {
-  const tz = options.tz ?? (input instanceof Temporal.ZonedDateTime ? input.timeZoneId : undefined);
+  const timeZone = options.timeZone ?? (input instanceof Temporal.ZonedDateTime ? input.timeZoneId : undefined);
 
-  return makeFormatter(options, tz).formatToParts(new Date(toInstant(input, { tz }).epochMilliseconds));
+  return makeFormatter(options, timeZone).formatToParts(new Date(toInstant(input, { timeZone }).epochMilliseconds));
 }
 
 /**

@@ -1,5 +1,5 @@
 import { currency, format as formatMoney, money } from '@vielzeug/coins';
-import { expires, format as formatDate, parsePlainDate } from '@vielzeug/tempo';
+import { classifyExpiry, format as formatDate, parse } from '@vielzeug/tempo';
 
 import type { Task } from './types';
 
@@ -12,7 +12,10 @@ export function formatBudget(budget: Task['budget']): string | null {
 
 /** Renders an ISO (`yyyy-MM-dd`) due date as e.g. `Jul 20`. */
 export function formatDueDate(dueDate: string): string {
-  return formatDate(parsePlainDate(dueDate), { intl: { day: 'numeric', month: 'short' }, tz: 'UTC' });
+  return formatDate(parse(dueDate, { as: 'plainDate' }), {
+    intl: { day: 'numeric', month: 'short' },
+    timeZone: 'UTC',
+  });
 }
 
 export type DueDateUrgency = 'overdue' | 'soon' | null;
@@ -26,5 +29,9 @@ export function dueDateUrgency(dueDate: string | null, status: Task['status']): 
 
   // Thresholds are cumulative upper bounds on (date − now), sorted ascending: anything at or
   // before now is 'overdue'; anything within the next 3 days is 'soon'; further out is null.
-  return expires(parsePlainDate(dueDate), { overdue: { days: 0 }, soon: { days: 3 } }, { tz: 'UTC' });
+  return classifyExpiry({
+    thresholds: { overdue: { days: 0 }, soon: { days: 3 } },
+    timeZone: 'UTC',
+    value: parse(dueDate, { as: 'plainDate' }),
+  });
 }

@@ -274,7 +274,7 @@ define<OreDatePickerProps>(DATE_PICKER_TAG, {
     const displayMonth_ = computed(() => {
       const d = Temporal.PlainDate.from({ day: 1, month: displayMonth.value, year: displayYear.value });
 
-      return format(d, { intl: { month: 'long' }, locale: locale.value, tz: 'UTC' });
+      return format(d, { intl: { month: 'long' }, locale: locale.value, timeZone: 'UTC' });
     });
 
     const displayYear_ = computed(() => String(displayYear.value));

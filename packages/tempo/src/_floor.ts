@@ -1,10 +1,8 @@
 import { Temporal } from '@js-temporal/polyfill';
 
-import type { BoundaryUnit, DateTimeDisambiguation, TimeInput } from './types';
+import type { BoundaryUnit, Disambiguation, TimeInput } from './types';
 
 import { toZoned } from './_convert';
-
-// ─── Floor-to-boundary-unit helper ───────────────────────────────────────────
 
 const TIME_ZERO: Temporal.ZonedDateTimeLike = {
   hour: 0,
@@ -23,16 +21,12 @@ const BOUNDARY_CLEAR: Record<Exclude<BoundaryUnit, 'week'>, Temporal.ZonedDateTi
   year: { ...TIME_ZERO, day: 1, month: 1 },
 };
 
-/**
- * Floors `input` to the start of `unit` in `tz`, returning an `Instant`.
- * Used internally by both `boundary.ts` and `compare.ts` without either depending on the other.
- */
 export function floorToUnit(
   input: TimeInput,
   unit: BoundaryUnit,
-  options: { prefer?: DateTimeDisambiguation; tz: string; weekStartsOn?: number },
+  options: { disambiguation?: Disambiguation; timeZone: string; weekStartsOn?: number },
 ): Temporal.Instant {
-  const zoned = toZoned(input, { prefer: options.prefer, tz: options.tz });
+  const zoned = toZoned(input, options);
 
   if (unit === 'week') {
     const daysToSubtract = (zoned.dayOfWeek - (options.weekStartsOn ?? 1) + 7) % 7;
