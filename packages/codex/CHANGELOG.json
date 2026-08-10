@@ -2,6 +2,20 @@
   "name": "@vielzeug/codex",
   "entries": [
     {
+      "version": "2.1.0",
+      "tag": "@vielzeug/codex_v2.1.0",
+      "date": "Mon, 10 Aug 2026 16:04:45 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat(codex): migrate to @modelcontextprotocol/server 2.0.0 (2026-07-28 spec) — replaces @modelcontextprotocol/sdk; stateless per-request HTTP host via createMcpHandler() over a Node/Fetch bridge, tools/list and tools/call registered via string-literal setRequestHandler(), MethodNotFound now thrown as ProtocolError(METHOD_NOT_FOUND, ...); wire behavior for tool list/call unchanged",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "82943ed76a740deef24e9a7332397560afaf816c"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.2",
       "tag": "@vielzeug/codex_v2.0.2",
       "date": "Mon, 10 Aug 2026 15:11:23 GMT",
