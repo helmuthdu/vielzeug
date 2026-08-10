@@ -20,6 +20,7 @@ router.subscribe((state) => {
   }
 })
 
+await router.ready
 console.log('Initial pathname:', router.getSnapshot().location.pathname)
 
 await router.navigate({ name: 'about' })

@@ -11,7 +11,7 @@ describe('scroll restoration', () => {
       history,
       routes: {
         home: { path: '/' },
-        page: { handler: vi.fn(), path: '/page' },
+        page: { data: vi.fn(), path: '/page' },
       },
       scroll,
     });

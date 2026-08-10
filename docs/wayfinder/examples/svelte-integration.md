@@ -7,7 +7,7 @@ description: 'Svelte integration example for @vielzeug/wayfinder.'
 
 ### Problem
 
-Svelte's `$store` auto-subscription calls `store.subscribe(run)` and expects `run` to be invoked immediately with the current value. `router.subscribe()` only fires on _subsequent_ state changes, so direct use yields `undefined` as the initial value.
+Svelte's `$store` auto-subscription expects `store.subscribe(run)` to invoke `run` immediately. `router.subscribe()` never synchronously emits the current snapshot, so it does not satisfy the Svelte store contract directly.
 
 ### Solution
 
@@ -30,10 +30,8 @@ const router = createRouter({
 // `readable` calls set(initialValue) immediately, then router.subscribe drives updates.
 export const routerState = readable(router.getSnapshot(), (set) => router.subscribe(set));
 
-// Expose actions directly (not reactive, just bound references).
-export const navigate = router.navigate.bind(router);
-export const url = router.url.bind(router);
-export const isActive = router.isActive.bind(router);
+// Expose actions directly; router methods are safe to destructure.
+export const { isActive, navigate, url } = router;
 ```
 
 ```svelte
@@ -75,7 +73,7 @@ Using `readable` from `svelte/store` ensures the store gets its initial value sy
 
 ### Pitfalls
 
-- Passing `router` directly as a Svelte store yields `undefined` for `$routerState` until the first navigation. Always use the `readable` wrapper.
+- Passing `router` directly as a Svelte store violates Svelte's synchronous initial-emission contract. Always use the `readable` wrapper.
 - The `readable` teardown is called when all subscribers unsubscribe. Do not call `router.dispose()` inside it unless you want to permanently shut down routing (e.g., end-to-end test cleanup).
 
 ### Related

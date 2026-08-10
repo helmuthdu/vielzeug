@@ -1998,6 +1998,7 @@ export default defineConfig({
       ],
       '/wayfinder/': [
         { link: '/wayfinder/', text: 'Overview' },
+        { link: '/wayfinder/migration', text: 'Migration' },
         {
           items: [
             { link: '/wayfinder/usage#basic-usage', text: 'Basic Usage' },
@@ -2006,8 +2007,8 @@ export default defineConfig({
             { link: '/wayfinder/usage#middleware', text: 'Middleware' },
             { link: '/wayfinder/usage#navigation', text: 'Navigation' },
             { link: '/wayfinder/usage#urls-and-active-state', text: 'URLs and Active State' },
-            { link: '/wayfinder/usage#resolve-without-navigating', text: 'Resolve Without Navigating' },
-            { link: '/wayfinder/usage#ssr-data-prefetch', text: 'SSR Data Prefetch' },
+            { link: '/wayfinder/usage#match-a-path-without-navigating', text: 'Match a Path Without Navigating' },
+            { link: '/wayfinder/usage#load-a-path-for-ssr', text: 'Load a Path for SSR' },
             { link: '/wayfinder/usage#state-and-subscriptions', text: 'State and Subscriptions' },
             { link: '/wayfinder/usage#scroll-restoration', text: 'Scroll Restoration' },
             { link: '/wayfinder/usage#testing', text: 'Testing' },

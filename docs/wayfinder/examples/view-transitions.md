@@ -63,7 +63,7 @@ Optional CSS:
 
 - `document.startViewTransition` is not available in all browsers and is absent in Node.js test environments. Wayfinder falls back to a plain navigation silently, so tests always pass.
 - Transitions run synchronously during the commit phase of navigation. Heavy CSS animations block the next interaction until the transition resolves.
-- Per-navigation `{ viewTransition: false }` still runs `document.startViewTransition` if the router default is `true`; it means the transition is skipped for the DOM swap, not the API call.
+- Per-navigation `{ viewTransition: false }` bypasses `document.startViewTransition`, even when the router default is `true`.
 
 ### Related
 

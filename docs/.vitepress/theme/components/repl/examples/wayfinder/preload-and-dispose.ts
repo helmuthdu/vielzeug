@@ -49,5 +49,5 @@ console.log('disposed before dispose():', router.disposed)
 router.dispose()
 console.log('disposed after dispose():', router.disposed)
 console.log('disposalSignal aborted:', router.disposalSignal.aborted)`,
-  name: 'Preload, waitFor, and Dispose',
+  name: 'Preload Cache and Dispose',
 };

@@ -97,55 +97,38 @@ yarn add @vielzeug/wayfinder
 
 ## Quick Start
 
+Create a memory-backed router, wait for initial routing, then navigate by name.
+
 ```ts
-import { createRouter } from '@vielzeug/wayfinder';
+import { createMemoryHistory, createRouter } from '@vielzeug/wayfinder';
 
 const router = createRouter({
+  history: createMemoryHistory('/'),
   routes: {
     home: { path: '/' },
-    dashboard: {
-      path: '/dashboard',
-      children: {
-        index: { index: true },
-        settings: {
-          path: 'settings',
-          data: async () => fetchSettings(),
-        },
-      },
-    },
+    settings: { path: '/settings' },
   },
-  notFound: { component: NotFoundPage },
 });
 
-await router.navigate({ name: 'dashboard.settings' });
+await router.ready;
+await router.navigate({ name: 'settings' });
+console.log(router.getSnapshot().location.pathname); // /settings
+router.dispose();
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- One declarative route table with nested names (`dashboard.settings`)
-- Named and raw-path navigation through one `navigate()` API
-- Lazy-load route modules on first navigation
-- Middleware for guards, analytics, and error boundaries
-- Route `data()` loaders with `AbortSignal` cancellation and async-generator streaming
-- Per-match `status` for granular loading/streaming feedback in nested layouts
-- Global `beforeLeave` leave guards with optional route scoping
-- Typed and coercible search params via `coerceSearch`
-- Per-route `onError` boundaries for degraded data states
-- Declarative `notFound` fallback in router options
-- Hover-prefetch via `router.preload()`
-- Branch resolve without navigation via `router.resolve()`
-- SSR data prefetch via `router.match(url)`
-- Scroll restoration via the `scroll` option
-- History entry state readable as `ctx.historyState`
-- Errors from data loaders exposed on `router.getSnapshot().error`
-- `router.waitFor(name)` for lifecycle coordination and testing
-- Memory history for tests and non-browser environments
-- Wildcard routes for catch-all cases
-- Base-path support for app subdirectories
-- View Transition API with per-navigation override
-- **Debug logging** via `debugRouter()` (`@vielzeug/wayfinder/devtools`) — logs every navigation phase change with `[wayfinder:nav]` prefixes; tree-shaken from production bundles
+- `createRouter()` — Compiles named, nested route tables.
+- `navigate()` — Commits route changes after middleware reaches its terminal stage.
+- `ready` — Signals that initial routing has settled.
+- `data()` — Receives cancellation through `AbortSignal` and can stream async-generator updates.
+- `beforeLeave()` — Blocks route exits before history changes.
+- `matchPath()` / `loadPath()` — Inspect routes synchronously or load route data without navigation.
+- `preload()` — Warms route data for a later matching navigation.
+- `createMemoryHistory()` — Runs routers in tests and non-browser environments.
+- `debugRouter()` — Logs navigation state from `@vielzeug/wayfinder/devtools`.
 
 </div>
 
@@ -156,6 +139,7 @@ await router.navigate({ name: 'dashboard.settings' });
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
+- [Migration Guide](./migration.md)
 
 </div>
 

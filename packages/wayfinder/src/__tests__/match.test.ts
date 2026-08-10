@@ -1,10 +1,20 @@
 /**
- * match() — SSR URL resolution without side effects.
+ * loadPath() — SSR URL resolution without side effects.
  */
 import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';
 
-describe('match()', () => {
+describe('loadPath()', () => {
+  it('replaces the removed match() method without a compatibility alias', async () => {
+    const router = createRouter({ history: createMemoryHistory('/'), routes: { home: { path: '/' } } });
+
+    await router.ready;
+
+    expect('match' in router).toBe(false);
+    await expect(router.loadPath('/')).resolves.not.toBeNull();
+    router.dispose();
+  });
+
   it('returns matched route state for a URL without modifying router state', async () => {
     const history = createMemoryHistory('/');
     const router = createRouter({
@@ -17,7 +27,7 @@ describe('match()', () => {
 
     await settle();
 
-    const state = await router.match('/about');
+    const state = await router.loadPath('/about');
 
     expect(state).not.toBeNull();
     expect(state?.location.pathname).toBe('/about');
@@ -35,7 +45,7 @@ describe('match()', () => {
 
     await settle();
 
-    const state = await router.match('/does-not-exist');
+    const state = await router.loadPath('/does-not-exist');
 
     expect(state).toBeNull();
     router.dispose();
@@ -53,9 +63,9 @@ describe('match()', () => {
 
     await settle();
 
-    const state = await router.match('/old');
+    const state = await router.loadPath('/old');
 
-    // match() follows the redirect transparently.
+    // loadPath() follows the redirect transparently.
     expect(state?.location.pathname).toBe('/new');
     expect(router.getSnapshot().location.pathname).toBe('/');
     router.dispose();
@@ -74,7 +84,7 @@ describe('match()', () => {
 
     await settle();
 
-    const state = await router.match('/page');
+    const state = await router.loadPath('/page');
 
     expect(dataFn).toHaveBeenCalledTimes(1);
     expect(state?.matches.at(-1)?.data).toEqual({ ssr: true });
@@ -96,7 +106,7 @@ describe('match()', () => {
     });
 
     await settle();
-    await router.match('/page');
+    await router.loadPath('/page');
 
     expect(pushSpy).not.toHaveBeenCalled();
     expect(replaceSpy).not.toHaveBeenCalled();
@@ -120,7 +130,7 @@ describe('match()', () => {
 
     await settle();
 
-    const state = await router.match('/broken');
+    const state = await router.loadPath('/broken');
 
     expect(state?.status).toBe('error');
     expect((state?.error as Error).message).toBe('load failed');
@@ -137,7 +147,7 @@ describe('match()', () => {
 
     await settle();
 
-    const state = await router.match('/app/page');
+    const state = await router.loadPath('/app/page');
 
     expect(state?.location.pathname).toBe('/page');
     expect(router.getSnapshot().location.pathname).toBe('/');
@@ -163,10 +173,10 @@ describe('match()', () => {
 
     await settle();
 
-    const state = await router.match('/page');
+    const state = await router.loadPath('/page');
 
     expect(state?.status).toBe('idle');
-    // match() drains the generator and exposes the return value as data.
+    // loadPath() drains the generator and exposes the return value as data.
     expect(state?.matches.at(-1)?.data).toBe('final');
     // Router navigation state must remain unaffected.
     expect(router.getSnapshot().location.pathname).toBe('/');
@@ -193,7 +203,7 @@ describe('match()', () => {
 
     // When the signal is already aborted, the data loader still runs for non-streaming loaders;
     // the signal is forwarded to the loader for cooperative cancellation.
-    const state = await router.match('/page', { signal: controller.signal });
+    const state = await router.loadPath('/page', { signal: controller.signal });
 
     // The route still matches; data may be undefined or the loader result depending on timing.
     expect(state).not.toBeNull();
@@ -223,7 +233,7 @@ describe('match()', () => {
     await settle();
 
     controller.abort();
-    await router.match('/page', { signal: controller.signal });
+    await router.loadPath('/page', { signal: controller.signal });
 
     expect(capturedSignal).toBeDefined();
     expect(capturedSignal?.aborted).toBe(true);

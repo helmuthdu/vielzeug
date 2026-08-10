@@ -88,7 +88,7 @@ describe('route context', () => {
 });
 
 describe('middleware pipeline', () => {
-  it('global middleware runs before route middleware before the handler', async () => {
+  it('global middleware runs before route middleware before the loader', async () => {
     const calls: string[] = [];
     const history = createMemoryHistory('/');
     const router = createRouter({
@@ -102,7 +102,7 @@ describe('middleware pipeline', () => {
       routes: {
         home: {
           data: () => {
-            calls.push('handler');
+            calls.push('loader');
           },
           middleware: [
             async (_ctx, next) => {
@@ -117,23 +117,23 @@ describe('middleware pipeline', () => {
 
     await settle();
 
-    expect(calls).toEqual(['global', 'route', 'handler']);
+    expect(calls).toEqual(['global', 'route', 'loader']);
     router.dispose();
   });
 
-  it('middleware that does not call next() blocks the handler', async () => {
-    const handler = vi.fn();
+  it('middleware that does not call next() blocks the loader', async () => {
+    const loader = vi.fn();
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
       routes: {
-        home: { data: handler, middleware: [vi.fn()], path: '/' },
+        home: { data: loader, middleware: [vi.fn()], path: '/' },
       },
     });
 
     await settle();
 
-    expect(handler).not.toHaveBeenCalled();
+    expect(loader).not.toHaveBeenCalled();
     router.dispose();
   });
 
@@ -155,6 +155,27 @@ describe('middleware pipeline', () => {
 
     expect(router.getSnapshot().location.pathname).toBe('/');
     expect(router.getSnapshot().status).toBe('idle');
+    expect(history.location.pathname).toBe('/');
+    router.dispose();
+  });
+
+  it('blocking middleware does not write programmatic navigation to history', async () => {
+    const history = createMemoryHistory('/');
+    const push = vi.spyOn(history, 'push');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        protected: { middleware: [async () => undefined], path: '/protected' },
+      },
+    });
+
+    await router.ready;
+    push.mockClear();
+    await router.navigate({ path: '/protected' });
+
+    expect(push).not.toHaveBeenCalled();
+    expect(history.location.pathname).toBe('/');
     router.dispose();
   });
 
@@ -237,7 +258,7 @@ describe('middleware pipeline', () => {
 });
 
 describe('navigation from context', () => {
-  it('ctx.navigate() named target redirects without running the original handler', async () => {
+  it('ctx.navigate() named target redirects without running the original loader', async () => {
     const source = vi.fn();
     const target = vi.fn();
     const history = createMemoryHistory('/from');
@@ -264,7 +285,7 @@ describe('navigation from context', () => {
     router.dispose();
   });
 
-  it('ctx.navigate() raw path forwards query params to the destination handler', async () => {
+  it('ctx.navigate() raw path forwards query params to the destination loader', async () => {
     const target = vi.fn();
     const history = createMemoryHistory('/from');
     const router = createRouter({

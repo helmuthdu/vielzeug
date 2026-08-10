@@ -3,7 +3,7 @@
  */
 import { createMemoryHistory, createRouter, WayfinderDisposedError } from '../';
 import { mockHistory, mockLocation, resetMocks } from './setup';
-import { settle } from './test-utils';
+import { createDeferred, settle } from './test-utils';
 
 describe('beforeLeave', () => {
   beforeEach(() => {
@@ -39,6 +39,28 @@ describe('beforeLeave', () => {
 
     expect(data).not.toHaveBeenCalled();
     expect(router.getSnapshot().location.pathname).toBe('/');
+    router.dispose();
+  });
+
+  it('invalidates an earlier attempt while blockers are pending', async () => {
+    const gate = createDeferred<boolean>();
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: { first: { path: '/first' }, home: { path: '/' }, second: { path: '/second' } },
+    });
+
+    await router.ready;
+    router.beforeLeave(() => gate.promise);
+
+    const first = router.navigate({ path: '/first' });
+    const second = router.navigate({ path: '/second' });
+
+    gate.resolve(true);
+    await Promise.all([first, second]);
+
+    expect(history.location.pathname).toBe('/second');
+    expect(router.getSnapshot().location.pathname).toBe('/second');
     router.dispose();
   });
 

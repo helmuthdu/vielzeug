@@ -31,10 +31,8 @@ router.subscribe((next) => {
   state.value = next;
 });
 
-// Stable bound references, safe to return from the composable.
-const isActive = router.isActive.bind(router);
-const navigate = router.navigate.bind(router);
-const url = router.url.bind(router);
+// Router actions are stable own properties and safe to return from the composable.
+const { isActive, navigate, url } = router;
 
 export function useRouter() {
   return { isActive, navigate, state: readonly(state), url };
@@ -89,7 +87,7 @@ This gives a Vue-Router-like DX (`useRouter()` composable, link + view) without 
 ### Pitfalls
 
 - Use `shallowRef` not `ref`. `RouteState` is a deep immutable object; deep tracking wastes memory and triggers false positives on object identity comparisons.
-- `isActive()` reads `history.location` directly, not the reactive ref. Add `void state.value` in the `active` computed (shown above) to force recomputation on every navigation.
+- `isActive()` reads the router snapshot. Add `void state.value` in the `active` computed (shown above) so Vue tracks every navigation.
 
 ### Related
 

@@ -26,12 +26,8 @@ const router = createRouter({
   },
 });
 
-// Stable bound references, safe to return from the hook.
-const getSnapshot = () => router.getSnapshot();
-const subscribe = (cb: () => void) => router.subscribe(cb);
-const isActive = router.isActive.bind(router);
-const navigate = router.navigate.bind(router);
-const url = router.url.bind(router);
+// Stable router actions are safe to destructure and return from the hook.
+const { getSnapshot, isActive, navigate, subscribe, url } = router;
 
 export function useRouter() {
   const state = useSyncExternalStore(subscribe, getSnapshot);

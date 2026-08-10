@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor!: redesign navigation coordination, add ready, and rename resolve/match to matchPath/loadPath",
+      "packageName": "@vielzeug/wayfinder",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/wayfinder"
+}

@@ -82,7 +82,9 @@ export async function executeMiddlewarePipeline<TRoutes extends RouteTable>(
   context: RouteContext<RouteParams, TRoutes>,
   middleware: readonly Middleware<TRoutes>[],
   terminal: () => Promise<void>,
-): Promise<void> {
+): Promise<boolean> {
+  let terminalRan = false;
+
   async function dispatch(index: number): Promise<void> {
     if (index < middleware.length) {
       let called = false;
@@ -97,10 +99,13 @@ export async function executeMiddlewarePipeline<TRoutes extends RouteTable>(
       return;
     }
 
+    terminalRan = true;
     await terminal();
   }
 
   await dispatch(0);
+
+  return terminalRan;
 }
 
 // ─── Error reporting ──────────────────────────────────────────────────────────

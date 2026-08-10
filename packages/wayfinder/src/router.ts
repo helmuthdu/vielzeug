@@ -30,6 +30,7 @@ import type {
   Unsubscribe,
 } from './types';
 
+import { createNavigationCoordinator, type NavigationAttempt } from './_navigation';
 import { compileRoutes } from './compile';
 import {
   buildMatchBranch,
@@ -143,8 +144,8 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   readonly #onError?: RouterOptions<TRoutes, TMeta, TComponent>['onError'];
 
   // Mutable navigation state
-  #abortController: AbortController | null = null;
   readonly #beforeLeaveBlockers = new Set<RegisteredBlocker>();
+  readonly #navigation = createNavigationCoordinator();
   #currentState: RouteState<TMeta, TComponent>;
   #disposed = false;
   readonly #disposeController = new AbortController();
@@ -158,6 +159,9 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   readonly #preload: ReturnType<typeof createPreloadManager>;
 
   readonly #unlistenHistory: () => void;
+
+  /** Resolves when the constructor-triggered navigation has settled; rejects if it fails. */
+  readonly ready: Promise<void>;
 
   constructor(options: RouterOptions<TRoutes, TMeta, TComponent>) {
     const compiled = compileRoutes(options);
@@ -205,7 +209,39 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     const { hash, pathname, search } = this.#history.location;
 
     this.#lastHref = `${pathname}${search}${hash}`;
-    this.#runInBackground(this.#handleRoute(), { source: 'initial-navigation' });
+
+    const attempt = this.#navigation.begin();
+
+    this.ready = this.#handleRoute(
+      attempt,
+      readLocation(this.#base, this.#history),
+      undefined,
+      0,
+      false,
+      (location, replace) => {
+        if (!attempt.isCurrent()) return;
+
+        const href = this.#hrefForLocation(location);
+
+        if (replace) this.#history.replace(href, location.historyState);
+
+        this.#lastHref = href;
+      },
+    ).then(() => undefined);
+    this.#runInBackground(this.ready, { source: 'initial-navigation' });
+
+    // Router actions are intentionally bound once so they remain safe when destructured.
+    this.beforeLeave = this.beforeLeave.bind(this);
+    this.dispose = this.dispose.bind(this);
+    this.getSnapshot = this.getSnapshot.bind(this);
+    this.isActive = this.isActive.bind(this);
+    this.loadPath = this.loadPath.bind(this);
+    this.matchPath = this.matchPath.bind(this);
+    this.navigate = this.navigate.bind(this);
+    this.preload = this.preload.bind(this);
+    this.subscribe = this.subscribe.bind(this);
+    this.url = this.url.bind(this);
+    this.waitFor = this.waitFor.bind(this);
   }
 
   // ─── Public state ─────────────────────────────────────────────────────────
@@ -245,9 +281,8 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   /**
    * Navigate using a named route target or a raw path target.
    *
-   * If the route handler throws, the navigation is considered committed — state reflects
-   * the destination with `status: 'idle'` and the browser URL is updated — but the
-   * returned Promise rejects with the handler error. `status` is NOT set to `'error'`.
+   * If a data loader throws after terminal execution begins, history has already committed
+   * the destination and the returned Promise rejects with the loader error.
    */
   navigate(
     target: NamedNavigationTarget<TRoutes> | RawNavigationTarget | string,
@@ -281,8 +316,8 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     return exact ? matchRouteFor(pathname, [route]).record != null : matchesPrefix(pathname, route);
   }
 
-  /** Resolve a pathname to the matching route branch without running middleware or handlers. Returns null for redirects or no match. */
-  resolve(pathname: string): RouteMatchBranch<TMeta, TComponent> | null {
+  /** Match a pathname to a route branch without running middleware or data loaders. Returns null for redirects or no match. */
+  matchPath(pathname: string): RouteMatchBranch<TMeta, TComponent> | null {
     const normalizedPathname = stripBase(normalizePath(pathname), this.#base);
     const { params, record } = matchRouteFor(normalizedPathname, this.#records);
 
@@ -300,15 +335,12 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   }
 
   /**
-   * Resolve a URL to a matched route state including data loader results, without
-   * modifying router state or history. Follows declarative redirects.
-   *
-   * Note: lazy route modules are resolved as a side effect of this call.
-   * Useful for SSR data pre-fetching.
+   * Load a URL into a route state including data loader results, without modifying
+   * router state or history. Follows declarative redirects and may resolve lazy modules.
    *
    * R5: Accepts an options object instead of a bare AbortSignal.
    */
-  async match(url: string, options?: { signal?: AbortSignal }): Promise<RouteState<TMeta, TComponent> | null> {
+  async loadPath(url: string, options?: { signal?: AbortSignal }): Promise<RouteState<TMeta, TComponent> | null> {
     const prepared = await this.#resolveUrl(url);
 
     if (prepared.type !== 'matched') return null;
@@ -478,9 +510,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     this.#disposed = true;
     this.#beforeLeaveBlockers.clear();
     this.#listeners.clear();
-    // Abort in-flight navigation — any isCurrent() checks via signal.aborted return false.
-    this.#abortController?.abort();
-    this.#abortController = null;
+    this.#navigation.invalidate(new WayfinderDisposedError());
     this.#unlistenHistory();
     // Abort the disposal signal last — waitFor() listeners clean themselves up via this signal.
     this.#disposeController.abort(new WayfinderDisposedError());
@@ -511,17 +541,12 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   }
 
   async #handleHistoryNavigation(newHref: string, previousHref: string): Promise<void> {
+    const attempt = this.#navigation.begin();
     const activeMatchNames = this.#currentState.matches.map((m) => m.name);
-    const parsed = new URL(newHref, 'http://localhost');
-    const destPathname = stripBase(parsed.pathname, this.#base);
-    const { params: destParams, record: destRecord } = matchRouteFor(destPathname, this.#records);
-    const dest: NavigationDestination = {
-      name: destRecord?.leaf.name,
-      params: destParams,
-      pathname: destPathname,
-      query: parseQuery(parsed.search),
-    };
-    const allowed = await runLeaveBlockers(this.#beforeLeaveBlockers, activeMatchNames, dest);
+    const destination = this.#navigationDestination(newHref);
+    const allowed = await runLeaveBlockers(this.#beforeLeaveBlockers, activeMatchNames, destination);
+
+    if (!attempt.isCurrent()) return;
 
     if (!allowed) {
       this.#history.replace(previousHref, this.#currentState.location.historyState);
@@ -529,8 +554,26 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
       return;
     }
 
-    this.#lastHref = newHref;
-    await this.#handleRoute();
+    const terminalRan = await this.#handleRoute(
+      attempt,
+      readLocation(this.#base, this.#history),
+      undefined,
+      0,
+      false,
+      (location, replace) => {
+        if (!attempt.isCurrent()) return;
+
+        const href = this.#hrefForLocation(location);
+
+        if (replace) this.#history.replace(href, location.historyState);
+
+        this.#lastHref = href;
+      },
+    );
+
+    if (attempt.isCurrent() && !terminalRan) {
+      this.#history.replace(previousHref, this.#currentState.location.historyState);
+    }
   }
 
   // ─── Private: error handling ──────────────────────────────────────────────
@@ -577,7 +620,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
   /**
    * Drain all data loaders to completion. Async generators are consumed entirely.
-   * Used in `match()` and `preload()`. Per-def `onError` boundaries are applied.
+   * Used in `loadPath()` and `preload()`. Per-def `onError` boundaries are applied.
    */
   async #loadDataDrain(
     defs: readonly RouteBranchDef<TMeta, TComponent>[],
@@ -861,6 +904,8 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
         try {
           dataResults = await this.#loadDataStream(defs, context, signal, isCurrent, location, params);
         } catch (error) {
+          if (!isCurrent()) return;
+
           this.#currentState = createRouteState<TMeta, TComponent>({
             error,
             location,
@@ -909,31 +954,34 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   // ─── Private: main navigation orchestrator ────────────────────────────────
 
   /**
-   * R8: Declarative redirect loops are detected by the `depth` counter passed through
-   * `#commitRedirect` (mirrors `#resolveUrl`'s 5-hop limit). Middleware redirects
-   * (via `ctx.navigate()`) are handled by `#navigateToPath`.
-   * R6: `internalNavigation` boolean is replaced by `#commitRedirect` for redirect paths.
+   * Declarative redirects reuse the active attempt and replace the final history entry.
+   * Middleware redirects call `ctx.navigate()`, which starts a new attempt.
    */
-  async #handleRoute(useTransition?: boolean, depth = 0): Promise<void> {
-    this.#abortController?.abort();
-
-    const controller = new AbortController();
-
-    this.#abortController = controller;
-
+  async #handleRoute(
+    attempt: NavigationAttempt,
+    currentLocation: RouteLocation,
+    useTransition?: boolean,
+    depth = 0,
+    replace = false,
+    commit: (location: RouteLocation, replace: boolean) => void = () => undefined,
+  ): Promise<boolean> {
     const prevState = this.#currentState;
-    const isCurrent = (): boolean => !controller.signal.aborted && !this.#disposed;
-
-    const currentLocation = readLocation(this.#base, this.#history);
+    const isCurrent = (): boolean => attempt.isCurrent() && !this.#disposed;
     const prepared = await this.#prepareRoute(currentLocation);
 
-    if (!isCurrent()) return;
+    if (!isCurrent()) return false;
 
     if (prepared.type === 'redirect') {
-      // R8: follow declarative redirect internally without user-visible blockers.
-      await this.#commitRedirect(prepared.redirectTo, true, depth);
+      if (depth >= 5) throw new WayfinderRedirectLoopError();
 
-      return;
+      return this.#handleRoute(
+        attempt,
+        this.#locationFromPath(prepared.redirectTo, currentLocation.historyState),
+        useTransition,
+        depth + 1,
+        true,
+        commit,
+      );
     }
 
     if (prepared.type === 'unmatched') {
@@ -942,6 +990,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
         const nfDefs = [this.#notFoundRecord.leaf];
         const nfBranch = buildMatchBranch(nfDefs, {}, currentLocation.pathname, [undefined]);
         let committed = false;
+        let terminalRan = false;
 
         // Apply global coerceSearch to the unmatched location so notFound handlers
         // receive typed query params, consistent with matched-route behaviour.
@@ -966,18 +1015,24 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
             (target, options) => this.navigate(target, options),
           );
 
-          await executeMiddlewarePipeline(
+          terminalRan = await executeMiddlewarePipeline(
             context,
             [...this.#globalMiddleware, ...this.#notFoundRecord!.ownMiddleware] as unknown as Middleware<TRoutes>[],
             async () => {
+              if (!isCurrent()) return;
+
               committed = true;
+              commit(currentLocation, replace);
+
+              if (!isCurrent()) return;
+
               await this.#runTerminal(
                 this.#notFoundRecord!,
                 context,
                 currentLocation,
                 {},
                 nfBranch,
-                controller.signal,
+                attempt.signal,
                 isCurrent,
               );
             },
@@ -993,8 +1048,14 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
           }
         }
 
-        return;
+        return terminalRan && committed;
       }
+
+      if (!isCurrent()) return false;
+
+      commit(prepared.location, replace);
+
+      if (!isCurrent()) return false;
 
       this.#currentState = createRouteState<TMeta, TComponent>({
         location: prepared.location,
@@ -1004,11 +1065,12 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
       this.#notifyListeners();
       this.#applyScroll(this.#currentState, prevState);
 
-      return;
+      return true;
     }
 
     const { branch, location, params, record, resolvedQuery } = prepared;
     let committed = false;
+    let terminalRan = false;
 
     const run = async (): Promise<void> => {
       if (!isCurrent()) return;
@@ -1017,12 +1079,18 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
         this.navigate(target, options),
       );
 
-      await executeMiddlewarePipeline(
+      terminalRan = await executeMiddlewarePipeline(
         context,
         [...this.#globalMiddleware, ...record.ownMiddleware] as unknown as Middleware<TRoutes>[],
         async () => {
+          if (!isCurrent()) return;
+
           committed = true;
-          await this.#runTerminal(record, context, location, params, branch, controller.signal, isCurrent);
+          commit(location, replace);
+
+          if (!isCurrent()) return;
+
+          await this.#runTerminal(record, context, location, params, branch, attempt.signal, isCurrent);
         },
       );
     };
@@ -1035,6 +1103,8 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
         this.#applyScroll(this.#currentState, prevState);
       }
     }
+
+    return terminalRan && committed;
   }
 
   // ─── Private: scroll ─────────────────────────────────────────────────────
@@ -1064,31 +1134,45 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     return `${joinPaths(this.#base, normalizedPath)}${parsed.search}${parsed.hash}`;
   }
 
-  /**
-   * R6: Internal redirect path — pushes/replaces history and re-runs route handling
-   * without running leave blockers (user never initiated this navigation).
-   * R8: accepts `depth` to detect declarative redirect loops (mirrors #resolveUrl's 5-hop limit).
-   */
-  async #commitRedirect(path: string, replace = true, depth = 0): Promise<void> {
-    if (depth >= 5) throw new WayfinderRedirectLoopError();
+  #locationFromPath(path: string, historyState: unknown): RouteLocation {
+    const parsed = new URL(this.#resolveDestination(path), 'http://localhost');
 
-    const destination = this.#resolveDestination(path);
-
-    this.#lastHref = destination;
-
-    if (replace) {
-      this.#history.replace(destination);
-    } else {
-      this.#history.push(destination);
-    }
-
-    await this.#handleRoute(undefined, depth + 1);
+    return {
+      hash: parsed.hash.replace(/^#/, ''),
+      historyState,
+      pathname: stripBase(parsed.pathname, this.#base),
+      query: parseQuery(parsed.search),
+    };
   }
 
-  /**
-   * User-initiated navigation. Always runs leave blockers.
-   * R6: `internalNavigation` param is removed; use `#commitRedirect` for redirect paths.
-   */
+  #hrefForLocation(location: RouteLocation): string {
+    const search = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(location.query)) {
+      if (Array.isArray(value)) value.forEach((item) => search.append(key, item));
+      else search.set(key, value);
+    }
+
+    const query = search.toString();
+    const hash = location.hash ? `#${location.hash}` : '';
+
+    return `${joinPaths(this.#base, location.pathname)}${query ? `?${query}` : ''}${hash}`;
+  }
+
+  #navigationDestination(href: string): NavigationDestination {
+    const parsed = new URL(href, 'http://localhost');
+    const pathname = stripBase(parsed.pathname, this.#base);
+    const { params, record } = matchRouteFor(pathname, this.#records);
+
+    return {
+      name: record?.leaf.name,
+      params,
+      pathname,
+      query: parseQuery(parsed.search),
+    };
+  }
+
+  /** User-initiated navigation. History changes only after middleware reaches the terminal stage. */
   async #navigateToPath(path: string, options: NavigateOptions = {}): Promise<void> {
     this.#assertNotDisposed();
 
@@ -1096,37 +1180,33 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
     if (!options.force && destination === this.#lastHref) return;
 
-    const prevLastHref = this.#lastHref;
-    const activeMatchNames = this.#currentState.matches.map((m) => m.name);
-    const parsed = new URL(destination, 'http://localhost');
-    const destPathname = stripBase(parsed.pathname, this.#base);
-    const { params: destParams, record: destRecord } = matchRouteFor(destPathname, this.#records);
-    const dest: NavigationDestination = {
-      name: destRecord?.leaf.name,
-      params: destParams,
-      pathname: destPathname,
-      query: parseQuery(parsed.search),
-    };
-    const allowed = await runLeaveBlockers(this.#beforeLeaveBlockers, activeMatchNames, dest);
+    const attempt = this.#navigation.begin();
+    const activeMatchNames = this.#currentState.matches.map((match) => match.name);
+    const allowed = await runLeaveBlockers(
+      this.#beforeLeaveBlockers,
+      activeMatchNames,
+      this.#navigationDestination(destination),
+    );
 
-    if (!allowed) return;
+    if (!attempt.isCurrent() || !allowed) return;
 
-    this.#lastHref = destination;
+    await this.#handleRoute(
+      attempt,
+      this.#locationFromPath(destination, options.state),
+      options.viewTransition,
+      0,
+      options.replace ?? false,
+      (location, replace) => {
+        if (!attempt.isCurrent()) return;
 
-    if (options.replace) {
-      this.#history.replace(destination, options.state);
-    } else {
-      this.#history.push(destination, options.state);
-    }
+        const href = this.#hrefForLocation(location);
 
-    try {
-      await this.#handleRoute(options.viewTransition);
-    } catch (err) {
-      // Restore #lastHref to the pre-navigation value so the same destination
-      // can be retried after a transient failure.
-      this.#lastHref = prevLastHref;
-      throw err;
-    }
+        if (replace) this.#history.replace(href, location.historyState);
+        else this.#history.push(href, location.historyState);
+
+        this.#lastHref = href;
+      },
+    );
   }
 }
 

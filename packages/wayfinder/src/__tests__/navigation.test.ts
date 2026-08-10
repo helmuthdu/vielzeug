@@ -231,6 +231,26 @@ describe('Navigation', () => {
   });
 
   describe('Lifecycle', () => {
+    it('does not abort initial navigation when deduplicating the current URL', async () => {
+      const loaded = createDeferred<void>();
+      const history = createMemoryHistory('/');
+      const router = createRouter({
+        history,
+        routes: {
+          home: { data: () => loaded.promise, path: '/' },
+        },
+      });
+
+      await Promise.resolve();
+      await router.navigate({ path: '/' });
+      loaded.resolve();
+      await router.ready;
+
+      expect(router.getSnapshot().location.pathname).toBe('/');
+      expect(router.getSnapshot().status).toBe('idle');
+      router.dispose();
+    });
+
     it('constructor triggers the initial route match', async () => {
       const data = vi.fn();
 
@@ -290,6 +310,38 @@ describe('Navigation', () => {
 
       await expect(waiting).rejects.toThrow(WayfinderDisposedError);
     });
+
+    it('ready resolves after the initial navigation settles', async () => {
+      const data = vi.fn(async () => ({ loaded: true }));
+      const router = createRouter({
+        history: createMemoryHistory('/page'),
+        routes: { page: { data, path: '/page' } },
+      });
+
+      await router.ready;
+
+      expect(data).toHaveBeenCalledTimes(1);
+      expect(router.getSnapshot().location.pathname).toBe('/page');
+      router.dispose();
+    });
+
+    it('ready rejects when the initial navigation fails', async () => {
+      const router = createRouter({
+        history: createMemoryHistory('/broken'),
+        onError: vi.fn(),
+        routes: {
+          broken: {
+            data: async () => {
+              throw new Error('initial failure');
+            },
+            path: '/broken',
+          },
+        },
+      });
+
+      await expect(router.ready).rejects.toThrow('initial failure');
+      router.dispose();
+    });
   });
 
   describe('State & subscribers', () => {
@@ -345,6 +397,28 @@ describe('Navigation', () => {
       expect(listener).toHaveBeenCalledTimes(1);
       expect(listener.mock.calls[0]?.[0].location.pathname).toBe('/about');
     });
+
+    it('keeps public router actions safe to destructure', async () => {
+      const router = createRouter({
+        history: createMemoryHistory('/'),
+        routes: { home: { path: '/' }, page: { path: '/page' } },
+      });
+
+      await router.ready;
+
+      const { getSnapshot, isActive, matchPath, navigate, subscribe, url } = router;
+      const listener = vi.fn();
+      const unsubscribe = subscribe(listener);
+
+      expect(url('page')).toBe('/page');
+      expect(matchPath('/page')?.at(-1)?.name).toBe('page');
+      await navigate({ name: 'page' });
+      expect(getSnapshot().location.pathname).toBe('/page');
+      expect(isActive('page')).toBe(true);
+
+      unsubscribe();
+      router.dispose();
+    });
   });
 
   describe('Helpers', () => {
@@ -374,7 +448,7 @@ describe('Navigation', () => {
         },
       });
 
-      expect(router.resolve('/app/dashboard/settings')).toEqual([
+      expect(router.matchPath('/app/dashboard/settings')).toEqual([
         {
           component: undefined,
           data: undefined,
@@ -394,7 +468,7 @@ describe('Navigation', () => {
           status: 'idle',
         },
       ]);
-      expect(router.resolve('/app/missing')).toBeNull();
+      expect(router.matchPath('/app/missing')).toBeNull();
     });
 
     it('returns null from resolve for redirect routes', () => {
@@ -405,8 +479,8 @@ describe('Navigation', () => {
         },
       });
 
-      expect(router.resolve('/legacy')).toBeNull();
-      expect(router.resolve('/current')).toEqual([
+      expect(router.matchPath('/legacy')).toBeNull();
+      expect(router.matchPath('/current')).toEqual([
         {
           component: undefined,
           data: undefined,

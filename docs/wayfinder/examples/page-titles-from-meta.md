@@ -40,19 +40,20 @@ const router = createRouter({
   },
 });
 
-// Set title on initial load from current snapshot, then update on every navigation.
+// Wait for initial routing before reading the first snapshot, then update on later state changes.
 const applyTitle = (state: ReturnType<typeof router.getSnapshot>) => {
   const m = state.matches.at(-1)?.meta as Meta | undefined;
   document.title = m?.title ? `${m.title} — My App` : 'My App';
 };
 
+await router.ready;
 applyTitle(router.getSnapshot());
 router.subscribe(applyTitle);
 ```
 
 ### Pitfalls
 
-- `router.subscribe()` does not fire for the initial navigation. Call `applyTitle(router.getSnapshot())` before subscribing, or the title will be blank until the first user-triggered navigation.
+- `router.subscribe()` does not synchronously emit the current snapshot. Await `router.ready`, then apply the current snapshot before subscribing.
 - For nested routes, use all entries in `state.matches` (not just the leaf) to build breadcrumb-style titles from root to leaf.
 
 ### Related

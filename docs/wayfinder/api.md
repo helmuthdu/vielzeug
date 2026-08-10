@@ -18,8 +18,9 @@ description: Complete API reference for Wayfinder.
 | `router.subscribe(listener)`            | Register a listener for state changes                      | Sync (returns unsub) | Listener is **not** called immediately with current state                                                 |
 | `router.url(name, params?, query?)`     | Build a URL for a named route                              | Sync                 | Throws if the route name is unknown                                                                       |
 | `router.isActive(name, options?)`       | Check if a named route matches the current URL             | Sync                 | Compares against the current snapshot pathname, not `history.location` directly                           |
-| `router.resolve(pathname)`              | Resolve a pathname to a branch without side effects        | Sync                 | Returns `null` for redirect routes                                                                        |
-| `router.match(url, options?)`           | Resolve a URL to a full state including data loaders       | Async                | Lazy modules are resolved as a side effect                                                                |
+| `router.matchPath(pathname)`            | Inspect a pathname as a branch without side effects            | Sync                 | Returns `null` for redirect routes                                                                    |
+| `router.loadPath(url, options?)`        | Load a URL into a full state including data loaders         | Async                | Lazy modules are resolved as a side effect                                                            |
+| `router.ready`                          | Await the initial navigation                                | Async                | Rejects when initial loading fails                                                                    |
 | `router.preload(name, params?, query?)` | Eagerly run data loaders without navigating                | Async                | Pass `query` to match the navigation cache key; rejects with `WayfinderDisposedError` if the router is disposed |
 | `router.waitFor(name)`                  | Wait for the router to settle on a named route             | Async                | Rejects immediately if `status === 'error'`; rejects with `WayfinderDisposedError` if disposed while pending |
 | `router.beforeLeave(blocker, options?)` | Register a global leave guard                              | Sync (returns unsub) | Scoped to specific routes via `options.routes`                                                            |
@@ -201,6 +202,8 @@ await router.navigate({ name: 'search', query: { q: 'wayfinder' }, hash: 'result
 
 **Returns:** `Promise<void>`
 
+History is written only after middleware reaches the terminal stage. Returning from middleware without `next()` cancels the programmatic navigation without changing history or the route snapshot.
+
 Named routes stay the primary API, but `navigate()` also accepts raw path objects or a plain string:
 
 ```ts
@@ -239,34 +242,34 @@ Check whether the current pathname matches a named route exactly or by prefix.
 
 **Returns:** `boolean`
 
-#### `router.resolve(pathname)`
+#### `router.matchPath(pathname)`
 
 ```ts
-router.resolve('/app/dashboard/settings');
+router.matchPath('/app/dashboard/settings');
 // => [
 //      { name: 'dashboard', ... },
 //      { name: 'dashboard.settings', ... },
 //    ]
 ```
 
-Resolve a pathname without running middleware, handlers, data loaders, or subscribers. Strips the configured `base` automatically. Returns the matched branch from root to leaf, or `null` for redirect routes and no-match.
+Inspect a pathname without running middleware, data loaders, or subscribers. Strips the configured `base` automatically. Returns the matched branch from root to leaf, or `null` for redirect routes and no-match.
 
 **Returns:** `RouteMatchBranch | null`
 
 ---
 
-#### `router.match(url, options?)`
+#### `router.loadPath(url, options?)`
 
 ```ts
 // SSR data prefetch
-const state = await router.match('/users/42');
+const state = await router.loadPath('/users/42');
 
 // With cancellation
 const controller = new AbortController();
-const state = await router.match('/dashboard', { signal: controller.signal });
+const state = await router.loadPath('/dashboard', { signal: controller.signal });
 ```
 
-Resolve a full URL to a `RouteState` including data loader results, without modifying router state or history. Follows declarative redirects (up to five hops) and resolves lazy modules as a side effect. Returns `null` for unmatched URLs.
+Load a full URL into a `RouteState` including data loader results, without modifying router state or history. Follows declarative redirects (up to five hops) and resolves lazy modules as a side effect. Returns `null` for unmatched URLs.
 
 When a `data()` function throws, the returned state has `status: 'error'` and `error` set to the thrown value.
 
@@ -365,6 +368,17 @@ For permanent declarative redirects (URL aliases), use the `redirect` field on t
 
 ### State
 
+#### `router.ready`
+
+A `Promise<void>` for the constructor-triggered navigation. It resolves after initial middleware, redirects, lazy modules, and data loaders settle. It resolves after a blocked or unmatched initial navigation, and rejects if initial navigation fails.
+
+```ts
+const router = createRouter({ routes });
+await router.ready;
+```
+
+---
+
 #### `router.getSnapshot()`
 
 Returns the current immutable route state snapshot. Use this to read state synchronously. Compatible with React's `useSyncExternalStore`:
@@ -401,7 +415,7 @@ const unsubscribe = router.subscribe((state) => {
 });
 ```
 
-Register a listener that is called after each subsequent state change. The listener is **not** called immediately — use `router.getSnapshot()` to read the current state synchronously.
+Register a listener for future state changes, including loading and streaming updates. The listener is **not** called with the current snapshot — call `router.getSnapshot()` when you subscribe if you need it.
 
 **Returns:** `() => void`
 

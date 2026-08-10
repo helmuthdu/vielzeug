@@ -11,49 +11,29 @@ Start with the [Overview](./index.md), then use this page for the day-to-day API
 
 ## Basic Usage
 
-```ts
-import { createRouter, redirectTo } from '@vielzeug/wayfinder';
+Create a deterministic router with memory history, wait for startup, and navigate by route name.
 
-const routes = {
-  home: {
-    path: '/',
-  },
-  login: {
-    path: '/login',
-  },
-  dashboard: {
-    path: '/dashboard',
-    middleware: [requireAuth],
-    children: {
-      index: {
-        index: true,
-      },
-      settings: {
-        path: 'settings',
-        data: async () => fetchSettings(),
-      },
-    },
-  },
-  userDetail: {
-    path: '/users/:id',
-    data: async ({ params }) => fetchUser(params.id),
-    meta: { title: 'User' },
-  },
-};
+```ts
+import { createMemoryHistory, createRouter } from '@vielzeug/wayfinder';
 
 const router = createRouter({
-  base: '/app',
-  middleware: [logger],
-  notFound: {
-    component: NotFoundPage,
+  history: createMemoryHistory('/'),
+  routes: {
+    home: { path: '/' },
+    settings: {
+      data: async () => ({ section: 'settings' }),
+      path: '/settings',
+    },
   },
-  onError: (error, context) => reportError(error, context),
-  routes,
-  viewTransition: true,
 });
+
+await router.ready;
+await router.navigate({ name: 'settings' });
+console.log(router.getSnapshot().matches.at(-1)?.data);
+router.dispose();
 ```
 
-`routes` is required. Wayfinder names come from the object keys, and object key order controls match precedence.
+`routes` is required. Route keys become names, and object key order controls match precedence.
 
 ## Define Routes
 
@@ -438,26 +418,26 @@ router.isActive('users');
 router.isActive('users', { exact: true });
 ```
 
-`isActive(name)` is useful for parent navigation items.
+`isActive(name)` reads the current router snapshot and is useful for parent navigation items.
 
-## Resolve Without Navigating
+## Match a Path Without Navigating
 
 ```ts
-const branch = router.resolve('/app/dashboard/settings');
+const branch = router.matchPath('/app/dashboard/settings');
 
 if (branch?.at(-1)?.name === 'dashboard.settings') {
   warmSettingsPanel();
 }
 ```
 
-`resolve()` strips the configured base automatically and returns the full matched branch (root to leaf). Data loaders are not executed.
+`matchPath()` strips the configured base automatically and returns the full matched branch (root to leaf). Data loaders are not executed.
 
-## SSR Data Prefetch
+## Load a Path for SSR
 
-Use `router.match(url)` to resolve a full route state including data loader results without modifying router state or history. Ideal for server-side data prefetching.
+Use `router.loadPath(url)` to load a full route state including data loader results without modifying router state or history. This is useful for server-side data prefetching.
 
 ```ts
-const state = await router.match('/users/42');
+const state = await router.loadPath('/users/42');
 
 if (state) {
   const data = state.matches.at(-1)?.data;
@@ -469,10 +449,10 @@ Pass an `AbortSignal` via the options object to cancel in-flight loaders:
 
 ```ts
 const controller = new AbortController();
-const state = await router.match('/users/42', { signal: controller.signal });
+const state = await router.loadPath('/users/42', { signal: controller.signal });
 ```
 
-`match()` follows declarative redirects (up to five hops) and resolves lazy modules as a side effect.
+`loadPath()` follows declarative redirects (up to five hops) and resolves lazy modules as a side effect.
 
 ## State and Subscriptions
 
@@ -595,12 +575,8 @@ const router = createRouter({
   notFound: { component: NotFoundPage },
 });
 
-// Stable references outside the hook — do not recreate on every render.
-const getSnapshot = () => router.getSnapshot();
-const subscribe = (cb: () => void) => router.subscribe(cb);
-const navigate = router.navigate.bind(router);
-const url = router.url.bind(router);
-const isActive = router.isActive.bind(router);
+// Stable router actions are safe to destructure outside the hook.
+const { getSnapshot, isActive, navigate, subscribe, url } = router;
 
 export function useRouter() {
   const state = useSyncExternalStore(subscribe, getSnapshot);
@@ -634,12 +610,9 @@ router.subscribe((next) => {
 });
 
 export function useRouter() {
-  return {
-    isActive: router.isActive.bind(router),
-    navigate: router.navigate.bind(router),
-    state: readonly(state),
-    url: router.url.bind(router),
-  };
+  const { isActive, navigate, url } = router;
+
+  return { isActive, navigate, state: readonly(state), url };
 }
 ```
 
@@ -659,9 +632,7 @@ export function useRouter() {
 
   // readable injects the initial value; subscribe() drives updates.
   export const routerState = readable(router.getSnapshot(), (set) => router.subscribe(set));
-  export const navigate = router.navigate.bind(router);
-  export const url = router.url.bind(router);
-  export const isActive = router.isActive.bind(router);
+  export const { isActive, navigate, url } = router;
 </script>
 ```
 

@@ -19,6 +19,8 @@ import { createPageSource } from '@vielzeug/sourcerer';
 
 const history = createMemoryHistory('/users?page=1&search=ada');
 const router = createRouter({ history, routes: { users: { path: '/users' } } });
+await router.ready;
+
 const source = createPageSource({
   autoStart: false,
   load: async ({ query }) => ({ data: [`${query.search}:${query.page}`], total: 1 }),

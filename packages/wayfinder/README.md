@@ -31,8 +31,9 @@
 - Declarative `notFound` fallback route
 - Browser and memory history drivers
 - `redirectTo()` middleware helper
-- SSR-compatible `match()` for data prefetching without side effects
-- `waitFor(name)` for testing and lifecycle coordination
+- SSR-compatible `loadPath()` for data prefetching without side effects
+- `matchPath()` for synchronous route inspection
+- `ready` and `waitFor(name)` for lifecycle coordination
 
 ## Installation
 
@@ -43,6 +44,8 @@ yarn add @vielzeug/wayfinder
 ```
 
 ## Quick Start
+
+Create a memory-backed router, await initial routing, then navigate by route name.
 
 ```ts
 import { createRouter } from '@vielzeug/wayfinder';
@@ -66,6 +69,8 @@ const router = createRouter({
   },
 });
 
+await router.ready;
+
 // React to state changes:
 router.subscribe((state) => {
   const leaf = state.matches.at(-1);
@@ -81,6 +86,7 @@ await router.navigate({ name: 'dashboard.settings' });
 - [Usage Guide](https://vielzeug.dev/wayfinder/usage)
 - [API Reference](https://vielzeug.dev/wayfinder/api)
 - [Examples](https://vielzeug.dev/wayfinder/examples)
+- [Migration Guide](https://vielzeug.dev/wayfinder/migration)
 - [React Integration Example](https://vielzeug.dev/wayfinder/examples/react-integration)
 - [Vue Integration Example](https://vielzeug.dev/wayfinder/examples/vue-integration)
 - [Svelte Integration Example](https://vielzeug.dev/wayfinder/examples/svelte-integration)

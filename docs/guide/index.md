@@ -191,21 +191,23 @@ const admins = await db.query('users').equals('role', 'admin').toArray();
 Typed client-side router — guards, middleware, history management, and nested routes.
 
 ```typescript
-import { createRouter } from '@vielzeug/wayfinder';
+import { createMemoryHistory, createRouter } from '@vielzeug/wayfinder';
 
 const router = createRouter({
+  history: createMemoryHistory('/'),
   routes: {
-    home: { path: '/', handler: () => renderHome() },
-    userDetail: { path: '/users/:id', handler: ({ params }) => renderUser(params.id) },
-    notFound: { path: '*', handler: () => render404() },
-  },
-  middleware: [
-    async (ctx, next) => {
-      if (!isLoggedIn() && ctx.pathname !== '/login') return ctx.navigate({ path: '/login' });
-      await next();
+    home: { component: HomePage, path: '/' },
+    userDetail: {
+      component: UserPage,
+      data: async ({ params }) => fetchUser(params.id),
+      path: '/users/:id',
     },
-  ],
+  },
+  notFound: { component: NotFoundPage },
 });
+
+await router.ready;
+router.subscribe((state) => render(state.matches.at(-1)?.component));
 ```
 
 [Wayfinder docs →](/wayfinder/)
