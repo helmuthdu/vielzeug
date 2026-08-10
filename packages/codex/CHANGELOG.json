@@ -2,6 +2,20 @@
   "name": "@vielzeug/codex",
   "entries": [
     {
+      "version": "2.1.1",
+      "tag": "@vielzeug/codex_v2.1.1",
+      "date": "Mon, 10 Aug 2026 21:21:35 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore: refresh bundled Ripple documentation",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "352bf87a0875d78e0701ea25763f29eb47f6c56b"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.1.0",
       "tag": "@vielzeug/codex_v2.1.0",
       "date": "Mon, 10 Aug 2026 16:04:45 GMT",

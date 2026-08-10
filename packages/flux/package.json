@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/flux",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Minimal push streams with explicit ownership, buffering, and ecosystem adapters",
   "type": "module",
   "files": [

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ripple
 
-This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+This log was last generated on Mon, 10 Aug 2026 21:21:35 GMT and should not be manually modified.
+
+## 2.1.0
+Mon, 10 Aug 2026 21:21:35 GMT
+
+### Minor changes
+
+- refactor: make isolated graph disposal terminal — writes, subscriptions, graph factories, and batch/untrack now throw RippleDisposedRuntimeError after dispose; Ripple exposes disposed
 
 ## 2.0.1
 Thu, 06 Aug 2026 07:20:49 GMT

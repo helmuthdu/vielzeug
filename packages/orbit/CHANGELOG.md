@@ -1,6 +1,11 @@
 # Change Log - @vielzeug/orbit
 
-This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+This log was last generated on Mon, 10 Aug 2026 21:21:35 GMT and should not be manually modified.
+
+## 2.0.1
+Mon, 10 Aug 2026 21:21:35 GMT
+
+_Version update only_
 
 ## 2.0.0
 Mon, 10 Aug 2026 15:11:23 GMT

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Mon, 10 Aug 2026 16:04:45 GMT and should not be manually modified.
+This log was last generated on Mon, 10 Aug 2026 21:21:35 GMT and should not be manually modified.
+
+## 2.1.1
+Mon, 10 Aug 2026 21:21:35 GMT
+
+### Patches
+
+- chore: refresh bundled Ripple documentation
 
 ## 2.1.0
 Mon, 10 Aug 2026 16:04:45 GMT
