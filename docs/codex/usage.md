@@ -56,7 +56,7 @@ curl http://127.0.0.1:3100/health
 
 ```ts
 import { SnapshotCatalog, createMcpServer, loadSnapshot } from '@vielzeug/codex';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
 const snapshot = loadSnapshot();
 const catalog = new SnapshotCatalog(snapshot);

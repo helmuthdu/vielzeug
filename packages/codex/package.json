@@ -18,7 +18,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "dev": "node --experimental-strip-types ./scripts/dev.ts",
     "fix": "eslint --fix src",
     "gen:tool-docs": "node --experimental-strip-types ./scripts/generate-tool-docs.ts",
@@ -32,9 +32,6 @@
     "test:integration": "pnpm run prepare:data && vitest run --project integration",
     "test:unit": "vitest run --project unit"
   },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0"
-  },
   "devDependencies": {
     "@types/node": "^26.1.2",
     "typescript": "^6.0.3",
@@ -43,5 +40,8 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0"
   }
 }

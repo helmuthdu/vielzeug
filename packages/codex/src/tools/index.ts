@@ -1,6 +1,6 @@
-import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import type { Server, Tool } from '@modelcontextprotocol/server';
 
-import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { METHOD_NOT_FOUND, ProtocolError } from '@modelcontextprotocol/server';
 
 import type { ToolDefinition } from './shared.js';
 
@@ -20,13 +20,21 @@ function content(value: unknown) {
 }
 
 export function registerTools(server: Server, catalog: Catalog, debug = false): void {
-  server.setRequestHandler(ListToolsRequestSchema, () => ({
-    tools: ALL_TOOLS.map(({ description, inputSchema, name }) => ({ description, inputSchema, name })),
+  server.setRequestHandler('tools/list', () => ({
+    // `ToolSchema` is codex's own hand-rolled, precisely-typed shape (see tools/schema.ts); it's
+    // a valid JSON Schema object at the wire, just not structurally identical to the SDK's own
+    // generic recursive JSON-value type for `Tool.inputSchema`. Cast at this one wire boundary
+    // rather than loosen `ToolSchema`/`ToolProperty` themselves.
+    tools: ALL_TOOLS.map(({ description, inputSchema, name }): Tool => ({
+      description,
+      inputSchema: inputSchema as unknown as Tool['inputSchema'],
+      name,
+    })),
   }));
-  server.setRequestHandler(CallToolRequestSchema, (request) => {
+  server.setRequestHandler('tools/call', (request) => {
     const tool = byName.get(request.params.name);
 
-    if (!tool) throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
+    if (!tool) throw new ProtocolError(METHOD_NOT_FOUND, `Unknown tool: ${request.params.name}`);
 
     const started = Date.now();
 
