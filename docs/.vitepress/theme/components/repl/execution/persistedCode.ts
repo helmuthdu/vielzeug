@@ -5,7 +5,7 @@
  * throw during `resetEditor()`/`clearEditor()` would surface as an unhandled error instead
  * of just... not persisting. Persistence is a nice-to-have here, never worth crashing over.
  */
-const STORAGE_PREFIX = 'vielzeug-repl-code-';
+const STORAGE_PREFIX = 'vielzeug-repl-code-v2-';
 
 function safely<T>(fn: () => T, fallback: T): T {
   try {

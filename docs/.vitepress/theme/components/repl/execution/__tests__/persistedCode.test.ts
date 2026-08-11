@@ -17,6 +17,12 @@ describe('persistedCode', () => {
     expect(persistedCode.get('unknown-lib')).toBeNull();
   });
 
+  it('does not load code persisted before the current REPL API revision', () => {
+    localStorage.setItem('vielzeug-repl-code-clockwork', "import { createMachine } from '@vielzeug/clockwork'");
+
+    expect(persistedCode.get('clockwork')).toBeNull();
+  });
+
   it('keeps different libraries in separate slots', () => {
     persistedCode.set('arsenal', 'a');
     persistedCode.set('ripple', 'b');

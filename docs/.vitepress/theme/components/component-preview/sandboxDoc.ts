@@ -21,6 +21,47 @@ export const REFINE_CSS_ID = 'refine-css';
 // Exported so createSandbox() can receive the initial refine CSS in namedStyles.
 export { refineCss };
 
+const previewRuntime = `
+const nativeShowModal = HTMLDialogElement.prototype.showModal;
+HTMLDialogElement.prototype.showModal = function () {
+  try { nativeShowModal.call(this); } catch {}
+  if (!this.open) this.setAttribute('open', '');
+};
+const overlayTags = new Set(['ORE-COMMAND-PALETTE', 'ORE-DIALOG', 'ORE-DRAWER']);
+const overlayFromPath = (path) => path.find((node) => node instanceof HTMLElement && overlayTags.has(node.tagName));
+const syncOverlay = (overlay) => {
+  const dialog = overlay.shadowRoot?.querySelector('dialog');
+  if (!dialog) return;
+  dialog.toggleAttribute('open', overlay.hasAttribute('open'));
+  dialog.addEventListener('close', () => overlay.removeAttribute('open'), { once: true });
+};
+const syncAllOverlays = () => document.querySelectorAll([...overlayTags].map((tag) => tag.toLowerCase()).join(',')).forEach(syncOverlay);
+new MutationObserver((records) => {
+  for (const { target } of records) {
+    if (target instanceof HTMLElement && overlayTags.has(target.tagName)) syncOverlay(target);
+  }
+}).observe(document, { attributes: true, attributeFilter: ['open'], subtree: true });
+document.addEventListener('click', (event) => {
+  const overlay = overlayFromPath(event.composedPath());
+  const closeButton = event.composedPath().find((node) => node instanceof HTMLElement && /^(Close|Close dialog)$/.test(node.getAttribute('aria-label') ?? ''));
+  if (overlay && closeButton) overlay.removeAttribute('open');
+}, { capture: true });
+document.addEventListener('pointerup', (event) => {
+  const overlay = overlayFromPath(event.composedPath());
+  const dragHandle = event.composedPath().find((node) => node instanceof HTMLElement && node.getAttribute('part') === 'drag-handle');
+  if (overlay?.tagName === 'ORE-DRAWER' && dragHandle) overlay.removeAttribute('open');
+}, { capture: true });
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  document.querySelectorAll([...overlayTags].map((tag) => tag.toLowerCase() + '[open]').join(',')).forEach((overlay) => overlay.removeAttribute('open'));
+}, { capture: true });
+document.addEventListener('select', (event) => {
+  const overlay = event.target instanceof HTMLElement && overlayTags.has(event.target.tagName) ? event.target : null;
+  if (overlay?.tagName === 'ORE-COMMAND-PALETTE') overlay.removeAttribute('open');
+});
+queueMicrotask(syncAllOverlays);
+`;
+
 export interface SandboxDocOptions {
   html: string;
   dir: 'ltr' | 'rtl';
@@ -39,6 +80,7 @@ export interface SandboxDocResult {
 
 export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
   const { background, dark, dir, height, html, vertical } = options;
+  const previewHtml = html.replace(/^\s*import\s+['"]@vielzeug\/refine\/[^'"]+['"];?\s*$/gm, '');
 
   const flexDirection = vertical ? 'column' : 'row';
   const bodyBackground = background ?? 'transparent';
@@ -68,12 +110,13 @@ export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
   // flex-centering layout above (`display: contents` removes the wrapper's own box, so its
   // children are laid out as if they were direct children of `body`).
   //
-  // Scripts are prepended so they execute before custom elements in the user
-  // HTML are parsed and upgraded by the browser.
+  // Scripts follow user HTML so custom elements upgrade after their light-DOM
+  // slots are available to lifecycle hooks.
   const fragment = `<style>${overrideCss}</style>
+<div dir="${dir}" style="display: contents">${previewHtml}</div>
+<script>${previewRuntime}</script>
 <script>${refineDeps}</script>
-<script>${refineJs}</script>
-<div dir="${dir}" style="display: contents">${html}</div>`;
+<script>${refineJs}</script>`;
 
   return { fragment };
 }

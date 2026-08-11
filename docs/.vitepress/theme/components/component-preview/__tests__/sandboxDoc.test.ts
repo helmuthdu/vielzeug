@@ -31,6 +31,35 @@ describe('buildSandboxDoc()', () => {
     expect(fragment).toContain('display: contents');
   });
 
+  it('parses user HTML before registering custom elements', () => {
+    const { fragment } = buildSandboxDoc({ dark: false, dir: 'ltr', html: '<ore-menu></ore-menu>', vertical: false });
+
+    expect(fragment.indexOf('<div dir="ltr"')).toBeLessThan(fragment.indexOf('<script>'));
+  });
+
+  it('registers every native-dialog overlay for preview state synchronization', () => {
+    const { fragment } = buildSandboxDoc({ dark: false, dir: 'ltr', html: '', vertical: false });
+
+    expect(fragment).toContain('ORE-COMMAND-PALETTE');
+    expect(fragment).toContain('ORE-DIALOG');
+    expect(fragment).toContain('ORE-DRAWER');
+    expect(fragment).toContain("event.key !== 'Escape'");
+    expect(fragment).toContain("overlay.removeAttribute('open')");
+    expect(fragment).toContain('syncAllOverlays');
+  });
+
+  it('removes Refine module imports while preserving example event wiring', () => {
+    const { fragment } = buildSandboxDoc({
+      dark: false,
+      dir: 'ltr',
+      html: "<script type=\"module\">\nimport '@vielzeug/refine/command-palette';\ndocument.body.dataset.ready = 'true';\n</script>",
+      vertical: false,
+    });
+
+    expect(fragment).not.toContain("import '@vielzeug/refine/command-palette'");
+    expect(fragment).toContain("document.body.dataset.ready = 'true'");
+  });
+
   it('sets body flex-direction from `vertical` independently of `dir`', () => {
     const row = buildSandboxDoc({ dark: false, dir: 'ltr', html: '', vertical: false });
     const column = buildSandboxDoc({ dark: false, dir: 'rtl', html: '', vertical: true });

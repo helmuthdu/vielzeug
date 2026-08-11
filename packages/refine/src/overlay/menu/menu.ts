@@ -513,6 +513,8 @@ define<OreMenuProps>(MENU_TAG, {
     rippleWatch(slots.elements('trigger'), resolveTrigger, { immediate: true });
 
     onMounted(() => {
+      resolveTrigger();
+
       return () => {
         cleanupTrigger?.();
         cleanupTrigger = null;
