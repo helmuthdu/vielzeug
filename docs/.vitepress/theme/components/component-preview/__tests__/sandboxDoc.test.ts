@@ -60,6 +60,25 @@ describe('buildSandboxDoc()', () => {
     expect(fragment).toContain("document.body.dataset.ready = 'true'");
   });
 
+  it('aligns preview content along its main axis', () => {
+    const { fragment } = buildSandboxDoc({
+      align: 'start',
+      dark: false,
+      dir: 'ltr',
+      html: '',
+      justify: 'end',
+      vertical: false,
+    });
+
+    expect(fragment).toContain('justify-content: end');
+  });
+
+  it('starts preview content on its main axis by default', () => {
+    const { fragment } = buildSandboxDoc({ dark: false, dir: 'ltr', html: '', vertical: false });
+
+    expect(fragment).toContain('justify-content: start');
+  });
+
   it('sets body flex-direction from `vertical` independently of `dir`', () => {
     const row = buildSandboxDoc({ dark: false, dir: 'ltr', html: '', vertical: false });
     const column = buildSandboxDoc({ dark: false, dir: 'rtl', html: '', vertical: true });

@@ -8,6 +8,7 @@ import HomePage from './components/HomePage.vue';
 import PackageBadges from './components/PackageBadges.vue';
 import PackageHero from './components/PackageHero.vue';
 import PackageInfo from './components/PackageInfo.vue';
+import PackagesMenu from './components/PackagesMenu.vue';
 import Repl from './components/REPL.vue';
 
 // Import Refine styles - using direct paths for monorepo
@@ -36,6 +37,7 @@ export default {
     app.component('PackageBadges', PackageBadges);
     app.component('PackageHero', PackageHero);
     app.component('PackageInfo', PackageInfo);
+    app.component('PackagesMenu', PackagesMenu);
     app.component('ComponentPreview', ComponentPreview);
 
     if (typeof window !== 'undefined') {

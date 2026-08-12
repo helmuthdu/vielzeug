@@ -112,6 +112,9 @@ const staticExportKeys = new Set([
   './styles/preflight.css',
   './styles/theme.css',
   './tokens.css',
+  './frameworks/elements',
+  './frameworks/react',
+  './frameworks/vue',
 ]);
 
 const staticCssExports = {
@@ -134,6 +137,15 @@ const staticCssExports = {
   './tokens.css': {
     import: './dist/styles/tokens.css',
     default: './dist/styles/tokens.css',
+  },
+  './frameworks/elements': {
+    types: './dist/frameworks/elements.d.ts',
+  },
+  './frameworks/react': {
+    types: './dist/frameworks/react.d.ts',
+  },
+  './frameworks/vue': {
+    types: './dist/frameworks/vue.d.ts',
   },
 };
 

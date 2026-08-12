@@ -1,0 +1,16 @@
+@layer refine.base {
+  :host {
+    --_panel-bg: var(--navigation-menu-bg, var(--color-canvas));
+    --_panel-border: var(--navigation-menu-border-color, var(--color-divider));
+    --_panel-shadow: var(--navigation-menu-shadow, var(--shadow-xl));
+
+    position: relative;
+    display: inline-block;
+  }
+
+  .triggers {
+    display: flex;
+    gap: var(--navigation-menu-trigger-gap, var(--size-1));
+    align-items: center;
+  }
+}

@@ -53,6 +53,11 @@ export type DropdownPositionerOptions = {
   offsetPx?: number;
   /** Padding (px) used by flip, shift, and size middleware. Default: 6 */
   padding?: number;
+  /**
+   * Whether to constrain placement to a clipping ancestor when `boundary` is unset. Default:
+   * true. Disable for native Popover API panels, which render in the top layer.
+   */
+  useClippingAncestor?: boolean;
 };
 
 /** Mirrors a start/end placement for RTL layouts. */
@@ -83,6 +88,7 @@ export function createDropdownPositioner({
   matchWidth = true,
   offsetPx = 0,
   padding = 6,
+  useClippingAncestor = true,
 }: DropdownPositionerOptions): OverlayPositioner {
   function resolvedPlacement(): Placement {
     const base = getPlacement?.() ?? 'bottom-start';
@@ -104,7 +110,7 @@ export function createDropdownPositioner({
     // across opens (e.g. the same `<ore-select>` reused in different dialogs), and the detected
     // ancestor's own rect can change between opens even when it's the same element (a resized
     // dialog).
-    const resolvedBoundary = boundary ?? getClippingAncestorRect(floating);
+    const resolvedBoundary = boundary ?? (useClippingAncestor ? getClippingAncestorRect(floating) : undefined);
 
     const result = computePosition(ref, floating, {
       boundary: resolvedBoundary,

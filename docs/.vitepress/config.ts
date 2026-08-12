@@ -98,73 +98,7 @@ export default defineConfig({
     logo: '/logo-main.svg',
     nav: [
       { link: '/guide/', text: 'Guide' },
-      {
-        items: [
-          {
-            items: [
-              { link: '/clockwork/', text: 'Clockwork' },
-              { link: '/flux/', text: 'Flux' },
-              { link: '/ripple/', text: 'Ripple' },
-            ],
-            text: 'Core Primitives',
-          },
-          {
-            items: [
-              { link: '/courier/', text: 'Courier' },
-              { link: '/pulse/', text: 'Pulse' },
-              { link: '/sourcerer/', text: 'Sourcerer' },
-              { link: '/vault/', text: 'Vault' },
-            ],
-            text: 'Data Layer',
-          },
-          {
-            items: [
-              { link: '/ore/', text: 'Ore' },
-              { link: '/dnd/', text: 'Dnd' },
-              { link: '/necromancer/', text: 'Necromancer' },
-              { link: '/orbit/', text: 'Orbit' },
-              { link: '/prism/', text: 'Prism' },
-              { link: '/scroll/', text: 'Scroll' },
-              { link: '/refine/', text: 'Refine' },
-            ],
-            text: 'UI Components',
-          },
-          {
-            items: [
-              { link: '/forge/', text: 'Forge' },
-              { link: '/spell/', text: 'Spell' },
-            ],
-            text: 'Forms & Validation',
-          },
-          {
-            items: [
-              { link: '/conduit/', text: 'Conduit' },
-              { link: '/familiar/', text: 'Familiar' },
-              { link: '/herald/', text: 'Herald' },
-              { link: '/keymap/', text: 'Keymap' },
-              { link: '/ward/', text: 'Ward' },
-              { link: '/wayfinder/', text: 'Wayfinder' },
-            ],
-            text: 'App Infrastructure',
-          },
-          {
-            items: [
-              { link: '/arsenal/', text: 'Arsenal' },
-              { link: '/assay/', text: 'Assay' },
-              { link: '/codex/', text: 'Codex' },
-              { link: '/coins/', text: 'Coins' },
-              { link: '/ledger/', text: 'Ledger' },
-              { link: '/lingua/', text: 'Lingua' },
-              { link: '/rune/', text: 'Rune' },
-              { link: '/sandbox/', text: 'Sandbox' },
-              { link: '/scout/', text: 'Scout' },
-              { link: '/tempo/', text: 'Tempo' },
-            ],
-            text: 'Utilities & Tools',
-          },
-        ],
-        text: 'Packages',
-      },
+      { component: 'PackagesMenu' },
       { link: '/refine/', text: 'Components' },
       { link: '/repl', text: 'REPL' },
     ],
@@ -1445,6 +1379,7 @@ export default defineConfig({
                 { link: '/refine/components/dialog', text: 'Dialog' },
                 { link: '/refine/components/drawer', text: 'Drawer' },
                 { link: '/refine/components/menu', text: 'Menu' },
+                { link: '/refine/components/navigation-menu', text: 'Navigation Menu' },
                 { link: '/refine/components/popover', text: 'Popover' },
                 { link: '/refine/components/tooltip', text: 'Tooltip' },
               ],

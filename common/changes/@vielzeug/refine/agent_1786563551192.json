@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add navigation menu",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

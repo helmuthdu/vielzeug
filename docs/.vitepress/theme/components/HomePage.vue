@@ -2,6 +2,7 @@
 import { useData } from 'vitepress';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import PackageInfo from './PackageInfo.vue';
+import { PACKAGE_GROUPS } from './packageGroups';
 
 const prefersReducedMotion = ref(false);
 
@@ -92,75 +93,7 @@ const monoVersion = computed(() => {
   return `v${maj}.${min}`;
 });
 
-const categories = [
-  {
-    name: 'App Infrastructure',
-    icon: 'building-2',
-    packages: [
-      { id: 'conduit', tagline: 'Dependency injection' },
-      { id: 'familiar', tagline: 'Web Worker pool' },
-      { id: 'herald', tagline: 'Typed event bus' },
-      { id: 'keymap', tagline: 'Keyboard shortcuts & chords' },
-      { id: 'ward', tagline: 'RBAC & permissions' },
-      { id: 'wayfinder', tagline: 'Client-side routing' },
-    ],
-  },
-  {
-    name: 'Core Primitives',
-    icon: 'atom',
-    packages: [
-      { id: 'clockwork', tagline: 'Finite state machines' },
-      { id: 'flux', tagline: 'Reactive streams & operators' },
-      { id: 'ripple', tagline: 'Signals, computed, effects' },
-    ],
-  },
-  {
-    name: 'Data Layer',
-    icon: 'database',
-    packages: [
-      { id: 'courier', tagline: 'HTTP client & caching' },
-      { id: 'pulse', tagline: 'WebSocket client & presence' },
-      { id: 'sourcerer', tagline: 'Reactive data sources' },
-      { id: 'vault', tagline: 'Browser storage' },
-    ],
-  },
-  {
-    name: 'Forms & Validation',
-    icon: 'check-square',
-    packages: [
-      { id: 'forge', tagline: 'Form state & validation' },
-      { id: 'spell', tagline: 'Schema validation' },
-    ],
-  },
-  {
-    name: 'UI Components',
-    icon: 'layout',
-    packages: [
-      { id: 'ore', tagline: 'Web component primitives' },
-      { id: 'dnd', tagline: 'Drag & drop' },
-      { id: 'necromancer', tagline: 'Web Animations API primitives' },
-      { id: 'orbit', tagline: 'Floating positioning' },
-      { id: 'prism', tagline: 'SVG charts' },
-      { id: 'scroll', tagline: 'Virtual lists' },
-      { id: 'refine', tagline: 'Accessible components' },
-    ],
-  },
-  {
-    name: 'Utilities & Tools',
-    icon: 'wrench',
-    packages: [
-      { id: 'arsenal', tagline: '75+ utility functions' },
-      { id: 'assay', tagline: 'DOM testing primitives' },
-      { id: 'codex', tagline: 'AI / MCP server' },
-      { id: 'coins', tagline: 'Monetary arithmetic' },
-      { id: 'ledger', tagline: 'Async undo / redo history' },
-      { id: 'lingua', tagline: 'i18n & pluralization' },
-      { id: 'rune', tagline: 'Structured logging' },
-      { id: 'scout', tagline: 'Trigram fuzzy search' },
-      { id: 'tempo', tagline: 'Date & time' },
-    ],
-  },
-];
+const categories = PACKAGE_GROUPS;
 
 const heroPackages = [
   { id: 'arsenal', name: 'arsenal', cmd: 'pnpm add @vielzeug/arsenal', tagline: '75+ utility functions' },
@@ -190,6 +123,7 @@ const heroPackages = [
   { id: 'refine', name: 'refine', cmd: 'pnpm add @vielzeug/refine', tagline: 'Accessible components' },
   { id: 'ripple', name: 'ripple', cmd: 'pnpm add @vielzeug/ripple', tagline: 'Signals, computed, effects' },
   { id: 'rune', name: 'rune', cmd: 'pnpm add @vielzeug/rune', tagline: 'Structured logging' },
+  { id: 'sandbox', name: 'sandbox', cmd: 'pnpm add @vielzeug/sandbox', tagline: 'Sandboxed iframe runtime' },
   { id: 'scout', name: 'scout', cmd: 'pnpm add @vielzeug/scout', tagline: 'Trigram fuzzy search' },
   { id: 'scroll', name: 'scroll', cmd: 'pnpm add @vielzeug/scroll', tagline: 'Virtual lists' },
   { id: 'sourcerer', name: 'sourcerer', cmd: 'pnpm add @vielzeug/sourcerer', tagline: 'Reactive data sources' },

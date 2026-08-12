@@ -57,6 +57,15 @@
       "import": "./dist/styles/tokens.css",
       "default": "./dist/styles/tokens.css"
     },
+    "./frameworks/elements": {
+      "types": "./dist/frameworks/elements.d.ts"
+    },
+    "./frameworks/react": {
+      "types": "./dist/frameworks/react.d.ts"
+    },
+    "./frameworks/vue": {
+      "types": "./dist/frameworks/vue.d.ts"
+    },
     "./accordion": {
       "import": "./dist/accordion.js",
       "require": "./dist/accordion.cjs",
@@ -242,6 +251,11 @@
       "require": "./dist/navbar.cjs",
       "types": "./dist/layout/navbar/navbar.d.ts"
     },
+    "./navigation-menu": {
+      "import": "./dist/navigation-menu.js",
+      "require": "./dist/navigation-menu.cjs",
+      "types": "./dist/overlay/navigation-menu/navigation-menu.d.ts"
+    },
     "./number-input": {
       "import": "./dist/number-input.js",
       "require": "./dist/number-input.cjs",
@@ -380,13 +394,14 @@
   },
   "scripts": {
     "analyze": "custom-elements-manifest analyze --config scripts/refine-manifest.mjs",
-    "build": "pnpm run check:theme && pnpm run check:manifest && pnpm run check:css-contract && vite build && pnpm run build:bundle && cp -r src/styles/*.css dist/styles && pnpm run build:types && pnpm run analyze",
+    "build": "pnpm run check:theme && pnpm run check:manifest && pnpm run check:css-contract && vite build && pnpm run build:bundle && cp -r src/styles/*.css dist/styles && pnpm run build:types && pnpm run analyze && pnpm run gen:framework-types",
     "build:types": "tsc -p tsconfig.declarations.json",
     "check:css-contract": "node ./scripts/check-css-contract.mjs",
     "check:manifest": "node ./scripts/refine-manifest.mjs check-exports",
     "check:theme": "node ./scripts/theme-tokens.mjs check",
     "dev": "vite",
     "fix": "eslint --fix src",
+    "gen:framework-types": "node ./scripts/generate-framework-types.mjs",
     "lint": "eslint src",
     "preview": "vite preview",
     "sync:exports": "node ./scripts/refine-manifest.mjs sync-exports",

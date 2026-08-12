@@ -21,6 +21,8 @@ export type ViewportSize = 'mobile' | 'tablet' | 'desktop' | 'full';
 
 export interface ComponentPreviewProps {
   title?: string;
+  align?: 'center' | 'end' | 'start' | 'stretch';
+  justify?: 'center' | 'end' | 'start';
   vertical?: boolean;
   background?: string;
   colorful?: boolean;
@@ -166,11 +168,13 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
         if (!sandboxContainerRef.value || !codeBlock.value) return;
 
         const { fragment } = buildSandboxDoc({
+          align: props.align,
           background: props.background,
           dark: isDark.value,
           dir: isRtl.value ? 'rtl' : 'ltr',
           height: props.height,
           html: codeBlock.value.html,
+          justify: props.justify,
           vertical: !!props.vertical,
         });
 

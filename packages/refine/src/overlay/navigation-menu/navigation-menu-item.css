@@ -1,0 +1,45 @@
+@layer refine.base {
+  :host {
+    display: inline-flex;
+  }
+
+  .trigger {
+    all: unset;
+    box-sizing: border-box;
+    display: inline-flex;
+    gap: var(--size-1);
+    align-items: center;
+    min-height: var(--_touch-target, var(--size-9));
+    padding: var(--size-1-5) var(--size-2-5);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--navbar-item-color, var(--color-contrast-700));
+    cursor: pointer;
+    border-radius: var(--rounded-md);
+  }
+
+  .trigger:hover,
+  .trigger[aria-expanded='true'] {
+    color: var(--color-primary);
+    background: var(--color-contrast-100);
+  }
+
+  .trigger:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--size-0-5);
+  }
+
+  .trigger:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  ::slotted(ore-icon) {
+    flex: none;
+    transition: transform var(--transition-fast);
+  }
+
+  :host([aria-expanded='true']) ::slotted(ore-icon) {
+    transform: rotate(180deg);
+  }
+}

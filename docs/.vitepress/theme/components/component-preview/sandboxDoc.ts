@@ -63,6 +63,8 @@ queueMicrotask(syncAllOverlays);
 `;
 
 export interface SandboxDocOptions {
+  align?: 'center' | 'end' | 'start' | 'stretch';
+  justify?: 'center' | 'end' | 'start';
   html: string;
   dir: 'ltr' | 'rtl';
   dark: boolean;
@@ -79,7 +81,7 @@ export interface SandboxDocResult {
 }
 
 export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
-  const { background, dark, dir, height, html, vertical } = options;
+  const { align = 'center', background, dark, dir, height, html, justify = 'start', vertical } = options;
   const previewHtml = html.replace(/^\s*import\s+['"]@vielzeug\/refine\/[^'"]+['"];?\s*$/gm, '');
 
   const flexDirection = vertical ? 'column' : 'row';
@@ -98,7 +100,7 @@ export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
     // the iframe's edge with no room below to render into — this used to be
     // `padding-bottom: 0`, which is exactly why those effects showed outside
     // the preview (real page, natural space below) but not inside it.
-    `body { display: flex; flex-direction: ${flexDirection}; flex-wrap: wrap; gap: 1rem; padding: 2rem; align-items: center; justify-content: center; min-height: ${bodyMinHeight}; background: ${bodyBackground}; }`,
+    `body { display: flex; flex-direction: ${flexDirection}; flex-wrap: wrap; gap: 1rem; padding: 2rem; align-items: ${align}; justify-content: ${justify}; min-height: ${bodyMinHeight}; background: ${bodyBackground}; }`,
   ].join(' ');
 
   // `buildDocument()` (from @vielzeug/sandbox) only supports `<html lang="...">` — it has no

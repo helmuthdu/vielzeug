@@ -5,6 +5,8 @@ import { useComponentPreview } from './component-preview/useComponentPreview';
 
 const props = defineProps<{
   title?: string;
+  align?: 'center' | 'end' | 'start' | 'stretch';
+  justify?: 'center' | 'end' | 'start';
   vertical?: boolean;
   background?: string;
   colorful?: boolean;

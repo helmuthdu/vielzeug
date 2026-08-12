@@ -117,6 +117,14 @@ export default defineConfig({
 });
 ```
 
+### Generated JSX Types
+
+Import the generated declaration once in your application entry point. It is derived from Refine's Custom Elements Manifest, so every published `ore-*` tag is available without a hand-maintained JSX declaration:
+
+```ts
+import type {} from '@vielzeug/refine/frameworks/react';
+```
+
 ## Vue 3
 
 Vue 3 supports web components natively. Custom events bind with `@event-name`, attributes bind with `:attr`, and no extra configuration is needed for basic usage.
@@ -181,6 +189,14 @@ export default defineConfig({
   @change="email = ($event as CustomEvent<{ value: string }>).detail.value"
   label="Email"
 />
+```
+
+### Generated Template Types
+
+Import the generated declaration once to register every published `ore-*` tag with Vue's template type checker:
+
+```ts
+import type {} from '@vielzeug/refine/frameworks/vue';
 ```
 
 ## Svelte
@@ -315,3 +331,36 @@ if (typeof window !== 'undefined') {
   import('@vielzeug/refine/button');
 }
 ```
+
+## VitePress
+
+Register the components only in the browser, then use a VitePress custom navigation component. `ore-navigation-menu` keeps panels in the Popover API top layer while preserving theme-scoped CSS variables and responsive styles.
+
+```ts
+// docs/.vitepress/theme/index.ts
+import DefaultTheme from 'vitepress/theme';
+import PackagesMenu from './components/PackagesMenu.vue';
+
+if (typeof window !== 'undefined') {
+  import('@vielzeug/refine/navigation-menu');
+  import('@vielzeug/refine/icon');
+}
+
+export default {
+  ...DefaultTheme,
+  enhanceApp({ app }) {
+    app.component('PackagesMenu', PackagesMenu);
+  },
+};
+```
+
+```ts
+// docs/.vitepress/config.ts
+export default defineConfig({
+  themeConfig: {
+    nav: [{ component: 'PackagesMenu' }],
+  },
+});
+```
+
+Use `useRoute()` inside `PackagesMenu.vue` to apply `aria-current="page"` to the link for the active package. VitePress renders the same custom component in its mobile navigation screen with a `screen-menu` prop; render a native `<details>` fallback there instead of the desktop popover.

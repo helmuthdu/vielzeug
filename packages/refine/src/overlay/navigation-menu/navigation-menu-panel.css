@@ -1,0 +1,83 @@
+@layer refine.base {
+  :host {
+    position: fixed;
+    inset: unset;
+    z-index: var(--z-popover);
+    box-sizing: border-box;
+    display: none;
+    width: min(var(--navigation-menu-panel-width, 48rem), calc(100vw - var(--size-8)));
+    max-height: min(var(--navigation-menu-panel-max-height, 42rem), calc(100dvh - var(--size-12)));
+    margin: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    background: var(--navigation-menu-bg, var(--color-canvas));
+    border: var(--border) solid var(--navigation-menu-border-color, var(--color-divider));
+    border-radius: var(--navigation-menu-radius, var(--rounded-lg));
+    box-shadow: var(--navigation-menu-shadow, var(--shadow-xl));
+    backdrop-filter: blur(var(--navigation-menu-backdrop-blur, var(--blur-xl))) saturate(180%);
+  }
+
+  :host([hidden]) {
+    display: none;
+  }
+
+  :host(:popover-open),
+  :host([data-open]) {
+    display: block;
+  }
+
+  .content {
+    display: grid;
+    grid-template-columns: repeat(var(--navigation-menu-panel-columns, 2), minmax(0, 1fr));
+    grid-auto-rows: max-content;
+    gap: var(--size-3);
+    align-content: start;
+    padding: var(--size-5);
+  }
+
+  .footer[hidden] {
+    display: none;
+  }
+
+  ::slotted(a) {
+    min-width: 0;
+    padding: var(--size-3);
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: var(--color-contrast-700);
+    text-decoration: none;
+    border-radius: var(--rounded-md);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
+  }
+
+  ::slotted(a:hover),
+  ::slotted(a:focus-visible) {
+    color: var(--color-primary);
+    background: var(--color-contrast-100);
+  }
+
+  ::slotted(a:focus-visible) {
+    outline: var(--focus-ring);
+    outline-offset: var(--size-0-5);
+  }
+
+  ::slotted(a[slot='footer']) {
+    display: flex;
+    gap: var(--size-2);
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--size-3) var(--size-5);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-primary);
+    text-decoration: none;
+    border-top: var(--border) solid var(--color-divider);
+  }
+
+  ::slotted(a[slot='footer']:hover),
+  ::slotted(a[slot='footer']:focus-visible) {
+    background: var(--color-contrast-100);
+  }
+}

@@ -16,10 +16,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: [
-      '.vitepress/theme/components/repl/**/__tests__/**/*.test.ts',
-      '.vitepress/theme/components/component-preview/**/__tests__/**/*.test.ts',
-    ],
+    include: ['.vitepress/theme/components/**/__tests__/**/*.test.ts'],
     name: 'docs',
     root: __dirname,
   },
