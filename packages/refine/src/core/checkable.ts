@@ -1,6 +1,6 @@
 import { computed, type Readable, type Signal, signal } from '@vielzeug/ripple';
 
-import { createDirtyTracker, createField, type ControlValidationMode, type FieldHandle } from './field-base';
+import { type ControlValidationMode, createDirtyTracker, createField, type FieldHandle } from './field-base';
 import { createInteraction } from './keyboard';
 import { syncedSignal } from './signals';
 

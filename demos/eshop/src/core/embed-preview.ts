@@ -1,8 +1,6 @@
 import { createSandbox, type SandboxHandle } from '@vielzeug/sandbox';
-
-import type { Model, PriceBreakdown } from './types';
-
 import { formatPrice } from './currency';
+import type { Model, PriceBreakdown } from './types';
 
 /**
  * Renders a shareable "build summary" card inside a sandboxed iframe (`@vielzeug/sandbox`) — the

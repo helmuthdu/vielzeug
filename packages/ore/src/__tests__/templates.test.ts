@@ -150,7 +150,7 @@ describe('Template: HTML System', () => {
         `,
       );
 
-      expect(shadow!.innerHTML).toMatch(/<\/div>\s+<div>/);
+      expect(shadow?.innerHTML).toMatch(/<\/div>\s+<div>/);
     });
 
     it('should keep sibling nested HTMLResult bindings isolated', async () => {
@@ -395,7 +395,7 @@ describe('Template: HTML System', () => {
         `,
       );
 
-      query('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      query('button')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
       expect(calls).toEqual(['child']);
     });
@@ -415,7 +415,7 @@ describe('Template: HTML System', () => {
         `,
       );
 
-      query('a')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      query('a')?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 
       expect(prevented).toBe(true);
     });
@@ -691,7 +691,7 @@ describe('Reactive Bindings', () => {
 
       checked.value = true;
       await flush();
-      expect(query('div')!.classList.contains('checked')).toBe(true);
+      expect(query('div')?.classList.contains('checked')).toBe(true);
     });
 
     it('should update multiple properties simultaneously', async () => {
@@ -803,11 +803,11 @@ describe('Reactive Bindings', () => {
 
       const { flush, query } = await mount('test-event-handler');
 
-      expect(query('.count')!.textContent).toBe('0');
+      expect(query('.count')?.textContent).toBe('0');
 
-      query('button')!.dispatchEvent(new Event('click'));
+      query('button')?.dispatchEvent(new Event('click'));
       await flush();
-      expect(query('.count')!.textContent).toBe('1');
+      expect(query('.count')?.textContent).toBe('1');
     });
 
     it('should update handlers when logic changes', async () => {
@@ -831,16 +831,16 @@ describe('Reactive Bindings', () => {
 
       const { flush, query } = await mount('test-dynamic-handler');
 
-      query('.action')!.dispatchEvent(new Event('click'));
+      query('.action')?.dispatchEvent(new Event('click'));
       await flush();
-      expect(query('.count')!.textContent).toBe('1');
+      expect(query('.count')?.textContent).toBe('1');
 
-      query('.toggle')!.dispatchEvent(new Event('click'));
+      query('.toggle')?.dispatchEvent(new Event('click'));
       await flush();
 
-      query('.action')!.dispatchEvent(new Event('click'));
+      query('.action')?.dispatchEvent(new Event('click'));
       await flush();
-      expect(query('.count')!.textContent).toBe('0');
+      expect(query('.count')?.textContent).toBe('0');
     });
   });
 });
@@ -860,11 +860,11 @@ describe('Computed Values', () => {
 
       const { flush, query } = await mount('test-computed-basic');
 
-      expect(query('.result')!.textContent).toBe('0');
+      expect(query('.result')?.textContent).toBe('0');
 
       count.value = 5;
       await flush();
-      expect(query('.result')!.textContent).toBe('10');
+      expect(query('.result')?.textContent).toBe('10');
     });
 
     it('should handle nested computed values', async () => {
@@ -881,11 +881,11 @@ describe('Computed Values', () => {
 
       const { flush, query } = await mount('test-nested-computed');
 
-      expect(query('div')!.textContent).toBe('3'); // (1 * 2) + 1
+      expect(query('div')?.textContent).toBe('3'); // (1 * 2) + 1
 
       a.value = 3;
       await flush();
-      expect(query('div')!.textContent).toBe('7'); // (3 * 2) + 1
+      expect(query('div')?.textContent).toBe('7'); // (3 * 2) + 1
     });
 
     it('should handle multiple dependencies', async () => {
@@ -902,15 +902,15 @@ describe('Computed Values', () => {
 
       const { flush, query } = await mount('test-multi-deps');
 
-      expect(query('div')!.textContent).toBe('5');
+      expect(query('div')?.textContent).toBe('5');
 
       a.value = 5;
       await flush();
-      expect(query('div')!.textContent).toBe('8');
+      expect(query('div')?.textContent).toBe('8');
 
       b.value = 10;
       await flush();
-      expect(query('div')!.textContent).toBe('15');
+      expect(query('div')?.textContent).toBe('15');
     });
   });
 
@@ -1044,14 +1044,14 @@ describe('Performance', () => {
 
     const { flush, query } = await mount('test-batching');
 
-    expect(query('div')!.textContent).toBe('0');
+    expect(query('div')?.textContent).toBe('0');
 
     // These should be batched
     a.value = 5;
     b.value = 10;
     await flush();
 
-    expect(query('div')!.textContent).toBe('15');
+    expect(query('div')?.textContent).toBe('15');
   });
 
   it('should handle rapid updates', async () => {
@@ -1075,7 +1075,7 @@ describe('Performance', () => {
     await new Promise((r) => setTimeout(r, 100));
     await flush();
 
-    expect(Number.parseInt(query('div')!.textContent || '0', 10)).toBeGreaterThanOrEqual(10);
+    expect(Number.parseInt(query('div')?.textContent || '0', 10)).toBeGreaterThanOrEqual(10);
 
     if (intervalId) clearInterval(intervalId);
   });

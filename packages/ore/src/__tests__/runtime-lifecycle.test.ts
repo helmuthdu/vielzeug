@@ -7,7 +7,6 @@ import { signal } from '@vielzeug/ripple';
 import {
   createContext,
   html,
-  ref,
   inject,
   onCleanup,
   onElement,
@@ -15,6 +14,7 @@ import {
   onFormReset,
   onMounted,
   provide,
+  ref,
 } from '../index';
 import { mount } from '../testing';
 

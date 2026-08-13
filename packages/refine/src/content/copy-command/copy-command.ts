@@ -1,9 +1,7 @@
-import { define, html, prop, onCleanup, useEmit, useSlots } from '@vielzeug/ore';
+import { define, html, onCleanup, prop, useEmit, useSlots } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-
-import type { ComponentSize, RoundedSize } from '../../types';
-
 import { srOnlyMixin } from '../../styles';
+import type { ComponentSize, RoundedSize } from '../../types';
 import '../icon/icon';
 import componentStyles from './copy-command.css?inline';
 

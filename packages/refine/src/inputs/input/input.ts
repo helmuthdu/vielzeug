@@ -1,12 +1,9 @@
-import { define, html, prop, ref, bind, getHost, onCleanup, onElement, useSlots } from '@vielzeug/ore';
-import { live, useField } from '@vielzeug/ore';
+import { bind, define, getHost, html, live, onCleanup, onElement, prop, ref, useField, useSlots } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-
+import { bindRefCallback, createTextField, lifecycleSignal } from '../../core';
 import type { TextFieldProps } from '../../shared';
-import type { InputType, VisualVariant } from '../../types';
-
-import { bindRefCallback, lifecycleSignal, createTextField } from '../../core';
 import { disablableBundle, FIELD_SIZE_PRESET, roundableBundle, sizableBundle, themableBundle } from '../../shared';
+import type { InputType, VisualVariant } from '../../types';
 import '../../content/icon/icon';
 import {
   coarsePointerMixin,

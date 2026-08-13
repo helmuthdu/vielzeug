@@ -1,5 +1,4 @@
-import { html, onMounted } from '../index';
-import { mediaObserver } from '../index';
+import { html, mediaObserver, onMounted } from '../index';
 import { mount } from '../testing';
 
 describe('mediaObserver()', () => {

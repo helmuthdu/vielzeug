@@ -1,8 +1,6 @@
 import type { Readable } from '@vielzeug/ripple';
-
-import type { ListItemRevealSide } from './list-item';
-
 import { createSwipeControl, type SwipeControl, type SwipeControlDetail } from '../../core';
+import type { ListItemRevealSide } from './list-item';
 
 /** Drag distance (px) past which the action panel snaps fully open on release. */
 const REVEAL_THRESHOLD = 64;

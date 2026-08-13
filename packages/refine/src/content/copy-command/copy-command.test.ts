@@ -25,7 +25,7 @@ describe('ore-copy-command', () => {
     it('renders the command text', async () => {
       fixture = await mountCopyCommand('npm install @vielzeug/ripple');
 
-      const code = fixture.element.shadowRoot!.querySelector('[part="command-text"]');
+      const code = fixture.element.shadowRoot?.querySelector('[part="command-text"]');
 
       expect(code?.textContent?.trim()).toBe('npm install @vielzeug/ripple');
     });
@@ -33,7 +33,7 @@ describe('ore-copy-command', () => {
     it('shows copy icon by default', async () => {
       fixture = await mountCopyCommand('npm install @vielzeug/ripple');
 
-      const icon = fixture.element.shadowRoot!.querySelector('ore-icon');
+      const icon = fixture.element.shadowRoot?.querySelector('ore-icon');
 
       expect(icon?.getAttribute('name')).toBe('copy');
     });
@@ -41,8 +41,8 @@ describe('ore-copy-command', () => {
     it('renders wrapper and command parts', async () => {
       fixture = await mountCopyCommand('npx -y @vielzeug/codex');
 
-      const wrapper = fixture.element.shadowRoot!.querySelector('[part="wrapper"]');
-      const cmd = fixture.element.shadowRoot!.querySelector(`[part="${COPY_BTN_PART}"]`);
+      const wrapper = fixture.element.shadowRoot?.querySelector('[part="wrapper"]');
+      const cmd = fixture.element.shadowRoot?.querySelector(`[part="${COPY_BTN_PART}"]`);
 
       expect(wrapper).toBeTruthy();
       expect(cmd?.tagName.toLowerCase()).toBe('button');
@@ -51,7 +51,7 @@ describe('ore-copy-command', () => {
     it('hides suffix when no suffix slot content', async () => {
       fixture = await mountCopyCommand('npm install @vielzeug/ripple');
 
-      const suffix = fixture.element.shadowRoot!.querySelector('[part="suffix"]');
+      const suffix = fixture.element.shadowRoot?.querySelector('[part="suffix"]');
 
       expect(suffix?.hasAttribute('hidden')).toBe(true);
     });
@@ -62,7 +62,7 @@ describe('ore-copy-command', () => {
         html: '<button slot="suffix">›</button>',
       });
 
-      const suffix = fixture.element.shadowRoot!.querySelector('[part="suffix"]');
+      const suffix = fixture.element.shadowRoot?.querySelector('[part="suffix"]');
 
       expect(suffix?.hasAttribute('hidden')).toBe(false);
     });
@@ -84,7 +84,7 @@ describe('ore-copy-command', () => {
 
       fixture = await mountCopyCommand(value);
 
-      const btn = fixture.element.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
+      const btn = fixture.element.shadowRoot?.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
 
       btn.click();
       await Promise.resolve();
@@ -95,13 +95,13 @@ describe('ore-copy-command', () => {
     it('switches to check icon after copy', async () => {
       fixture = await mountCopyCommand('npm install @vielzeug/ripple');
 
-      const btn = fixture.element.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
+      const btn = fixture.element.shadowRoot?.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
 
       btn.click();
       await Promise.resolve();
       await Promise.resolve();
 
-      const icon = fixture.element.shadowRoot!.querySelector('ore-icon');
+      const icon = fixture.element.shadowRoot?.querySelector('ore-icon');
 
       expect(icon?.getAttribute('name')).toBe('check');
     });
@@ -109,7 +109,7 @@ describe('ore-copy-command', () => {
     it('updates aria-label to "Copied!" after copy', async () => {
       fixture = await mountCopyCommand('npm install @vielzeug/ripple');
 
-      const btn = fixture.element.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
+      const btn = fixture.element.shadowRoot?.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
 
       btn.click();
       await Promise.resolve();
@@ -127,7 +127,7 @@ describe('ore-copy-command', () => {
 
       fixture.element.addEventListener('copy', copyHandler);
 
-      const btn = fixture.element.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
+      const btn = fixture.element.shadowRoot?.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
 
       btn.click();
       await Promise.resolve();
@@ -139,7 +139,7 @@ describe('ore-copy-command', () => {
     it('does nothing when value is empty', async () => {
       fixture = await mountCopyCommand('');
 
-      const btn = fixture.element.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
+      const btn = fixture.element.shadowRoot?.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
 
       btn.click();
       await Promise.resolve();
@@ -156,7 +156,7 @@ describe('ore-copy-command', () => {
 
       fixture = await mountCopyCommand('npm install @vielzeug/ripple');
 
-      const btn = fixture.element.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
+      const btn = fixture.element.shadowRoot?.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
 
       await expect(async () => {
         btn.click();
@@ -164,8 +164,8 @@ describe('ore-copy-command', () => {
         await Promise.resolve();
       }).not.toThrow();
 
-      const icon = fixture.element.shadowRoot!.querySelector('ore-icon');
-      const live = fixture.element.shadowRoot!.querySelector('[role="status"]');
+      const icon = fixture.element.shadowRoot?.querySelector('ore-icon');
+      const live = fixture.element.shadowRoot?.querySelector('[role="status"]');
 
       expect(icon?.getAttribute('name')).toBe('circle-alert');
       expect(btn.getAttribute('aria-label')).toBe('Copy failed — press to try again');
@@ -181,7 +181,7 @@ describe('ore-copy-command', () => {
 
       fixture = await mountCopyCommand('npm install @vielzeug/ripple');
 
-      const btn = fixture.element.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
+      const btn = fixture.element.shadowRoot?.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
 
       btn.click();
       await Promise.resolve();
@@ -189,7 +189,7 @@ describe('ore-copy-command', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 2100));
 
-      const icon = fixture.element.shadowRoot!.querySelector('ore-icon');
+      const icon = fixture.element.shadowRoot?.querySelector('ore-icon');
 
       expect(icon?.getAttribute('name')).toBe('copy');
     });
@@ -235,7 +235,7 @@ describe('ore-copy-command', () => {
     it('command button has descriptive aria-label', async () => {
       fixture = await mountCopyCommand('npm install @vielzeug/ripple');
 
-      const btn = fixture.element.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
+      const btn = fixture.element.shadowRoot?.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
 
       expect(btn.getAttribute('aria-label')).toContain('npm install @vielzeug/ripple');
     });
@@ -243,7 +243,7 @@ describe('ore-copy-command', () => {
     it('live region is present for screen reader announcements', async () => {
       fixture = await mountCopyCommand('npm install @vielzeug/ripple');
 
-      const live = fixture.element.shadowRoot!.querySelector('[role="status"]');
+      const live = fixture.element.shadowRoot?.querySelector('[role="status"]');
 
       expect(live).toBeTruthy();
     });

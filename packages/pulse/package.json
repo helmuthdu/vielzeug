@@ -3,6 +3,9 @@
   "version": "2.1.1",
   "description": "Typed WebSocket client with channel multiplexing, presence tracking, auto-reconnect, and heartbeat",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "files": [
     "dist"
   ],
@@ -11,35 +14,32 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
     }
-  },
-  "scripts": {
-    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
-    "build:bundle": "vite build --config vite.bundle.config.ts",
-    "build:types": "tsc -p tsconfig.declarations.json",
-    "fix": "eslint --fix src",
-    "lint": "eslint src",
-    "prepublishOnly": "pnpm run build",
-    "preview": "vite preview",
-    "test": "vitest"
   },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "engines": {
-    "node": ">=22"
+  "scripts": {
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "biome check --write src",
+    "lint": "biome ci src",
+    "prepublishOnly": "pnpm run build",
+    "preview": "vite preview",
+    "test": "vitest"
   },
   "dependencies": {
     "@vielzeug/ripple": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.2.0",
     "typescript": "^6.0.3",
-    "vite": "^8.2.0",
+    "vite": "^8.2.1",
     "vitest": "^4.1.10"
   }
 }

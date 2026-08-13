@@ -36,7 +36,7 @@ describe('prototype mutation — relaxed ObjectSchema', () => {
     expect(result.x).toBe(1);
     expect(result.extra).toBe('ok');
     expect(result.evil).toBeUndefined();
-    expect(Object.prototype.hasOwnProperty.call(result, '__proto__')).toBe(false);
+    expect(Object.hasOwn(result, '__proto__')).toBe(false);
   });
 
   it('silently drops "constructor" and "prototype" keys from relaxed output', () => {
@@ -223,7 +223,7 @@ describe('BigInt coercion DoS guard', () => {
 
     expect(result.success).toBe(false);
 
-    if (!result.success) expect(result.error.issues[0]!.code).toBe('invalid_type');
+    if (!result.success) expect(result.error.issues[0]?.code).toBe('invalid_type');
   });
 
   it('rejects coercion of very large digit strings without significant delay', () => {
@@ -248,6 +248,6 @@ describe('BigInt coercion DoS guard', () => {
 
     expect(result.success).toBe(false);
 
-    if (!result.success) expect(result.error.issues[0]!.code).toBe('invalid_type');
+    if (!result.success) expect(result.error.issues[0]?.code).toBe('invalid_type');
   });
 });

@@ -1,9 +1,5 @@
-import { define, html, inject, prop, bind, getHost } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
+import { bind, define, getHost, html, inject, prop, useField } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
-
-import type { ButtonType, ComponentSize, LinkTarget, RoundedSize, ThemeColor } from '../../types';
-
 import { commonProps } from '../../shared';
 import {
   coarsePointerMixin,
@@ -17,6 +13,7 @@ import {
   shineEffectMixin,
   sizeVariantMixin,
 } from '../../styles';
+import type { ButtonType, ComponentSize, LinkTarget, RoundedSize, ThemeColor } from '../../types';
 import { useLinkProps } from '../../utils';
 import { BUTTON_GROUP_CTX } from '../button-group/button-group';
 import { useFormAction } from '../shared';

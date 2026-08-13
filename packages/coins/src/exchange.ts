@@ -1,9 +1,8 @@
-import type { Currency, ExchangeRate, Money, RoundingMode } from './types';
-
 import { isCurrency } from './currency';
 import { decimal, roundDivision } from './decimal';
 import { CoinsError, CurrencyMismatchError } from './errors';
 import { isMoney, withMinor } from './money';
+import type { Currency, ExchangeRate, Money, RoundingMode } from './types';
 
 export function exchangeRate<From extends Currency, To extends Currency>({
   from,

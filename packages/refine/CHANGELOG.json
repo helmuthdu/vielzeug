@@ -1,32 +1,21 @@
 {
-  "name": "@vielzeug/refine",
   "entries": [
     {
-      "version": "2.1.0",
-      "tag": "@vielzeug/refine_v2.1.0",
-      "date": "Thu, 13 Aug 2026 06:06:28 GMT",
       "comments": {
         "minor": [
           {
-            "comment": "feat: add navigation menu",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: add navigation menu",
             "commit": "870d1c1a51f5d0b115ee34662908254e41b31a8d"
           }
         ]
-      }
+      },
+      "date": "Thu, 13 Aug 2026 06:06:28 GMT",
+      "tag": "@vielzeug/refine_v2.1.0",
+      "version": "2.1.0"
     },
     {
-      "version": "2.0.3",
-      "tag": "@vielzeug/refine_v2.0.3",
-      "date": "Mon, 10 Aug 2026 21:21:35 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "refactor: collapse core/ barrels, unify composable disposal, derive manifest from filesystem, add --_* CSS contract check",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "573b484c5299bf4b4ba290eb144a9a626f490bf9"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/orbit\" to `2.0.1`"
@@ -37,21 +26,21 @@
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.1.0`"
           }
-        ]
-      }
-    },
-    {
-      "version": "2.0.2",
-      "tag": "@vielzeug/refine_v2.0.2",
-      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "Fix floating overlays in deferred slot and preview lifecycles",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "e32a868dfc0804ad4eca9e3c9f9678c52382e70e"
+            "comment": "refactor: collapse core/ barrels, unify composable disposal, derive manifest from filesystem, add --_* CSS contract check",
+            "commit": "573b484c5299bf4b4ba290eb144a9a626f490bf9"
           }
-        ],
+        ]
+      },
+      "date": "Mon, 10 Aug 2026 21:21:35 GMT",
+      "tag": "@vielzeug/refine_v2.0.3",
+      "version": "2.0.3"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/dnd\" to `2.0.0`"
@@ -68,21 +57,21 @@
           {
             "comment": "Updating dependency \"@vielzeug/tempo\" to `2.0.0`"
           }
-        ]
-      }
-    },
-    {
-      "version": "2.0.1",
-      "tag": "@vielzeug/refine_v2.0.1",
-      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "add classic TypeScript subpath mappings",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "49ec292706645d1f4937897ac628d852f3a11736"
+            "comment": "Fix floating overlays in deferred slot and preview lifecycles",
+            "commit": "e32a868dfc0804ad4eca9e3c9f9678c52382e70e"
           }
-        ],
+        ]
+      },
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "tag": "@vielzeug/refine_v2.0.2",
+      "version": "2.0.2"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.1`"
@@ -108,50 +97,21 @@
           {
             "comment": "Updating dependency \"@vielzeug/tempo\" to `1.0.6`"
           }
-        ]
-      }
-    },
-    {
-      "version": "2.0.0",
-      "tag": "@vielzeug/refine_v2.0.0",
-      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "fix: ore-slider no longer forces width:100% by default, breaking layout next to other fields in a flex/grid row; add fullwidth opt-in matching ore-input/ore-select/ore-number-input convention",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
-          },
-          {
-            "comment": "chore: replace removed aria() with bind({ aria }, { target }); opt into form-internals polyfill via install(afterEach, { formInternals: true }); narrow headless option-list close reasons to DropdownCloseReason (latent type bug exposed by ore's strict EmitFn)",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
-          },
-          {
-            "comment": "fix: refine slider touch geometry",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+            "comment": "add classic TypeScript subpath mappings",
+            "commit": "49ec292706645d1f4937897ac628d852f3a11736"
           }
-        ],
-        "minor": [
-          {
-            "comment": "fix: fix broken stepper/avatar-group subpath exports, move ore-step/ore-stepper to context-based coordination, remove duplicate toast-like message feature from ore-stepper",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
-          },
-          {
-            "comment": "refactor: simplify public component boundaries and native form behavior",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
-          }
-        ],
-        "major": [
-          {
-            "comment": "refactor!: migrate component observers to Ripple watch module",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
-          }
-        ],
+        ]
+      },
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "tag": "@vielzeug/refine_v2.0.1",
+      "version": "2.0.1"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.0`"
@@ -168,28 +128,50 @@
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.0`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.8.0",
-      "tag": "@vielzeug/refine_v1.8.0",
-      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
-      "comments": {
+        ],
+        "major": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor!: migrate component observers to Ripple watch module",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          }
+        ],
         "minor": [
           {
-            "comment": "refactor(refine): adopt @vielzeug/assay in @vielzeug/refine/testing — queryInShadow/queryAllInShadow/queryPart/getSlotted/nextTick/wait are now re-exported from assay instead of duplicated (same names, same behavior). dispatchPointer() is removed — use fire.pointer* from @vielzeug/ore/testing (which re-exports assay's dispatchers) instead. The unused keyEvent() helper is also removed — use fire.keyDown/fire.keyboard, which construct and dispatch in one call. Also updates to @vielzeug/ore's renamed resetStableIdCounter() and testing/flush()'s removed FLUSH_DEEP option",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "3247d636f24fe6f86a4f04ad0ee4ca0c896f2b49"
+            "comment": "fix: fix broken stepper/avatar-group subpath exports, move ore-step/ore-stepper to context-based coordination, remove duplicate toast-like message feature from ore-stepper",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: simplify public component boundaries and native form behavior",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
           }
         ],
         "patch": [
           {
-            "comment": "fix(refine): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies — fixes @vielzeug/keymap missing from the tree-shakeable build's externals (was being silently inlined into refine's own dist instead of staying external) and removes a dead @vielzeug/scroll entry from the bundle config (never imported, not a dependency)",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
+            "comment": "fix: ore-slider no longer forces width:100% by default, breaking layout next to other fields in a flex/grid row; add fullwidth opt-in matching ore-input/ore-select/ore-number-input convention",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: replace removed aria() with bind({ aria }, { target }); opt into form-internals polyfill via install(afterEach, { formInternals: true }); narrow headless option-list close reasons to DropdownCloseReason (latent type bug exposed by ore's strict EmitFn)",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: refine slider touch geometry",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
           }
-        ],
+        ]
+      },
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "tag": "@vielzeug/refine_v2.0.0",
+      "version": "2.0.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/assay\" to `1.0.0`"
@@ -206,67 +188,67 @@
           {
             "comment": "Updating dependency \"@vielzeug/tempo\" to `1.0.5`"
           }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor(refine): adopt @vielzeug/assay in @vielzeug/refine/testing — queryInShadow/queryAllInShadow/queryPart/getSlotted/nextTick/wait are now re-exported from assay instead of duplicated (same names, same behavior). dispatchPointer() is removed — use fire.pointer* from @vielzeug/ore/testing (which re-exports assay's dispatchers) instead. The unused keyEvent() helper is also removed — use fire.keyDown/fire.keyboard, which construct and dispatch in one call. Also updates to @vielzeug/ore's renamed resetStableIdCounter() and testing/flush()'s removed FLUSH_DEEP option",
+            "commit": "3247d636f24fe6f86a4f04ad0ee4ca0c896f2b49"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix(refine): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies — fixes @vielzeug/keymap missing from the tree-shakeable build's externals (was being silently inlined into refine's own dist instead of staying external) and removes a dead @vielzeug/scroll entry from the bundle config (never imported, not a dependency)",
+            "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
+          }
         ]
-      }
+      },
+      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
+      "tag": "@vielzeug/refine_v1.8.0",
+      "version": "1.8.0"
     },
     {
-      "version": "1.7.0",
-      "tag": "@vielzeug/refine_v1.7.0",
-      "date": "Fri, 24 Jul 2026 21:50:49 GMT",
       "comments": {
         "minor": [
           {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "feat(file-input): drag feedback, upload progress/retry/replace, independent per-file queue",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "commit": "083f7b633415d8831c17e45a2fcaf5ab8b90c7cf"
           },
           {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "refactor(file-input): extract upload lifecycle into file-input-upload.ts, fix disabled guards on remove/retry/replace, make drop-zone disabled reactive, add screen-reader announcements, gate Replace to multiple mode",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "commit": "083f7b633415d8831c17e45a2fcaf5ab8b90c7cf"
           },
           {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "feat(refine): add loading/success states to ore-input, fix disabled-state opacity anti-pattern across ore-input/ore-textarea/ore-file-input",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "commit": "488dc1f9ec10e5afd9984684e44df35b21791b98"
           },
           {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "feat(refine): add loading/success states to ore-textarea/ore-select/ore-combobox/ore-number-input, fix disabled-state opacity anti-pattern on ore-textarea/ore-number-input hosts, fix ore-select loading forward disabling its trigger",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "commit": "488dc1f9ec10e5afd9984684e44df35b21791b98"
           },
           {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "feat(refine): add success state to ore-date-picker/ore-time-picker/ore-message-composer, add error/success status icon to ore-file-input dropzone, fix ore-message-composer loading state blocking text entry",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "commit": "488dc1f9ec10e5afd9984684e44df35b21791b98"
           },
           {
-            "comment": "feat(refine): add List component with swipe-to-reveal row actions and swipe-through confirm gesture",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat(refine): add List component with swipe-to-reveal row actions and swipe-through confirm gesture",
             "commit": "22524e68109cb355ad7e23c73db27e3f7be50a2c"
           }
         ]
-      }
+      },
+      "date": "Fri, 24 Jul 2026 21:50:49 GMT",
+      "tag": "@vielzeug/refine_v1.7.0",
+      "version": "1.7.0"
     },
     {
-      "version": "1.6.0",
-      "tag": "@vielzeug/refine_v1.6.0",
-      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
-          }
-        ],
-        "minor": [
-          {
-            "comment": "chore: fix --_* CSS mixin gaps (select/combobox/date-picker/time-picker/checkbox/switch/menu), RTL keyboard nav, cross-shadow-root ARIA (tab-item/tab-panel), icon.ts XSS-warning noise; dedup headless dirty-tracking; dispose-shape consistency; BREAKING: remove unused createFocusTrap/createDialogFocusControl from @vielzeug/refine/headless",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "7ab188de7775031e7c7fc9f54d82c5bf2a4bcac9"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.1.2`"
@@ -289,33 +271,40 @@
           {
             "comment": "Updating dependency \"@vielzeug/tempo\" to `1.0.4`"
           }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: fix --_* CSS mixin gaps (select/combobox/date-picker/time-picker/checkbox/switch/menu), RTL keyboard nav, cross-shadow-root ARIA (tab-item/tab-panel), icon.ts XSS-warning noise; dedup headless dirty-tracking; dispose-shape consistency; BREAKING: remove unused createFocusTrap/createDialogFocusControl from @vielzeug/refine/headless",
+            "commit": "7ab188de7775031e7c7fc9f54d82c5bf2a4bcac9"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
+            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+          }
         ]
-      }
+      },
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "tag": "@vielzeug/refine_v1.6.0",
+      "version": "1.6.0"
     },
     {
-      "version": "1.5.4",
-      "tag": "@vielzeug/refine_v1.5.4",
-      "date": "Tue, 21 Jul 2026 07:04:16 GMT",
       "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/dnd\" to `1.2.1`"
           }
         ]
-      }
+      },
+      "date": "Tue, 21 Jul 2026 07:04:16 GMT",
+      "tag": "@vielzeug/refine_v1.5.4",
+      "version": "1.5.4"
     },
     {
-      "version": "1.5.3",
-      "tag": "@vielzeug/refine_v1.5.3",
-      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "fix: resolve @vielzeug/ore/directives in vitest",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "399a94067d6eb0208ec72de59d69ec2cd2aaaf9c"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/orbit\" to `1.1.1`"
@@ -326,114 +315,109 @@
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.2`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: resolve @vielzeug/ore/directives in vitest",
+            "commit": "399a94067d6eb0208ec72de59d69ec2cd2aaaf9c"
+          }
         ]
-      }
+      },
+      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
+      "tag": "@vielzeug/refine_v1.5.3",
+      "version": "1.5.3"
     },
     {
-      "version": "1.5.2",
-      "tag": "@vielzeug/refine_v1.5.2",
-      "date": "Thu, 16 Jul 2026 16:49:59 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "fix: match externalized subpath imports (e.g. @vielzeug/ore/forms) so refine doesn't vendor a second, disconnected copy of ore's runtime",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: match externalized subpath imports (e.g. @vielzeug/ore/forms) so refine doesn't vendor a second, disconnected copy of ore's runtime",
             "commit": "7132c2ceb1a4a19455c57eb3ac428cc82c48bc6f"
           }
         ]
-      }
+      },
+      "date": "Thu, 16 Jul 2026 16:49:59 GMT",
+      "tag": "@vielzeug/refine_v1.5.2",
+      "version": "1.5.2"
     },
     {
-      "version": "1.5.1",
-      "tag": "@vielzeug/refine_v1.5.1",
-      "date": "Thu, 16 Jul 2026 13:17:33 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "fix: ore-navbar's mobile toggle button and menu panel now respect their own hidden state — :host([data-mobile]) .mobile-toggle set display:inline-flex unconditionally (an author-stylesheet rule, which always wins over the UA stylesheet's [hidden]{display:none} regardless of specificity), so the button stayed visibly clickable even when the component's own logic correctly decided to hide it (no mobile-menu slot content, no mobile-sidebar target) — clicking toggled a panel that stayed hidden too, doing nothing visible. Also: ore-navbar-item now closes the mobile menu on click (via a new closeMobileMenu on NavbarContext) — previously stayed open after navigating",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: ore-navbar's mobile toggle button and menu panel now respect their own hidden state — :host([data-mobile]) .mobile-toggle set display:inline-flex unconditionally (an author-stylesheet rule, which always wins over the UA stylesheet's [hidden]{display:none} regardless of specificity), so the button stayed visibly clickable even when the component's own logic correctly decided to hide it (no mobile-menu slot content, no mobile-sidebar target) — clicking toggled a panel that stayed hidden too, doing nothing visible. Also: ore-navbar-item now closes the mobile menu on click (via a new closeMobileMenu on NavbarContext) — previously stayed open after navigating",
             "commit": "5c0eca263e5fb15928eb37bbbe34f21c732aad86"
           }
         ]
-      }
+      },
+      "date": "Thu, 16 Jul 2026 13:17:33 GMT",
+      "tag": "@vielzeug/refine_v1.5.1",
+      "version": "1.5.1"
     },
     {
-      "version": "1.5.0",
-      "tag": "@vielzeug/refine_v1.5.0",
-      "date": "Wed, 15 Jul 2026 17:08:06 GMT",
       "comments": {
         "minor": [
           {
-            "comment": "feat: ore-input, ore-number-input, ore-combobox, and ore-date-picker now set a 12rem min-width on their :host (matching ore-select/ore-textarea's existing convention, each via its own --<field>-min-width custom property), and ore-number-input's inner ore-input now stretches (flex:1) to fill its own host's width instead of just its min-width — form fields of different types placed side by side (e.g. in a 2-column grid) no longer render at visibly different widths purely because their content differs",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: ore-input, ore-number-input, ore-combobox, and ore-date-picker now set a 12rem min-width on their :host (matching ore-select/ore-textarea's existing convention, each via its own --<field>-min-width custom property), and ore-number-input's inner ore-input now stretches (flex:1) to fill its own host's width instead of just its min-width — form fields of different types placed side by side (e.g. in a 2-column grid) no longer render at visibly different widths purely because their content differs",
             "commit": "2b5bf8e273f0ee701c7679e9fd639db7e810d6d2"
           }
         ],
         "patch": [
           {
-            "comment": "fix: ore-select's and ore-date-picker's inner ore-input trigger now stretches (width:100%) to fill the host's own width — :host is display:inline-block on both, which unlike a flex/grid container with stretch alignment never stretches its children on its own, so the trigger stayed shrink-wrapped to its own 12rem minimum even when the host itself had already been stretched wider by an ancestor grid/flex track, rendering visibly narrower than a same-width sibling field (e.g. ore-number-input, whose inner field already stretches via flex:1)",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: ore-select's and ore-date-picker's inner ore-input trigger now stretches (width:100%) to fill the host's own width — :host is display:inline-block on both, which unlike a flex/grid container with stretch alignment never stretches its children on its own, so the trigger stayed shrink-wrapped to its own 12rem minimum even when the host itself had already been stretched wider by an ancestor grid/flex track, rendering visibly narrower than a same-width sibling field (e.g. ore-number-input, whose inner field already stretches via flex:1)",
             "commit": "339759b864e7daeabfc020155009fa668fdfd583"
           },
           {
-            "comment": "fix: ore-toast now registers ore-alert internally — toast.ts renders <ore-alert> in its own template but never imported alert.ts, so any consumer that imported only @vielzeug/refine/toast (without separately importing @vielzeug/refine/alert) got an undefined custom element rendering as unstyled plain text instead of a styled alert",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: ore-toast now registers ore-alert internally — toast.ts renders <ore-alert> in its own template but never imported alert.ts, so any consumer that imported only @vielzeug/refine/toast (without separately importing @vielzeug/refine/alert) got an undefined custom element rendering as unstyled plain text instead of a styled alert",
             "commit": "ce10af44ab54fbaf81418250df39b355df29ea6e"
           }
         ]
-      }
+      },
+      "date": "Wed, 15 Jul 2026 17:08:06 GMT",
+      "tag": "@vielzeug/refine_v1.5.0",
+      "version": "1.5.0"
     },
     {
-      "version": "1.4.2",
-      "tag": "@vielzeug/refine_v1.4.2",
-      "date": "Wed, 15 Jul 2026 07:45:31 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "fix: render ore-number-input's stepper buttons inside the field's bordered box instead of floating beside it",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "4729cc99bc788bf93f845a006016d1a756719e7c"
-          },
-          {
-            "comment": "fix: ore-number-input default width now stretches to fill its container like other fields instead of shrink-wrapping; ore-date-picker's calendar now positions via fixed+auto-correction so it never grows/shifts an ancestor's layout",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "4729cc99bc788bf93f845a006016d1a756719e7c"
-          },
-          {
-            "comment": "fix: dropdown-style overlays (select, combobox, menu, date-picker) now auto-detect the nearest clipping ancestor as their flip/shift boundary (via orbit's getClippingAncestorRect) instead of only the page viewport, fixing ore-date-picker's calendar overhanging a dialog. Also self-corrects any residual position:fixed containing-block mismatch by measuring the actual rendered rect and compensating — analytically pre-detecting the trapping ancestor turned out to misposition ore-select's dropdown, which isn't affected by the same ancestor the calendar is. The measurement neutralizes the floating element's own entrance-transition transform first, so it isn't misread as a permanent mismatch and baked into the position — that misread was making ore-select's options unclickable (dropdown appeared correctly placed but closed immediately on option click)",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "5b91b5dc46898dbe8f224011f3043c14144deec8"
-          },
-          {
-            "comment": "fix: ore-dialog/ore-drawer no longer mistake a same-named bubbling event from a nested field for their own native close/cancel — selecting an option in an ore-select/ore-combobox dropdown nested in a dialog was closing the whole dialog instead of just that field's dropdown, because slot-assignment-based event-path computation crosses into a projecting shadow tree regardless of the originating event's own composed flag",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "5b91b5dc46898dbe8f224011f3043c14144deec8"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/orbit\" to `1.1.0`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.4.1",
-      "tag": "@vielzeug/refine_v1.4.1",
-      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "fix: normalize navbar item button base styles",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "7f6d5af417dcc1c1fa267de4387abc26387f80f7"
+            "comment": "fix: render ore-number-input's stepper buttons inside the field's bordered box instead of floating beside it",
+            "commit": "4729cc99bc788bf93f845a006016d1a756719e7c"
           },
           {
-            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "1a8008d19848e2db3dace46af8c9710eb79be07a"
+            "comment": "fix: ore-number-input default width now stretches to fill its container like other fields instead of shrink-wrapping; ore-date-picker's calendar now positions via fixed+auto-correction so it never grows/shifts an ancestor's layout",
+            "commit": "4729cc99bc788bf93f845a006016d1a756719e7c"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: dropdown-style overlays (select, combobox, menu, date-picker) now auto-detect the nearest clipping ancestor as their flip/shift boundary (via orbit's getClippingAncestorRect) instead of only the page viewport, fixing ore-date-picker's calendar overhanging a dialog. Also self-corrects any residual position:fixed containing-block mismatch by measuring the actual rendered rect and compensating — analytically pre-detecting the trapping ancestor turned out to misposition ore-select's dropdown, which isn't affected by the same ancestor the calendar is. The measurement neutralizes the floating element's own entrance-transition transform first, so it isn't misread as a permanent mismatch and baked into the position — that misread was making ore-select's options unclickable (dropdown appeared correctly placed but closed immediately on option click)",
+            "commit": "5b91b5dc46898dbe8f224011f3043c14144deec8"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: ore-dialog/ore-drawer no longer mistake a same-named bubbling event from a nested field for their own native close/cancel — selecting an option in an ore-select/ore-combobox dropdown nested in a dialog was closing the whole dialog instead of just that field's dropdown, because slot-assignment-based event-path computation crosses into a projecting shadow tree regardless of the originating event's own composed flag",
+            "commit": "5b91b5dc46898dbe8f224011f3043c14144deec8"
           }
-        ],
+        ]
+      },
+      "date": "Wed, 15 Jul 2026 07:45:31 GMT",
+      "tag": "@vielzeug/refine_v1.4.2",
+      "version": "1.4.2"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/dnd\" to `1.2.0`"
@@ -444,110 +428,122 @@
           {
             "comment": "Updating dependency \"@vielzeug/ore\" to `1.2.1`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.4.0",
-      "tag": "@vielzeug/refine_v1.4.0",
-      "date": "Sat, 11 Jul 2026 19:22:05 GMT",
-      "comments": {
-        "minor": [
-          {
-            "comment": "feat: add ore-message-composer -- an auto-resizing chat/comment composer built directly on ore-textarea's headless primitives (createTextField, createAutoResize), with send-shortcut handling, IME-safe composition, and clear-and-refocus on send",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "23faa33f3489a636e04af90afff5bfd50e0dd4cf"
-          },
-          {
-            "comment": "feat: required now participates in real constraint validation (checkValidity/reportValidity/<ore-form> submit blocking) for ore-select, ore-radio-group, ore-checkbox-group, ore-combobox, and ore-checkbox, matching ore-input/ore-textarea; readonly fields are correctly exempt from required validation across the text-field family",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "23faa33f3489a636e04af90afff5bfd50e0dd4cf"
-          }
         ],
         "patch": [
           {
-            "comment": "fix: ore-message-composer -- flat/ghost variants no longer render identically at rest (flat now matches ore-textarea's filled/inset-shadow recipe), field no longer collapses to near-zero height before the first keystroke (auto-resize scrollHeight read deferred a frame, with a min-height floor as a backstop), and a cancelled send (preventDefault()) no longer refocuses the field",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "23faa33f3489a636e04af90afff5bfd50e0dd4cf"
+            "comment": "fix: normalize navbar item button base styles",
+            "commit": "7f6d5af417dcc1c1fa267de4387abc26387f80f7"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
+            "commit": "1a8008d19848e2db3dace46af8c9710eb79be07a"
           }
-        ],
+        ]
+      },
+      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
+      "tag": "@vielzeug/refine_v1.4.1",
+      "version": "1.4.1"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ore\" to `1.2.0`"
           }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: add ore-message-composer -- an auto-resizing chat/comment composer built directly on ore-textarea's headless primitives (createTextField, createAutoResize), with send-shortcut handling, IME-safe composition, and clear-and-refocus on send",
+            "commit": "23faa33f3489a636e04af90afff5bfd50e0dd4cf"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: required now participates in real constraint validation (checkValidity/reportValidity/<ore-form> submit blocking) for ore-select, ore-radio-group, ore-checkbox-group, ore-combobox, and ore-checkbox, matching ore-input/ore-textarea; readonly fields are correctly exempt from required validation across the text-field family",
+            "commit": "23faa33f3489a636e04af90afff5bfd50e0dd4cf"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: ore-message-composer -- flat/ghost variants no longer render identically at rest (flat now matches ore-textarea's filled/inset-shadow recipe), field no longer collapses to near-zero height before the first keystroke (auto-resize scrollHeight read deferred a frame, with a min-height floor as a backstop), and a cancelled send (preventDefault()) no longer refocuses the field",
+            "commit": "23faa33f3489a636e04af90afff5bfd50e0dd4cf"
+          }
         ]
-      }
+      },
+      "date": "Sat, 11 Jul 2026 19:22:05 GMT",
+      "tag": "@vielzeug/refine_v1.4.0",
+      "version": "1.4.0"
     },
     {
-      "version": "1.3.1",
-      "tag": "@vielzeug/refine_v1.3.1",
-      "date": "Thu, 09 Jul 2026 15:05:53 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "fix: light-dark() shadow tokens computed to none in spec-compliant browsers, breaking hover/focus/halo effects across every component; fix button effect/frost mixin selectors matching a nonexistent <button> tag; move refine's internal build scripts into scripts/",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: light-dark() shadow tokens computed to none in spec-compliant browsers, breaking hover/focus/halo effects across every component; fix button effect/frost mixin selectors matching a nonexistent <button> tag; move refine's internal build scripts into scripts/",
             "commit": "e5af90b233d108bb7730496113862fcd8e14ade9"
           }
         ]
-      }
+      },
+      "date": "Thu, 09 Jul 2026 15:05:53 GMT",
+      "tag": "@vielzeug/refine_v1.3.1",
+      "version": "1.3.1"
     },
     {
-      "version": "1.3.0",
-      "tag": "@vielzeug/refine_v1.3.0",
-      "date": "Wed, 08 Jul 2026 17:19:00 GMT",
       "comments": {
         "minor": [
           {
-            "comment": "feat: add ore-chat-message and ore-typing-indicator components; add a gallery/preview-grid mode to ore-file-input for image thumbnails",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: add ore-chat-message and ore-typing-indicator components; add a gallery/preview-grid mode to ore-file-input for image thumbnails",
             "commit": "6c114341f053a55c37aa358fe6d2d68ab4e6dcd0"
           }
         ],
         "patch": [
           {
-            "comment": "fix: chat-message alignment/announce fixes, typing-indicator reliable announcement via shared live region, command-palette simplified slot handling + disabled-row Enter guard, file-input naming cleanup",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: chat-message alignment/announce fixes, typing-indicator reliable announcement via shared live region, command-palette simplified slot handling + disabled-row Enter guard, file-input naming cleanup",
             "commit": "6c114341f053a55c37aa358fe6d2d68ab4e6dcd0"
           }
         ]
-      }
+      },
+      "date": "Wed, 08 Jul 2026 17:19:00 GMT",
+      "tag": "@vielzeug/refine_v1.3.0",
+      "version": "1.3.0"
     },
     {
-      "version": "1.2.0",
-      "tag": "@vielzeug/refine_v1.2.0",
-      "date": "Wed, 08 Jul 2026 09:22:31 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "chore(internal): migrate component setup() functions and shared form-context/checkable-binding helpers off ore's removed SetupContextBag onto the new free-function API (bind/emit/onMounted/.../useEmit/useSlots/getHost); no consumer-facing API change.",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "e02805143171c2ae97e2ebc968d22a15f305b4ef"
-          },
-          {
-            "comment": "fix: externalize @vielzeug/ore/directives, /forms, /observers (mapped to the same Ore global) in the IIFE bundle — previously only the bare @vielzeug/ore specifier was externalized, so Rollup silently inlined a second copy of ore's module graph into refine.iife.js, and any lifecycle hook (getHost, onMounted, etc.) resolved through it always threw 'outside setup'. Fixes broken docs component previews for every component using useField/when/live/raw/styleMap/resizeObserver/intersectionObserver.",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "8db093de02785883722ea70fbf1bf00aff87c723"
-          }
-        ],
-        "minor": [
-          {
-            "comment": "feat(command-palette): add ore-command-palette + ore-command-palette-item — searchable, keyboard-driven command list built on refine headless primitives (native <dialog>, createListControl) and @vielzeug/keymap for the global open shortcut",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "65ba6e2293ec6f8b2e57eb3b31ca8a2b0a4a6b84"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ore\" to `1.1.0`"
           }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat(command-palette): add ore-command-palette + ore-command-palette-item — searchable, keyboard-driven command list built on refine headless primitives (native <dialog>, createListControl) and @vielzeug/keymap for the global open shortcut",
+            "commit": "65ba6e2293ec6f8b2e57eb3b31ca8a2b0a4a6b84"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(internal): migrate component setup() functions and shared form-context/checkable-binding helpers off ore's removed SetupContextBag onto the new free-function API (bind/emit/onMounted/.../useEmit/useSlots/getHost); no consumer-facing API change.",
+            "commit": "e02805143171c2ae97e2ebc968d22a15f305b4ef"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: externalize @vielzeug/ore/directives, /forms, /observers (mapped to the same Ore global) in the IIFE bundle — previously only the bare @vielzeug/ore specifier was externalized, so Rollup silently inlined a second copy of ore's module graph into refine.iife.js, and any lifecycle hook (getHost, onMounted, etc.) resolved through it always threw 'outside setup'. Fixes broken docs component previews for every component using useField/when/live/raw/styleMap/resizeObserver/intersectionObserver.",
+            "commit": "8db093de02785883722ea70fbf1bf00aff87c723"
+          }
         ]
-      }
+      },
+      "date": "Wed, 08 Jul 2026 09:22:31 GMT",
+      "tag": "@vielzeug/refine_v1.2.0",
+      "version": "1.2.0"
     },
     {
-      "version": "1.1.3",
-      "tag": "@vielzeug/refine_v1.1.3",
-      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
       "comments": {
         "dependency": [
           {
@@ -569,24 +565,24 @@
             "comment": "Updating dependency \"@vielzeug/tempo\" to `1.0.3`"
           }
         ]
-      }
+      },
+      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
+      "tag": "@vielzeug/refine_v1.1.3",
+      "version": "1.1.3"
     },
     {
-      "version": "1.1.2",
-      "tag": "@vielzeug/refine_v1.1.2",
-      "date": "Sun, 05 Jul 2026 21:33:33 GMT",
       "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ore\" to `1.0.4`"
           }
         ]
-      }
+      },
+      "date": "Sun, 05 Jul 2026 21:33:33 GMT",
+      "tag": "@vielzeug/refine_v1.1.2",
+      "version": "1.1.2"
     },
     {
-      "version": "1.1.1",
-      "tag": "@vielzeug/refine_v1.1.1",
-      "date": "Sun, 05 Jul 2026 06:22:27 GMT",
       "comments": {
         "dependency": [
           {
@@ -599,32 +595,13 @@
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.0`"
           }
         ]
-      }
+      },
+      "date": "Sun, 05 Jul 2026 06:22:27 GMT",
+      "tag": "@vielzeug/refine_v1.1.1",
+      "version": "1.1.1"
     },
     {
-      "version": "1.1.0",
-      "tag": "@vielzeug/refine_v1.1.0",
-      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
       "comments": {
-        "minor": [
-          {
-            "comment": "chore(refine): improve refine headless module: fix dead labelPlacement option, use RefineConfigError in createOptionList, consolidate visually-hidden CSS, unify disabled option convention across headless primitives to Readable signals, split SwipeControl onCancel/onRelease, add selection-control/spinner test coverage",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "ae5ec8894e5d4070aec5409a1c779ef895f590a5"
-          },
-          {
-            "comment": "feat(refine): fix ore-button link mode to render a real anchor, rework ore-number-input composition onto ore-input's ref API, add form association to ore-otp-input, add ARIA grid row structure + arrow-key nav to calendar/date-picker month/year views, add error/helper props to rating/slider, route datagrid renderExpanded through raw() and fix calendar event-color CSS injection, rename datagrid JS properties to camelCase",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "5b87583cb825687212206f609a85cc48d84b210a"
-          }
-        ],
-        "patch": [
-          {
-            "comment": "fix(refine): surface visible failure state in ore-copy-command instead of silently failing",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "ef727d40d8914071a3bb219acbc2c6e910d54b4a"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ore\" to `1.0.2`"
@@ -641,21 +618,33 @@
           {
             "comment": "Updating dependency \"@vielzeug/tempo\" to `1.0.2`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.0.1",
-      "tag": "@vielzeug/refine_v1.0.1",
-      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
-      "comments": {
-        "patch": [
+        ],
+        "minor": [
           {
-            "comment": "chore(refine): rename internal _warn.ts to _dev.ts",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "1b696f77f93b469187d4d7bae13012812a126885"
+            "comment": "chore(refine): improve refine headless module: fix dead labelPlacement option, use RefineConfigError in createOptionList, consolidate visually-hidden CSS, unify disabled option convention across headless primitives to Readable signals, split SwipeControl onCancel/onRelease, add selection-control/spinner test coverage",
+            "commit": "ae5ec8894e5d4070aec5409a1c779ef895f590a5"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat(refine): fix ore-button link mode to render a real anchor, rework ore-number-input composition onto ore-input's ref API, add form association to ore-otp-input, add ARIA grid row structure + arrow-key nav to calendar/date-picker month/year views, add error/helper props to rating/slider, route datagrid renderExpanded through raw() and fix calendar event-color CSS injection, rename datagrid JS properties to camelCase",
+            "commit": "5b87583cb825687212206f609a85cc48d84b210a"
           }
         ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix(refine): surface visible failure state in ore-copy-command instead of silently failing",
+            "commit": "ef727d40d8914071a3bb219acbc2c6e910d54b4a"
+          }
+        ]
+      },
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "tag": "@vielzeug/refine_v1.1.0",
+      "version": "1.1.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ore\" to `1.0.1`"
@@ -675,21 +664,21 @@
           {
             "comment": "Updating dependency \"@vielzeug/tempo\" to `1.0.1`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(refine): rename internal _warn.ts to _dev.ts",
+            "commit": "1b696f77f93b469187d4d7bae13012812a126885"
+          }
         ]
-      }
+      },
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "tag": "@vielzeug/refine_v1.0.1",
+      "version": "1.0.1"
     },
     {
-      "version": "1.0.0",
-      "tag": "@vielzeug/refine_v1.0.0",
-      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
       "comments": {
-        "major": [
-          {
-            "comment": "Initial public release",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "4a8eb7b9cbf3e3e9a69e7a5c9d8e268ed6b5aad3"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ore\" to `1.0.0`"
@@ -709,8 +698,19 @@
           {
             "comment": "Updating dependency \"@vielzeug/tempo\" to `1.0.0`"
           }
+        ],
+        "major": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Initial public release",
+            "commit": "4a8eb7b9cbf3e3e9a69e7a5c9d8e268ed6b5aad3"
+          }
         ]
-      }
+      },
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "tag": "@vielzeug/refine_v1.0.0",
+      "version": "1.0.0"
     }
-  ]
+  ],
+  "name": "@vielzeug/refine"
 }

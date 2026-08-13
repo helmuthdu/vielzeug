@@ -1,6 +1,6 @@
 import { fromPresence } from '@vielzeug/flux/pulse';
 import { toSignal } from '@vielzeug/flux/ripple';
-import { createPulse, type ChannelDefinitions } from '@vielzeug/pulse';
+import { type ChannelDefinitions, createPulse } from '@vielzeug/pulse';
 import { computed } from '@vielzeug/ripple';
 
 export interface PresenceShopper {

@@ -1,5 +1,3 @@
-import type { SlotStrategy, WorkerOptions, WorkerPool } from '../types';
-
 import { createPool } from '../_pool';
 import {
   FamiliarInvalidOptionsError,
@@ -7,11 +5,13 @@ import {
   FamiliarTerminatedError,
   FamiliarTimeoutError,
 } from '../errors';
+import type { SlotStrategy, WorkerOptions, WorkerPool } from '../types';
 
 export type TestWorkerOptions = Omit<WorkerOptions, 'concurrency' | 'onSlotError'> & { concurrency?: number };
 
 export type TestWorkerCall<TInput, TOutput> =
-  { input: TInput; status: 'fulfilled'; value: TOutput } | { input: TInput; reason: unknown; status: 'rejected' };
+  | { input: TInput; status: 'fulfilled'; value: TOutput }
+  | { input: TInput; reason: unknown; status: 'rejected' };
 
 export type TestWorkerHandle<TInput, TOutput> = WorkerPool<TInput, TOutput> & {
   readonly calls: ReadonlyArray<TestWorkerCall<TInput, TOutput>>;
@@ -137,7 +137,6 @@ export function createTestWorker<TInput, TOutput>(
   return pool as TestWorkerHandle<TInput, TOutput>;
 }
 
-export type { WorkerPool } from '../types';
 export {
   FamiliarError,
   FamiliarInvalidOptionsError,
@@ -147,3 +146,4 @@ export {
   FamiliarTerminatedError,
   FamiliarTimeoutError,
 } from '../errors';
+export type { WorkerPool } from '../types';

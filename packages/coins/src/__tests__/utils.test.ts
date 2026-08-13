@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  EUR,
-  USD,
   allocate,
   clamp,
   currency,
   defineCurrency,
+  EUR,
   money,
   parseMoneyJSON,
   sum,
   toDecimal,
   toJSON,
+  USD,
 } from '../index';
 
 describe('currency definitions', () => {

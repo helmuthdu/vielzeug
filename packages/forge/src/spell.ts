@@ -1,8 +1,6 @@
-import { Schema, type Issue, type SchemaMode } from '@vielzeug/spell';
-
-import type { FormErrors, FormValidator, ValidationErrors } from './types';
-
+import type { Issue, Schema, SchemaMode } from '@vielzeug/spell';
 import { writeError } from './core/path';
+import type { FormErrors, FormValidator, ValidationErrors } from './types';
 
 type ErrorTree = Record<string, unknown>;
 type UnionIssue = Extract<Issue, { code: 'invalid_union' }>;

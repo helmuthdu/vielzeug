@@ -5,34 +5,54 @@
  * encode component-specific Ore and Ripple behavior, not a stable public API.
  */
 
-// ── Ore adapter ───────────────────────────────────────────────────────────────
-export { lifecycleSignal } from './ore';
-
-// ── Auto-resize ───────────────────────────────────────────────────────────────
-export { createAutoResize, type AutoResizeControl, type AutoResizeOptions } from './auto-resize';
-
-// ── Ref callback ──────────────────────────────────────────────────────────────
-export { bindRefCallback, type RefCallback } from './ref-callback';
-
+// ── Live-region announcer ─────────────────────────────────────────────────────
+export { type AnnounceOptions, type AnnouncePoliteness, announce } from './announcer';
 // ── Cross-shadow-root ARIA relationships ──────────────────────────────────────
-export { setAriaReflection, type AriaReflectionProperty } from './aria-reflection';
-
-// ── Focus management ────────────────────────────────────────────────────────
-export { createFocusManager, type FocusManager, type FocusManagerOptions } from './focus';
-
+export { type AriaReflectionProperty, setAriaReflection } from './aria-reflection';
+// ── Auto-resize ───────────────────────────────────────────────────────────────
+export { type AutoResizeControl, type AutoResizeOptions, createAutoResize } from './auto-resize';
+// ── Checkable ─────────────────────────────────────────────────────────────────
+export { type CheckableChangePayload, type CheckableHandle, type CheckableOptions, createCheckable } from './checkable';
+// ── Choice field ──────────────────────────────────────────────────────────────
+export {
+  type ChoiceChangeDetail,
+  type ChoiceFieldHandle,
+  type ChoiceFieldOptions,
+  createChoiceField,
+} from './choice-field';
+// ── Composer ──────────────────────────────────────────────────────────────────
+export {
+  type ComposerControl,
+  type ComposerControlOptions,
+  createComposerControl,
+  type SendShortcut,
+} from './composer';
+// ── Date picker ──────────────────────────────────────────────────────────────
+export {
+  createDatePickerControl,
+  type DateCell,
+  type DatePickerControl,
+  type DatePickerControlOptions,
+  type DatePickerView,
+  formatDisplayDate,
+  type MonthCell,
+  parseIso,
+  toIsoString,
+  type YearCell,
+} from './date-picker';
 // ── Field base ───────────────────────────────────────────────────────────────
 export {
+  type AssistiveStateHandle,
+  type AssistiveStateOptions,
+  type ControlValidationMode,
+  type CounterOptions,
+  type CounterState,
   counterClassName,
   createAssistiveState,
   createDirtyTracker,
   createErrorHelperState,
   createField,
   createLabelState,
-  type AssistiveStateHandle,
-  type AssistiveStateOptions,
-  type ControlValidationMode,
-  type CounterOptions,
-  type CounterState,
   type DirtyTracker,
   type ErrorHelperOptions,
   type ErrorHelperState,
@@ -43,33 +63,19 @@ export {
   type LabelStateOptions,
   type ValidationTrigger,
 } from './field-base';
-
-// ── Text field ────────────────────────────────────────────────────────────────
-export { createTextField, type TextFieldDetach, type TextFieldHandle, type TextFieldOptions } from './text-field';
-
-// ── Choice field ──────────────────────────────────────────────────────────────
-export {
-  createChoiceField,
-  type ChoiceChangeDetail,
-  type ChoiceFieldHandle,
-  type ChoiceFieldOptions,
-} from './choice-field';
-
-// ── Checkable ─────────────────────────────────────────────────────────────────
-export { createCheckable, type CheckableChangePayload, type CheckableHandle, type CheckableOptions } from './checkable';
-
-// ── Composer ──────────────────────────────────────────────────────────────────
-export {
-  createComposerControl,
-  type ComposerControl,
-  type ComposerControlOptions,
-  type SendShortcut,
-} from './composer';
-
+// ── Focus management ────────────────────────────────────────────────────────
+export { createFocusManager, type FocusManager, type FocusManagerOptions } from './focus';
+// ── DOM utilities ─────────────────────────────────────────────────────────────
+export { getChoiceLabel, getLightChildrenByTag } from './light-dom';
+// ── Navigation types ─────────────────────────────────────────────────────────
+export type { ListKeyAction, ListNavigationAction } from './nav';
+// ── Number utilities ──────────────────────────────────────────────────────────
+export { toFiniteNumber, toFiniteNumberOr, toPositiveStep } from './numbers';
+// ── Ore adapter ───────────────────────────────────────────────────────────────
+export { lifecycleSignal } from './ore';
 // ── Overlay ──────────────────────────────────────────────────────────────────
 export {
   createOutsidePointerDismissal,
-  restoreTriggerFocus,
   type DialogCloseReason,
   type DropdownCloseReason,
   type OutsidePointerDismissalOptions,
@@ -77,17 +83,14 @@ export {
   type OverlayOpenChangeDetail,
   type OverlayOpenDetail,
   type OverlayOpenReason,
+  restoreTriggerFocus,
 } from './overlay';
-
-// ── Navigation types ─────────────────────────────────────────────────────────
-export { type ListKeyAction, type ListNavigationAction } from './nav';
-
-// ── Spinner ───────────────────────────────────────────────────────────────────
-export { createSpinnerControl, type SpinnerControl, type SpinnerControlOptions } from './spinner';
-
+// ── Ref callback ──────────────────────────────────────────────────────────────
+export { bindRefCallback, type RefCallback } from './ref-callback';
 // ── Slider ────────────────────────────────────────────────────────────────────
 export { createSliderControl, type SliderControl, type SliderControlOptions } from './slider';
-
+// ── Spinner ───────────────────────────────────────────────────────────────────
+export { createSpinnerControl, type SpinnerControl, type SpinnerControlOptions } from './spinner';
 // ── Swipe ─────────────────────────────────────────────────────────────────────
 export {
   createSwipeControl,
@@ -96,33 +99,12 @@ export {
   type SwipeControlDetail,
   type SwipeControlOptions,
 } from './swipe';
-
-// ── Live-region announcer ─────────────────────────────────────────────────────
-export { announce, type AnnouncePoliteness, type AnnounceOptions } from './announcer';
-
-// ── Date picker ──────────────────────────────────────────────────────────────
-export {
-  createDatePickerControl,
-  formatDisplayDate,
-  parseIso,
-  toIsoString,
-  type DateCell,
-  type DatePickerControl,
-  type DatePickerControlOptions,
-  type DatePickerView,
-  type MonthCell,
-  type YearCell,
-} from './date-picker';
-
-// ── DOM utilities ─────────────────────────────────────────────────────────────
-export { getChoiceLabel, getLightChildrenByTag } from './light-dom';
-
-// ── Number utilities ──────────────────────────────────────────────────────────
-export { toFiniteNumber, toFiniteNumberOr, toPositiveStep } from './numbers';
+// ── Text field ────────────────────────────────────────────────────────────────
+export { createTextField, type TextFieldDetach, type TextFieldHandle, type TextFieldOptions } from './text-field';
 
 // ── Shared component primitives ──────────────────────────────────────────────
 
-export { createDropdownPositioner, type DropdownPositionerOptions, type OverlayPositioner } from './positioner';
+export { elementDirection } from './direction';
 export {
   createInteraction,
   dispatchKeyboardAction,
@@ -138,6 +120,6 @@ export {
   type ListboxDropdownOptions,
   type ListboxDropdownPlacementOptions,
 } from './option-list';
-export { elementDirection } from './direction';
 export { parseStringTriggers } from './parse';
+export { createDropdownPositioner, type DropdownPositionerOptions, type OverlayPositioner } from './positioner';
 export { syncedSignal } from './signals';

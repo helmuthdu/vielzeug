@@ -1,4 +1,4 @@
-import { computed, effect as rawEffect, isReactive, type Readable, type Signal } from '@vielzeug/ripple';
+import { computed, isReactive, type Readable, effect as rawEffect, type Signal } from '@vielzeug/ripple';
 
 import { invariant } from '../errors';
 import { createDirectiveResult, type DirectiveResult } from '../template/result';

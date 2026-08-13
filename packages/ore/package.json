@@ -3,6 +3,9 @@
   "version": "2.0.3",
   "description": "Custom element authoring primitives — reactive templates, signals, slots, and automatic lifecycle management",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "files": [
     "dist"
   ],
@@ -11,33 +14,37 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
     },
     "./testing": {
-      "types": "./dist/testing/index.d.ts",
       "import": "./dist/testing.js",
-      "require": "./dist/testing.cjs"
+      "require": "./dist/testing.cjs",
+      "types": "./dist/testing/index.d.ts"
     }
   },
-  "scripts": {
-    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
-    "build:types": "tsc -p tsconfig.declarations.json",
-    "fix": "eslint --fix src vitest.setup.ts",
-    "lint": "eslint src vitest.setup.ts",
-    "prepublishOnly": "pnpm run build",
-    "preview": "vite preview",
-    "test": "vitest",
-    "test:types": "tsc -p tsconfig.json --noEmit",
-    "build:bundle": "vite build --config vite.bundle.config.ts"
+  "typesVersions": {
+    "*": {
+      "testing": [
+        "dist/testing/index.d.ts"
+      ]
+    }
   },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "engines": {
-    "node": ">=22"
+  "scripts": {
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "biome check --write src vitest.setup.ts",
+    "lint": "biome ci src vitest.setup.ts",
+    "prepublishOnly": "pnpm run build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:types": "tsc -p tsconfig.json --noEmit"
   },
   "peerDependencies": {
     "@vielzeug/assay": "workspace:^",
@@ -49,20 +56,13 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.2.0",
     "@vielzeug/assay": "workspace:*",
     "@vielzeug/ripple": "workspace:*",
-    "axe-core": "^4.12.1",
+    "axe-core": "^4.13.0",
     "jsdom": "^30.0.1",
     "typescript": "^6.0.3",
-    "vite": "^8.2.0",
+    "vite": "^8.2.1",
     "vitest": "^4.1.10"
-  },
-  "typesVersions": {
-    "*": {
-      "testing": [
-        "dist/testing/index.d.ts"
-      ]
-    }
   }
 }

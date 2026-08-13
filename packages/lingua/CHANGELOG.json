@@ -1,131 +1,131 @@
 {
-  "name": "@vielzeug/lingua",
   "entries": [
     {
-      "version": "2.1.0",
-      "tag": "@vielzeug/lingua_v2.1.0",
-      "date": "Wed, 05 Aug 2026 19:50:19 GMT",
       "comments": {
         "minor": [
           {
-            "comment": "feat: add single-catalog translators and harden package resolution",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: add single-catalog translators and harden package resolution",
             "commit": "62592e8394077e557850a3b1983b87d04cee4a17"
           }
         ]
-      }
+      },
+      "date": "Wed, 05 Aug 2026 19:50:19 GMT",
+      "tag": "@vielzeug/lingua_v2.1.0",
+      "version": "2.1.0"
     },
     {
-      "version": "2.0.0",
-      "tag": "@vielzeug/lingua_v2.0.0",
-      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
       "comments": {
         "major": [
           {
-            "comment": "refactor!: redesign localization around explicit locale catalogs. Replaces createI18n()/hydrateI18n() with createTranslationStore()/hydrateTranslationStore(), resources with catalogs, and I18n state version 2 with TranslationState version 3. Removes namespace/resource APIs and LinguaMissingResourceError. Use createTranslator() for fixed-locale translation.",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor!: redesign localization around explicit locale catalogs. Replaces createI18n()/hydrateI18n() with createTranslationStore()/hydrateTranslationStore(), resources with catalogs, and I18n state version 2 with TranslationState version 3. Removes namespace/resource APIs and LinguaMissingResourceError. Use createTranslator() for fixed-locale translation.",
             "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
           }
         ]
-      }
+      },
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "tag": "@vielzeug/lingua_v2.0.0",
+      "version": "2.0.0"
     },
     {
-      "version": "1.1.4",
-      "tag": "@vielzeug/lingua_v1.1.4",
-      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "fix(lingua): warn in dev when t() is called on a plural-branch-only key (has() returns true but t() cannot resolve it), automatically run validateCatalog()'s CLDR plural-form checks whenever a catalog is registered/constructed/loaded (dev-only, lazily-chunked via dynamic import so it never enters production bundles), rename CatalogStore.catalogs/.pendingLoaders getters to snapshotCatalogs()/snapshotLoaders() methods for naming parity with NamespaceStore, remove 2 redundant type casts in fork(), and drop phantom [E0xx] labels from test names that referenced a non-existent error-code system",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix(lingua): warn in dev when t() is called on a plural-branch-only key (has() returns true but t() cannot resolve it), automatically run validateCatalog()'s CLDR plural-form checks whenever a catalog is registered/constructed/loaded (dev-only, lazily-chunked via dynamic import so it never enters production bundles), rename CatalogStore.catalogs/.pendingLoaders getters to snapshotCatalogs()/snapshotLoaders() methods for naming parity with NamespaceStore, remove 2 redundant type casts in fork(), and drop phantom [E0xx] labels from test names that referenced a non-existent error-code system",
             "commit": "96d19934a4bfe6ba71fb68a637e7c072f81ec787"
           }
         ]
-      }
+      },
+      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
+      "tag": "@vielzeug/lingua_v1.1.4",
+      "version": "1.1.4"
     },
     {
-      "version": "1.1.3",
-      "tag": "@vielzeug/lingua_v1.1.3",
-      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
             "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
           }
         ]
-      }
+      },
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "tag": "@vielzeug/lingua_v1.1.3",
+      "version": "1.1.3"
     },
     {
-      "version": "1.1.2",
-      "tag": "@vielzeug/lingua_v1.1.2",
-      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "fix: harden namespace and subscription lifecycle behavior",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: harden namespace and subscription lifecycle behavior",
             "commit": "fbea2e0f80fd770bbf73db4db25c5200b777fcef"
           }
         ]
-      }
+      },
+      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
+      "tag": "@vielzeug/lingua_v1.1.2",
+      "version": "1.1.2"
     },
     {
-      "version": "1.1.1",
-      "tag": "@vielzeug/lingua_v1.1.1",
-      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
             "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
           }
         ]
-      }
+      },
+      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
+      "tag": "@vielzeug/lingua_v1.1.1",
+      "version": "1.1.1"
     },
     {
-      "version": "1.1.0",
-      "tag": "@vielzeug/lingua_v1.1.0",
-      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
       "comments": {
         "minor": [
           {
-            "comment": "fix(lingua): restore broken @vielzeug/lingua/validate subpath (vite entry-key/exports mismatch), throw LinguaNamespaceMissingError instead of a raw Error from loadNamespace(), wire up the documented ./format subpath, drop dead ssr.ts/testing.ts entries, dedupe has() logic, add exports smoke check",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix(lingua): restore broken @vielzeug/lingua/validate subpath (vite entry-key/exports mismatch), throw LinguaNamespaceMissingError instead of a raw Error from loadNamespace(), wire up the documented ./format subpath, drop dead ssr.ts/testing.ts entries, dedupe has() logic, add exports smoke check",
             "commit": "f9ff38505c5eac14b3176f083d67aa1da2d65adc"
           }
         ]
-      }
+      },
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "tag": "@vielzeug/lingua_v1.1.0",
+      "version": "1.1.0"
     },
     {
-      "version": "1.0.1",
-      "tag": "@vielzeug/lingua_v1.0.1",
-      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore(lingua): rename internal _warn.ts to _dev.ts",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(lingua): rename internal _warn.ts to _dev.ts",
             "commit": "1b696f77f93b469187d4d7bae13012812a126885"
           }
         ]
-      }
+      },
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "tag": "@vielzeug/lingua_v1.0.1",
+      "version": "1.0.1"
     },
     {
-      "version": "1.0.0",
-      "tag": "@vielzeug/lingua_v1.0.0",
-      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
       "comments": {
         "major": [
           {
-            "comment": "Initial public release",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Initial public release",
             "commit": "2a622e2058ae28a3e3ffd33f639ad8c3d9579aa4"
           }
         ]
-      }
+      },
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "tag": "@vielzeug/lingua_v1.0.0",
+      "version": "1.0.0"
     }
-  ]
+  ],
+  "name": "@vielzeug/lingua"
 }

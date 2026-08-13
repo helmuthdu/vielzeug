@@ -1,10 +1,8 @@
 import { Temporal } from '@js-temporal/polyfill';
-
-import type { CalendarUnit, DifferenceInput, ParseAs, ShiftOptions, TimeInput } from './types';
-
 import { toZoned } from './_convert';
 import { CALENDAR_UNITS, inferSharedTimeZone, inferTimeZone, validateTimeZone } from './_tz';
 import { fail } from './errors';
+import type { CalendarUnit, DifferenceInput, ParseAs, ShiftOptions, TimeInput } from './types';
 
 /** Parse intentionally requires an explicit result kind: time strings are ambiguous at system boundaries. */
 export function parse(input: string, options: { as: 'zonedDateTime' }): Temporal.ZonedDateTime;

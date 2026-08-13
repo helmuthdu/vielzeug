@@ -1,24 +1,22 @@
 import type { Placement } from '@vielzeug/orbit';
 
 import {
+  bind,
   createStableId,
   define,
-  html,
-  prop,
-  bind,
   getHost,
+  html,
   onCleanup,
   onMounted,
+  prop,
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-
-import type { ComponentSize } from '../../types';
-
 import { type OverlayOpenChangeDetail, type OverlayOpenReason, parseStringTriggers } from '../../core';
 import { disablableBundle, sizableBundle } from '../../shared';
 import { forcedColorsMixin } from '../../styles';
+import type { ComponentSize } from '../../types';
 import { useFloatingTrigger } from '../shared/use-floating-trigger';
 import styles from './tooltip.css?inline';
 

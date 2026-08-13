@@ -1,47 +1,47 @@
 {
   "name": "@vielzeug/codex",
   "version": "2.1.2",
-  "type": "module",
   "description": "MCP server that exposes the vielzeug ecosystem to AI assistants — run locally over stdio or remotely over HTTP",
-  "exports": {
-    ".": "./dist/index.js"
-  },
-  "bin": {
-    "codex": "./dist/cli.js"
+  "type": "module",
+  "engines": {
+    "node": ">=22"
   },
   "files": [
     "data",
     "dist",
     "mcp-setup.json"
   ],
-  "engines": {
-    "node": ">=22"
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "bin": {
+    "codex": "./dist/cli.js"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "build": "rm -rf dist && tsc",
     "dev": "node --experimental-strip-types ./scripts/dev.ts",
-    "fix": "eslint --fix src",
+    "fix": "biome check --write src",
     "gen:tool-docs": "node --experimental-strip-types ./scripts/generate-tool-docs.ts",
-    "lint": "eslint src",
+    "lint": "biome ci src",
     "postbuild": "pnpm run gen:tool-docs",
-    "prepare:data": "node --experimental-strip-types ./scripts/generate-bundled-data.ts",
     "prebuild": "pnpm run prepare:data",
+    "prepare:data": "node --experimental-strip-types ./scripts/generate-bundled-data.ts",
     "prepublishOnly": "pnpm run build",
     "start": "node dist/cli.js",
     "test": "pnpm run test:unit && pnpm run test:integration",
     "test:integration": "pnpm run prepare:data && vitest run --project integration",
     "test:unit": "vitest run --project unit"
   },
-  "devDependencies": {
-    "@types/node": "^26.1.2",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }

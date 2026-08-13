@@ -1,9 +1,8 @@
-import type { SandboxHandle, SandboxMessage, SandboxOptions, Unsubscribe } from './types.js';
-
 import { devOnly, warn } from './_dev.js';
 import { buildRuntimeDocument } from './_document.js';
 import { normalizeSandboxOptions } from './_policy.js';
 import {
+  type BridgeBootstrap,
   createChannel,
   envelope,
   isProtocolMessage,
@@ -15,9 +14,9 @@ import {
   MSG_STATE_UPDATE,
   MSG_STATE_UPDATE_ALL,
   MSG_STYLE_PATCH,
-  type BridgeBootstrap,
 } from './_protocol.js';
 import { SandboxTimeoutError } from './errors.js';
+import type { SandboxHandle, SandboxMessage, SandboxOptions, Unsubscribe } from './types.js';
 
 const READY_TIMEOUT_MS = 5000;
 

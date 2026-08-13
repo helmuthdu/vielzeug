@@ -57,7 +57,7 @@ describe('flattenPaths', () => {
       cur[`l${i}`] = next;
       cur = next;
     }
-    cur['leaf'] = 'value';
+    cur.leaf = 'value';
 
     const result = flattenPaths(deep);
     const keys = Object.keys(result);

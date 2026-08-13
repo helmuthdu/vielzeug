@@ -1,7 +1,4 @@
 import { define, html, prop } from '@vielzeug/ore';
-
-import type { ElevationLevel, PaddingSize, RoundedSize, ThemeColor } from '../../types';
-
 import {
   colorThemeMixin,
   elevationMixin,
@@ -10,6 +7,7 @@ import {
   rainbowEffectMixin,
   roundedVariantMixin,
 } from '../../styles';
+import type { ElevationLevel, PaddingSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './box.css?inline';
 
 /** Box component properties */

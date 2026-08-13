@@ -39,29 +39,29 @@ export type DrainOptions = {
 };
 
 export interface WorkerPool<TInput, TOutput> {
-  [Symbol.asyncDispose](): Promise<void>;
-  [Symbol.dispose](): void;
-  readonly disposed: boolean;
   readonly disposalSignal: AbortSignal;
   dispose(): void;
+  readonly disposed: boolean;
   drain(options?: DrainOptions): Promise<void>;
   prime(): Promise<void>;
   run(input: TInput, options?: RunOptions): Promise<TOutput>;
   readonly stats: WorkerStats;
   readonly status: WorkerStatus;
+  [Symbol.asyncDispose](): Promise<void>;
+  [Symbol.dispose](): void;
 }
 
 export interface StreamWorkerPool<TInput, TChunk> {
-  [Symbol.asyncDispose](): Promise<void>;
-  [Symbol.dispose](): void;
-  readonly disposed: boolean;
   readonly disposalSignal: AbortSignal;
   dispose(): void;
+  readonly disposed: boolean;
   drain(options?: DrainOptions): Promise<void>;
   prime(): Promise<void>;
   runStream(input: TInput, options?: RunOptions): AsyncIterable<TChunk>;
   readonly stats: WorkerStats;
   readonly status: WorkerStatus;
+  [Symbol.asyncDispose](): Promise<void>;
+  [Symbol.dispose](): void;
 }
 
 export type BatchOptions = RunOptions;

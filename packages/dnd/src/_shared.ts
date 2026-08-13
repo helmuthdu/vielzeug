@@ -1,4 +1,4 @@
-import { type Disposable } from './types';
+import type { Disposable } from './types';
 
 // ─── Disposable ──────────────────────────────────────────────────────────────
 

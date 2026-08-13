@@ -8,9 +8,8 @@
  */
 
 import type { Positioner, PositionerOptions } from './float';
-import type { ComputePositionResult, ReferenceElement } from './types';
-
 import { createPositioner } from './float';
+import type { ComputePositionResult, ReferenceElement } from './types';
 
 // ── Overlay helpers ───────────────────────────────────────────────────────────
 
@@ -23,7 +22,7 @@ function setStyles(el: HTMLElement, styles: Record<string, string>): void {
 function createOverlay(): HTMLElement {
   const el = document.createElement('div');
 
-  el.dataset['orbitDebug'] = '';
+  el.dataset.orbitDebug = '';
   setStyles(el, {
     'font-family': 'monospace',
     'font-size': '11px',

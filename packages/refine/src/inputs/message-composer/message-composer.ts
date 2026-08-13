@@ -1,9 +1,18 @@
-import { define, html, prop, ref, bind, getHost, onCleanup, onElement, useEmit, useSlots } from '@vielzeug/ore';
-import { live, useField } from '@vielzeug/ore';
+import {
+  bind,
+  define,
+  getHost,
+  html,
+  live,
+  onCleanup,
+  onElement,
+  prop,
+  ref,
+  useEmit,
+  useField,
+  useSlots,
+} from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
-
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
-
 import {
   bindRefCallback,
   createAutoResize,
@@ -20,8 +29,8 @@ import {
   themableBundle,
 } from '../../shared';
 import {
-  colorThemeMixin,
   coarsePointerMixin,
+  colorThemeMixin,
   disabledLoadingMixin,
   fieldVariantMixin,
   forcedColorsFocusMixin,
@@ -29,6 +38,7 @@ import {
   reducedMotionMixin,
   sizeVariantMixin,
 } from '../../styles';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 import { errorAttr } from '../shared/field-binding';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderFieldStatusRegion, renderStatusIcon } from '../shared/templates';

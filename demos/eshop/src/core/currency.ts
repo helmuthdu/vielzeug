@@ -1,6 +1,6 @@
 import type { Currency } from '@vielzeug/coins';
 
-import { currency, exchange, exchangeRate, format as formatMoney, money, USD, EUR, GBP } from '@vielzeug/coins';
+import { currency, EUR, exchange, exchangeRate, format as formatMoney, GBP, money, USD } from '@vielzeug/coins';
 import { signal } from '@vielzeug/ripple';
 
 const RATES = {

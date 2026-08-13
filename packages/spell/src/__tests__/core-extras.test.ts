@@ -1,4 +1,4 @@
-import { s, SpellDefinitionError } from '../index';
+import { SpellDefinitionError, s } from '../index';
 import { fromDefinition } from '../json';
 
 describe('declarative definitions', () => {

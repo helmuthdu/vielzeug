@@ -21,8 +21,8 @@ Package count, the dependency graph, and the catalogue change often enough that 
 pnpm setup   # rush install — install all dependencies
 pnpm build   # rush build — build all packages
 pnpm test    # vitest — run all tests
-pnpm lint    # eslint + stylelint
-pnpm fix     # auto-fix JS (eslint --fix) and CSS (prettier + stylelint)
+pnpm lint    # Biome checks formatting, imports, and lint rules
+pnpm fix     # Biome applies safe formatting, import, and lint fixes
 ```
 
 Per-package: `cd packages/<name> && pnpm build|test|lint|fix`. Test path convention and per-package overrides are documented in `.ai/core/workspace.md` and `.ai/data/packages.json`.
@@ -31,7 +31,7 @@ Per-package: `cd packages/<name> && pnpm build|test|lint|fix`. Test path convent
 
 - Zero external runtime dependencies per package; `workspace:*` deps between packages are fine.
 - TypeScript strict mode everywhere — no `any`, no JS files in `src/`.
-- ESLint Perfectionist enforces sorted imports/object keys — run `pnpm fix`, don't hand-sort.
+- Biome organizes imports and applies safe fixes — run `pnpm fix`, don't hand-format.
 - Conventional commits: `feat(courier): add retry logic`.
 - All public exports go through `packages/<name>/src/index.ts`.
 

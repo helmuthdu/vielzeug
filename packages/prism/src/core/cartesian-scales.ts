@@ -1,8 +1,7 @@
-import type { Scale } from '../types';
-
 import { warn } from '../_dev';
 import { linearScale } from '../scales/linear';
 import { timeScale } from '../scales/time';
+import type { Scale } from '../types';
 
 export function buildXScale(allX: (Date | number)[], width: number): Scale<Date> | Scale<number> {
   if (allX.length === 0) return linearScale({ domain: [0, 1], range: [0, width] });

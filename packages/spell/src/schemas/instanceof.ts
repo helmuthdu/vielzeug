@@ -3,7 +3,9 @@ import type { SchemaDescriptor } from '../core';
 import { ErrorCode, Schema } from '../core';
 
 export class InstanceOfSchema<T, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<T, T, Mode> {
-  readonly cls: new (...args: any[]) => T;
+  readonly cls: new (
+    ...args: any[]
+  ) => T;
 
   protected override get _kind(): string {
     return 'instanceof';

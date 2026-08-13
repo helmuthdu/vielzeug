@@ -21,7 +21,7 @@ function getCspContent(doc: string): string {
 
   expect(match).not.toBeNull();
 
-  return match![1]!;
+  return match?.[1]!;
 }
 
 // ---------------------------------------------------------------------------

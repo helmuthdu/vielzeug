@@ -1,148 +1,137 @@
 {
-  "name": "@vielzeug/flux",
   "entries": [
     {
-      "version": "2.0.3",
-      "tag": "@vielzeug/flux_v2.0.3",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.1.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.1.0`"
+          }
+        ]
+      },
       "date": "Mon, 10 Aug 2026 21:21:35 GMT",
+      "tag": "@vielzeug/flux_v2.0.3",
+      "version": "2.0.3"
+    },
+    {
       "comments": {
         "dependency": [
           {
-            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.1`"
+            "comment": "Updating dependency \"@vielzeug/herald\" to `2.0.0`"
           },
           {
-            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.1.0`"
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.0`"
           },
           {
-            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.1`"
+            "comment": "Updating dependency \"@vielzeug/herald\" to `2.0.0`"
           },
           {
-            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.1.0`"
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.0`"
           }
         ]
-      }
-    },
-    {
-      "version": "2.0.2",
-      "tag": "@vielzeug/flux_v2.0.2",
+      },
       "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "tag": "@vielzeug/flux_v2.0.2",
+      "version": "2.0.2"
+    },
+    {
       "comments": {
         "dependency": [
           {
-            "comment": "Updating dependency \"@vielzeug/herald\" to `2.0.0`"
+            "comment": "Updating dependency \"@vielzeug/courier\" to `2.0.1`"
           },
           {
-            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.0`"
+            "comment": "Updating dependency \"@vielzeug/herald\" to `1.0.6`"
           },
           {
-            "comment": "Updating dependency \"@vielzeug/herald\" to `2.0.0`"
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.0.1`"
           },
           {
-            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.0`"
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `2.0.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/herald\" to `1.0.6`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.0.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.1`"
           }
-        ]
-      }
-    },
-    {
-      "version": "2.0.1",
-      "tag": "@vielzeug/flux_v2.0.1",
-      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
             "commit": "49ec292706645d1f4937897ac628d852f3a11736"
           }
-        ],
-        "dependency": [
-          {
-            "comment": "Updating dependency \"@vielzeug/courier\" to `2.0.1`"
-          },
-          {
-            "comment": "Updating dependency \"@vielzeug/herald\" to `1.0.6`"
-          },
-          {
-            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.0.1`"
-          },
-          {
-            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.1`"
-          },
-          {
-            "comment": "Updating dependency \"@vielzeug/courier\" to `2.0.1`"
-          },
-          {
-            "comment": "Updating dependency \"@vielzeug/herald\" to `1.0.6`"
-          },
-          {
-            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.0.1`"
-          },
-          {
-            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.1`"
-          }
         ]
-      }
+      },
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "tag": "@vielzeug/flux_v2.0.1",
+      "version": "2.0.1"
     },
     {
-      "version": "2.0.0",
-      "tag": "@vielzeug/flux_v2.0.0",
-      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
       "comments": {
-        "minor": [
+        "dependency": [
           {
-            "comment": "feat: adapt Courier adapters to AsyncIterable streams and query handles",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
-          }
-        ],
-        "patch": [
+            "comment": "Updating dependency \"@vielzeug/courier\" to `2.0.0`"
+          },
           {
-            "comment": "fix: pipe operator type inference",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.0`"
           }
         ],
         "major": [
           {
-            "comment": "refactor!: redesign streams around returned teardowns, pipe(), explicit buffers, channels, adapter subpaths, and terminal consumer names",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor!: redesign streams around returned teardowns, pipe(), explicit buffers, channels, adapter subpaths, and terminal consumer names",
             "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
           }
         ],
-        "dependency": [
+        "minor": [
           {
-            "comment": "Updating dependency \"@vielzeug/courier\" to `2.0.0`"
-          },
-          {
-            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.0.0`"
-          },
-          {
-            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.0`"
-          },
-          {
-            "comment": "Updating dependency \"@vielzeug/courier\" to `2.0.0`"
-          },
-          {
-            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.0.0`"
-          },
-          {
-            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.0`"
-          }
-        ]
-      }
-    },
-    {
-      "version": "1.0.8",
-      "tag": "@vielzeug/flux_v1.0.8",
-      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
-      "comments": {
-        "patch": [
-          {
-            "comment": "refactor(flux): derive the @vielzeug/ripple portion of the vite external list from package.json via readWorkspaceDeps(), keeping the herald/pulse/courier optional-peer adapters explicit since they aren't regular dependencies",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
+            "comment": "feat: adapt Courier adapters to AsyncIterable streams and query handles",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
           }
         ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: pipe operator type inference",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
+        ]
+      },
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "tag": "@vielzeug/flux_v2.0.0",
+      "version": "2.0.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.3.0`"
@@ -165,21 +154,21 @@
           {
             "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.8`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.0.7",
-      "tag": "@vielzeug/flux_v1.0.7",
-      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+            "comment": "refactor(flux): derive the @vielzeug/ripple portion of the vite external list from package.json via readWorkspaceDeps(), keeping the herald/pulse/courier optional-peer adapters explicit since they aren't regular dependencies",
+            "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
           }
-        ],
+        ]
+      },
+      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
+      "tag": "@vielzeug/flux_v1.0.8",
+      "version": "1.0.8"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.3`"
@@ -202,13 +191,20 @@
           {
             "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.7`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
+            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+          }
         ]
-      }
+      },
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "tag": "@vielzeug/flux_v1.0.7",
+      "version": "1.0.7"
     },
     {
-      "version": "1.0.6",
-      "tag": "@vielzeug/flux_v1.0.6",
-      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
       "comments": {
         "dependency": [
           {
@@ -227,20 +223,13 @@
             "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.6`"
           }
         ]
-      }
+      },
+      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
+      "tag": "@vielzeug/flux_v1.0.6",
+      "version": "1.0.6"
     },
     {
-      "version": "1.0.5",
-      "tag": "@vielzeug/flux_v1.0.5",
-      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "1a8008d19848e2db3dace46af8c9710eb79be07a"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/courier\" to `1.1.2`"
@@ -254,21 +243,21 @@
           {
             "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.5`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.0.4",
-      "tag": "@vielzeug/flux_v1.0.4",
-      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
+            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
+            "commit": "1a8008d19848e2db3dace46af8c9710eb79be07a"
           }
-        ],
+        ]
+      },
+      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
+      "tag": "@vielzeug/flux_v1.0.5",
+      "version": "1.0.5"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.1`"
@@ -291,13 +280,20 @@
           {
             "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.4`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
+            "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
+          }
         ]
-      }
+      },
+      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
+      "tag": "@vielzeug/flux_v1.0.4",
+      "version": "1.0.4"
     },
     {
-      "version": "1.0.3",
-      "tag": "@vielzeug/flux_v1.0.3",
-      "date": "Sun, 05 Jul 2026 06:22:27 GMT",
       "comments": {
         "dependency": [
           {
@@ -310,20 +306,13 @@
             "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.3`"
           }
         ]
-      }
+      },
+      "date": "Sun, 05 Jul 2026 06:22:27 GMT",
+      "tag": "@vielzeug/flux_v1.0.3",
+      "version": "1.0.3"
     },
     {
-      "version": "1.0.2",
-      "tag": "@vielzeug/flux_v1.0.2",
-      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "harden flux operator error-forwarding, dedupe subject/pipe internals, fix withLatestFrom error swallow, add NaN/Infinity guard, cancellable toPromise/toArray",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "91af9ac312379b977026a36625b4e5fe303fb1b2"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/courier\" to `1.1.0`"
@@ -343,21 +332,21 @@
           {
             "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.2`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.0.1",
-      "tag": "@vielzeug/flux_v1.0.1",
-      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "chore(flux): rename internal _warn.ts to _dev.ts",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "1b696f77f93b469187d4d7bae13012812a126885"
+            "comment": "harden flux operator error-forwarding, dedupe subject/pipe internals, fix withLatestFrom error swallow, add NaN/Infinity guard, cancellable toPromise/toArray",
+            "commit": "91af9ac312379b977026a36625b4e5fe303fb1b2"
           }
-        ],
+        ]
+      },
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "tag": "@vielzeug/flux_v1.0.2",
+      "version": "1.0.2"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.1.0`"
@@ -380,21 +369,21 @@
           {
             "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.1`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(flux): rename internal _warn.ts to _dev.ts",
+            "commit": "1b696f77f93b469187d4d7bae13012812a126885"
+          }
         ]
-      }
+      },
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "tag": "@vielzeug/flux_v1.0.1",
+      "version": "1.0.1"
     },
     {
-      "version": "1.0.0",
-      "tag": "@vielzeug/flux_v1.0.0",
-      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
       "comments": {
-        "major": [
-          {
-            "comment": "Initial public release",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "3559d0e0e26e795f88785a43b3db8e1e97cfd04d"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.0.0`"
@@ -417,8 +406,19 @@
           {
             "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.0`"
           }
+        ],
+        "major": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Initial public release",
+            "commit": "3559d0e0e26e795f88785a43b3db8e1e97cfd04d"
+          }
         ]
-      }
+      },
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "tag": "@vielzeug/flux_v1.0.0",
+      "version": "1.0.0"
     }
-  ]
+  ],
+  "name": "@vielzeug/flux"
 }

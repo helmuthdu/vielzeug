@@ -17,7 +17,7 @@ describe('findShortcutConflicts', () => {
     const conflicts = findShortcutConflicts('g g', map.listBindings());
 
     expect(conflicts).toHaveLength(1);
-    expect(conflicts[0]!.shortcut).toHaveLength(1);
+    expect(conflicts[0]?.shortcut).toHaveLength(1);
   });
 
   it('returns a longer binding that the proposed shortcut would itself shadow', () => {
@@ -26,7 +26,7 @@ describe('findShortcutConflicts', () => {
     const conflicts = findShortcutConflicts('g', map.listBindings());
 
     expect(conflicts).toHaveLength(1);
-    expect(conflicts[0]!.shortcut).toHaveLength(2);
+    expect(conflicts[0]?.shortcut).toHaveLength(2);
   });
 
   it('returns an empty array when there is no relationship', () => {

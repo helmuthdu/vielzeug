@@ -1,8 +1,7 @@
-import type { Params } from './url';
-
-import { classifyRequestError, CourierDisposedError, CourierHttpError, CourierParseError } from './errors';
+import { CourierDisposedError, CourierHttpError, CourierParseError, classifyRequestError } from './errors';
 import { buildRequestInit } from './serialize';
 import { anySignal, buildTimeoutSignal, type TransportCore } from './transport';
+import type { Params } from './url';
 import { buildUrl } from './url';
 
 export type StreamOptions<P extends string = string> = {

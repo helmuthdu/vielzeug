@@ -4,12 +4,11 @@
        ======================================== */
 
   :host {
-    display: block;
-    color: var(--accordion-item-body-color, var(--text-color-body));
-
     --accordion-details-radius: var(--rounded-lg);
     --accordion-item-transition: var(--transition-normal);
     --accordion-item-expand-easing: var(--ease-spring);
+    display: block;
+    color: var(--accordion-item-body-color, var(--text-color-body));
   }
 
   details {
@@ -278,10 +277,9 @@
      ======================================== */
 
   .chevron {
+    --ore-icon-size: var(--_size, var(--size-5));
     width: var(--_size, var(--size-5));
     height: var(--_size, var(--size-5));
-
-    --ore-icon-size: var(--_size, var(--size-5));
 
     margin-inline-start: auto;
     transform: rotate(-90deg);

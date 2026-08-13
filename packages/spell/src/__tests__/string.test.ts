@@ -1,4 +1,4 @@
-import { s, SpellValidationError } from '../index';
+import { SpellValidationError, s } from '../index';
 
 describe('s.string()', () => {
   it('accepts strings including empty string', () => {

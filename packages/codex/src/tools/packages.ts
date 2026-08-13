@@ -1,7 +1,6 @@
-import type { ToolDefinition } from './shared.js';
-
 import { DOC_PAGES } from '../types.js';
 import { PACKAGE_SLUG_PROPERTY, parseArgs, type ToolSchema } from './schema.js';
+import type { ToolDefinition } from './shared.js';
 
 const empty = { properties: {}, type: 'object' } satisfies ToolSchema;
 const slug = {

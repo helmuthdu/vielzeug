@@ -1,8 +1,7 @@
-import type { PagePagination, PageQuery, PageQueryPatch, PageSource, PageSourceConfig } from './types';
-
 import { warn } from './_dev';
 import { createAsyncSource } from './asyncSource';
 import { createPagePagination, positiveInteger, sameQuery, totalItems } from './pagination';
+import type { PagePagination, PageQuery, PageQueryPatch, PageSource, PageSourceConfig } from './types';
 
 const normalizeQuery = <TFilter, TSort>(
   current: PageQuery<TFilter, TSort>,

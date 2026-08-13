@@ -1,8 +1,7 @@
-import type { Page } from '@playwright/test';
-
-import { expect, test } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 type NecromancerRuntime = Pick<typeof import('../index'), 'animate' | 'captureLayout'>;
 
@@ -125,7 +124,7 @@ test('reduces motion while preserving its requested keyframes', async ({ page })
 
     return {
       finalOpacity: getComputedStyle(element).opacity,
-      firstOpacity: frames?.[0]?.['opacity'],
+      firstOpacity: frames?.[0]?.opacity,
       status,
     };
   });
@@ -161,10 +160,10 @@ test('adds FLIP translation without replacing authored transforms or translate',
 
     return {
       authoredTranslate: element.style.translate,
-      composite: firstFrame?.['composite'],
+      composite: firstFrame?.composite,
       handleCount: group.handles.length,
       transform: element.style.transform,
-      translate: firstFrame?.['translate'],
+      translate: firstFrame?.translate,
     };
   });
 
@@ -216,9 +215,9 @@ test('adds FLIP scaling without replacing an authored scale', async ({ page }) =
 
     return {
       authoredScale: element.style.scale,
-      composite: firstFrame?.['composite'],
+      composite: firstFrame?.composite,
       endWidth,
-      scale: firstFrame?.['scale'],
+      scale: firstFrame?.scale,
       startWidth,
     };
   });
@@ -265,10 +264,10 @@ test('matches replacement layout elements by key', async ({ page }) => {
     group.dispose();
 
     return {
-      composite: firstFrame?.['composite'],
+      composite: firstFrame?.composite,
       targetIsReplacement: handle.animation.effect?.target === replacement,
       transform: replacement.style.transform,
-      translate: firstFrame?.['translate'],
+      translate: firstFrame?.translate,
     };
   });
 

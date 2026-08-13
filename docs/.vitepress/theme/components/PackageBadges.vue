@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useData } from 'vitepress';
+import { computed } from 'vue';
 
 interface Props {
   package: string;
@@ -20,38 +20,38 @@ const packageInfo = computed(() => {
 
   return (
     packages[pkgName] || {
-      version: '1.0.0',
       dependencies: 0,
-      size: props.size || '0 KB',
       minNode: null,
+      size: props.size || '0 KB',
+      version: '1.0.0',
     }
   );
 });
 
 const badges = computed(() => [
   {
+    alt: 'Version',
+    color: 'blue',
     label: 'version',
     value: packageInfo.value.version,
-    color: 'blue',
-    alt: 'Version',
   },
   {
+    alt: 'Size',
+    color: 'success',
     label: 'size',
     value: packageInfo.value.size,
-    color: 'success',
-    alt: 'Size',
   },
   {
+    alt: 'TypeScript',
+    color: 'blue',
     label: 'TypeScript',
     value: '100%',
-    color: 'blue',
-    alt: 'TypeScript',
   },
   {
+    alt: 'Dependencies',
+    color: 'success',
     label: 'dependencies',
     value: packageInfo.value.dependencies,
-    color: 'success',
-    alt: 'Dependencies',
   },
 ]);
 

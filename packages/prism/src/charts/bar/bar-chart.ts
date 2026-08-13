@@ -1,8 +1,4 @@
 import { isReactive } from '@vielzeug/ripple';
-
-import type { BarChartConfig, BarVariant, ChartHandle } from '../../types';
-import type { BarScaleContext } from './bar-scale-context';
-
 import { warn } from '../../_dev';
 import { renderAxis, resolveTickCount } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
@@ -14,8 +10,10 @@ import { bandScale } from '../../scales/band';
 import { linearScale } from '../../scales/linear';
 import { createSvgElement } from '../../svg/element';
 import { seriesColor } from '../../theme';
+import type { BarChartConfig, BarVariant, ChartHandle } from '../../types';
 import { findCatIdx, findSeriesIdx, isOutsideBars } from './bar-hit-test';
 import { renderBars } from './bar-renderer';
+import type { BarScaleContext } from './bar-scale-context';
 
 function variantFlags(variant: BarVariant): { horizontal: boolean; stacked: boolean } {
   return {

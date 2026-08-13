@@ -1,20 +1,18 @@
 import type { Readable } from '@vielzeug/ripple';
 
 import { signal } from '@vielzeug/ripple';
-
-import type { ChartA11y, ChartDimensions, ChartMargin } from '../types';
-
 import { warn } from '../_dev';
 import { PrismRenderError } from '../errors';
 import { createSvgElement, setAttributes } from '../svg/element';
+import type { ChartA11y, ChartDimensions, ChartMargin } from '../types';
 import { resolveMargin } from './layout';
 import { observeResize } from './responsive';
 
 export interface ChartBase {
   chartArea: SVGGElement;
   dimensions: Readable<ChartDimensions>;
-  svg: SVGSVGElement;
   dispose(): void;
+  svg: SVGSVGElement;
 }
 
 export function createChartBase(

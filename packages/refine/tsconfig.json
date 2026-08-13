@@ -1,14 +1,14 @@
 {
-  "extends": "../../tsconfig.json",
-  "include": ["src/**/*.d.ts", "src/**/*.ts", "vitest.setup.ts"],
-  "exclude": ["node_modules"],
   "compilerOptions": {
     "baseUrl": ".",
-    "types": ["vitest/globals", "vite/client", "node"],
     "paths": {
       "/ore": ["../ore/src/index.ts"],
       "/ore/controls": ["../ore/src/controls/index.ts"],
       "/ore/testing": ["../ore/src/testing/index.ts"]
-    }
-  }
+    },
+    "types": ["vitest/globals", "vite/client", "node"]
+  },
+  "exclude": ["node_modules"],
+  "extends": "../../tsconfig.json",
+  "include": ["src/**/*.d.ts", "src/**/*.ts", "vitest.setup.ts"]
 }

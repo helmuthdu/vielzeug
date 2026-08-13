@@ -3,9 +3,8 @@ import type { Readable } from '@vielzeug/ripple';
 import { signal } from '@vielzeug/ripple';
 
 import type { PositionerOptions } from './float';
-import type { ComputePositionResult, ReferenceElement } from './types';
-
 import { createPositioner, type Positioner } from './float';
+import type { ComputePositionResult, ReferenceElement } from './types';
 
 export interface ReactivePositioner extends Positioner {
   readonly position: Readable<ComputePositionResult | null>;

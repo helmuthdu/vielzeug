@@ -71,7 +71,7 @@ export function decode(raw: unknown): ParsedFrame {
 
   try {
     parsed = JSON.parse(raw);
-  } catch (cause) {
+  } catch (_cause) {
     throw new PulseProtocolError('JSON parse error', raw);
   }
 

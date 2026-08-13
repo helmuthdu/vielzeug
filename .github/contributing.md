@@ -33,7 +33,7 @@ pnpm test    # verify the setup works
    git checkout -b fix/<package>-short-description
    ```
 
-3. **Edit code** in `packages/<name>/`. Run `pnpm --filter @vielzeug/<name> fix` (or `pnpm fix` at the root) instead of hand-formatting or hand-sorting imports — ESLint Perfectionist + Prettier own that. Add or update tests in `packages/<name>/src/__tests__/`.
+3. **Edit code** in `packages/<name>/`. Run `pnpm --filter @vielzeug/<name> fix` (or `pnpm fix` at the root) instead of hand-formatting or hand-sorting imports — Biome owns those safe fixes. Add or update tests in `packages/<name>/src/__tests__/`.
 
 4. **Add a change file.** Every PR that touches a package's published output needs one — CI (`rush change --verify`) fails without it:
 

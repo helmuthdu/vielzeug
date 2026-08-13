@@ -7,9 +7,8 @@
  * ```
  */
 
-import type { Bus, BusLogger, BusOptions, EventMap } from './types';
-
 import { createBus } from './bus';
+import type { Bus, BusLogger, BusOptions, EventMap } from './types';
 
 /**
  * Creates a {@link Bus} with debug logging pre-wired to `console.debug`.

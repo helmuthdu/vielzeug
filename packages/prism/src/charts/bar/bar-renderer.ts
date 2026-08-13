@@ -1,8 +1,7 @@
 import type { AnimationTarget } from '../../animation/transition';
-import type { BandScale, Scale, TransitionConfig } from '../../types';
-
 import { animate } from '../../animation/transition';
 import { createSvgElement, setAttributes } from '../../svg/element';
+import type { BandScale, Scale, TransitionConfig } from '../../types';
 
 export interface BarRenderOptions {
   baselineYs?: number[];

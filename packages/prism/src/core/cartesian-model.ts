@@ -1,6 +1,5 @@
-import type { Datum, Series } from '../types';
-
 import { warn } from '../_dev';
+import type { Datum, Series } from '../types';
 
 export type CartesianKey = string;
 

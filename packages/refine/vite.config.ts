@@ -1,7 +1,7 @@
-import browserslist from 'browserslist';
-import { browserslistToTargets } from 'lightningcss';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import browserslist from 'browserslist';
+import { browserslistToTargets } from 'lightningcss';
 import { defineConfig, mergeConfig } from 'vite';
 
 import { getConfig, readWorkspaceDeps } from '../../vite.config.ts';

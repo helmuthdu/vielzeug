@@ -1,7 +1,6 @@
-import type { Catalog, CatalogNode, Locale, PluralMessage } from './types';
-
 import { compileCatalog } from './_catalog';
 import { canonicalLocale } from './_locale';
+import type { Catalog, CatalogNode, Locale, PluralMessage } from './types';
 
 export type ValidationIssue = {
   key: string;

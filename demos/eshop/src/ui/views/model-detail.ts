@@ -15,9 +15,6 @@ import '../components/model-card';
 
 import { define, html, prop, when } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-
-import type { Configuration, FeatureKey, Model } from '../../core/types';
-
 import { compareModelIds } from '../../core/cart-store';
 import { getModelBySlug, modelsSignal } from '../../core/catalog';
 import { formatPrice } from '../../core/currency';
@@ -25,6 +22,7 @@ import { addToCart, toggleCompare } from '../../core/history';
 import { t } from '../../core/i18n';
 import { computePriceBreakdown, estimateMonthlyPayment, resolveConfiguration } from '../../core/pricing';
 import { router } from '../../core/router';
+import type { Configuration, FeatureKey, Model } from '../../core/types';
 import { openShareBuildDialog } from '../components/share-build-dialog';
 
 /** Icon per feature-card key (`model.features.*` in `core/i18n.ts` owns the label text) —
@@ -63,9 +61,9 @@ define<ModelConfiguratorProps>('model-configurator', {
   setup(props) {
     const model = (): Model => props.model.value!;
 
-    const trimId = signal(props.model.value!.trims[0].id);
-    const colorId = signal(props.model.value!.colors[0].id);
-    const wheelId = signal(props.model.value!.wheels[0].id);
+    const trimId = signal(props.model.value?.trims[0].id);
+    const colorId = signal(props.model.value?.colors[0].id);
+    const wheelId = signal(props.model.value?.wheels[0].id);
     const extraPackageIds = signal<string[]>([]);
 
     const trim = computed(() => model().trims.find((t) => t.id === trimId.value)!);

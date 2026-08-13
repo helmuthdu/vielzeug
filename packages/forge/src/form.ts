@@ -1,3 +1,19 @@
+import {
+  assertSafeKey,
+  hasAtPath,
+  immutable,
+  isRecord,
+  type MetaRoot,
+  normalizeErrors,
+  readAtPath,
+  readError,
+  readMeta,
+  resetAtPath,
+  touchAll,
+  writeAtPath,
+  writeMeta,
+} from './core/path';
+import { ForgeConfigError, ForgeDisposedError, ForgeSubmitError, ForgeValidationError } from './errors';
 import type {
   Field,
   FieldState,
@@ -13,23 +29,6 @@ import type {
   ValidationErrors,
   ValidationResult,
 } from './types';
-
-import {
-  assertSafeKey,
-  hasAtPath,
-  immutable,
-  isRecord,
-  normalizeErrors,
-  readAtPath,
-  readError,
-  readMeta,
-  resetAtPath,
-  type MetaRoot,
-  touchAll,
-  writeAtPath,
-  writeMeta,
-} from './core/path';
-import { ForgeConfigError, ForgeDisposedError, ForgeSubmitError, ForgeValidationError } from './errors';
 
 type InternalState<TValues extends Record<string, unknown>> = Readonly<{
   baseline: TValues;

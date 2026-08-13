@@ -292,8 +292,8 @@ describe('ore-slider', () => {
       });
 
       fixture
-        .query<HTMLElement>('.slider-thumb-start')!
-        .dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
+        .query<HTMLElement>('.slider-thumb-start')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
       await new Promise((r) => setTimeout(r, 10));
 
       expect(target?.value).toBe('21,80');

@@ -1,13 +1,10 @@
-import { define, html, prop, bind, getHost, onCleanup, onMounted, useEmit } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
+import { bind, define, getHost, html, onCleanup, onMounted, prop, useEmit, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
-
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
-
 import { createListControl, lifecycleSignal } from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, fieldVariantMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import componentStyles from './otp-input.css?inline';
 

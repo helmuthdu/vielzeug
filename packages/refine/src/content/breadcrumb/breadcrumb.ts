@@ -1,7 +1,6 @@
-import { define, html, prop, getHost, useSlots, watchEffect } from '@vielzeug/ore';
-
-import itemStyles from './breadcrumb-item.css?inline';
+import { define, getHost, html, prop, useSlots, watchEffect } from '@vielzeug/ore';
 import componentStyles from './breadcrumb.css?inline';
+import itemStyles from './breadcrumb-item.css?inline';
 
 export type OreBreadcrumbProps = {
   label?: string;

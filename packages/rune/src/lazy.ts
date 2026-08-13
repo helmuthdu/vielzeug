@@ -1,6 +1,5 @@
-import type { Bindings } from './types';
-
 import { isUnsafeObjectKey } from './_prototype';
+import type { Bindings } from './types';
 
 const LAZY_BRAND = Symbol('rune.lazy');
 

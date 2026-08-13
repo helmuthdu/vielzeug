@@ -120,18 +120,10 @@ export type SandboxMessage =
 export interface SandboxHandle {
   /** `AbortSignal` aborted when `dispose()` is called. Use to tie async operations to this sandbox's lifetime. */
   readonly disposalSignal: AbortSignal;
-  /** True once dispose() has been called. */
-  readonly disposed: boolean;
-  /**
-   * Resolves when the first sandbox document signals it is ready.
-   * Also resolves if the sandbox is disposed before the first render — check
-   * `sandbox.disposed` afterward if you need to distinguish the two cases.
-   * Does not reset on re-renders; use the Promise returned by render() for
-   * subsequent renders.
-   */
-  readonly ready: Promise<void>;
   /** Tear down the sandbox — removes the iframe from the DOM and clears all listeners. */
   dispose(): void;
+  /** True once dispose() has been called. */
+  readonly disposed: boolean;
   /**
    * Subscribe to application-level messages from the sandboxed document.
    * Receives 'error', 'custom', and 'resize' messages. The 'ready' lifecycle
@@ -140,13 +132,13 @@ export interface SandboxHandle {
    */
   onMessage(handler: (msg: SandboxMessage) => void): Unsubscribe;
   /**
-   * Replace the live document body without navigating the iframe. Document/window listeners,
-   * head scripts, and named styles remain; body descendants, their listeners, references, and
-   * form state are replaced. Scripts included in `html` do not execute through innerHTML.
-   *
-   * Call after `render()` resolves — warns in dev if the bridge is not ready. No-ops if disposed.
+   * Resolves when the first sandbox document signals it is ready.
+   * Also resolves if the sandbox is disposed before the first render — check
+   * `sandbox.disposed` afterward if you need to distinguish the two cases.
+   * Does not reset on re-renders; use the Promise returned by render() for
+   * subsequent renders.
    */
-  replaceBody(html: string): void;
+  readonly ready: Promise<void>;
   /**
    * Replace the entire sandbox document (full page reset). Creates the iframe lazily
    * on the first call — no DOM is created until render() is invoked.
@@ -160,17 +152,25 @@ export interface SandboxHandle {
    */
   render(html: string, options?: { signal?: AbortSignal }): Promise<void>;
   /**
-   * Push multiple state values into the sandbox in a single postMessage.
-   * More efficient than calling setState() repeatedly for initial state setup.
-   * Warns in dev if called before render() resolves.
+   * Replace the live document body without navigating the iframe. Document/window listeners,
+   * head scripts, and named styles remain; body descendants, their listeners, references, and
+   * form state are replaced. Scripts included in `html` do not execute through innerHTML.
+   *
+   * Call after `render()` resolves — warns in dev if the bridge is not ready. No-ops if disposed.
    */
-  setStateAll(record: Record<string, unknown>): void;
+  replaceBody(html: string): void;
   /**
    * Push a state value into the sandbox without re-rendering.
    * Dispatches a `sandbox:state-update` CustomEvent on `document` inside the sandbox.
    * Warns in dev if called before render() resolves.
    */
   setState(key: string, value: unknown): void;
+  /**
+   * Push multiple state values into the sandbox in a single postMessage.
+   * More efficient than calling setState() repeatedly for initial state setup.
+   * Warns in dev if called before render() resolves.
+   */
+  setStateAll(record: Record<string, unknown>): void;
   /**
    * Replace the CSS for a named style block without a full re-render.
    * `id` must match a key in the `namedStyles` option passed to `createSandbox`.

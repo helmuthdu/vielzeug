@@ -15,56 +15,26 @@
   ],
   "homepage": "https://vielzeug.dev/refine/",
   "repository": {
+    "directory": "packages/refine",
     "type": "git",
-    "url": "https://github.com/helmuthdu/vielzeug",
-    "directory": "packages/refine"
+    "url": "https://github.com/helmuthdu/vielzeug"
   },
   "bugs": {
     "url": "https://github.com/helmuthdu/vielzeug/issues"
   },
+  "type": "module",
   "engines": {
     "node": ">=22"
   },
-  "type": "module",
-  "customElements": "dist/custom-elements.json",
   "files": [
     "dist"
   ],
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    },
-    "./styles/animation.css": {
-      "import": "./dist/styles/animation.css",
-      "default": "./dist/styles/animation.css"
-    },
-    "./styles/layers.css": {
-      "import": "./dist/styles/layer.css",
-      "default": "./dist/styles/layer.css"
-    },
-    "./styles/preflight.css": {
-      "import": "./dist/styles/preflight.css",
-      "default": "./dist/styles/preflight.css"
-    },
-    "./styles/theme.css": {
-      "import": "./dist/styles/theme.css",
-      "default": "./dist/styles/theme.css"
-    },
-    "./tokens.css": {
-      "import": "./dist/styles/tokens.css",
-      "default": "./dist/styles/tokens.css"
-    },
-    "./frameworks/elements": {
-      "types": "./dist/frameworks/elements.d.ts"
-    },
-    "./frameworks/react": {
-      "types": "./dist/frameworks/react.d.ts"
-    },
-    "./frameworks/vue": {
-      "types": "./dist/frameworks/vue.d.ts"
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
     },
     "./accordion": {
       "import": "./dist/accordion.js",
@@ -201,6 +171,15 @@
       "require": "./dist/file-input.cjs",
       "types": "./dist/inputs/file-input/file-input.d.ts"
     },
+    "./frameworks/elements": {
+      "types": "./dist/frameworks/elements.d.ts"
+    },
+    "./frameworks/react": {
+      "types": "./dist/frameworks/react.d.ts"
+    },
+    "./frameworks/vue": {
+      "types": "./dist/frameworks/vue.d.ts"
+    },
     "./grid": {
       "import": "./dist/grid.js",
       "require": "./dist/grid.cjs",
@@ -336,6 +315,22 @@
       "require": "./dist/stepper.cjs",
       "types": "./dist/content/stepper/stepper.d.ts"
     },
+    "./styles/animation.css": {
+      "default": "./dist/styles/animation.css",
+      "import": "./dist/styles/animation.css"
+    },
+    "./styles/layers.css": {
+      "default": "./dist/styles/layer.css",
+      "import": "./dist/styles/layer.css"
+    },
+    "./styles/preflight.css": {
+      "default": "./dist/styles/preflight.css",
+      "import": "./dist/styles/preflight.css"
+    },
+    "./styles/theme.css": {
+      "default": "./dist/styles/theme.css",
+      "import": "./dist/styles/theme.css"
+    },
     "./switch": {
       "import": "./dist/switch.js",
       "require": "./dist/switch.cjs",
@@ -381,6 +376,10 @@
       "require": "./dist/toast.cjs",
       "types": "./dist/feedback/toast/toast.d.ts"
     },
+    "./tokens.css": {
+      "default": "./dist/styles/tokens.css",
+      "import": "./dist/styles/tokens.css"
+    },
     "./tooltip": {
       "import": "./dist/tooltip.js",
       "require": "./dist/tooltip.cjs",
@@ -392,68 +391,8 @@
       "types": "./dist/feedback/typing-indicator/typing-indicator.d.ts"
     }
   },
-  "scripts": {
-    "analyze": "custom-elements-manifest analyze --config scripts/refine-manifest.mjs",
-    "build": "pnpm run check:theme && pnpm run check:manifest && pnpm run check:css-contract && vite build && pnpm run build:bundle && cp -r src/styles/*.css dist/styles && pnpm run build:types && pnpm run analyze && pnpm run gen:framework-types",
-    "build:types": "tsc -p tsconfig.declarations.json",
-    "check:css-contract": "node ./scripts/check-css-contract.mjs",
-    "check:manifest": "node ./scripts/refine-manifest.mjs check-exports",
-    "check:theme": "node ./scripts/theme-tokens.mjs check",
-    "dev": "vite",
-    "fix": "eslint --fix src",
-    "gen:framework-types": "node ./scripts/generate-framework-types.mjs",
-    "lint": "eslint src",
-    "preview": "vite preview",
-    "sync:exports": "node ./scripts/refine-manifest.mjs sync-exports",
-    "sync:theme": "node ./scripts/theme-tokens.mjs sync",
-    "test": "vitest",
-    "test:e2e": "playwright test",
-    "build:bundle": "vite build --config vite.bundle.config.ts",
-    "build:bundle:watch": "vite build --watch --config vite.bundle.config.ts"
-  },
-  "dependencies": {
-    "@vielzeug/arsenal": "workspace:*",
-    "@vielzeug/assay": "workspace:*",
-    "@vielzeug/dnd": "workspace:*",
-    "@vielzeug/keymap": "workspace:*",
-    "@vielzeug/orbit": "workspace:*",
-    "@vielzeug/ore": "workspace:*",
-    "@vielzeug/ripple": "workspace:*",
-    "@vielzeug/tempo": "workspace:*",
-    "lucide": "^1.28.0"
-  },
-  "devDependencies": {
-    "@types/node": "^26.1.2",
-    "@axe-core/playwright": "^4.12.1",
-    "@custom-elements-manifest/analyzer": "^0.11.0",
-    "@playwright/test": "^1.62.1",
-    "@types/culori": "^4.0.1",
-    "axe-core": "^4.12.1",
-    "browserslist": "^4.28.7",
-    "culori": "^4.0.2",
-    "lightningcss": "^1.33.0",
-    "prettier": "^3.9.6",
-    "stylelint": "^17.14.1",
-    "typescript": "^6.0.3",
-    "vite": "^8.2.0",
-    "vitest": "^4.1.10"
-  },
-  "sideEffects": [
-    "./dist/*.js",
-    "./dist/*.cjs",
-    "./dist/styles/**"
-  ],
   "typesVersions": {
     "*": {
-      "frameworks/elements": [
-        "dist/frameworks/elements.d.ts"
-      ],
-      "frameworks/react": [
-        "dist/frameworks/react.d.ts"
-      ],
-      "frameworks/vue": [
-        "dist/frameworks/vue.d.ts"
-      ],
       "accordion": [
         "dist/disclosure/accordion/accordion.d.ts"
       ],
@@ -534,6 +473,15 @@
       ],
       "file-input": [
         "dist/inputs/file-input/file-input.d.ts"
+      ],
+      "frameworks/elements": [
+        "dist/frameworks/elements.d.ts"
+      ],
+      "frameworks/react": [
+        "dist/frameworks/react.d.ts"
+      ],
+      "frameworks/vue": [
+        "dist/frameworks/vue.d.ts"
       ],
       "grid": [
         "dist/layout/grid/grid.d.ts"
@@ -650,5 +598,56 @@
         "dist/feedback/typing-indicator/typing-indicator.d.ts"
       ]
     }
-  }
+  },
+  "sideEffects": [
+    "./dist/*.js",
+    "./dist/*.cjs",
+    "./dist/styles/**"
+  ],
+  "scripts": {
+    "analyze": "custom-elements-manifest analyze --config scripts/refine-manifest.mjs",
+    "build": "pnpm run check:theme && pnpm run check:manifest && pnpm run check:css-contract && vite build && pnpm run build:bundle && cp -r src/styles/*.css dist/styles && pnpm run build:types && pnpm run analyze && pnpm run gen:framework-types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:bundle:watch": "vite build --watch --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "check:css-contract": "node ./scripts/check-css-contract.mjs",
+    "check:manifest": "node ./scripts/refine-manifest.mjs check-exports",
+    "check:theme": "node ./scripts/theme-tokens.mjs check",
+    "dev": "vite",
+    "fix": "biome check --write src",
+    "gen:framework-types": "node ./scripts/generate-framework-types.mjs",
+    "lint": "biome ci src",
+    "preview": "vite preview",
+    "sync:exports": "node ./scripts/refine-manifest.mjs sync-exports",
+    "sync:theme": "node ./scripts/theme-tokens.mjs sync",
+    "test": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@vielzeug/arsenal": "workspace:*",
+    "@vielzeug/assay": "workspace:*",
+    "@vielzeug/dnd": "workspace:*",
+    "@vielzeug/keymap": "workspace:*",
+    "@vielzeug/orbit": "workspace:*",
+    "@vielzeug/ore": "workspace:*",
+    "@vielzeug/ripple": "workspace:*",
+    "@vielzeug/tempo": "workspace:*",
+    "lucide": "^1.31.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@biomejs/biome": "2.5.8",
+    "@custom-elements-manifest/analyzer": "^0.11.0",
+    "@playwright/test": "^1.62.1",
+    "@types/culori": "^4.0.1",
+    "@types/node": "^26.2.0",
+    "axe-core": "^4.13.0",
+    "browserslist": "^4.28.8",
+    "culori": "^4.0.2",
+    "lightningcss": "^1.33.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
+  },
+  "customElements": "dist/custom-elements.json"
 }

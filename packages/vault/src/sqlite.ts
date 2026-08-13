@@ -1,4 +1,3 @@
-export { createSQLite } from './adapters/sqlite';
 export type {
   SQLiteDatabase,
   SQLiteParameter,
@@ -6,3 +5,4 @@ export type {
   SQLiteVaultOptions,
   SQLiteVaultStore,
 } from './adapters/sqlite';
+export { createSQLite } from './adapters/sqlite';

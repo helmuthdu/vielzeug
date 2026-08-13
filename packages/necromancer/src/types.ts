@@ -66,26 +66,26 @@ export interface LayoutCaptureOptions {
 export interface AnimationHandle {
   /** The lifecycle-owned native Web Animation. */
   readonly animation: Animation;
-  /** Resolves once the animation finishes, is reduced, or is cancelled. */
-  readonly result: Promise<AnimationResult>;
-  /** Whether this handle has been disposed. */
-  readonly disposed: boolean;
   /** Cancels the native animation and releases owned listeners. */
   dispose(reason?: unknown): void;
+  /** Whether this handle has been disposed. */
+  readonly disposed: boolean;
+  /** Resolves once the animation finishes, is reduced, or is cancelled. */
+  readonly result: Promise<AnimationResult>;
   /** Calls {@link dispose}. */
   [Symbol.dispose](): void;
 }
 
 /** A lifecycle-owned collection of animations. */
 export interface AnimationGroup {
+  /** Disposes every child and releases group ownership. */
+  dispose(reason?: unknown): void;
+  /** Whether this group has been disposed. */
+  readonly disposed: boolean;
   /** Child handles in the order supplied to {@link animateEach}. */
   readonly handles: readonly AnimationHandle[];
   /** Resolves after all children have reached a terminal state. */
   readonly results: Promise<readonly AnimationResult[]>;
-  /** Whether this group has been disposed. */
-  readonly disposed: boolean;
-  /** Disposes every child and releases group ownership. */
-  dispose(reason?: unknown): void;
   /** Calls {@link dispose}. */
   [Symbol.dispose](): void;
 }

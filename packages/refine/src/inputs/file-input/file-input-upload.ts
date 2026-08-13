@@ -13,7 +13,7 @@ export const formatBytes = (bytes: number): string => {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  return `${parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
 };
 
 const isFileSizeAllowed = (file: File, maxSize: number): boolean => !maxSize || file.size <= maxSize;
@@ -321,8 +321,8 @@ export function createFileQueue(options: FileQueueOptions): FileQueue {
   return {
     addFiles,
     dispose,
-    files,
     fileState,
+    files,
     removeFile,
     replaceFile,
     retryUpload,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { EUR, JPY, USD, format, formatParts, money } from '../index';
+import { EUR, format, formatParts, JPY, money, USD } from '../index';
 
 describe('format', () => {
   it('formats bigint-backed values without number conversion', () => {

@@ -120,12 +120,12 @@
   }
 
   :host([orientation='vertical']) .indicator:not(.indicator-active) {
-    width: var(--size-2) !important;
-    height: var(--size-2) !important;
+    width: var(--size-2);
+    height: var(--size-2);
   }
 
   :host([orientation='vertical']) .indicator-active {
-    width: var(--size-1-5) !important;
+    width: var(--size-1-5);
     height: var(--size-8);
   }
 
@@ -173,17 +173,16 @@
 
   /* Inactive indicator: small circle */
   .indicator:not(.indicator-active) {
-    width: var(--size-2) !important;
-    height: var(--size-2) !important;
+    width: var(--size-2);
+    height: var(--size-2);
     overflow: hidden;
     border-radius: var(--rounded-full);
   }
 
   /* Active indicator: wider pill (progress bar) */
   .indicator-active {
-    width: var(--size-8) !important;
-
     --progress-track-bg: color-mix(in oklch, var(--_dot-bg) 60%, transparent);
+    width: var(--size-8);
   }
 
   .indicator:focus-visible {

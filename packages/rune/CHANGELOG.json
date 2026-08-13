@@ -1,103 +1,103 @@
 {
-  "name": "@vielzeug/rune",
   "entries": [
     {
-      "version": "2.0.0",
-      "tag": "@vielzeug/rune_v2.0.0",
-      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
       "comments": {
         "major": [
           {
-            "comment": "refactor!: make batch lifecycle awaitable and remove RuneTransportError",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor!: make batch lifecycle awaitable and remove RuneTransportError",
             "commit": "b0ab037bd2bd0615375b175b95e1cf1d15be3e65"
           }
         ]
-      }
+      },
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "tag": "@vielzeug/rune_v2.0.0",
+      "version": "2.0.0"
     },
     {
-      "version": "1.1.3",
-      "tag": "@vielzeug/rune_v1.1.3",
-      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
             "commit": "49ec292706645d1f4937897ac628d852f3a11736"
           }
         ]
-      }
+      },
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "tag": "@vielzeug/rune_v1.1.3",
+      "version": "1.1.3"
     },
     {
-      "version": "1.1.2",
-      "tag": "@vielzeug/rune_v1.1.2",
-      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
             "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
           }
         ]
-      }
+      },
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "tag": "@vielzeug/rune_v1.1.2",
+      "version": "1.1.2"
     },
     {
-      "version": "1.1.1",
-      "tag": "@vielzeug/rune_v1.1.1",
-      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
             "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
           }
         ]
-      }
+      },
+      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
+      "tag": "@vielzeug/rune_v1.1.1",
+      "version": "1.1.1"
     },
     {
-      "version": "1.1.0",
-      "tag": "@vielzeug/rune_v1.1.0",
-      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
       "comments": {
         "minor": [
           {
-            "comment": "fix(rune): patch Node console format-string injection (log forging via namespace) and __proto__ bracket-assignment prototype hijack (serializeErrors/redactObject/resolveBindings); stop entry.data aliasing internal bindings, serialize Error values in pinned bindings (not just per-call context), isolate transport/middleware failures in dispatch() using RuneTransportError, export PRIORITY, fix README Rune/sample drift, drop unused devOnly()",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix(rune): patch Node console format-string injection (log forging via namespace) and __proto__ bracket-assignment prototype hijack (serializeErrors/redactObject/resolveBindings); stop entry.data aliasing internal bindings, serialize Error values in pinned bindings (not just per-call context), isolate transport/middleware failures in dispatch() using RuneTransportError, export PRIORITY, fix README Rune/sample drift, drop unused devOnly()",
             "commit": "4309a13cf8cd54fbce0caa39476757f799894f68"
           }
         ]
-      }
+      },
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "tag": "@vielzeug/rune_v1.1.0",
+      "version": "1.1.0"
     },
     {
-      "version": "1.0.1",
-      "tag": "@vielzeug/rune_v1.0.1",
-      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore(rune): rename internal _warn.ts to _dev.ts",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(rune): rename internal _warn.ts to _dev.ts",
             "commit": "1b696f77f93b469187d4d7bae13012812a126885"
           }
         ]
-      }
+      },
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "tag": "@vielzeug/rune_v1.0.1",
+      "version": "1.0.1"
     },
     {
-      "version": "1.0.0",
-      "tag": "@vielzeug/rune_v1.0.0",
-      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
       "comments": {
         "major": [
           {
-            "comment": "Initial public release",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Initial public release",
             "commit": "2a622e2058ae28a3e3ffd33f639ad8c3d9579aa4"
           }
         ]
-      }
+      },
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "tag": "@vielzeug/rune_v1.0.0",
+      "version": "1.0.0"
     }
-  ]
+  ],
+  "name": "@vielzeug/rune"
 }

@@ -45,10 +45,9 @@ export interface CemSlot {
 }
 
 export interface CemDeclaration {
-  [key: string]: unknown;
   attributes?: CemAttribute[];
-  cssProperties?: CemCssProperty[];
   cssParts?: CemCssPart[];
+  cssProperties?: CemCssProperty[];
   description?: string;
   events?: CemEvent[];
   members?: CemMember[];
@@ -56,6 +55,7 @@ export interface CemDeclaration {
   slots?: CemSlot[];
   superclass?: { name: string; package?: string };
   tagName?: string;
+  [key: string]: unknown;
 }
 
 export interface Example {

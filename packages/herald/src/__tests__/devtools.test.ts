@@ -3,7 +3,7 @@ import { debugBus } from '../devtools';
 type TestEvents = {
   count: number;
   greet: { name: string };
-  toggle: void;
+  toggle: undefined;
 };
 
 describe('debugBus', () => {

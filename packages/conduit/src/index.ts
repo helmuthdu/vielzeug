@@ -1,8 +1,8 @@
 export { createContainer } from './container';
 export {
   ConduitCircularDependencyError,
-  ConduitDisposeError,
   ConduitDisposedError,
+  ConduitDisposeError,
   ConduitDuplicateRegistrationError,
   ConduitError,
   ConduitProviderNotFoundError,

@@ -5,13 +5,12 @@ import '@vielzeug/refine/slider';
 import '@vielzeug/refine/accordion';
 import '@vielzeug/refine/accordion-item';
 
-import type { LogEntry } from '@vielzeug/rune';
-
 import { define, each, html, onCleanup, ref, when } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
+import type { LogEntry } from '@vielzeug/rune';
 
 import { currentUser } from '../../core/auth';
-import { SUPPORTED_CURRENCIES, currentCurrency, setCurrency } from '../../core/currency';
+import { currentCurrency, SUPPORTED_CURRENCIES, setCurrency } from '../../core/currency';
 import { currentLocale, setLocale, t } from '../../core/i18n';
 import { ringBuffer } from '../../core/logger';
 import { seedUsers } from '../../core/seed-data';

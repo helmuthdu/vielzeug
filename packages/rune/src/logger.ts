@@ -1,9 +1,8 @@
-import type { Bindings, LogEntry, Logger, LogLevel, LogMiddleware, LogType, RuneOptions, Transport } from './types';
-
 import { warn } from './_dev';
 import { isUnsafeObjectKey } from './_prototype';
-import { DEFAULT_THEME, consoleTransport, renderGroup } from './console';
+import { consoleTransport, DEFAULT_THEME, renderGroup } from './console';
 import { resolveBindings } from './lazy';
+import type { Bindings, LogEntry, Logger, LogLevel, LogMiddleware, LogType, RuneOptions, Transport } from './types';
 import { isLevelEnabled } from './types';
 
 /* --- Arg parsing (simplified) --- */
@@ -165,7 +164,7 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
       const ctx: Bindings = { duration_ms };
 
       if (thrownErr !== undefined)
-        ctx['err'] = serializeError(thrownErr instanceof Error ? thrownErr : new Error(String(thrownErr)));
+        ctx.err = serializeError(thrownErr instanceof Error ? thrownErr : new Error(String(thrownErr)));
 
       emit(level, ctx, label);
     };

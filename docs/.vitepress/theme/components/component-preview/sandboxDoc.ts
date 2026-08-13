@@ -81,15 +81,15 @@ queueMicrotask(syncAllOverlays);
 
 export interface SandboxDocOptions {
   align?: 'center' | 'end' | 'start' | 'stretch';
-  justify?: 'center' | 'end' | 'start';
-  html: string;
-  dir: 'ltr' | 'rtl';
-  dark: boolean;
-  vertical: boolean;
   /** When set, the sandbox body background is transparent so the host container's background image shows through. */
   background?: string;
+  dark: boolean;
+  dir: 'ltr' | 'rtl';
   /** When set, applied as min-height on the sandbox body so flex centering has vertical free space. */
   height?: string;
+  html: string;
+  justify?: 'center' | 'end' | 'start';
+  vertical: boolean;
 }
 
 export interface SandboxDocResult {

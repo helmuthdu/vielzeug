@@ -1,11 +1,9 @@
-import { define, html, inject, prop, ref, bind, getHost, onMounted, watchEffect } from '@vielzeug/ore';
+import { bind, define, getHost, html, inject, onMounted, prop, ref, watchEffect } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
-
-import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
-
 import { setAriaReflection } from '../../core';
 import { disablableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
+import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
 import { TABS_CTX } from '../tabs/tabs';
 import styles from './tab-item.css?inline';
 

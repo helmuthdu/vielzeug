@@ -1,29 +1,29 @@
-export { ANONYMOUS, WILDCARD } from './constants';
 export { allow, deny, owns, predicate, ruleFor } from './builder';
+export { ANONYMOUS, WILDCARD } from './constants';
 export { WardConfigError, WardError, WardPredicateError } from './errors';
 export { createWard } from './factory';
 export { matchesPattern, patternCovers } from './resource';
 export type {
+  BoundWard,
   BoundWardAllowedActionsInput,
   BoundWardDecisionInput,
   BoundWardRulesInScopeInput,
-  BoundWard,
   ConflictKind,
   Principal,
   RuleContext,
   UserPrincipal,
-  WardAllowedActionsInput,
   Ward,
+  WardAllowedActionsInput,
   WardCheck,
   WardConflict,
-  WardDecisionInput,
   WardDecision,
+  WardDecisionInput,
   WardDecisionResult,
   WardLoggerContext,
   WardOptions,
   WardPredicate,
-  WardRulesInScopeInput,
   WardRule,
+  WardRulesInScopeInput,
   WardTrace,
   WardTraceCandidate,
 } from './types';

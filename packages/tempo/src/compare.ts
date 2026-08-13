@@ -1,10 +1,8 @@
 import { Temporal } from '@js-temporal/polyfill';
-
-import type { ClampInput, ContainsInput, CompareOptions, TimeInput } from './types';
-
 import { toInstant } from './_convert';
 import { floorToUnit } from './_floor';
 import { inferSharedTimeZone, normalizeRange } from './_tz';
+import type { ClampInput, CompareOptions, ContainsInput, TimeInput } from './types';
 
 function compareByUnit(a: TimeInput, b: TimeInput, options: CompareOptions): number {
   if (!options.unit) return Temporal.Instant.compare(toInstant(a, options), toInstant(b, options));

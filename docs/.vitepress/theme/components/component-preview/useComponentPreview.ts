@@ -5,10 +5,9 @@
 // only props/slots and delegates everything else here.
 
 import type { SandboxHandle, SandboxMessage } from '@vielzeug/sandbox';
-import type { VNode } from 'vue';
-
 import { createSandbox } from '@vielzeug/sandbox';
 import { useData } from 'vitepress';
+import type { VNode } from 'vue';
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 
 import { buildSandboxDoc, REFINE_CSS_ID, refineCss } from './sandboxDoc';
@@ -20,13 +19,13 @@ import { extractCodeFromSlot } from './vnode';
 export type ViewportSize = 'mobile' | 'tablet' | 'desktop' | 'full';
 
 export interface ComponentPreviewProps {
-  title?: string;
   align?: 'center' | 'end' | 'start' | 'stretch';
-  justify?: 'center' | 'end' | 'start';
-  vertical?: boolean;
   background?: string;
   colorful?: boolean;
   height?: string;
+  justify?: 'center' | 'end' | 'start';
+  title?: string;
+  vertical?: boolean;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────

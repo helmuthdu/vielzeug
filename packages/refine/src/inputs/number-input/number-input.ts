@@ -1,11 +1,9 @@
 import { clamp } from '@vielzeug/arsenal/math';
-import { define, html, prop, ref, bind, getHost, onElement, watchEffect } from '@vielzeug/ore';
+import { bind, define, getHost, html, onElement, prop, ref, watchEffect } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { watch as rippleWatch } from '@vielzeug/ripple/watch';
-
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
-
 import { createSpinnerControl } from '../../core';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 import '../../content/icon/icon';
 import '../input/input';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';

@@ -1,7 +1,6 @@
-import type { Stream, Subscription } from '../types';
-
 import { link } from '../_link';
 import { stream } from '../core';
+import type { Stream, Subscription } from '../types';
 
 type StreamValue<T> = T extends Stream<infer Value> ? Value : never;
 type StreamValues<T extends readonly Stream<unknown>[]> = { [Key in keyof T]: StreamValue<T[Key]> };

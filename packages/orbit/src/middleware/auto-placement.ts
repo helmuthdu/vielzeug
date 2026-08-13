@@ -1,14 +1,8 @@
-import type { Alignment, DetectOverflowOptions, Middleware, Placement, Side } from '../types';
-
 import { warn } from '../_dev';
 import { getAvailableSpace, getPlacementOverflow, resolveBoundary, totalOverflow } from '../overflow';
+import type { Alignment, DetectOverflowOptions, Middleware, Placement, Side } from '../types';
 
 export interface AutoPlacementOptions extends DetectOverflowOptions {
-  /**
-   * Placements to evaluate. When provided, takes precedence over `alignment`.
-   * Note: use either `flip` or `autoPlacement`, not both.
-   */
-  allowedPlacements?: Placement[];
   /**
    * Constrains auto-placement to variants with the given alignment.
    *
@@ -18,6 +12,11 @@ export interface AutoPlacementOptions extends DetectOverflowOptions {
    * - omitted (default) — evaluates the 4 cardinal sides only.
    */
   alignment?: Alignment | null;
+  /**
+   * Placements to evaluate. When provided, takes precedence over `alignment`.
+   * Note: use either `flip` or `autoPlacement`, not both.
+   */
+  allowedPlacements?: Placement[];
 }
 
 const SIDES: Side[] = ['top', 'right', 'bottom', 'left'];

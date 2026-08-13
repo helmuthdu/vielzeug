@@ -132,9 +132,9 @@ describe('createDatePickerControl', () => {
       const sel = ctrl.selected();
 
       expect(sel).not.toBeNull();
-      expect(sel!.year).toBe(2025);
-      expect(sel!.month).toBe(6);
-      expect(sel!.day).toBe(15);
+      expect(sel?.year).toBe(2025);
+      expect(sel?.month).toBe(6);
+      expect(sel?.day).toBe(15);
       expect(onChange).toHaveBeenCalledWith(sel);
     });
 
@@ -231,7 +231,7 @@ describe('createDatePickerControl', () => {
       const selected = ctrl.dayCells().find((c) => c.isSelected);
 
       expect(selected).toBeDefined();
-      expect(selected!.day).toBe(15);
+      expect(selected?.day).toBe(15);
     });
 
     it('marks today correctly', () => {

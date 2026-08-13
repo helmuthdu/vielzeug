@@ -1,3 +1,7 @@
+import { type CompiledCatalog, type CompiledMessage, compileCatalog } from './_catalog';
+import { canonicalLocale, localeChain, pluralCategory } from './_locale';
+import { renderSegments, renderText, type Template } from './_template';
+import { LinguaInvalidPluralCountError } from './errors';
 import type {
   Catalog,
   Catalogs,
@@ -9,11 +13,6 @@ import type {
   TranslateOptions,
   TranslatorOptions,
 } from './types';
-
-import { type CompiledCatalog, type CompiledMessage, compileCatalog } from './_catalog';
-import { canonicalLocale, localeChain, pluralCategory } from './_locale';
-import { renderSegments, renderText, type Template } from './_template';
-import { LinguaInvalidPluralCountError } from './errors';
 
 export type Translator<C extends Catalog = Catalog> = {
   readonly locale: Locale;

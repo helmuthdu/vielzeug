@@ -1,6 +1,6 @@
 import type { ParseContext, ParseValue, SchemaDescriptor, SchemaState } from '../core';
 
-import { Schema, SpellValidationError, _makeCtx } from '../core';
+import { _makeCtx, Schema, SpellValidationError } from '../core';
 
 export class LazySchema<T, Input = T, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
   T,

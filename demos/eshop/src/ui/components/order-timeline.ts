@@ -1,10 +1,8 @@
 import '@vielzeug/refine/icon';
 import { define, html, prop, when } from '@vielzeug/ore';
-
-import type { OrderStatus } from '../../core/types';
-
 import { formatOrderStatus } from '../../core/format';
 import { t } from '../../core/i18n';
+import type { OrderStatus } from '../../core/types';
 
 /**
  * The happy-path sequence a placed order moves through. The design brief's own timeline also

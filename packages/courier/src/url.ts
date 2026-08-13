@@ -1,6 +1,5 @@
-import type { ResponseType } from './response';
-
 import { CourierParseError } from './errors';
+import type { ResponseType } from './response';
 
 type QueryScalar = string | number | boolean | null;
 

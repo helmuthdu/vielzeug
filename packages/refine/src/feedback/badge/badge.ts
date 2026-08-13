@@ -1,8 +1,5 @@
 import { define, html, prop } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
-
-import type { RoundedSize, ThemeColor, VisualVariant } from '../../types';
-
 import { roundableBundle, themableBundle } from '../../shared';
 import {
   colorThemeMixin,
@@ -11,6 +8,7 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
+import type { RoundedSize, ThemeColor, VisualVariant } from '../../types';
 import componentStyles from './badge.css?inline';
 
 type BadgeVariant = Extract<VisualVariant, 'solid' | 'flat' | 'bordered' | 'outline' | 'frost'>;

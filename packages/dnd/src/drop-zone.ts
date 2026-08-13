@@ -1,5 +1,5 @@
 import { createDisposable, resolveDisabled } from './_shared';
-import { type Disposable } from './types';
+import type { Disposable } from './types';
 
 // ─── Accept matching ─────────────────────────────────────────────────────────
 
@@ -30,8 +30,6 @@ export function matchesAccept(file: File, accept: string[]): boolean {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface DropZoneOptions {
-  /** The element to attach drag listeners to. */
-  element: HTMLElement;
   /**
    * Accepted file types. Each entry may be:
    *   - A MIME type:            'image/png'
@@ -42,12 +40,42 @@ export interface DropZoneOptions {
    */
   accept?: string[];
   /**
+   * When `true`, all drag events are ignored and hover state does not change.
+   *
+   * Note: a disabled zone does not call `preventDefault` on drag or paste events,
+   * so underlying elements (such as text editors) will still receive them.
+   */
+  disabled?: boolean;
+  /**
+   * The `dropEffect` to set on `dataTransfer` during `dragover`.
+   * @default 'copy'
+   */
+  dropEffect?: DataTransfer['dropEffect'];
+  /** The element to attach drag listeners to. */
+  element: HTMLElement;
+  /**
    * Maximum number of files accepted per drop. Files beyond this limit are
    * treated as rejected and forwarded to `onDropRejected`.
    *
    * When omitted there is no limit.
    */
   maxFiles?: number;
+  /** Called when files are dropped or pasted (when `paste: true` and `onPaste` is omitted). Receives accepted files only. */
+  onDrop?: (files: File[]) => void;
+  /**
+   * Called when dropped or pasted files are rejected by the `accept` filter, `maxFiles` limit, or `onValidate`.
+   */
+  onDropRejected?: (files: File[]) => void;
+  /**
+   * Called whenever hover state toggles.
+   * Use this for drag-over styling.
+   */
+  onHoverChange?: (hovered: boolean) => void;
+  /**
+   * Called when files are pasted via the clipboard. Falls back to `onDrop` when omitted.
+   * Only active when `paste: true`.
+   */
+  onPaste?: (files: File[]) => void;
   /**
    * Optional async file gating. Called after type/extension filtering, before `onDrop`.
    * Return (or resolve) `false` to move all type-accepted files to `onDropRejected`.
@@ -69,29 +97,6 @@ export interface DropZoneOptions {
    */
   onValidate?: (files: File[], context: DropValidationContext) => boolean | Promise<boolean>;
   /**
-   * When `true`, all drag events are ignored and hover state does not change.
-   *
-   * Note: a disabled zone does not call `preventDefault` on drag or paste events,
-   * so underlying elements (such as text editors) will still receive them.
-   */
-  disabled?: boolean;
-  /**
-   * The `dropEffect` to set on `dataTransfer` during `dragover`.
-   * @default 'copy'
-   */
-  dropEffect?: DataTransfer['dropEffect'];
-  /** Called when files are dropped or pasted (when `paste: true` and `onPaste` is omitted). Receives accepted files only. */
-  onDrop?: (files: File[]) => void;
-  /**
-   * Called when dropped or pasted files are rejected by the `accept` filter, `maxFiles` limit, or `onValidate`.
-   */
-  onDropRejected?: (files: File[]) => void;
-  /**
-   * Called whenever hover state toggles.
-   * Use this for drag-over styling.
-   */
-  onHoverChange?: (hovered: boolean) => void;
-  /**
    * Called whenever the async validation state changes.
    * Use this to drive loading spinners.
    *
@@ -107,11 +112,6 @@ export interface DropZoneOptions {
    * @default false
    */
   paste?: boolean;
-  /**
-   * Called when files are pasted via the clipboard. Falls back to `onDrop` when omitted.
-   * Only active when `paste: true`.
-   */
-  onPaste?: (files: File[]) => void;
 }
 
 export interface DropValidationContext {

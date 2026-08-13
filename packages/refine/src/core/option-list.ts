@@ -4,9 +4,9 @@ import { RefineConfigError } from '../errors';
 import { createListControl, type ListKeyAction, type ListNavigationAction } from './nav';
 import {
   createOutsidePointerDismissal,
-  restoreTriggerFocus,
   type DropdownCloseReason,
   type OverlayOpenReason,
+  restoreTriggerFocus,
 } from './overlay';
 import { createDropdownPositioner, type DropdownPositionerOptions } from './positioner';
 

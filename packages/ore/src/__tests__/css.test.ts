@@ -1,4 +1,4 @@
-import { css, type CSSResult } from '../index';
+import { type CSSResult, css } from '../index';
 import { _clearStylesheetCache, _getStylesheetCacheSize, loadStylesheet } from '../utils/css';
 
 describe('css()', () => {

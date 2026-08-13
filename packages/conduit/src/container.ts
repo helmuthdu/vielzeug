@@ -1,13 +1,12 @@
-import type { Container, FactoryOptions, InferTokens, Lifetime, ScopeToken, Token, ValueOptions } from './types.js';
-
 import {
   ConduitCircularDependencyError,
-  ConduitDisposeError,
   ConduitDisposedError,
+  ConduitDisposeError,
   ConduitDuplicateRegistrationError,
   ConduitProviderNotFoundError,
   ConduitScopedResolutionError,
 } from './errors.js';
+import type { Container, FactoryOptions, InferTokens, Lifetime, ScopeToken, Token, ValueOptions } from './types.js';
 
 type Disposer = (value: never) => Promise<void> | void;
 

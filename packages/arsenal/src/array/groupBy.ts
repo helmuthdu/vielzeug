@@ -1,6 +1,5 @@
-import type { Primitive } from '../types';
-
 import { isUnsafeKey } from '../_common/unsafePaths';
+import type { Primitive } from '../types';
 
 /**
  * Groups elements by a selector function. Dangerous keys (`__proto__`, `constructor`,

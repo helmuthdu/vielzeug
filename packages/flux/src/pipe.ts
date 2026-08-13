@@ -1,6 +1,5 @@
-import type { Operator, PipedStream, Stream, ValidPipe } from './types';
-
 import { applyOperators } from './_pipe';
+import type { Operator, PipedStream, Stream, ValidPipe } from './types';
 
 /** Standalone composition preserves contextual types for inline generic operators. */
 export function pipe<Input>(source: Stream<Input>): Stream<Input>;

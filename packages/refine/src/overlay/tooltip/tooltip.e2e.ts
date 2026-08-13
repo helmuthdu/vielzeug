@@ -18,8 +18,8 @@ test.describe('Interaction', () => {
 
     const positions = await page.evaluate(() => {
       const tooltip = document.querySelector('ore-tooltip')!;
-      const trigger = document.querySelector('ore-button')!.getBoundingClientRect();
-      const panel = tooltip.shadowRoot!.querySelector<HTMLElement>('.tooltip')!.getBoundingClientRect();
+      const trigger = document.querySelector('ore-button')?.getBoundingClientRect();
+      const panel = tooltip.shadowRoot?.querySelector<HTMLElement>('.tooltip')?.getBoundingClientRect();
 
       return { panel, trigger };
     });

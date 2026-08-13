@@ -3,6 +3,9 @@
   "version": "2.0.1",
   "description": "Schema-first validation and parsing — runtime type checking, coercion, and custom refinements",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "files": [
     "dist"
   ],
@@ -11,47 +14,20 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
     },
     "./json": {
-      "types": "./dist/json.d.ts",
       "import": "./dist/json.js",
-      "require": "./dist/json.cjs"
+      "require": "./dist/json.cjs",
+      "types": "./dist/json.d.ts"
     },
     "./predicates": {
-      "types": "./dist/predicates.d.ts",
       "import": "./dist/predicates.js",
-      "require": "./dist/predicates.cjs"
+      "require": "./dist/predicates.cjs",
+      "types": "./dist/predicates.d.ts"
     }
-  },
-  "scripts": {
-    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
-    "build:types": "tsc -p tsconfig.declarations.json",
-    "fix": "eslint --fix src",
-    "lint": "eslint src",
-    "prepublishOnly": "pnpm run build",
-    "preview": "vite preview",
-    "test": "pnpm test:types && vitest",
-    "test:types": "tsc -p tsconfig.types.json",
-    "build:bundle": "vite build --config vite.bundle.config.ts"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "engines": {
-    "node": ">=22"
-  },
-  "dependencies": {
-    "@vielzeug/arsenal": "workspace:*"
-  },
-  "devDependencies": {
-    "@types/node": "^26.1.2",
-    "typescript": "^6.0.3",
-    "vite": "^8.2.0",
-    "vitest": "^4.1.10"
   },
   "typesVersions": {
     "*": {
@@ -62,5 +38,29 @@
         "dist/predicates.d.ts"
       ]
     }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "biome check --write src",
+    "lint": "biome ci src",
+    "prepublishOnly": "pnpm run build",
+    "preview": "vite preview",
+    "test": "pnpm test:types && vitest",
+    "test:types": "tsc -p tsconfig.types.json"
+  },
+  "dependencies": {
+    "@vielzeug/arsenal": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
   }
 }

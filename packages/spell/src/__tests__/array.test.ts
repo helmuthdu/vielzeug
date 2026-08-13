@@ -1,4 +1,4 @@
-import { s, SpellValidationError } from '../index';
+import { SpellValidationError, s } from '../index';
 
 describe('s.array()', () => {
   it('accepts arrays, rejects non-arrays', () => {

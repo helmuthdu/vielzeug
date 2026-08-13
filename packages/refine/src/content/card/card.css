@@ -208,18 +208,17 @@
      directly with the rest (no parentheses around it) is used instead — same reasoning as
      list-item.css's identical `:host:has(...)` rules. */
   :host[interactive]:not([disabled]):active:not(
-      :has(
-        button:active,
-        a[href]:active,
-        input:active,
-        select:active,
-        textarea:active,
-        summary:active,
-        [role='button']:active,
-        [role='link']:active
-      )
+    :has(
+      button:active,
+      a[href]:active,
+      input:active,
+      select:active,
+      textarea:active,
+      summary:active,
+      [role='button']:active,
+      [role='link']:active
     )
-    .card {
+  ) .card {
     box-shadow: var(--_shadow);
     transform: translateY(0) scale(0.99);
     transition:

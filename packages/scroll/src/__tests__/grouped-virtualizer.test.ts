@@ -92,7 +92,7 @@ describe('createGroupedVirtualizer – item and header shape', () => {
 
     expect(first.sectionIndex).toBe(0);
     expect(first.itemIndex).toBe(0);
-    expect(first.data).toEqual(sections[0]!.items[0]);
+    expect(first.data).toEqual(sections[0]?.items[0]);
   });
 
   it('headers carry label and sectionIndex', () => {
@@ -687,7 +687,7 @@ describe('createGroupedVirtualizer – update() with option overrides', () => {
       sections: [makeSection('A', 2)],
     });
 
-    const initialTotal = (onChange.mock.calls.at(-1)![0] as { totalSize: number }).totalSize;
+    const initialTotal = (onChange.mock.calls.at(-1)?.[0] as { totalSize: number }).totalSize;
 
     // 1 header (36 default) + 2 items × 30 = 96
     expect(initialTotal).toBe(36 + 2 * 30);
@@ -695,7 +695,7 @@ describe('createGroupedVirtualizer – update() with option overrides', () => {
     // Change item estimate to 60
     gv.update([makeSection('A', 2)], { estimateItemSize: 60 });
 
-    const newTotal = (onChange.mock.calls.at(-1)![0] as { totalSize: number }).totalSize;
+    const newTotal = (onChange.mock.calls.at(-1)?.[0] as { totalSize: number }).totalSize;
 
     // 1 header (36 default) + 2 items × 60 = 156
     expect(newTotal).toBe(36 + 2 * 60);
@@ -715,7 +715,7 @@ describe('createGroupedVirtualizer – update() with option overrides', () => {
     // Change header estimate to 80
     gv.update([makeSection('A', 2)], { estimateHeaderSize: 80 });
 
-    const total = (onChange.mock.calls.at(-1)![0] as { totalSize: number }).totalSize;
+    const total = (onChange.mock.calls.at(-1)?.[0] as { totalSize: number }).totalSize;
 
     // 1 header × 80 + 2 items × 30 = 140
     expect(total).toBe(80 + 2 * 30);
@@ -735,7 +735,7 @@ describe('createGroupedVirtualizer – update() with option overrides', () => {
       estimateItemSize: (_item, itemIndex) => (itemIndex === 0 ? 100 : 20),
     });
 
-    const total = (onChange.mock.calls.at(-1)![0] as { totalSize: number }).totalSize;
+    const total = (onChange.mock.calls.at(-1)?.[0] as { totalSize: number }).totalSize;
 
     // 1 header (36) + 1st item (100) + 2nd item (20) + 3rd item (20) = 176
     expect(total).toBe(36 + 100 + 20 + 20);
@@ -753,9 +753,9 @@ describe('createGroupedVirtualizer – update() with option overrides', () => {
 
     gv.update([makeSection('B', 4)]);
 
-    const state = onChange.mock.calls.at(-1)![0] as { headers: Array<{ label: string }>; items: unknown[] };
+    const state = onChange.mock.calls.at(-1)?.[0] as { headers: Array<{ label: string }>; items: unknown[] };
 
-    expect(state.headers[0]!.label).toBe('B');
+    expect(state.headers[0]?.label).toBe('B');
     expect(state.items).toHaveLength(4);
     gv.dispose();
   });

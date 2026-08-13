@@ -101,7 +101,7 @@ describe('hash', () => {
     it('handles circular reference with [Circular] sentinel', () => {
       const obj: Record<string, unknown> = { a: 1 };
 
-      obj['self'] = obj;
+      obj.self = obj;
       expect(hash(obj)).toContain('[Circular]');
     });
   });

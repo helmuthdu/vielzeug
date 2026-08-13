@@ -1,10 +1,7 @@
-import { define, html, prop, ref, bind, getHost, onMounted } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
+import { bind, define, getHost, html, onMounted, prop, ref, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-
-import type { VisualVariant } from '../../shared';
-
 import { createDropdownPositioner } from '../../core';
+import type { VisualVariant } from '../../shared';
 import '../../content/icon/icon';
 import '../input/input';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';

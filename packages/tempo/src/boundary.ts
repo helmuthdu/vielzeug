@@ -1,9 +1,7 @@
-import { Temporal } from '@js-temporal/polyfill';
-
-import type { BoundaryOptions, BoundaryUnit, TimeInput } from './types';
-
+import type { Temporal } from '@js-temporal/polyfill';
 import { floorToUnit } from './_floor';
 import { inferTimeZone } from './_tz';
+import type { BoundaryOptions, BoundaryUnit, TimeInput } from './types';
 
 const BOUNDARY_STEP: Record<BoundaryUnit, Temporal.DurationLike> = {
   day: { days: 1 },

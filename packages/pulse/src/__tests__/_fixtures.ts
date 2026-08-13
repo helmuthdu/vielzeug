@@ -1,6 +1,5 @@
-import type { ChannelDefinitions, MessageMap, PresenceDefinitions, PulseOptions } from '../types';
-
 import { createPulse } from '../pulse';
+import type { ChannelDefinitions, MessageMap, PresenceDefinitions, PulseOptions } from '../types';
 
 export class MockWebSocket {
   static CLOSED = 3;

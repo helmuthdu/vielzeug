@@ -1,6 +1,5 @@
-import type { Obj } from '../types';
-
 import { isUnsafeKey } from '../_common/unsafePaths';
+import type { Obj } from '../types';
 
 /**
  * Maps object keys while preserving values. Both the original key and any mapped key that

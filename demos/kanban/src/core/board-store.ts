@@ -1,13 +1,10 @@
-import type { Readable, Signal } from '@vielzeug/ripple';
-
 import { stream } from '@vielzeug/flux';
 import { toSignal } from '@vielzeug/flux/ripple';
+import type { Readable, Signal } from '@vielzeug/ripple';
 import { computed, signal } from '@vielzeug/ripple';
-
-import type { Board, Task, TaskStatus } from './types';
-
 import { router } from './router';
 import { seedBoard } from './seed-data';
+import type { Board, Task, TaskStatus } from './types';
 
 export { currentUser } from './auth';
 

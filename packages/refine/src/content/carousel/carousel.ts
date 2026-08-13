@@ -1,4 +1,4 @@
-import { define, html, prop, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
+import { bind, define, getHost, html, onMounted, prop, useEmit } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
 

@@ -1,4 +1,4 @@
-import { Temporal, format, parse } from '@vielzeug/tempo';
+import { format, parse, Temporal } from '@vielzeug/tempo';
 
 // ── Public ISO helpers (single source of truth for both components) ───────────
 
@@ -214,8 +214,8 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
       cells.push({
         day: d.day,
         isDisabled: isDayDisabled(d),
-        iso: d.toString(),
         isOutsideMonth: true,
+        iso: d.toString(),
         isSelected: _selected !== null && Temporal.PlainDate.compare(d, _selected) === 0,
         isToday: Temporal.PlainDate.compare(d, todayDate) === 0,
         plain: d,
@@ -231,8 +231,8 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
       cells.push({
         day,
         isDisabled: isDayDisabled(d),
-        iso: d.toString(),
         isOutsideMonth: false,
+        iso: d.toString(),
         isSelected: _selected !== null && Temporal.PlainDate.compare(d, _selected) === 0,
         isToday: Temporal.PlainDate.compare(d, todayDate) === 0,
         plain: d,
@@ -249,8 +249,8 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
       cells.push({
         day: d.day,
         isDisabled: isDayDisabled(d),
-        iso: d.toString(),
         isOutsideMonth: true,
+        iso: d.toString(),
         isSelected: _selected !== null && Temporal.PlainDate.compare(d, _selected) === 0,
         isToday: Temporal.PlainDate.compare(d, todayDate) === 0,
         plain: d,

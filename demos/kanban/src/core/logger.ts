@@ -1,6 +1,6 @@
 import type { LogEntry, Transport } from '@vielzeug/rune';
 
-import { createLogger, consoleTransport, pipe } from '@vielzeug/rune';
+import { consoleTransport, createLogger, pipe } from '@vielzeug/rune';
 
 const MAX_RING_BUFFER_SIZE = 200;
 

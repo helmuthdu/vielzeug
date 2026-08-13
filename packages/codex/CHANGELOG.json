@@ -1,176 +1,176 @@
 {
-  "name": "@vielzeug/codex",
   "entries": [
     {
-      "version": "2.1.2",
-      "tag": "@vielzeug/codex_v2.1.2",
-      "date": "Thu, 13 Aug 2026 06:06:28 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore(codex): refresh bundled docs data",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(codex): refresh bundled docs data",
             "commit": "dbf61dcc3211caada793f9526c4d48073ad7d5d7"
           }
         ]
-      }
+      },
+      "date": "Thu, 13 Aug 2026 06:06:28 GMT",
+      "tag": "@vielzeug/codex_v2.1.2",
+      "version": "2.1.2"
     },
     {
-      "version": "2.1.1",
-      "tag": "@vielzeug/codex_v2.1.1",
-      "date": "Mon, 10 Aug 2026 21:21:35 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore: refresh bundled Ripple documentation",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: refresh bundled Ripple documentation",
             "commit": "352bf87a0875d78e0701ea25763f29eb47f6c56b"
           }
         ]
-      }
+      },
+      "date": "Mon, 10 Aug 2026 21:21:35 GMT",
+      "tag": "@vielzeug/codex_v2.1.1",
+      "version": "2.1.1"
     },
     {
-      "version": "2.1.0",
-      "tag": "@vielzeug/codex_v2.1.0",
-      "date": "Mon, 10 Aug 2026 16:04:45 GMT",
       "comments": {
         "minor": [
           {
-            "comment": "feat(codex): migrate to @modelcontextprotocol/server 2.0.0 (2026-07-28 spec) — replaces @modelcontextprotocol/sdk; stateless per-request HTTP host via createMcpHandler() over a Node/Fetch bridge, tools/list and tools/call registered via string-literal setRequestHandler(), MethodNotFound now thrown as ProtocolError(METHOD_NOT_FOUND, ...); wire behavior for tool list/call unchanged",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat(codex): migrate to @modelcontextprotocol/server 2.0.0 (2026-07-28 spec) — replaces @modelcontextprotocol/sdk; stateless per-request HTTP host via createMcpHandler() over a Node/Fetch bridge, tools/list and tools/call registered via string-literal setRequestHandler(), MethodNotFound now thrown as ProtocolError(METHOD_NOT_FOUND, ...); wire behavior for tool list/call unchanged",
             "commit": "82943ed76a740deef24e9a7332397560afaf816c"
           }
         ]
-      }
+      },
+      "date": "Mon, 10 Aug 2026 16:04:45 GMT",
+      "tag": "@vielzeug/codex_v2.1.0",
+      "version": "2.1.0"
     },
     {
-      "version": "2.0.2",
-      "tag": "@vielzeug/codex_v2.0.2",
-      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore: refresh bundled docs data",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: refresh bundled docs data",
             "commit": "8538aec24a6c7bef4382aabdebf2628280c234b3"
           },
           {
-            "comment": "refresh bundled Tempo 2 documentation",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refresh bundled Tempo 2 documentation",
             "commit": "e2f7065b98add9ee90eaa428843d4edb77493b6a"
           },
           {
-            "comment": "refresh bundled Wayfinder documentation",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refresh bundled Wayfinder documentation",
             "commit": "b086ec9d0425054899992787d40b5de6f63ca220"
           }
         ]
-      }
+      },
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "tag": "@vielzeug/codex_v2.0.2",
+      "version": "2.0.2"
     },
     {
-      "version": "2.0.1",
-      "tag": "@vielzeug/codex_v2.0.1",
-      "date": "Wed, 05 Aug 2026 19:50:19 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "refresh bundled Lingua documentation",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refresh bundled Lingua documentation",
             "commit": "62592e8394077e557850a3b1983b87d04cee4a17"
           }
         ]
-      }
+      },
+      "date": "Wed, 05 Aug 2026 19:50:19 GMT",
+      "tag": "@vielzeug/codex_v2.0.1",
+      "version": "2.0.1"
     },
     {
-      "version": "2.0.0",
-      "tag": "@vielzeug/codex_v2.0.0",
-      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
       "comments": {
-        "patch": [
+        "major": [
           {
-            "comment": "chore: refresh bundled docs data",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor!: Redesign Codex around validated chunked snapshots, catalog APIs, and local-only Streamable HTTP.",
             "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
           }
         ],
-        "major": [
+        "patch": [
           {
-            "comment": "refactor!: Redesign Codex around validated chunked snapshots, catalog APIs, and local-only Streamable HTTP.",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: refresh bundled docs data",
             "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
           }
         ]
-      }
+      },
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "tag": "@vielzeug/codex_v2.0.0",
+      "version": "2.0.0"
     },
     {
-      "version": "1.0.4",
-      "tag": "@vielzeug/codex_v1.0.4",
-      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore(codex): refresh bundled docs data",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(codex): refresh bundled docs data",
             "commit": "347e11e543f5f3e03c0d06655475656ff83d4643"
           }
         ]
-      }
+      },
+      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
+      "tag": "@vielzeug/codex_v1.0.4",
+      "version": "1.0.4"
     },
     {
-      "version": "1.0.3",
-      "tag": "@vielzeug/codex_v1.0.3",
-      "date": "Sat, 25 Jul 2026 03:18:07 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore: refresh bundled docs data",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: refresh bundled docs data",
             "commit": "35fab0f20c16072ae84b208477a5eadd0f49d0d9"
           }
         ]
-      }
+      },
+      "date": "Sat, 25 Jul 2026 03:18:07 GMT",
+      "tag": "@vielzeug/codex_v1.0.3",
+      "version": "1.0.3"
     },
     {
-      "version": "1.0.2",
-      "tag": "@vielzeug/codex_v1.0.2",
-      "date": "Fri, 03 Jul 2026 10:09:41 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "fix(codex): harden security, fix doc drift, add CLI --data flag",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix(codex): harden security, fix doc drift, add CLI --data flag",
             "commit": "64a9145b9ab9e041e572921a20259fc8942b26a1"
           }
         ]
-      }
+      },
+      "date": "Fri, 03 Jul 2026 10:09:41 GMT",
+      "tag": "@vielzeug/codex_v1.0.2",
+      "version": "1.0.2"
     },
     {
-      "version": "1.0.1",
-      "tag": "@vielzeug/codex_v1.0.1",
-      "date": "Thu, 02 Jul 2026 06:05:59 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "fix(codex): handle CLI data-load errors, add disposed to HttpServerHandle, close sandbox-document style breakout, expand test coverage",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix(codex): handle CLI data-load errors, add disposed to HttpServerHandle, close sandbox-document style breakout, expand test coverage",
             "commit": "d10634f57420a0f21f170fb2f7a93ff6bc2f75bb"
           }
         ]
-      }
+      },
+      "date": "Thu, 02 Jul 2026 06:05:59 GMT",
+      "tag": "@vielzeug/codex_v1.0.1",
+      "version": "1.0.1"
     },
     {
-      "version": "1.0.0",
-      "tag": "@vielzeug/codex_v1.0.0",
-      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
       "comments": {
         "major": [
           {
-            "comment": "Initial public release",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Initial public release",
             "commit": "2a622e2058ae28a3e3ffd33f639ad8c3d9579aa4"
           }
         ]
-      }
+      },
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "tag": "@vielzeug/codex_v1.0.0",
+      "version": "1.0.0"
     }
-  ]
+  ],
+  "name": "@vielzeug/codex"
 }

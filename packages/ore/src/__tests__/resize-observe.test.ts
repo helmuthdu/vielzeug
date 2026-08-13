@@ -1,6 +1,5 @@
 // noinspection HtmlUnknownAttribute
-import { html, ref, onMounted } from '../index';
-import { resizeObserver } from '../index';
+import { html, onMounted, ref, resizeObserver } from '../index';
 import { mount } from '../testing';
 
 describe('resizeObserver()', () => {
@@ -29,7 +28,6 @@ describe('resizeObserver()', () => {
     globalThis.ResizeObserver = class {
       observe = observeSpy;
       disconnect = vi.fn();
-      constructor(_cb: ResizeObserverCallback) {}
     } as unknown as typeof ResizeObserver;
 
     try {
@@ -98,7 +96,6 @@ describe('resizeObserver()', () => {
     globalThis.ResizeObserver = class {
       observe = vi.fn();
       disconnect = disconnectSpy;
-      constructor(_cb: ResizeObserverCallback) {}
     } as unknown as typeof ResizeObserver;
 
     try {
@@ -129,7 +126,6 @@ describe('resizeObserver()', () => {
     globalThis.ResizeObserver = class {
       observe = vi.fn();
       disconnect = disconnectSpy;
-      constructor(_cb: ResizeObserverCallback) {}
     } as unknown as typeof ResizeObserver;
 
     try {

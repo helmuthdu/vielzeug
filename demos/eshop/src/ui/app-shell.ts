@@ -6,13 +6,11 @@ import '@vielzeug/refine/toast';
 import { define, each, html, onCleanup, ref, when } from '@vielzeug/ore';
 import { toast } from '@vielzeug/refine/toast';
 import { computed, effect, signal } from '@vielzeug/ripple';
-
-import type { RouteNames } from '../core/router';
-
 import { canAccessAdmin, currentUser } from '../core/auth';
 import { cartCount, compareModels } from '../core/cart-store';
 import { bus } from '../core/events';
 import { t } from '../core/i18n';
+import type { RouteNames } from '../core/router';
 import { activeRoute, activeRouteParams, router } from '../core/router';
 import { modelIndex } from '../core/search-index';
 import { openCompareDrawer } from './components/compare-drawer';
@@ -319,7 +317,7 @@ define('app-shell', {
 
       if (routeName === 'catalog') view.appendChild(createCatalogView());
       else if (routeName === 'modelDetail') {
-        const slug = activeRouteParams.value['slug'] as string | undefined;
+        const slug = activeRouteParams.value.slug as string | undefined;
 
         view.appendChild(createModelDetailView(slug ?? ''));
       } else if (routeName === 'cart') view.appendChild(createCartView());

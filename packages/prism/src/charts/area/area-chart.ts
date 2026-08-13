@@ -1,8 +1,4 @@
 import { isReactive } from '@vielzeug/ripple';
-
-import type { Point } from '../../svg/path';
-import type { AreaChartConfig, ChartHandle } from '../../types';
-
 import { warn } from '../../_dev';
 import { renderAxis, resolveTickCount } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
@@ -12,7 +8,9 @@ import { chartArea } from '../../core/layout';
 import { createCrosshair } from '../../interaction/crosshair';
 import { createSeriesInteraction } from '../../interaction/series-interaction';
 import { createSvgElement } from '../../svg/element';
+import type { Point } from '../../svg/path';
 import { seriesColor } from '../../theme';
+import type { AreaChartConfig, ChartHandle } from '../../types';
 import { computeAreaPoints, renderArea } from './area-renderer';
 
 export function createAreaChart(container: HTMLElement, config: AreaChartConfig): ChartHandle {

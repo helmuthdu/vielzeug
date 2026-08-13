@@ -1,7 +1,6 @@
-import type { AnySchema, VaultStore } from './types';
-
 import { warn } from './_dev';
 import { VaultDisposedError, VaultError } from './errors';
+import type { AnySchema, VaultStore } from './types';
 
 /**
  * Schedules periodic calls to `adapter.pruneExpired()` using `setInterval`.

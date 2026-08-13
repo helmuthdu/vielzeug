@@ -3,6 +3,7 @@ export { createInfiniteSource } from './infiniteSource';
 export { createLocalSource } from './localSource';
 export { createPageSource } from './pageSource';
 export type {
+  AnyPagination,
   CursorPagination,
   CursorQuery,
   CursorQueryPatch,
@@ -25,7 +26,6 @@ export type {
   PageResult,
   PageSource,
   PageSourceConfig,
-  AnyPagination,
   Predicate,
   Sorter,
   Source,

@@ -1,3 +1,5 @@
+import { type CompiledAfter, type CompiledMachine, type CompiledState, compileDefinition } from './definition.js';
+import { ClockworkError } from './errors.js';
 import type {
   Actor,
   ActorErrorContext,
@@ -11,16 +13,14 @@ import type {
   TransitionResult,
 } from './types.js';
 
-import { compileDefinition, type CompiledAfter, type CompiledMachine, type CompiledState } from './definition.js';
-import { ClockworkError } from './errors.js';
-
 type InternalEvent<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
   readonly after: CompiledAfter<State, Context, Event>;
   readonly kind: 'after';
 };
 
 type RuntimeEvent<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> =
-  { readonly event: Event; readonly kind: 'event' } | InternalEvent<State, Context, Event>;
+  | { readonly event: Event; readonly kind: 'event' }
+  | InternalEvent<State, Context, Event>;
 
 type SelectedTransition<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
   readonly event: Event | undefined;
@@ -83,7 +83,8 @@ const selectTransition = <State extends string, Context extends Record<string, u
 
   for (const candidate of candidates) {
     const guard = candidate.guard as
-      ((args: { readonly context: Readonly<Context>; readonly event: Event }) => boolean) | undefined;
+      | ((args: { readonly context: Readonly<Context>; readonly event: Event }) => boolean)
+      | undefined;
 
     if (!guard || guard({ context: snapshot.context, event: runtimeEvent.event })) {
       return { event: runtimeEvent.event, transition: candidate };
@@ -108,7 +109,8 @@ const transition = <State extends string, Context extends Record<string, unknown
   }
 
   const reducer = selected.transition.reduce as
-    ((args: { readonly context: Readonly<Context>; readonly event: Event | undefined }) => Context) | undefined;
+    | ((args: { readonly context: Readonly<Context>; readonly event: Event | undefined }) => Context)
+    | undefined;
   const nextContext = reducer ? reducer({ context: snapshot.context, event: selected.event }) : snapshot.context;
 
   if (!isContextRecord(nextContext)) {

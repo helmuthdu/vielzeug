@@ -60,7 +60,7 @@
   }
 
   :host(:not([collapsible])) .chevron {
-    display: none !important;
+    display: none;
   }
 
   .group-label {
@@ -124,13 +124,13 @@
   }
 
   :host([sidebar-collapsed]) .group-badge {
-    position: static !important;
-    display: flex !important;
-    visibility: visible !important;
-    width: auto !important;
-    height: auto !important;
-    pointer-events: auto !important;
-    opacity: 1 !important;
+    position: static;
+    display: flex;
+    visibility: visible;
+    width: auto;
+    height: auto;
+    pointer-events: auto;
+    opacity: 1;
   }
 
   /* Collapsible group closed: hide items */

@@ -122,23 +122,29 @@ const toHostAttr = normalizeHostAttrKey;
 const applyReactiveBinding = (
   value: HostBindingValue,
   updater: (next: string | number | boolean | null | undefined) => void,
-): (() => void) | void => {
+): (() => void) | undefined => {
   if (typeof value === 'function') {
-    return watchEffect(() => updater(value()));
+    return watchEffect(() => {
+      updater(value());
+      return undefined;
+    });
   }
 
   if (isReactive(value)) {
-    return watchEffect(() => updater(value.value));
+    return watchEffect(() => {
+      updater(value.value);
+      return undefined;
+    });
   }
 
   updater(value);
 };
 
-function applyAttribute(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | void {
+function applyAttribute(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | undefined {
   return applyReactiveBinding(value, (next) => setAttr(host, name, next));
 }
 
-function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | void {
+function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | undefined {
   const cssName = sanitizeCssToken(name.startsWith('--') ? name : toKebab(name));
 
   if (!cssName) return;

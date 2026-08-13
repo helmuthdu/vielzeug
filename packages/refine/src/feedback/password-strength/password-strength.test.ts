@@ -121,7 +121,7 @@ describe('ore-password-strength', () => {
     it('hides visible label when show-label is false', async () => {
       fixture = await mount('ore-password-strength', { attrs: { score: '3' } });
 
-      (fixture.element as HTMLElement & { ['show-label']: boolean })['show-label'] = false;
+      (fixture.element as HTMLElement & { 'show-label': boolean })['show-label'] = false;
       await fixture.flush();
 
       expect(fixture.query('.level-label')).toBeNull();

@@ -1,6 +1,5 @@
-import type { Currency, CurrencyCode } from './types';
-
 import { CoinsError, InvalidCurrencyError } from './errors';
+import type { Currency, CurrencyCode } from './types';
 
 const builtins = new Map<string, Currency>();
 const custom = new Map<string, Currency>();

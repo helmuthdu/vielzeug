@@ -1,8 +1,7 @@
+import { buildBridgeScript } from './_bridge.js';
+import { buildCspFromOptions, type NormalizedSandboxOptions, normalizeSandboxOptions } from './_policy.js';
 import type { BridgeBootstrap } from './_protocol.js';
 import type { SandboxOptions } from './types.js';
-
-import { buildBridgeScript } from './_bridge.js';
-import { buildCspFromOptions, normalizeSandboxOptions, type NormalizedSandboxOptions } from './_policy.js';
 
 function escapeCss(css: string): string {
   return css.replace(/<\/style/gi, '\\3C /style');

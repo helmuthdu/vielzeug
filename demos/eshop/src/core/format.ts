@@ -1,8 +1,6 @@
 import { format as formatDate, parse, Temporal } from '@vielzeug/tempo';
-
-import type { OrderStatus, PaymentMethod } from './types';
-
 import { t } from './i18n';
+import type { OrderStatus, PaymentMethod } from './types';
 
 const ORDER_STATUS_KEYS: Record<OrderStatus, string> = {
   cancelled: 'orders.status.cancelled',

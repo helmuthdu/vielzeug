@@ -4,7 +4,7 @@ import { createTestBus } from '../testing';
 type TestEvents = {
   count: number;
   greet: { name: string };
-  toggle: void;
+  toggle: undefined;
 };
 
 describe('createTestBus - emitted()', () => {

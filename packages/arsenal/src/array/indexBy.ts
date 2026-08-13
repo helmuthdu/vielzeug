@@ -1,6 +1,5 @@
-import type { Primitive } from '../types';
-
 import { isUnsafeKey } from '../_common/unsafePaths';
+import type { Primitive } from '../types';
 
 /**
  * Creates an object keyed by selector result. Last item wins on collisions. Dangerous keys

@@ -41,8 +41,8 @@ function throttle(update: () => void, delay: number): ThrottledUpdate {
 }
 
 export interface AutoUpdateOptions {
-  /** Watch the floating element for size changes. Default: `true`. */
-  observeFloating?: boolean;
+  /** Re-position on every animation frame. Use only when the reference itself animates. Default: `false`. */
+  animationFrame?: boolean;
   /**
    * Listen to scroll events on ancestor scroll containers of the reference element
    * in addition to the window. More efficient in deeply nested DOMs.
@@ -50,16 +50,10 @@ export interface AutoUpdateOptions {
    * Default: `true`.
    */
   observeAncestors?: boolean;
+  /** Watch the floating element for size changes. Default: `true`. */
+  observeFloating?: boolean;
   /** Track visual viewport scroll and resize (useful for pinch-zoom). Default: `true`. */
   observeVisualViewport?: boolean;
-  /** Re-position on every animation frame. Use only when the reference itself animates. Default: `false`. */
-  animationFrame?: boolean;
-  /**
-   * Throttle update calls to at most once every `throttle` milliseconds.
-   * Uses a leading + trailing strategy: fires immediately, then once more after the interval.
-   * Default: `0` (no throttling).
-   */
-  throttle?: number;
   /**
    * Pause position updates while the reference element is scrolled out of the viewport.
    * Uses IntersectionObserver to detect visibility. When the reference becomes visible again,
@@ -67,6 +61,12 @@ export interface AutoUpdateOptions {
    * Default: `true`.
    */
   pauseWhenHidden?: boolean;
+  /**
+   * Throttle update calls to at most once every `throttle` milliseconds.
+   * Uses a leading + trailing strategy: fires immediately, then once more after the interval.
+   * Default: `0` (no throttling).
+   */
+  throttle?: number;
 }
 
 /**

@@ -37,7 +37,7 @@ describe('ore-dialog', () => {
 
       const dialog = fixture.query('dialog');
 
-      expect(!dialog || !dialog.hasAttribute('open')).toBe(true);
+      expect(!dialog?.hasAttribute('open')).toBe(true);
     });
 
     it('dialog is visible when open', async () => {
@@ -219,8 +219,8 @@ describe('ore-dialog', () => {
       // Light-DOM (slotted) content — not queryable via `fixture.query()`, which is scoped to the
       // shadow root. Query the host element's own light DOM directly instead.
       fixture.element
-        .querySelector('#descendant-field')!
-        .dispatchEvent(new CustomEvent('close', { bubbles: true, cancelable: true, detail: { reason: 'trigger' } }));
+        .querySelector('#descendant-field')
+        ?.dispatchEvent(new CustomEvent('close', { bubbles: true, cancelable: true, detail: { reason: 'trigger' } }));
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('open')).toBe(true);
@@ -240,8 +240,8 @@ describe('ore-dialog', () => {
       fixture.element.addEventListener('close-request', closeRequestHandler);
 
       fixture.element
-        .querySelector('#descendant-field')!
-        .dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
+        .querySelector('#descendant-field')
+        ?.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
       await fixture.flush();
 
       expect(closeRequestHandler).not.toHaveBeenCalled();

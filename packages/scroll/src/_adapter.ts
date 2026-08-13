@@ -1,4 +1,4 @@
-import { type ScrollTarget, isWindowTarget } from './_utils';
+import { isWindowTarget, type ScrollTarget } from './_utils';
 
 /** Single-axis read/write interface for either horizontal or vertical scroll. */
 export type Axis = {

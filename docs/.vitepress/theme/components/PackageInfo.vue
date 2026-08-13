@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { useData } from 'vitepress';
+import { computed } from 'vue';
 
 interface Props {
   package: string;
@@ -17,10 +17,10 @@ const packageInfo = computed(() => {
 
   return (
     packages[pkgName] || {
-      version: '1.0.0',
       dependencies: 0,
-      size: '0 KB',
       minNode: null,
+      size: '0 KB',
+      version: '1.0.0',
     }
   );
 });

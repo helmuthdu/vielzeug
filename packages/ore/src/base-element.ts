@@ -2,7 +2,7 @@ import { createScope, type Scope, untrack } from '@vielzeug/ripple';
 
 import type { ComponentDefinition } from './component-types';
 
-import { OreApiError, type OreErrorPhase, OreLifecycleError, ORE_ERRORS, reportRuntimeError } from './errors';
+import { ORE_ERRORS, OreApiError, type OreErrorPhase, OreLifecycleError, reportRuntimeError } from './errors';
 import { createProps, getPropMeta, type InferProps, type PropInputDefs, type PropsDef } from './props';
 import {
   beginPendingWork,
@@ -12,7 +12,7 @@ import {
   onCleanup,
   runWithContext,
 } from './runtime';
-import { type HTMLResult } from './template/result';
+import type { HTMLResult } from './template/result';
 import { loadStylesheet } from './utils/css';
 
 // ─── Component phases & lifecycle events ──────────────────────────────────────

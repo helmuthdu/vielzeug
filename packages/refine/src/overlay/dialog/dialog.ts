@@ -1,9 +1,8 @@
-import { define, html, prop, ref, getHost, onCleanup, onEvent, onMounted, useEmit, useSlots } from '@vielzeug/ore';
+import { define, getHost, html, onCleanup, onEvent, onMounted, prop, ref, useEmit, useSlots } from '@vielzeug/ore';
 
 import type { OverlayOpenChangeDetail } from '../../core';
-import type { PaddingSize, RoundedSize } from '../../types';
-
 import { coarsePointerMixin, roundedVariantMixin } from '../../styles';
+import type { PaddingSize, RoundedSize } from '../../types';
 import { useDialogControl } from '../shared/use-dialog';
 import '../../content/icon/icon';
 import componentStyles from './dialog.css?inline';

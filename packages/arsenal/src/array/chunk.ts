@@ -24,5 +24,6 @@ export function chunk<T>(input: T[] | string, size = 2): string[] | T[][] {
   if (!Number.isInteger(size) || size < 1) throw new RangeError('chunk: size must be a positive integer');
 
   return Array.from({ length: Math.ceil(input.length / size) }, (_, i) => input.slice(i * size, i * size + size)) as
-    string[] | T[][];
+    | string[]
+    | T[][];
 }

@@ -261,8 +261,8 @@ describe('buildXScale — single-point domain', () => {
   it('does not produce Infinity domain when all x values are identical', () => {
     const scale = buildXScale([5, 5, 5], 300);
 
-    expect(isFinite(scale.domain[0] as number)).toBe(true);
-    expect(isFinite(scale.domain[1] as number)).toBe(true);
+    expect(Number.isFinite(scale.domain[0] as number)).toBe(true);
+    expect(Number.isFinite(scale.domain[1] as number)).toBe(true);
   });
 
   it('all-same-timestamp Date series produces finite domain', () => {
@@ -270,8 +270,8 @@ describe('buildXScale — single-point domain', () => {
     const scale = buildXScale([d, d, d], 600);
     const [d0, d1] = scale.domain as [Date, Date];
 
-    expect(isFinite(d0.getTime())).toBe(true);
-    expect(isFinite(d1.getTime())).toBe(true);
+    expect(Number.isFinite(d0.getTime())).toBe(true);
+    expect(Number.isFinite(d1.getTime())).toBe(true);
     expect(d1.getTime()).toBeGreaterThan(d0.getTime());
   });
 });

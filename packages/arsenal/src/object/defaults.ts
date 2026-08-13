@@ -1,7 +1,6 @@
-import type { Obj } from '../types';
-
 import { isUnsafeKey } from '../_common/unsafePaths';
 import { isPlainObject } from '../guards/isPlainObject';
+import type { Obj } from '../types';
 
 /**
  * Fills in `undefined` properties in `target` with values from `sources`. First source wins

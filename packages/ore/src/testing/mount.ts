@@ -2,16 +2,15 @@
  * Component mounting utilities for test environments.
  */
 
+import { type QueryScope, within } from '@vielzeug/assay';
 import type { Readable } from '@vielzeug/ripple';
 
-import { type QueryScope, within } from '@vielzeug/assay';
-
-import { type ComponentDefinition } from '../component-types';
+import type { ComponentDefinition } from '../component-types';
 import { define } from '../define';
 import { getHost } from '../runtime';
-import { type HTMLResult } from '../template/result';
+import type { HTMLResult } from '../template/result';
 import { setAttr } from '../utils/dom';
-import { flush, type FlushOptions } from './flush';
+import { type FlushOptions, flush } from './flush';
 import { _disposeRenderHooks } from './render-hook';
 import { resetOreForTests } from './reset';
 
@@ -24,8 +23,6 @@ import { resetOreForTests } from './reset';
  * `element.shadowRoot`, falling back to `element` for light-DOM components (`shadow: false`).
  */
 export interface Fixture<T extends HTMLElement = HTMLElement> extends QueryScope {
-  /** Delegates to `dispose()`. Enables `using` declarations. */
-  [Symbol.dispose](): void;
   /** Run a callback then flush — the standard way to trigger and assert a reactive update */
   act(fn: () => unknown): Promise<void>;
   /** Set an attribute (boolean `false` removes it) then flush */
@@ -42,19 +39,21 @@ export interface Fixture<T extends HTMLElement = HTMLElement> extends QueryScope
   flush(options?: FlushOptions): Promise<void>;
   /** The component's shadow root (null for light-DOM components) */
   readonly shadow: ShadowRoot | null;
+  /** Delegates to `dispose()`. Enables `using` declarations. */
+  [Symbol.dispose](): void;
 }
 
 export interface MountOptions {
-  /** Properties assigned directly onto the element */
-  props?: Record<string, unknown>;
   /** HTML attributes to set on the element */
   attrs?: Record<string, string | number | boolean>;
-  /** Inner HTML for slot content */
-  html?: string;
-  /** Parent container (default: document.body) */
-  container?: HTMLElement;
   /** Extra component options when passing an inline setup function */
   componentOptions?: Omit<ComponentDefinition<Record<string, unknown>>, 'setup'>;
+  /** Parent container (default: document.body) */
+  container?: HTMLElement;
+  /** Inner HTML for slot content */
+  html?: string;
+  /** Properties assigned directly onto the element */
+  props?: Record<string, unknown>;
 }
 
 type MountProps = { readonly [x: string]: Readable<unknown> };

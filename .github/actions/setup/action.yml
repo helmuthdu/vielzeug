@@ -6,7 +6,7 @@ inputs:
     description: Run rush install after cache restore (installs each package's workspace deps)
     default: 'true'
   root-install:
-    description: Run pnpm install for root-level tools (vitest, eslint) — not managed by Rush
+    description: Run pnpm install for root-level tools (vitest, Biome) — not managed by Rush
     default: 'true'
 
 runs:
@@ -52,7 +52,7 @@ runs:
       shell: bash
       run: node common/scripts/install-run-rush.js install
 
-    # Root package.json owns vitest/eslint/etc — Rush only manages packages/*, so every
+    # Root package.json owns vitest/Biome/etc — Rush only manages packages/*, so every
     # caller needs this too. Folding it in here (instead of repeating it in every workflow)
     # is what makes `uses: ./.github/actions/setup` actually produce a working toolchain.
     - name: Install root workspace tools

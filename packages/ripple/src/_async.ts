@@ -22,7 +22,7 @@ export type ResourceOptions = {
 };
 
 type AsyncRuntime = {
-  effect(callback: () => void | (() => void), options?: { name?: string }): EffectHandle;
+  effect(callback: () => undefined | (() => void), options?: { name?: string }): EffectHandle;
   signal<T>(initial: T, options?: { name?: string }): Signal<T>;
 };
 

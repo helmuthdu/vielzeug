@@ -117,7 +117,7 @@ describe('buildSandboxDoc()', () => {
     const bodyRuleMatch = fragment.match(/body\s*\{\s*display:\s*flex[^}]*\}/);
 
     expect(bodyRuleMatch).not.toBeNull();
-    expect(bodyRuleMatch![0]).toContain('padding: 2rem;');
-    expect(bodyRuleMatch![0]).not.toContain('padding-bottom');
+    expect(bodyRuleMatch?.[0]).toContain('padding: 2rem;');
+    expect(bodyRuleMatch?.[0]).not.toContain('padding-bottom');
   });
 });

@@ -1,10 +1,7 @@
-import type { Signal } from '@vielzeug/ripple';
-
 import { createLedger } from '@vielzeug/ledger';
-
-import type { Board, Task, TaskStatus } from './types';
-
+import type { Signal } from '@vielzeug/ripple';
 import { bus } from './events';
+import type { Board, Task, TaskStatus } from './types';
 
 export const ledger = createLedger({ maxHistory: 50 });
 

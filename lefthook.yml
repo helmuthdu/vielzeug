@@ -1,29 +1,17 @@
 pre-commit:
   parallel: true
   commands:
-    lint:assets:
-      glob: '*.{html,json,yml}'
+    check:
+      glob: '*.{html,js,ts,cjs,mjs,cts,mts,jsx,tsx,json,jsonc,css}'
       stage_fixed: true
-      run: npx prettier --write {staged_files}
-    lint:styles:
-      glob: '*.{css,scss}'
-      stage_fixed: true
-      run: >
-        npx prettier --write {staged_files} &&
-        npx stylelint --fix {staged_files}
-    lint:scripts:
+      run: pnpm biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+    test:related:
       glob: '**/*.{ts,tsx,js,jsx}'
       exclude: '\.(spec|test)\.(ts|tsx|js|jsx)$'
-      stage_fixed: true
-      run: >
-        npx eslint --fix {staged_files} &&
-        npx vitest related {staged_files} --passWithNoTests --run
+      run: pnpm vitest related {staged_files} --passWithNoTests --run
     test:unit:
       glob: '**/*.{spec,test}.{ts,tsx,js,jsx}'
-      stage_fixed: true
-      run: >
-        npx eslint --fix {staged_files} &&
-        npx vitest {staged_files} --passWithNoTests --run
+      run: pnpm vitest {staged_files} --passWithNoTests --run
     check:ai-data:
       glob: '.ai/{data/**,tasks/**,reference/**,core/**}'
       run: node scripts/sync-ai-data.mjs --check

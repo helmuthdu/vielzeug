@@ -1,13 +1,13 @@
 import {
   createStableId,
   define,
-  html,
-  prop,
-  ref,
   getHost,
+  html,
   onCleanup,
   onEvent,
   onMounted,
+  prop,
+  ref,
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
@@ -59,10 +59,10 @@ const drawerSwipeConfig: Record<DrawerPlacement, DrawerSwipeConfig> = {
 
 /** Element interface exposing the imperative API for `ore-drawer`. */
 export interface DrawerElement extends HTMLElement, Omit<OreDrawerProps, 'title'> {
-  /** Programmatically open the drawer. Equivalent to setting `open`. */
-  show(): void;
   /** Programmatically close the drawer with the exit animation. */
   hide(): void;
+  /** Programmatically open the drawer. Equivalent to setting `open`. */
+  show(): void;
 }
 
 /** Drawer component properties */

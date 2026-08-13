@@ -1,10 +1,10 @@
-import { HeraldConfigError, createBus } from '../index';
+import { createBus, HeraldConfigError } from '../index';
 import { pipeEvents } from '../pipe';
 
 type Events = {
   count: number;
   greet: { name: string };
-  toggle: void;
+  toggle: undefined;
 };
 
 describe('pipeEvents - basic forwarding', () => {
@@ -230,8 +230,8 @@ describe('pipeEvents - event remapping', () => {
   });
 
   it('supports mixing same-name and renamed entries', () => {
-    type Source = { 'auth:login': { userId: string }; 'auth:logout': void };
-    type Target = { 'auth:login': { userId: string }; 'user:signed-out': void };
+    type Source = { 'auth:login': { userId: string }; 'auth:logout': undefined };
+    type Target = { 'auth:login': { userId: string }; 'user:signed-out': undefined };
 
     const source = createBus<Source>();
     const target = createBus<Target>();

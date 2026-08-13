@@ -28,12 +28,10 @@ export type InferTokens<T extends readonly Token<unknown>[]> = {
 };
 
 export interface Container {
-  [Symbol.asyncDispose](): Promise<void>;
+  createScope(scope?: ScopeToken, options?: { name?: string }): Container;
   readonly disposalSignal: AbortSignal;
+  dispose(): Promise<void>;
   readonly disposed: boolean;
-  readonly name: string;
-
-  value<T>(token: Token<T>, value: T, options?: ValueOptions<T>): this;
 
   factory<T, Dependencies extends readonly Token<unknown>[]>(
     token: Token<T>,
@@ -43,8 +41,10 @@ export interface Container {
   ): this;
 
   has<T>(token: Token<T>): boolean;
+  readonly name: string;
   resolve<T>(token: Token<T>): Promise<T>;
   validate(): this;
-  createScope(scope?: ScopeToken, options?: { name?: string }): Container;
-  dispose(): Promise<void>;
+
+  value<T>(token: Token<T>, value: T, options?: ValueOptions<T>): this;
+  [Symbol.asyncDispose](): Promise<void>;
 }

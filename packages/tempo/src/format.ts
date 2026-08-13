@@ -1,5 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill';
-
+import { toInstant, toZoned } from './_convert';
+import { inferTimeZone } from './_tz';
+import { fail } from './errors';
 import type {
   DurationFormatOptions,
   FormatOptions,
@@ -10,10 +12,6 @@ import type {
   TimeInput,
   TimeZoneOptions,
 } from './types';
-
-import { toInstant, toZoned } from './_convert';
-import { inferTimeZone } from './_tz';
-import { fail } from './errors';
 
 // ─── Formatter types ──────────────────────────────────────────────────────────
 

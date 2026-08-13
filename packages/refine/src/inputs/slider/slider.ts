@@ -1,25 +1,23 @@
 import {
+  bind,
   createStableId,
   define,
-  html,
-  prop,
-  ref,
-  bind,
   getHost,
+  html,
   onCleanup,
   onEvent,
   onMounted,
+  prop,
+  ref,
+  useField,
   useSlots,
 } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
-
-import type { ComponentSize, ThemeColor } from '../../types';
-
 import { createErrorHelperState, createSliderControl } from '../../core';
-import { disablableBundle, sizableBundle, SLIDER_SIZE_PRESET, themableBundle } from '../../shared';
+import { disablableBundle, SLIDER_SIZE_PRESET, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, disabledStateMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
+import type { ComponentSize, ThemeColor } from '../../types';
 import { defineFieldValue, dispatchNativeFieldEvent, setFieldValue } from '../shared/native-field-event';
 import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './slider.css?inline';

@@ -1,3 +1,28 @@
+import { createNavigationCoordinator, type NavigationAttempt } from './_navigation';
+import { compileRoutes } from './compile';
+import {
+  buildMatchBranch,
+  createRouteContext,
+  createRouteState,
+  executeMiddlewarePipeline,
+  reportError,
+} from './context';
+import { WayfinderDisposedError, WayfinderRedirectLoopError, WayfinderRouteError } from './errors';
+import { type RegisteredBlocker, runLeaveBlockers } from './guards';
+import { createBrowserHistory } from './history';
+import { createHydrationManager } from './hydration';
+import {
+  buildPreloadKey,
+  buildUrl,
+  joinPaths,
+  matchesPrefix,
+  matchRouteFor,
+  normalizePath,
+  parseQuery,
+  readLocation,
+  stripBase,
+} from './path';
+import { createPreloadManager } from './preload';
 import type {
   BeforeLeaveBlocker,
   BeforeLeaveOptions,
@@ -29,32 +54,6 @@ import type {
   RouteTable,
   Unsubscribe,
 } from './types';
-
-import { createNavigationCoordinator, type NavigationAttempt } from './_navigation';
-import { compileRoutes } from './compile';
-import {
-  buildMatchBranch,
-  createRouteContext,
-  createRouteState,
-  executeMiddlewarePipeline,
-  reportError,
-} from './context';
-import { WayfinderDisposedError, WayfinderRedirectLoopError, WayfinderRouteError } from './errors';
-import { type RegisteredBlocker, runLeaveBlockers } from './guards';
-import { createBrowserHistory } from './history';
-import { createHydrationManager } from './hydration';
-import {
-  buildPreloadKey,
-  buildUrl,
-  joinPaths,
-  matchesPrefix,
-  matchRouteFor,
-  normalizePath,
-  parseQuery,
-  readLocation,
-  stripBase,
-} from './path';
-import { createPreloadManager } from './preload';
 
 // ─── Module-level helpers (formerly in resolve.ts) ────────────────────────────
 

@@ -1,9 +1,7 @@
 import { computed, signal } from '@vielzeug/ripple';
-
-import type { Model } from './types';
-
 import { courier, fetchModelsRequest } from './api';
 import { models as seedModels } from './seed-data';
+import type { Model } from './types';
 
 const modelsKey = ['models'] as const;
 const modelsDefinition = {

@@ -55,7 +55,7 @@ test.describe('Interaction', () => {
     await page.locator('ore-navigation-menu-item').click();
 
     const state = await page.locator('ore-navigation-menu-panel').evaluate((panel) => {
-      const trigger = document.querySelector('ore-navigation-menu-item')!.shadowRoot!.querySelector('.trigger')!;
+      const trigger = document.querySelector('ore-navigation-menu-item')?.shadowRoot?.querySelector('.trigger')!;
       const panelRect = panel.getBoundingClientRect();
       const triggerRect = trigger.getBoundingClientRect();
 

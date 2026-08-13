@@ -24,7 +24,7 @@ export const UNSAFE_CSS_CHARS = /[;{}]/g;
 export const sanitizeCssToken = (value: string): string => value.replace(UNSAFE_CSS_CHARS, '');
 
 export const runAll = (fns: (() => void)[]): void => {
-  for (let i = fns.length - 1; i >= 0; i--) fns[i]!();
+  for (let i = fns.length - 1; i >= 0; i--) fns[i]?.();
 };
 
 export const removeNodes = (nodes: Node[]): void => {

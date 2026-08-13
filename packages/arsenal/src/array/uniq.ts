@@ -1,6 +1,5 @@
-import type { Primitive } from '../types';
-
 import { dedupeBySelector } from '../_common/_selectorSet';
+import type { Primitive } from '../types';
 
 /**
  * Creates a new array with duplicate values removed.

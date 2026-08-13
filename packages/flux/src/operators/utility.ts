@@ -1,9 +1,8 @@
-import type { Operator, Stream, Subscription } from '../types';
-
 import { link } from '../_link';
 import { tryCall } from '../_safe';
 import { defaultScheduler } from '../_scheduler';
 import { stream } from '../core';
+import type { Operator, Stream, Subscription } from '../types';
 
 export type RetryOptions = {
   attempts: number;

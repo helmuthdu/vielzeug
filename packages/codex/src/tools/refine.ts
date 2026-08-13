@@ -1,7 +1,6 @@
 import type { CemAttribute, CemDeclaration } from '../types.js';
-import type { ToolDefinition } from './shared.js';
-
 import { parseArgs, type ToolSchema } from './schema.js';
+import type { ToolDefinition } from './shared.js';
 
 const tag = {
   properties: { tagName: { description: 'Custom element tag', maxLength: 100, minLength: 1, type: 'string' } },

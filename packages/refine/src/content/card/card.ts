@@ -1,8 +1,5 @@
-import { define, html, prop, bind, getHost, useEmit, useSlots, watchEffect } from '@vielzeug/ore';
+import { bind, define, getHost, html, prop, useEmit, useSlots, watchEffect } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
-
-import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
-
 import { createInteraction } from '../../core';
 import { disablableBundle, loadableBundle, themableBundle } from '../../shared';
 import {
@@ -13,6 +10,7 @@ import {
   reducedMotionMixin,
   roundedVariantMixin,
 } from '../../styles';
+import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 import componentStyles from './card.css?inline';
 
 const INTERACTIVE_DESCENDANT_SELECTOR =
@@ -24,7 +22,7 @@ function isNestedInteractiveTarget(host: HTMLElement, event: Event): boolean {
 
     if (node === host) return false;
 
-    if (node.matches(INTERACTIVE_DESCENDANT_SELECTOR) || !!node.closest(INTERACTIVE_DESCENDANT_SELECTOR)) {
+    if (node.matches(INTERACTIVE_DESCENDANT_SELECTOR) || node.closest(INTERACTIVE_DESCENDANT_SELECTOR)) {
       return true;
     }
   }

@@ -1,13 +1,11 @@
 import type { Server, Tool } from '@modelcontextprotocol/server';
 
 import { METHOD_NOT_FOUND, ProtocolError } from '@modelcontextprotocol/server';
-
-import type { ToolDefinition } from './shared.js';
-
 import { log } from '../_log.js';
-import { CatalogError, type Catalog } from '../catalog.js';
+import { type Catalog, CatalogError } from '../catalog.js';
 import { packageTools } from './packages.js';
 import { refineTools } from './refine.js';
+import type { ToolDefinition } from './shared.js';
 
 export const ALL_TOOLS: readonly ToolDefinition[] = [...packageTools, ...refineTools];
 
@@ -25,11 +23,13 @@ export function registerTools(server: Server, catalog: Catalog, debug = false): 
     // a valid JSON Schema object at the wire, just not structurally identical to the SDK's own
     // generic recursive JSON-value type for `Tool.inputSchema`. Cast at this one wire boundary
     // rather than loosen `ToolSchema`/`ToolProperty` themselves.
-    tools: ALL_TOOLS.map(({ description, inputSchema, name }): Tool => ({
-      description,
-      inputSchema: inputSchema as unknown as Tool['inputSchema'],
-      name,
-    })),
+    tools: ALL_TOOLS.map(
+      ({ description, inputSchema, name }): Tool => ({
+        description,
+        inputSchema: inputSchema as unknown as Tool['inputSchema'],
+        name,
+      }),
+    ),
   }));
   server.setRequestHandler('tools/call', (request) => {
     const tool = byName.get(request.params.name);

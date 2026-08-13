@@ -1,3 +1,5 @@
+import { error as logError } from './_dev';
+import { WayfinderApiError } from './errors';
 import type {
   MatchStatus,
   Middleware,
@@ -12,9 +14,6 @@ import type {
   RouteState,
   RouteTable,
 } from './types';
-
-import { error as logError } from './_dev';
-import { WayfinderApiError } from './errors';
 
 // ─── Route state ──────────────────────────────────────────────────────────────
 
@@ -89,7 +88,7 @@ export async function executeMiddlewarePipeline<TRoutes extends RouteTable>(
     if (index < middleware.length) {
       let called = false;
 
-      await middleware[index]!(context, async () => {
+      await middleware[index]?.(context, async () => {
         if (called) throw new WayfinderApiError('next() called multiple times');
 
         called = true;

@@ -1,13 +1,11 @@
-import { define, html, prop, bind, getHost, onCleanup, onMounted, useEmit, useSlots } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
+import { bind, define, getHost, html, onCleanup, onMounted, prop, useEmit, useField, useSlots } from '@vielzeug/ore';
 import { computed, effect, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
 
 import type { OverlayOpenChangeDetail, OverlayOpenReason } from '../../core';
+import { createChoiceField, createListboxDropdown, lifecycleSignal } from '../../core';
 import type { SelectableFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
-
-import { lifecycleSignal, createChoiceField, createListboxDropdown } from '../../core';
 import '../../feedback/chip/chip';
 import '../../content/icon/icon';
 import '../input/input';

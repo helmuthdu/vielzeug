@@ -123,7 +123,7 @@
   /* ── Grid base ───────────────────────────────────────────────────────────── */
 
   [hidden] {
-    display: none !important;
+    display: none;
   }
 
   .cal-grid {
@@ -411,9 +411,8 @@
   }
 
   :host([expanded]) .cal-event-pill {
-    max-width: 100%;
-
     --badge-max-width: 100%;
+    max-width: 100%;
   }
 
   :host([expanded]) .cal-event-pill-overflow {

@@ -1,10 +1,9 @@
-import type { FieldDef, FieldMatch, ScoutIndexOptions, SearchConstraints, SearchResult } from './types';
-
 import { registerIndexRevision } from './_index-state';
 import { ScoutConfigurationError } from './errors';
 import { findMatchRanges } from './highlight';
 import { defaultStringify, tokenize } from './tokenize';
 import { generateTrigrams, overlapSimilarity } from './trigram';
+import type { FieldDef, FieldMatch, ScoutIndexOptions, SearchConstraints, SearchResult } from './types';
 
 type FieldConfig<T> = {
   field: keyof T & string;
@@ -26,12 +25,20 @@ type ItemRecord = {
  * the trigram index in O(field_length) without a full rebuild.
  */
 export interface ScoutIndex<T> {
-  /** All items currently in the index, in insertion order. */
-  readonly items: readonly T[];
-  /** Number of items currently in the index. */
-  readonly size: number;
   /** Adds `item` to the index. No-op if the item is already indexed (by reference). */
   add(item: T): void;
+  /** All items currently in the index, in insertion order. */
+  readonly items: readonly T[];
+  /**
+   * Subscribes `listener` to be called after every changed `add()` / `remove()` / `reindex()`
+   * / `setItems()` operation. No-ops — e.g. removing an unindexed item or reconciling an
+   * unchanged corpus — do not fire it. Each changed `setItems()` reconciliation fires once.
+   * Returns an unsubscribe function.
+   *
+   * Framework-agnostic extension point: `createSearch()` uses this internally to keep
+   * reactive `results` in sync with index mutations. Most callers won't need this directly.
+   */
+  onMutate(listener: () => void): () => void;
   /**
    * Re-reads the item's current field values and rebuilds its index entry in-place,
    * only updating fields whose values have changed. Preserves insertion order.
@@ -44,12 +51,6 @@ export interface ScoutIndex<T> {
    */
   remove(item: T): void;
   /**
-   * Reconciles the index to `items` by reference identity. Retained items are reindexed,
-   * new items are added, missing items are removed, and one mutation notification fires
-   * when indexed corpus or field values change. Duplicate references collapse to one item.
-   */
-  setItems(items: readonly T[]): void;
-  /**
    * Searches the index for `query` and returns results sorted by score descending.
    *
    * An empty (or whitespace-only) `query` returns all indexed items with `score = 1`.
@@ -58,15 +59,13 @@ export interface ScoutIndex<T> {
    */
   search(query: string, options?: SearchConstraints): SearchResult<T>[];
   /**
-   * Subscribes `listener` to be called after every changed `add()` / `remove()` / `reindex()`
-   * / `setItems()` operation. No-ops — e.g. removing an unindexed item or reconciling an
-   * unchanged corpus — do not fire it. Each changed `setItems()` reconciliation fires once.
-   * Returns an unsubscribe function.
-   *
-   * Framework-agnostic extension point: `createSearch()` uses this internally to keep
-   * reactive `results` in sync with index mutations. Most callers won't need this directly.
+   * Reconciles the index to `items` by reference identity. Retained items are reindexed,
+   * new items are added, missing items are removed, and one mutation notification fires
+   * when indexed corpus or field values change. Duplicate references collapse to one item.
    */
-  onMutate(listener: () => void): () => void;
+  setItems(items: readonly T[]): void;
+  /** Number of items currently in the index. */
+  readonly size: number;
 }
 
 function requireFiniteInteger(value: number, name: string, minimum: number): number {

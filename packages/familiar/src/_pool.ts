@@ -1,5 +1,7 @@
 import { abortError } from '@vielzeug/arsenal/async';
-
+import { type QueueItem, TaskQueue } from './_queue';
+import { unrefTimer } from './_timers';
+import { FamiliarQueueFullError, FamiliarTerminatedError, FamiliarTimeoutError } from './errors';
 import type {
   BatchOptions,
   DrainOptions,
@@ -11,10 +13,6 @@ import type {
   WorkerStats,
   WorkerStatus,
 } from './types';
-
-import { type QueueItem, TaskQueue } from './_queue';
-import { unrefTimer } from './_timers';
-import { FamiliarQueueFullError, FamiliarTerminatedError, FamiliarTimeoutError } from './errors';
 
 export type PoolOptions = {
   concurrency: number;
@@ -329,7 +327,7 @@ export async function* batch<TInput, TOutput>(
   options: BatchOptions = {},
 ): AsyncIterable<TOutput> {
   const controller = new AbortController();
-  const onAbort = () => controller.abort(options.signal!.reason);
+  const onAbort = () => controller.abort(options.signal?.reason);
 
   options.signal?.addEventListener('abort', onAbort, { once: true });
 
@@ -356,7 +354,7 @@ export function createTaskGroup<TInput, TOutput>(
   const controller = new AbortController();
   const tasks = new Set<Promise<TOutput>>();
   let size = 0;
-  const onAbort = () => controller.abort(options.signal!.reason);
+  const onAbort = () => controller.abort(options.signal?.reason);
 
   options.signal?.addEventListener('abort', onAbort, { once: true });
 

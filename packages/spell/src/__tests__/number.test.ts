@@ -1,4 +1,4 @@
-import { s, SpellValidationError } from '../index';
+import { SpellValidationError, s } from '../index';
 
 describe('s.number()', () => {
   it('accepts numbers', () => {

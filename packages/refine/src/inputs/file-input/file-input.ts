@@ -1,19 +1,19 @@
 import { createDropZone } from '@vielzeug/dnd';
 import {
+  bind,
   createStableId,
   define,
   html,
-  prop,
-  ref,
-  bind,
   onCleanup,
   onElement,
   onEvent,
   onMounted,
+  prop,
+  ref,
   useEmit,
+  useField,
   when,
 } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
 
@@ -30,8 +30,8 @@ import {
   roundedVariantMixin,
   sizeVariantMixin,
 } from '../../styles';
-import { createFileQueue, formatBytes, type FileUploadFn } from './file-input-upload';
 import componentStyles from './file-input.css?inline';
+import { createFileQueue, type FileUploadFn, formatBytes } from './file-input-upload';
 
 export type { FileUploadFn, FileUploadState, FileUploadStatus } from './file-input-upload';
 

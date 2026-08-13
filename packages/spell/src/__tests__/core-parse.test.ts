@@ -1,4 +1,4 @@
-import { s, Schema, SpellValidationError } from '../index';
+import { Schema, SpellValidationError, s } from '../index';
 
 describe('safeParse and safeParseAsync', () => {
   it('safeParse() returns parsed data on success', () => {

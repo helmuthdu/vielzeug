@@ -1,6 +1,6 @@
-export { CatalogError, SnapshotCatalog, type Catalog, type SearchHit } from './catalog.js';
+export { type Catalog, CatalogError, type SearchHit, SnapshotCatalog } from './catalog.js';
 export { CodexError } from './errors.js';
-export { startHttpHost, type HttpHost, type HttpHostOptions } from './http.js';
+export { type HttpHost, type HttpHostOptions, startHttpHost } from './http.js';
 export { createMcpServer } from './server.js';
 export {
   loadSnapshot,
@@ -12,8 +12,6 @@ export {
   validateSnapshot,
 } from './snapshot.js';
 export {
-  DOC_PAGES,
-  SNAPSHOT_SCHEMA_VERSION,
   type CemAttribute,
   type CemCssPart,
   type CemCssProperty,
@@ -21,10 +19,12 @@ export {
   type CemEvent,
   type CemMember,
   type CemSlot,
+  DOC_PAGES,
   type DocPage,
   type Example,
   type PackageContent,
   type PackageMeta,
+  SNAPSHOT_SCHEMA_VERSION,
   type SnapshotManifest,
   type SnapshotPointer,
 } from './types.js';

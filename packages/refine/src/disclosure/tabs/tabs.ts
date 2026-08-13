@@ -1,24 +1,22 @@
 import {
+  bind,
   createContext,
   define,
-  html,
-  prop,
-  ref,
-  bind,
   getHost,
+  html,
   onCleanup,
   onMounted,
+  prop,
   provide,
+  ref,
   useEmit,
 } from '@vielzeug/ore';
 import { computed, type Readable, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
-
-import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
-
 import { createInteraction, createListControl, elementDirection, lifecycleSignal } from '../../core';
 import { sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin } from '../../styles';
+import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
 import styles from './tabs.css?inline';
 
 /** Context provided by ore-tabs to its ore-tab-item and ore-tab-panel children. */

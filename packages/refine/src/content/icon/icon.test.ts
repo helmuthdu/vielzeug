@@ -24,8 +24,8 @@ describe('ore-icon', () => {
 
     expect(shadow).toBeTruthy();
     // The shadow root must contain an SVG, not the literal string "[object Object]"
-    expect(shadow!.textContent).not.toContain('[object Object]');
-    expect(shadow!.querySelector('svg')).toBeTruthy();
+    expect(shadow?.textContent).not.toContain('[object Object]');
+    expect(shadow?.querySelector('svg')).toBeTruthy();
   });
 
   it('renders no SVG when name is omitted', async () => {

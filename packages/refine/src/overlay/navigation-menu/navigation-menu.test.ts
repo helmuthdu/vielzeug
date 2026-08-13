@@ -155,8 +155,8 @@ describe('ore-navigation-menu', () => {
     });
 
     const trigger = fixture.element
-      .querySelector<HTMLElement>('ore-navigation-menu-item')!
-      .shadowRoot?.querySelector<HTMLElement>('.trigger');
+      .querySelector<HTMLElement>('ore-navigation-menu-item')
+      ?.shadowRoot?.querySelector<HTMLElement>('.trigger');
 
     if (!trigger) throw new Error('Expected navigation trigger button');
 
@@ -177,8 +177,8 @@ describe('ore-navigation-menu', () => {
     });
 
     const trigger = fixture.element
-      .querySelector<HTMLElement>('ore-navigation-menu-item')!
-      .shadowRoot?.querySelector<HTMLElement>('.trigger');
+      .querySelector<HTMLElement>('ore-navigation-menu-item')
+      ?.shadowRoot?.querySelector<HTMLElement>('.trigger');
 
     if (!trigger) throw new Error('Expected navigation trigger button');
 

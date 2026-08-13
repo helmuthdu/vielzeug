@@ -19,7 +19,7 @@
 
   /* Prevent display:flex/grid from overriding [hidden] attribute */
   [hidden] {
-    display: none !important;
+    display: none;
   }
 
   /* ── Trigger ─────────────────────────────────────────────────────────────── */

@@ -1,4 +1,4 @@
-import { diagnostics, type ParseResult, s, SpellError, SpellValidationError } from '../index';
+import { diagnostics, type ParseResult, SpellError, SpellValidationError, s } from '../index';
 
 const { createParseContext, prependIssuePath } = diagnostics;
 

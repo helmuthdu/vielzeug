@@ -3,12 +3,32 @@
   "version": "2.1.0",
   "description": "Explicit typed localization with pluralization, lazy locale catalogs, and SSR hydration",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "files": [
     "dist"
   ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./format": {
+      "import": "./dist/format.js",
+      "require": "./dist/format.cjs",
+      "types": "./dist/format.d.ts"
+    },
+    "./validate": {
+      "import": "./dist/validate.js",
+      "require": "./dist/validate.cjs",
+      "types": "./dist/validate.d.ts"
+    }
+  },
   "typesVersions": {
     "*": {
       "format": [
@@ -19,46 +39,26 @@
       ]
     }
   },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    },
-    "./format": {
-      "types": "./dist/format.d.ts",
-      "import": "./dist/format.js",
-      "require": "./dist/format.cjs"
-    },
-    "./validate": {
-      "types": "./dist/validate.d.ts",
-      "import": "./dist/validate.js",
-      "require": "./dist/validate.cjs"
-    }
-  },
-  "scripts": {
-    "build": "pnpm run typecheck && vite build && pnpm run build:bundle && pnpm run build:types && pnpm run verify:exports",
-    "build:types": "tsc -p tsconfig.declarations.json",
-    "fix": "eslint --fix src",
-    "lint": "eslint src",
-    "prepublishOnly": "pnpm run build",
-    "preview": "vite preview",
-    "test": "pnpm run typecheck && vitest",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build:bundle": "vite build --config vite.bundle.config.ts",
-    "verify:exports": "node ./scripts/verify-exports.mjs"
-  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "engines": {
-    "node": ">=22"
+  "scripts": {
+    "build": "pnpm run typecheck && vite build && pnpm run build:bundle && pnpm run build:types && pnpm run verify:exports",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "biome check --write src",
+    "lint": "biome ci src",
+    "prepublishOnly": "pnpm run build",
+    "preview": "vite preview",
+    "test": "pnpm run typecheck && vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "verify:exports": "node ./scripts/verify-exports.mjs"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.2.0",
     "typescript": "^6.0.3",
-    "vite": "^8.2.0",
+    "vite": "^8.2.1",
     "vitest": "^4.1.10"
   }
 }

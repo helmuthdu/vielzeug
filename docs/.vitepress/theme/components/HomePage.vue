@@ -7,9 +7,9 @@ import { PACKAGE_GROUPS } from './packageGroups';
 const prefersReducedMotion = ref(false);
 
 const RINGS = [
-  { cx: 32.0, cy: 32.0, rx: 28.902, ry: 11.221, tilt: -Math.PI / 2, dur: 3800 },
-  { cx: 27.15, cy: 23.72, rx: 28.902, ry: 11.221, tilt: (-Math.PI * 5) / 6, dur: 5200 },
-  { cx: 36.84, cy: 23.71, rx: 28.902, ry: 11.221, tilt: -Math.PI / 6, dur: 4500 },
+  { cx: 32.0, cy: 32.0, dur: 3800, rx: 28.902, ry: 11.221, tilt: -Math.PI / 2 },
+  { cx: 27.15, cy: 23.72, dur: 5200, rx: 28.902, ry: 11.221, tilt: (-Math.PI * 5) / 6 },
+  { cx: 36.84, cy: 23.71, dur: 4500, rx: 28.902, ry: 11.221, tilt: -Math.PI / 6 },
 ];
 
 const TAIL_LEN = 18;
@@ -96,42 +96,42 @@ const monoVersion = computed(() => {
 const categories = PACKAGE_GROUPS;
 
 const heroPackages = [
-  { id: 'arsenal', name: 'arsenal', cmd: 'pnpm add @vielzeug/arsenal', tagline: '75+ utility functions' },
-  { id: 'assay', name: 'assay', cmd: 'pnpm add -D @vielzeug/assay', tagline: 'DOM testing primitives' },
-  { id: 'clockwork', name: 'clockwork', cmd: 'pnpm add @vielzeug/clockwork', tagline: 'Finite state machines' },
-  { id: 'coins', name: 'coins', cmd: 'pnpm add @vielzeug/coins', tagline: 'Monetary arithmetic' },
-  { id: 'conduit', name: 'conduit', cmd: 'pnpm add @vielzeug/conduit', tagline: 'Dependency injection' },
-  { id: 'courier', name: 'courier', cmd: 'pnpm add @vielzeug/courier', tagline: 'HTTP client & caching' },
-  { id: 'dnd', name: 'dnd', cmd: 'pnpm add @vielzeug/dnd', tagline: 'Drag & drop' },
-  { id: 'familiar', name: 'familiar', cmd: 'pnpm add @vielzeug/familiar', tagline: 'Web Worker pool' },
-  { id: 'flux', name: 'flux', cmd: 'pnpm add @vielzeug/flux', tagline: 'Reactive streams & operators' },
-  { id: 'forge', name: 'forge', cmd: 'pnpm add @vielzeug/forge', tagline: 'Form state & validation' },
-  { id: 'herald', name: 'herald', cmd: 'pnpm add @vielzeug/herald', tagline: 'Typed event bus' },
-  { id: 'keymap', name: 'keymap', cmd: 'pnpm add @vielzeug/keymap', tagline: 'Keyboard shortcuts & chords' },
-  { id: 'ledger', name: 'ledger', cmd: 'pnpm add @vielzeug/ledger', tagline: 'Async undo / redo history' },
-  { id: 'lingua', name: 'lingua', cmd: 'pnpm add @vielzeug/lingua', tagline: 'i18n & pluralization' },
+  { cmd: 'pnpm add @vielzeug/arsenal', id: 'arsenal', name: 'arsenal', tagline: '75+ utility functions' },
+  { cmd: 'pnpm add -D @vielzeug/assay', id: 'assay', name: 'assay', tagline: 'DOM testing primitives' },
+  { cmd: 'pnpm add @vielzeug/clockwork', id: 'clockwork', name: 'clockwork', tagline: 'Finite state machines' },
+  { cmd: 'pnpm add @vielzeug/coins', id: 'coins', name: 'coins', tagline: 'Monetary arithmetic' },
+  { cmd: 'pnpm add @vielzeug/conduit', id: 'conduit', name: 'conduit', tagline: 'Dependency injection' },
+  { cmd: 'pnpm add @vielzeug/courier', id: 'courier', name: 'courier', tagline: 'HTTP client & caching' },
+  { cmd: 'pnpm add @vielzeug/dnd', id: 'dnd', name: 'dnd', tagline: 'Drag & drop' },
+  { cmd: 'pnpm add @vielzeug/familiar', id: 'familiar', name: 'familiar', tagline: 'Web Worker pool' },
+  { cmd: 'pnpm add @vielzeug/flux', id: 'flux', name: 'flux', tagline: 'Reactive streams & operators' },
+  { cmd: 'pnpm add @vielzeug/forge', id: 'forge', name: 'forge', tagline: 'Form state & validation' },
+  { cmd: 'pnpm add @vielzeug/herald', id: 'herald', name: 'herald', tagline: 'Typed event bus' },
+  { cmd: 'pnpm add @vielzeug/keymap', id: 'keymap', name: 'keymap', tagline: 'Keyboard shortcuts & chords' },
+  { cmd: 'pnpm add @vielzeug/ledger', id: 'ledger', name: 'ledger', tagline: 'Async undo / redo history' },
+  { cmd: 'pnpm add @vielzeug/lingua', id: 'lingua', name: 'lingua', tagline: 'i18n & pluralization' },
   {
+    cmd: 'pnpm add @vielzeug/necromancer',
     id: 'necromancer',
     name: 'necromancer',
-    cmd: 'pnpm add @vielzeug/necromancer',
     tagline: 'Web Animations API primitives',
   },
-  { id: 'orbit', name: 'orbit', cmd: 'pnpm add @vielzeug/orbit', tagline: 'Floating positioning' },
-  { id: 'ore', name: 'ore', cmd: 'pnpm add @vielzeug/ore', tagline: 'Web component primitives' },
-  { id: 'prism', name: 'prism', cmd: 'pnpm add @vielzeug/prism', tagline: 'SVG charts' },
-  { id: 'pulse', name: 'pulse', cmd: 'pnpm add @vielzeug/pulse', tagline: 'WebSocket client & presence' },
-  { id: 'refine', name: 'refine', cmd: 'pnpm add @vielzeug/refine', tagline: 'Accessible components' },
-  { id: 'ripple', name: 'ripple', cmd: 'pnpm add @vielzeug/ripple', tagline: 'Signals, computed, effects' },
-  { id: 'rune', name: 'rune', cmd: 'pnpm add @vielzeug/rune', tagline: 'Structured logging' },
-  { id: 'sandbox', name: 'sandbox', cmd: 'pnpm add @vielzeug/sandbox', tagline: 'Sandboxed iframe runtime' },
-  { id: 'scout', name: 'scout', cmd: 'pnpm add @vielzeug/scout', tagline: 'Trigram fuzzy search' },
-  { id: 'scroll', name: 'scroll', cmd: 'pnpm add @vielzeug/scroll', tagline: 'Virtual lists' },
-  { id: 'sourcerer', name: 'sourcerer', cmd: 'pnpm add @vielzeug/sourcerer', tagline: 'Reactive data sources' },
-  { id: 'spell', name: 'spell', cmd: 'pnpm add @vielzeug/spell', tagline: 'Schema validation' },
-  { id: 'tempo', name: 'tempo', cmd: 'pnpm add @vielzeug/tempo', tagline: 'Date & time' },
-  { id: 'vault', name: 'vault', cmd: 'pnpm add @vielzeug/vault', tagline: 'Browser storage' },
-  { id: 'ward', name: 'ward', cmd: 'pnpm add @vielzeug/ward', tagline: 'RBAC & permissions' },
-  { id: 'wayfinder', name: 'wayfinder', cmd: 'pnpm add @vielzeug/wayfinder', tagline: 'Client-side routing' },
+  { cmd: 'pnpm add @vielzeug/orbit', id: 'orbit', name: 'orbit', tagline: 'Floating positioning' },
+  { cmd: 'pnpm add @vielzeug/ore', id: 'ore', name: 'ore', tagline: 'Web component primitives' },
+  { cmd: 'pnpm add @vielzeug/prism', id: 'prism', name: 'prism', tagline: 'SVG charts' },
+  { cmd: 'pnpm add @vielzeug/pulse', id: 'pulse', name: 'pulse', tagline: 'WebSocket client & presence' },
+  { cmd: 'pnpm add @vielzeug/refine', id: 'refine', name: 'refine', tagline: 'Accessible components' },
+  { cmd: 'pnpm add @vielzeug/ripple', id: 'ripple', name: 'ripple', tagline: 'Signals, computed, effects' },
+  { cmd: 'pnpm add @vielzeug/rune', id: 'rune', name: 'rune', tagline: 'Structured logging' },
+  { cmd: 'pnpm add @vielzeug/sandbox', id: 'sandbox', name: 'sandbox', tagline: 'Sandboxed iframe runtime' },
+  { cmd: 'pnpm add @vielzeug/scout', id: 'scout', name: 'scout', tagline: 'Trigram fuzzy search' },
+  { cmd: 'pnpm add @vielzeug/scroll', id: 'scroll', name: 'scroll', tagline: 'Virtual lists' },
+  { cmd: 'pnpm add @vielzeug/sourcerer', id: 'sourcerer', name: 'sourcerer', tagline: 'Reactive data sources' },
+  { cmd: 'pnpm add @vielzeug/spell', id: 'spell', name: 'spell', tagline: 'Schema validation' },
+  { cmd: 'pnpm add @vielzeug/tempo', id: 'tempo', name: 'tempo', tagline: 'Date & time' },
+  { cmd: 'pnpm add @vielzeug/vault', id: 'vault', name: 'vault', tagline: 'Browser storage' },
+  { cmd: 'pnpm add @vielzeug/ward', id: 'ward', name: 'ward', tagline: 'RBAC & permissions' },
+  { cmd: 'pnpm add @vielzeug/wayfinder', id: 'wayfinder', name: 'wayfinder', tagline: 'Client-side routing' },
 ];
 const activeHeroIndex = ref(0);
 const activeHeroPkg = computed(() => heroPackages[activeHeroIndex.value]);
@@ -162,10 +162,10 @@ const filteredCategories = computed(() => {
 });
 
 const coreEssentials = [
-  { id: 'ripple', category: 'Core Primitives', tagline: 'Signals, computed, and effects', size: '1.2 kB' },
-  { id: 'spell', category: 'Forms & Validation', tagline: 'Schema validation with fluent API', size: '1.8 kB' },
-  { id: 'arsenal', category: 'Utilities', tagline: '75+ zero-dependency utility functions', size: '2.5 kB' },
-  { id: 'courier', category: 'Data Layer', tagline: 'HTTP client & query cache / mutations', size: '2.0 kB' },
+  { category: 'Core Primitives', id: 'ripple', size: '1.2 kB', tagline: 'Signals, computed, and effects' },
+  { category: 'Forms & Validation', id: 'spell', size: '1.8 kB', tagline: 'Schema validation with fluent API' },
+  { category: 'Utilities', id: 'arsenal', size: '2.5 kB', tagline: '75+ zero-dependency utility functions' },
+  { category: 'Data Layer', id: 'courier', size: '2.0 kB', tagline: 'HTTP client & query cache / mutations' },
 ];
 
 function cycleHeroPkg() {

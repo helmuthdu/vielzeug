@@ -7,9 +7,9 @@ import type { OverlayOpenChangeDetail } from '../../core';
 import { createDropdownPositioner, createOutsidePointerDismissal, lifecycleSignal } from '../../core';
 import { disablableBundle } from '../../shared';
 import { reducedMotionMixin } from '../../styles';
+import hostStyles from './navigation-menu.css?inline';
 import itemStyles from './navigation-menu-item.css?inline';
 import panelStyles from './navigation-menu-panel.css?inline';
-import hostStyles from './navigation-menu.css?inline';
 
 export type OreNavigationMenuEvents = {
   'open-change': OverlayOpenChangeDetail & { value: string | null };

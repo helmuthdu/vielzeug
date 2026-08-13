@@ -30,8 +30,8 @@ test.describe('Layout', () => {
 
       await page.evaluate(() => {
         (document.getElementById('ta') as HTMLElement & { shadowRoot: ShadowRoot }).shadowRoot
-          .querySelector('textarea')!
-          .focus();
+          .querySelector('textarea')
+          ?.focus();
       });
       await page.waitForTimeout(300);
 

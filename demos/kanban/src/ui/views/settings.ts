@@ -3,10 +3,10 @@ import '@vielzeug/refine/button';
 import '@vielzeug/refine/icon';
 import '@vielzeug/refine/accordion';
 import '@vielzeug/refine/accordion-item';
-import type { LogEntry } from '@vielzeug/rune';
 
 import { define, each, html, onCleanup, ref, when } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
+import type { LogEntry } from '@vielzeug/rune';
 
 import { currentUser } from '../../core/board-store';
 import { currentLocale, setLocale, t } from '../../core/i18n';

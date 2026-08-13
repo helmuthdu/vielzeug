@@ -25,7 +25,7 @@ describe('s.instanceof()', () => {
     it('converts through the JSON subpath', () => {
       const jsonSchema = fromDefinition(s.instanceof(Date).definition());
 
-      expect(jsonSchema['$comment']).toBe('Instances of "Date" are not representable in JSON Schema.');
+      expect(jsonSchema.$comment).toBe('Instances of "Date" are not representable in JSON Schema.');
     });
   });
 });

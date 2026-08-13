@@ -1,8 +1,7 @@
-import type { Currency, Money } from './types';
-
 import { decimal, lcm } from './decimal';
 import { CoinsError, CurrencyMismatchError } from './errors';
 import { compare, isMoney, withMinor } from './money';
+import type { Currency, Money } from './types';
 
 export function sum<C extends Currency>(values: Iterable<Money<C>>, options: { currency: C }): Money<C> {
   let amount = 0n;

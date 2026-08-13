@@ -2,11 +2,11 @@ import { describe, expect, test, vi } from 'vitest';
 
 import {
   type Catalog,
+  createTranslationStore,
+  hydrateTranslationStore,
   LinguaDisposedError,
   LinguaInvalidStateError,
   LinguaMissingCatalogError,
-  createTranslationStore,
-  hydrateTranslationStore,
 } from '../';
 
 const catalogs = {

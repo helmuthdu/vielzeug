@@ -3,13 +3,11 @@ import { uuid } from '@vielzeug/arsenal/random';
 import { define, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
-
-import type { SwipeControl } from '../../core';
-import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
-
 import { warn } from '../../_dev';
+import type { SwipeControl } from '../../core';
 import { createSwipeControl } from '../../core';
 import { reducedMotionMixin } from '../../styles';
+import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './toast.css?inline';
 
 /** Must match toast.css's default opacity transition duration. */
@@ -200,7 +198,7 @@ class ToastStore {
   scheduleFinalization(id: string, delay: number): void {
     const entry = this.#entry(id);
 
-    if (!entry || entry.phase !== 'exiting' || this.#disposed) return;
+    if (entry?.phase !== 'exiting' || this.#disposed) return;
 
     if (entry.exitTimeoutId) clearTimeout(entry.exitTimeoutId);
 
@@ -625,10 +623,10 @@ export interface ToastService {
   add(item: ToastItem): string;
   clear(): void;
   configure(config: ToastServiceConfig): void;
-  readonly disposed: boolean;
   dismiss(id: string): void;
   readonly disposalSignal: AbortSignal;
   dispose(): void;
+  readonly disposed: boolean;
   error(message: string, opts?: Partial<ToastItem>): string;
   info(message: string, opts?: Partial<ToastItem>): string;
   promise<T>(

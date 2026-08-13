@@ -1,8 +1,8 @@
 .sidebar-logo[hidden] {
-  display: none !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
-  margin: 0 !important;
+  display: none;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
 }
 
 /*
@@ -81,7 +81,7 @@
 
   :host([data-no-transition]),
   :host([data-no-transition]) > nav {
-    transition: none !important;
+    transition: none;
   }
 
   :host([data-collapsed]) {
@@ -276,7 +276,7 @@
   }
 
   :host([data-collapsed]) .sidebar-header .sidebar-header-content {
-    display: none !important;
+    display: none;
   }
 
   .sidebar-logo {
@@ -290,7 +290,7 @@
   }
 
   .sidebar-logo:empty {
-    display: none !important;
+    display: none;
   }
 
   :host([data-collapsed]) .sidebar-logo {
@@ -374,10 +374,9 @@
 @layer refine.variants {
   /* ── floating ── */
   :host([variant='floating']) {
+    --_panel-radius: var(--rounded-lg);
     height: calc(100% - var(--size-6));
     margin: var(--size-3);
-
-    --_panel-radius: var(--rounded-lg);
   }
 
   :host([variant='floating']) > nav {

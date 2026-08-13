@@ -1,14 +1,12 @@
 import { createScope, effect, isReactive } from '@vielzeug/ripple';
-
-import type { Point } from '../../svg/path';
-import type { ChartHandle, SparklineConfig, StackSegment } from '../../types';
-
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
 import { createChartBase } from '../../core/chart-base';
 import { createSvgElement, setAttributes } from '../../svg/element';
+import type { Point } from '../../svg/path';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
+import type { ChartHandle, SparklineConfig, StackSegment } from '../../types';
 
 function buildTopPoints(data: number[], width: number, height: number): Point[] {
   if (data.length === 0) return [];

@@ -1,9 +1,7 @@
 import { computed, signal } from '@vielzeug/ripple';
-
-import type { CartItem } from './types';
-
 import { modelMap } from './catalog';
 import { combineBreakdowns, computePriceBreakdown, scaleBreakdown } from './pricing';
+import type { CartItem } from './types';
 
 export const cartItems = signal<CartItem[]>([]);
 

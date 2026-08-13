@@ -1,8 +1,5 @@
 import { signal } from '@vielzeug/ripple';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import type { Datum, Series, StackSegment } from '../types';
-
 import { error, warn } from '../_dev';
 import { animate } from '../animation/transition';
 import { createAreaChart } from '../charts/area';
@@ -13,6 +10,7 @@ import { createSparkline } from '../charts/sparkline';
 import { buildXScale, buildYScale } from '../core/cartesian-scales';
 import { createTooltip } from '../interaction/tooltip';
 import { resetTheme, seriesColor, setTheme } from '../theme';
+import type { Datum, Series, StackSegment } from '../types';
 
 // ─── theme ───────────────────────────────────────────────────────────────────
 
@@ -660,16 +658,16 @@ describe('buildXScale / buildYScale — empty arrays', () => {
   it('buildXScale([]) returns a valid scale without Infinity domain', () => {
     const scale = buildXScale([], 300);
 
-    expect(isFinite(scale.domain[0] as number)).toBe(true);
-    expect(isFinite(scale.domain[1] as number)).toBe(true);
+    expect(Number.isFinite(scale.domain[0] as number)).toBe(true);
+    expect(Number.isFinite(scale.domain[1] as number)).toBe(true);
     expect(scale.range).toEqual([0, 300]);
   });
 
   it('buildYScale([]) returns a valid scale without Infinity domain', () => {
     const scale = buildYScale([], 300);
 
-    expect(isFinite((scale.domain as [number, number])[0])).toBe(true);
-    expect(isFinite((scale.domain as [number, number])[1])).toBe(true);
+    expect(Number.isFinite((scale.domain as [number, number])[0])).toBe(true);
+    expect(Number.isFinite((scale.domain as [number, number])[1])).toBe(true);
   });
 });
 

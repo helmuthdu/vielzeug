@@ -2,15 +2,15 @@ import {
   batch,
   computed,
   createScope,
-  effect as rawEffect,
   type Readable,
+  effect as rawEffect,
   type Scope,
-  signal,
   type Signal,
+  signal,
   untrack,
 } from '@vielzeug/ripple';
 
-import { invariant, OreApiError, ORE_ERRORS, OreLifecycleError, reportRuntimeError } from '../errors';
+import { invariant, ORE_ERRORS, OreApiError, OreLifecycleError, reportRuntimeError } from '../errors';
 import { createDirectiveResult, type DirectiveResult, type HTMLResult } from '../template/result';
 import { removeNodes, runAll } from '../utils/dom';
 

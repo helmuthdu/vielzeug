@@ -1,6 +1,5 @@
-import type { RandomSource } from './source';
-
 import { randomIndex } from './_index';
+import type { RandomSource } from './source';
 
 /**
  * Returns a new randomly-shuffled copy of the array using Fisher-Yates

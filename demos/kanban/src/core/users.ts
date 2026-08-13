@@ -1,9 +1,7 @@
 import { computed, signal } from '@vielzeug/ripple';
-
-import type { User } from './types';
-
 import { courier, getUsers } from './api';
 import { seedUsers } from './seed-data';
+import type { User } from './types';
 
 const usersKey = ['users'] as const;
 const usersDefinition = {

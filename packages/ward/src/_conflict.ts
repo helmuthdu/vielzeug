@@ -1,9 +1,8 @@
 import type { CompiledEntry } from './_compile';
-import type { WardConflict } from './types';
-
 import { isOverriddenBy } from './_match';
 import { ANONYMOUS, WILDCARD } from './constants';
 import { patternCovers } from './resource';
+import type { WardConflict } from './types';
 
 // ---------------------------------------------------------------------------
 // Role coverage helpers

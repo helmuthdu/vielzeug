@@ -10,11 +10,7 @@ body {
   min-height: 100dvh;
   padding: 0;
   margin: 0;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: var(--text-base);
   color: var(--text-color-body);
   background: var(--color-contrast-50);
@@ -238,13 +234,13 @@ body {
 
 .task-card__description {
   display: -webkit-box;
+  -webkit-box-orient: vertical;
   margin: 0 0 var(--size-2-5);
   overflow: hidden;
   -webkit-line-clamp: 2;
   font-size: var(--text-xs);
   line-height: 1.5;
   color: var(--text-color-tertiary);
-  -webkit-box-orient: vertical;
 }
 
 .task-card__footer {

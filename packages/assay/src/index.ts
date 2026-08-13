@@ -1,6 +1,7 @@
 export { AssayError, AssayQueryError, AssayTimeoutError } from './errors';
 
 export {
+  type CustomEventOptions,
   dispatch,
   fireBlur,
   fireChange,
@@ -11,16 +12,15 @@ export {
   fireKeyDown,
   fireKeyUp,
   fireSubmit,
-  type CustomEventOptions,
 } from './events';
-export { within, queryInShadow, queryAllInShadow, queryPart, getSlotted, type QueryScope } from './query';
+export { getSlotted, type QueryScope, queryAllInShadow, queryInShadow, queryPart, within } from './query';
 export {
+  type DelayOptions,
   delay,
   nextTick,
+  type RetryOptions,
   retry,
+  type WaitOptions,
   waitForEvent,
   waitUntil,
-  type DelayOptions,
-  type RetryOptions,
-  type WaitOptions,
 } from './wait';

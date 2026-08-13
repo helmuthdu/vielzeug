@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { BHD, EUR, JPY, USD, exchange, exchangeRate, money, toDecimal } from '../index';
+import { BHD, EUR, exchange, exchangeRate, JPY, money, toDecimal, USD } from '../index';
 
 describe('exchange', () => {
   it('converts equal-scale currencies exactly', () => {

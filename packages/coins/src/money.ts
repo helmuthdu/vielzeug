@@ -1,8 +1,7 @@
-import type { Currency, Money, RoundingMode } from './types';
-
 import { isCurrency } from './currency';
 import { decimal, roundDivision, toDecimalString } from './decimal';
 import { CoinsError, CurrencyMismatchError } from './errors';
+import type { Currency, Money, RoundingMode } from './types';
 
 const defaultRounding: RoundingMode = 'halfAwayFromZero';
 

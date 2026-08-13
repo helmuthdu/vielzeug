@@ -1,10 +1,6 @@
 {
-  "name": "@vielzeug/orbit",
   "entries": [
     {
-      "version": "2.0.1",
-      "tag": "@vielzeug/orbit_v2.0.1",
-      "date": "Mon, 10 Aug 2026 21:21:35 GMT",
       "comments": {
         "dependency": [
           {
@@ -14,34 +10,27 @@
             "comment": "Updating dependency \"@vielzeug/ripple\" to `^2.1.0`"
           }
         ]
-      }
+      },
+      "date": "Mon, 10 Aug 2026 21:21:35 GMT",
+      "tag": "@vielzeug/orbit_v2.0.1",
+      "version": "2.0.1"
     },
     {
-      "version": "2.0.0",
-      "tag": "@vielzeug/orbit_v2.0.0",
-      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
       "comments": {
         "major": [
           {
-            "comment": "refactor!: replace float helpers with lifecycle-owned positioners",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor!: replace float helpers with lifecycle-owned positioners",
             "commit": "e32a868dfc0804ad4eca9e3c9f9678c52382e70e"
           }
         ]
-      }
+      },
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "tag": "@vielzeug/orbit_v2.0.0",
+      "version": "2.0.0"
     },
     {
-      "version": "1.1.5",
-      "tag": "@vielzeug/orbit_v1.1.5",
-      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "49ec292706645d1f4937897ac628d852f3a11736"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.1`"
@@ -49,13 +38,20 @@
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.1`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
+            "commit": "49ec292706645d1f4937897ac628d852f3a11736"
+          }
         ]
-      }
+      },
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "tag": "@vielzeug/orbit_v1.1.5",
+      "version": "1.1.5"
     },
     {
-      "version": "1.1.4",
-      "tag": "@vielzeug/orbit_v1.1.4",
-      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
       "comments": {
         "dependency": [
           {
@@ -65,39 +61,32 @@
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.0`"
           }
         ]
-      }
+      },
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "tag": "@vielzeug/orbit_v1.1.4",
+      "version": "1.1.4"
     },
     {
-      "version": "1.1.3",
-      "tag": "@vielzeug/orbit_v1.1.3",
-      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "refactor(orbit): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.3.0`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.1.2",
-      "tag": "@vielzeug/orbit_v1.1.2",
-      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+            "comment": "refactor(orbit): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies",
+            "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
           }
-        ],
+        ]
+      },
+      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
+      "tag": "@vielzeug/orbit_v1.1.3",
+      "version": "1.1.3"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.1.2`"
@@ -105,61 +94,61 @@
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.3`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
+            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+          }
         ]
-      }
+      },
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "tag": "@vielzeug/orbit_v1.1.2",
+      "version": "1.1.2"
     },
     {
-      "version": "1.1.1",
-      "tag": "@vielzeug/orbit_v1.1.1",
-      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
       "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.2`"
           }
         ]
-      }
+      },
+      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
+      "tag": "@vielzeug/orbit_v1.1.1",
+      "version": "1.1.1"
     },
     {
-      "version": "1.1.0",
-      "tag": "@vielzeug/orbit_v1.1.0",
-      "date": "Wed, 15 Jul 2026 07:45:31 GMT",
       "comments": {
         "minor": [
           {
-            "comment": "feat: add getContainingBlock() and getClippingAncestorRect() for auto-detecting position:fixed containing-block traps and the nearest real clipping ancestor; fix flatTreeParent (used by both, and by autoUpdate's scroll-ancestor detection) to cross <slot> boundaries instead of skipping straight past a shadow host to its light-DOM ancestors",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: add getContainingBlock() and getClippingAncestorRect() for auto-detecting position:fixed containing-block traps and the nearest real clipping ancestor; fix flatTreeParent (used by both, and by autoUpdate's scroll-ancestor detection) to cross <slot> boundaries instead of skipping straight past a shadow host to its light-DOM ancestors",
             "commit": "c024b3450f549402987b7d77cf50e1cf8dc30b7b"
           }
         ]
-      }
+      },
+      "date": "Wed, 15 Jul 2026 07:45:31 GMT",
+      "tag": "@vielzeug/orbit_v1.1.0",
+      "version": "1.1.0"
     },
     {
-      "version": "1.0.5",
-      "tag": "@vielzeug/orbit_v1.0.5",
-      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
             "commit": "1a8008d19848e2db3dace46af8c9710eb79be07a"
           }
         ]
-      }
+      },
+      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
+      "tag": "@vielzeug/orbit_v1.0.5",
+      "version": "1.0.5"
     },
     {
-      "version": "1.0.4",
-      "tag": "@vielzeug/orbit_v1.0.4",
-      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.1.1`"
@@ -167,52 +156,52 @@
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.1`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
+            "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
+          }
         ]
-      }
+      },
+      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
+      "tag": "@vielzeug/orbit_v1.0.4",
+      "version": "1.0.4"
     },
     {
-      "version": "1.0.3",
-      "tag": "@vielzeug/orbit_v1.0.3",
-      "date": "Sun, 05 Jul 2026 06:22:27 GMT",
       "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.0`"
           }
         ]
-      }
+      },
+      "date": "Sun, 05 Jul 2026 06:22:27 GMT",
+      "tag": "@vielzeug/orbit_v1.0.3",
+      "version": "1.0.3"
     },
     {
-      "version": "1.0.2",
-      "tag": "@vielzeug/orbit_v1.0.2",
-      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "fix(orbit): stop redundant DOM reads in computePosition hot path, export getRects, fix README API drift, add devtools/error test coverage",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "3806602695c504f5773e48d6d5595e7423ae2e98"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.1.0`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.0.1",
-      "tag": "@vielzeug/orbit_v1.0.1",
-      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "chore(orbit): rename internal _warn.ts to _dev.ts",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "1b696f77f93b469187d4d7bae13012812a126885"
+            "comment": "fix(orbit): stop redundant DOM reads in computePosition hot path, export getRects, fix README API drift, add devtools/error test coverage",
+            "commit": "3806602695c504f5773e48d6d5595e7423ae2e98"
           }
-        ],
+        ]
+      },
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "tag": "@vielzeug/orbit_v1.0.2",
+      "version": "1.0.2"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.0.1`"
@@ -220,21 +209,21 @@
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.1.0`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(orbit): rename internal _warn.ts to _dev.ts",
+            "commit": "1b696f77f93b469187d4d7bae13012812a126885"
+          }
         ]
-      }
+      },
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "tag": "@vielzeug/orbit_v1.0.1",
+      "version": "1.0.1"
     },
     {
-      "version": "1.0.0",
-      "tag": "@vielzeug/orbit_v1.0.0",
-      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
       "comments": {
-        "major": [
-          {
-            "comment": "Initial public release",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "2a622e2058ae28a3e3ffd33f639ad8c3d9579aa4"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.0.0`"
@@ -242,8 +231,19 @@
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.0.0`"
           }
+        ],
+        "major": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Initial public release",
+            "commit": "2a622e2058ae28a3e3ffd33f639ad8c3d9579aa4"
+          }
         ]
-      }
+      },
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "tag": "@vielzeug/orbit_v1.0.0",
+      "version": "1.0.0"
     }
-  ]
+  ],
+  "name": "@vielzeug/orbit"
 }

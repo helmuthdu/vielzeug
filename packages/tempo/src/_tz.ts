@@ -1,8 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill';
-
+import { fail, TempoInvalidTzError, TempoMissingTzError } from './errors';
 import type { CalendarUnit, TimeInput, TimeZoneOptions } from './types';
-
-import { TempoInvalidTzError, TempoMissingTzError, fail } from './errors';
 
 export function validateTimeZone(timeZone: string): string {
   try {

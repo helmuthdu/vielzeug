@@ -1,9 +1,8 @@
-import type { ComputePositionOptions, ComputePositionResult, ReferenceElement } from './types';
-
-import { autoUpdate, type AutoUpdateOptions } from './auto-update';
+import { type AutoUpdateOptions, autoUpdate } from './auto-update';
 import { getContainingBlock } from './containing-block';
 import { computePosition } from './core';
 import { getClippingAncestorRect } from './overflow';
+import type { ComputePositionOptions, ComputePositionResult, ReferenceElement } from './types';
 
 export type PositionStrategy = 'absolute' | 'fixed';
 

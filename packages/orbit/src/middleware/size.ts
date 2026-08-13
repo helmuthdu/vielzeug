@@ -1,6 +1,5 @@
-import type { DetectOverflowOptions, Middleware } from '../types';
-
 import { resolveBoundary } from '../overflow';
+import type { DetectOverflowOptions, Middleware } from '../types';
 import { getSide } from '../utils';
 
 export type SizeOptions = DetectOverflowOptions;

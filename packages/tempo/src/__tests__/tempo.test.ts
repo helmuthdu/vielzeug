@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  Temporal,
-  TempoInvalidInputError,
-  TempoMissingTzError,
-  classifyExpiry,
   clamp,
+  classifyExpiry,
   contains,
   dateRange,
   difference,
@@ -19,6 +16,9 @@ import {
   parse,
   recurrence,
   shift,
+  TempoInvalidInputError,
+  TempoMissingTzError,
+  Temporal,
   toInstant,
 } from '../index';
 

@@ -2,15 +2,12 @@ import '@vielzeug/refine/dialog';
 import '@vielzeug/refine/copy-command';
 import '@vielzeug/refine/button';
 
-import type { SandboxHandle } from '@vielzeug/sandbox';
-
 import { define, html, onCleanup, ref } from '@vielzeug/ore';
 import { effect, signal } from '@vielzeug/ripple';
-
-import type { Model, PriceBreakdown } from '../../core/types';
-
+import type { SandboxHandle } from '@vielzeug/sandbox';
 import { createBuildPreview, renderBuildPreview } from '../../core/embed-preview';
 import { t } from '../../core/i18n';
+import type { Model, PriceBreakdown } from '../../core/types';
 
 export interface ShareBuildPayload {
   breakdown: PriceBreakdown;

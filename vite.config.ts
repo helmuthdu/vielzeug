@@ -1,7 +1,6 @@
-import type { LibraryFormats } from 'vite';
-
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import type { LibraryFormats } from 'vite';
 
 type LibraryEntry = string | Record<string, string>;
 

@@ -8,7 +8,7 @@ export type WatchOptions<T> = {
 };
 
 type WatchRuntime = {
-  effect(callback: () => void | (() => void), options?: { name?: string }): EffectHandle;
+  effect(callback: () => undefined | (() => void), options?: { name?: string }): EffectHandle;
 };
 
 export const createWatch =

@@ -8,13 +8,11 @@ import { computed, signal } from '@vielzeug/ripple';
 import { toSearchMatcher } from '@vielzeug/scout';
 import { createVirtualScroller } from '@vielzeug/scroll';
 import { createLocalSource } from '@vielzeug/sourcerer';
-
-import type { Task, TaskStatus } from '../../core/types';
-
 import { boardSignal } from '../../core/board-store';
 import { formatDueDate } from '../../core/format';
 import { t } from '../../core/i18n';
 import { taskIndex } from '../../core/search-index';
+import type { Task, TaskStatus } from '../../core/types';
 import { userInitials, userMap } from '../../core/users';
 import { openTaskDialog } from '../components/task-dialog';
 
@@ -46,7 +44,7 @@ const PRIORITY_COLOR: Record<Task['priority'], string> = {
 
 function renderTaskRow(task: Task, el: HTMLElement, onOpen: (taskId: string) => void): void {
   el.className = 'backlog__task';
-  el.dataset['taskId'] = task.id;
+  el.dataset.taskId = task.id;
   el.setAttribute('role', 'button');
   el.tabIndex = 0;
   el.style.setProperty('--priority-color', PRIORITY_COLOR[task.priority]);

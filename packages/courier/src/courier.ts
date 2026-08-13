@@ -1,10 +1,9 @@
-import type { MutationOptions, QueryCache } from './types';
-
 import { createApi } from './api';
 import { CourierDisposedError } from './errors';
 import { createQueryCache } from './query';
 import { createStreams } from './stream';
 import { anySignal, createTransportCore, type TransportOptions } from './transport';
+import type { MutationOptions, QueryCache } from './types';
 
 export type CourierOptions = TransportOptions & {
   query?: { staleTime?: number };

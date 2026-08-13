@@ -340,13 +340,7 @@
     --overlay-enter-scale: 0.97; /* slight scale-in for menus / panels */
     --overlay-enter-scale-dialog: 0.96; /* slightly more pronounced for dialogs */
 
-    /* ========================================
-       CSS Color Scheme
-       ======================================== */
-    color-scheme: light dark;
-
     /* ── theme-tokens:generated:begin — run `pnpm run sync:theme`, do not hand-edit ── */
-
     /* ── Contrast scale — Neutral OKLCH with a lifted, non-pure-black Dark Mode baseline ── */
     --color-contrast-50: light-dark(oklch(99% 0.001 264deg), oklch(17% 0.001 250deg)); /* Canvas, page background */
     --color-contrast-100: light-dark(oklch(97% 0.001 264deg), oklch(21% 0.001 250deg)); /* Cards, elevated surfaces */
@@ -354,24 +348,20 @@
       oklch(95.5% 0.001 264deg),
       oklch(23.5% 0.001 250deg)
     ); /* Midpoint — chip base, subtle fills */
-
     --color-contrast-200: light-dark(oklch(94% 0.001 264deg), oklch(26% 0.001 250deg)); /* Nested cards, hover states */
     --color-contrast-300: light-dark(oklch(89% 0.002 264deg), oklch(32% 0.001 250deg)); /* Borders, dividers */
     --color-contrast-400: light-dark(
       oklch(81% 0.002 264deg),
       oklch(40% 0.001 250deg)
     ); /* Disabled backgrounds, subtle UI */
-
     --color-contrast-500: light-dark(
       oklch(49% 0.002 264deg),
       oklch(58% 0.001 250deg)
     ); /* Tertiary text - AA large-text compliant */
-
     --color-contrast-600: light-dark(
       oklch(40% 0.002 264deg),
       oklch(68% 0.001 250deg)
     ); /* Secondary text - AA compliant */
-
     --color-contrast-700: light-dark(oklch(32% 0.002 264deg), oklch(78% 0.001 250deg)); /* Body text - AAA compliant */
     --color-contrast-800: light-dark(oklch(22% 0.002 264deg), oklch(88% 0.001 250deg)); /* Headings - AAA compliant */
     --color-contrast-900: light-dark(
@@ -384,15 +374,10 @@
     --color-contrast: color-mix(in oklch, var(--color-contrast-900) 85%, transparent);
 
     /* ── Shade ramp — shared derivation recipe for every color family below ──── */
-
     /* Every family only authors a `base` (+ content/contrast ink pair); every  */
-
     /* other sub-token is `oklch(from var(--color-x) ...)`, derived from that   */
-
     /* single base using the deltas below. Tune a family by editing its base;   */
-
     /* tune the ramp shape itself (e.g. how much lighter "-lighter" is) here,    */
-
     /* once, for all 7 families at once. */
     --shade-lighter-l: 0.3;
     --shade-lighter-c: 0.35;
@@ -456,11 +441,11 @@
     --color-neutral-backdrop: light-dark(
       oklch(
         from var(--color-neutral) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
-          var(--shade-backdrop-alpha-light)
+        var(--shade-backdrop-alpha-light)
       ),
       oklch(
         from var(--color-neutral) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
-          var(--shade-backdrop-alpha-dark)
+        var(--shade-backdrop-alpha-dark)
       )
     );
     --color-neutral-content: light-dark(
@@ -490,15 +475,16 @@
 
     /* ── Primary — Periwinkle violet — primary brand color ── */
     --color-primary-hue: 293deg;
+
     --color-primary: light-dark(oklch(56% 0.22 var(--color-primary-hue)), oklch(72% 0.148 var(--color-primary-hue)));
     --color-primary-backdrop: light-dark(
       oklch(
         from var(--color-primary) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
-          var(--shade-backdrop-alpha-light)
+        var(--shade-backdrop-alpha-light)
       ),
       oklch(
         from var(--color-primary) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
-          var(--shade-backdrop-alpha-dark)
+        var(--shade-backdrop-alpha-dark)
       )
     );
     --color-primary-content: light-dark(
@@ -534,11 +520,11 @@
     --color-secondary-backdrop: light-dark(
       oklch(
         from var(--color-secondary) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
-          var(--shade-backdrop-alpha-light)
+        var(--shade-backdrop-alpha-light)
       ),
       oklch(
         from var(--color-secondary) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
-          var(--shade-backdrop-alpha-dark)
+        var(--shade-backdrop-alpha-dark)
       )
     );
     --color-secondary-content: light-dark(
@@ -571,11 +557,11 @@
     --color-info-backdrop: light-dark(
       oklch(
         from var(--color-info) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
-          var(--shade-backdrop-alpha-light)
+        var(--shade-backdrop-alpha-light)
       ),
       oklch(
         from var(--color-info) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
-          var(--shade-backdrop-alpha-dark)
+        var(--shade-backdrop-alpha-dark)
       )
     );
     --color-info-content: light-dark(
@@ -607,11 +593,11 @@
     --color-success-backdrop: light-dark(
       oklch(
         from var(--color-success) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
-          var(--shade-backdrop-alpha-light)
+        var(--shade-backdrop-alpha-light)
       ),
       oklch(
         from var(--color-success) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
-          var(--shade-backdrop-alpha-dark)
+        var(--shade-backdrop-alpha-dark)
       )
     );
     --color-success-content: light-dark(
@@ -644,11 +630,11 @@
     --color-warning-backdrop: light-dark(
       oklch(
         from var(--color-warning) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
-          var(--shade-backdrop-alpha-light)
+        var(--shade-backdrop-alpha-light)
       ),
       oklch(
         from var(--color-warning) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
-          var(--shade-backdrop-alpha-dark)
+        var(--shade-backdrop-alpha-dark)
       )
     );
     --color-warning-content: light-dark(
@@ -681,11 +667,11 @@
     --color-error-backdrop: light-dark(
       oklch(
         from var(--color-error) var(--shade-backdrop-l-light) calc(c * var(--shade-backdrop-c-light)) h /
-          var(--shade-backdrop-alpha-light)
+        var(--shade-backdrop-alpha-light)
       ),
       oklch(
         from var(--color-error) var(--shade-backdrop-l-dark) calc(c * var(--shade-backdrop-c-dark)) h /
-          var(--shade-backdrop-alpha-dark)
+        var(--shade-backdrop-alpha-dark)
       )
     );
     --color-error-content: light-dark(
@@ -711,7 +697,6 @@
     --color-error-border: oklch(from var(--color-error) l c h / var(--shade-border-alpha));
     --color-error-focus-shadow:
       0 0 0 4px color-mix(in oklch, var(--color-error) var(--shade-focus-ring-strength), transparent), var(--shadow-sm);
-
     /* ── theme-tokens:generated:end ── */
   }
 

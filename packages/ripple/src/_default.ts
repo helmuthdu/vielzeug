@@ -1,3 +1,7 @@
+import { createResource, type Resource, type ResourceOptions } from './_async';
+import { createStore as createStoreFactory, type Store, type StoreOptions } from './_store';
+import { createWatch, type WatchOptions } from './_watch';
+import { ReactiveRuntime } from './runtime';
 import type {
   Cleanup,
   ComputedOptions,
@@ -10,11 +14,6 @@ import type {
   SignalOptions,
 } from './types';
 
-import { createResource, type Resource, type ResourceOptions } from './_async';
-import { createStore as createStoreFactory, type Store, type StoreOptions } from './_store';
-import { createWatch, type WatchOptions } from './_watch';
-import { ReactiveRuntime } from './runtime';
-
 export interface Ripple {
   batch<T>(fn: () => T): T;
   computed<T>(derive: () => T, options?: ComputedOptions<T>): Readable<T>;
@@ -22,7 +21,7 @@ export interface Ripple {
   createStore<T>(initial: T, options?: StoreOptions): Store<T>;
   dispose(): void;
   readonly disposed: boolean;
-  effect(callback: () => Cleanup | void, options?: EffectOptions): EffectHandle;
+  effect(callback: () => Cleanup | undefined, options?: EffectOptions): EffectHandle;
   resource<Source, Value>(
     source: () => Source,
     loader: (source: Source, context: { readonly signal: AbortSignal }) => Promise<Value>,

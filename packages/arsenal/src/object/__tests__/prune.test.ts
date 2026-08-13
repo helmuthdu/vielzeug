@@ -215,7 +215,7 @@ describe('prune', () => {
       expect(result).toEqual({ safe: 1 });
       expect(Object.hasOwn(result, '__proto__')).toBe(false);
       expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
-      expect((Object.prototype as Record<string, unknown>)['polluted']).toBeUndefined();
+      expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
     });
   });
 });

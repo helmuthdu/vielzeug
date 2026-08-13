@@ -1,103 +1,103 @@
 {
-  "name": "@vielzeug/wayfinder",
   "entries": [
     {
-      "version": "2.0.0",
-      "tag": "@vielzeug/wayfinder_v2.0.0",
-      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
       "comments": {
         "major": [
           {
-            "comment": "refactor!: redesign navigation coordination, add ready, and rename resolve/match to matchPath/loadPath",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor!: redesign navigation coordination, add ready, and rename resolve/match to matchPath/loadPath",
             "commit": "b086ec9d0425054899992787d40b5de6f63ca220"
           }
         ]
-      }
+      },
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "tag": "@vielzeug/wayfinder_v2.0.0",
+      "version": "2.0.0"
     },
     {
-      "version": "1.0.5",
-      "tag": "@vielzeug/wayfinder_v1.0.5",
-      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
             "commit": "49ec292706645d1f4937897ac628d852f3a11736"
           }
         ]
-      }
+      },
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "tag": "@vielzeug/wayfinder_v1.0.5",
+      "version": "1.0.5"
     },
     {
-      "version": "1.0.4",
-      "tag": "@vielzeug/wayfinder_v1.0.4",
-      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
             "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
           }
         ]
-      }
+      },
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "tag": "@vielzeug/wayfinder_v1.0.4",
+      "version": "1.0.4"
     },
     {
-      "version": "1.0.3",
-      "tag": "@vielzeug/wayfinder_v1.0.3",
-      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
             "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
           }
         ]
-      }
+      },
+      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
+      "tag": "@vielzeug/wayfinder_v1.0.3",
+      "version": "1.0.3"
     },
     {
-      "version": "1.0.2",
-      "tag": "@vielzeug/wayfinder_v1.0.2",
-      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "fix: prevent preload() from running after dispose, guard parseQuery against __proto__ key hijack, add devtools test coverage",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: prevent preload() from running after dispose, guard parseQuery against __proto__ key hijack, add devtools test coverage",
             "commit": "8d8ea84ceca10289cc6f12dcb4e7494dbfb07e55"
           }
         ]
-      }
+      },
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "tag": "@vielzeug/wayfinder_v1.0.2",
+      "version": "1.0.2"
     },
     {
-      "version": "1.0.1",
-      "tag": "@vielzeug/wayfinder_v1.0.1",
-      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore(wayfinder): rename internal _warn.ts to _dev.ts",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(wayfinder): rename internal _warn.ts to _dev.ts",
             "commit": "1b696f77f93b469187d4d7bae13012812a126885"
           }
         ]
-      }
+      },
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "tag": "@vielzeug/wayfinder_v1.0.1",
+      "version": "1.0.1"
     },
     {
-      "version": "1.0.0",
-      "tag": "@vielzeug/wayfinder_v1.0.0",
-      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
       "comments": {
         "major": [
           {
-            "comment": "Initial public release",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Initial public release",
             "commit": "2a622e2058ae28a3e3ffd33f639ad8c3d9579aa4"
           }
         ]
-      }
+      },
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "tag": "@vielzeug/wayfinder_v1.0.0",
+      "version": "1.0.0"
     }
-  ]
+  ],
+  "name": "@vielzeug/wayfinder"
 }

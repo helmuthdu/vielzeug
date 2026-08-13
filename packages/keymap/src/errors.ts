@@ -12,8 +12,4 @@ export class KeymapError extends Error {
 }
 
 /** Thrown when a shortcut string cannot be parsed — ambiguous or invalid key step. */
-export class KeymapParseError extends KeymapError {
-  constructor(message: string) {
-    super(message);
-  }
-}
+export class KeymapParseError extends KeymapError {}

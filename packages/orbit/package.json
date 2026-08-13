@@ -3,6 +3,9 @@
   "version": "2.0.1",
   "description": "Dependency-free floating UI positioning with lifecycle-owned geometry and middleware",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "files": [
     "dist"
   ],
@@ -11,56 +14,25 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
     },
     "./devtools": {
-      "types": "./dist/devtools.d.ts",
       "import": "./dist/devtools.js",
-      "require": "./dist/devtools.cjs"
+      "require": "./dist/devtools.cjs",
+      "types": "./dist/devtools.d.ts"
     },
     "./presets": {
-      "types": "./dist/presets.d.ts",
       "import": "./dist/presets.js",
-      "require": "./dist/presets.cjs"
+      "require": "./dist/presets.cjs",
+      "types": "./dist/presets.d.ts"
     },
     "./reactive": {
-      "types": "./dist/reactive.d.ts",
       "import": "./dist/reactive.js",
-      "require": "./dist/reactive.cjs"
+      "require": "./dist/reactive.cjs",
+      "types": "./dist/reactive.d.ts"
     }
-  },
-  "scripts": {
-    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
-    "build:types": "tsc -p tsconfig.declarations.json",
-    "fix": "eslint --fix src",
-    "lint": "eslint src",
-    "prepublishOnly": "pnpm run build",
-    "test": "vitest",
-    "build:bundle": "vite build --config vite.bundle.config.ts"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "engines": {
-    "node": ">=22"
-  },
-  "peerDependencies": {
-    "@vielzeug/ripple": "workspace:^"
-  },
-  "peerDependenciesMeta": {
-    "@vielzeug/ripple": {
-      "optional": true
-    }
-  },
-  "devDependencies": {
-    "@types/node": "^26.1.2",
-    "@vielzeug/ripple": "workspace:*",
-    "typescript": "^6.0.3",
-    "vite": "^8.2.0",
-    "vitest": "^4.1.10"
   },
   "typesVersions": {
     "*": {
@@ -74,5 +46,33 @@
         "dist/reactive.d.ts"
       ]
     }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "biome check --write src",
+    "lint": "biome ci src",
+    "prepublishOnly": "pnpm run build",
+    "test": "vitest"
+  },
+  "peerDependencies": {
+    "@vielzeug/ripple": "workspace:^"
+  },
+  "peerDependenciesMeta": {
+    "@vielzeug/ripple": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@vielzeug/ripple": "workspace:*",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
   }
 }

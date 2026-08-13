@@ -1,3 +1,13 @@
+export { createRipple, type Ripple } from './_default';
+
+export {
+  RippleComputedCycleError,
+  RippleDisposedRuntimeError,
+  RippleDisposedScopeError,
+  RippleError,
+  RippleInfiniteLoopError,
+} from './errors';
+export { isReactive } from './runtime';
 export type {
   Cleanup,
   ComputedOptions,
@@ -15,17 +25,6 @@ export type {
   SignalOptions,
   Unsubscribe,
 } from './types';
-
-export {
-  RippleComputedCycleError,
-  RippleDisposedRuntimeError,
-  RippleDisposedScopeError,
-  RippleError,
-  RippleInfiniteLoopError,
-} from './errors';
-export { isReactive } from './runtime';
-
-export { createRipple, type Ripple } from './_default';
 
 import { defaultRipple } from './_default';
 

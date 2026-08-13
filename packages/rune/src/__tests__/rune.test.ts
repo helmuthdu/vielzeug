@@ -1,12 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import type { Bindings, LogEntry, LogLevel, LogMiddleware, RuneOptions, Transport } from '../types';
-
-import { DEFAULT_THEME, consoleTransport, resolveTheme } from '../console';
+import { consoleTransport, DEFAULT_THEME, resolveTheme } from '../console';
 import { RuneError } from '../errors';
 import { lazy } from '../lazy';
 import { createLogger, defaultLogger } from '../logger';
 import { batchTransport, jsonTransport, pipe, redactTransport, remoteTransport, sampleTransport } from '../transports';
+import type { Bindings, LogEntry, LogLevel, LogMiddleware, RuneOptions, Transport } from '../types';
 import { isLevelEnabled, PRIORITY } from '../types';
 
 /* ─── Test helpers ─── */
@@ -125,8 +123,8 @@ describe('emit and payload semantics', () => {
 
     log.error({ err: new Error('boom') }, 'request failed');
 
-    expect(entries[0].data['err']).toMatchObject({ message: 'boom', name: 'Error' });
-    expect(typeof (entries[0].data['err'] as Record<string, unknown>)['stack']).toBe('string');
+    expect(entries[0].data.err).toMatchObject({ message: 'boom', name: 'Error' });
+    expect(typeof (entries[0].data.err as Record<string, unknown>).stack).toBe('string');
     expect(entries[0].message).toBe('request failed');
   });
 
@@ -135,8 +133,8 @@ describe('emit and payload semantics', () => {
 
     log.error({ err: new Error('fail'), requestId: 'abc' }, 'request failed');
 
-    expect(entries[0].data['err']).toMatchObject({ message: 'fail', name: 'Error' });
-    expect(entries[0].data['requestId']).toBe('abc');
+    expect(entries[0].data.err).toMatchObject({ message: 'fail', name: 'Error' });
+    expect(entries[0].data.requestId).toBe('abc');
     expect(entries[0].message).toBe('request failed');
   });
 
@@ -173,7 +171,7 @@ describe('emit and payload semantics', () => {
     expect(entries[1].data).toEqual({ a: 1 });
 
     // Mutating one entry's data must never affect the logger's own bindings or other entries.
-    (entries[0].data as Record<string, unknown>)['a'] = 'mutated';
+    (entries[0].data as Record<string, unknown>).a = 'mutated';
     expect(log.bindings).toEqual({ a: 1 });
     expect(entries[1].data).toEqual({ a: 1 });
   });
@@ -319,7 +317,7 @@ describe('child and bindings composition', () => {
     const reqLog = log.withBindings({ a: 1 });
     const snap = reqLog.bindings as Record<string, unknown>;
 
-    snap['a'] = 999;
+    snap.a = 999;
 
     expect(reqLog.bindings).toEqual({ a: 1 });
   });
@@ -398,7 +396,7 @@ describe('middleware via use()', () => {
 
     traced.info('request');
 
-    expect(entries[0].data['traceId']).toBe('trace-123');
+    expect(entries[0].data.traceId).toBe('trace-123');
   });
 });
 
@@ -613,9 +611,9 @@ describe('jsonTransport', () => {
 
     const record = JSON.parse(lines[0]) as Record<string, unknown>;
 
-    expect(record['level']).toBe('info');
-    expect(record['msg']).toBe('server started');
-    expect(typeof record['time']).toBe('string');
+    expect(record.level).toBe('info');
+    expect(record.msg).toBe('server started');
+    expect(typeof record.time).toBe('string');
   });
 
   it('includes namespace as ns field', () => {
@@ -629,7 +627,7 @@ describe('jsonTransport', () => {
 
     const record = JSON.parse(lines[0]) as Record<string, unknown>;
 
-    expect(record['ns']).toBe('api');
+    expect(record.ns).toBe('api');
   });
 
   it('merges bindings and context (via data) into the flat record', () => {
@@ -643,8 +641,8 @@ describe('jsonTransport', () => {
 
     const record = JSON.parse(lines[0]) as Record<string, unknown>;
 
-    expect(record['reqId']).toBe('x');
-    expect(record['path']).toBe('/api');
+    expect(record.reqId).toBe('x');
+    expect(record.path).toBe('/api');
   });
 
   it('filters below configured level', () => {
@@ -673,10 +671,10 @@ describe('jsonTransport', () => {
 
     const record = JSON.parse(lines[0]) as Record<string, unknown>;
 
-    expect(record['severity']).toBe('warn');
-    expect(record['message']).toBe('started');
-    expect(record['service']).toBe('svc');
-    expect(typeof record['timestamp']).toBe('string');
+    expect(record.severity).toBe('warn');
+    expect(record.message).toBe('started');
+    expect(record.service).toBe('svc');
+    expect(typeof record.timestamp).toBe('string');
     // default field names should NOT appear
     expect('level' in record).toBe(false);
     expect('msg' in record).toBe(false);
@@ -977,8 +975,8 @@ describe('redactTransport', () => {
 
     const data = entries[0].data as Record<string, Record<string, unknown>>;
 
-    expect(data['auth']['token']).toBe('[REDACTED]');
-    expect(data['auth']['type']).toBe('bearer');
+    expect(data.auth.token).toBe('[REDACTED]');
+    expect(data.auth.type).toBe('bearer');
   });
 
   it('recursively redacts fields inside arrays', () => {
@@ -998,9 +996,9 @@ describe('redactTransport', () => {
 
     const data = entries[0].data as Record<string, Array<Record<string, unknown>>>;
 
-    expect(data['users'][0]['token']).toBe('[REDACTED]');
-    expect(data['users'][1]['token']).toBe('[REDACTED]');
-    expect(data['users'][0]['id']).toBe(1);
+    expect(data.users[0].token).toBe('[REDACTED]');
+    expect(data.users[1].token).toBe('[REDACTED]');
+    expect(data.users[0].id).toBe(1);
   });
 
   it('accepts a custom replacement value', () => {
@@ -1023,8 +1021,8 @@ describe('redactTransport', () => {
 
     log.info({ token: 'secret' }, 'x');
 
-    expect(originals[0].data['token']).toBe('secret');
-    expect(redactedEntries[0].data['token']).toBe('[REDACTED]');
+    expect(originals[0].data.token).toBe('secret');
+    expect(redactedEntries[0].data.token).toBe('[REDACTED]');
   });
 
   it.each([-1, 1.5, Infinity, Number.NaN])('rejects invalid maxDepth %s', (maxDepth) => {
@@ -1048,7 +1046,7 @@ describe('lazy bindings', () => {
     boundLog.info('x');
 
     expect(factory).toHaveBeenCalledTimes(1);
-    expect(entries[0].data['computed']).toBe('expensive');
+    expect(entries[0].data.computed).toBe('expensive');
   });
 
   it('does not invoke factory when level is suppressed', () => {
@@ -1070,8 +1068,8 @@ describe('lazy bindings', () => {
     boundLog.info('a');
     boundLog.info('b');
 
-    expect(entries[0].data['tick']).toBe(1);
-    expect(entries[1].data['tick']).toBe(2);
+    expect(entries[0].data.tick).toBe(1);
+    expect(entries[1].data.tick).toBe(2);
   });
 
   it('non-lazy bindings are passed through unchanged', () => {
@@ -1096,7 +1094,7 @@ describe('time()', () => {
     expect(entries).toHaveLength(1);
     expect(entries[0].level).toBe('debug');
     expect(entries[0].message).toBe('work');
-    expect(typeof entries[0].data['duration_ms']).toBe('number');
+    expect(typeof entries[0].data.duration_ms).toBe('number');
     expect('label' in entries[0].data).toBe(false);
   });
 
@@ -1107,7 +1105,7 @@ describe('time()', () => {
 
     expect(value).toBe('done');
     expect(entries[0].message).toBe('async-work');
-    expect(typeof entries[0].data['duration_ms']).toBe('number');
+    expect(typeof entries[0].data.duration_ms).toBe('number');
   });
 
   it('still emits when sync fn throws', () => {
@@ -1129,7 +1127,7 @@ describe('time()', () => {
     await expect(log.time('async-fail', () => Promise.reject(new Error('bad')))).rejects.toThrow('bad');
 
     expect(entries[0].message).toBe('async-fail');
-    expect(typeof entries[0].data['duration_ms']).toBe('number');
+    expect(typeof entries[0].data.duration_ms).toBe('number');
   });
 
   it('skips emit but still runs fn when logLevel is off', () => {
@@ -1321,7 +1319,7 @@ describe('lazy bindings in per-call context (F5)', () => {
     log.info({ dynamic: lazy(factory) }, 'event');
 
     expect(factory).toHaveBeenCalledTimes(1);
-    expect(entries[0].data['dynamic']).toBe('ctx-value');
+    expect(entries[0].data.dynamic).toBe('ctx-value');
   });
 
   it('does not invoke context lazy when level is suppressed', () => {
@@ -1458,7 +1456,7 @@ describe('consoleTransport inspectFn / format options (F6)', () => {
     const args = infoSpy.mock.calls[0] as unknown[];
     const msgIdx = args.indexOf('raw');
     const dataIdx = args.findIndex(
-      (a) => typeof a === 'object' && a !== null && (a as Record<string, unknown>)['x'] === 2,
+      (a) => typeof a === 'object' && a !== null && (a as Record<string, unknown>).x === 2,
     );
 
     expect(msgIdx).toBeGreaterThanOrEqual(0);
@@ -1662,8 +1660,8 @@ describe('jsonTransport field collision', () => {
 
     const record = JSON.parse(lines[0]) as Record<string, unknown>;
 
-    expect(record['level']).toBe('warn');
-    expect(record['msg']).toBe('real message');
+    expect(record.level).toBe('warn');
+    expect(record.msg).toBe('real message');
   });
 
   it('context keys that match reserved fields do not clobber them', () => {
@@ -1676,8 +1674,8 @@ describe('jsonTransport field collision', () => {
 
     const record = JSON.parse(lines[0]) as Record<string, unknown>;
 
-    expect(record['level']).toBe('info');
-    expect(record['msg']).toBe('structured');
+    expect(record.level).toBe('info');
+    expect(record.msg).toBe('structured');
   });
 });
 
@@ -1702,7 +1700,7 @@ describe('redactTransport edge cases', () => {
 
     log.info({ token: 'abc' }, 'msg');
 
-    expect(entries[0].data['token']).toBe('');
+    expect(entries[0].data.token).toBe('');
   });
 
   it('does not let a "__proto__" field hijack the redacted output object prototype (security)', () => {
@@ -1715,8 +1713,8 @@ describe('redactTransport edge cases', () => {
     const outData = received[0].data;
 
     expect(Object.getPrototypeOf(outData)).toBe(Object.prototype);
-    expect(outData['polluted']).toBeUndefined();
-    expect(outData['password']).toBe('[REDACTED]');
+    expect(outData.polluted).toBeUndefined();
+    expect(outData.password).toBe('[REDACTED]');
   });
 });
 
@@ -1731,8 +1729,8 @@ describe('prototype pollution guards (security)', () => {
     log.info('no-context call');
 
     expect(Object.getPrototypeOf(entries[0].data)).toBe(Object.prototype);
-    expect((entries[0].data as Record<string, unknown>)['polluted']).toBeUndefined();
-    expect(entries[0].data['safe']).toBe(1);
+    expect((entries[0].data as Record<string, unknown>).polluted).toBeUndefined();
+    expect(entries[0].data.safe).toBe(1);
   });
 
   it('a "__proto__" field in per-call context does not hijack entry.data\u2019s prototype', () => {
@@ -1742,7 +1740,7 @@ describe('prototype pollution guards (security)', () => {
     log.info(malicious, 'msg');
 
     expect(Object.getPrototypeOf(entries[0].data)).toBe(Object.prototype);
-    expect((entries[0].data as Record<string, unknown>)['polluted']).toBeUndefined();
+    expect((entries[0].data as Record<string, unknown>).polluted).toBeUndefined();
   });
 
   it('a "__proto__" lazy binding does not hijack the resolved bindings prototype', () => {
@@ -1761,7 +1759,7 @@ describe('prototype pollution guards (security)', () => {
     log.info('no-context call');
 
     expect(Object.getPrototypeOf(entries[0].data)).toBe(Object.prototype);
-    expect((entries[0].data as Record<string, unknown>)['polluted']).toBeUndefined();
+    expect((entries[0].data as Record<string, unknown>).polluted).toBeUndefined();
   });
 });
 
@@ -1771,7 +1769,7 @@ describe('jsonTransport circular reference safety', () => {
   it('throws on circular data when safe:false (default)', () => {
     const circular: Record<string, unknown> = {};
 
-    circular['self'] = circular;
+    circular.self = circular;
 
     const entry: LogEntry = {
       data: circular,
@@ -1787,7 +1785,7 @@ describe('jsonTransport circular reference safety', () => {
   it('a throwing transport is isolated by the logger and never crashes the caller (D1)', () => {
     const circular: Record<string, unknown> = {};
 
-    circular['self'] = circular;
+    circular.self = circular;
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const log = createLogger({ transports: [jsonTransport()] });
@@ -1907,15 +1905,15 @@ describe('jsonTransport safe mode', () => {
     });
     const circular: Record<string, unknown> = {};
 
-    circular['self'] = circular;
+    circular.self = circular;
 
     expect(() => log.info(circular, 'safe-circular')).not.toThrow();
     expect(lines).toHaveLength(1);
 
     const record = JSON.parse(lines[0]) as Record<string, unknown>;
-    const selfValue = record['self'] as Record<string, unknown>;
+    const selfValue = record.self as Record<string, unknown>;
 
-    expect(selfValue['self']).toBe('[Circular]');
+    expect(selfValue.self).toBe('[Circular]');
   });
 });
 
@@ -2313,10 +2311,10 @@ describe('lazy binding shallow resolution', () => {
 
     expect(entries).toHaveLength(1);
 
-    const nestedVal = entries[0].data['nested'] as Record<string, unknown>;
+    const nestedVal = entries[0].data.nested as Record<string, unknown>;
 
     expect(typeof nestedVal).toBe('object');
-    expect(typeof nestedVal['secret']).toBe('object');
+    expect(typeof nestedVal.secret).toBe('object');
   });
 });
 
@@ -2573,11 +2571,11 @@ describe('Error auto-serialization in context', () => {
 
     log.error({ err: new Error('timeout') }, 'request failed');
 
-    const err = entries[0].data['err'] as Record<string, unknown>;
+    const err = entries[0].data.err as Record<string, unknown>;
 
-    expect(err['message']).toBe('timeout');
-    expect(err['name']).toBe('Error');
-    expect(typeof err['stack']).toBe('string');
+    expect(err.message).toBe('timeout');
+    expect(err.name).toBe('Error');
+    expect(typeof err.stack).toBe('string');
   });
 
   it('non-Error values pass through unchanged', () => {
@@ -2585,8 +2583,8 @@ describe('Error auto-serialization in context', () => {
 
     log.info({ count: 42, label: 'ok' });
 
-    expect(entries[0].data['count']).toBe(42);
-    expect(entries[0].data['label']).toBe('ok');
+    expect(entries[0].data.count).toBe(42);
+    expect(entries[0].data.label).toBe('ok');
   });
 
   it('Error value in a pinned binding is serialized the same as per-call context (review A1)', () => {
@@ -2594,12 +2592,12 @@ describe('Error auto-serialization in context', () => {
 
     log.info('boom');
 
-    const err = entries[0].data['err'] as Record<string, unknown>;
+    const err = entries[0].data.err as Record<string, unknown>;
 
     expect(err).not.toBeInstanceOf(Error);
-    expect(err['message']).toBe('pinned-fail');
-    expect(err['name']).toBe('Error');
-    expect(typeof err['stack']).toBe('string');
+    expect(err.message).toBe('pinned-fail');
+    expect(err.name).toBe('Error');
+    expect(typeof err.stack).toBe('string');
   });
 
   it('Error value pinned via withBindings() is serialized', () => {
@@ -2608,10 +2606,10 @@ describe('Error auto-serialization in context', () => {
 
     bound.error('boom');
 
-    const err = entries[0].data['err'] as Record<string, unknown>;
+    const err = entries[0].data.err as Record<string, unknown>;
 
     expect(err).not.toBeInstanceOf(Error);
-    expect(err['message']).toBe('bound-fail');
+    expect(err.message).toBe('bound-fail');
   });
 });
 
@@ -2702,8 +2700,8 @@ describe('withBindings() with lazy bindings', () => {
     child.info('b');
 
     expect(entries).toHaveLength(2);
-    expect((entries[0].data['req'] as { count: number }).count).toBe(1);
-    expect((entries[1].data['req'] as { count: number }).count).toBe(2);
+    expect((entries[0].data.req as { count: number }).count).toBe(1);
+    expect((entries[1].data.req as { count: number }).count).toBe(2);
   });
 });
 
@@ -2753,8 +2751,8 @@ describe('LogMethod 3-arg Error overload', () => {
 
     expect(entries).toHaveLength(1);
     expect(entries[0].message).toBe('request failed');
-    expect(entries[0].data['requestId']).toBe('abc');
-    expect(entries[0].data['err']).toMatchObject({ message: 'timeout', name: 'Error' });
+    expect(entries[0].data.requestId).toBe('abc');
+    expect(entries[0].data.err).toMatchObject({ message: 'timeout', name: 'Error' });
   });
 
   it('log.error(err, message) — Error first, string second = message with no extra context', () => {
@@ -2764,7 +2762,7 @@ describe('LogMethod 3-arg Error overload', () => {
     log.error(err, 'request failed');
 
     expect(entries[0].message).toBe('request failed');
-    expect(entries[0].data['err']).toMatchObject({ message: 'fail', name: 'Error' });
+    expect(entries[0].data.err).toMatchObject({ message: 'fail', name: 'Error' });
   });
 
   it('log.error(err) — Error only, no message', () => {
@@ -2775,7 +2773,7 @@ describe('LogMethod 3-arg Error overload', () => {
 
     expect(entries).toHaveLength(1);
     expect(entries[0].message).toBeUndefined();
-    expect(entries[0].data['err']).toMatchObject({ message: 'bare', name: 'Error' });
+    expect(entries[0].data.err).toMatchObject({ message: 'bare', name: 'Error' });
   });
 
   it('log.error(err, context) — Error + context, no message', () => {
@@ -2785,7 +2783,7 @@ describe('LogMethod 3-arg Error overload', () => {
     log.error(err, { userId: 42 });
 
     expect(entries[0].message).toBeUndefined();
-    expect(entries[0].data['err']).toMatchObject({ message: 'err' });
-    expect(entries[0].data['userId']).toBe(42);
+    expect(entries[0].data.err).toMatchObject({ message: 'err' });
+    expect(entries[0].data.userId).toBe(42);
   });
 });

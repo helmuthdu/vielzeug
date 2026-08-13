@@ -1,5 +1,3 @@
-export { ScrollConfigurationError, ScrollError, ScrollRangeError } from './errors';
-export { createDomVirtualList, createVirtualScroller } from './dom-virtual-list';
 export type {
   DomVirtualListController,
   DomVirtualListOptions,
@@ -9,7 +7,8 @@ export type {
   VirtualRenderItem,
   VirtualScrollerOptions,
 } from './dom-virtual-list';
-export { createGridVirtualizer } from './grid-virtualizer';
+export { createDomVirtualList, createVirtualScroller } from './dom-virtual-list';
+export { ScrollConfigurationError, ScrollError, ScrollRangeError } from './errors';
 export type {
   GridRangeChangeEvent,
   GridVirtualizer,
@@ -18,7 +17,7 @@ export type {
   GridVirtualizerUpdateOptions,
   ScrollToCellOptions,
 } from './grid-virtualizer';
-export { createGroupedVirtualizer } from './grouped-virtualizer';
+export { createGridVirtualizer } from './grid-virtualizer';
 export type {
   GroupSection,
   GroupVirtualHeader,
@@ -28,9 +27,9 @@ export type {
   GroupVirtualizerState,
   GroupVirtualizerUpdateOptions,
 } from './grouped-virtualizer';
-export { createReactiveGroupedVirtualizer, createReactiveVirtualizer } from './reactive';
+export { createGroupedVirtualizer } from './grouped-virtualizer';
 export type { ReactiveGroupVirtualizer, ReactiveVirtualizer, Signal } from './reactive';
-export { createMeasurementCache, createVirtualizer, DEFAULT_ESTIMATE_SIZE, DEFAULT_OVERSCAN } from './virtualizer';
+export { createReactiveGroupedVirtualizer, createReactiveVirtualizer } from './reactive';
 export type {
   MeasurementCache,
   Overscan,
@@ -43,3 +42,4 @@ export type {
   VirtualizerUpdateOptions,
   VirtualKey,
 } from './virtualizer';
+export { createMeasurementCache, createVirtualizer, DEFAULT_ESTIMATE_SIZE, DEFAULT_OVERSCAN } from './virtualizer';

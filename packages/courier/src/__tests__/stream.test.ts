@@ -72,7 +72,7 @@ describe('Courier streams', () => {
     await vi.waitFor(() => expect(requestSignal).toBeDefined());
     void iterator.return?.();
 
-    expect(requestSignal!.aborted).toBe(true);
+    expect(requestSignal?.aborted).toBe(true);
     await expect(pending).rejects.toBeInstanceOf(CourierAbortError);
   });
 

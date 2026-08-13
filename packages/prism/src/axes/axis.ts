@@ -1,7 +1,6 @@
-import type { AxisConfig, AxisPosition } from '../types';
-
 import { createSvgElement, removeChildren, setAttributes } from '../svg/element';
 import { createTextElement } from '../svg/text';
+import type { AxisConfig, AxisPosition } from '../types';
 import { type AnyScale, mapTick } from './scale-utils';
 
 const defaultTickFormat = (v: Date | number | string): string =>

@@ -58,7 +58,7 @@ test.describe('Layout', () => {
 
     const textDecorationLine = await page.evaluate(() => {
       const button = document.getElementById('link')!;
-      const link = button.shadowRoot!.querySelector<HTMLAnchorElement>('a[part="button"]')!;
+      const link = button.shadowRoot?.querySelector<HTMLAnchorElement>('a[part="button"]')!;
 
       return getComputedStyle(link).textDecorationLine;
     });

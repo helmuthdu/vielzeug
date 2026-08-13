@@ -124,7 +124,7 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
     };
 
     if (options.onFocus) {
-      on('focus', (e) => options.onFocus!(e as FocusEvent));
+      on('focus', (e) => options.onFocus?.(e as FocusEvent));
     }
 
     on('input', (e) => {

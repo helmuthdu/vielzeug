@@ -1,4 +1,4 @@
-import { add, money, multiply, subtract, sum, toDecimal, USD, type Money } from '@vielzeug/coins';
+import { add, type Money, money, multiply, subtract, sum, toDecimal, USD } from '@vielzeug/coins';
 
 import type { Configuration, Model, PriceBreakdown } from './types';
 

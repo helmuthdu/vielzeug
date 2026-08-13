@@ -1,6 +1,5 @@
 import { debounce } from '@vielzeug/arsenal/function';
-import { define, html, prop, getHost, onCleanup, onMounted, useEmit, useSlots } from '@vielzeug/ore';
-import { unsafeHtml } from '@vielzeug/ore';
+import { define, getHost, html, onCleanup, onMounted, prop, unsafeHtml, useEmit, useSlots } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
 
@@ -13,6 +12,7 @@ import '../../inputs/select/select';
 import '../../overlay/popover/popover';
 import { disablableBundle, loadableBundle } from '../../shared';
 import { tableBaseMixin } from '../../styles';
+import componentStyles from './datagrid.css?inline';
 import { COLUMN_OBSERVED_ATTRS, parseColumnChildren } from './datagrid-column';
 import {
   createDataGridModel,
@@ -25,13 +25,12 @@ import {
   type SortDirection,
   type SortState,
 } from './datagrid-model';
-import { type GridNavHandle, createGridNav } from './datagrid-nav';
-import componentStyles from './datagrid.css?inline';
+import { createGridNav, type GridNavHandle } from './datagrid-nav';
 
 type SortMode = 'client' | 'server';
 
 export { COLUMN_TAG } from './datagrid-column';
-export type { DataGridView, FilterOption, FilterOperator } from './datagrid-model';
+export type { DataGridView, FilterOperator, FilterOption } from './datagrid-model';
 
 // ── Pure module-level helpers ─────────────────────────────────────────────────
 
@@ -413,7 +412,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
 
       if (fn) return fn(item);
 
-      const id = item['id'];
+      const id = item.id;
 
       if (id == null) {
         warn('ore-datagrid: row missing `id` — keys will collide. Provide `getRowKey` or add a unique `id` field.');
@@ -1430,7 +1429,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                               @change="${(e: CustomEvent<{ values: string[] }>) => {
                                 const n = parseInt(e.detail.values[0], 10);
 
-                                if (!isNaN(n)) {
+                                if (!Number.isNaN(n)) {
                                   pageSize.value = n;
                                   model.goToPage(0);
                                   emit('page-change', { pageIndex: 0, pageSize: n });

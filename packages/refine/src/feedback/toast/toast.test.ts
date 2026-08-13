@@ -102,7 +102,7 @@ describe('ore-toast', () => {
 
     await fixture.flush();
 
-    const container = fixture.element.shadowRoot!.querySelector('.toast-container')!;
+    const container = fixture.element.shadowRoot?.querySelector('.toast-container')!;
 
     container.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
 

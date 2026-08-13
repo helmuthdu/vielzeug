@@ -2,10 +2,10 @@ import { describe, expect, expectTypeOf, test } from 'vitest';
 
 import {
   type Catalog,
-  LinguaInvalidCatalogError,
-  LinguaInvalidPluralCountError,
   createCatalogTranslator,
   createTranslator,
+  LinguaInvalidCatalogError,
+  LinguaInvalidPluralCountError,
 } from '../';
 
 const catalogs = {

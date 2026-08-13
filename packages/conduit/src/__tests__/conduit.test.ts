@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   ConduitCircularDependencyError,
-  ConduitDisposeError,
   ConduitDisposedError,
+  ConduitDisposeError,
   ConduitProviderNotFoundError,
   ConduitScopedResolutionError,
   createContainer,

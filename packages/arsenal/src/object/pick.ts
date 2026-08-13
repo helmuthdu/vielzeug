@@ -1,6 +1,5 @@
-import type { Obj } from '../types';
-
 import { isUnsafeKey } from '../_common/unsafePaths';
+import type { Obj } from '../types';
 
 /**
  * Creates a new object containing only selected keys. Only `obj`'s own enumerable keys are

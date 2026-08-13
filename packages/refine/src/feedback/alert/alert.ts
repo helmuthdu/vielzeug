@@ -1,4 +1,4 @@
-import { define, html, prop, getHost, useEmit, useSlots } from '@vielzeug/ore';
+import { define, getHost, html, prop, useEmit, useSlots } from '@vielzeug/ore';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 

@@ -46,7 +46,6 @@ if (!('ResizeObserver' in globalThis)) {
     observe = vi.fn();
     unobserve = vi.fn();
     disconnect = vi.fn();
-    constructor(_cb: ResizeObserverCallback) {}
   } as unknown as typeof ResizeObserver;
 }
 
@@ -59,7 +58,6 @@ if (!('IntersectionObserver' in globalThis)) {
     readonly root = null;
     readonly rootMargin = '';
     readonly thresholds: readonly number[] = [];
-    constructor(_cb: IntersectionObserverCallback, _options?: IntersectionObserverInit) {}
     takeRecords(): IntersectionObserverEntry[] {
       return [];
     }

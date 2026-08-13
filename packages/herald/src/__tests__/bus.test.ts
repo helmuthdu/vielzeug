@@ -1,10 +1,10 @@
-import { BusDisposedError, HeraldConfigError, HeraldError, combineSignals, createBus } from '../index';
+import { BusDisposedError, combineSignals, createBus, HeraldConfigError, HeraldError } from '../index';
 import { pipeEvents } from '../pipe';
 
 type TestEvents = {
   count: number;
   greet: { name: string };
-  toggle: void;
+  toggle: undefined;
 };
 
 describe('createBus - subscription lifecycle', () => {

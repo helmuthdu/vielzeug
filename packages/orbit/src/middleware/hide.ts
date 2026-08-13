@@ -1,6 +1,5 @@
-import type { DetectOverflowOptions, HideData, Middleware } from '../types';
-
 import { detectOverflowAtRect, getFloatingRect, isFullyClipped, resolveBoundary } from '../overflow';
+import type { DetectOverflowOptions, HideData, Middleware } from '../types';
 
 export interface HideOptions extends DetectOverflowOptions {
   /**

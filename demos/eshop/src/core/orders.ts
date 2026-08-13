@@ -1,9 +1,7 @@
 import { effect, signal } from '@vielzeug/ripple';
-
-import type { Order } from './types';
-
 import { courier, fetchOrdersRequest } from './api';
 import { currentUser } from './auth';
+import type { Order } from './types';
 
 export const ordersSignal = signal<Order[]>([]);
 export const ordersLoading = signal<boolean>(true);

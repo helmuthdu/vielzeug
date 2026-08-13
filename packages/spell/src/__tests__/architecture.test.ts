@@ -1,4 +1,4 @@
-import { s, SpellDefinitionError } from '../index';
+import { SpellDefinitionError, s } from '../index';
 import { fromDefinition } from '../json';
 
 describe('Spell 2 execution and definition boundaries', () => {

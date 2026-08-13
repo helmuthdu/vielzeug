@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
+import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 
 import { log } from './_log.js';
 import { SnapshotCatalog } from './catalog.js';

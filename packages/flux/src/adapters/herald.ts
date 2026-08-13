@@ -1,10 +1,8 @@
 import type { Bus, EventKey, EventMap } from '@vielzeug/herald';
-
-import type { Operator, Stream } from '../types';
-
 import { link } from '../_link';
 import { tryCall } from '../_safe';
 import { stream } from '../core';
+import type { Operator, Stream } from '../types';
 
 export function fromBus<T extends EventMap, K extends EventKey<T>>(bus: Bus<T>, event: K): Stream<T[K]> {
   return stream((sink) => bus.on(event, (payload) => sink.next(payload)));

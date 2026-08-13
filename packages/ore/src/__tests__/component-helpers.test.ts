@@ -1,4 +1,4 @@
-import { define, html, inject, prop, ref, getHost, provide } from '../index';
+import { define, getHost, html, inject, prop, provide, ref } from '../index';
 import { onCleanup } from '../runtime';
 import { mount } from '../testing';
 

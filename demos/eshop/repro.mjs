@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
+const page = await browser.newPage({ viewport: { height: 900, width: 1200 } });
 
 await page.goto('http://localhost:4322/');
 await page.waitForTimeout(500);
@@ -44,7 +44,7 @@ await page.evaluate(() => {
   list.insertBefore(clone, template);
 });
 await page.waitForTimeout(300);
-await page.screenshot({ path: '/tmp/repro-full.png', fullPage: true });
+await page.screenshot({ fullPage: true, path: '/tmp/repro-full.png' });
 
 const firstCard = page.locator('.orders-view__list ore-card').first();
 const box = await firstCard.boundingBox();

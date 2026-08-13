@@ -1,8 +1,6 @@
-import { Temporal } from '@js-temporal/polyfill';
-
-import type { BoundaryUnit, Disambiguation, TimeInput } from './types';
-
+import type { Temporal } from '@js-temporal/polyfill';
 import { toZoned } from './_convert';
+import type { BoundaryUnit, Disambiguation, TimeInput } from './types';
 
 const TIME_ZERO: Temporal.ZonedDateTimeLike = {
   hour: 0,

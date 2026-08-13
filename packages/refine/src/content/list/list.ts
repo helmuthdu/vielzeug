@@ -1,12 +1,10 @@
-import { createContext, define, html, prop, bind, getHost, onCleanup, provide, useEmit } from '@vielzeug/ore';
-import { computed, signal, type Readable } from '@vielzeug/ripple';
+import { bind, createContext, define, getHost, html, onCleanup, prop, provide, useEmit } from '@vielzeug/ore';
+import { computed, type Readable, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
-
-import type { ComponentSize } from '../../types';
-
 import { createListControl, lifecycleSignal } from '../../core';
 import { disablableBundle, LIST_SIZE_PRESET, sizableBundle } from '../../shared';
 import { sizeVariantMixin } from '../../styles';
+import type { ComponentSize } from '../../types';
 import componentStyles from './list.css?inline';
 
 /** Visual variant for `ore-list`. */

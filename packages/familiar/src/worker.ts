@@ -1,3 +1,13 @@
+export { batch, createTaskGroup } from './_pool';
+export {
+  FamiliarError,
+  FamiliarInvalidOptionsError,
+  FamiliarQueueFullError,
+  FamiliarRuntimeError,
+  FamiliarTaskError,
+  FamiliarTerminatedError,
+  FamiliarTimeoutError,
+} from './errors';
 export type {
   BatchOptions,
   DrainOptions,
@@ -10,19 +20,6 @@ export type {
   WorkerStats,
   WorkerStatus,
 } from './types';
-export {
-  FamiliarError,
-  FamiliarInvalidOptionsError,
-  FamiliarQueueFullError,
-  FamiliarRuntimeError,
-  FamiliarTaskError,
-  FamiliarTerminatedError,
-  FamiliarTimeoutError,
-} from './errors';
-export { batch, createTaskGroup } from './_pool';
-
-import type { SerializedError, WorkerResponse } from './protocol';
-import type { RunOptions, SlotStrategy, StreamWorkerPool, WorkerOptions, WorkerPool } from './types';
 
 import { createPool } from './_pool';
 import { createStreamPool, type StreamSlot } from './_stream-pool';
@@ -34,7 +31,9 @@ import {
   FamiliarTerminatedError,
   FamiliarTimeoutError,
 } from './errors';
+import type { SerializedError, WorkerResponse } from './protocol';
 import { PROTOCOL_VERSION } from './protocol';
+import type { RunOptions, SlotStrategy, StreamWorkerPool, WorkerOptions, WorkerPool } from './types';
 
 const MAX_CONCURRENCY = 512;
 

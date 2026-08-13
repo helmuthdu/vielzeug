@@ -1,3 +1,9 @@
+import {
+  RippleComputedCycleError,
+  RippleDisposedRuntimeError,
+  RippleDisposedScopeError,
+  RippleInfiniteLoopError,
+} from './errors';
 import type {
   Cleanup,
   ComputedOptions,
@@ -12,13 +18,6 @@ import type {
   SignalOptions,
   Unsubscribe,
 } from './types';
-
-import {
-  RippleComputedCycleError,
-  RippleDisposedRuntimeError,
-  RippleDisposedScopeError,
-  RippleInfiniteLoopError,
-} from './errors';
 
 const REACTIVE = Symbol('ripple.reactive');
 const SIGNAL = Symbol('ripple.signal');
@@ -224,11 +223,11 @@ class EffectNode implements ObserverNode, EffectHandle {
   private isDisposed = false;
   private owner: ScopeNode | undefined;
   private scheduled = false;
-  private readonly callback: () => Cleanup | void;
+  private readonly callback: () => Cleanup | undefined;
   private readonly options: EffectOptions | undefined;
   private readonly runtime: ReactiveRuntime;
 
-  constructor(runtime: ReactiveRuntime, callback: () => Cleanup | void, options?: EffectOptions) {
+  constructor(runtime: ReactiveRuntime, callback: () => Cleanup | undefined, options?: EffectOptions) {
     this.runtime = runtime;
     this.callback = callback;
     this.options = options;
@@ -363,7 +362,7 @@ export class ReactiveRuntime {
     return node;
   };
 
-  readonly effect = (callback: () => Cleanup | void, options?: EffectOptions): EffectHandle => {
+  readonly effect = (callback: () => Cleanup | undefined, options?: EffectOptions): EffectHandle => {
     this.assertActive();
 
     const node = new EffectNode(this, callback, options);

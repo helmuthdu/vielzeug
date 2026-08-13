@@ -1,5 +1,3 @@
-import type { Order, OrderStatus } from './types';
-
 import { courier, placeOrderRequest, updateOrderStatusRequest } from './api';
 import { currentUser, getPrincipal, ward } from './auth';
 import { bus } from './events';
@@ -7,6 +5,7 @@ import { formatOrderStatus } from './format';
 import { t } from './i18n';
 import { logger } from './logger';
 import { refreshOrders } from './orders';
+import type { Order, OrderStatus } from './types';
 
 type OrderAction = 'cancel' | 'create' | 'read' | 'updateStatus';
 

@@ -6,10 +6,10 @@ import { gzipSync } from 'node:zlib';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 interface PackageInfo {
-  version: string;
   dependencies: number;
-  size: string;
   minNode: string | null;
+  size: string;
+  version: string;
 }
 
 interface PackagesData {

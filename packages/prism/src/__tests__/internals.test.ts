@@ -124,7 +124,7 @@ describe('buildXScale', () => {
     const px = scale.map(d0 as never);
 
     expect(typeof px).toBe('number');
-    expect(isFinite(px)).toBe(true);
+    expect(Number.isFinite(px)).toBe(true);
     expect(px).toBeLessThan(scale.map(d1 as never));
   });
 

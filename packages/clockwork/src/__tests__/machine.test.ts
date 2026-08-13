@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { debugActor } from '../devtools.js';
-import { ClockworkError, defineMachine, type Machine, type MachineConfig } from '../index.js';
+import { type ClockworkError, defineMachine, type Machine, type MachineConfig } from '../index.js';
 
 const flush = async (): Promise<void> => {
   await Promise.resolve();

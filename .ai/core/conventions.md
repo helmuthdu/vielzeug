@@ -39,7 +39,7 @@
 - **MUST:** Name owned-resource teardown `dispose()`, never `destroy()`, `disconnect()`, `close()`, or `cleanup()`.
 - **SHOULD:** Reserve async disposal for teardown that genuinely requires `await`.
 - **MAY:** Implement both `[Symbol.dispose]()` and `[Symbol.asyncDispose]()` only when synchronous abort and awaited drain have distinct guarantees. Document both guarantees beside methods.
-- **MUST:** Let ESLint order Symbol keys; run `pnpm fix` instead of hand-ordering them.
+- **MUST:** Let Biome apply safe formatting and import-organization fixes; run `pnpm fix` instead of hand-formatting.
 
 ```ts
 interface SomeHandle {
@@ -173,8 +173,8 @@ Do not hand-edit docs alias maps or generated package lists; `scripts/vielzeug-p
 
 | Convention                           | Enforcement                     |
 | ------------------------------------ | ------------------------------- |
-| Import/object ordering               | ESLint                          |
-| Formatting                           | Prettier / `pnpm fix`           |
+| Import/export ordering               | Biome organize imports           |
+| Formatting                           | Biome / `pnpm fix`              |
 | Package metadata and task references | `pnpm check:ai-data`            |
 | Package behavior                     | focused Vitest tests            |
 | Package lint/build                   | package lint and build commands |

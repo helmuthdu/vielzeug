@@ -1,5 +1,3 @@
-import type { AnySchema, BaseAdapterOptions, KeyOf, RecordOf, TtlMs, VaultStore } from '../types';
-
 import { buildAdapterOps, type StorageBackend } from '../adapter-core';
 import { VaultError, VaultQuotaError } from '../errors';
 import {
@@ -10,6 +8,7 @@ import {
   getRecordKey,
 } from '../internal';
 import { isExpired, parseStored } from '../ttl';
+import type { AnySchema, BaseAdapterOptions, KeyOf, RecordOf, TtlMs, VaultStore } from '../types';
 
 // Firefox historically threw 'NS_ERROR_DOM_QUOTA_REACHED'; modern browsers use the standard name.
 const QUOTA_ERROR_NAMES = new Set(['QuotaExceededError', 'NS_ERROR_DOM_QUOTA_REACHED']);
@@ -83,7 +82,7 @@ function createWebStorageAdapter<S extends AnySchema>(
     for (let i = 0; i < resolvedStorage.length; i++) {
       const key = resolvedStorage.key(i);
 
-      if (key !== null && key.startsWith(dbPrefix)) ownedKeys.add(key);
+      if (key?.startsWith(dbPrefix)) ownedKeys.add(key);
     }
   };
 

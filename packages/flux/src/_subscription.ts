@@ -17,7 +17,7 @@ function reportUnhandledError(reason: unknown): void {
 export function createSubscription<T>(
   observerOrNext: Observer<T> | ((value: T) => void),
   signal?: AbortSignal,
-): { add(teardown: Teardown | void): void; signal: AbortSignal; sink: Sink<T>; subscription: Subscription } {
+): { add(teardown: Teardown | undefined): void; signal: AbortSignal; sink: Sink<T>; subscription: Subscription } {
   const observer: Observer<T> = typeof observerOrNext === 'function' ? { next: observerOrNext } : observerOrNext;
   const controller = new AbortController();
   let closed = false;
@@ -78,7 +78,7 @@ export function createSubscription<T>(
     },
   };
 
-  const add = (nextTeardown: Teardown | void): void => {
+  const add = (nextTeardown: Teardown | undefined): void => {
     if (!nextTeardown) return;
 
     if (closed) {

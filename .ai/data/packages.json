@@ -2,327 +2,327 @@
   "$schemaVersion": 1,
   "packages": [
     {
-      "slug": "arsenal",
-      "name": "@vielzeug/arsenal",
       "category": "Utilities",
+      "dependencies": [],
       "description": "75+ tree-shakeable array/object/string/async helpers",
       "docsContract": "catalog",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/arsenal",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "arsenal"
     },
     {
-      "slug": "assay",
-      "name": "@vielzeug/assay",
       "category": "Testing",
+      "dependencies": [],
       "description": "Framework-agnostic DOM testing primitives — scoped queries, event dispatch, async waiting",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/assay",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "assay"
     },
     {
-      "slug": "clockwork",
-      "name": "@vielzeug/clockwork",
       "category": "State",
+      "dependencies": [],
       "description": "Framework-neutral finite state machines with pure transitions and actors",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/clockwork",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "clockwork"
     },
     {
-      "slug": "codex",
-      "name": "@vielzeug/codex",
       "category": "AI",
+      "dependencies": [],
       "description": "MCP server exposing all Vielzeug docs to AI clients",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/codex",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "codex"
     },
     {
-      "slug": "coins",
-      "name": "@vielzeug/coins",
       "category": "Finance",
+      "dependencies": [],
       "description": "Currency formatting and exchange utilities for monetary arithmetic",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/coins",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "coins"
     },
     {
-      "slug": "conduit",
-      "name": "@vielzeug/conduit",
       "category": "DI",
+      "dependencies": [],
       "description": "Typed dependency injection container",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/conduit",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "conduit"
     },
     {
-      "slug": "courier",
-      "name": "@vielzeug/courier",
       "category": "HTTP",
+      "dependencies": ["arsenal"],
       "description": "Typed HTTP client with caching and mutations",
       "domOutput": false,
-      "dependencies": ["arsenal"],
+      "name": "@vielzeug/courier",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "courier"
     },
     {
-      "slug": "dnd",
-      "name": "@vielzeug/dnd",
       "category": "UI",
+      "dependencies": [],
       "description": "Drag-and-drop — drop zones and sortable lists",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/dnd",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "dnd"
     },
     {
-      "slug": "familiar",
-      "name": "@vielzeug/familiar",
       "category": "Workers",
+      "dependencies": ["arsenal"],
       "description": "Web Worker pool with tasks, timeouts, cancellation",
       "domOutput": false,
-      "dependencies": ["arsenal"],
+      "name": "@vielzeug/familiar",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "familiar"
     },
     {
-      "slug": "flux",
-      "name": "@vielzeug/flux",
       "category": "Streams",
+      "dependencies": [],
       "description": "Minimal push streams with explicit ownership, buffering, and ecosystem adapters",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/flux",
       "optionalPeers": ["courier", "herald", "pulse", "ripple"],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "flux"
     },
     {
-      "slug": "forge",
-      "name": "@vielzeug/forge",
       "category": "Forms",
+      "dependencies": ["arsenal"],
       "description": "Typed form state, validation, submission",
       "domOutput": false,
-      "dependencies": ["arsenal"],
+      "name": "@vielzeug/forge",
       "optionalPeers": ["spell", "vault"],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "forge"
     },
     {
-      "slug": "herald",
-      "name": "@vielzeug/herald",
       "category": "Events",
+      "dependencies": [],
       "description": "Typed event bus, pub/sub, async streams",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/herald",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "herald"
     },
     {
-      "slug": "keymap",
-      "name": "@vielzeug/keymap",
       "category": "Input",
+      "dependencies": [],
       "description": "Headless keyboard shortcut manager with chord sequences",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/keymap",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "keymap"
     },
     {
-      "slug": "ledger",
-      "name": "@vielzeug/ledger",
       "category": "State",
+      "dependencies": ["ripple"],
       "description": "Serialized reversible command history with atomic reactive state and cancellation ownership",
       "domOutput": false,
-      "dependencies": ["ripple"],
+      "name": "@vielzeug/ledger",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "ledger"
     },
     {
-      "slug": "lingua",
-      "name": "@vielzeug/lingua",
       "category": "i18n",
+      "dependencies": [],
       "description": "Typed i18n with pluralization and async loading",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/lingua",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "lingua"
     },
     {
-      "slug": "necromancer",
-      "name": "@vielzeug/necromancer",
       "category": "Animation",
+      "dependencies": [],
       "description": "Lifecycle-owned Web Animations API primitives with native access, per-handle groups, and additive FLIP",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/necromancer",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "necromancer"
     },
     {
-      "slug": "orbit",
-      "name": "@vielzeug/orbit",
       "category": "UI",
+      "dependencies": [],
       "description": "Dependency-free floating UI positioning with lifecycle-owned geometry",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/orbit",
       "optionalPeers": ["ripple"],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "orbit"
     },
     {
-      "slug": "ore",
-      "name": "@vielzeug/ore",
       "category": "UI",
+      "dependencies": [],
       "description": "Functional web-component authoring on top of ripple",
       "domOutput": true,
-      "dependencies": [],
+      "name": "@vielzeug/ore",
       "optionalPeers": ["assay"],
-      "peerDependencies": ["ripple"]
+      "peerDependencies": ["ripple"],
+      "slug": "ore"
     },
     {
-      "slug": "prism",
-      "name": "@vielzeug/prism",
       "category": "Charts",
+      "dependencies": ["orbit", "ripple"],
       "description": "Reactive SVG charting library — line, bar, area, pie, sparkline",
       "domOutput": true,
-      "dependencies": ["orbit", "ripple"],
+      "name": "@vielzeug/prism",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "prism"
     },
     {
-      "slug": "pulse",
-      "name": "@vielzeug/pulse",
       "category": "WebSockets",
+      "dependencies": ["ripple"],
       "description": "Typed WebSocket client with channels, rooms, presence, reconnect",
       "domOutput": false,
-      "dependencies": ["ripple"],
+      "name": "@vielzeug/pulse",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "pulse"
     },
     {
-      "slug": "refine",
-      "name": "@vielzeug/refine",
       "category": "UI",
+      "dependencies": ["arsenal", "assay", "dnd", "keymap", "orbit", "ore", "ripple", "tempo"],
       "description": "Accessible, themeable web components built on ore",
       "docsContract": "component-library",
       "domOutput": true,
-      "testCommand": "pnpm --filter @vielzeug/refine test",
-      "dependencies": ["arsenal", "assay", "dnd", "keymap", "orbit", "ore", "ripple", "tempo"],
+      "name": "@vielzeug/refine",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "refine",
+      "testCommand": "pnpm --filter @vielzeug/refine test"
     },
     {
-      "slug": "ripple",
-      "name": "@vielzeug/ripple",
       "category": "State",
+      "dependencies": [],
       "description": "Reactive runtime primitives: signals, derived values, effects, and scopes",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/ripple",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "ripple"
     },
     {
-      "slug": "rune",
-      "name": "@vielzeug/rune",
       "category": "Logging",
+      "dependencies": [],
       "description": "Structured scoped logger with remote transport",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/rune",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "rune"
     },
     {
-      "slug": "sandbox",
-      "name": "@vielzeug/sandbox",
       "category": "AI",
+      "dependencies": [],
       "description": "Sandboxed iframe runtime with typed postMessage state bridge",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/sandbox",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "sandbox"
     },
     {
-      "slug": "scout",
-      "name": "@vielzeug/scout",
       "category": "Utilities",
+      "dependencies": ["ripple"],
       "description": "Trigram fuzzy-search index with highlighting and reactive layer",
       "domOutput": false,
-      "dependencies": ["ripple"],
+      "name": "@vielzeug/scout",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "scout"
     },
     {
-      "slug": "scroll",
-      "name": "@vielzeug/scroll",
       "category": "UI",
+      "dependencies": ["ripple"],
       "description": "Virtual list engine for large datasets",
       "domOutput": false,
-      "dependencies": ["ripple"],
+      "name": "@vielzeug/scroll",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "scroll"
     },
     {
-      "slug": "sourcerer",
-      "name": "@vielzeug/sourcerer",
       "category": "Data",
+      "dependencies": [],
       "description": "Reactive data sources with pagination and search",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/sourcerer",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "sourcerer"
     },
     {
-      "slug": "spell",
-      "name": "@vielzeug/spell",
       "category": "Validation",
+      "dependencies": ["arsenal"],
       "description": "Zero-dep schema validation (Zod-like)",
       "domOutput": false,
-      "dependencies": ["arsenal"],
+      "name": "@vielzeug/spell",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "spell"
     },
     {
-      "slug": "tempo",
-      "name": "@vielzeug/tempo",
       "category": "Date/Time",
+      "dependencies": [],
       "description": "Temporal-powered date utilities",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/tempo",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "tempo"
     },
     {
-      "slug": "vault",
-      "name": "@vielzeug/vault",
       "category": "Storage",
+      "dependencies": [],
       "description": "Adapter-free typed storage core with focused browser and SQLite subpaths",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/vault",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "vault"
     },
     {
-      "slug": "ward",
-      "name": "@vielzeug/ward",
       "category": "Auth",
+      "dependencies": [],
       "description": "RBAC engine with wildcards and predicates",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/ward",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "ward"
     },
     {
-      "slug": "wayfinder",
-      "name": "@vielzeug/wayfinder",
       "category": "Routing",
+      "dependencies": [],
       "description": "Client-side router with middleware and guards",
       "domOutput": false,
-      "dependencies": [],
+      "name": "@vielzeug/wayfinder",
       "optionalPeers": [],
-      "peerDependencies": []
+      "peerDependencies": [],
+      "slug": "wayfinder"
     }
   ]
 }

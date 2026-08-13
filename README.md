@@ -786,8 +786,8 @@ vielzeug/
 pnpm setup          # Rush install — install all dependencies
 pnpm build          # Rush build — build all packages
 pnpm test           # Run all tests (vitest)
-pnpm lint           # Lint code (ESLint + Stylelint)
-pnpm fix            # Auto-fix lint issues
+pnpm lint           # Check code with Biome
+pnpm fix            # Apply Biome safe fixes
 pnpm docs:dev       # Start docs dev server (VitePress)
 pnpm docs:build     # Build documentation
 ```

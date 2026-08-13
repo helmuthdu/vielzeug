@@ -1,10 +1,8 @@
 import { Temporal } from '@js-temporal/polyfill';
-
-import type { RecurrenceRule, TimeInput, TimeZoneOptions } from './types';
-
 import { toInstant, toZoned } from './_convert';
 import { inferTimeZone } from './_tz';
 import { TempoInvalidInputError } from './errors';
+import type { RecurrenceRule, TimeInput, TimeZoneOptions } from './types';
 
 export function dateRange(
   start: TimeInput,

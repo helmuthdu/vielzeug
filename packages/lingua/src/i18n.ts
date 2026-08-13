@@ -1,10 +1,9 @@
-import type { Catalog, TranslationStoreOptions, TranslationState, Locale, SubscribeOptions } from './types';
-
 import { error as logError } from './_dev';
 import { canonicalLocale, localeChain } from './_locale';
 import { createCatalogStore } from './_resources';
 import { LinguaDisposedError, LinguaInvalidStateError } from './errors';
-import { type Translator, createTranslatorFromCompiled } from './translator';
+import { createTranslatorFromCompiled, type Translator } from './translator';
+import type { Catalog, Locale, SubscribeOptions, TranslationState, TranslationStoreOptions } from './types';
 
 export type TranslationSnapshot<C extends Catalog = Catalog> = {
   readonly locale: Locale;

@@ -204,14 +204,10 @@
 
   ::slotted(ore-alert),
   ore-alert {
+    --_motion-animation: none;
     width: 100%;
     margin: 0;
     box-shadow: var(--shadow-lg);
-
-    /* Suppress ore-alert's own collapse animation — the toast-inner opacity
-       fade is the canonical exit. Passing --motion-animation: none overrides
-       the @keyframes ore-alert-exit that fires on [dismissing]. */
-    --_motion-animation: none;
   }
 
   /* ── Action buttons ───────────────────────────────────────────────────── */

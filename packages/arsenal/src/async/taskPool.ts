@@ -1,11 +1,11 @@
 export interface TaskPool {
-  dispose(reason?: unknown): void;
-  idle(): Promise<void>;
-  run<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T>;
   readonly active: number;
-  readonly disposed: boolean;
   readonly disposalSignal: AbortSignal;
+  dispose(reason?: unknown): void;
+  readonly disposed: boolean;
+  idle(): Promise<void>;
   readonly pending: number;
+  run<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T>;
   [Symbol.dispose](): void;
 }
 

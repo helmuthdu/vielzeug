@@ -1,7 +1,6 @@
-import type { Stream } from '../types';
-
 import { defaultScheduler } from '../_scheduler';
 import { stream } from '../core';
+import type { Stream } from '../types';
 
 export type IntervalOptions = {
   every: number;

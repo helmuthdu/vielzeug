@@ -3,7 +3,7 @@
  * Wraps `createVirtualizer` so the current state is exposed as a reactive
  * `Signal<VirtualizerState>` from `@vielzeug/ripple`.
  */
-import { signal, type Signal } from '@vielzeug/ripple';
+import { type Signal, signal } from '@vielzeug/ripple';
 
 import {
   createGroupedVirtualizer,

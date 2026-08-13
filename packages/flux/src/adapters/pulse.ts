@@ -1,8 +1,6 @@
 import type { EventKey, MessageMap, PresenceChannel, Pulse } from '@vielzeug/pulse';
-
-import type { Stream } from '../types';
-
 import { stream } from '../core';
+import type { Stream } from '../types';
 
 export function fromPulse<T extends MessageMap, K extends EventKey<T>>(pulse: Pulse<T>, event: K): Stream<T[K]> {
   return stream((sink) => pulse.on(event, (payload) => sink.next(payload)));

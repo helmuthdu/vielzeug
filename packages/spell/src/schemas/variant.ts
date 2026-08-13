@@ -1,10 +1,10 @@
 import type { AnySchema, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, SpellValidationError, _makeCtx } from '../core';
+import { _makeCtx, ErrorCode, Schema, SpellValidationError } from '../core';
 import { SpellError } from '../errors';
 import { defineOwnProperty, objectFromEntries } from '../safe-object';
 import { LiteralSchema } from './literal';
-import { type InferObject, ObjectSchema, type ObjectShape } from './object';
+import type { InferObject, ObjectSchema, ObjectShape } from './object';
 
 type VariantMap = Record<string, ObjectSchema<any, any>>;
 type InferVariantMap<K extends string, M extends VariantMap> = {

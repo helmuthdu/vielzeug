@@ -1,4 +1,4 @@
-import { type VaultStore, table, VaultError } from '../index';
+import { table, VaultError, type VaultStore } from '../index';
 import { createMemory } from '../memory';
 
 type Row = { age: number; city: string; id: number; name: string };

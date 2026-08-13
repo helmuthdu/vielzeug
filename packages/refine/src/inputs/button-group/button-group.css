@@ -4,10 +4,9 @@
        ======================================== */
 
   :host {
-    display: inline-flex;
-
     --group-gap: var(--size-2);
     --group-radius: var(--_radius, var(--rounded-lg));
+    display: inline-flex;
   }
 
   .button-group {

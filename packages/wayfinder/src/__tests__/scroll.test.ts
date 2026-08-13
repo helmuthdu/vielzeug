@@ -1,6 +1,5 @@
-import type { RouteState, ScrollDecision } from '../types';
-
 import { createMemoryHistory, createRouter } from '../';
+import type { RouteState, ScrollDecision } from '../types';
 import { settle } from './test-utils';
 
 describe('scroll restoration', () => {

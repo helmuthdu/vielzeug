@@ -11,7 +11,7 @@ Vielzeug is a monorepo of independent TypeScript packages published under `@viel
 - `pnpm` for package management
 - `rush` for monorepo orchestration
 - `vitest` for tests
-- `eslint` and `stylelint` for linting
+- `Biome` for formatting, import organization, and linting
 - Node 22
 
 ## Root commands

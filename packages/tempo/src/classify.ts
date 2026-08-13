@@ -1,5 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill';
-
+import { toInstant, toZoned } from './_convert';
+import { inferSharedTimeZone } from './_tz';
+import { TempoInvalidInputError } from './errors';
 import type {
   ClassifyExpiryInput,
   FixedDuration,
@@ -8,10 +10,6 @@ import type {
   TimeInput,
   TimeZoneOptions,
 } from './types';
-
-import { toInstant, toZoned } from './_convert';
-import { inferSharedTimeZone } from './_tz';
-import { TempoInvalidInputError } from './errors';
 
 const MILLIS = {
   day: 86_400_000,

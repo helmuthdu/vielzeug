@@ -5,8 +5,8 @@ import {
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
   normalizeOverscan,
-  observeResize,
   type Overscan,
+  observeResize,
   resolveEstimateFn,
   type ScrollTarget,
   toNonNegativeInt,
@@ -19,7 +19,7 @@ import {
   validateOverscan,
 } from './_validation';
 
-export { type VirtualItem };
+export type { VirtualItem };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -51,9 +51,9 @@ export interface ScrollToCellOptions {
 
 export interface GridVirtualizerOptions {
   colCount: number;
+  colGap?: number;
   /** External measurement cache for columns. Share across instances for scroll restoration. */
   colMeasurementCache?: Map<number, number>;
-  colGap?: number;
   estimateColSize?: number | ((col: number) => number);
   estimateRowSize?: number | ((row: number) => number);
   initialScrollLeft?: number;
@@ -65,9 +65,9 @@ export interface GridVirtualizerOptions {
   overscanX?: Overscan;
   overscanY?: Overscan;
   rowCount: number;
+  rowGap?: number;
   /** External measurement cache for rows. Share across instances for scroll restoration. */
   rowMeasurementCache?: Map<number, number>;
-  rowGap?: number;
 }
 
 /**
@@ -90,13 +90,8 @@ export interface GridVirtualizerUpdateOptions {
 export interface GridVirtualizer {
   readonly cols: VirtualItem[];
   readonly disposalSignal: AbortSignal;
-  readonly disposed: boolean;
-  readonly rows: VirtualItem[];
-  readonly scrollLeft: number;
-  readonly scrollTop: number;
-  readonly totalHeight: number;
-  readonly totalWidth: number;
   dispose: () => void;
+  readonly disposed: boolean;
   invalidate: () => void;
   /** Measure rows and columns in a single coordinated rebuild pass (R4). */
   measureBatch: (rows: Array<{ index: number; size: number }>, cols: Array<{ index: number; size: number }>) => void;
@@ -109,11 +104,16 @@ export interface GridVirtualizer {
   /** Prepend `additionalRowCount` rows at the top while keeping the viewport visually stable. */
   prependRows: (additionalRowCount: number) => void;
   refresh: () => void;
+  readonly rows: VirtualItem[];
+  readonly scrollLeft: number;
   scrollToCell: (row: number, col: number, options?: ScrollToCellOptions) => void;
   /** Scroll to bring a row into view without changing the horizontal position. */
   scrollToColumn: (col: number, options?: Pick<ScrollToCellOptions, 'behavior' | 'colAlign'>) => void;
+  readonly scrollTop: number;
   /** Scroll to bring a column into view without changing the vertical position. */
   scrollToRow: (row: number, options?: Pick<ScrollToCellOptions, 'behavior' | 'rowAlign'>) => void;
+  readonly totalHeight: number;
+  readonly totalWidth: number;
   update: (next: GridVirtualizerUpdateOptions) => void;
   [Symbol.dispose]: () => void;
 }

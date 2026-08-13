@@ -13,15 +13,15 @@ export interface OutputLine {
 }
 
 export interface ReplExecution {
-  readonly disposed: Ref<boolean>;
-  isExecuting: Ref<boolean>;
-  output: Ref<OutputLine[]>;
-  [Symbol.dispose](): void;
   cancel(): void;
   clear(): void;
   dispose(): void;
+  readonly disposed: Ref<boolean>;
+  isExecuting: Ref<boolean>;
+  output: Ref<OutputLine[]>;
   reportError(message: string): void;
   run(code: string, libraries: SandboxLibrary[]): Promise<void>;
+  [Symbol.dispose](): void;
 }
 
 // Everything posted from inside the sandbox is untrusted input (see @vielzeug/sandbox's own

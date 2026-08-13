@@ -1,15 +1,13 @@
 import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
-
-import type { Datum, Series, TooltipConfig } from '../types';
-
 import { warn } from '../_dev';
+import type { Datum, Series, TooltipConfig } from '../types';
 
 export interface TooltipState {
   dispose(): void;
-  [Symbol.dispose](): void;
   el: HTMLDivElement | null;
   hide(): void;
   show(x: number, y: number, datum: Datum, series: Series): void;
+  [Symbol.dispose](): void;
 }
 
 export function createTooltip(container: HTMLElement, config?: TooltipConfig | true): TooltipState {

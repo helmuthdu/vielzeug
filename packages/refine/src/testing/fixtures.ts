@@ -1,5 +1,3 @@
-import AxeBuilder from '@axe-core/playwright';
-import { test as base } from '@playwright/test';
 /**
  * Shared Playwright test fixture for refine e2e specs — the real-browser counterpart to this
  * same folder's jsdom `axeCheck()`/ARIA helpers (`index.ts`), just Playwright/Chromium-only
@@ -20,6 +18,8 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import AxeBuilder from '@axe-core/playwright';
+import { test as base } from '@playwright/test';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../../../..');

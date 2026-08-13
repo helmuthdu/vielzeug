@@ -1,17 +1,16 @@
-import type { Middleware, Placement } from './types';
-
 import { flip } from './middleware/flip';
 import { offset } from './middleware/offset';
 import { shift } from './middleware/shift';
 import { size } from './middleware/size';
+import type { Middleware, Placement } from './types';
 
 /**
  * A positioning preset — a pre-configured `placement` and `middleware` array
  * ready to spread into `createPositioner()` or `computePosition()` options.
  */
 export interface PositioningPreset {
-  placement: Placement;
   middleware: Middleware[];
+  placement: Placement;
 }
 
 export interface PresetOptions {

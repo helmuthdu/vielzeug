@@ -7,13 +7,21 @@ import { normalizePackageManifest } from './lib/package-manifest.mjs';
 const root = new URL('..', import.meta.url).pathname;
 const packages = join(root, 'packages');
 
-export function syncPackageManifests({ check = false, packagesDir = packages } = {}) {
+function packageManifestsIn(directory) {
+  try {
+    return readdirSync(directory, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => join(directory, entry.name, 'package.json'));
+  } catch {
+    return [];
+  }
+}
+
+export function syncPackageManifests({ check = false, packagesDir = packages, rootDir = join(packagesDir, '..') } = {}) {
   const stale = [];
+  const files = [join(rootDir, 'package.json'), ...packageManifestsIn(packagesDir), ...packageManifestsIn(join(rootDir, 'demos'))];
 
-  for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-
-    const file = join(packagesDir, entry.name, 'package.json');
+  for (const file of files) {
     let original;
     try {
       original = readFileSync(file, 'utf8');

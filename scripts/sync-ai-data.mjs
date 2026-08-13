@@ -8,7 +8,9 @@
 // concepts than value. The current .ai architecture keeps curated facts in JSON and uses
 // one small sync pass to refresh the fields that are derivable from source.
 
+import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import { isMain, parseArgs } from './lib/cli.mjs';
@@ -174,20 +176,17 @@ export function mergePackageData(curatedPackages, livePackages) {
     .sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
-/** Formats through prettier (not just `JSON.stringify(..., null, 2)`) so the generated
- * content byte-for-byte matches what's actually on disk: lefthook's pre-commit `pnpm fix`
- * (and any editor's format-on-save) run prettier over `.ai/data/packages.json`, which collapses
- * short arrays like `["ripple"]` onto one line — `JSON.stringify` never does that, it always
- * expands arrays one-element-per-line. Skipping this step made `--check` mode compare its own
- * raw serialization against a prettier-reformatted file that's semantically identical but
- * textually different, so CI reported `[STALE]` on every commit even right after `gen:ai-data`. */
-async function formatJson(content, filepath) {
-  const prettier = await import('prettier');
-  const config = (await prettier.resolveConfig(filepath)) ?? undefined;
-  return prettier.format(content, { ...config, filepath });
+const require = createRequire(import.meta.url);
+const biomeBin = require.resolve('@biomejs/biome/bin/biome');
+
+function formatJson(content, filepath) {
+  return execFileSync(process.execPath, [biomeBin, 'format', `--stdin-file-path=${filepath}`], {
+    encoding: 'utf8',
+    input: content,
+  });
 }
 
-export async function packagesFileContent(packages) {
+export function packagesFileContent(packages) {
   const raw = JSON.stringify({ $schemaVersion: 1, packages }, null, 2);
   return formatJson(raw, path.join(ROOT, '.ai/data/packages.json'));
 }

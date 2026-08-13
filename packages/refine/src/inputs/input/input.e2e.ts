@@ -77,8 +77,8 @@ test.describe('Layout', () => {
 
       await page.evaluate(() => {
         (document.getElementById('in') as HTMLElement & { shadowRoot: ShadowRoot }).shadowRoot
-          .querySelector('input')!
-          .focus();
+          .querySelector('input')
+          ?.focus();
       });
       await page.waitForTimeout(300);
 

@@ -1,16 +1,14 @@
 import type { Readable } from '@vielzeug/ripple';
 
 import { createScope, effect } from '@vielzeug/ripple';
-
+import { error } from '../_dev';
 import type { CrosshairState } from '../interaction/crosshair';
 import type { LegendState } from '../interaction/legend';
-import type { TooltipState } from '../interaction/tooltip';
-import type { BaseChartConfig, ChartDimensions, ChartHandle, ChartPlugin, ChartPluginContext } from '../types';
-
-import { error } from '../_dev';
 import { createLegend } from '../interaction/legend';
+import type { TooltipState } from '../interaction/tooltip';
 import { createTooltip } from '../interaction/tooltip';
 import { createSvgElement, removeChildren } from '../svg/element';
+import type { BaseChartConfig, ChartDimensions, ChartHandle, ChartPlugin, ChartPluginContext } from '../types';
 import { createChartBase } from './chart-base';
 
 export interface ScaffoldGroups {
@@ -82,7 +80,7 @@ function runScaffold<TCtx>(
     legend: LegendState | null,
     disposalSignal: AbortSignal,
   ) => TCtx,
-  renderFn: (ctx: TCtx) => ChartEventHandlers | void,
+  renderFn: (ctx: TCtx) => ChartEventHandlers | undefined,
 ): ChartHandle {
   const base = createChartBase(container, { a11y: config.a11y, ariaLabel: config.ariaLabel, margin: config.margin });
   const tooltip = config.tooltip ? createTooltip(container, config.tooltip) : null;
@@ -165,7 +163,7 @@ function runScaffold<TCtx>(
 }
 
 function makeEventManager(svg: SVGSVGElement): {
-  attach(handlers: ChartEventHandlers | void): void;
+  attach(handlers: ChartEventHandlers | undefined): void;
   detach(): void;
 } {
   let active: ChartEventHandlers | null = null;
@@ -210,7 +208,7 @@ function makeEventManager(svg: SVGSVGElement): {
 export function createChartScaffold(
   container: HTMLElement,
   config: BaseChartConfig,
-  renderFn: (ctx: ScaffoldContext) => ChartEventHandlers | void,
+  renderFn: (ctx: ScaffoldContext) => ChartEventHandlers | undefined,
 ): ChartHandle {
   return runScaffold(
     container,
@@ -253,7 +251,7 @@ export function createChartScaffold(
 export function createRadialScaffold(
   container: HTMLElement,
   config: BaseChartConfig,
-  renderFn: (ctx: RadialScaffoldContext) => ChartEventHandlers | void,
+  renderFn: (ctx: RadialScaffoldContext) => ChartEventHandlers | undefined,
 ): ChartHandle {
   return runScaffold(
     container,

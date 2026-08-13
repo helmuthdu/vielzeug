@@ -1,12 +1,12 @@
 import { AssayTimeoutError } from './errors';
 
 export interface WaitOptions {
+  /** Polling interval in ms (default: 50). */
+  interval?: number;
   /** Cancel the pending wait. */
   signal?: AbortSignal;
   /** Maximum wait time in ms (default: 1000). */
   timeout?: number;
-  /** Polling interval in ms (default: 50). */
-  interval?: number;
 }
 
 export interface RetryOptions extends WaitOptions {

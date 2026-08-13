@@ -1,4 +1,4 @@
-import { s, SpellValidationError } from '../index';
+import { SpellValidationError, s } from '../index';
 
 describe('s.date()', () => {
   const d = new Date('2024-06-01');

@@ -4,7 +4,7 @@ import { createBus } from '../index';
 
 type BenchEvents = {
   tick: number;
-  toggle: void;
+  toggle: undefined;
 };
 
 // ─── Emit throughput ────────────────────────────────────────────────────────

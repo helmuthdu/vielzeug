@@ -1,6 +1,5 @@
-import type { RandomSource } from './source';
-
 import { randomIndex } from './_index';
+import type { RandomSource } from './source';
 
 /**
  * Generates a random integer between two values, inclusive.

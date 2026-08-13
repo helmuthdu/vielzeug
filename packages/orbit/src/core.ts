@@ -1,3 +1,5 @@
+import { devOnly, warn } from './_dev';
+import { OrbitConfigError } from './errors';
 import type {
   ComputePositionOptions,
   ComputePositionResult,
@@ -7,9 +9,6 @@ import type {
   MiddlewareState,
   ReferenceElement,
 } from './types';
-
-import { devOnly, warn } from './_dev';
-import { OrbitConfigError } from './errors';
 import { baseCoords, toRect } from './utils';
 
 // ── DOM helpers ────────────────────────────────────────────────────────────────────────────────
@@ -24,7 +23,7 @@ export function getRects(reference: ReferenceElement, floating: HTMLElement): Mi
 
 // ── Internal state helpers ───────────────────────────────────────────────────────────
 
-function mergeState(state: MiddlewareState, result: MiddlewareResult | void): MiddlewareState {
+function mergeState(state: MiddlewareState, result: MiddlewareResult | undefined): MiddlewareState {
   if (!result) return state;
 
   return {

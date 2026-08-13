@@ -31,8 +31,8 @@ test.describe('Interaction', () => {
 
     const positions = await page.evaluate(() => {
       const popover = document.querySelector('ore-popover')!;
-      const trigger = document.querySelector('ore-button')!.getBoundingClientRect();
-      const panel = popover.shadowRoot!.querySelector<HTMLElement>('.panel')!.getBoundingClientRect();
+      const trigger = document.querySelector('ore-button')?.getBoundingClientRect();
+      const panel = popover.shadowRoot?.querySelector<HTMLElement>('.panel')?.getBoundingClientRect();
 
       return { panel, trigger };
     });

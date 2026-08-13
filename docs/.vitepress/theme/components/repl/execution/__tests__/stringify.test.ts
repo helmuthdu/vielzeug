@@ -39,7 +39,7 @@ describe('stringify', () => {
   it('falls back to String() when JSON.stringify throws (circular refs)', () => {
     const circular: Record<string, unknown> = {};
 
-    circular['self'] = circular;
+    circular.self = circular;
     expect(stringify(circular)).toBe(String(circular));
   });
 });

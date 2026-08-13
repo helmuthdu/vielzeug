@@ -1,26 +1,26 @@
 import {
+  bind,
   createContext,
   define,
+  getHost,
   html,
   inject,
-  prop,
-  bind,
-  getHost,
   onMounted,
+  prop,
   provide,
+  resizeObserver,
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { resizeObserver } from '@vielzeug/ore';
 import { computed, type Readable, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
 
 import '../../content/icon/icon';
 import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
 import { computeSafeRel } from '../../utils';
+import sidebarStyles from './sidebar.css?inline';
 import groupStyles from './sidebar-group.css?inline';
 import itemStyles from './sidebar-item.css?inline';
-import sidebarStyles from './sidebar.css?inline';
 
 // ─── Types ────────────────────────────────────────────────────────────────
 

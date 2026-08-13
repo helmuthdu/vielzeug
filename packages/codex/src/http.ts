@@ -1,11 +1,9 @@
-import { createMcpHandler, type McpHttpHandler } from '@modelcontextprotocol/server';
-import { createServer, type IncomingMessage, type Server as HttpServer, type ServerResponse } from 'node:http';
+import { createServer, type Server as HttpServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-
-import type { Catalog } from './catalog.js';
-
+import { createMcpHandler, type McpHttpHandler } from '@modelcontextprotocol/server';
 import { log } from './_log.js';
+import type { Catalog } from './catalog.js';
 import { createMcpServer } from './server.js';
 
 export interface HttpHost {

@@ -1,5 +1,28 @@
 // Public API — all exports for @vielzeug/prism
 
+export type { EasingFn } from './animation/easing';
+export type { AnimationTarget } from './animation/transition';
+// Animation utilities (for plugin authors)
+export { animate } from './animation/transition';
+// Chart factories
+export { createAreaChart } from './charts/area';
+export { createBarChart } from './charts/bar';
+export { createLineChart } from './charts/line';
+export { createPieChart } from './charts/pie';
+export { createSparkline } from './charts/sparkline';
+// Error classes
+export { PrismDisposedError, PrismError, PrismRenderError } from './errors';
+// Interaction types (useful for plugin authors)
+export type { LegendState } from './interaction/legend';
+export type { TooltipState } from './interaction/tooltip';
+// Scale factories
+export { bandScale } from './scales/band';
+export { linearScale } from './scales/linear';
+export { timeScale } from './scales/time';
+// SVG primitives (for plugin authors)
+export type { Point } from './svg/path';
+// Theme utilities
+export { resetTheme, seriesColor, setTheme } from './theme';
 export type {
   AreaChartConfig,
   AreaSeriesConfig,
@@ -37,33 +60,3 @@ export type {
   TooltipConfig,
   TransitionConfig,
 } from './types';
-
-// Error classes
-export { PrismDisposedError, PrismError, PrismRenderError } from './errors';
-
-// Chart factories
-export { createAreaChart } from './charts/area';
-export { createBarChart } from './charts/bar';
-export { createLineChart } from './charts/line';
-export { createPieChart } from './charts/pie';
-export { createSparkline } from './charts/sparkline';
-
-// Scale factories
-export { bandScale } from './scales/band';
-export { linearScale } from './scales/linear';
-export { timeScale } from './scales/time';
-
-// Animation utilities (for plugin authors)
-export { animate } from './animation/transition';
-export type { AnimationTarget } from './animation/transition';
-export type { EasingFn } from './animation/easing';
-
-// Interaction types (useful for plugin authors)
-export type { LegendState } from './interaction/legend';
-export type { TooltipState } from './interaction/tooltip';
-
-// SVG primitives (for plugin authors)
-export type { Point } from './svg/path';
-
-// Theme utilities
-export { resetTheme, seriesColor, setTheme } from './theme';

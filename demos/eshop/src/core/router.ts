@@ -1,8 +1,7 @@
-import type { RouteParams } from '@vielzeug/wayfinder';
-
 import { stream } from '@vielzeug/flux';
 import { toSignal } from '@vielzeug/flux/ripple';
 import { computed } from '@vielzeug/ripple';
+import type { RouteParams } from '@vielzeug/wayfinder';
 import { createBrowserHistory, createRouter } from '@vielzeug/wayfinder';
 
 export type RouteNames =

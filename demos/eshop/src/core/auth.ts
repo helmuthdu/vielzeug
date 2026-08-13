@@ -1,11 +1,8 @@
-import type { Principal } from '@vielzeug/ward';
-
 import { signal } from '@vielzeug/ripple';
+import type { Principal } from '@vielzeug/ward';
 import { allow, createWard, owns } from '@vielzeug/ward';
-
-import type { Order, User } from './types';
-
 import { seedUsers } from './seed-data';
+import type { Order, User } from './types';
 
 export type OrderAction = 'cancel' | 'create' | 'read' | 'updateStatus';
 

@@ -2,9 +2,9 @@ import type { LegendConfig, LegendPosition } from '../types';
 
 export interface LegendState {
   dispose(): void;
-  [Symbol.dispose](): void;
   el: HTMLDivElement | null;
   update(series: { color: string; name: string }[]): void;
+  [Symbol.dispose](): void;
 }
 
 function resolvePosition(config: LegendConfig | true): LegendPosition {

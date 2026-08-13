@@ -1,11 +1,9 @@
 import type { Readable } from '@vielzeug/ripple';
 
 import { signal } from '@vielzeug/ripple';
-
-import type { Stream, Subscription } from '../types';
-
 import { error } from '../_dev';
 import { stream } from '../core';
+import type { Stream, Subscription } from '../types';
 
 export type ToSignalOptions<T> = {
   initial: T;

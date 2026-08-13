@@ -1,10 +1,6 @@
 {
-  "name": "@vielzeug/forge",
   "entries": [
     {
-      "version": "2.0.2",
-      "tag": "@vielzeug/forge_v2.0.2",
-      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
       "comments": {
         "dependency": [
           {
@@ -14,20 +10,13 @@
             "comment": "Updating dependency \"@vielzeug/vault\" to `2.1.0`"
           }
         ]
-      }
+      },
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "tag": "@vielzeug/forge_v2.0.2",
+      "version": "2.0.2"
     },
     {
-      "version": "2.0.1",
-      "tag": "@vielzeug/forge_v2.0.1",
-      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "49ec292706645d1f4937897ac628d852f3a11736"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.1`"
@@ -44,28 +33,21 @@
           {
             "comment": "Updating dependency \"@vielzeug/vault\" to `2.0.1`"
           }
-        ]
-      }
-    },
-    {
-      "version": "2.0.0",
-      "tag": "@vielzeug/forge_v2.0.0",
-      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "chore: accept asynchronous Spell schemas in the validator adapter",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
+            "commit": "49ec292706645d1f4937897ac628d852f3a11736"
           }
-        ],
-        "major": [
-          {
-            "comment": "refactor!: replace flat controller and Ripple runtime with explicit immutable forms, safe value constraints, and DOM, Spell customValidator, and Vault adapters",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
-          }
-        ],
+        ]
+      },
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "tag": "@vielzeug/forge_v2.0.1",
+      "version": "2.0.1"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.0`"
@@ -82,47 +64,54 @@
           {
             "comment": "Updating dependency \"@vielzeug/vault\" to `2.0.0`"
           }
+        ],
+        "major": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor!: replace flat controller and Ripple runtime with explicit immutable forms, safe value constraints, and DOM, Spell customValidator, and Vault adapters",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: accept asynchronous Spell schemas in the validator adapter",
+            "commit": "f8c0a0e7dd3c41f4fe459598cf0aefb3fa45cecc"
+          }
         ]
-      }
+      },
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "tag": "@vielzeug/forge_v2.0.0",
+      "version": "2.0.0"
     },
     {
-      "version": "1.4.0",
-      "tag": "@vielzeug/forge_v1.4.0",
-      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
       "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.3.0`"
+          }
+        ],
         "minor": [
           {
-            "comment": "refactor(forge): move snapshot/restore to form.history, remove subscribeScoped()/validateStream(), merge values/validation into core/fields.ts with shared bulk-op primitives, extract core/notifier.ts, fix reset()/replace() dropping validator-only field state",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor(forge): move snapshot/restore to form.history, remove subscribeScoped()/validateStream(), merge values/validation into core/fields.ts with shared bulk-op primitives, extract core/notifier.ts, fix reset()/replace() dropping validator-only field state",
             "commit": "d43608540af0fa8492bee939a5f0b264be6e2187"
           }
         ],
         "patch": [
           {
-            "comment": "refactor(forge): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor(forge): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies",
             "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
           }
-        ],
-        "dependency": [
-          {
-            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.3.0`"
-          }
         ]
-      }
+      },
+      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
+      "tag": "@vielzeug/forge_v1.4.0",
+      "version": "1.4.0"
     },
     {
-      "version": "1.3.1",
-      "tag": "@vielzeug/forge_v1.3.1",
-      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.1.2`"
@@ -130,61 +119,54 @@
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.3`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
+            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+          }
         ]
-      }
+      },
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "tag": "@vielzeug/forge_v1.3.1",
+      "version": "1.3.1"
     },
     {
-      "version": "1.3.0",
-      "tag": "@vielzeug/forge_v1.3.0",
-      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
       "comments": {
-        "minor": [
-          {
-            "comment": "feat: improve scoped adapter ergonomics and scoped path documentation",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "445b9206b4d74e3b628fa3ac206f76f24b31668b"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.2`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.2.1",
-      "tag": "@vielzeug/forge_v1.2.1",
-      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
-      "comments": {
-        "patch": [
-          {
-            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "1a8008d19848e2db3dace46af8c9710eb79be07a"
-          }
-        ]
-      }
-    },
-    {
-      "version": "1.2.0",
-      "tag": "@vielzeug/forge_v1.2.0",
-      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
-      "comments": {
-        "patch": [
-          {
-            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
-          }
         ],
         "minor": [
           {
-            "comment": "chore: update debugForm for cross-package devtools naming/shape consistency",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "59df8cb6e0dae020f8b1ed990c52b3bb694846de"
+            "comment": "feat: improve scoped adapter ergonomics and scoped path documentation",
+            "commit": "445b9206b4d74e3b628fa3ac206f76f24b31668b"
           }
-        ],
+        ]
+      },
+      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
+      "tag": "@vielzeug/forge_v1.3.0",
+      "version": "1.3.0"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
+            "commit": "1a8008d19848e2db3dace46af8c9710eb79be07a"
+          }
+        ]
+      },
+      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
+      "tag": "@vielzeug/forge_v1.2.1",
+      "version": "1.2.1"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.1.1`"
@@ -192,62 +174,52 @@
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.1`"
           }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: update debugForm for cross-package devtools naming/shape consistency",
+            "commit": "59df8cb6e0dae020f8b1ed990c52b3bb694846de"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
+            "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
+          }
         ]
-      }
+      },
+      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
+      "tag": "@vielzeug/forge_v1.2.0",
+      "version": "1.2.0"
     },
     {
-      "version": "1.1.2",
-      "tag": "@vielzeug/forge_v1.1.2",
-      "date": "Sun, 05 Jul 2026 06:22:27 GMT",
       "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.0`"
           }
         ]
-      }
+      },
+      "date": "Sun, 05 Jul 2026 06:22:27 GMT",
+      "tag": "@vielzeug/forge_v1.1.2",
+      "version": "1.1.2"
     },
     {
-      "version": "1.1.1",
-      "tag": "@vielzeug/forge_v1.1.1",
-      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
       "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.1.0`"
           }
         ]
-      }
+      },
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "tag": "@vielzeug/forge_v1.1.1",
+      "version": "1.1.1"
     },
     {
-      "version": "1.1.0",
-      "tag": "@vielzeug/forge_v1.1.0",
-      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "fix(forge): close prototype-pollution gaps, fix array/dispose-race bugs, dedupe async-queue/validator internals, expand test coverage and docs",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "15275096f7ca42afafef22c6a41a2a4fde80961d"
-          },
-          {
-            "comment": "chore(forge): rename internal _warn.ts to _dev.ts",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "15275096f7ca42afafef22c6a41a2a4fde80961d"
-          }
-        ],
-        "minor": [
-          {
-            "comment": "chore(forge): remove stale adapters — use subscribe()/connect() directly (see docs/forge/usage.md#framework-integration for migration recipes)",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "15275096f7ca42afafef22c6a41a2a4fde80961d"
-          },
-          {
-            "comment": "feat(forge): decompose createForm() into cohesive internal modules, eliminate all as-unknown-as casts, add opt-in /devtools sub-path and fields.list() API; fix broken /validators export path",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "15275096f7ca42afafef22c6a41a2a4fde80961d"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.0.1`"
@@ -255,21 +227,38 @@
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.1.0`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.0.0",
-      "tag": "@vielzeug/forge_v1.0.0",
-      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
-      "comments": {
-        "major": [
+        ],
+        "minor": [
           {
-            "comment": "Initial public release",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "2a622e2058ae28a3e3ffd33f639ad8c3d9579aa4"
+            "comment": "chore(forge): remove stale adapters — use subscribe()/connect() directly (see docs/forge/usage.md#framework-integration for migration recipes)",
+            "commit": "15275096f7ca42afafef22c6a41a2a4fde80961d"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat(forge): decompose createForm() into cohesive internal modules, eliminate all as-unknown-as casts, add opt-in /devtools sub-path and fields.list() API; fix broken /validators export path",
+            "commit": "15275096f7ca42afafef22c6a41a2a4fde80961d"
           }
         ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix(forge): close prototype-pollution gaps, fix array/dispose-race bugs, dedupe async-queue/validator internals, expand test coverage and docs",
+            "commit": "15275096f7ca42afafef22c6a41a2a4fde80961d"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(forge): rename internal _warn.ts to _dev.ts",
+            "commit": "15275096f7ca42afafef22c6a41a2a4fde80961d"
+          }
+        ]
+      },
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "tag": "@vielzeug/forge_v1.1.0",
+      "version": "1.1.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.0.0`"
@@ -277,8 +266,19 @@
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.0.0`"
           }
+        ],
+        "major": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Initial public release",
+            "commit": "2a622e2058ae28a3e3ffd33f639ad8c3d9579aa4"
+          }
         ]
-      }
+      },
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "tag": "@vielzeug/forge_v1.0.0",
+      "version": "1.0.0"
     }
-  ]
+  ],
+  "name": "@vielzeug/forge"
 }

@@ -1,10 +1,10 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { SnapshotCatalog } from '../catalog.js';
-import { loadSnapshot, type LoadedSnapshot, validateSnapshot } from '../snapshot.js';
+import { type LoadedSnapshot, loadSnapshot, validateSnapshot } from '../snapshot.js';
 
 const roots: string[] = [];
 

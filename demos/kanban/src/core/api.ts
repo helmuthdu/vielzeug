@@ -1,8 +1,6 @@
 import { createCourier } from '@vielzeug/courier';
-
-import type { User } from './types';
-
 import { seedUsers } from './seed-data';
+import type { User } from './types';
 
 // ---------------------------------------------------------------------------
 // In-memory "server" state

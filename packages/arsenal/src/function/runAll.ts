@@ -16,7 +16,7 @@ export function runAll(fns: readonly (() => void)[], opts?: { reverse?: boolean 
   if (opts?.reverse) {
     for (let i = len - 1; i >= 0; i--) {
       try {
-        fns[i]!();
+        fns[i]?.();
       } catch (err) {
         errors.push(err);
       }

@@ -2,7 +2,7 @@ import { isPlainObject } from '@vielzeug/arsenal/guards';
 
 import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { Schema, SpellValidationError, _makeCtx } from '../core';
+import { _makeCtx, Schema, SpellValidationError } from '../core';
 import { cloneRecord, defineOwnProperty } from '../safe-object';
 
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;

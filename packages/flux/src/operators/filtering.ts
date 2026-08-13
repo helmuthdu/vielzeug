@@ -1,9 +1,8 @@
-import type { Operator, Stream, Subscription } from '../types';
-
 import { link } from '../_link';
 import { defaultScheduler } from '../_scheduler';
 import { stream } from '../core';
 import { FluxTimeoutError } from '../errors';
+import type { Operator, Stream, Subscription } from '../types';
 
 export type DebounceOptions = {
   for: number;

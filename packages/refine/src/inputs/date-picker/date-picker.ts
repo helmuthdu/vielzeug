@@ -1,18 +1,15 @@
-import { define, html, prop, ref, bind, getHost, onMounted } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
+import { bind, define, getHost, html, onMounted, prop, ref, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-import { Temporal, format } from '@vielzeug/tempo';
-
-import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../shared';
-
+import { format, Temporal } from '@vielzeug/tempo';
 import {
   createDatePickerControl,
   createDropdownPositioner,
+  type DatePickerView,
   formatDisplayDate,
   parseIso,
   toIsoString,
-  type DatePickerView,
 } from '../../core';
+import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../shared';
 import '../../content/icon/icon';
 import '../input/input';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';

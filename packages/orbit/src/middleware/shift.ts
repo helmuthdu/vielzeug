@@ -1,6 +1,5 @@
-import type { DetectOverflowOptions, Middleware, MiddlewareState } from '../types';
-
 import { detectOverflow } from '../overflow';
+import type { DetectOverflowOptions, Middleware, MiddlewareState } from '../types';
 import { clamp, getSide } from '../utils';
 
 /**
@@ -68,11 +67,6 @@ export function limitShift(options: LimitShiftOptions = {}): ShiftLimiter {
 
 export interface ShiftOptions extends DetectOverflowOptions {
   /**
-   * Whether to shift along the main axis (the axis away from the reference).
-   * Default: `false` — main-axis overflow is better handled by `flip`.
-   */
-  mainAxis?: boolean;
-  /**
    * Whether to shift along the cross axis (perpendicular to the reference direction).
    * Default: `true`.
    */
@@ -82,6 +76,11 @@ export interface ShiftOptions extends DetectOverflowOptions {
    * Pass `limitShift()` to keep the float within the reference's extent.
    */
   limiter?: ShiftLimiter;
+  /**
+   * Whether to shift along the main axis (the axis away from the reference).
+   * Default: `false` — main-axis overflow is better handled by `flip`.
+   */
+  mainAxis?: boolean;
 }
 
 /**

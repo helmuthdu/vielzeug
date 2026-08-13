@@ -1,14 +1,12 @@
-import browserslist from 'browserslist';
-import { browserslistToTargets } from 'lightningcss';
 import { copyFileSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { defineConfig, type DefaultTheme, type UserConfig } from 'vitepress';
-
-import type { ThemeConfig } from './theme/types';
-
+import browserslist from 'browserslist';
+import { browserslistToTargets } from 'lightningcss';
+import { type DefaultTheme, defineConfig, type UserConfig } from 'vitepress';
 import { buildVielzeugSrcAliases } from '../../scripts/vielzeug-packages';
 import { componentPreviewPlugin } from './plugins/component-preview/index';
+import type { ThemeConfig } from './theme/types';
 import { getPackagesData } from './theme/utils/packageData';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

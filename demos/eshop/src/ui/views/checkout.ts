@@ -14,14 +14,10 @@ import '../components/share-build-dialog';
 import { createForm } from '@vielzeug/forge';
 import { define, html, when } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
-
-import type { CheckoutStep } from '../../core/checkout-machine';
-import type { RouteNames } from '../../core/router';
-import type { Address, DeliveryMethod, FinancingTerms, Order, PaymentMethod, TradeIn } from '../../core/types';
-
 import { currentUser } from '../../core/auth';
 import { cartItems, cartLineBreakdowns, cartTotal } from '../../core/cart-store';
 import { modelMap } from '../../core/catalog';
+import type { CheckoutStep } from '../../core/checkout-machine';
 import { checkoutMachine } from '../../core/checkout-machine';
 import { formatPrice } from '../../core/currency';
 import { bus } from '../../core/events';
@@ -30,8 +26,10 @@ import { t } from '../../core/i18n';
 import { logger } from '../../core/logger';
 import { attemptPlaceOrder } from '../../core/order-actions';
 import { applyTradeInCredit, resolveConfiguration } from '../../core/pricing';
+import type { RouteNames } from '../../core/router';
 import { activeRouteParams, router } from '../../core/router';
 import { DEALERS } from '../../core/seed-data';
+import type { Address, DeliveryMethod, FinancingTerms, Order, PaymentMethod, TradeIn } from '../../core/types';
 import { openShareBuildDialog } from '../components/share-build-dialog';
 
 // ---------------------------------------------------------------------------
@@ -494,7 +492,7 @@ define('checkout-review', {
         () => html`
           <div class="checkout-review__line">
             <span>${() => t('checkout.tradeIn.creditLabel')}</span>
-            <strong>−${() => formatPrice(committedTradeIn!.estimatedValueUsd)}</strong>
+            <strong>−${() => formatPrice(committedTradeIn?.estimatedValueUsd)}</strong>
           </div>
         `,
       )}
@@ -524,7 +522,7 @@ define('checkout-review', {
       ${when(
         () => committedPayment !== null,
         () => html`
-          <ore-chip size="sm" variant="flat">${() => formatPaymentMethod(committedPayment!.method)}</ore-chip>
+          <ore-chip size="sm" variant="flat">${() => formatPaymentMethod(committedPayment?.method)}</ore-chip>
         `,
       )}
       ${when(
@@ -534,13 +532,13 @@ define('checkout-review', {
             <h2>${() => t('checkout.review.financingTitle')}</h2>
             <dl>
               <dt>${() => t('checkout.review.financingApr')}</dt>
-              <dd>${() => `${committedPayment!.financing!.aprPercent}%`}</dd>
+              <dd>${() => `${committedPayment?.financing?.aprPercent}%`}</dd>
               <dt>${() => t('checkout.review.financingTerm')}</dt>
               <dd>
-                ${() => t('checkout.review.financingTermValue', { months: committedPayment!.financing!.termMonths })}
+                ${() => t('checkout.review.financingTermValue', { months: committedPayment?.financing?.termMonths })}
               </dd>
               <dt>${() => t('checkout.review.financingDown')}</dt>
-              <dd>${() => formatPrice(committedPayment!.financing!.downPaymentAmount)}</dd>
+              <dd>${() => formatPrice(committedPayment?.financing?.downPaymentAmount)}</dd>
             </dl>
           </section>
         `,
@@ -567,7 +565,7 @@ define('checkout-review', {
 
 define('checkout-confirmation', {
   setup() {
-    const orderId = activeRouteParams.value['orderId'];
+    const orderId = activeRouteParams.value.orderId;
     const order = lastPlacedOrder?.id === orderId ? lastPlacedOrder : null;
     const dealer = order?.dealerId ? DEALERS.find((d) => d.id === order.dealerId) : undefined;
 
@@ -600,15 +598,15 @@ define('checkout-confirmation', {
         () => html`
           <p>
             ${() => t('confirmation.orderNumber')}:
-            <strong>${() => order!.id}</strong>
+            <strong>${() => order?.id}</strong>
           </p>
           <p>
             ${() => t('confirmation.estimatedDelivery')}:
-            <strong>${() => formatLongDate(order!.estimatedDeliveryDate)}</strong>
+            <strong>${() => formatLongDate(order?.estimatedDeliveryDate)}</strong>
           </p>
           <p>
             ${() =>
-              order!.deliveryMethod === 'pickup'
+              order?.deliveryMethod === 'pickup'
                 ? `${t('checkout.delivery.methodPickup')} — ${dealer?.name ?? ''}`
                 : t('checkout.delivery.methodDelivery')}
           </p>
@@ -617,7 +615,7 @@ define('checkout-confirmation', {
             () => html`
               <p>
                 ${() => t('checkout.tradeIn.creditLabel')}:
-                <strong>−${() => formatPrice(order!.tradeIn!.estimatedValueUsd)}</strong>
+                <strong>−${() => formatPrice(order?.tradeIn?.estimatedValueUsd)}</strong>
               </p>
             `,
           )}
@@ -628,11 +626,11 @@ define('checkout-confirmation', {
                 <h2>${() => t('checkout.review.financingTitle')}</h2>
                 <dl>
                   <dt>${() => t('checkout.review.financingApr')}</dt>
-                  <dd>${() => `${order!.financing!.aprPercent}%`}</dd>
+                  <dd>${() => `${order?.financing?.aprPercent}%`}</dd>
                   <dt>${() => t('checkout.review.financingTerm')}</dt>
-                  <dd>${() => t('checkout.review.financingTermValue', { months: order!.financing!.termMonths })}</dd>
+                  <dd>${() => t('checkout.review.financingTermValue', { months: order?.financing?.termMonths })}</dd>
                   <dt>${() => t('checkout.review.financingDown')}</dt>
-                  <dd>${() => formatPrice(order!.financing!.downPaymentAmount)}</dd>
+                  <dd>${() => formatPrice(order?.financing?.downPaymentAmount)}</dd>
                 </dl>
               </section>
             `,

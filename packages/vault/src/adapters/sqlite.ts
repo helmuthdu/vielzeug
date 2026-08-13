@@ -1,3 +1,13 @@
+import {
+  assertBatchTables,
+  type BatchImpl,
+  buildAdapterOps,
+  buildTxContext,
+  type StorageBackend,
+} from '../adapter-core';
+import { VaultDisposedError, VaultError } from '../errors';
+import { encodeVaultKey, getRecordKey } from '../internal';
+import { isExpired } from '../ttl';
 import type {
   AnySchema,
   BaseAdapterOptions,
@@ -6,17 +16,6 @@ import type {
   RecordOf,
   TransactionalVaultStore,
 } from '../types';
-
-import {
-  assertBatchTables,
-  buildAdapterOps,
-  buildTxContext,
-  type BatchImpl,
-  type StorageBackend,
-} from '../adapter-core';
-import { VaultDisposedError, VaultError } from '../errors';
-import { encodeVaultKey, getRecordKey } from '../internal';
-import { isExpired } from '../ttl';
 
 export type SQLiteParameter = null | number | string;
 type SQLiteRow = Record<string, unknown>;
@@ -157,7 +156,7 @@ function initializeNamespace(database: SQLiteDatabase, name: string): void {
     return;
   }
 
-  if (row['format_version'] !== STORAGE_FORMAT_VERSION) {
+  if (row.format_version !== STORAGE_FORMAT_VERSION) {
     throw new VaultError(`SQLite storage format for "${name}" is not supported`);
   }
 }
@@ -240,9 +239,9 @@ function toKeyColumns(key: number | string): KeyColumns {
 }
 
 function getStoredRow(row: SQLiteRow): StoredRow {
-  const json = row['value_json'];
-  const rawExpiresAt = row['expires_at'];
-  const rowId = row['row_id'];
+  const json = row.value_json;
+  const rawExpiresAt = row.expires_at;
+  const rowId = row.row_id;
 
   if (typeof json !== 'string' || typeof rowId !== 'number' || !Number.isInteger(rowId)) {
     throw new VaultError('SQLite storage contains a malformed record');
@@ -355,7 +354,7 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
         `SELECT COUNT(*) AS count FROM ${RECORDS_TABLE} WHERE namespace = ? AND table_name = ?`,
         [name, table],
       );
-      const count = row?.['count'];
+      const count = row?.count;
 
       if (typeof count !== 'number') throw new VaultError('SQLite storage returned an invalid count');
 
@@ -433,7 +432,7 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
         `SELECT COUNT(*) AS count FROM ${RECORDS_TABLE} WHERE namespace = ? AND table_name = ?`,
         [name, table],
       );
-      const count = row?.['count'];
+      const count = row?.count;
 
       if (typeof count !== 'number') throw new VaultError('SQLite storage returned an invalid count');
 

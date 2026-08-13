@@ -1,6 +1,5 @@
-import type { HighlightPart, SearchResult } from './types';
-
 import { tokenize } from './tokenize';
+import type { HighlightPart, SearchResult } from './types';
 
 /**
  * Finds character ranges within `text` where `query` words appear.

@@ -1,6 +1,5 @@
-import type { Locale } from './types';
-
 import { LinguaInvalidLocaleError } from './errors';
+import type { Locale } from './types';
 
 const pluralRules = new Map<string, Intl.PluralRules>();
 

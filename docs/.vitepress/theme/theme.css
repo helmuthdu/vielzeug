@@ -84,11 +84,11 @@
 
 .VPNavBar.fill .content-body,
 .VPNavBar.has-sidebar .content-body {
-  background: none !important;
+  background: none;
 }
 
 .VPNavBar:not(.top) .content-body {
-  background-color: inherit !important;
+  background-color: inherit;
 }
 
 .VPNavBar.has-sidebar .curtain {
@@ -103,17 +103,17 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 0.5rem;
-  padding: 0 !important;
-  list-style: none !important;
+  padding: 0;
+  list-style: none;
 }
 
 .grid-links li {
-  margin: 0 !important;
+  margin: 0;
 }
 
 .logo-highlight {
   padding: 1rem;
-  margin: 0.5rem auto !important;
+  margin: 0.5rem auto;
   background: var(--color-contrast-100);
   border: 1px solid var(--vp-c-divider);
   border-radius: 1rem;
@@ -159,9 +159,9 @@
 
 /* Full-bleed REPL page — IDE fills viewport below navbar */
 .VPContent:has(#repl-container) {
-  padding: 0 !important;
-  padding-top: var(--vp-nav-height, 64px) !important;
-  margin: 0 !important;
+  padding: 0;
+  padding-top: var(--vp-nav-height, 64px);
+  margin: 0;
 }
 
 html:has(#repl-container),
@@ -191,12 +191,12 @@ body:has(#repl-container) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  padding: 0 !important;
-  list-style: none !important;
+  padding: 0;
+  list-style: none;
 }
 
 .doc-links li {
-  margin: 0 !important;
+  margin: 0;
 }
 
 .doc-links li a {
@@ -222,12 +222,12 @@ body:has(#repl-container) {
   display: flex;
   flex-direction: column;
   gap: var(--size-2);
-  padding: 0 !important;
-  list-style: none !important;
+  padding: 0;
+  list-style: none;
 }
 
 .see-also li {
-  margin: 0 !important;
+  margin: 0;
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
   color: var(--text-color-secondary);
@@ -255,13 +255,13 @@ body:has(#repl-container) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
   gap: 0.4rem 1.5rem;
-  padding: 0 !important;
-  list-style: none !important;
+  padding: 0;
+  list-style: none;
 }
 
 .features-grid li {
   padding: var(--size-1-5) 0;
-  margin: 0 !important;
+  margin: 0;
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   border-bottom: var(--border) solid var(--color-contrast-200);

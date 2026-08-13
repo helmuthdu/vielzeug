@@ -9,7 +9,7 @@
 import { computed, isReactive, type Readable } from '@vielzeug/ripple';
 
 import { invariant } from '../errors';
-import { type Binding, type HtmlBindingValue } from './binding-types';
+import type { Binding, HtmlBindingValue } from './binding-types';
 import { applyBinding, createAttrBindingFromValue, resolveStaticText } from './bindings';
 import { followPath, getStaticTemplate, SlotKind } from './compiler';
 import {

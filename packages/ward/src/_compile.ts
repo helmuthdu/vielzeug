@@ -1,7 +1,6 @@
-import type { WardRule } from './types';
-
 import { WILDCARD } from './constants';
 import { WardConfigError } from './errors';
+import type { WardRule } from './types';
 
 // ---------------------------------------------------------------------------
 // Internal types (shared across modules)

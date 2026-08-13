@@ -67,7 +67,7 @@ test.describe('Layout', () => {
 
       return {
         contentHeight: content.getBoundingClientRect().height,
-        fontSize: isNaN(rawLineHeight) ? rawFontSize : rawLineHeight,
+        fontSize: Number.isNaN(rawLineHeight) ? rawFontSize : rawLineHeight,
       };
     });
 

@@ -1,4 +1,4 @@
-import { define, html, prop, getHost, useSlots, watchEffect } from '@vielzeug/ore';
+import { define, getHost, html, prop, useSlots, watchEffect } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
 
 import componentStyles from './avatar-group.css?inline';

@@ -6,8 +6,8 @@ import {
   DEFAULT_OVERSCAN,
   type MeasurementCache,
   normalizeOverscan,
-  observeResize,
   type Overscan,
+  observeResize,
   resolveEstimateFn,
   type ScrollTarget,
   toNonNegativeInt,
@@ -96,15 +96,8 @@ export interface ScrollToIndexOptions {
 export interface Virtualizer {
   readonly count: number;
   readonly disposalSignal: AbortSignal;
-  readonly disposed: boolean;
-  /** Currently rendered items. Always populated. */
-  readonly items: VirtualItem[];
-  /** `true` while the user is actively scrolling; `false` once scroll has settled. */
-  readonly isScrolling: boolean;
-  readonly scrollOffset: number;
-  readonly stickyItems: VirtualItem[];
-  readonly totalSize: number;
   dispose: () => void;
+  readonly disposed: boolean;
   invalidate: () => void;
   /**
    * `true` when scrolled to (or within `threshold` px of) the end — the bottom edge in
@@ -113,6 +106,10 @@ export interface Virtualizer {
    * `createDomVirtualList`'s `stickToBottom` option does exactly this. Default `threshold`: `0`.
    */
   isAtEnd: (threshold?: number) => boolean;
+  /** `true` while the user is actively scrolling; `false` once scroll has settled. */
+  readonly isScrolling: boolean;
+  /** Currently rendered items. Always populated. */
+  readonly items: VirtualItem[];
   measure: (index: number, size: number) => void;
   measureBatch: (entries: Array<{ index: number; size: number }>) => void;
   /** Attach a ResizeObserver to `el` and auto-measure `index` on resize. Returns a disconnect fn. */
@@ -121,10 +118,13 @@ export interface Virtualizer {
   prepend: (additionalCount: number) => void;
   /** Rebuild the full offset table and re-emit (use when item sizes may have changed). */
   refresh: () => void;
+  readonly scrollOffset: number;
   scrollToBottom: (options?: { behavior?: ScrollBehavior }) => void;
   scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
   scrollToOffset: (offset: number, options?: { behavior?: ScrollBehavior }) => void;
   scrollToTop: (options?: { behavior?: ScrollBehavior }) => void;
+  readonly stickyItems: VirtualItem[];
+  readonly totalSize: number;
   update: (next: VirtualizerUpdateOptions) => void;
   [Symbol.dispose]: () => void;
 }

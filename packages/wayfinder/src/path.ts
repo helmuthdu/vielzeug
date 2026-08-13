@@ -1,6 +1,5 @@
-import type { QueryParams, ResolvedQueryParams, RouteLocation, RouteMatcher, RouteParams, RouteRecord } from './types';
-
 import { WayfinderRouteError } from './errors';
+import type { QueryParams, ResolvedQueryParams, RouteLocation, RouteMatcher, RouteParams, RouteRecord } from './types';
 
 /** Ensure leading slash, collapse duplicate slashes, preserve root. */
 export function normalizePath(path: string): string {

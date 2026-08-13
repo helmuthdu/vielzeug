@@ -1,7 +1,6 @@
-import type { Catalog, CatalogNode, PluralMessage } from './types';
-
 import { compileTemplate, type Template } from './_template';
 import { LinguaInvalidCatalogError } from './errors';
+import type { Catalog, CatalogNode, PluralMessage } from './types';
 
 const unsafeKeys = new Set(['__proto__', 'constructor', 'prototype']);
 

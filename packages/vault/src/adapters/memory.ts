@@ -1,8 +1,7 @@
-import type { AnySchema, BaseAdapterOptions, KeyOf, RecordOf, VaultStore } from '../types';
-
 import { buildAdapterOps, type StorageBackend } from '../adapter-core';
 import { encodeVaultKey, getRecordKey } from '../internal';
 import { isExpired, parseStored, type StoredRecord } from '../ttl';
+import type { AnySchema, BaseAdapterOptions, KeyOf, RecordOf, VaultStore } from '../types';
 
 type MemoryBroadcastMsg =
   | { table: string; type: 'clear' }
@@ -18,30 +17,30 @@ function isBroadcastMessage(value: unknown): value is MemoryBroadcastMsg {
 
   const message = value as Record<string, unknown>;
 
-  if (typeof message['table'] !== 'string' || typeof message['type'] !== 'string') return false;
+  if (typeof message.table !== 'string' || typeof message.type !== 'string') return false;
 
-  if (message['table'] === '__proto__' || message['table'] === 'constructor' || message['table'] === 'prototype') {
+  if (message.table === '__proto__' || message.table === 'constructor' || message.table === 'prototype') {
     return false;
   }
 
-  switch (message['type']) {
+  switch (message.type) {
     case 'clear':
       return true;
     case 'delete':
-      return typeof message['key'] === 'string';
+      return typeof message.key === 'string';
     case 'deleteMany':
-      return Array.isArray(message['keys']) && message['keys'].every((key) => typeof key === 'string');
+      return Array.isArray(message.keys) && message.keys.every((key) => typeof key === 'string');
     case 'put':
-      return typeof message['key'] === 'string' && parseStored(message['stored']) !== undefined;
+      return typeof message.key === 'string' && parseStored(message.stored) !== undefined;
     case 'putAll':
       return (
-        Array.isArray(message['entries']) &&
-        message['entries'].every(
+        Array.isArray(message.entries) &&
+        message.entries.every(
           (entry) =>
             typeof entry === 'object' &&
             entry !== null &&
-            typeof (entry as Record<string, unknown>)['key'] === 'string' &&
-            parseStored((entry as Record<string, unknown>)['stored']) !== undefined,
+            typeof (entry as Record<string, unknown>).key === 'string' &&
+            parseStored((entry as Record<string, unknown>).stored) !== undefined,
         )
       );
     default:

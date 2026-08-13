@@ -1,6 +1,5 @@
-import type { GridConfig } from '../types';
-
 import { createSvgElement, removeChildren } from '../svg/element';
+import type { GridConfig } from '../types';
 import { type AnyScale, mapTick } from './scale-utils';
 
 export function renderGrid(

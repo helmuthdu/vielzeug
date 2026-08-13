@@ -1,6 +1,5 @@
-import type { Obj } from '../types';
-
 import { UNSAFE_PATH_SEGMENTS } from '../_common/unsafePaths';
+import type { Obj } from '../types';
 
 type PathValue<T, P extends string> = P extends `${infer Key}.${infer Rest}`
   ? Key extends keyof T

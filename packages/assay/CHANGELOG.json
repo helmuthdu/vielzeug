@@ -1,47 +1,47 @@
 {
-  "name": "@vielzeug/assay",
   "entries": [
     {
-      "version": "2.0.1",
-      "tag": "@vielzeug/assay_v2.0.1",
-      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
             "commit": "49ec292706645d1f4937897ac628d852f3a11736"
           }
         ]
-      }
+      },
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "tag": "@vielzeug/assay_v2.0.1",
+      "version": "2.0.1"
     },
     {
-      "version": "2.0.0",
-      "tag": "@vielzeug/assay_v2.0.0",
-      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
       "comments": {
         "major": [
           {
-            "comment": "refactor!: replace synthetic user interactions and duplicate queries with explicit dispatch, scoped required queries, and cancellable waits",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor!: replace synthetic user interactions and duplicate queries with explicit dispatch, scoped required queries, and cancellable waits",
             "commit": "221a22d33825af19fe58705cdcd163f665976c8a"
           }
         ]
-      }
+      },
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "tag": "@vielzeug/assay_v2.0.0",
+      "version": "2.0.0"
     },
     {
-      "version": "1.0.0",
-      "tag": "@vielzeug/assay_v1.0.0",
-      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
       "comments": {
         "major": [
           {
-            "comment": "feat(assay)!: initial release — framework-agnostic DOM testing primitives (within/queryByText/queryAllByText, queryInShadow/queryAllInShadow/queryPart/getSlotted, fire.*/createPointerEvent, waitFor/waitForEvent/nextTick/wait, AssayError/AssayTimeoutError). Extracted from @vielzeug/ore/testing so @vielzeug/refine and other DOM-output packages can share the same primitives instead of duplicating them",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat(assay)!: initial release — framework-agnostic DOM testing primitives (within/queryByText/queryAllByText, queryInShadow/queryAllInShadow/queryPart/getSlotted, fire.*/createPointerEvent, waitFor/waitForEvent/nextTick/wait, AssayError/AssayTimeoutError). Extracted from @vielzeug/ore/testing so @vielzeug/refine and other DOM-output packages can share the same primitives instead of duplicating them",
             "commit": "2fbc71272a07eec3c748e335a44a0c513688dcda"
           }
         ]
-      }
+      },
+      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
+      "tag": "@vielzeug/assay_v1.0.0",
+      "version": "1.0.0"
     }
-  ]
+  ],
+  "name": "@vielzeug/assay"
 }

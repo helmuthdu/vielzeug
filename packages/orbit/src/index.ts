@@ -1,49 +1,38 @@
 // Errors
-export { OrbitConfigError, OrbitError } from './errors';
 
-// Core engine
-export { computePosition, computePositionAsync, computePositionRaf, getRects } from './core';
-export { detectOverflow, getClippingAncestorRect } from './overflow';
-
-// High-level API
-export { createPositioner } from './float';
-export type { Positioner, PositionerOptions, PositionStrategy } from './float';
-
+export type { AutoUpdateOptions } from './auto-update';
 // Auto-update
 export { autoUpdate } from './auto-update';
-export type { AutoUpdateOptions } from './auto-update';
-
+// Core engine
+export { computePosition, computePositionAsync, computePositionRaf, getRects } from './core';
+export { OrbitConfigError, OrbitError } from './errors';
+export type { Positioner, PositionerOptions, PositionStrategy } from './float';
+// High-level API
+export { createPositioner } from './float';
+export type { InlineOptions } from './inline';
+export { inline } from './inline';
+export type { ArrowOptions } from './middleware/arrow';
 // Middleware
 export { arrow } from './middleware/arrow';
-export type { ArrowOptions } from './middleware/arrow';
-
-export { autoPlacement } from './middleware/auto-placement';
 export type { AutoPlacementOptions } from './middleware/auto-placement';
-
-export { flip } from './middleware/flip';
+export { autoPlacement } from './middleware/auto-placement';
 export type { FlipOptions } from './middleware/flip';
-
-export { hide } from './middleware/hide';
+export { flip } from './middleware/flip';
 export type { HideOptions } from './middleware/hide';
-
-export { inline } from './inline';
-export type { InlineOptions } from './inline';
-
-export { offset } from './middleware/offset';
+export { hide } from './middleware/hide';
 export type { OffsetConfig, OffsetValue } from './middleware/offset';
 
-export { limitShift, shift } from './middleware/shift';
+export { offset } from './middleware/offset';
 export type { LimitShiftOptions, ShiftLimiter, ShiftOptions } from './middleware/shift';
 
-export { size } from './middleware/size';
+export { limitShift, shift } from './middleware/shift';
 export type { SizeOptions } from './middleware/size';
+
+export { size } from './middleware/size';
+export { detectOverflow, getClippingAncestorRect } from './overflow';
 
 // Preset types (functions live on the @vielzeug/orbit/presets sub-path)
 export type { PositioningPreset, PresetOptions } from './presets';
-
-// Public utilities
-export { getAlignment, getSide } from './utils';
-
 // Types
 export type {
   Alignment,
@@ -68,3 +57,5 @@ export type {
   SizeData,
   VirtualReference,
 } from './types';
+// Public utilities
+export { getAlignment, getSide } from './utils';

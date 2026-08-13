@@ -1,6 +1,6 @@
 import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, SpellValidationError, _makeCtx, prependIssuePath } from '../core';
+import { _makeCtx, ErrorCode, prependIssuePath, Schema, SpellValidationError } from '../core';
 import { defineOwnProperty, isUnsafeObjectKey, objectFromEntries } from '../safe-object';
 import { LiteralSchema } from './literal';
 import { UnionSchema } from './union';

@@ -3,6 +3,9 @@
   "version": "2.1.0",
   "description": "Typed storage core with explicit browser and SQLite adapter entry points",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "files": [
     "dist"
   ],
@@ -11,61 +14,35 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
     },
     "./indexeddb": {
-      "types": "./dist/indexeddb.d.ts",
       "import": "./dist/indexeddb.js",
-      "require": "./dist/indexeddb.cjs"
+      "require": "./dist/indexeddb.cjs",
+      "types": "./dist/indexeddb.d.ts"
     },
     "./local-storage": {
-      "types": "./dist/local-storage.d.ts",
       "import": "./dist/local-storage.js",
-      "require": "./dist/local-storage.cjs"
+      "require": "./dist/local-storage.cjs",
+      "types": "./dist/local-storage.d.ts"
     },
     "./memory": {
-      "types": "./dist/memory.d.ts",
       "import": "./dist/memory.js",
-      "require": "./dist/memory.cjs"
+      "require": "./dist/memory.cjs",
+      "types": "./dist/memory.d.ts"
     },
     "./session-storage": {
-      "types": "./dist/session-storage.d.ts",
       "import": "./dist/session-storage.js",
-      "require": "./dist/session-storage.cjs"
+      "require": "./dist/session-storage.cjs",
+      "types": "./dist/session-storage.d.ts"
     },
     "./sqlite": {
-      "types": "./dist/sqlite.d.ts",
       "import": "./dist/sqlite.js",
-      "require": "./dist/sqlite.cjs"
+      "require": "./dist/sqlite.cjs",
+      "types": "./dist/sqlite.d.ts"
     }
-  },
-  "scripts": {
-    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
-    "build:types": "tsc -p tsconfig.declarations.json",
-    "fix": "eslint --fix src",
-    "lint": "eslint src",
-    "prepublishOnly": "pnpm run build",
-    "preview": "vite preview",
-    "test": "vitest",
-    "test:sqlite:bun": "bun test runtime-smoke/bun-sqlite.ts",
-    "test:sqlite:deno": "deno test --allow-read --allow-env --allow-ffi runtime-smoke/deno-sqlite.ts",
-    "build:bundle": "vite build --config vite.bundle.config.ts"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "engines": {
-    "node": ">=22"
-  },
-  "devDependencies": {
-    "@types/node": "^26.1.2",
-    "fake-indexeddb": "^6.2.5",
-    "typescript": "^6.0.3",
-    "vite": "^8.2.0",
-    "vitest": "^4.1.10"
   },
   "typesVersions": {
     "*": {
@@ -85,5 +62,28 @@
         "dist/sqlite.d.ts"
       ]
     }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "biome check --write src",
+    "lint": "biome ci src",
+    "prepublishOnly": "pnpm run build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:sqlite:bun": "bun test runtime-smoke/bun-sqlite.ts",
+    "test:sqlite:deno": "deno test --allow-read --allow-env --allow-ffi runtime-smoke/deno-sqlite.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "fake-indexeddb": "^6.2.5",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
   }
 }

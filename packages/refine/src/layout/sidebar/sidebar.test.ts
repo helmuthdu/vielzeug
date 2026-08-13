@@ -1,5 +1,5 @@
 import { type Fixture, mount } from '@vielzeug/ore/testing';
-import { expect, it, vi, describe, beforeAll, afterEach } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 describe('ore-sidebar', () => {
   let fixture: Fixture<HTMLElement>;

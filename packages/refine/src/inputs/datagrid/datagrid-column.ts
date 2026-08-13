@@ -1,6 +1,5 @@
-import type { DataGridColumn } from './datagrid-model';
-
 import { warn } from '../../_dev';
+import type { DataGridColumn } from './datagrid-model';
 
 // ── Declarative ore-column element ────────────────────────────────────────────
 

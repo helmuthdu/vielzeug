@@ -1,4 +1,4 @@
-import { WILDCARD } from './constants';
+import type { WILDCARD } from './constants';
 
 export type UserPrincipal = {
   attributes?: Record<string, unknown>;

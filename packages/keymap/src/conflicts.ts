@@ -1,7 +1,6 @@
 import type { ShortcutStep } from './parser';
-import type { BindingEntry } from './types';
-
 import { canonicalizeShortcut, parseShortcut } from './parser';
+import type { BindingEntry } from './types';
 
 export interface ConflictOptions {
   modKey?: 'ctrl' | 'meta';

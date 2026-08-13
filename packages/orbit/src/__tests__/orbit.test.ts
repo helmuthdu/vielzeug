@@ -1,7 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import type { Middleware } from '../types';
-
 import {
   arrow,
   autoPlacement,
@@ -22,6 +19,7 @@ import {
   shift,
   size,
 } from '../index';
+import type { Middleware } from '../types';
 import { createDomRect, makeArrow, makeElements, makeVirtualReference, setViewport, withState } from './helpers';
 
 describe('computePosition', () => {

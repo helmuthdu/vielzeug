@@ -1,8 +1,7 @@
-import type { Currency, Money, MoneyJSON } from './types';
-
 import { resolveBuiltinCurrency } from './currency';
 import { CoinsError } from './errors';
 import { money } from './money';
+import type { Currency, Money, MoneyJSON } from './types';
 
 const INTEGER = /^(?:0|-[1-9]\d*|[1-9]\d*)$/;
 const KEYS = ['amount', 'currency', 'unit'] as const;
@@ -42,9 +41,9 @@ function readPayload(value: unknown): MoneyJSON {
     }
   }
 
-  const amount = descriptors.amount!.value;
-  const currency = descriptors.currency!.value;
-  const unit = descriptors.unit!.value;
+  const amount = descriptors.amount?.value;
+  const currency = descriptors.currency?.value;
+  const unit = descriptors.unit?.value;
 
   if (typeof amount !== 'string' || !INTEGER.test(amount))
     throw new TypeError('Money JSON amount must be a canonical integer string');

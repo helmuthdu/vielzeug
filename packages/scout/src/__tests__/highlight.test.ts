@@ -1,6 +1,5 @@
-import type { SearchResult } from '../types';
-
 import { findMatchRanges, highlight, highlightField } from '../highlight';
+import type { SearchResult } from '../types';
 
 describe('highlight', () => {
   test('empty text returns empty array', () => {

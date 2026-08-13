@@ -547,7 +547,7 @@ describe('ore-file-input accessibility', () => {
       // File persistence: still listed, not dropped back to an empty picker.
       expect(fixture.query('.file-name')?.textContent).toContain('doc.pdf');
 
-      fixture.query<HTMLButtonElement>('[aria-label="Retry uploading doc.pdf"]')!.click();
+      fixture.query<HTMLButtonElement>('[aria-label="Retry uploading doc.pdf"]')?.click();
       await fixture.flush();
       await fixture.act(() => Promise.resolve());
 
@@ -579,7 +579,7 @@ describe('ore-file-input accessibility', () => {
 
       const clickSpy = vi.spyOn(input, 'click');
 
-      fixture.query<HTMLButtonElement>('[aria-label="Replace contract.pdf"]')!.click();
+      fixture.query<HTMLButtonElement>('[aria-label="Replace contract.pdf"]')?.click();
       expect(clickSpy).toHaveBeenCalledTimes(1);
 
       const replacement = new File(['y'.repeat(4096)], 'contract-v2.pdf', { type: 'application/pdf' });
@@ -634,7 +634,7 @@ describe('ore-file-input accessibility', () => {
       dispatchFiles(input, [keep, drop]);
       await fixture.flush();
 
-      fixture.query<HTMLButtonElement>('[aria-label="Remove drop.txt"]')!.click();
+      fixture.query<HTMLButtonElement>('[aria-label="Remove drop.txt"]')?.click();
       await fixture.flush();
 
       expect(fixture.queryAll('.file-item')).toHaveLength(1);
@@ -658,12 +658,12 @@ describe('ore-file-input accessibility', () => {
       await fixture.attr('disabled', true);
       upload.mockClear();
 
-      fixture.query<HTMLButtonElement>('[aria-label="Retry uploading doc.pdf"]')!.click();
+      fixture.query<HTMLButtonElement>('[aria-label="Retry uploading doc.pdf"]')?.click();
       await fixture.flush();
 
       expect(upload).not.toHaveBeenCalled();
 
-      fixture.query<HTMLButtonElement>('[aria-label="Remove doc.pdf"]')!.click();
+      fixture.query<HTMLButtonElement>('[aria-label="Remove doc.pdf"]')?.click();
       await fixture.flush();
 
       expect(fixture.queryAll('.file-item')).toHaveLength(1);

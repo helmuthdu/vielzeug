@@ -1,6 +1,5 @@
-import type { Obj } from '../types';
-
 import { isUnsafeKey } from '../_common/unsafePaths';
+import type { Obj } from '../types';
 
 /**
  * Filters object entries using a value predicate. Dangerous keys (`__proto__`, `constructor`,

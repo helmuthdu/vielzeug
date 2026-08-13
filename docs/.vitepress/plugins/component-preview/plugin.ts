@@ -17,6 +17,7 @@
 import type { Plugin } from 'vite';
 
 export { REFINE_CSS_HMR_EVENT } from './constants';
+
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
@@ -106,7 +107,7 @@ export function componentPreviewPlugin(): Plugin {
         if (!isSrcCss && !isDistFile) return;
 
         if (isSrcCss || (isDistFile && file.endsWith('.css'))) {
-          const mod = server.moduleGraph.getModuleById('\0' + CSS_ID);
+          const mod = server.moduleGraph.getModuleById(`\0${CSS_ID}`);
 
           if (mod) server.moduleGraph.invalidateModule(mod);
 
@@ -121,7 +122,7 @@ export function componentPreviewPlugin(): Plugin {
 
         // JS/IIFE dist change — full reload required (custom element re-registration).
         for (const id of [JS_ID, CSS_ID, DEPS_ID]) {
-          const mod = server.moduleGraph.getModuleById('\0' + id);
+          const mod = server.moduleGraph.getModuleById(`\0${id}`);
 
           if (mod) server.moduleGraph.invalidateModule(mod);
         }
@@ -132,14 +133,14 @@ export function componentPreviewPlugin(): Plugin {
       server.watcher.on('add', handleWatchEvent).on('change', handleWatchEvent).on('unlink', handleWatchEvent);
     },
     load(id) {
-      if (id === '\0' + JS_ID) {
+      if (id === `\0${JS_ID}`) {
         const jsPath = resolve(refineDir, 'refine.iife.js');
         const code = existsSync(jsPath) ? readFileSync(jsPath, 'utf-8') : '';
 
         return `export default ${JSON.stringify(code)}`;
       }
 
-      if (id === '\0' + CSS_ID) {
+      if (id === `\0${CSS_ID}`) {
         // Prefer src CSS (no build needed); fall back to dist when src unavailable.
         const distCssPath = resolve(refineDir, 'styles/tokens.css');
         const srcCssPath = resolve(refineSrcStylesDir, 'tokens.css');
@@ -147,10 +148,10 @@ export function componentPreviewPlugin(): Plugin {
         const refine = inlineCss(refineCssPath);
         const prism = readFileSync(resolve(pkgDir, 'prism/dist/theme/prism.css'), 'utf-8');
 
-        return `export default ${JSON.stringify(refine + '\n' + prism)}`;
+        return `export default ${JSON.stringify(`${refine}\n${prism}`)}`;
       }
 
-      if (id === '\0' + DEPS_ID) {
+      if (id === `\0${DEPS_ID}`) {
         const depContents = depPaths.map((p) => (existsSync(p) ? readFileSync(p, 'utf-8') : ''));
 
         // Inject shims immediately after their respective UMD bundles.
@@ -163,7 +164,7 @@ export function componentPreviewPlugin(): Plugin {
     },
     name: 'refine-preview',
     resolveId(id) {
-      if (id === JS_ID || id === CSS_ID || id === DEPS_ID) return '\0' + id;
+      if (id === JS_ID || id === CSS_ID || id === DEPS_ID) return `\0${id}`;
     },
   };
 }

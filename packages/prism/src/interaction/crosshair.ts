@@ -1,16 +1,15 @@
-import type { CrosshairConfig } from '../types';
-
 import { createSvgElement, setAttributes } from '../svg/element';
+import type { CrosshairConfig } from '../types';
 
 export interface CrosshairState {
   hide(): void;
-  /** When `false`, the crosshair follows the raw mouse position instead of snapping to the nearest datum. */
-  readonly snap: boolean;
   /**
    * @param announceText Optional text describing the value at the crosshair position,
    * announced via the crosshair's ARIA live region — used when no tooltip is also shown.
    */
   show(x: number, y: number, width: number, height: number, announceText?: string): void;
+  /** When `false`, the crosshair follows the raw mouse position instead of snapping to the nearest datum. */
+  readonly snap: boolean;
 }
 
 export function createCrosshair(parent: SVGGElement, config?: CrosshairConfig | true): CrosshairState {

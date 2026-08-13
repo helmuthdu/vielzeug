@@ -1,10 +1,8 @@
 import { createContainer, token } from '@vielzeug/conduit';
 import { Temporal } from '@vielzeug/tempo';
-
-import type { Order, OrderStatus } from './types';
-
 import { courier } from './api';
 import { logger } from './logger';
+import type { Order, OrderStatus } from './types';
 
 // ---------------------------------------------------------------------------
 // Tokens — one per dependency contract, resolved through the container instead

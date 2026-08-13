@@ -1,6 +1,5 @@
-import type { DetectOverflowOptions, Middleware, Placement } from '../types';
-
 import { detectOverflow, getPlacementOverflow, hasOverflow, totalOverflow } from '../overflow';
+import type { DetectOverflowOptions, Middleware, Placement } from '../types';
 import { getAlignment, getSide, OPPOSITE, withPlacement } from '../utils';
 
 export interface FlipOptions extends DetectOverflowOptions {

@@ -6,8 +6,8 @@ import { watch } from '@vielzeug/ripple/watch';
 
 import {
   createOutsidePointerDismissal,
-  lifecycleSignal,
   type DialogCloseReason,
+  lifecycleSignal,
   type OverlayOpenReason,
 } from '../../core';
 

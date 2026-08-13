@@ -1,9 +1,9 @@
 /**
  * Route context and middleware pipeline.
  */
-import type { RouteContext } from '../types';
 
 import { createMemoryHistory, createRouter } from '../';
+import type { RouteContext } from '../types';
 import { settle } from './test-utils';
 
 describe('route context', () => {

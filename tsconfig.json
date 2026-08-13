@@ -1,25 +1,23 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "useDefineForClassFields": true,
-    "module": "ESNext",
-    "lib": ["ES2024", "DOM", "DOM.Iterable", "ESNext.Disposable"],
-    "skipLibCheck": true,
-    "types": ["vitest/globals", "vite/client"],
-    /* Bundler mode */
-    "isolatedModules": true,
-    "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
+    "erasableSyntaxOnly": true,
     "ignoreDeprecations": "6.0",
+    "isolatedModules": true,
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "ESNext.Disposable"],
+    "module": "ESNext",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
     "noEmit": true,
-    /* Linting */
-    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022",
+    "types": ["vitest/globals", "vite/client"],
+    "useDefineForClassFields": true,
+    "verbatimModuleSyntax": true
   }
 }

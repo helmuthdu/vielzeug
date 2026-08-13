@@ -329,6 +329,7 @@
   }
 
   .dg-search-input {
+    --input-height: var(--size-7);
     display: block;
     flex-shrink: 0;
     width: 0;
@@ -337,8 +338,6 @@
     transition:
       width var(--transition-fast),
       opacity var(--transition-fast);
-
-    --input-height: var(--size-7);
   }
 
   .dg-search--open .dg-search-input {

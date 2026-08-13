@@ -253,7 +253,8 @@ type RedirectRouteDefinition<Path extends string = string> = RouteCommon &
 export type RouteChildren = Record<string, RouteDefinition<string>>;
 
 export type RouteDefinition<Path extends string = string> =
-  ContentRouteDefinition<Path> | RedirectRouteDefinition<Path>;
+  | ContentRouteDefinition<Path>
+  | RedirectRouteDefinition<Path>;
 
 // ─── Type-safe route traversal ─────────────────────────────────────────────────
 
@@ -395,14 +396,14 @@ export type RouterOptions<TRoutes extends RouteTable = RouteTable, TMeta = unkno
 
 /** Pluggable history driver. Use `createBrowserHistory()` for standard SPAs, `createMemoryHistory()` for SSR/tests. */
 export interface HistoryDriver {
+  /** Navigate one entry back in history, equivalent to the browser back button. */
+  back(): void;
   readonly location: {
     readonly hash: string;
     readonly pathname: string;
     readonly search: string;
     readonly state: unknown;
   };
-  /** Navigate one entry back in history, equivalent to the browser back button. */
-  back(): void;
   /**
    * Subscribe to backwards/forwards navigation (popstate-equivalent).
    * `push()` and `replace()` are silent — they do not notify subscribers.

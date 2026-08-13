@@ -1,7 +1,6 @@
-import type { AnySchema, KeyOf, RecordOf, VaultKey } from './types';
-
 import { error as logError } from './_dev';
 import { VaultDisposedError, VaultError } from './errors';
+import type { AnySchema, KeyOf, RecordOf, VaultKey } from './types';
 
 type ObserverListener<T> = (records: T[]) => void;
 

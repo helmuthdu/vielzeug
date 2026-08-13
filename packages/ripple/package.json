@@ -1,59 +1,38 @@
 {
   "name": "@vielzeug/ripple",
   "version": "2.1.0",
+  "description": "Fine-grained reactive runtime — signals, derived values, effects, scopes, and optional state tools",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "files": [
     "dist"
   ],
-  "description": "Fine-grained reactive runtime — signals, derived values, effects, scopes, and optional state tools",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
     },
     "./async": {
-      "types": "./dist/async.d.ts",
       "import": "./dist/async.js",
-      "require": "./dist/async.cjs"
+      "require": "./dist/async.cjs",
+      "types": "./dist/async.d.ts"
     },
     "./store": {
-      "types": "./dist/store.d.ts",
       "import": "./dist/store.js",
-      "require": "./dist/store.cjs"
+      "require": "./dist/store.cjs",
+      "types": "./dist/store.d.ts"
     },
     "./watch": {
-      "types": "./dist/watch.d.ts",
       "import": "./dist/watch.js",
-      "require": "./dist/watch.cjs"
+      "require": "./dist/watch.cjs",
+      "types": "./dist/watch.d.ts"
     }
-  },
-  "scripts": {
-    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
-    "build:types": "tsc -p tsconfig.declarations.json",
-    "fix": "eslint --fix src",
-    "lint": "eslint src",
-    "prepublishOnly": "pnpm run build && pnpm run verify:exports",
-    "preview": "vite preview",
-    "test": "vitest",
-    "build:bundle": "vite build --config vite.bundle.config.ts",
-    "verify:exports": "node ./scripts/verify-exports.mjs"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "engines": {
-    "node": ">=22"
-  },
-  "devDependencies": {
-    "@types/node": "^26.1.2",
-    "typescript": "^6.0.3",
-    "vite": "^8.2.0",
-    "vitest": "^4.1.10"
   },
   "typesVersions": {
     "*": {
@@ -67,5 +46,26 @@
         "dist/watch.d.ts"
       ]
     }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "biome check --write src",
+    "lint": "biome ci src",
+    "prepublishOnly": "pnpm run build && pnpm run verify:exports",
+    "preview": "vite preview",
+    "test": "vitest",
+    "verify:exports": "node ./scripts/verify-exports.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
   }
 }

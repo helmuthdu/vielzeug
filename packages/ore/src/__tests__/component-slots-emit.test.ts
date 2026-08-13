@@ -135,7 +135,7 @@ describe('component slots and emit', () => {
 
     element.addEventListener('close', closeSpy);
     element.addEventListener('ping', pingSpy);
-    query('button')!.dispatchEvent(new Event('click'));
+    query('button')?.dispatchEvent(new Event('click'));
     await flush();
 
     expect(closeSpy).toHaveBeenCalledTimes(1);
@@ -151,7 +151,7 @@ describe('component slots and emit', () => {
           change: {
             value: string;
           };
-          retry: void;
+          retry: undefined;
         }>();
         const fire = () => {
           emit('change', { value: 'ok' });
@@ -170,7 +170,7 @@ describe('component slots and emit', () => {
 
     element.addEventListener('change', changeSpy);
     element.addEventListener('retry', retrySpy);
-    query('button')!.dispatchEvent(new Event('click'));
+    query('button')?.dispatchEvent(new Event('click'));
     await flush();
 
     expect((changeSpy.mock.calls[0]?.[0] as CustomEvent<{ value: string }>).detail.value).toBe('ok');
@@ -211,11 +211,11 @@ describe('component slots and emit', () => {
       if (cancelNext) e.preventDefault();
     });
 
-    (element.shadowRoot!.querySelector('button') as HTMLButtonElement).click();
+    (element.shadowRoot?.querySelector('button') as HTMLButtonElement).click();
     expect(results).toEqual([true]);
 
     cancelNext = true;
-    (element.shadowRoot!.querySelector('button') as HTMLButtonElement).click();
+    (element.shadowRoot?.querySelector('button') as HTMLButtonElement).click();
     expect(results).toEqual([true, false]);
   });
 
@@ -248,7 +248,7 @@ describe('component slots and emit', () => {
     const spy = vi.fn();
 
     element.addEventListener('toggle', spy);
-    query('button')!.dispatchEvent(new Event('click'));
+    query('button')?.dispatchEvent(new Event('click'));
     await flush();
 
     expect((spy.mock.calls[0]?.[0] as CustomEvent<{ checked: boolean }>).detail.checked).toBe(true);

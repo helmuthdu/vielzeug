@@ -8,11 +8,9 @@ import './car-silhouette';
 
 import { define, getHost, html, prop, useEmit, when } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-
-import type { Model } from '../../core/types';
-
 import { formatPrice } from '../../core/currency';
 import { t } from '../../core/i18n';
+import type { Model } from '../../core/types';
 
 type ModelCardProps = {
   inCompare: boolean;
@@ -21,7 +19,7 @@ type ModelCardProps = {
 
 export type ModelCardElement = HTMLElement & { inCompare: boolean; model: Model };
 
-type ModelCardEvents = { 'toggle-compare': void; view: void };
+type ModelCardEvents = { 'toggle-compare': undefined; view: undefined };
 
 /**
  * `<model-card>` — light-DOM (`shadow: false`) so `styles/app.css` can target `.model-card`

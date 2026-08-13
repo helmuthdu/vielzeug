@@ -1,7 +1,7 @@
-import { fireClick } from '@vielzeug/assay';
-import { type Fixture, mount } from '@vielzeug/ore/testing';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fireClick } from '@vielzeug/assay';
+import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 const buttonCss = readFileSync(join(import.meta.dirname, 'button.css'), 'utf-8');
 
@@ -117,8 +117,8 @@ describe('ore-button', () => {
       const match = buttonCss.match(/\[part='button'\]:hover,\s*\[part='button'\]:active\s*{([^}]*)}/);
 
       expect(match).not.toBeNull();
-      expect(match![1]).toContain('--_theme-shadow');
-      expect(match![1]).toContain('--_theme-halo');
+      expect(match?.[1]).toContain('--_theme-shadow');
+      expect(match?.[1]).toContain('--_theme-halo');
     });
   });
 
@@ -140,8 +140,8 @@ describe('ore-button', () => {
       );
 
       expect(match).not.toBeNull();
-      expect(match![1]).toContain('height: 100%');
-      expect(match![2]).toContain('height: 100%');
+      expect(match?.[1]).toContain('height: 100%');
+      expect(match?.[2]).toContain('height: 100%');
     });
   });
 
@@ -150,7 +150,7 @@ describe('ore-button', () => {
       const match = buttonCss.match(/\[part='button'\]\s*{([^}]*)}/);
 
       expect(match).not.toBeNull();
-      expect(match![1]).toContain('text-decoration: none');
+      expect(match?.[1]).toContain('text-decoration: none');
     });
   });
 
@@ -384,7 +384,7 @@ describe('ore-button', () => {
       const btn = wrapper.querySelector<HTMLElement>('ore-button')!;
       const submitHandler = vi.fn((e: Event) => e.preventDefault());
 
-      wrapper.querySelector('form')!.addEventListener('submit', submitHandler);
+      wrapper.querySelector('form')?.addEventListener('submit', submitHandler);
       fireClick(btn);
 
       expect(submitHandler).not.toHaveBeenCalled();

@@ -22,7 +22,7 @@ export type Sink<T> = {
   next(value: T): void;
 };
 
-export type Producer<T> = (sink: Sink<T>, signal: AbortSignal) => Teardown | void;
+export type Producer<T> = (sink: Sink<T>, signal: AbortSignal) => Teardown | undefined;
 
 export type Operator<A = unknown, B = unknown> = (source: Stream<A>) => Stream<B>;
 

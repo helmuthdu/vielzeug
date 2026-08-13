@@ -1,11 +1,10 @@
 import { createContext, define, html, prop, provide } from '@vielzeug/ore';
-import { type Readable } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../shared';
-import type { ButtonVariant } from '../button/button';
-
 import { roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { roundedVariantMixin } from '../../styles';
+import type { ButtonVariant } from '../button/button';
 import componentStyles from './button-group.css?inline';
 
 /** Button group properties */

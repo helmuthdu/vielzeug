@@ -1,4 +1,4 @@
-import { invariant, OreInternalError, OreLifecycleError, OreError, reportRuntimeError } from '../errors';
+import { invariant, OreError, OreInternalError, OreLifecycleError, reportRuntimeError } from '../errors';
 import { html } from '../index';
 import { beginPendingWork, hasPendingWork } from '../runtime';
 import { createHtmlResult, isHtmlResult } from '../template/result';

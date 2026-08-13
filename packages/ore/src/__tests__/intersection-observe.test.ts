@@ -1,6 +1,5 @@
 // noinspection HtmlUnknownAttribute
-import { html, ref, onMounted } from '../index';
-import { intersectionObserver } from '../index';
+import { html, intersectionObserver, onMounted, ref } from '../index';
 import { mount } from '../testing';
 
 describe('intersectionObserver()', () => {
@@ -29,7 +28,6 @@ describe('intersectionObserver()', () => {
     globalThis.IntersectionObserver = class {
       observe = observeSpy;
       disconnect = vi.fn();
-      constructor(_cb: IntersectionObserverCallback) {}
     } as unknown as typeof IntersectionObserver;
 
     try {
@@ -98,7 +96,6 @@ describe('intersectionObserver()', () => {
     globalThis.IntersectionObserver = class {
       observe = vi.fn();
       disconnect = disconnectSpy;
-      constructor(_cb: IntersectionObserverCallback) {}
     } as unknown as typeof IntersectionObserver;
 
     try {

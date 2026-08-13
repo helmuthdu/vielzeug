@@ -1,14 +1,12 @@
 import { isReactive } from '@vielzeug/ripple';
-
-import type { ChartEventHandlers } from '../../core/chart-scaffold';
-import type { ChartHandle, PieChartConfig, PieSliceConfig } from '../../types';
-
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
+import type { ChartEventHandlers } from '../../core/chart-scaffold';
 import { createRadialScaffold } from '../../core/chart-scaffold';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import { seriesColor } from '../../theme';
+import type { ChartHandle, PieChartConfig, PieSliceConfig } from '../../types';
 import { type Arc, arcCentroid, arcPath, computeArcs } from './pie-renderer';
 
 const TWO_PI = 2 * Math.PI;

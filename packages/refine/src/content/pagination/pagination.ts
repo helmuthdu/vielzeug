@@ -1,12 +1,12 @@
-import { define, html, prop, getHost, useEmit } from '@vielzeug/ore';
+import { define, getHost, html, prop, useEmit } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import '../icon/icon';
 import '../../inputs/button/button';
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
 import { sizableBundle, themableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, sizeVariantMixin } from '../../styles';
+import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 import componentStyles from './pagination.css?inline';
 
 export type OrePaginationEvents = {

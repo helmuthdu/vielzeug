@@ -1,6 +1,5 @@
-import type { HeartbeatOptions } from './types';
-
 import { encode } from './protocol';
+import type { HeartbeatOptions } from './types';
 
 const DEFAULT_INTERVAL = 30_000;
 const DEFAULT_TIMEOUT = 5_000;

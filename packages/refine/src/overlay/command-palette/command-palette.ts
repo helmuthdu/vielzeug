@@ -1,14 +1,12 @@
 import { createKeymap } from '@vielzeug/keymap';
-import { define, html, ref, prop, getHost, onCleanup, onEvent, onMounted, useEmit } from '@vielzeug/ore';
+import { define, getHost, html, onCleanup, onEvent, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
-
-import type { CommandPaletteItem, OreCommandPaletteEvents, OreCommandPaletteProps } from './command-palette.types';
-
 import { warn } from '../../_dev';
-import { announce, lifecycleSignal, createListControl } from '../../core';
+import { announce, createListControl, lifecycleSignal } from '../../core';
 import { reducedMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
+import type { CommandPaletteItem, OreCommandPaletteEvents, OreCommandPaletteProps } from './command-palette.types';
 import { buildRows, filterItems, normalizeItem, parseSlottedItems, splitShortcutKeys } from './command-palette-items';
 import '../../content/icon/icon';
 import componentStyles from './command-palette.css?inline';

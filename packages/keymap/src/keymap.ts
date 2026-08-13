@@ -1,9 +1,8 @@
-import type { Shortcut } from './parser';
-import type { BindingEntry, BindingValue, Handler, Keymap, KeymapOptions, When } from './types';
-
 import { warn } from './_dev';
 import { KeymapError } from './errors';
+import type { Shortcut } from './parser';
 import { canonicalizeShortcut, detectModKey, matchStep, parseShortcut } from './parser';
+import type { BindingEntry, BindingValue, Handler, Keymap, KeymapOptions, When } from './types';
 
 type ParsedBinding = {
   handler: Handler;
@@ -254,12 +253,12 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
         unmounted = true;
         record!.refs -= 1;
 
-        if (record!.refs > 0) return;
+        if (record?.refs > 0) return;
 
-        target.removeEventListener('keydown', record!.onKeydown);
-        target.removeEventListener('keyup', record!.onKeyup);
-        record!.keydown.reset();
-        record!.keyup.reset();
+        target.removeEventListener('keydown', record?.onKeydown);
+        target.removeEventListener('keyup', record?.onKeyup);
+        record?.keydown.reset();
+        record?.keyup.reset();
         mounted.delete(target);
       };
     },

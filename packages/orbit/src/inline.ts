@@ -29,19 +29,19 @@ function sameRect(a: Rect, b: Rect): boolean {
 
 export interface InlineOptions {
   /**
-   * Cursor x-coordinate. When provided alongside `y`, the middleware picks the
-   * client rect that contains the cursor instead of the closest rect to the floating element.
-   */
-  x?: number;
-  /** Cursor y-coordinate. */
-  y?: number;
-  /**
    * Padding used when hit-testing cursor coordinates against client rects.
    * Prevents snapping when the cursor is just outside a rect edge. Default: `2`.
    *
    * @remarks Only applies when both `x` and `y` are provided.
    */
   padding?: Padding;
+  /**
+   * Cursor x-coordinate. When provided alongside `y`, the middleware picks the
+   * client rect that contains the cursor instead of the closest rect to the floating element.
+   */
+  x?: number;
+  /** Cursor y-coordinate. */
+  y?: number;
 }
 
 /**

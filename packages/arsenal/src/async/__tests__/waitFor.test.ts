@@ -42,13 +42,13 @@ describe('waitFor', () => {
 
   it('rejects promptly when signal aborts during sleep interval — regression B4', async () => {
     const ac = new AbortController();
-    let polls = 0;
+    let _polls = 0;
 
     const start = Date.now();
 
     const p = waitFor(
       () => {
-        polls++;
+        _polls++;
 
         return false;
       },

@@ -1,45 +1,43 @@
 import type { Placement } from '@vielzeug/orbit';
 
 import {
+  bind,
   createStableId,
   define,
-  html,
-  prop,
-  bind,
   getHost,
+  html,
   onCleanup,
   onMounted,
+  prop,
   useEmit,
   useSlots,
   watchEffect,
 } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { watch as rippleWatch } from '@vielzeug/ripple/watch';
-
-import type { ComponentSize } from '../../types';
-
 import {
-  lifecycleSignal,
   createDropdownPositioner,
   createInteraction,
   createListControl,
   createOutsidePointerDismissal,
-  restoreTriggerFocus,
   type DropdownCloseReason,
+  lifecycleSignal,
   type OverlayOpenChangeDetail,
   type OverlayOpenReason,
+  restoreTriggerFocus,
 } from '../../core';
 import { disablableBundle, MENU_SIZE_PRESET, sizableBundle } from '../../shared';
 import { colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styles';
+import type { ComponentSize } from '../../types';
+import componentStyles from './menu.css?inline';
 import menuItemStyles from './menu-item.css?inline';
 import menuSeparatorStyles from './menu-separator.css?inline';
-import componentStyles from './menu.css?inline';
 
 // ── Types ─────────────────────────────────────────────────────────────
 
 export interface MenuSelectDetail {
-  value: string;
   checked?: boolean;
+  value: string;
 }
 
 export type OreMenuItemType = 'checkbox' | 'radio';

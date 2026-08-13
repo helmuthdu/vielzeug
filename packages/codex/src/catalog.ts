@@ -1,10 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-
-import type { CemDeclaration, DocPage, Example, PackageContent, PackageMeta, SearchRecord } from './types.js';
-
 import { CodexError } from './errors.js';
-import { parseContent, type LoadedSnapshot } from './snapshot.js';
+import { type LoadedSnapshot, parseContent } from './snapshot.js';
+import type { CemDeclaration, DocPage, Example, PackageContent, PackageMeta, SearchRecord } from './types.js';
 
 export type CatalogErrorCode = 'INVALID_ARG' | 'NOT_FOUND' | 'UNAVAILABLE';
 

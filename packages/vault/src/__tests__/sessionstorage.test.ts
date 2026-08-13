@@ -1,4 +1,4 @@
-import { type VaultStore, table, ttl } from '../index';
+import { table, ttl, type VaultStore } from '../index';
 import { createSessionStorage } from '../session-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };

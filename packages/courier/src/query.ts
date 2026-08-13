@@ -1,8 +1,7 @@
-import type { AsyncState, QueryCache, QueryContext, QueryDefinition, QueryKey, Unsubscribe } from './types';
-
 import { warn } from './_dev';
 import { CourierDisposedError } from './errors';
 import { hash } from './serialize';
+import type { AsyncState, QueryCache, QueryContext, QueryDefinition, QueryKey, Unsubscribe } from './types';
 
 const DEFAULT_STALE_TIME = 0;
 
@@ -99,7 +98,7 @@ export function createQueryCache(options?: { signal?: AbortSignal; staleTime?: n
     notify(entry.key);
 
     const promise = Promise.resolve()
-      .then(() => entry.definition!.fetch({ key: entry.key, signal: controller.signal } as QueryContext))
+      .then(() => entry.definition?.fetch({ key: entry.key, signal: controller.signal } as QueryContext))
       .then(
         (data) => {
           entry.snapshot = { data, error: null, isFetching: false, status: 'success', updatedAt: Date.now() };

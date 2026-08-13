@@ -1,12 +1,11 @@
+import { keyId } from '../core/cartesian-model';
 import type { ChartEventHandlers } from '../core/chart-scaffold';
+import { chartArea } from '../core/layout';
 import type { Point } from '../svg/path';
 import type { ChartDimensions, ChartEvent, Datum, Series } from '../types';
 import type { CrosshairState } from './crosshair';
-import type { TooltipState } from './tooltip';
-
-import { keyId } from '../core/cartesian-model';
-import { chartArea } from '../core/layout';
 import { getMousePosition } from './events';
+import type { TooltipState } from './tooltip';
 
 export interface SeriesInteractionOptions {
   crosshair?: CrosshairState | null;

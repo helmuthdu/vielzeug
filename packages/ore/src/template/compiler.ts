@@ -192,7 +192,7 @@ const buildStaticTemplate = (strings: TemplateStringsArray): CompiledStaticTempl
     const slot = detectSlot(raw);
 
     if (slot.kind === SlotKind.NODE) {
-      html += slot.prefix + `<!--ore:${commentCounter}-->`;
+      html += `${slot.prefix}<!--ore:${commentCounter}-->`;
       slots.push({ commentId: commentCounter, kind: SlotKind.NODE });
       commentCounter++;
       activeElementId = undefined;
@@ -249,4 +249,5 @@ export const followPath = (root: Node, path: NodePath): Node => {
 
   return node;
 };
-import { OreApiError, ORE_ERRORS } from '../errors';
+
+import { ORE_ERRORS, OreApiError } from '../errors';

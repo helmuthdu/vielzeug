@@ -1,4 +1,4 @@
-import { type Infer, type Schema, s, SpellValidationError } from '../index';
+import { type Infer, type Schema, SpellValidationError, s } from '../index';
 
 describe('optional nullable nullish required', () => {
   it('optional() accepts undefined and still validates concrete values', () => {
@@ -59,7 +59,7 @@ describe('optional nullable nullish required', () => {
 
     expect(result.success).toBe(false);
 
-    if (!result.success) expect(result.error.issues[0]!.message).toBe('Bad');
+    if (!result.success) expect(result.error.issues[0]?.message).toBe('Bad');
   });
 
   it('required() preserves wrapper defaults, labels, and checks across mode merges', () => {
@@ -80,7 +80,7 @@ describe('optional nullable nullish required', () => {
 
     expect(result.success).toBe(false);
 
-    if (!result.success) expect(result.error.issues[0]!.message).toBe('Zero');
+    if (!result.success) expect(result.error.issues[0]?.message).toBe('Zero');
   });
 
   it('modifier inference remains correct', () => {

@@ -1,8 +1,6 @@
 import { define, html, prop } from '@vielzeug/ore';
-
-import type { ThemeColor } from '../../types';
-
 import { colorThemeMixin } from '../../styles';
+import type { ThemeColor } from '../../types';
 import componentStyles from './separator.css?inline';
 
 /** Separator component properties */

@@ -277,8 +277,8 @@ describe('ore-stepper', () => {
 
       const click = (value: string) => {
         fixture.element
-          .querySelector(`ore-step[value="${value}"]`)!
-          .dispatchEvent(new CustomEvent('click', { bubbles: true, composed: true }));
+          .querySelector(`ore-step[value="${value}"]`)
+          ?.dispatchEvent(new CustomEvent('click', { bubbles: true, composed: true }));
       };
       const cart = () => fixture.element.querySelector('ore-step[value="cart"]')!;
 

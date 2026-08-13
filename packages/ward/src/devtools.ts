@@ -7,9 +7,8 @@
  * ```
  */
 
-import type { Ward, WardLoggerContext, WardOptions, WardRule } from './types';
-
 import { createWard } from './factory';
+import type { Ward, WardLoggerContext, WardOptions, WardRule } from './types';
 
 /**
  * Creates a {@link Ward} with authorization decision logging pre-wired to `console.debug`.

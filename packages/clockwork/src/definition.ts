@@ -1,6 +1,5 @@
-import type { After, Effect, Invoke, MachineConfig, MachineEvent, Transition } from './types.js';
-
 import { ClockworkError } from './errors.js';
+import type { After, Effect, Invoke, MachineConfig, MachineEvent, Transition } from './types.js';
 
 export type CompiledAfter<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
   readonly definition: After<State, Context, Event>;

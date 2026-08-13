@@ -658,13 +658,13 @@ describe('createDropZone', () => {
       expect(zone.validating).toBe(true);
       expect(onValidatingChange).toHaveBeenCalledTimes(1);
 
-      resolvers[0]!(true);
+      resolvers[0]?.(true);
       await Promise.resolve();
 
       expect(zone.validating).toBe(true);
       expect(onValidatingChange).toHaveBeenCalledTimes(1);
 
-      resolvers[1]!(true);
+      resolvers[1]?.(true);
       await Promise.resolve();
 
       expect(zone.validating).toBe(false);

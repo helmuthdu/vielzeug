@@ -29,9 +29,9 @@ export interface Signal<T> extends Readable<T> {
 }
 
 export interface Disposable {
+  readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
-  readonly disposalSignal: AbortSignal;
   [Symbol.dispose](): void;
 }
 

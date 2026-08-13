@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  CourierHttpError,
+  type CourierHttpError,
   CourierSchemaValidationError,
   CourierTimeoutError,
   createCourier,

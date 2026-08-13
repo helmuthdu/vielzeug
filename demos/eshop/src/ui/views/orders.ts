@@ -12,9 +12,6 @@ import '../components/order-timeline';
 
 import { define, each, html, when } from '@vielzeug/ore';
 import { computed, type Readable, signal } from '@vielzeug/ripple';
-
-import type { Order, OrderItem, OrderStatus } from '../../core/types';
-
 import { modelMap } from '../../core/catalog';
 import { formatPrice } from '../../core/currency';
 import { formatLongDate, formatOrderStatus } from '../../core/format';
@@ -23,6 +20,7 @@ import { attemptCancelOrder, canCancelOrder } from '../../core/order-actions';
 import { ordersLoading, ordersSignal } from '../../core/orders';
 import { combineBreakdowns, resolveConfiguration } from '../../core/pricing';
 import { router } from '../../core/router';
+import type { Order, OrderItem, OrderStatus } from '../../core/types';
 
 /** Placeholder card count for the loading skeleton — enough to plausibly fill the grid without
  * implying a specific real order count. */

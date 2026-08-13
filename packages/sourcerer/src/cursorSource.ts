@@ -1,8 +1,7 @@
-import type { CursorPagination, CursorQuery, CursorQueryPatch, CursorSource, CursorSourceConfig } from './types';
-
 import { warn } from './_dev';
 import { createAsyncSource } from './asyncSource';
 import { positiveInteger, sameQuery, totalItems } from './pagination';
+import type { CursorPagination, CursorQuery, CursorQueryPatch, CursorSource, CursorSourceConfig } from './types';
 
 const createPagination = <TCursor>(result?: {
   nextCursor?: TCursor;

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ScoutDisposedError, ScoutError, ScoutConfigurationError } from '../errors';
+import { ScoutConfigurationError, ScoutDisposedError, ScoutError } from '../errors';
 import { createIndex } from '../scout-index';
 
 type User = { age: number; email: string; name: string };
@@ -103,7 +103,7 @@ describe('ScoutIndex.search', () => {
     const nameResult = index.search('alice').find((r) => r.item.name === 'Alice Johnson');
 
     expect(nameResult).toBeDefined();
-    expect(nameResult!.score).toBeGreaterThan(0);
+    expect(nameResult?.score).toBeGreaterThan(0);
   });
 
   test('non-string field with custom stringify', () => {
@@ -131,13 +131,13 @@ describe('ScoutIndex.search', () => {
     const aliceResult = results.find((r) => r.item.name === 'Alice Johnson');
 
     expect(aliceResult).toBeDefined();
-    expect(aliceResult!.matches).toBeDefined();
+    expect(aliceResult?.matches).toBeDefined();
 
-    const nameMatch = aliceResult!.matches.find((m) => m.field === 'name');
+    const nameMatch = aliceResult?.matches.find((m) => m.field === 'name');
 
     expect(nameMatch).toBeDefined();
-    expect(nameMatch!.ranges.length).toBeGreaterThan(0);
-    expect(nameMatch!.ranges[0]).toHaveLength(2);
+    expect(nameMatch?.ranges.length).toBeGreaterThan(0);
+    expect(nameMatch?.ranges[0]).toHaveLength(2);
   });
 
   test('ranges point to correct character positions', () => {
@@ -179,7 +179,7 @@ describe('ScoutIndex.search', () => {
     const results = index.search('fin');
 
     expect(results.map((r) => r.item.title)).toContain('Finalize Q3 budget report');
-    expect(results.find((r) => r.item.title === 'Finalize Q3 budget report')!.score).toBeGreaterThanOrEqual(0.2);
+    expect(results.find((r) => r.item.title === 'Finalize Q3 budget report')?.score).toBeGreaterThanOrEqual(0.2);
   });
 
   test('does not lose the match as more characters are typed — no "3 chars hides it, 4 shows it" cliff', () => {

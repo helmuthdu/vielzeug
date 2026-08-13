@@ -1,4 +1,4 @@
-import { define, html, inject, prop, bind, getHost, onCleanup, useEmit, useSlots, watchEffect } from '@vielzeug/ore';
+import { bind, define, getHost, html, inject, onCleanup, prop, useEmit, useSlots, watchEffect } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import { disablableBundle } from '../../shared';

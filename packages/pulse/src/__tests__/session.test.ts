@@ -1,5 +1,5 @@
 import { PulseAbortError, PulseConnectionError } from '../errors';
-import { MockWebSocket, frames, openPulse } from './_fixtures';
+import { frames, MockWebSocket, openPulse } from './_fixtures';
 
 describe('createPulse session restoration', () => {
   beforeEach(() => {

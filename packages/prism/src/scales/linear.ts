@@ -3,7 +3,7 @@ import type { LinearScaleConfig } from './types';
 
 function niceNumber(value: number, round: boolean): number {
   const exp = Math.floor(Math.log10(value));
-  const frac = value / Math.pow(10, exp);
+  const frac = value / 10 ** exp;
   let nice: number;
 
   if (round) {
@@ -18,7 +18,7 @@ function niceNumber(value: number, round: boolean): number {
     else nice = 10;
   }
 
-  return nice * Math.pow(10, exp);
+  return nice * 10 ** exp;
 }
 
 function niceRange(min: number, max: number, tickCount: number): [number, number] {

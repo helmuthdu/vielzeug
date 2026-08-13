@@ -1,6 +1,5 @@
-import type { SandboxOptions } from './types.js';
-
 import { SandboxConfigurationError } from './errors.js';
+import type { SandboxOptions } from './types.js';
 
 export interface NormalizedSandboxOptions {
   allowedFontOrigins: string[];

@@ -1,17 +1,17 @@
 import {
+  bind,
   createContext,
   define,
+  getHost,
   html,
   inject,
-  prop,
-  bind,
-  getHost,
   onMounted,
+  prop,
   provide,
+  resizeObserver,
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { resizeObserver } from '@vielzeug/ore';
 import { computed, type Readable, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
 

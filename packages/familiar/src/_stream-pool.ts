@@ -1,11 +1,10 @@
 import { abortError } from '@vielzeug/arsenal/async';
 
 import type { PoolOptions } from './_pool';
-import type { DrainOptions, RunOptions, StreamWorkerPool, WorkerStats, WorkerStatus } from './types';
-import type { RunningStream } from './worker';
-
 import { unrefTimer } from './_timers';
 import { FamiliarQueueFullError, FamiliarTerminatedError, FamiliarTimeoutError } from './errors';
+import type { DrainOptions, RunOptions, StreamWorkerPool, WorkerStats, WorkerStatus } from './types';
+import type { RunningStream } from './worker';
 
 export type StreamSlot<TInput, TChunk> = {
   cancel(reason: unknown): void;
@@ -230,7 +229,7 @@ export function createStreamPool<TInput, TChunk>(
     },
     runStream(input, runOptions = {}): AsyncIterable<TChunk> {
       const controller = new AbortController();
-      const onAbort = () => controller.abort(runOptions.signal!.reason);
+      const onAbort = () => controller.abort(runOptions.signal?.reason);
 
       runOptions.signal?.addEventListener('abort', onAbort, { once: true });
 

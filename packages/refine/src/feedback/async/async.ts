@@ -1,4 +1,4 @@
-import { define, html, prop, bind, useEmit, when } from '@vielzeug/ore';
+import { bind, define, html, prop, useEmit, when } from '@vielzeug/ore';
 import { type Readable, signal } from '@vielzeug/ripple';
 
 import { reducedMotionMixin } from '../../styles';
@@ -7,7 +7,7 @@ import componentStyles from './async.css?inline';
 export type AsyncStatus = 'idle' | 'loading' | 'empty' | 'error' | 'success';
 
 export type OreAsyncEvents = {
-  retry: void;
+  retry: undefined;
 };
 
 export type OreAsyncProps = {

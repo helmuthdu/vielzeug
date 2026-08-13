@@ -1,8 +1,7 @@
-import type { Middleware, RouteBranchDef, RouteDefinition, RouteRecord, RouterOptions, RouteTable } from './types';
-
 import { warn } from './_dev';
 import { WayfinderRouteError } from './errors';
 import { compilePathMatcher, joinPaths, normalizePath } from './path';
+import type { Middleware, RouteBranchDef, RouteDefinition, RouteRecord, RouterOptions, RouteTable } from './types';
 
 export type CompiledRoutes<TMeta = unknown, TComponent = unknown> = {
   records: readonly RouteRecord<TMeta, TComponent>[];

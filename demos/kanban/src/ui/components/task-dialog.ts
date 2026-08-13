@@ -8,9 +8,6 @@ import '@vielzeug/refine/button';
 import { define, html, when } from '@vielzeug/ore';
 import { computed, effect, signal } from '@vielzeug/ripple';
 import { s } from '@vielzeug/spell';
-
-import type { Task, TaskPriority, TaskStatus } from '../../core/types';
-
 import { currentUser } from '../../core/auth';
 import { boardSignal } from '../../core/board-store';
 import { t } from '../../core/i18n';
@@ -21,6 +18,7 @@ import {
   canDeleteTask,
   canUpdateTask,
 } from '../../core/task-actions';
+import type { Task, TaskPriority, TaskStatus } from '../../core/types';
 import { usersSignal } from '../../core/users';
 
 export type TaskDialogRequest = { kind: 'create'; status: TaskStatus } | { kind: 'edit'; taskId: string };
@@ -77,13 +75,13 @@ const TaskDraftSchema = s.object({
  * field's own event listener keeps this draft signal current instead.
  */
 interface TaskDraft {
-  title: string;
-  description: string;
-  status: TaskStatus;
-  priority: TaskPriority;
   assigneeId: string;
-  dueDate: string;
   budgetAmount: number | null;
+  description: string;
+  dueDate: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  title: string;
 }
 
 function emptyDraft(status: TaskStatus): TaskDraft {

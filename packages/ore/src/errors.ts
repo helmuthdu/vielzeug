@@ -31,22 +31,14 @@ export class OreError extends Error {
 }
 
 /** Thrown when Ore API is called incorrectly (e.g. outside setup, duplicate define, invalid prop). */
-export class OreApiError extends OreError {
-  constructor(message: string) {
-    super(message);
-  }
-}
+export class OreApiError extends OreError {}
 
 /**
  * Thrown when an internal invariant fails — e.g. compiled template metadata no
  * longer matching the DOM it was cloned from. Distinct from `OreApiError`: this
  * is never the caller's fault, it signals a bug in ore itself. See `invariant()`.
  */
-export class OreInternalError extends OreError {
-  constructor(message: string) {
-    super(message);
-  }
-}
+export class OreInternalError extends OreError {}
 
 /**
  * The phase in which a component error occurred.

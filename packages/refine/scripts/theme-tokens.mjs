@@ -80,24 +80,10 @@ const processRef = globalThis.process;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const THEME_CSS_PATH = join(__dirname, '../src/styles/theme.css');
 
-// `prettier`/`stylelint` are real devDependencies of *this* package
-// (packages/refine/package.json) specifically so this script can `require()`
-// them reliably — Rush provisions each project's own declared dependencies
-// into its own node_modules regardless of whether the git-repo-root's own
-// `pnpm install` has run. That distinction matters here: CI's "rush rebuild"
-// job runs with `root-install: false` (see .github/workflows/ci.yml) — the
-// git-repo-root's node_modules is never populated in that job at all. This
-// script used to assume `prettier`/`stylelint` would be reachable by walking
-// up node_modules ancestors to the repo root (relying on a *separate*,
-// root-only `pnpm install` most other lint/format tooling in this monorepo
-// intentionally depends on instead of duplicating itself into every
-// package) — that assumption doesn't hold for this specific script, since
-// it's `require()`d as part of `build` (via `check:theme`), which the
-// rush-rebuild-only CI job exercises without ever running that root
-// install. Anchoring at *this package's own* package.json sidesteps the
-// question entirely: Rush guarantees these are installed here regardless.
+// Biome is a devDependency of this package so Rush makes it available to this
+// build-time generator without relying on a root workspace installation.
 const require = createRequire(join(__dirname, '../package.json'));
-const prettier = require('prettier');
+const biomeBin = require.resolve('@biomejs/biome/bin/biome');
 
 const GENERATED_BEGIN = '  /* ── theme-tokens:generated:begin — run `pnpm run sync:theme`, do not hand-edit ── */';
 const GENERATED_END = '  /* ── theme-tokens:generated:end ── */';
@@ -386,38 +372,16 @@ function normalizedGeneratedBlock(source) {
   return normalizedBlock(generatedBlock(source).value);
 }
 
-function stylelintFix(source) {
-  // Written next to the real file (not os.tmpdir()) so stylelint's config
-  // lookup resolves the same `stylelint.config.ts` a normal `pnpm lint:css`
-  // run would use for this file.
+function formatCss(source) {
   const tmpPath = `${THEME_CSS_PATH}.sync-tmp.${processRef.pid}.css`;
-  const stylelintBin = join(
-    dirname(require.resolve('stylelint/package.json')),
-    require('stylelint/package.json').bin.stylelint,
-  );
 
   writeFileSync(tmpPath, source);
-
   try {
-    execFileSync(processRef.execPath, [stylelintBin, tmpPath, '--fix'], { stdio: 'ignore' });
-  } catch {
-    // Non-zero exit means unfixable violations remain — surface whatever
-    // stylelint managed to fix so `check` reports a concrete diff instead of
-    // crashing; any leftover violation still fails the repo's normal lint step.
+    execFileSync(processRef.execPath, [biomeBin, 'format', '--write', tmpPath], { stdio: 'ignore' });
+    return readFileSync(tmpPath, 'utf8');
+  } finally {
+    rmSync(tmpPath);
   }
-
-  const fixed = readFileSync(tmpPath, 'utf8');
-
-  rmSync(tmpPath);
-
-  return fixed;
-}
-
-async function formatCss(source) {
-  const options = (await prettier.resolveConfig(THEME_CSS_PATH)) ?? {};
-  const pretty = await prettier.format(source, { ...options, filepath: THEME_CSS_PATH });
-
-  return stylelintFix(pretty);
 }
 
 async function main(command) {

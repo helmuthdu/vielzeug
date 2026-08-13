@@ -9,15 +9,13 @@ import { createKeymap } from '@vielzeug/keymap';
 import { define, each, html, onCleanup, ref, when } from '@vielzeug/ore';
 import { toast } from '@vielzeug/refine/toast';
 import { computed, effect, signal } from '@vielzeug/ripple';
-
-import type { RouteNames } from '../core/router';
-
 import { activeRoute } from '../core/board-store';
 import { exportTasksAsCsv } from '../core/csv-export';
 import { bus } from '../core/events';
 import { ledger } from '../core/history';
 import { t } from '../core/i18n';
 import { presenceCount, presenceSignal, setupRealtime } from '../core/realtime';
+import type { RouteNames } from '../core/router';
 import { router } from '../core/router';
 import { taskIndex } from '../core/search-index';
 import { initialsFromName } from '../core/users';

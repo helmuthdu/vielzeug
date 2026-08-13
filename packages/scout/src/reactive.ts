@@ -1,9 +1,7 @@
 import { batch, computed, signal } from '@vielzeug/ripple';
-
-import type { CreateSearchOptions, ScoutIndexOptions, SearchResult, SearchState } from './types';
-
 import { ScoutConfigurationError, ScoutDisposedError } from './errors';
 import { createIndex, type ScoutIndex } from './scout-index';
+import type { CreateSearchOptions, ScoutIndexOptions, SearchResult, SearchState } from './types';
 
 /**
  * Combined index + reactive search state returned by `createReactiveSearch()`.

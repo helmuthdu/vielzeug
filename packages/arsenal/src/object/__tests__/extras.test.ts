@@ -34,7 +34,7 @@ describe('object extras', () => {
     const pk = pick(malicious, ['__proto__'] as never[]);
     const sm = shallowMerge({}, malicious);
 
-    expect((Object.prototype as Record<string, unknown>)['polluted']).toBeUndefined();
+    expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
     expect(Object.hasOwn(d, '__proto__')).toBe(false);
     expect(Object.hasOwn(mv, '__proto__')).toBe(false);
     expect(Object.hasOwn(mk, '__proto__')).toBe(false);
@@ -57,7 +57,7 @@ describe('object extras', () => {
 
     expect(result).toEqual({ b: 'safe' });
     expect(Object.hasOwn(result, '__proto__')).toBe(false);
-    expect((Object.prototype as Record<string, unknown>)['polluted']).toBeUndefined();
+    expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
   });
 
   it('invert and defaults', () => {

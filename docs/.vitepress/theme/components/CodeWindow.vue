@@ -1,16 +1,16 @@
 <script setup lang="ts">
 interface Props {
-  variant?: 'code' | 'chat';
-  lang?: string;
   filename?: string;
+  lang?: string;
   title?: string;
+  variant?: 'code' | 'chat';
 }
 
 withDefaults(defineProps<Props>(), {
-  variant: 'code',
-  lang: 'ts',
   filename: '',
+  lang: 'ts',
   title: 'MCP tool call',
+  variant: 'code',
 });
 </script>
 

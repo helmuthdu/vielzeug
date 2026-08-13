@@ -5,7 +5,7 @@
  * `slots.elements(name?)`: Signal<Element[]> — assigned elements for a slot (flattened).
  */
 
-import { type Readable, signal, type Signal } from '@vielzeug/ripple';
+import { type Readable, type Signal, signal } from '@vielzeug/ripple';
 
 import { onCleanup, onMounted, requireSetupContext } from './runtime';
 
@@ -130,7 +130,7 @@ const createSlots = (host: HTMLElement): ComponentSlots<string> => {
   // lifetime — it is the only way to detect a *first* <slot> appearing dynamically
   // (e.g. a when() branch that renders a slot), so it cannot be disconnected when
   // the bound-slot count drops to zero.
-  const initSlots = (): void => {
+  const initSlots = (): undefined => {
     bindAllSlots();
     recomputeAllSlots();
 
@@ -148,6 +148,8 @@ const createSlots = (host: HTMLElement): ComponentSlots<string> => {
       });
       observer.observe(host.shadowRoot, { childList: true, subtree: true });
     }
+
+    return undefined;
   };
 
   onMounted(initSlots);

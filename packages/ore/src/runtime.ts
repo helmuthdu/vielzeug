@@ -10,16 +10,16 @@
  * top-level `setup()` body) call `onMounted`/`onCleanup`/`bind`/... directly,
  * with no context object to thread through every layer of a composable.
  */
-import { type Cleanup, effect as _effect, type Readable } from '@vielzeug/ripple';
+import { effect as _effect, type Cleanup, type Readable } from '@vielzeug/ripple';
 
-import { OreApiError, ORE_ERRORS } from './errors';
+import { ORE_ERRORS, OreApiError } from './errors';
 import { listen as listenInternal } from './utils/dom';
 
 // ─── Runtime context ──────────────────────────────────────────────────────────
 // A single context object carries both the host element and mount callbacks,
 // eliminating two parallel globals that were always set together.
 
-export type OnMountedCallback = () => Cleanup | void;
+export type OnMountedCallback = () => Cleanup | undefined;
 export type OnFormResetCallback = () => void;
 
 export type RuntimeContext = {
@@ -149,7 +149,7 @@ export const onFormReset = (fn: OnFormResetCallback): void => {
  * `watch(source, callback)`, which has different semantics (explicit source,
  * old/new value pair) — the two are commonly imported in the same file.
  */
-export const watchEffect = (fn: () => Cleanup | void): (() => void) => {
+export const watchEffect = (fn: () => Cleanup | undefined): (() => void) => {
   const sub = _effect(fn);
   const stop = (): void => sub.dispose();
 
@@ -189,7 +189,7 @@ export function onEvent(
  */
 export const onElement = <T extends HTMLElement>(
   ref: Readable<T | null>,
-  callback: (el: T) => Cleanup | undefined | void,
+  callback: (el: T) => Cleanup | undefined | undefined,
 ): (() => void) => {
   return watchEffect(() => {
     const el = ref.value;

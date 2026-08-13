@@ -4,7 +4,7 @@
 
 import { getHost } from '../runtime';
 
-type NoDetail = void | undefined | never;
+type NoDetail = undefined | undefined | never;
 type KeysWithoutDetail<T extends Record<string, unknown>> = {
   [P in keyof T]: [T[P]] extends [NoDetail] ? P : never;
 }[keyof T];

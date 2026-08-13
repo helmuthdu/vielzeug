@@ -10,20 +10,20 @@
  *   attribute bindings.
  */
 
-import { computed, effect as rawEffect, isReactive, type Readable, untrack } from '@vielzeug/ripple';
+import { computed, isReactive, type Readable, effect as rawEffect, untrack } from '@vielzeug/ripple';
 
 import { isLiveBinding } from '../directives/live';
 import { invariant } from '../errors';
 import { getPropMeta, type PropMeta } from '../props';
 import { createReplaceableSlot, isStructuredValue, listen, setAttr } from '../utils/dom';
-import {
-  type AttrBinding,
-  type Binding,
-  type DirectiveBinding,
-  type EventBinding,
-  type HtmlBinding,
-  type HtmlBindingValue,
-  type RefBinding,
+import type {
+  AttrBinding,
+  Binding,
+  DirectiveBinding,
+  EventBinding,
+  HtmlBinding,
+  HtmlBindingValue,
+  RefBinding,
 } from './binding-types';
 import { isHtmlResult } from './result';
 
@@ -38,7 +38,10 @@ const signalEffect = (
   update: (v: unknown) => void,
   registerCleanup: RegisterCleanup,
 ): void => {
-  const sub = rawEffect(() => update(signal.value));
+  const sub = rawEffect(() => {
+    update(signal.value);
+    return undefined;
+  });
 
   registerCleanup(() => sub.dispose());
 };

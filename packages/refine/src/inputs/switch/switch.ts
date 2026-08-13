@@ -1,10 +1,6 @@
-import { define, html, prop, getHost, onCleanup } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
-
-import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
-
-import { lifecycleSignal, createCheckable } from '../../core';
-import { disablableBundle, sizableBundle, SWITCH_SIZE_PRESET, themableBundle } from '../../shared';
+import { define, getHost, html, onCleanup, prop, useField } from '@vielzeug/ore';
+import { createCheckable, lifecycleSignal } from '../../core';
+import { disablableBundle, SWITCH_SIZE_PRESET, sizableBundle, themableBundle } from '../../shared';
 import {
   coarsePointerMixin,
   colorThemeMixin,
@@ -12,6 +8,7 @@ import {
   forcedColorsFormControlMixin,
   sizeVariantMixin,
 } from '../../styles';
+import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 import { applyCheckableBinding } from '../shared/field-binding';
 import { defineFieldChecked, dispatchNativeFieldEvent, setFieldChecked } from '../shared/native-field-event';
 import { renderHelperRegion } from '../shared/templates';

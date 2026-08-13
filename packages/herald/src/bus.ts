@@ -1,3 +1,6 @@
+import { warn as _internalWarn } from './_dev';
+import { callSafely, type SafeCallResult } from './_safe';
+import { BusDisposedError, HeraldConfigError } from './errors';
 import type {
   Bus,
   BusOptions,
@@ -10,10 +13,6 @@ import type {
   Unsubscribe,
   WaitAnyResult,
 } from './types';
-
-import { warn as _internalWarn } from './_dev';
-import { type SafeCallResult, callSafely } from './_safe';
-import { BusDisposedError, HeraldConfigError } from './errors';
 
 // Module-scoped noop — shared across all bus instances to avoid per-bus allocation.
 // @internal — exported only for sibling internal modules; stripped from public declarations via stripInternal.
@@ -120,7 +119,7 @@ export function createBus<T extends EventMap = Record<string, unknown>>(options?
   // listener (including wildcards) before rethrowing the first captured error, if any.
   function callSafe(fn: () => void, event: EventKey<T>, payload: unknown, timestamp: number): SafeCallResult {
     const onError = options?.onError
-      ? (err: unknown) => options.onError!({ err, event, payload, timestamp } as EmissionErrorContext<T>)
+      ? (err: unknown) => options.onError?.({ err, event, payload, timestamp } as EmissionErrorContext<T>)
       : undefined;
 
     return callSafely(fn, onError);

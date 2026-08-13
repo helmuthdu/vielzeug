@@ -1,3 +1,5 @@
+import { createPagePagination, positiveInteger, sameQuery, totalItems } from './pagination';
+import { createSourceStore } from './sourceStore';
 import type {
   LocalQuery,
   LocalQueryPatch,
@@ -6,9 +8,6 @@ import type {
   PagePagination,
   SourceSnapshot,
 } from './types';
-
-import { createPagePagination, positiveInteger, sameQuery, totalItems } from './pagination';
-import { createSourceStore } from './sourceStore';
 
 const normalizeQuery = (current: LocalQuery, patch: LocalQueryPatch = {}, maxPage?: number): LocalQuery => {
   const page = patch.page ?? current.page;
@@ -35,7 +34,7 @@ export function createLocalSource<T>(data: readonly T[], config: LocalSourceConf
 
   const buildSnapshot = (): SourceSnapshot<T, LocalQuery, PagePagination> => {
     const matched =
-      query.search.length > 0 && config.match ? allData.filter((item) => config.match!(item, query.search)) : allData;
+      query.search.length > 0 && config.match ? allData.filter((item) => config.match?.(item, query.search)) : allData;
     const total = totalItems(matched.length);
     const pagination = createPagePagination(query.page, query.pageSize, total);
     const start = (pagination.index - 1) * pagination.size;

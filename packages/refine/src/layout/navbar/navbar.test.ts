@@ -159,7 +159,7 @@ describe('ore-navbar', () => {
 
       menuItem.textContent = 'Menu';
       expect(menu).not.toBeNull();
-      menu!.append(menuItem);
+      menu?.append(menuItem);
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('data-mobile')).toBe(true);
@@ -355,7 +355,7 @@ describe('ore-navbar', () => {
 
       const item = fixture.element.querySelector('ore-navbar-item')!;
 
-      fireClick(item.shadowRoot!.querySelector('.item')!);
+      fireClick(item.shadowRoot?.querySelector('.item')!);
       await fixture.flush();
       expect(fixture.element.hasAttribute('data-mobile-open')).toBe(false);
     } finally {

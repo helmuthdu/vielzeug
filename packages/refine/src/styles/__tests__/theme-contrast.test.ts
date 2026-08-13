@@ -24,9 +24,9 @@
 // from the page canvas's own direction instead of derived from these
 // families' own base.
 
-import { displayable, parse, wcagContrast } from 'culori';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { displayable, parse, wcagContrast } from 'culori';
 import { describe, expect, it } from 'vitest';
 
 import { COLOR_FAMILIES, CONTRAST_SCALE } from '../../../scripts/theme-tokens.mjs';

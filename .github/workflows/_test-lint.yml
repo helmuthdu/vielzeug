@@ -48,11 +48,8 @@ jobs:
         with:
           rush-install: 'false'
 
-      - name: Lint JS/TS
-        run: pnpm lint:js
-
-      - name: Lint CSS
-        run: pnpm lint:css
+      - name: Run Biome
+        run: pnpm lint
 
       - name: Lint GitHub Actions workflows
         uses: reviewdog/action-actionlint@50842263c20a7c46bd0065b9e624d3c569db061e # v1.73.0

@@ -12,11 +12,8 @@ import type { Router, RouterOptions, RouteState, RouteTable } from './index';
 import { createRouter } from './router';
 
 /** Options for {@link debugRouter}. Extends {@link RouterOptions} with debug-specific settings. */
-export interface DebugRouterOptions<
-  TRoutes extends RouteTable,
-  TMeta = unknown,
-  TComponent = unknown,
-> extends RouterOptions<TRoutes, TMeta, TComponent> {
+export interface DebugRouterOptions<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown>
+  extends RouterOptions<TRoutes, TMeta, TComponent> {
   /**
    * Label used in log prefixes. Defaults to `'nav'`, producing `[wayfinder:nav]`.
    * Useful when running multiple routers (e.g. a main router and a modal router)

@@ -1,10 +1,6 @@
-import { define, html, inject, prop, bind, getHost, onCleanup } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
+import { bind, define, getHost, html, inject, onCleanup, prop, useField } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
-
-import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
-
-import { elementDirection, lifecycleSignal, createCheckable, createListControl } from '../../core';
+import { createCheckable, createListControl, elementDirection, lifecycleSignal } from '../../core';
 import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import {
   coarsePointerMixin,
@@ -13,6 +9,7 @@ import {
   forcedColorsFormControlMixin,
   sizeVariantMixin,
 } from '../../styles';
+import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 import { RADIO_GROUP_CTX } from '../radio-group/radio-group';
 import { defineFieldChecked, dispatchNativeFieldEvent, setFieldChecked } from '../shared/native-field-event';
 import { renderHelperRegion } from '../shared/templates';

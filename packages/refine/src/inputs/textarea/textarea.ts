@@ -1,11 +1,20 @@
-import { define, html, prop, ref, bind, getHost, onCleanup, onElement, watchEffect } from '@vielzeug/ore';
-import { live, useField } from '@vielzeug/ore';
+import {
+  bind,
+  define,
+  getHost,
+  html,
+  live,
+  onCleanup,
+  onElement,
+  prop,
+  ref,
+  useField,
+  watchEffect,
+} from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
-
+import { bindRefCallback, createAutoResize, createTextField, lifecycleSignal } from '../../core';
 import type { TextFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
-
-import { bindRefCallback, createAutoResize, lifecycleSignal, createTextField } from '../../core';
 import '../../content/icon/icon';
 import { disablableBundle, roundableBundle, sizableBundle, TEXTAREA_SIZE_PRESET, themableBundle } from '../../shared';
 import {

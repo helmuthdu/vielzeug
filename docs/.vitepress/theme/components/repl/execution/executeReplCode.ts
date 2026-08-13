@@ -1,17 +1,15 @@
 import type * as Monaco from 'monaco-editor';
-
-import type { ReplExecution } from './useReplExecution';
-
-import { type SandboxLibrary } from './buildSandboxDocument';
+import type { SandboxLibrary } from './buildSandboxDocument';
 import { formatCaughtError } from './formatCaughtError';
 import { type GlobalNameResolver, rewriteVielzeugImports } from './rewriteImports';
 import { transpileTypeScript } from './useMonaco';
+import type { ReplExecution } from './useReplExecution';
 
 export interface ExecuteReplCodeParams {
   execution: Pick<ReplExecution, 'clear' | 'reportError' | 'run'>;
   libraries: SandboxLibrary[];
-  monaco: typeof Monaco;
   model: Monaco.editor.ITextModel | null;
+  monaco: typeof Monaco;
   rawCode: string;
   resolveGlobalName: GlobalNameResolver;
 }

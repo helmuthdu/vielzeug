@@ -2,7 +2,7 @@ import { sleep } from '@vielzeug/arsenal/async';
 import { fireChange, fireClick, fireKeyDown } from '@vielzeug/assay';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
-import { ariaSortValue, sortIconName, type OreDataGridProps } from './datagrid';
+import { ariaSortValue, type OreDataGridProps, sortIconName } from './datagrid';
 
 // ── Pure helper unit tests (no DOM required) ──────────────────────────────────
 
@@ -483,8 +483,8 @@ describe('ore-datagrid', () => {
       fireClick(getBodyRows(fixture)[0]);
       await Promise.resolve();
 
-      expect(detail!.keys).toEqual(['1']);
-      expect(detail!.rows[0]).toMatchObject({ id: '1', name: 'Alice' });
+      expect(detail?.keys).toEqual(['1']);
+      expect(detail?.rows[0]).toMatchObject({ id: '1', name: 'Alice' });
     });
 
     it('selects row with Enter key', async () => {
@@ -685,7 +685,7 @@ describe('ore-datagrid', () => {
       fireClick(fixture.query('[aria-label="Next page"]') as HTMLButtonElement);
       await Promise.resolve();
 
-      expect(pageDetail!.pageIndex).toBe(1);
+      expect(pageDetail?.pageIndex).toBe(1);
     });
 
     it('shows pagination info text with "to" separator', async () => {
@@ -799,7 +799,7 @@ describe('ore-datagrid', () => {
       fireClick(getBodyRows(fixture)[0]);
       await Promise.resolve();
 
-      expect(detail!.keys[0]).toBe('user-1');
+      expect(detail?.keys[0]).toBe('user-1');
     });
   });
 
@@ -955,8 +955,8 @@ describe('ore-datagrid', () => {
       await Promise.resolve();
 
       expect(detail).not.toBeNull();
-      expect(detail!.pageIndex).toBe(0);
-      expect(detail!.pageSize).toBe(10);
+      expect(detail?.pageIndex).toBe(0);
+      expect(detail?.pageSize).toBe(10);
     });
 
     it('changes the page size and resets to page 0 on select change', async () => {
@@ -1530,7 +1530,7 @@ describe('ore-datagrid', () => {
 
       expect(fixture.query('.dg-sort-btn')).toBeNull();
 
-      el.querySelector('ore-column')!.setAttribute('sortable', '');
+      el.querySelector('ore-column')?.setAttribute('sortable', '');
       await new Promise((r) => setTimeout(r, 0));
 
       expect(fixture.query('.dg-sort-btn')).toBeTruthy();
@@ -1662,8 +1662,8 @@ describe('ore-datagrid', () => {
       fireClick(fixture.queryAll('.dg-expand-btn')[0] as HTMLElement);
       await Promise.resolve();
 
-      expect(detail!.expanded).toBe(true);
-      expect(detail!.key).toBe('1');
+      expect(detail?.expanded).toBe(true);
+      expect(detail?.key).toBe('1');
     });
 
     it('emits row-expand with expanded=false on second click', async () => {
@@ -1683,7 +1683,7 @@ describe('ore-datagrid', () => {
       fireClick(btn);
       await Promise.resolve();
 
-      expect(detail!.expanded).toBe(false);
+      expect(detail?.expanded).toBe(false);
     });
 
     it('multiple rows can be expanded simultaneously', async () => {

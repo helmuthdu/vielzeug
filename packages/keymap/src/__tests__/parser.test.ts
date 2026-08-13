@@ -203,8 +203,8 @@ describe('parseStep standalone', () => {
     const step = parseStep('ctrl+shift+k', 'ctrl');
 
     expect(step).not.toBeNull();
-    expect(step!.key).toBe('k');
-    expect(step!.modifiers).toEqual(new Set(['ctrl', 'shift']));
+    expect(step?.key).toBe('k');
+    expect(step?.modifiers).toEqual(new Set(['ctrl', 'shift']));
   });
 
   it('returns null for an empty string', () => {
@@ -229,23 +229,23 @@ describe('security — prototype-inherited key handling', () => {
     const step = parseStep('ctrl+__proto__', 'ctrl');
 
     expect(step).not.toBeNull();
-    expect(step!.modifiers).toEqual(new Set(['ctrl']));
-    expect(step!.key).toBe('__proto__');
+    expect(step?.modifiers).toEqual(new Set(['ctrl']));
+    expect(step?.key).toBe('__proto__');
   });
 
   it('treats constructor as a key name (not a modifier)', () => {
     const step = parseStep('ctrl+constructor', 'ctrl');
 
     expect(step).not.toBeNull();
-    expect(step!.modifiers).toEqual(new Set(['ctrl']));
-    expect(step!.key).toBe('constructor');
+    expect(step?.modifiers).toEqual(new Set(['ctrl']));
+    expect(step?.key).toBe('constructor');
   });
 
   it('treats valueOf as a key name (not a modifier)', () => {
     const step = parseStep('ctrl+valueof', 'ctrl');
 
     expect(step).not.toBeNull();
-    expect(step!.modifiers).toEqual(new Set(['ctrl']));
-    expect(step!.key).toBe('valueof');
+    expect(step?.modifiers).toEqual(new Set(['ctrl']));
+    expect(step?.key).toBe('valueof');
   });
 });

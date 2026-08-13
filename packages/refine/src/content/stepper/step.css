@@ -1,12 +1,11 @@
 @layer refine.base {
   :host {
-    display: flex;
-    flex: 1 1 0%;
-    min-width: 0;
-
     --step-indicator-size: var(--size-8);
     --step-font-size: var(--text-sm);
     --step-gap: var(--size-2);
+    display: flex;
+    flex: 1 1 0%;
+    min-width: 0;
   }
 
   .step {

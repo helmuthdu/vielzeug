@@ -1,4 +1,4 @@
-export { createCourier, type Courier, type CourierOptions } from './courier';
+export { type Courier, type CourierOptions, createCourier } from './courier';
 export {
   CourierAbortError,
   CourierDisposedError,
@@ -10,8 +10,8 @@ export {
   CourierTimeoutError,
 } from './errors';
 export { withBearerAuth, withLogging, withRequestId } from './interceptors';
+export type { StreamEvent, StreamOptions } from './stream';
 export type { FetchContext, Interceptor, TransportOptions } from './transport';
-export type { HttpRequestConfig as RequestConfig, Params } from './url';
 export type {
   AsyncState,
   MutationContext,
@@ -23,4 +23,4 @@ export type {
   QueryKeyAtom,
   Unsubscribe,
 } from './types';
-export type { StreamEvent, StreamOptions } from './stream';
+export type { HttpRequestConfig as RequestConfig, Params } from './url';

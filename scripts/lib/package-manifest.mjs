@@ -30,7 +30,9 @@ function findTypesPath(value) {
 }
 
 function createTypesVersions(exportsField, current = {}) {
-  if (typeof exportsField !== 'object' || exportsField === null || Array.isArray(exportsField)) return current;
+  if (typeof exportsField !== 'object' || exportsField === null || Array.isArray(exportsField)) {
+    return Object.keys(current).length === 0 ? undefined : current;
+  }
 
   const generated = Object.fromEntries(
     Object.entries(exportsField)
@@ -48,14 +50,61 @@ function createTypesVersions(exportsField, current = {}) {
   return { ...current, '*': { ...generated, ...existing } };
 }
 
+const MANIFEST_FIELD_ORDER = [
+  'name',
+  'version',
+  'private',
+  'description',
+  'keywords',
+  'homepage',
+  'repository',
+  'bugs',
+  'license',
+  'author',
+  'funding',
+  'packageManager',
+  'type',
+  'root',
+  'engines',
+  'workspaces',
+  'files',
+  'main',
+  'module',
+  'types',
+  'exports',
+  'typesVersions',
+  'bin',
+  'sideEffects',
+  'publishConfig',
+  'scripts',
+  'dependencies',
+  'optionalDependencies',
+  'peerDependencies',
+  'peerDependenciesMeta',
+  'devDependencies',
+];
+
+function orderManifest(manifest) {
+  const known = new Set(MANIFEST_FIELD_ORDER);
+  const entries = [
+    ...MANIFEST_FIELD_ORDER.filter((key) => key in manifest).map((key) => [key, manifest[key]]),
+    ...Object.keys(manifest)
+      .filter((key) => !known.has(key))
+      .sort()
+      .map((key) => [key, manifest[key]]),
+  ];
+
+  return Object.fromEntries(entries);
+}
+
 /** Package manifests describe only published artifacts; workspace source resolution belongs in tooling configuration. */
 export function normalizePackageManifest(manifest) {
   const exports = stripSourceCondition(manifest.exports);
   const typesVersions = createTypesVersions(exports, manifest.typesVersions);
 
-  return {
+  return orderManifest({
     ...manifest,
     ...(manifest.exports && { exports }),
     ...(typesVersions ? { typesVersions } : {}),
-  };
+  });
 }

@@ -1,3 +1,7 @@
+import { VaultDisposedError, VaultError, VaultScopeError } from './errors';
+import { createObserverHub, getRecordKey } from './internal';
+import { createQueryBuilder, type NativeRange, type QueryContext } from './query';
+import { assertTtlMs } from './ttl';
 import type {
   AnySchema,
   BaseAdapterOptions,
@@ -10,11 +14,6 @@ import type {
   TtlMs,
   VaultStore,
 } from './types';
-
-import { VaultDisposedError, VaultError, VaultScopeError } from './errors';
-import { createObserverHub, getRecordKey } from './internal';
-import { createQueryBuilder, type NativeRange, type QueryContext } from './query';
-import { assertTtlMs } from './ttl';
 
 /* -------------------- Internal backend protocol -------------------- */
 

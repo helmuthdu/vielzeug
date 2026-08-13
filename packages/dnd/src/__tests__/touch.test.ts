@@ -162,7 +162,7 @@ describe('sortable scope touch input', () => {
 
     preview.className = 'drag-preview';
     preview.textContent = 'Preview';
-    item!.append(preview);
+    item?.append(preview);
 
     const scope = createSortableScope({ touch: { preview: () => preview } });
     const sortable = createSortable({ element, getKey, scope });
@@ -194,7 +194,7 @@ describe('sortable scope touch input', () => {
     const sortable = createSortable({ element, getKey, scope });
     const onDragStart = vi.fn();
 
-    item!.addEventListener('dragstart', onDragStart);
+    item?.addEventListener('dragstart', onDragStart);
     mockElementFromPoint(item!);
     scope.dispose();
 

@@ -6,7 +6,7 @@ describe('public type and middleware contracts', () => {
   it('accepts normal TypeScript interface event maps', () => {
     interface InterfaceEvents {
       count: number;
-      ready: void;
+      ready: undefined;
     }
 
     const bus = createBus<InterfaceEvents>();

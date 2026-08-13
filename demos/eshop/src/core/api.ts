@@ -1,8 +1,6 @@
 import { createCourier } from '@vielzeug/courier';
-
-import type { Order, OrderStatus } from './types';
-
 import { models as catalogModels, seedOrders } from './seed-data';
+import type { Order, OrderStatus } from './types';
 
 // ---------------------------------------------------------------------------
 // In-memory "server" state — the mock endpoints below read/write these arrays,

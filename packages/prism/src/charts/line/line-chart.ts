@@ -1,8 +1,4 @@
 import { isReactive } from '@vielzeug/ripple';
-
-import type { Point } from '../../svg/path';
-import type { ChartHandle, LineChartConfig } from '../../types';
-
 import { warn } from '../../_dev';
 import { renderAxis, resolveTickCount } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
@@ -12,7 +8,9 @@ import { chartArea } from '../../core/layout';
 import { createCrosshair } from '../../interaction/crosshair';
 import { createSeriesInteraction } from '../../interaction/series-interaction';
 import { createSvgElement } from '../../svg/element';
+import type { Point } from '../../svg/path';
 import { seriesColor } from '../../theme';
+import type { ChartHandle, LineChartConfig } from '../../types';
 import { computePoints, renderLine } from './line-renderer';
 
 export function createLineChart(container: HTMLElement, config: LineChartConfig): ChartHandle {

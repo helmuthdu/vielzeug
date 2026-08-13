@@ -6,7 +6,8 @@ import type { CommandPaletteItem, CommandPaletteItemInput } from './command-pale
 // keyboard navigation still walks a single, index-addressable sequence.
 
 export type CommandPaletteRow =
-  { group: string; type: 'group' } | { idx: number; item: CommandPaletteItem; type: 'item' };
+  | { group: string; type: 'group' }
+  | { idx: number; item: CommandPaletteItem; type: 'item' };
 
 export function parseSlottedItems(elements: Element[]): CommandPaletteItem[] {
   return elements

@@ -1,4 +1,4 @@
-import { Temporal } from '@js-temporal/polyfill';
+import type { Temporal } from '@js-temporal/polyfill';
 
 export type AbsoluteTime = Temporal.Instant | Temporal.ZonedDateTime;
 export type WallTime = Temporal.PlainDate | Temporal.PlainDateTime;
@@ -45,7 +45,16 @@ export interface DurationFormatOptions {
 }
 
 export type TempoUnit =
-  'day' | 'hour' | 'microsecond' | 'millisecond' | 'minute' | 'month' | 'nanosecond' | 'second' | 'week' | 'year';
+  | 'day'
+  | 'hour'
+  | 'microsecond'
+  | 'millisecond'
+  | 'minute'
+  | 'month'
+  | 'nanosecond'
+  | 'second'
+  | 'week'
+  | 'year';
 export type CalendarUnit = Extract<TempoUnit, 'day' | 'month' | 'week' | 'year'>;
 export type BoundaryUnit = Exclude<TempoUnit, 'microsecond' | 'millisecond' | 'nanosecond' | 'second'>;
 export type WeekStartDay = 1 | 2 | 3 | 4 | 5 | 6 | 7;

@@ -3,10 +3,8 @@ import '@vielzeug/refine/avatar';
 import '@vielzeug/refine/chip';
 import '@vielzeug/refine/icon';
 import { bind, define, getHost, html, prop, useEmit, when } from '@vielzeug/ore';
-
-import type { Task } from '../../core/types';
-
 import { dueDateUrgency, formatBudget, formatDueDate } from '../../core/format';
+import type { Task } from '../../core/types';
 import { userInitials, userMap } from '../../core/users';
 
 const PRIORITY_COLOR: Record<Task['priority'], string> = {
@@ -28,7 +26,7 @@ export type TaskCardElement = HTMLElement & {
   task: Task;
 };
 
-type TaskCardEvents = { activate: void };
+type TaskCardEvents = { activate: undefined };
 
 /**
  * `<task-card>` — ore-authored replacement for the old imperative DOM builder. `shadow: false`

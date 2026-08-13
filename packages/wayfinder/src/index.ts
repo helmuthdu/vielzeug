@@ -1,3 +1,14 @@
+export {
+  WayfinderApiError,
+  WayfinderDisposedError,
+  WayfinderError,
+  WayfinderRedirectLoopError,
+  WayfinderRouteError,
+} from './errors';
+export { createBrowserHistory, createMemoryHistory } from './history';
+export { redirectTo } from './middleware';
+export type { Router } from './router';
+export { createRouter } from './router';
 export type {
   BeforeLeaveBlocker,
   BeforeLeaveOptions,
@@ -30,24 +41,13 @@ export type {
   RouteName,
   RouteParams,
   RoutePathByName,
-  RouteState,
-  RouteTable,
   RouterErrorContext,
   RouterErrorSource,
   RouterOptions,
+  RouteState,
+  RouteTable,
   ScrollDecision,
   ScrollPosition,
   Unsubscribe,
   UntypedNamedNavigationTarget,
 } from './types';
-export {
-  WayfinderApiError,
-  WayfinderDisposedError,
-  WayfinderError,
-  WayfinderRedirectLoopError,
-  WayfinderRouteError,
-} from './errors';
-export { createRouter } from './router';
-export type { Router } from './router';
-export { createBrowserHistory, createMemoryHistory } from './history';
-export { redirectTo } from './middleware';

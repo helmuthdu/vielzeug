@@ -6,7 +6,9 @@ type Pending<T> = {
 };
 
 type IteratorState<T> =
-  { kind: 'complete' | 'open'; queue: T[] } | { kind: 'error'; queue: T[]; reason: unknown } | { kind: 'returned' };
+  | { kind: 'complete' | 'open'; queue: T[] }
+  | { kind: 'error'; queue: T[]; reason: unknown }
+  | { kind: 'returned' };
 
 function assertOptions(options: AsyncIterableOptions): void {
   if (!Number.isInteger(options.capacity) || options.capacity < 1) {
@@ -25,7 +27,7 @@ export function toIterator<T>(source: Stream<T>, options: AsyncIterableOptions):
   const detach = (): void => options.signal?.removeEventListener('abort', stop);
 
   const resolveDone = (): void => {
-    while (pending.length > 0) pending.shift()!.resolve({ done: true, value: undefined as T });
+    while (pending.length > 0) pending.shift()?.resolve({ done: true, value: undefined as T });
   };
 
   const complete = (): void => {
@@ -43,7 +45,7 @@ export function toIterator<T>(source: Stream<T>, options: AsyncIterableOptions):
     controller.abort();
     detach();
 
-    while (pending.length > 0) pending.shift()!.reject(reason);
+    while (pending.length > 0) pending.shift()?.reject(reason);
   };
 
   const stop = (): void => {

@@ -1,12 +1,11 @@
-import type { ComponentDefinition } from './component-types';
-
 import { createComponentClass } from './_component-class';
-import { OreApiError, ORE_ERRORS } from './errors';
-import { prop, type PropDef } from './props';
+import type { ComponentDefinition } from './component-types';
+import { ORE_ERRORS, OreApiError } from './errors';
+import { type PropDef, prop } from './props';
 
-export { prop };
-export type { PropDef };
 export type { HostBindFn } from './host-bind';
+export type { PropDef };
+export { prop };
 
 /**
  * Define and register a web component.

@@ -1,3 +1,5 @@
+import { warn } from './_dev';
+import { isUnsafeObjectKey } from './_prototype';
 import type {
   BatchHandle,
   BatchTransportOptions,
@@ -11,9 +13,6 @@ import type {
   SampleTransportOptions,
   Transport,
 } from './types';
-
-import { warn } from './_dev';
-import { isUnsafeObjectKey } from './_prototype';
 import { isLevelEnabled } from './types';
 
 export type { RemoteLogData };
@@ -113,7 +112,7 @@ export function jsonTransport(options: JsonTransportOptions = {}): Transport {
     ((line: string) => {
       (
         globalThis as Record<string, unknown> & { process?: { stdout?: { write: (s: string) => void } } }
-      ).process?.stdout?.write(line + '\n');
+      ).process?.stdout?.write(`${line}\n`);
     });
 
   return (entry: LogEntry): void => {

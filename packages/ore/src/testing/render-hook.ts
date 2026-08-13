@@ -11,8 +11,6 @@ import { createRuntimeContext, onCleanup, runWithContext } from '../runtime';
 import { flush } from './flush';
 
 export interface HookFixture<T> {
-  /** Delegates to `dispose()`. Enables `using` declarations. */
-  [Symbol.dispose](): void;
   /** Teardown the hook (runs cleanups). Idempotent. */
   dispose(): void;
   /** `true` after `dispose()` has been called. */
@@ -21,6 +19,8 @@ export interface HookFixture<T> {
   flush(): Promise<void>;
   /** The value returned by the setup function */
   result: T;
+  /** Delegates to `dispose()`. Enables `using` declarations. */
+  [Symbol.dispose](): void;
 }
 
 const hookDisposers = new Set<() => void>();

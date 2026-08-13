@@ -1,6 +1,6 @@
 import type { AnySchema, InferOutput, Issue, MessageFn, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, SpellValidationError, _makeCtx, fail, prependIssuePath, resolveMessage } from '../core';
+import { _makeCtx, ErrorCode, fail, prependIssuePath, resolveMessage, Schema, SpellValidationError } from '../core';
 
 /* -------------------- Typed annotations -------------------- */
 

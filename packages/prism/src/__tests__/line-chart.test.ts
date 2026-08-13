@@ -1,9 +1,7 @@
 import { signal } from '@vielzeug/ripple';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import type { ChartPlugin, ChartPluginContext } from '../types';
-
 import { createLineChart } from '../charts/line';
+import type { ChartPlugin, ChartPluginContext } from '../types';
 
 describe('createLineChart', () => {
   let container: HTMLElement;
@@ -162,9 +160,9 @@ describe('createLineChart', () => {
     const legend = container.querySelector('.prism-legend');
 
     expect(legend).not.toBeNull();
-    expect(legend!.querySelectorAll('.prism-legend-item').length).toBe(2);
-    expect(legend!.querySelectorAll('.prism-legend-label')[0].textContent).toBe('Alpha');
-    expect(legend!.querySelectorAll('.prism-legend-label')[1].textContent).toBe('Beta');
+    expect(legend?.querySelectorAll('.prism-legend-item').length).toBe(2);
+    expect(legend?.querySelectorAll('.prism-legend-label')[0].textContent).toBe('Alpha');
+    expect(legend?.querySelectorAll('.prism-legend-label')[1].textContent).toBe('Beta');
     chart.dispose();
   });
 

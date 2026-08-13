@@ -1,10 +1,9 @@
 @layer refine.base {
   :host {
-    display: inline-flex;
-    outline: none;
-
     --tab-item-transition: var(--transition-normal);
     --tab-item-radius: var(--rounded-lg);
+    display: inline-flex;
+    outline: none;
   }
 
   button {

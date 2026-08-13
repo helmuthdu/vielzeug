@@ -1,4 +1,4 @@
-import { define, html, inject, prop, ref, getHost, onMounted, useEmit, watchEffect } from '@vielzeug/ore';
+import { define, getHost, html, inject, onMounted, prop, ref, useEmit, watchEffect } from '@vielzeug/ore';
 
 import type { ComponentSize, SurfaceVariant } from '../../types';
 
@@ -144,7 +144,7 @@ define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
     const closeItem = () => {
       const details = detailsRef.value;
 
-      if (!details || !details.open || isAnimating) return;
+      if (!details?.open || isAnimating) return;
 
       isAnimating = true;
 

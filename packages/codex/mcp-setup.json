@@ -1,10 +1,10 @@
 {
-  "name": "vielzeug",
-  "stdio": {
-    "command": "npx",
-    "args": ["-y", "@vielzeug/codex"]
-  },
   "http": {
     "url": "http://127.0.0.1:3100/"
+  },
+  "name": "vielzeug",
+  "stdio": {
+    "args": ["-y", "@vielzeug/codex"],
+    "command": "npx"
   }
 }

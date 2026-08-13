@@ -1,6 +1,4 @@
-import type { HttpRequestConfig, Params } from './url';
-
-import { classifyRequestError, CourierDisposedError, CourierHttpError, CourierSchemaValidationError } from './errors';
+import { CourierDisposedError, CourierHttpError, CourierSchemaValidationError, classifyRequestError } from './errors';
 import { parseResponse } from './response';
 import { buildRequestInit } from './serialize';
 import {
@@ -11,6 +9,7 @@ import {
   type TransportOptions,
   validateTimeout,
 } from './transport';
+import type { HttpRequestConfig, Params } from './url';
 import { buildUrl } from './url';
 
 export type { FetchContext, Interceptor } from './transport';

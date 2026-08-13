@@ -26,7 +26,7 @@ describe('lifecycleSignal()', () => {
     expect(signal.aborted).toBe(false);
     expect(registeredCleanup).toBeDefined();
 
-    registeredCleanup!();
+    registeredCleanup?.();
 
     expect(signal.aborted).toBe(true);
   });
@@ -50,12 +50,12 @@ describe('lifecycleSignal()', () => {
       cleanup2 = fn;
     });
 
-    cleanup1!();
+    cleanup1?.();
 
     expect(sig1.aborted).toBe(true);
     expect(sig2.aborted).toBe(false);
 
-    cleanup2!();
+    cleanup2?.();
 
     expect(sig2.aborted).toBe(true);
   });

@@ -1,7 +1,6 @@
-import type { Fn } from '../types';
-
 import { LruMap } from '../_common/_lruMap';
 import { ArsenalSerializationError } from '../errors';
+import type { Fn } from '../types';
 
 export type MemoOptions<T extends Fn> = {
   key?: (...args: Parameters<T>) => PropertyKey;

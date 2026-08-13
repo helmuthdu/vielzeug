@@ -115,8 +115,8 @@ describe('@vielzeug/spell/json', () => {
       }),
     );
 
-    expect(variant['discriminator']).toEqual({ propertyName: 'type' });
-    expect(variant['oneOf']).toHaveLength(2);
+    expect(variant.discriminator).toEqual({ propertyName: 'type' });
+    expect(variant.oneOf).toHaveLength(2);
   });
 
   it('converts modifiers and annotations', () => {

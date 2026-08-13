@@ -1,5 +1,9 @@
 export type QueryKeyAtom =
-  string | number | boolean | null | { readonly [key: string]: string | number | boolean | null };
+  | string
+  | number
+  | boolean
+  | null
+  | { readonly [key: string]: string | number | boolean | null };
 export type QueryKey = readonly [QueryKeyAtom, ...QueryKeyAtom[]];
 export type Unsubscribe = () => void;
 

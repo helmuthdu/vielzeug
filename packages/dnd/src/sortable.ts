@@ -2,7 +2,7 @@ import { warn } from './_dev';
 import { createDisposable, resolveDisabled } from './_shared';
 import { createScopeTouchController, type ScopeTouchController, type TouchInputOptions } from './_touch';
 import { DndScopeError } from './errors';
-import { type Disposable } from './types';
+import type { Disposable } from './types';
 
 // ─── Branded scope ────────────────────────────────────────────────────────────
 
@@ -11,23 +11,23 @@ const SCOPE_BRAND = Symbol('SortableScope');
 export interface SortableScope extends Disposable {
   /** `true` while any sortable in this scope is actively dragging. */
   readonly isDragging: boolean;
-  readonly [SCOPE_BRAND]: true;
   /**
    * Calls the revert function registered for the most recent cross-container move.
    * A no-op when no move registered a revert function.
    */
   revert(): void;
+  readonly [SCOPE_BRAND]: true;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface AutoScrollOptions {
+  /** Scroll the sortable container while dragging near its edges. @default true */
+  container?: boolean;
   /** Distance in pixels from an edge that triggers auto-scroll. @default 32 */
   edgeThreshold?: number;
   /** Pixels scrolled per dragover frame while near an edge. @default 18 */
   speed?: number;
-  /** Scroll the sortable container while dragging near its edges. @default true */
-  container?: boolean;
   /** Scroll the viewport while dragging near the window edges. @default false */
   viewport?: boolean;
 }
@@ -59,6 +59,8 @@ export interface ReorderEvent {
 export interface SortableMoveEvent {
   /** Stable identity of the moved item. */
   readonly itemId: string;
+  /** Registers a rollback for the most recent scope move. */
+  setRevert(fn: () => void): void;
   /** Source container before the move. */
   readonly source: HTMLElement;
   /** Ordered source item IDs after the move. */
@@ -67,8 +69,6 @@ export interface SortableMoveEvent {
   readonly target: HTMLElement;
   /** Ordered target item IDs after the move. */
   readonly targetIds: string[];
-  /** Registers a rollback for the most recent scope move. */
-  setRevert(fn: () => void): void;
 }
 
 export interface SortableScopeOptions {
@@ -87,20 +87,28 @@ export interface SortableScopeOptions {
 export type SortableTouchOptions = TouchInputOptions;
 
 export interface SortableOptions {
+  /** Auto-scrolls the container (and viewport) near edges while dragging. @default true */
+  autoScroll?: boolean | AutoScrollOptions;
+  /** Sorting axis used to compute insertion position. @default 'vertical' */
+  axis?: 'vertical' | 'horizontal';
+  /**
+   * When `true`, drag interactions are ignored.
+   *
+   * Note: if `disabled` transitions to `true` while a drag is in progress the
+   * drag is treated as a cancellation — the item snaps back to its original
+   * position rather than committing the last placeholder location.
+   */
+  disabled?: boolean;
+  /** Optional custom drag preview element. */
+  dragImage?: HTMLElement | ((id: string, item: HTMLElement, event: DragEvent) => HTMLElement | null | undefined);
+  /**
+   * Hotspot offset `[x, y]` passed to `setDragImage`.
+   * Controls which point of the preview image follows the cursor.
+   * @default [0, 0]
+   */
+  dragImageOffset?: [number, number];
   /** Container element whose direct-child items are sortable. */
   element: HTMLElement;
-  /** Shared scope for connected sortable containers. Containers only exchange items within the same scope. */
-  scope?: SortableScope;
-  /**
-   * Selector for the drag handle inside each item.
-   * When omitted the whole item is the handle.
-   */
-  handle?: string;
-  /**
-   * Enables keyboard-based reordering using arrow keys plus Home/End.
-   * @default true
-   */
-  keyboard?: boolean;
   /**
    * Returns the identity key for a given item element.
    * This separates the "what is this item?" concern (yours) from the "which children
@@ -112,27 +120,16 @@ export interface SortableOptions {
    * ```
    */
   getKey: (element: HTMLElement) => string;
-  /** Sorting axis used to compute insertion position. @default 'vertical' */
-  axis?: 'vertical' | 'horizontal';
-  /** Auto-scrolls the container (and viewport) near edges while dragging. @default true */
-  autoScroll?: boolean | AutoScrollOptions;
-  /** Optional custom drag preview element. */
-  dragImage?: HTMLElement | ((id: string, item: HTMLElement, event: DragEvent) => HTMLElement | null | undefined);
-  /** CSS class applied to the placeholder element. @default 'dnd-placeholder' */
-  placeholderClass?: string;
   /**
-   * Called with a {@link ReorderEvent} after a successful reorder, only when the order changed.
-   *
-   * @example
-   * ```ts
-   * onReorder: ({ ids, setRevert }) => {
-   *   const prev = order;
-   *   setOrder(ids);
-   *   setRevert(() => setOrder(prev));
-   * },
-   * ```
+   * Selector for the drag handle inside each item.
+   * When omitted the whole item is the handle.
    */
-  onReorder?: (event: ReorderEvent) => void;
+  handle?: string;
+  /**
+   * Enables keyboard-based reordering using arrow keys plus Home/End.
+   * @default true
+   */
+  keyboard?: boolean;
   /**
    * Called just before a successful drag commit with the before and after order snapshots.
    * Use this hook to set up FLIP animations — the source items are still in their
@@ -146,24 +143,27 @@ export interface SortableOptions {
    * ```
    */
   onBeforeReorder?: (from: string[], to: string[]) => void;
-  /**
-   * When `true`, drag interactions are ignored.
-   *
-   * Note: if `disabled` transitions to `true` while a drag is in progress the
-   * drag is treated as a cancellation — the item snaps back to its original
-   * position rather than committing the last placeholder location.
-   */
-  disabled?: boolean;
-  /** Called when the user starts dragging an item. */
-  onDragStart?: (id: string, event: DragEvent) => void;
   /** Called when a drag ends (whether dropped or cancelled). */
   onDragEnd?: (id: string, event: DragEvent) => void;
+  /** Called when the user starts dragging an item. */
+  onDragStart?: (id: string, event: DragEvent) => void;
   /**
-   * Hotspot offset `[x, y]` passed to `setDragImage`.
-   * Controls which point of the preview image follows the cursor.
-   * @default [0, 0]
+   * Called with a {@link ReorderEvent} after a successful reorder, only when the order changed.
+   *
+   * @example
+   * ```ts
+   * onReorder: ({ ids, setRevert }) => {
+   *   const prev = order;
+   *   setOrder(ids);
+   *   setRevert(() => setOrder(prev));
+   * },
+   * ```
    */
-  dragImageOffset?: [number, number];
+  onReorder?: (event: ReorderEvent) => void;
+  /** CSS class applied to the placeholder element. @default 'dnd-placeholder' */
+  placeholderClass?: string;
+  /** Shared scope for connected sortable containers. Containers only exchange items within the same scope. */
+  scope?: SortableScope;
 }
 
 export interface Sortable extends Disposable {
@@ -208,10 +208,10 @@ interface ResolvedAutoScrollOptions {
 
 /** Per-container closure passed into shared session functions. */
 interface ContainerHandle {
+  commitReorder: (orderedIds: string[]) => void;
   readonly element: HTMLElement;
   getOrderedIds: () => string[];
   isDisabled: () => boolean;
-  commitReorder: (orderedIds: string[]) => void;
   notifyBeforeReorder: (from: string[], to: string[]) => void;
   notifyDragEnd: (id: string, event: DragEvent) => void;
   notifyDragStart: (id: string, event: DragEvent) => void;
@@ -225,6 +225,8 @@ interface ContainerHandle {
 interface DragSession {
   draggedEl: HTMLElement;
   draggedId: string;
+  /** rAF handle for the deferred element-hide; null once fired or cancelled. */
+  hideFrame: number | null;
   /**
    * Order snapshots captured lazily: snapshot is taken the first time a handle
    * becomes the active target (and always for the source at drag start).
@@ -236,18 +238,16 @@ interface DragSession {
   placeholder: HTMLElement;
   source: ContainerHandle;
   target: ContainerHandle | null;
-  /** rAF handle for the deferred element-hide; null once fired or cancelled. */
-  hideFrame: number | null;
 }
 
 interface SortableScopeState {
   active: DragSession | null;
   commitMove: (event: Omit<SortableMoveEvent, 'setRevert'>) => void;
+  /** All sortables registered in this scope, kept for scope.dispose(). */
+  disposables: Set<() => void>;
   handles: Set<ContainerHandle>;
   lastRevert: (() => void) | null;
   touch: ScopeTouchController | null;
-  /** All sortables registered in this scope, kept for scope.dispose(). */
-  disposables: Set<() => void>;
 }
 
 interface ManagedElementState {

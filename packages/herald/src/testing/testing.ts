@@ -1,7 +1,6 @@
 import type { Bus, BusOptions, EventKey, EventMap } from '..';
-import type { InternalBusOptions } from '../bus';
-
 import { isUnsafeObjectKey } from '../_prototype';
+import type { InternalBusOptions } from '../bus';
 import { createBus } from '../bus';
 
 /** A test bus is a regular bus with typed emission recording on top. */

@@ -1,12 +1,9 @@
-import { define, html, prop, bind, getHost, onMounted } from '@vielzeug/ore';
-import { intersectionObserver } from '@vielzeug/ore';
+import { bind, define, getHost, html, intersectionObserver, onMounted, prop } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
-
-import type { ComponentSize } from '../../types';
-
 import { sizableBundle } from '../../shared';
 import { reducedMotionMixin } from '../../styles';
+import type { ComponentSize } from '../../types';
 import { safeCSSLength } from '../../utils';
 import componentStyles from './skeleton.css?inline';
 

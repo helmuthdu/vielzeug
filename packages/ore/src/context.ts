@@ -11,8 +11,8 @@
  */
 
 import { warn } from './_dev';
-import { OreApiError, ORE_ERRORS } from './errors';
-import { requireSetupContext, type RuntimeContext } from './runtime';
+import { ORE_ERRORS, OreApiError } from './errors';
+import { type RuntimeContext, requireSetupContext } from './runtime';
 
 const contextRegistry = new WeakMap<HTMLElement, Map<InjectionKey<unknown>, unknown>>();
 

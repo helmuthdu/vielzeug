@@ -87,7 +87,7 @@ export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
  * @internal
  */
 export function defaultReconnectDelay(attempt: number, maxMs = 30_000): number {
-  const base = Math.min(1000 * Math.pow(2, attempt), maxMs);
+  const base = Math.min(1000 * 2 ** attempt, maxMs);
 
   return Math.random() * base;
 }

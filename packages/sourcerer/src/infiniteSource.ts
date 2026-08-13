@@ -1,3 +1,6 @@
+import { warn } from './_dev';
+import { createAsyncSource } from './asyncSource';
+import { positiveInteger, sameQuery, totalItems } from './pagination';
 import type {
   InfinitePagination,
   InfiniteQuery,
@@ -5,10 +8,6 @@ import type {
   InfiniteSource,
   InfiniteSourceConfig,
 } from './types';
-
-import { warn } from './_dev';
-import { createAsyncSource } from './asyncSource';
-import { positiveInteger, sameQuery, totalItems } from './pagination';
 
 const createPagination = (loaded: number, total: number, isLoadingMore: boolean): InfinitePagination => ({
   hasMore: loaded < total,

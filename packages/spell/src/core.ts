@@ -13,16 +13,16 @@ import {
   type InferInput,
   type InferOutput,
   type InferSchemaMode,
-  type MergeSchemaModes,
-  type SchemaMode,
   type Issue,
   type JsonSchema,
+  type MergeSchemaModes,
   type MessageFn,
   type Messages,
   type ParseContext,
   type ParseResult,
   type SchemaDefinition,
   type SchemaDescriptor,
+  type SchemaMode,
   type SchemaWalker,
   schemaInput,
   schemaMode,
@@ -32,39 +32,38 @@ import {
 } from './types';
 
 export {
-  ErrorCode,
+  fail,
+  prependIssuePath,
+  resolveMessage,
+  SpellDefinitionError,
+  SpellError,
+  SpellValidationError,
+} from './errors';
+export {
   type AnySchema,
   type CheckContext,
+  ErrorCode,
   type FlatError,
   type FlatErrorFirst,
   type Infer,
   type InferInput,
   type InferOutput,
   type InferSchemaMode,
-  type MergeSchemaModes,
-  type SchemaMode,
   type Issue,
   type JsonSchema,
+  type MergeSchemaModes,
   type MessageFn,
   type Messages,
   type ParseContext,
   type ParseResult,
   type SchemaDefinition,
   type SchemaDescriptor,
+  type SchemaMode,
   type SchemaWalker,
   schemaMode,
   type ValidateFn,
   type ValidateResult,
 };
-
-export {
-  SpellDefinitionError,
-  SpellError,
-  SpellValidationError,
-  fail,
-  prependIssuePath,
-  resolveMessage,
-} from './errors';
 
 function deepFreeze<T>(value: T): T {
   if (value === null || typeof value !== 'object' || Object.isFrozen(value)) return value;

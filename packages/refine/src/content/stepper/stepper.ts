@@ -1,23 +1,21 @@
 import {
+  bind,
   createContext,
   define,
-  html,
-  prop,
-  bind,
   getHost,
+  html,
   onCleanup,
   onMounted,
+  prop,
   provide,
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { computed, signal, type Readable } from '@vielzeug/ripple';
+import { computed, type Readable, signal } from '@vielzeug/ripple';
 import { watch } from '@vielzeug/ripple/watch';
-
-import type { ComponentSize, ThemeColor } from '../../types';
-
 import { createInteraction, createListControl, elementDirection, lifecycleSignal } from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
+import type { ComponentSize, ThemeColor } from '../../types';
 import { isStepNavigable } from './_is-step-navigable';
 import componentStyles from './stepper.css?inline';
 
@@ -208,7 +206,10 @@ define<OreStepperProps>(STEPPER_TAG, {
     // render corrupted its rendered output (the step's clickable/static control silently failed
     // to mount at all). Onmounted's callback runs on a microtask, strictly after the whole
     // synchronous parse (and thus every child) has completed, so `getSteps()` sees the final list.
-    onMounted(() => ensureSelection());
+    onMounted(() => {
+      ensureSelection();
+      return undefined;
+    });
 
     // ────────────────────────────────────────────────────────────────
     // Keyboard Navigation (roving tabindex over navigable steps)

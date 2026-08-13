@@ -1,9 +1,7 @@
-import { createContext, define, html, prop, bind, getHost, onCleanup, provide, useEmit } from '@vielzeug/ore';
+import { bind, createContext, define, getHost, html, onCleanup, prop, provide, useEmit } from '@vielzeug/ore';
 import { computed, type Readable } from '@vielzeug/ripple';
-
-import type { ComponentSize, SurfaceVariant } from '../../types';
-
 import { createListControl, lifecycleSignal } from '../../core';
+import type { ComponentSize, SurfaceVariant } from '../../types';
 import styles from './accordion.css?inline';
 
 /** Context provided by ore-accordion to its ore-accordion-item children. */
@@ -126,7 +124,7 @@ define<OreAccordionProps>(ACCORDION_TAG, {
           const eventTarget = event.composedPath().find((node): node is HTMLElement => node instanceof HTMLElement);
           const expandedItem = (event as CustomEvent<{ item?: HTMLElement }>).detail?.item ?? eventTarget;
 
-          if (!expandedItem || expandedItem.localName !== 'ore-accordion-item') return;
+          if (expandedItem?.localName !== 'ore-accordion-item') return;
 
           // Guard: only respond to accordion-items that belong to THIS accordion instance
           if (expandedItem.closest('ore-accordion') !== el) return;

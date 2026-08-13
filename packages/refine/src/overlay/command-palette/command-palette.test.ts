@@ -313,7 +313,7 @@ describe('ore-command-palette', () => {
       await fixture.attr('open', false);
       await fixture.attr('open', true);
 
-      expect(getInput()!.value).toBe('');
+      expect(getInput()?.value).toBe('');
       expect(getRows()).toHaveLength(4);
     });
 

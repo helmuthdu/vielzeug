@@ -1,115 +1,115 @@
 {
-  "name": "@vielzeug/sandbox",
   "entries": [
     {
-      "version": "2.0.0",
-      "tag": "@vielzeug/sandbox_v2.0.0",
-      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
       "comments": {
         "major": [
           {
-            "comment": "feat!: harden sandbox protocol and rename patch to replaceBody",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat!: harden sandbox protocol and rename patch to replaceBody",
             "commit": "98cc4a64eec297eee235b3a6dfdb59dc39091e66"
           }
         ]
-      }
+      },
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "tag": "@vielzeug/sandbox_v2.0.0",
+      "version": "2.0.0"
     },
     {
-      "version": "1.2.3",
-      "tag": "@vielzeug/sandbox_v1.2.3",
-      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
             "commit": "49ec292706645d1f4937897ac628d852f3a11736"
           }
         ]
-      }
+      },
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "tag": "@vielzeug/sandbox_v1.2.3",
+      "version": "1.2.3"
     },
     {
-      "version": "1.2.2",
-      "tag": "@vielzeug/sandbox_v1.2.2",
-      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
             "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
           }
         ]
-      }
+      },
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "tag": "@vielzeug/sandbox_v1.2.2",
+      "version": "1.2.2"
     },
     {
-      "version": "1.2.1",
-      "tag": "@vielzeug/sandbox_v1.2.1",
-      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
             "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
           }
         ]
-      }
+      },
+      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
+      "tag": "@vielzeug/sandbox_v1.2.1",
+      "version": "1.2.1"
     },
     {
-      "version": "1.2.0",
-      "tag": "@vielzeug/sandbox_v1.2.0",
-      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
       "comments": {
         "minor": [
           {
-            "comment": "Add SandboxBridge.onState() subscription API, SandboxStateUpdateDetail type, and harden bridge messages against superseded-document races via a render generation tag",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Add SandboxBridge.onState() subscription API, SandboxStateUpdateDetail type, and harden bridge messages against superseded-document races via a render generation tag",
             "commit": "a4bae58e1b729885f222430142b1a4f235ebb5ba"
           },
           {
-            "comment": "render() now rejects with SandboxTimeoutError if no 'ready' signal arrives within 5s, in all builds (previously a dev-only warning that never rejected). Superseded renders and dispose() still resolve, not reject.",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "render() now rejects with SandboxTimeoutError if no 'ready' signal arrives within 5s, in all builds (previously a dev-only warning that never rejected). Superseded renders and dispose() still resolve, not reject.",
             "commit": "a4bae58e1b729885f222430142b1a4f235ebb5ba"
           }
         ],
         "patch": [
           {
-            "comment": "chore(sandbox): rename internal _warn.ts to _dev.ts",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(sandbox): rename internal _warn.ts to _dev.ts",
             "commit": "1b696f77f93b469187d4d7bae13012812a126885"
           }
         ]
-      }
+      },
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "tag": "@vielzeug/sandbox_v1.2.0",
+      "version": "1.2.0"
     },
     {
-      "version": "1.1.0",
-      "tag": "@vielzeug/sandbox_v1.1.0",
-      "date": "Thu, 02 Jul 2026 06:05:59 GMT",
       "comments": {
         "minor": [
           {
-            "comment": "Add setStateAll batch API, lang/title document options, SandboxError base class, and harden CSP/postMessage security",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Add setStateAll batch API, lang/title document options, SandboxError base class, and harden CSP/postMessage security",
             "commit": "4b779cda797ede3c5ebd23c659c86810f0fdf4d1"
           }
         ]
-      }
+      },
+      "date": "Thu, 02 Jul 2026 06:05:59 GMT",
+      "tag": "@vielzeug/sandbox_v1.1.0",
+      "version": "1.1.0"
     },
     {
-      "version": "1.0.0",
-      "tag": "@vielzeug/sandbox_v1.0.0",
-      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
       "comments": {
         "major": [
           {
-            "comment": "Initial public release",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Initial public release",
             "commit": "1e77fcb4a56119b6e684cce54f2384b223bec973"
           }
         ]
-      }
+      },
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "tag": "@vielzeug/sandbox_v1.0.0",
+      "version": "1.0.0"
     }
-  ]
+  ],
+  "name": "@vielzeug/sandbox"
 }

@@ -29,7 +29,7 @@ describe('createPulse lifecycle', () => {
     expect(pulse.status.value).toBe('connecting');
     expect(MockWebSocket.instances).toHaveLength(1);
 
-    MockWebSocket.instances[0]!.open();
+    MockWebSocket.instances[0]?.open();
     await expect(connecting).resolves.toBeUndefined();
     expect(pulse.status.value).toBe('open');
 
@@ -108,7 +108,7 @@ describe('createPulse lifecycle', () => {
 
     socket.drop();
     await vi.advanceTimersByTimeAsync(0);
-    MockWebSocket.instances[1]!.drop();
+    MockWebSocket.instances[1]?.drop();
     await vi.advanceTimersByTimeAsync(0);
 
     expect(pulse.status.value).toBe('closed');

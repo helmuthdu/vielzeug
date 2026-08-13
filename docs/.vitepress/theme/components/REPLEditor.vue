@@ -209,13 +209,12 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-
-import { type SandboxLibrary } from './repl/execution/buildSandboxDocument';
+import type { ExampleModule } from './repl/examples/types';
+import type { SandboxLibrary } from './repl/execution/buildSandboxDocument';
 import { executeReplCode } from './repl/execution/executeReplCode';
 import { persistedCode } from './repl/execution/persistedCode';
 import { loadMonaco } from './repl/execution/useMonaco';
 import { type OutputLine, useReplExecution } from './repl/execution/useReplExecution';
-import type { ExampleModule } from './repl/examples/types';
 import { LIBRARY_REGISTRY, type LibraryEntry } from './repl/registry.generated';
 
 // ============================================================================
@@ -257,8 +256,8 @@ const examplesByCategory = computed(() => {
   }
 
   return Object.entries(grouped).map(([name, exampleList]) => ({
-    name: name.charAt(0).toUpperCase() + name.slice(1),
     examples: exampleList,
+    name: name.charAt(0).toUpperCase() + name.slice(1),
   }));
 });
 

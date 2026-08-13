@@ -1,7 +1,6 @@
-import type { CartItem, Configuration } from './types';
-
 import { cartItems, compareModelIds } from './cart-store';
 import { bus } from './events';
+import type { CartItem, Configuration } from './types';
 
 /**
  * Direct cart/compare mutations — every view calls into this module rather than writing to

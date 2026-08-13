@@ -1,7 +1,6 @@
-import type { PulseStatus, ReconnectOptions } from './types';
-
 import { defaultReconnectDelay, sleep } from './_utils';
 import { PulseConnectionError, PulseDisposedError } from './errors';
+import type { PulseStatus, ReconnectOptions } from './types';
 
 type ConnectionCallbacks = {
   onClose(): void;

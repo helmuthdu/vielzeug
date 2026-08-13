@@ -1,4 +1,4 @@
-import { type VaultStore, table, ttl, VaultDisposedError } from '../index';
+import { table, ttl, VaultDisposedError, type VaultStore } from '../index';
 import { createLocalStorage } from '../local-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };

@@ -1,5 +1,4 @@
-import { html, ref, onMounted } from '../index';
-import { mutationObserver } from '../index';
+import { html, mutationObserver, onMounted, ref } from '../index';
 import { mount } from '../testing';
 
 describe('mutationObserver()', () => {

@@ -5,12 +5,11 @@
      `--_gap`/`--_font-size` from `ore-menu` (see `LIST_SIZE_PRESET`'s doc comment). The
      `var(..., fallback)` defaults below cover standalone use outside an `ore-list`. */
   :host {
+    --_actions-width: var(--list-item-actions-width, var(--size-24));
     position: relative;
     display: block;
     overflow: hidden;
     color: var(--color-contrast-700);
-
-    --_actions-width: var(--list-item-actions-width, var(--size-24));
   }
 
   /* ========================================

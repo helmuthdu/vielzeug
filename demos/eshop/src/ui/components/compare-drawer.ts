@@ -8,14 +8,12 @@ import '@vielzeug/refine/grid-item';
 import { createSortable, createSortableScope } from '@vielzeug/dnd';
 import { define, each, html, onCleanup, onMounted, ref, when } from '@vielzeug/ore';
 import { computed, effect, signal } from '@vielzeug/ripple';
-
-import type { Model } from '../../core/types';
-
 import { compareModels } from '../../core/cart-store';
 import { formatPrice } from '../../core/currency';
-import { reorderCompare, removeFromCompare } from '../../core/history';
+import { removeFromCompare, reorderCompare } from '../../core/history';
 import { t } from '../../core/i18n';
 import { router } from '../../core/router';
+import type { Model } from '../../core/types';
 
 /** `better` only appears on rows with an unambiguous "lower/higher is better" direction —
  * `segment` and `rangeOrEconomy` (the latter mixes range-in-km with fuel-economy-in-L/100km
@@ -127,7 +125,7 @@ define('compare-drawer', {
 
       sortable = createSortable({
         element: container,
-        getKey: (el) => el.dataset['modelId'] ?? '',
+        getKey: (el) => el.dataset.modelId ?? '',
         onReorder: ({ ids }) => reorderCompare(ids),
         scope,
       });

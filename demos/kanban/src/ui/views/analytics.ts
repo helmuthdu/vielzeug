@@ -1,13 +1,10 @@
-import type { BarChartConfig, ChartHandle, LineChartConfig } from '@vielzeug/prism';
-
 import { define, html, onCleanup, onMounted, ref } from '@vielzeug/ore';
+import type { BarChartConfig, ChartHandle, LineChartConfig } from '@vielzeug/prism';
 import { createBarChart, createLineChart } from '@vielzeug/prism';
 import { effect } from '@vielzeug/ripple';
-
-import type { TaskStatus } from '../../core/types';
-
 import { boardSignal } from '../../core/board-store';
 import { t } from '../../core/i18n';
+import type { TaskStatus } from '../../core/types';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 

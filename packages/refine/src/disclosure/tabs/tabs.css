@@ -1,12 +1,11 @@
 @layer refine.base {
   :host {
+    --tabs-transition: var(--transition-normal);
+    --tabs-radius: var(--rounded-lg);
     display: flex;
     flex-direction: column;
     width: 100%;
     height: 100%;
-
-    --tabs-transition: var(--transition-normal);
-    --tabs-radius: var(--rounded-lg);
   }
 
   .tablist-wrapper {

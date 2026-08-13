@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 import { CodexError } from './errors.js';
 import {
-  DOC_PAGES,
   type CemDeclaration,
+  DOC_PAGES,
   type DocPage,
   type Example,
   type PackageContent,

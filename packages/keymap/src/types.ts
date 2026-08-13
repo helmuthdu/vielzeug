@@ -25,12 +25,12 @@ export interface KeymapOptions {
 }
 
 export interface Keymap {
-  [Symbol.dispose](): void;
   bind(shortcut: string, value: BindingValue): () => void;
-  dispose(): void;
   readonly disposalSignal: AbortSignal;
+  dispose(): void;
   readonly disposed: boolean;
   listBindings(): readonly BindingEntry[];
   mount(target: EventTarget): () => void;
   unbind(shortcut: string): void;
+  [Symbol.dispose](): void;
 }

@@ -32,7 +32,7 @@ describe('fuzzyScore', () => {
     const results = fuzzyScore(['John Doe', 'Jane Doe', 'Alice Smith'], 'john');
 
     expect(results[0]?.item).toBe('John Doe');
-    expect(results.every((result, index) => index === 0 || results[index - 1]!.score >= result.score)).toBe(true);
+    expect(results.every((result, index) => index === 0 || results[index - 1]?.score >= result.score)).toBe(true);
   });
 
   it('returns all values with score 1 for an empty query', () => {

@@ -1,3 +1,4 @@
+export type { ClockworkErrorCode } from './errors.js';
 export { ClockworkError } from './errors.js';
 export { defineMachine } from './interpret.js';
 export type {
@@ -23,4 +24,3 @@ export type {
   TransitionInput,
   TransitionResult,
 } from './types.js';
-export type { ClockworkErrorCode } from './errors.js';

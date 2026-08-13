@@ -1,7 +1,6 @@
-import type { Obj } from '../types';
-
 import { isUnsafeKey } from '../_common/unsafePaths';
 import { isPlainObject } from '../guards/isPlainObject';
+import type { Obj } from '../types';
 
 export type DeepMergeOptions = {
   /** How to handle arrays when both source and target contain one. Default: `'replace'`. */

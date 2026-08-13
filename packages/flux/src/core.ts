@@ -1,6 +1,5 @@
-import type { Observer, Producer, Stream, SubscribeOptions, Subscription } from './types';
-
 import { createSubscription } from './_subscription';
+import type { Observer, Producer, Stream, SubscribeOptions, Subscription } from './types';
 
 /** Creates lazy work. Producer cleanup belongs to each individual subscription. */
 export function stream<T>(producer: Producer<T>): Stream<T> {

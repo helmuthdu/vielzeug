@@ -1,5 +1,17 @@
 /// <reference lib="dom" />
 
+import {
+  assertBatchTables,
+  type BatchImpl,
+  buildAdapterOps,
+  buildTxContext,
+  type StorageBackend,
+  withIndexedDbTransactions,
+} from '../adapter-core';
+import { VaultDisposedError, VaultError, VaultMigrationError } from '../errors';
+import { encodeVaultKey, getRecordKey } from '../internal';
+import type { NativeRange } from '../query';
+import { isExpired, parseStored, type StoredRecord } from '../ttl';
 import type {
   AnySchema,
   BaseAdapterOptions,
@@ -10,19 +22,6 @@ import type {
   TransactionContext,
   TtlMs,
 } from '../types';
-
-import {
-  assertBatchTables,
-  buildAdapterOps,
-  buildTxContext,
-  withIndexedDbTransactions,
-  type BatchImpl,
-  type StorageBackend,
-} from '../adapter-core';
-import { VaultDisposedError, VaultError, VaultMigrationError } from '../errors';
-import { encodeVaultKey, getRecordKey } from '../internal';
-import { type NativeRange } from '../query';
-import { isExpired, parseStored, type StoredRecord } from '../ttl';
 
 function idbReq<R>(request: IDBRequest<R>): Promise<R> {
   return new Promise<R>((resolve, reject) => {
@@ -107,7 +106,7 @@ async function getAllFromStoreByIndex<T extends object>(
       ? IDBKeyRange.only(range.value as IDBValidKey)
       : range.type === 'between'
         ? IDBKeyRange.bound(range.lower as IDBValidKey, range.upper as IDBValidKey)
-        : IDBKeyRange.bound(range.prefix, range.prefix + '\uffff');
+        : IDBKeyRange.bound(range.prefix, `${range.prefix}\uffff`);
   const rawRecords = await idbReq<unknown[]>(index.getAll(idbRange));
   const records: T[] = [];
 

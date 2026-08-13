@@ -1,8 +1,7 @@
+import { html } from '@vielzeug/ore';
 import type { Readable } from '@vielzeug/ripple';
 
-import { html } from '@vielzeug/ore';
-
-import { counterClassName, type CounterState } from '../../core';
+import { type CounterState, counterClassName } from '../../core';
 
 /**
  * Renders the standard assistive text region (helper/error) used across all

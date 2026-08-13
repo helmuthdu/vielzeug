@@ -24,8 +24,8 @@ import type { OrePaginationEvents, OrePaginationProps } from '../content/paginat
 import type { OreSeparatorProps } from '../content/separator/separator';
 import type { OreTableProps } from '../content/table/table';
 import type { OreTextProps } from '../content/text/text';
-import type { OreAccordionItemEvents, OreAccordionItemProps } from '../disclosure/accordion-item/accordion-item';
 import type { OreAccordionEvents, OreAccordionProps } from '../disclosure/accordion/accordion';
+import type { OreAccordionItemEvents, OreAccordionItemProps } from '../disclosure/accordion-item/accordion-item';
 import type { OreTabItemProps } from '../disclosure/tab-item/tab-item';
 import type { OreTabPanelProps } from '../disclosure/tab-panel/tab-panel';
 import type { OreTabsEvents, OreTabsProps } from '../disclosure/tabs/tabs';
@@ -36,11 +36,11 @@ import type { OreChipEvents, OreChipProps } from '../feedback/chip/chip';
 import type { OrePasswordStrengthProps } from '../feedback/password-strength/password-strength';
 import type { OreProgressProps } from '../feedback/progress/progress';
 import type { OreSkeletonProps } from '../feedback/skeleton/skeleton';
-import type { OreButtonGroupProps } from '../inputs/button-group/button-group';
 import type { OreButtonProps } from '../inputs/button/button';
+import type { OreButtonGroupProps } from '../inputs/button-group/button-group';
 import type { OreCalendarEvents, OreCalendarProps } from '../inputs/calendar/calendar';
-import type { OreCheckboxGroupEvents, OreCheckboxGroupProps } from '../inputs/checkbox-group/checkbox-group';
 import type { OreCheckboxEvents, OreCheckboxProps } from '../inputs/checkbox/checkbox';
+import type { OreCheckboxGroupEvents, OreCheckboxGroupProps } from '../inputs/checkbox-group/checkbox-group';
 import type { OreComboboxEvents, OreComboboxOptionProps, OreComboboxProps } from '../inputs/combobox/combobox.types';
 import type { OreDataGridEvents, OreDataGridProps } from '../inputs/datagrid/datagrid';
 import type { OreDatePickerEvents, OreDatePickerProps } from '../inputs/date-picker/date-picker';
@@ -49,8 +49,8 @@ import type { OreInputEvents, OreInputProps } from '../inputs/input/input';
 import type { OreMessageComposerEvents, OreMessageComposerProps } from '../inputs/message-composer/message-composer';
 import type { OreNumberInputEvents, OreNumberInputProps } from '../inputs/number-input/number-input';
 import type { OreOtpInputEvents, OreOtpInputProps } from '../inputs/otp-input/otp-input';
-import type { OreRadioGroupEvents, OreRadioGroupProps } from '../inputs/radio-group/radio-group';
 import type { OreRadioEvents, OreRadioProps } from '../inputs/radio/radio';
+import type { OreRadioGroupEvents, OreRadioGroupProps } from '../inputs/radio-group/radio-group';
 import type { OreRatingEvents, OreRatingProps } from '../inputs/rating/rating';
 import type { OreSelectEvents, OreSelectProps } from '../inputs/select/select';
 import type { OreSliderEvents, OreSliderProps } from '../inputs/slider/slider';
@@ -58,8 +58,8 @@ import type { OreSwitchEvents, OreSwitchProps } from '../inputs/switch/switch';
 import type { OreTextareaEvents, OreTextareaProps } from '../inputs/textarea/textarea';
 import type { OreTimePickerEvents, OreTimePickerProps } from '../inputs/time-picker/time-picker';
 import type { OreBoxProps } from '../layout/box/box';
-import type { OreGridItemProps } from '../layout/grid-item/grid-item';
 import type { OreGridProps } from '../layout/grid/grid';
+import type { OreGridItemProps } from '../layout/grid-item/grid-item';
 import type { NavbarElement, OreNavbarEvents, OreNavbarItemProps } from '../layout/navbar/navbar';
 import type {
   OreSidebarEvents,
@@ -75,28 +75,91 @@ import type { OrePopoverEvents, OrePopoverProps } from '../overlay/popover/popov
 import type { OreTooltipProps } from '../overlay/tooltip/tooltip';
 import type { AddEventListeners, FormValidityMethods } from '../shared';
 
-export {};
-
 declare global {
   interface HTMLElementTagNameMap {
+    // disclosure
+    'ore-accordion': HTMLElement & OreAccordionProps & AddEventListeners<OreAccordionEvents>;
+    'ore-accordion-item': HTMLElement & OreAccordionItemProps & AddEventListeners<OreAccordionItemEvents>;
+    // feedback
+    'ore-alert': HTMLElement & OreAlertProps & AddEventListeners<OreAlertEvents>;
+    'ore-async': HTMLElement & OreAsyncProps & AddEventListeners<OreAsyncEvents>;
     // content
     'ore-avatar': HTMLElement & OreAvatarProps;
     'ore-avatar-group': HTMLElement & OreAvatarGroupProps;
+    'ore-badge': HTMLElement & OreBadgeProps;
+    // layout
+    'ore-box': HTMLElement & OreBoxProps;
     'ore-breadcrumb': HTMLElement & OreBreadcrumbProps;
     'ore-breadcrumb-item': HTMLElement & OreBreadcrumbItemProps;
+    // inputs
+    'ore-button': HTMLElement & OreButtonProps;
+    'ore-button-group': HTMLElement & OreButtonGroupProps;
+    'ore-calendar': HTMLElement & OreCalendarProps & AddEventListeners<OreCalendarEvents>;
     'ore-card': HTMLElement & OreCardProps & AddEventListeners<OreCardEvents>;
     'ore-carousel': HTMLElement & OreCarouselProps & AddEventListeners<OreCarouselEvents>;
     'ore-carousel-slide': HTMLElement;
+    'ore-checkbox': HTMLElement & OreCheckboxProps & FormValidityMethods & AddEventListeners<OreCheckboxEvents>;
+    'ore-checkbox-group': HTMLElement &
+      OreCheckboxGroupProps &
+      FormValidityMethods &
+      AddEventListeners<OreCheckboxGroupEvents>;
+    'ore-chip': HTMLElement & OreChipProps & AddEventListeners<OreChipEvents>;
     'ore-code-window': HTMLElement & OreCodeWindowProps;
+    'ore-column': HTMLElement;
+    'ore-combobox': HTMLElement & OreComboboxProps & FormValidityMethods & AddEventListeners<OreComboboxEvents>;
+    'ore-combobox-option': HTMLElement & OreComboboxOptionProps;
     'ore-copy-command': HTMLElement & OreCopyCommandProps & AddEventListeners<OreCopyCommandEvents>;
+    'ore-datagrid': HTMLElement & OreDataGridProps & AddEventListeners<OreDataGridEvents>;
+    'ore-date-picker': HTMLElement & OreDatePickerProps & AddEventListeners<OreDatePickerEvents>;
+    // overlay
+    'ore-dialog': HTMLElement & OreDialogProps & AddEventListeners<OreDialogEvents>;
+    'ore-drawer': DrawerElement & AddEventListeners<OreDrawerEvents>;
+    'ore-file-input': HTMLElement & OreFileInputProps & FormValidityMethods & AddEventListeners<OreFileInputEvents>;
+    'ore-grid': HTMLElement & OreGridProps;
+    'ore-grid-item': HTMLElement & OreGridItemProps;
     'ore-icon': HTMLElement & OreIconProps;
+    'ore-input': HTMLElement & OreInputProps & FormValidityMethods & AddEventListeners<OreInputEvents>;
     'ore-marquee': HTMLElement & OreMarqueeProps;
+    'ore-menu': HTMLElement & OreMenuProps & AddEventListeners<OreMenuEvents>;
+    'ore-menu-item': HTMLElement & OreMenuItemProps;
+    'ore-menu-separator': HTMLElement;
+    'ore-message-composer': HTMLElement &
+      OreMessageComposerProps &
+      FormValidityMethods &
+      AddEventListeners<OreMessageComposerEvents>;
+    'ore-navbar': NavbarElement & AddEventListeners<OreNavbarEvents>;
+    'ore-navbar-item': HTMLElement & OreNavbarItemProps;
+    'ore-number-input': HTMLElement &
+      OreNumberInputProps &
+      FormValidityMethods &
+      AddEventListeners<OreNumberInputEvents>;
+    'ore-otp-input': HTMLElement & OreOtpInputProps & AddEventListeners<OreOtpInputEvents>;
     'ore-pagination': HTMLElement & OrePaginationProps & AddEventListeners<OrePaginationEvents>;
+    'ore-password-strength': HTMLElement & OrePasswordStrengthProps;
+    'ore-popover': HTMLElement & OrePopoverProps & AddEventListeners<OrePopoverEvents>;
+    'ore-progress': HTMLElement & OreProgressProps;
+    'ore-radio': HTMLElement & OreRadioProps & FormValidityMethods & AddEventListeners<OreRadioEvents>;
+    'ore-radio-group': HTMLElement & OreRadioGroupProps & FormValidityMethods & AddEventListeners<OreRadioGroupEvents>;
+    'ore-rating': HTMLElement & OreRatingProps & FormValidityMethods & AddEventListeners<OreRatingEvents>;
+    'ore-select': HTMLElement & OreSelectProps & FormValidityMethods & AddEventListeners<OreSelectEvents>;
     'ore-separator': HTMLElement & OreSeparatorProps;
+    'ore-sidebar': SidebarElement & AddEventListeners<OreSidebarEvents>;
+    'ore-sidebar-group': HTMLElement & OreSidebarGroupProps & AddEventListeners<OreSidebarGroupEvents>;
+    'ore-sidebar-item': HTMLElement & OreSidebarItemProps;
+    'ore-skeleton': HTMLElement & OreSkeletonProps;
+    'ore-slider': HTMLElement & OreSliderProps & FormValidityMethods & AddEventListeners<OreSliderEvents>;
+    'ore-switch': HTMLElement & OreSwitchProps & FormValidityMethods & AddEventListeners<OreSwitchEvents>;
+    'ore-tab-item': HTMLElement & OreTabItemProps;
+    'ore-tab-panel': HTMLElement & OreTabPanelProps;
     'ore-table': HTMLElement & OreTableProps;
+    'ore-tabs': HTMLElement & OreTabsProps & AddEventListeners<OreTabsEvents>;
+    'ore-td': HTMLElement & {
+      colspan?: number | string;
+      headers?: string;
+      rowspan?: number | string;
+    };
     'ore-text': HTMLElement & OreTextProps;
-    // table markers (light-DOM authoring API used by ore-table)
-    'ore-tr': HTMLElement & { foot?: boolean; head?: boolean };
+    'ore-textarea': HTMLElement & OreTextareaProps & FormValidityMethods & AddEventListeners<OreTextareaEvents>;
     'ore-th': HTMLElement & {
       abbr?: string;
       axis?: string;
@@ -105,75 +168,10 @@ declare global {
       rowspan?: number | string;
       scope?: 'col' | 'colgroup' | 'row' | 'rowgroup' | string;
     };
-    'ore-td': HTMLElement & {
-      colspan?: number | string;
-      headers?: string;
-      rowspan?: number | string;
-    };
-    // disclosure
-    'ore-accordion': HTMLElement & OreAccordionProps & AddEventListeners<OreAccordionEvents>;
-    'ore-accordion-item': HTMLElement & OreAccordionItemProps & AddEventListeners<OreAccordionItemEvents>;
-    'ore-tab-item': HTMLElement & OreTabItemProps;
-    'ore-tab-panel': HTMLElement & OreTabPanelProps;
-    'ore-tabs': HTMLElement & OreTabsProps & AddEventListeners<OreTabsEvents>;
-    // feedback
-    'ore-alert': HTMLElement & OreAlertProps & AddEventListeners<OreAlertEvents>;
-    'ore-async': HTMLElement & OreAsyncProps & AddEventListeners<OreAsyncEvents>;
-    'ore-badge': HTMLElement & OreBadgeProps;
-    'ore-chip': HTMLElement & OreChipProps & AddEventListeners<OreChipEvents>;
-    'ore-password-strength': HTMLElement & OrePasswordStrengthProps;
-    'ore-progress': HTMLElement & OreProgressProps;
-    'ore-skeleton': HTMLElement & OreSkeletonProps;
-    'ore-toast': HTMLElement;
-    // inputs
-    'ore-button': HTMLElement & OreButtonProps;
-    'ore-button-group': HTMLElement & OreButtonGroupProps;
-    'ore-calendar': HTMLElement & OreCalendarProps & AddEventListeners<OreCalendarEvents>;
-    'ore-checkbox': HTMLElement & OreCheckboxProps & FormValidityMethods & AddEventListeners<OreCheckboxEvents>;
-    'ore-checkbox-group': HTMLElement &
-      OreCheckboxGroupProps &
-      FormValidityMethods &
-      AddEventListeners<OreCheckboxGroupEvents>;
-    'ore-combobox': HTMLElement & OreComboboxProps & FormValidityMethods & AddEventListeners<OreComboboxEvents>;
-    'ore-combobox-option': HTMLElement & OreComboboxOptionProps;
-    'ore-column': HTMLElement;
-    'ore-datagrid': HTMLElement & OreDataGridProps & AddEventListeners<OreDataGridEvents>;
-    'ore-date-picker': HTMLElement & OreDatePickerProps & AddEventListeners<OreDatePickerEvents>;
-    'ore-file-input': HTMLElement & OreFileInputProps & FormValidityMethods & AddEventListeners<OreFileInputEvents>;
-    'ore-input': HTMLElement & OreInputProps & FormValidityMethods & AddEventListeners<OreInputEvents>;
-    'ore-message-composer': HTMLElement &
-      OreMessageComposerProps &
-      FormValidityMethods &
-      AddEventListeners<OreMessageComposerEvents>;
-    'ore-number-input': HTMLElement &
-      OreNumberInputProps &
-      FormValidityMethods &
-      AddEventListeners<OreNumberInputEvents>;
-    'ore-otp-input': HTMLElement & OreOtpInputProps & AddEventListeners<OreOtpInputEvents>;
-    'ore-radio': HTMLElement & OreRadioProps & FormValidityMethods & AddEventListeners<OreRadioEvents>;
-    'ore-radio-group': HTMLElement & OreRadioGroupProps & FormValidityMethods & AddEventListeners<OreRadioGroupEvents>;
-    'ore-rating': HTMLElement & OreRatingProps & FormValidityMethods & AddEventListeners<OreRatingEvents>;
-    'ore-select': HTMLElement & OreSelectProps & FormValidityMethods & AddEventListeners<OreSelectEvents>;
-    'ore-slider': HTMLElement & OreSliderProps & FormValidityMethods & AddEventListeners<OreSliderEvents>;
-    'ore-switch': HTMLElement & OreSwitchProps & FormValidityMethods & AddEventListeners<OreSwitchEvents>;
-    'ore-textarea': HTMLElement & OreTextareaProps & FormValidityMethods & AddEventListeners<OreTextareaEvents>;
     'ore-time-picker': HTMLElement & OreTimePickerProps & AddEventListeners<OreTimePickerEvents>;
-    // layout
-    'ore-box': HTMLElement & OreBoxProps;
-    'ore-grid': HTMLElement & OreGridProps;
-    'ore-grid-item': HTMLElement & OreGridItemProps;
-    'ore-navbar': NavbarElement & AddEventListeners<OreNavbarEvents>;
-    'ore-navbar-item': HTMLElement & OreNavbarItemProps;
-    'ore-sidebar': SidebarElement & AddEventListeners<OreSidebarEvents>;
-    'ore-sidebar-group': HTMLElement & OreSidebarGroupProps & AddEventListeners<OreSidebarGroupEvents>;
-    'ore-sidebar-item': HTMLElement & OreSidebarItemProps;
-    // overlay
-    'ore-dialog': HTMLElement & OreDialogProps & AddEventListeners<OreDialogEvents>;
-    'ore-drawer': DrawerElement & AddEventListeners<OreDrawerEvents>;
-    'ore-menu': HTMLElement & OreMenuProps & AddEventListeners<OreMenuEvents>;
-    'ore-menu-item': HTMLElement & OreMenuItemProps;
-    'ore-menu-separator': HTMLElement;
-    'ore-popover': HTMLElement & OrePopoverProps & AddEventListeners<OrePopoverEvents>;
+    'ore-toast': HTMLElement;
     'ore-tooltip': HTMLElement & OreTooltipProps;
+    // table markers (light-DOM authoring API used by ore-table)
+    'ore-tr': HTMLElement & { foot?: boolean; head?: boolean };
   }
 }

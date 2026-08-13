@@ -1,7 +1,6 @@
-import type { RandomSource } from './source';
-
 import { randomIndex } from './_index';
 import { random } from './random';
+import type { RandomSource } from './source';
 
 /**
  * Picks a single random item from an array.

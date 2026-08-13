@@ -1,8 +1,7 @@
-import type { FormatOptions, Money, MoneyFormatPart } from './types';
-
 import { roundDivision } from './decimal';
 import { CoinsError } from './errors';
 import { isMoney } from './money';
+import type { FormatOptions, Money, MoneyFormatPart } from './types';
 
 const MAX_FRACTION_DIGITS = 20;
 const integerFormatters = new Map<string, Intl.NumberFormat>();

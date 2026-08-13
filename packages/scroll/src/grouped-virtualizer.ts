@@ -84,25 +84,25 @@ export interface GroupVirtualizerOptions<T> {
 export interface GroupVirtualizer<T> {
   readonly count: number;
   readonly disposalSignal: AbortSignal;
+  dispose: () => void;
   readonly disposed: boolean;
+  invalidate: () => void;
   /** `true` while the user is actively scrolling; `false` once scroll has settled. */
   readonly isScrolling: boolean;
   readonly items: ReadonlyArray<GroupVirtualItem<T>>;
-  readonly scrollOffset: number;
-  readonly stickyItems: VirtualItem[];
-  readonly totalSize: number;
-  dispose: () => void;
-  invalidate: () => void;
   measure: (index: number, size: number) => void;
   measureBatch: (entries: Array<{ index: number; size: number }>) => void;
   measureEl: (index: number, el: HTMLElement) => () => void;
   refresh: () => void;
+  readonly scrollOffset: number;
   scrollToBottom: (options?: { behavior?: ScrollBehavior }) => void;
   scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
   scrollToItem: (sectionIndex: number, itemIndex: number, options?: ScrollToIndexOptions) => void;
   scrollToOffset: (offset: number, options?: { behavior?: ScrollBehavior }) => void;
   scrollToSection: (sectionIndex: number, options?: ScrollToIndexOptions) => void;
   scrollToTop: (options?: { behavior?: ScrollBehavior }) => void;
+  readonly stickyItems: VirtualItem[];
+  readonly totalSize: number;
   update: (sections: Array<GroupSection<T>>, opts?: GroupVirtualizerUpdateOptions<T>) => void;
   [Symbol.dispose]: () => void;
 }

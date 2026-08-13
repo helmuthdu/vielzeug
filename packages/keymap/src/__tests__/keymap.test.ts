@@ -545,7 +545,7 @@ describe('createKeymap', () => {
     it('defaults trigger to keydown', () => {
       const map = createKeymap({ 'ctrl+k': mockHandler() });
 
-      expect(map.listBindings()[0]!.trigger).toBe('keydown');
+      expect(map.listBindings()[0]?.trigger).toBe('keydown');
     });
 
     it('reflects bind() and unbind() changes', () => {
@@ -579,7 +579,7 @@ describe('createKeymap', () => {
       const map = createKeymap({ 'ctrl+k': handler });
       const unmount = map.mount(target);
 
-      map.listBindings()[0]!.shortcut[0]!.modifiers.add('shift');
+      map.listBindings()[0]?.shortcut[0]?.modifiers.add('shift');
 
       target.dispatch(makeEvent('k', { ctrlKey: true }));
       expect(handler).toHaveBeenCalledOnce();
@@ -590,8 +590,8 @@ describe('createKeymap', () => {
     it('returns distinct modifiers Set instances across calls', () => {
       const map = createKeymap({ 'ctrl+k': mockHandler() });
 
-      const setA = map.listBindings()[0]!.shortcut[0]!.modifiers;
-      const setB = map.listBindings()[0]!.shortcut[0]!.modifiers;
+      const setA = map.listBindings()[0]?.shortcut[0]?.modifiers;
+      const setB = map.listBindings()[0]?.shortcut[0]?.modifiers;
 
       expect(setA).not.toBe(setB);
       expect(setA).toEqual(setB);

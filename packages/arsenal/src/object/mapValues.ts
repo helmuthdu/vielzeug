@@ -1,6 +1,5 @@
-import type { Obj } from '../types';
-
 import { isUnsafeKey } from '../_common/unsafePaths';
+import type { Obj } from '../types';
 
 /**
  * Maps object values while preserving the original keys. Dangerous keys (`__proto__`,

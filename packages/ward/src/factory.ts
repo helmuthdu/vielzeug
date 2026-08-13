@@ -1,30 +1,29 @@
 import type { CompiledEntry } from './_compile';
-import type {
-  BoundWardAllowedActionsInput,
-  BoundWardDecisionInput,
-  BoundWardRulesInScopeInput,
-  BoundWard,
-  Principal,
-  UserPrincipal,
-  WardAllowedActionsInput,
-  Ward,
-  WardCheck,
-  WardConflict,
-  WardDecisionInput,
-  WardDecision,
-  WardDecisionResult,
-  WardOptions,
-  WardRulesInScopeInput,
-  WardRule,
-  WardTrace,
-  WardTraceCandidate,
-} from './types';
-
 import { compileEntry } from './_compile';
 import { computeConflicts } from './_conflict';
 import { warnAnonymousPredicates } from './_dev';
 import { assertUserPrincipal, isOverriddenBy, matchesRule, pickWinner, toDecision, validatePrincipal } from './_match';
 import { WardConfigError } from './errors';
+import type {
+  BoundWard,
+  BoundWardAllowedActionsInput,
+  BoundWardDecisionInput,
+  BoundWardRulesInScopeInput,
+  Principal,
+  UserPrincipal,
+  Ward,
+  WardAllowedActionsInput,
+  WardCheck,
+  WardConflict,
+  WardDecision,
+  WardDecisionInput,
+  WardDecisionResult,
+  WardOptions,
+  WardRule,
+  WardRulesInScopeInput,
+  WardTrace,
+  WardTraceCandidate,
+} from './types';
 
 const warn = warnAnonymousPredicates;
 

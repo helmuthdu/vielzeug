@@ -15,12 +15,11 @@ import { cleanup } from './mount';
 // in the testing sub-path don't carry a testing-only error class in their public type surface.
 // Generic DOM interaction helpers belong to @vielzeug/assay, not this Ore-specific test API.
 export { OreTimeoutError } from '../errors';
-
-export { debugFlush, flush, type FlushOptions } from './flush';
 export { walkFlatTree } from './dom';
+export { debugFlush, type FlushOptions, flush } from './flush';
 export { installFormInternalsPolyfill } from './form-internals-polyfill';
-export { cleanup, mock, mount, mountComponent, type Fixture, type MountOptions, type MountSetup } from './mount';
-export { renderHook, type HookFixture } from './render-hook';
+export { cleanup, type Fixture, type MountOptions, type MountSetup, mock, mount, mountComponent } from './mount';
+export { type HookFixture, renderHook } from './render-hook';
 export { resetOreForTests } from './reset';
 
 export type InstallOptions = {

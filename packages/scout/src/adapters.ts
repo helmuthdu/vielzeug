@@ -1,7 +1,6 @@
+import { getIndexRevision } from './_index-state';
 import type { ScoutIndex } from './scout-index';
 import type { SearchConstraints } from './types';
-
-import { getIndexRevision } from './_index-state';
 
 /**
  * Adapts a `ScoutIndex` to sourcerer's explicit local `match` callback.

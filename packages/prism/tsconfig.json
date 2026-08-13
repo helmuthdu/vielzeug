@@ -1,12 +1,12 @@
 {
-  "extends": "../../tsconfig.json",
-  "include": ["src/**/*.d.ts", "src/**/*.ts", "vitest.setup.ts"],
-  "exclude": ["node_modules"],
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
       "@vielzeug/orbit": ["../orbit/src/index.ts"],
       "@vielzeug/ripple": ["../ripple/src/index.ts"]
     }
-  }
+  },
+  "exclude": ["node_modules"],
+  "extends": "../../tsconfig.json",
+  "include": ["src/**/*.d.ts", "src/**/*.ts", "vitest.setup.ts"]
 }

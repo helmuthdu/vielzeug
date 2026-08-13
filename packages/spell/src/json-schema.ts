@@ -1,6 +1,5 @@
-import type { JsonSchema, SchemaDefinition, SchemaDescriptor } from './types';
-
 import { defineOwnProperty } from './safe-object';
+import type { JsonSchema, SchemaDefinition, SchemaDescriptor } from './types';
 
 export function definitionToJsonSchema(definition: SchemaDefinition): JsonSchema {
   return descriptorToJsonSchema(definition);
@@ -27,9 +26,9 @@ function _descriptorToBase(d: SchemaDescriptor): JsonSchema {
     case 'array': {
       const out: JsonSchema = { items: descriptorToJsonSchema(d.items), type: 'array' };
 
-      if (d.minItems !== undefined) out['minItems'] = d.minItems;
+      if (d.minItems !== undefined) out.minItems = d.minItems;
 
-      if (d.maxItems !== undefined) out['maxItems'] = d.maxItems;
+      if (d.maxItems !== undefined) out.maxItems = d.maxItems;
 
       return out;
     }
@@ -80,15 +79,15 @@ function _descriptorToBase(d: SchemaDescriptor): JsonSchema {
     case 'number': {
       const out: JsonSchema = { type: d.typeHint === 'integer' ? 'integer' : 'number' };
 
-      if (d.minimum !== undefined) out['minimum'] = d.minimum;
+      if (d.minimum !== undefined) out.minimum = d.minimum;
 
-      if (d.maximum !== undefined) out['maximum'] = d.maximum;
+      if (d.maximum !== undefined) out.maximum = d.maximum;
 
-      if (d.exclusiveMinimum !== undefined) out['exclusiveMinimum'] = d.exclusiveMinimum;
+      if (d.exclusiveMinimum !== undefined) out.exclusiveMinimum = d.exclusiveMinimum;
 
-      if (d.exclusiveMaximum !== undefined) out['exclusiveMaximum'] = d.exclusiveMaximum;
+      if (d.exclusiveMaximum !== undefined) out.exclusiveMaximum = d.exclusiveMaximum;
 
-      if (d.multipleOf !== undefined) out['multipleOf'] = d.multipleOf;
+      if (d.multipleOf !== undefined) out.multipleOf = d.multipleOf;
 
       return out;
     }
@@ -105,9 +104,9 @@ function _descriptorToBase(d: SchemaDescriptor): JsonSchema {
 
       const out: JsonSchema = { properties, type: 'object' };
 
-      if (required.length > 0) out['required'] = required;
+      if (required.length > 0) out.required = required;
 
-      if (d.strict) out['additionalProperties'] = false;
+      if (d.strict) out.additionalProperties = false;
 
       return out;
     }
@@ -132,15 +131,15 @@ function _descriptorToBase(d: SchemaDescriptor): JsonSchema {
     case 'string': {
       const out: JsonSchema = { type: 'string' };
 
-      if (d.minLength !== undefined) out['minLength'] = d.minLength;
+      if (d.minLength !== undefined) out.minLength = d.minLength;
 
-      if (d.maxLength !== undefined) out['maxLength'] = d.maxLength;
+      if (d.maxLength !== undefined) out.maxLength = d.maxLength;
 
-      if (d.pattern != null) out['pattern'] = d.pattern;
+      if (d.pattern != null) out.pattern = d.pattern;
 
-      if (d.format !== undefined) out['format'] = d.format;
+      if (d.format !== undefined) out.format = d.format;
 
-      if (d.contentEncoding !== undefined) out['contentEncoding'] = d.contentEncoding;
+      if (d.contentEncoding !== undefined) out.contentEncoding = d.contentEncoding;
 
       return out;
     }
@@ -152,9 +151,9 @@ function _descriptorToBase(d: SchemaDescriptor): JsonSchema {
       };
 
       if (d.rest !== null) {
-        out['items'] = descriptorToJsonSchema(d.rest);
+        out.items = descriptorToJsonSchema(d.rest);
       } else {
-        out['items'] = false;
+        out.items = false;
       }
 
       return out;

@@ -1,33 +1,31 @@
 import {
+  bind,
   createContext,
   createStableId,
   define,
-  html,
-  prop,
-  bind,
   getHost,
+  html,
   onCleanup,
+  prop,
   provide,
   useEmit,
+  useField,
   useSlots,
   watchEffect,
   when,
 } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
-import { type Readable } from '@vielzeug/ripple';
-
-import type { ComponentSize, ThemeColor } from '../../types';
-
+import type { Readable } from '@vielzeug/ripple';
 import {
   type ChoiceChangeDetail,
-  lifecycleSignal,
   createChoiceField,
   createListControl,
   getChoiceLabel,
   getLightChildrenByTag,
+  lifecycleSignal,
 } from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { disabledStateMixin } from '../../styles';
+import type { ComponentSize, ThemeColor } from '../../types';
 import componentStyles from './radio-group.css?inline';
 
 /** Radio group component properties */

@@ -1,10 +1,7 @@
-import { createStableId, define, html, prop, bind, getHost } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
+import { bind, createStableId, define, getHost, html, prop, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-
-import type { ComponentSize, ThemeColor } from '../../types';
-
 import { createErrorHelperState, createSliderControl } from '../../core';
+import type { ComponentSize, ThemeColor } from '../../types';
 import '../../content/icon/icon';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
@@ -96,8 +93,8 @@ define<OreRatingProps>(RATING_TAG, {
   setup(props) {
     const el = getHost();
     const normalizedValue = computed(() => {
-      const max = Math.max(1, Number(props.max!.value) || 5);
-      const raw = Number(props.value!.value);
+      const max = Math.max(1, Number(props.max?.value) || 5);
+      const raw = Number(props.value?.value);
       const safe = Number.isFinite(raw) ? raw : 0;
 
       return Math.min(max, Math.max(0, safe));
@@ -124,14 +121,14 @@ define<OreRatingProps>(RATING_TAG, {
     const helperText = computed(() => assistive.value.helperText);
     const ariaDescribedBy = computed(() => (errorText.value || helperText.value ? assistiveId : null));
 
-    const isInteractive = computed(() => !props.readonly!.value && !isDisabled.value);
+    const isInteractive = computed(() => !props.readonly?.value && !isDisabled.value);
     const hovered = signal<number | null>(null);
     const displayValue = computed(() => hovered.value ?? normalizedValue.value);
     const getStarButtons = () => {
       return [...(el.shadowRoot?.querySelectorAll<HTMLButtonElement>('[data-star]') ?? [])];
     };
     const ratingControl = createSliderControl({
-      max: computed(() => Number(props.max!.value) || 5),
+      max: computed(() => Number(props.max?.value) || 5),
       min: signal(1),
       step: signal(1),
     });
@@ -171,7 +168,7 @@ define<OreRatingProps>(RATING_TAG, {
     function select(star: number, _originalEvent?: Event) {
       if (!isInteractive.value) return;
 
-      const max = Math.max(1, Number(props.max!.value) || 5);
+      const max = Math.max(1, Number(props.max?.value) || 5);
       const nextValue = Math.min(max, Math.max(0, star));
 
       if (nextValue === normalizedValue.value) return;
@@ -195,7 +192,7 @@ define<OreRatingProps>(RATING_TAG, {
     }
 
     const stars = computed(() => {
-      const max = Number(props.max!.value) || 5;
+      const max = Number(props.max?.value) || 5;
 
       return Array.from({ length: max }, (_, i) => i + 1);
     });

@@ -1,7 +1,6 @@
-import type { ComponentDefinition } from './component-types';
-
 import { BaseElement } from './base-element';
-import { OreApiError, ORE_ERRORS } from './errors';
+import type { ComponentDefinition } from './component-types';
+import { ORE_ERRORS, OreApiError } from './errors';
 import { normalizePropDefinition, type PropInputDefs, type PropsDef, validatePropDefs } from './props';
 import { toKebab } from './utils/dom';
 

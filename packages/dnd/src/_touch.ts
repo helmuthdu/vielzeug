@@ -1,6 +1,6 @@
 import { warn } from './_dev';
 import { createDisposable } from './_shared';
-import { type Disposable } from './types';
+import type { Disposable } from './types';
 
 export interface TouchInputOptions {
   /**

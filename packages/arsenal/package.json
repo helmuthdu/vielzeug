@@ -3,10 +3,12 @@
   "version": "2.0.1",
   "description": "Tree-shakeable TypeScript utility library — array, object, string, async, cache, math, and more",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "files": [
     "dist"
   ],
-  "sideEffects": false,
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
@@ -62,31 +64,6 @@
       "require": "./dist/string/index.cjs"
     }
   },
-  "scripts": {
-    "build": "pnpm run verify:exports && vite build && pnpm run build:bundle && pnpm run build:types",
-    "build:types": "tsc -p tsconfig.declarations.json",
-    "fix": "eslint --fix src",
-    "lint": "eslint src",
-    "prepublishOnly": "pnpm run build",
-    "preview": "vite preview",
-    "test": "pnpm run verify:exports && vitest",
-    "sync:exports": "node ./scripts/sync-exports.mjs",
-    "verify:exports": "node ./scripts/sync-exports.mjs --check",
-    "build:bundle": "vite build --config vite.bundle.config.ts"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "engines": {
-    "node": ">=22"
-  },
-  "devDependencies": {
-    "@types/node": "^26.1.2",
-    "typescript": "^6.0.3",
-    "vite": "^8.2.0",
-    "vitest": "^4.1.10"
-  },
   "typesVersions": {
     "*": {
       "array": [
@@ -117,5 +94,28 @@
         "dist/string/index.d.ts"
       ]
     }
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "pnpm run verify:exports && vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "biome check --write src",
+    "lint": "biome ci src",
+    "prepublishOnly": "pnpm run build",
+    "preview": "vite preview",
+    "sync:exports": "node ./scripts/sync-exports.mjs",
+    "test": "pnpm run verify:exports && vitest",
+    "verify:exports": "node ./scripts/sync-exports.mjs --check"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
   }
 }

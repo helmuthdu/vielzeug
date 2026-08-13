@@ -1,6 +1,6 @@
 import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, SpellValidationError, _makeCtx } from '../core';
+import { _makeCtx, ErrorCode, Schema, SpellValidationError } from '../core';
 
 export class UnionSchema<
   T extends readonly AnySchema[],

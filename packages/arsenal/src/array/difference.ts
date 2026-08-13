@@ -1,6 +1,5 @@
-import type { Primitive } from '../types';
-
 import { toSelectorSet } from '../_common/_selectorSet';
+import type { Primitive } from '../types';
 
 /**
  * Returns elements that are in source but not in other.

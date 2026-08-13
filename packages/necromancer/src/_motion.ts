@@ -1,6 +1,5 @@
-import type { AnimateOptions, MotionMode } from './types';
-
 import { NecromancerConfigError } from './errors';
+import type { AnimateOptions, MotionMode } from './types';
 
 const DEFAULT_DURATION = 180;
 

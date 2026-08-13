@@ -432,8 +432,8 @@ test.describe('Layout', () => {
       const shippingStep = document.querySelector('ore-step[value="shipping"]') as HTMLElement & {
         shadowRoot: ShadowRoot;
       };
-      const connector = shippingStep.shadowRoot.querySelector('.connector')!.getBoundingClientRect();
-      const indicator = shippingStep.shadowRoot.querySelector('.indicator')!.getBoundingClientRect();
+      const connector = shippingStep.shadowRoot.querySelector('.connector')?.getBoundingClientRect();
+      const indicator = shippingStep.shadowRoot.querySelector('.indicator')?.getBoundingClientRect();
 
       return {
         connectorCenter: connector.left + connector.width / 2,
@@ -470,10 +470,10 @@ test.describe('Layout', () => {
       const shippingStep = document.querySelector('ore-step[value="shipping"]') as HTMLElement & {
         shadowRoot: ShadowRoot;
       };
-      const cartTrailing = cartStep.shadowRoot.querySelector('.connector-trailing')!.getBoundingClientRect();
-      const shippingLeading = shippingStep.shadowRoot.querySelector('.connector-leading')!.getBoundingClientRect();
-      const cartIndicator = cartStep.shadowRoot.querySelector('.indicator')!.getBoundingClientRect();
-      const shippingIndicator = shippingStep.shadowRoot.querySelector('.indicator')!.getBoundingClientRect();
+      const cartTrailing = cartStep.shadowRoot.querySelector('.connector-trailing')?.getBoundingClientRect();
+      const shippingLeading = shippingStep.shadowRoot.querySelector('.connector-leading')?.getBoundingClientRect();
+      const cartIndicator = cartStep.shadowRoot.querySelector('.indicator')?.getBoundingClientRect();
+      const shippingIndicator = shippingStep.shadowRoot.querySelector('.indicator')?.getBoundingClientRect();
 
       return {
         cartIndicatorBottom: cartIndicator.bottom,

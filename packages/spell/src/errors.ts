@@ -92,7 +92,7 @@ export class SpellValidationError extends SpellError {
 
     scored.sort((a, b) => b.score - a.score);
 
-    return scored[0]!.issues;
+    return scored[0]?.issues;
   }
 
   flatten(): { fieldErrors: FlatError[]; formErrors: string[] } {
@@ -108,7 +108,7 @@ export class SpellValidationError extends SpellError {
         const existing = pathMap.get(key);
 
         if (existing !== undefined) {
-          fieldErrors[existing]!.messages.push(issue.message);
+          fieldErrors[existing]?.messages.push(issue.message);
         } else {
           pathMap.set(key, fieldErrors.length);
           fieldErrors.push({ messages: [issue.message], path: [...issue.path] });

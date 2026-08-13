@@ -1,5 +1,3 @@
-import type { ExampleModule } from './types';
-
 import { arsenalExamples } from './arsenal';
 import { clockworkExamples } from './clockwork';
 import { coinsExamples } from './coins';
@@ -24,6 +22,7 @@ import { scrollExamples } from './scroll';
 import { sourcererExamples } from './sourcerer';
 import { spellExamples } from './spell';
 import { tempoExamples } from './tempo';
+import type { ExampleModule } from './types';
 import { vaultExamples } from './vault';
 import { wardExamples } from './ward';
 import { wayfinderExamples } from './wayfinder';

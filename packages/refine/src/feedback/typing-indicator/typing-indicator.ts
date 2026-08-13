@@ -1,11 +1,9 @@
 import { define, html, prop } from '@vielzeug/ore';
 import { watch } from '@vielzeug/ripple/watch';
-
-import type { ComponentSize, ThemeColor } from '../../types';
-
 import { announce } from '../../core';
 import { sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
+import type { ComponentSize, ThemeColor } from '../../types';
 import componentStyles from './typing-indicator.css?inline';
 
 /** Typing indicator component properties */

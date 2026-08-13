@@ -6,7 +6,7 @@ import { computed, effect } from '@vielzeug/ripple';
 import { boardSignal } from '../../core/board-store';
 import { reorderTasks } from '../../core/history';
 import { attemptMoveTask, canCreateTask } from '../../core/task-actions';
-import { type Task, type TaskStatus } from '../../core/types';
+import type { Task, TaskStatus } from '../../core/types';
 import { renderTaskCard } from './task-card';
 import { openTaskDialog } from './task-dialog';
 
@@ -40,7 +40,7 @@ function createColumn(containerEl: HTMLElement, opts: ColumnOptions): ColumnHand
 
   const sortable = createSortable({
     element: containerEl,
-    getKey: (el) => el.dataset['taskId'] ?? '',
+    getKey: (el) => el.dataset.taskId ?? '',
     onReorder: ({ ids }) => opts.onReorder(ids),
     scope: sharedScope,
   });

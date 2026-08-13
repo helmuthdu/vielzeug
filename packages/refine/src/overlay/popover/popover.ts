@@ -1,13 +1,13 @@
-import { type Placement } from '@vielzeug/orbit';
+import type { Placement } from '@vielzeug/orbit';
 import {
+  bind,
   createStableId,
   define,
-  html,
-  prop,
-  bind,
   getHost,
+  html,
   onCleanup,
   onMounted,
+  prop,
   useEmit,
   useSlots,
 } from '@vielzeug/ore';

@@ -1,9 +1,8 @@
 import type { CompiledEntry } from './_compile';
-import type { Principal, UserPrincipal, WardDecision, WardRule } from './types';
-
 import { ANONYMOUS, WILDCARD } from './constants';
 import { WardConfigError, WardPredicateError } from './errors';
 import { matchesPattern } from './resource';
+import type { Principal, UserPrincipal, WardDecision, WardRule } from './types';
 
 // ---------------------------------------------------------------------------
 // Principal validation

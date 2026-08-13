@@ -1,13 +1,12 @@
-import { define, html, prop, bind, useEmit, styleMap } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
+import { bind, define, html, prop, styleMap, useEmit, useField } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-import { Temporal, format } from '@vielzeug/tempo';
+import { format, Temporal } from '@vielzeug/tempo';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../shared';
 
 import '../../content/icon/icon';
 import '../../feedback/badge/badge';
-import { createDatePickerControl, parseIso, toIsoString, type DatePickerView } from '../../core';
+import { createDatePickerControl, type DatePickerView, parseIso, toIsoString } from '../../core';
 import { disablableBundle, roundableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, reducedMotionMixin } from '../../styles';
 import componentStyles from './calendar.css?inline';
@@ -513,12 +512,13 @@ define<OreCalendarProps>(CALENDAR_TAG, {
                             // `html` tagged template does not collapse whitespace at runtime like a
                             // browser parser would, so a pretty-printed multi-line `<span>...</span>`
                             // here would render literal newlines/indentation into `textContent`.
-                            // prettier-ignore
-                            const overflowPill = overflow > 0
-                              ? html`<span class="cal-event-pill-overflow" aria-hidden="true"
+                            // biome-ignore format: Preserve text-node whitespace in the template.
+                            const overflowPill =
+                              overflow > 0
+                                ? html`<span class="cal-event-pill-overflow" aria-hidden="true"
                                   >+${overflow} more</span
                                 >`
-                              : html``;
+                                : html``;
 
                             return html`
                               <div

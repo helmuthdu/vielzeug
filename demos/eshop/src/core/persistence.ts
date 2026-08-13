@@ -1,16 +1,13 @@
-import type { VaultStore } from '@vielzeug/vault';
-
 import { effect } from '@vielzeug/ripple';
+import type { VaultStore } from '@vielzeug/vault';
 import { table } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
-
-import type { ThemePreference } from './theme';
-import type { CartItem } from './types';
-
 import { cartItems, compareModelIds } from './cart-store';
 import { currencyFromCode, currentCurrency, setCurrency } from './currency';
 import { setLocale } from './i18n';
+import type { ThemePreference } from './theme';
 import { accentHue, setAccentHue, setThemePreference, themePreference } from './theme';
+import type { CartItem } from './types';
 
 // ---------------------------------------------------------------------------
 // Vault schema — one row per preference/collection, keyed by a fixed id, mirroring

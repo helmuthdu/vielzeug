@@ -1,7 +1,6 @@
-import type { Sink, Stream } from './types';
-
 import { assertNonNegativeInteger } from './_numeric';
 import { stream } from './core';
+import type { Sink, Stream } from './types';
 
 export type ChannelOptions<T> = {
   initial?: T;

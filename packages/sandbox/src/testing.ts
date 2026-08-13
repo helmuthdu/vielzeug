@@ -8,14 +8,14 @@
 
 /** Helpers for simulating sandbox→host messages in tests. */
 export interface SandboxTestHelpers {
-  /** Fire a 'ready' signal as if the bridge script executed. */
-  fireReady(): void;
   /** Fire a 'custom' event as if sandbox code called window.__sandbox__.emit(). */
   fireCustom(event: string, detail?: unknown): void;
-  /** Fire a 'resize' message as if the bridge ResizeObserver fired. */
-  fireResize(height: number): void;
   /** Fire an 'error' message as if the sandbox caught an uncaught error. */
   fireError(message: string, stack?: string): void;
+  /** Fire a 'ready' signal as if the bridge script executed. */
+  fireReady(): void;
+  /** Fire a 'resize' message as if the bridge ResizeObserver fired. */
+  fireResize(height: number): void;
 }
 
 /**

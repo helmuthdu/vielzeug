@@ -1,235 +1,235 @@
 {
-  "name": "@vielzeug/scout",
   "entries": [
     {
-      "version": "2.1.1",
-      "tag": "@vielzeug/scout_v2.1.1",
-      "date": "Mon, 10 Aug 2026 21:21:35 GMT",
       "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.1.0`"
           }
         ]
-      }
+      },
+      "date": "Mon, 10 Aug 2026 21:21:35 GMT",
+      "tag": "@vielzeug/scout_v2.1.1",
+      "version": "2.1.1"
     },
     {
-      "version": "2.1.0",
-      "tag": "@vielzeug/scout_v2.1.0",
-      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
       "comments": {
         "minor": [
           {
-            "comment": "feat: add bulk index reconciliation and validate search configuration",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: add bulk index reconciliation and validate search configuration",
             "commit": "53a0e2e20fbb07468b92dcea8a20a078cbb9eb1e"
           }
         ]
-      }
+      },
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "tag": "@vielzeug/scout_v2.1.0",
+      "version": "2.1.0"
     },
     {
-      "version": "2.0.1",
-      "tag": "@vielzeug/scout_v2.0.1",
-      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "49ec292706645d1f4937897ac628d852f3a11736"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.1`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
+            "commit": "49ec292706645d1f4937897ac628d852f3a11736"
+          }
         ]
-      }
+      },
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "tag": "@vielzeug/scout_v2.0.1",
+      "version": "2.0.1"
     },
     {
-      "version": "2.0.0",
-      "tag": "@vielzeug/scout_v2.0.0",
-      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
       "comments": {
-        "major": [
-          {
-            "comment": "refactor!: replace toSearchFn with toSearchMatcher",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.0.0`"
           }
+        ],
+        "major": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor!: replace toSearchFn with toSearchMatcher",
+            "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
+          }
         ]
-      }
+      },
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "tag": "@vielzeug/scout_v2.0.0",
+      "version": "2.0.0"
     },
     {
-      "version": "1.1.7",
-      "tag": "@vielzeug/scout_v1.1.7",
-      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "refactor(scout): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.3.0`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.1.6",
-      "tag": "@vielzeug/scout_v1.1.6",
-      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
-          },
-          {
-            "comment": "fix(scout): a single shared trigram no longer counts as a fuzzy match, fixing false-positive results for short queries",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "be459b5621a039d2e409193afeb99e01b01e2363"
+            "comment": "refactor(scout): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies",
+            "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
           }
-        ],
+        ]
+      },
+      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
+      "tag": "@vielzeug/scout_v1.1.7",
+      "version": "1.1.7"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.3`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
+            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix(scout): a single shared trigram no longer counts as a fuzzy match, fixing false-positive results for short queries",
+            "commit": "be459b5621a039d2e409193afeb99e01b01e2363"
+          }
         ]
-      }
+      },
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "tag": "@vielzeug/scout_v1.1.6",
+      "version": "1.1.6"
     },
     {
-      "version": "1.1.5",
-      "tag": "@vielzeug/scout_v1.1.5",
-      "date": "Tue, 21 Jul 2026 07:21:10 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "fix: score fuzzy matches with the overlap coefficient instead of Sørensen–Dice, so short query prefixes of much longer text no longer fall below the default threshold",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: score fuzzy matches with the overlap coefficient instead of Sørensen–Dice, so short query prefixes of much longer text no longer fall below the default threshold",
             "commit": "43443174fa18ec79afd656a3a4b1344a08376039"
           }
         ]
-      }
+      },
+      "date": "Tue, 21 Jul 2026 07:21:10 GMT",
+      "tag": "@vielzeug/scout_v1.1.5",
+      "version": "1.1.5"
     },
     {
-      "version": "1.1.4",
-      "tag": "@vielzeug/scout_v1.1.4",
-      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
       "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.2`"
           }
         ]
-      }
+      },
+      "date": "Fri, 17 Jul 2026 14:17:07 GMT",
+      "tag": "@vielzeug/scout_v1.1.4",
+      "version": "1.1.4"
     },
     {
-      "version": "1.1.3",
-      "tag": "@vielzeug/scout_v1.1.3",
-      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
             "commit": "1a8008d19848e2db3dace46af8c9710eb79be07a"
           }
         ]
-      }
+      },
+      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
+      "tag": "@vielzeug/scout_v1.1.3",
+      "version": "1.1.3"
     },
     {
-      "version": "1.1.2",
-      "tag": "@vielzeug/scout_v1.1.2",
-      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.1`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
+            "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
+          }
         ]
-      }
+      },
+      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
+      "tag": "@vielzeug/scout_v1.1.2",
+      "version": "1.1.2"
     },
     {
-      "version": "1.1.1",
-      "tag": "@vielzeug/scout_v1.1.1",
-      "date": "Sun, 05 Jul 2026 06:22:27 GMT",
       "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.0`"
           }
         ]
-      }
+      },
+      "date": "Sun, 05 Jul 2026 06:22:27 GMT",
+      "tag": "@vielzeug/scout_v1.1.1",
+      "version": "1.1.1"
     },
     {
-      "version": "1.1.0",
-      "tag": "@vielzeug/scout_v1.1.0",
-      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
       "comments": {
         "minor": [
           {
-            "comment": "fix(scout): tokenize() now preserves non-ASCII text (CJK/Cyrillic were unsearchable), reactive results now update on index.add()/remove()/reindex() via new ScoutIndex.onMutate(), createIndex() throws ScoutIndexError on zero fields, SearchState.clear() throws ScoutDisposedError after dispose(), punctuation-only queries return no results instead of matching everything; adds segmentWords() and devtools debugSearch()",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix(scout): tokenize() now preserves non-ASCII text (CJK/Cyrillic were unsearchable), reactive results now update on index.add()/remove()/reindex() via new ScoutIndex.onMutate(), createIndex() throws ScoutIndexError on zero fields, SearchState.clear() throws ScoutDisposedError after dispose(), punctuation-only queries return no results instead of matching everything; adds segmentWords() and devtools debugSearch()",
             "commit": "7a314aeb4051cee95c59227fba2a18adf3674fe2"
           }
         ]
-      }
+      },
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "tag": "@vielzeug/scout_v1.1.0",
+      "version": "1.1.0"
     },
     {
-      "version": "1.0.1",
-      "tag": "@vielzeug/scout_v1.0.1",
-      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "chore(scout): rename internal _warn.ts to _dev.ts",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "1b696f77f93b469187d4d7bae13012812a126885"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.1.0`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(scout): rename internal _warn.ts to _dev.ts",
+            "commit": "1b696f77f93b469187d4d7bae13012812a126885"
+          }
         ]
-      }
+      },
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "tag": "@vielzeug/scout_v1.0.1",
+      "version": "1.0.1"
     },
     {
-      "version": "1.0.0",
-      "tag": "@vielzeug/scout_v1.0.0",
-      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
       "comments": {
-        "major": [
-          {
-            "comment": "Initial public release",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "750b497c42c9c3de99d418be9f70b5e4817d95f3"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `1.0.0`"
           }
+        ],
+        "major": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Initial public release",
+            "commit": "750b497c42c9c3de99d418be9f70b5e4817d95f3"
+          }
         ]
-      }
+      },
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "tag": "@vielzeug/scout_v1.0.0",
+      "version": "1.0.0"
     }
-  ]
+  ],
+  "name": "@vielzeug/scout"
 }

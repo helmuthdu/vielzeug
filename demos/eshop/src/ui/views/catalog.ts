@@ -9,9 +9,6 @@ import '../components/car-silhouette';
 
 import { define, each, html, when } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
-
-import type { Model } from '../../core/types';
-
 import { compareModelIds } from '../../core/cart-store';
 import { modelMap, modelsSignal } from '../../core/catalog';
 import { formatPrice } from '../../core/currency';
@@ -19,6 +16,7 @@ import { toggleCompare } from '../../core/history';
 import { t } from '../../core/i18n';
 import { router } from '../../core/router';
 import { modelIndex } from '../../core/search-index';
+import type { Model } from '../../core/types';
 
 /**
  * The flagship shown above the filterable grid — real OEM configurator sites (this app's own
@@ -83,29 +81,29 @@ define('catalog-view', {
           <section class="catalog__hero">
             <div class="catalog__hero-media">
               <car-silhouette
-                body-type=${() => featuredModel.value!.bodyType}
-                color-hex=${() => featuredModel.value!.colors[0]?.hex ?? '#c7ccd1'}
-                color-name=${() => featuredModel.value!.colors[0]?.name ?? ''}
-                hero-hue=${() => featuredModel.value!.heroHue}></car-silhouette>
+                body-type=${() => featuredModel.value?.bodyType}
+                color-hex=${() => featuredModel.value?.colors[0]?.hex ?? '#c7ccd1'}
+                color-name=${() => featuredModel.value?.colors[0]?.name ?? ''}
+                hero-hue=${() => featuredModel.value?.heroHue}></car-silhouette>
             </div>
             <div class="catalog__hero-content">
               <p class="catalog__hero-segment">
-                ${() => `${featuredModel.value!.segment} — ${t('catalog.featuredLabel')}`}
+                ${() => `${featuredModel.value?.segment} — ${t('catalog.featuredLabel')}`}
               </p>
-              <h2 class="catalog__hero-name">${() => featuredModel.value!.name}</h2>
-              <p class="catalog__hero-tagline">${() => featuredModel.value!.tagline}</p>
+              <h2 class="catalog__hero-name">${() => featuredModel.value?.name}</h2>
+              <p class="catalog__hero-tagline">${() => featuredModel.value?.tagline}</p>
               <div class="catalog__hero-specs">
                 <div class="spec">
                   <span class="spec__label">${() => t('model.topSpeed')}</span>
-                  <strong>${() => `${featuredModel.value!.topSpeedKph} km/h`}</strong>
+                  <strong>${() => `${featuredModel.value?.topSpeedKph} km/h`}</strong>
                 </div>
                 <div class="spec">
                   <span class="spec__label">${() => t('model.zeroToHundred')}</span>
-                  <strong>${() => `${featuredModel.value!.zeroToHundredSec}s`}</strong>
+                  <strong>${() => `${featuredModel.value?.zeroToHundredSec}s`}</strong>
                 </div>
                 <div class="spec">
                   <span class="spec__label">${() => t('common.startingAt')}</span>
-                  <strong>${() => formatPrice(featuredModel.value!.basePrice)}</strong>
+                  <strong>${() => formatPrice(featuredModel.value?.basePrice)}</strong>
                 </div>
               </div>
               <div class="catalog__hero-actions">
@@ -114,12 +112,12 @@ define('catalog-view', {
                   variant="solid"
                   color="primary"
                   @click=${() =>
-                    void router.navigate({ name: 'modelDetail', params: { slug: featuredModel.value!.slug } })}>
+                    void router.navigate({ name: 'modelDetail', params: { slug: featuredModel.value?.slug } })}>
                   ${() => t('common.viewDetails')}
                 </ore-button>
-                <ore-button rounded variant="ghost" @click=${() => toggleCompare(featuredModel.value!.id)}>
+                <ore-button rounded variant="ghost" @click=${() => toggleCompare(featuredModel.value?.id)}>
                   ${() =>
-                    compareModelIds.value.includes(featuredModel.value!.id)
+                    compareModelIds.value.includes(featuredModel.value?.id)
                       ? t('common.removeFromCompare')
                       : t('common.addToCompare')}
                 </ore-button>

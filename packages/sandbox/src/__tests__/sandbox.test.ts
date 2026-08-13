@@ -1282,7 +1282,7 @@ describe('createSandboxTestHelpers', () => {
     h.fireCustom('ping');
     window.removeEventListener('message', spy);
 
-    const event = spy.mock.calls[0]![0] as MessageEvent;
+    const event = spy.mock.calls[0]?.[0] as MessageEvent;
 
     expect('detail' in (event.data as Record<string, unknown>)).toBe(true);
     expect((event.data as { detail: unknown }).detail).toBeUndefined();
@@ -1329,7 +1329,7 @@ describe('buildDocument — nonce in CSP meta tag', () => {
     const contentMatch = doc.match(/http-equiv="Content-Security-Policy"\s+content="([^"]*)"/);
 
     expect(contentMatch).not.toBeNull();
-    expect(contentMatch![1]).toContain("'nonce-abc123'");
+    expect(contentMatch?.[1]).toContain("'nonce-abc123'");
   });
 
   it('rejects a nonce with characters outside the supported token grammar', () => {

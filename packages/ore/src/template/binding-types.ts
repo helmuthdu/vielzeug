@@ -6,10 +6,10 @@
  * Runtime factories and brand guards live in `result.ts` — this module is types only.
  */
 
-import { type Readable } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
-import { type PropMeta } from '../props';
-import { type DirectiveResult, type HTMLResult, type Ref, type RefCallback } from './result';
+import type { PropMeta } from '../props';
+import type { DirectiveResult, HTMLResult, Ref, RefCallback } from './result';
 
 // ─── Binding variants ─────────────────────────────────────────────────────────
 

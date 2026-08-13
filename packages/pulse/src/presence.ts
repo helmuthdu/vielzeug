@@ -1,10 +1,8 @@
 import { type Signal, signal } from '@vielzeug/ripple';
-
-import type { PresenceChannel, Unsubscribe } from './types';
-
 import { deriveAbortController } from './_utils';
 import { PulseDisposedError } from './errors';
-import { type InPresenceJoinFrame, type InPresenceLeaveFrame, type InPresenceStateFrame } from './protocol';
+import type { InPresenceJoinFrame, InPresenceLeaveFrame, InPresenceStateFrame } from './protocol';
+import type { PresenceChannel, Unsubscribe } from './types';
 
 type UpdateFn<T> = (room: string, state: T) => void;
 

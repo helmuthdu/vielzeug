@@ -7,14 +7,14 @@ import { AssayQueryError } from './errors';
 /** Scoped query helpers for any queryable DOM root — see {@link within}. */
 export interface QueryScope {
   get<E extends Element = Element>(selector: string): E;
+  getByTestId<E extends Element = Element>(testId: string): E;
+  getByText<E extends Element = Element>(text: string, selector?: string): E;
   query<E extends Element = Element>(selector: string): E | null;
   queryAll<E extends Element = Element>(selector: string): E[];
-  getByText<E extends Element = Element>(text: string, selector?: string): E;
-  queryByText<E extends Element = Element>(text: string, selector?: string): E | null;
-  queryAllByText<E extends Element = Element>(text: string, selector?: string): E[];
-  getByTestId<E extends Element = Element>(testId: string): E;
-  queryByTestId<E extends Element = Element>(testId: string): E | null;
   queryAllByTestId<E extends Element = Element>(testId: string): E[];
+  queryAllByText<E extends Element = Element>(text: string, selector?: string): E[];
+  queryByTestId<E extends Element = Element>(testId: string): E | null;
+  queryByText<E extends Element = Element>(text: string, selector?: string): E | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

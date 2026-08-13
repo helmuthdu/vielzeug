@@ -1,6 +1,6 @@
 import { expectTypeOf } from 'vitest';
 
-import { s, schemaMode, type AnySchema, type InferInput, type InferOutput, type InferSchemaMode } from '../index';
+import { type AnySchema, type InferInput, type InferOutput, type InferSchemaMode, s, schemaMode } from '../index';
 
 describe('public type contracts', () => {
   it('keeps coercion input separate from parsed output', () => {

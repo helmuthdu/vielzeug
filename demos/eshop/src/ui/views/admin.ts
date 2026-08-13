@@ -5,14 +5,10 @@ import '@vielzeug/refine/badge';
 import '@vielzeug/refine/icon';
 import '@vielzeug/refine/checkbox';
 
-import type { BarChartConfig, ChartHandle } from '@vielzeug/prism';
-
 import { define, each, html, onCleanup, onMounted, ref, when } from '@vielzeug/ore';
+import type { BarChartConfig, ChartHandle } from '@vielzeug/prism';
 import { createBarChart } from '@vielzeug/prism';
 import { computed, effect, signal } from '@vielzeug/ripple';
-
-import type { Order, OrderStatus } from '../../core/types';
-
 import { canAccessAdmin } from '../../core/auth';
 import { getReportService } from '../../core/container';
 import { formatPrice } from '../../core/currency';
@@ -23,6 +19,7 @@ import { createOrdersSource } from '../../core/inventory-source';
 import { attemptBulkUpdateOrderStatus, attemptUpdateOrderStatus } from '../../core/order-actions';
 import { allOrdersSignal } from '../../core/orders';
 import { router } from '../../core/router';
+import type { Order, OrderStatus } from '../../core/types';
 import { exportOrdersAsCsv } from '../../core/worker-tasks';
 
 const STATUS_VALUES: OrderStatus[] = ['placed', 'processing', 'in-transit', 'delivered', 'cancelled'];

@@ -217,13 +217,13 @@
 
   :host(
       :is(
-          :not([variant]),
-          [variant='solid'],
-          [variant='flat'],
-          [variant='bordered'],
-          [variant='outline'],
-          [variant='ghost']
-        ):is([mode='selectable'], [mode='action']):not([disabled])
+        :not([variant]),
+        [variant='solid'],
+        [variant='flat'],
+        [variant='bordered'],
+        [variant='outline'],
+        [variant='ghost']
+      ):is([mode='selectable'], [mode='action']):not([disabled])
     )
     .chip-btn:hover
     .chip {
@@ -234,13 +234,13 @@
 
   :host(
       :is(
-          :not([variant]),
-          [variant='solid'],
-          [variant='flat'],
-          [variant='bordered'],
-          [variant='outline'],
-          [variant='ghost']
-        ):is([mode='selectable'], [mode='action']):not([disabled])
+        :not([variant]),
+        [variant='solid'],
+        [variant='flat'],
+        [variant='bordered'],
+        [variant='outline'],
+        [variant='ghost']
+      ):is([mode='selectable'], [mode='action']):not([disabled])
     )
     .chip-btn:active
     .chip {

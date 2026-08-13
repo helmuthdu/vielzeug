@@ -149,7 +149,7 @@ export const seedBoard: Board = {
       assigneeId: 'user-alice',
       budget: null,
       completedAt: daysAgo(3),
-      description: 'Configure Rush, pnpm workspaces, and shared ESLint / Prettier configs.',
+      description: 'Configure Rush, pnpm workspaces, and shared Biome config.',
       dueDate: '2026-07-01',
       id: 'task-011',
       ownerId: 'user-alice',

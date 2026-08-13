@@ -1,12 +1,12 @@
 import { expect } from 'vitest';
 
 import {
+  FamiliarInvalidOptionsError,
   FamiliarQueueFullError,
+  FamiliarRuntimeError,
   FamiliarTaskError,
   FamiliarTerminatedError,
   FamiliarTimeoutError,
-  FamiliarRuntimeError,
-  FamiliarInvalidOptionsError,
 } from '../errors';
 
 type FamiliarErrorClass =

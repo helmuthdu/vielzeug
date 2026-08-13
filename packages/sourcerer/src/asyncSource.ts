@@ -1,7 +1,6 @@
-import type { AnyPagination, SourceSnapshot } from './types';
-
 import { createRequestController, toError } from './requestController';
 import { createSourceStore } from './sourceStore';
+import type { AnyPagination, SourceSnapshot } from './types';
 
 type AsyncSource<T, TQuery, TPagination extends AnyPagination> = Readonly<{
   readonly disposalSignal: AbortSignal;

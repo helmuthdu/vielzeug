@@ -1,18 +1,4 @@
 import { signal } from '@vielzeug/ripple';
-
-import type {
-  ChannelDefinitions,
-  EventKey,
-  MessageMap,
-  PresenceChannel,
-  PresenceDefinitions,
-  Pulse,
-  PulseChannel,
-  PulseOptions,
-  PulseStatus,
-  Unsubscribe,
-} from './types';
-
 import { createConnection } from './_connection';
 import { createWaitPromise } from './_wait';
 import { createChannel } from './channel';
@@ -28,12 +14,24 @@ import { createHeartbeat, type HeartbeatHandle } from './heartbeat';
 import { createPresence } from './presence';
 import {
   type DecodedInFrame,
+  decodeValidated,
+  encode,
   type InPresenceJoinFrame,
   type InPresenceLeaveFrame,
   type InPresenceStateFrame,
-  decodeValidated,
-  encode,
 } from './protocol';
+import type {
+  ChannelDefinitions,
+  EventKey,
+  MessageMap,
+  PresenceChannel,
+  PresenceDefinitions,
+  Pulse,
+  PulseChannel,
+  PulseOptions,
+  PulseStatus,
+  Unsubscribe,
+} from './types';
 
 type Handler = (payload: unknown) => void;
 type RoomOperation = 'join' | 'leave';

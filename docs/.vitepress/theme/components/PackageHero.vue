@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { useData } from 'vitepress';
 import { computed } from 'vue';
-import { useData, withBase } from 'vitepress';
 
 interface Props {
   package: string;
@@ -8,10 +8,11 @@ interface Props {
 
 const props = defineProps<Props>();
 const { site, frontmatter } = useData();
+const withBase = (path: string) => `${site.value.base.replace(/\/$/, '')}${path}`;
 
 const packageInfo = computed(() => {
   const packages = site.value.themeConfig?.packages || {};
-  return packages[props.package] || { version: null, size: null, dependencies: 0, minNode: null };
+  return packages[props.package] || { dependencies: 0, minNode: null, size: null, version: null };
 });
 
 const category = computed(() => frontmatter.value.category || null);
@@ -24,10 +25,10 @@ const featuredExports = computed(() => exports.value.slice(0, 5));
 
 const envLabel: Record<string, string> = {
   browser: 'Browser',
+  bun: 'Bun',
+  deno: 'Deno',
   node: 'Node',
   ssr: 'SSR',
-  deno: 'Deno',
-  bun: 'Bun',
 };
 
 const environmentLabels = computed(() =>
@@ -45,31 +46,31 @@ const installCommand = computed(() => `pnpm add ${packageScope.value}`);
 
 const categoryLabel = computed(() => {
   const map: Record<string, string> = {
-    utilities: 'Utilities',
-    state: 'State',
-    validation: 'Validation',
-    ui: 'UI',
-    'ui-components': 'UI Components',
-    'ui-primitives': 'UI Primitives',
-    'ui-interaction': 'UI Interaction',
-    'ui-performance': 'UI Performance',
-    forms: 'Forms',
+    'ai-tooling': 'AI Tooling',
     auth: 'Auth',
     data: 'Data',
-    network: 'Network',
     datetime: 'Date & Time',
-    time: 'Date & Time',
+    di: 'DI',
+    events: 'Events',
     finance: 'Finance',
+    forms: 'Forms',
+    http: 'HTTP',
+    i18n: 'i18n',
+    logging: 'Logging',
+    network: 'Network',
     reactive: 'Reactive',
     routing: 'Routing',
+    state: 'State',
     storage: 'Storage',
-    http: 'HTTP',
-    events: 'Events',
-    logging: 'Logging',
-    i18n: 'i18n',
-    di: 'DI',
+    time: 'Date & Time',
+    ui: 'UI',
+    'ui-components': 'UI Components',
+    'ui-interaction': 'UI Interaction',
+    'ui-performance': 'UI Performance',
+    'ui-primitives': 'UI Primitives',
+    utilities: 'Utilities',
+    validation: 'Validation',
     workers: 'Workers',
-    'ai-tooling': 'AI Tooling',
   };
   const val = category.value;
   if (!val) return '';
@@ -97,30 +98,48 @@ const categoryLabel = computed(() => {
             {{ description }}
           </ore-text>
           <div class="pkg-install-action">
-            <ore-text as="span" variant="label" size="sm" color="muted">Install</ore-text>
             <ore-copy-command :value="installCommand" size="md" variant="bordered" class="pkg-install-command"></ore-copy-command>
           </div>
         </div>
       </div>
       <div class="pkg-hero-content">
-        <dl class="pkg-facts" aria-label="Package facts">
-          <div v-if="packageInfo.version" class="pkg-fact">
-            <dt><ore-text as="span" class="pkg-sr-only">Version</ore-text></dt>
-            <dd>
-              <ore-text as="span" variant="label" size="sm" color="body">v{{ packageInfo.version }}</ore-text>
-            </dd>
-          </div>
-          <div v-if="packageInfo.size && packageInfo.size !== 'N/A'" class="pkg-fact">
-            <dt><ore-text as="span" class="pkg-sr-only">Size</ore-text></dt>
-            <dd>
-              <ore-text as="span" variant="label" size="sm" color="body">{{ packageInfo.size }} gzip</ore-text>
-            </dd>
-          </div>
-          <div v-if="packageInfo.dependencies === 0" class="pkg-fact">
-            <dt><ore-text as="span" class="pkg-sr-only">Dependencies</ore-text></dt>
-            <dd><ore-text as="span" variant="label" size="sm" color="body">Zero dependencies</ore-text></dd>
-          </div>
-        </dl>
+        <section class="pkg-facts-panel" aria-labelledby="pkg-facts-heading">
+          <dl class="pkg-facts">
+            <div v-if="packageInfo.version" class="pkg-fact">
+              <dt><ore-text as="span" class="pkg-sr-only">Version</ore-text></dt>
+              <dd>
+                <ore-tooltip content="Published package version" placement="top">
+                  <ore-chip color="primary" variant="flat" size="md" rounded="lg">
+                    <ore-icon slot="icon" name="package" size="14" aria-hidden="true"></ore-icon>
+                    v{{ packageInfo.version }}
+                  </ore-chip>
+                </ore-tooltip>
+              </dd>
+            </div>
+            <div v-if="packageInfo.size && packageInfo.size !== 'N/A'" class="pkg-fact">
+              <dt><ore-text as="span" class="pkg-sr-only">Size</ore-text></dt>
+              <dd>
+                <ore-tooltip content="Compressed package size" placement="top">
+                  <ore-chip color="secondary" variant="flat" size="md" rounded="lg">
+                    <ore-icon slot="icon" name="file-archive" size="14" aria-hidden="true"></ore-icon>
+                    {{ packageInfo.size }} gzip
+                  </ore-chip>
+                </ore-tooltip>
+              </dd>
+            </div>
+            <div v-if="packageInfo.dependencies === 0" class="pkg-fact">
+              <dt><ore-text as="span" class="pkg-sr-only">Dependencies</ore-text></dt>
+              <dd>
+                <ore-tooltip content="No runtime dependencies" placement="top">
+                  <ore-chip color="success" variant="flat" size="md" rounded="lg">
+                    <ore-icon slot="icon" name="layers" size="14" aria-hidden="true"></ore-icon>
+                    Zero dependencies
+                  </ore-chip>
+                </ore-tooltip>
+              </dd>
+            </div>
+          </dl>
+        </section>
         <ore-separator></ore-separator>
         <div class="pkg-details">
           <section v-if="environments.length" class="pkg-runtime" aria-label="Runtime support">
@@ -174,7 +193,7 @@ const categoryLabel = computed(() => {
                 :key="rel"
                 :href="withBase(`/${rel}/`)"
                 size="sm"
-                variant="flat"
+                variant="ghost"
                 class="pkg-related-button">
                 <img slot="prefix" :src="withBase(`/logo-${rel}.svg`)" alt="" class="pkg-related-logo" />
                 {{ rel }}
@@ -238,13 +257,11 @@ const categoryLabel = computed(() => {
   display: flex;
   flex-wrap: wrap;
   gap: var(--size-3);
-  align-items: center;
+  align-items: flex-start;
+  flex-direction: column;
 }
 
 .pkg-install-command {
-  --copy-command-border-color: var(--color-primary);
-  --copy-command-hover-bg: var(--color-primary-backdrop);
-
   min-width: 0;
   max-width: 100%;
 }
@@ -257,8 +274,14 @@ const categoryLabel = computed(() => {
 .pkg-facts {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--size-3);
+  gap: var(--size-2);
   margin: 0;
+}
+
+.pkg-facts-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
 }
 
 .pkg-fact {

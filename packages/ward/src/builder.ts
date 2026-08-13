@@ -1,6 +1,5 @@
+import type { WILDCARD } from './constants';
 import type { WardPredicate, WardRule } from './types';
-
-import { WILDCARD } from './constants';
 
 // ---------------------------------------------------------------------------
 // RuleOptions — shared options for allow/deny/ruleFor

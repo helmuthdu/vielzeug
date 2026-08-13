@@ -1,10 +1,7 @@
-import { define, html, inject, prop, getHost, onCleanup } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
+import { define, getHost, html, inject, onCleanup, prop, useField } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
-
+import { createCheckable, lifecycleSignal } from '../../core';
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
-
-import { lifecycleSignal, createCheckable } from '../../core';
 import '../../content/icon/icon';
 import { CONTROL_SIZE_PRESET, disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import {

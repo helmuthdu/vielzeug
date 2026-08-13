@@ -1,117 +1,117 @@
 {
-  "name": "@vielzeug/vault",
   "entries": [
     {
-      "version": "2.1.0",
-      "tag": "@vielzeug/vault_v2.1.0",
-      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
       "comments": {
         "minor": [
           {
-            "comment": "feat: add driver-neutral SQLite storage",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: add driver-neutral SQLite storage",
             "commit": "d8db96e972ca1a6b46f1ec50001bb3ae6f88a403"
           }
         ]
-      }
+      },
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "tag": "@vielzeug/vault_v2.1.0",
+      "version": "2.1.0"
     },
     {
-      "version": "2.0.1",
-      "tag": "@vielzeug/vault_v2.0.1",
-      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
             "commit": "49ec292706645d1f4937897ac628d852f3a11736"
           }
         ]
-      }
+      },
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "tag": "@vielzeug/vault_v2.0.1",
+      "version": "2.0.1"
     },
     {
-      "version": "2.0.0",
-      "tag": "@vielzeug/vault_v2.0.0",
-      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
       "comments": {
         "major": [
           {
-            "comment": "refactor!: redesign storage around portable keys, fixed envelopes, capability-specific stores, and observe()",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor!: redesign storage around portable keys, fixed envelopes, capability-specific stores, and observe()",
             "commit": "792538a714045e2a468e2c14a4c2c8c85c06d706"
           }
         ]
-      }
+      },
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "tag": "@vielzeug/vault_v2.0.0",
+      "version": "2.0.0"
     },
     {
-      "version": "1.0.4",
-      "tag": "@vielzeug/vault_v1.0.4",
-      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
             "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
           }
         ]
-      }
+      },
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "tag": "@vielzeug/vault_v1.0.4",
+      "version": "1.0.4"
     },
     {
-      "version": "1.0.3",
-      "tag": "@vielzeug/vault_v1.0.3",
-      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
             "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
           }
         ]
-      }
+      },
+      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
+      "tag": "@vielzeug/vault_v1.0.3",
+      "version": "1.0.3"
     },
     {
-      "version": "1.0.2",
-      "tag": "@vielzeug/vault_v1.0.2",
-      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "fix(vault): correct IndexedDB keys() to exclude ad-hoc TTL-expired records; document custom-codec + secondary-index incompatibility",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix(vault): correct IndexedDB keys() to exclude ad-hoc TTL-expired records; document custom-codec + secondary-index incompatibility",
             "commit": "1681f481fd03166b1fa716c15ef63047679197ec"
           }
         ]
-      }
+      },
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "tag": "@vielzeug/vault_v1.0.2",
+      "version": "1.0.2"
     },
     {
-      "version": "1.0.1",
-      "tag": "@vielzeug/vault_v1.0.1",
-      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "chore(vault): rename internal _warn.ts to _dev.ts",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(vault): rename internal _warn.ts to _dev.ts",
             "commit": "1b696f77f93b469187d4d7bae13012812a126885"
           }
         ]
-      }
+      },
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "tag": "@vielzeug/vault_v1.0.1",
+      "version": "1.0.1"
     },
     {
-      "version": "1.0.0",
-      "tag": "@vielzeug/vault_v1.0.0",
-      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
       "comments": {
         "major": [
           {
-            "comment": "Initial public release",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Initial public release",
             "commit": "2a622e2058ae28a3e3ffd33f639ad8c3d9579aa4"
           }
         ]
-      }
+      },
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "tag": "@vielzeug/vault_v1.0.0",
+      "version": "1.0.0"
     }
-  ]
+  ],
+  "name": "@vielzeug/vault"
 }

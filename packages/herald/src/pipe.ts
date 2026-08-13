@@ -1,7 +1,6 @@
-import type { Bus, EventKey, EventMap, PipeEntry, PipeableKey, Unsubscribe } from './types';
-
 import { createSignalScope } from './bus';
 import { HeraldConfigError } from './errors';
+import type { Bus, EventKey, EventMap, PipeableKey, PipeEntry, Unsubscribe } from './types';
 
 /**
  * Forward selected events from `source` to `target`.

@@ -1,4 +1,4 @@
-import { define, html, prop, bind, getHost, onMounted, watchEffect } from '@vielzeug/ore';
+import { bind, define, getHost, html, onMounted, prop, watchEffect } from '@vielzeug/ore';
 
 import { reducedMotionMixin, tableBaseMixin } from '../../styles';
 import componentStyles from './table.css?inline';
@@ -267,7 +267,7 @@ define<OreTableProps>(TABLE_TAG, {
     // HTML-parser foster-parenting, which ejects table section elements from
     // their intended positions in the tree.
     onMounted(() => {
-      const scrollContainer = el.shadowRoot!.querySelector('.scroll-container')!;
+      const scrollContainer = el.shadowRoot?.querySelector('.scroll-container')!;
 
       const table = document.createElement('table');
       const captionEl = document.createElement('caption');

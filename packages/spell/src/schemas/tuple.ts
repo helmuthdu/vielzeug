@@ -1,6 +1,6 @@
 import type { AnySchema, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, prependIssuePath, Schema, SpellValidationError, _makeCtx } from '../core';
+import { _makeCtx, ErrorCode, prependIssuePath, Schema, SpellValidationError } from '../core';
 
 export type TupleSchemas = readonly [AnySchema, ...AnySchema[]];
 export type InferTuple<T extends TupleSchemas, R extends AnySchema | null = null> =

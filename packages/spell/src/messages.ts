@@ -1,7 +1,6 @@
-import type { ParseContext } from './types';
-
 import { warn } from './_dev';
 import { cloneRecord, defineOwnProperty, isUnsafeObjectKey } from './safe-object';
+import type { ParseContext } from './types';
 
 export type Messages = {
   array: {

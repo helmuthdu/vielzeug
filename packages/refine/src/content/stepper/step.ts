@@ -1,4 +1,4 @@
-import { define, html, inject, prop, bind, getHost, useSlots, watchEffect } from '@vielzeug/ore';
+import { bind, define, getHost, html, inject, prop, useSlots, watchEffect } from '@vielzeug/ore';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 

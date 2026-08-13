@@ -1,6 +1,5 @@
-import type { Primitive } from '../types';
-
 import { isUnsafeKey } from '../_common/unsafePaths';
+import type { Primitive } from '../types';
 
 /**
  * Counts elements in an array by selector output. Selector results of `null`/`undefined` are

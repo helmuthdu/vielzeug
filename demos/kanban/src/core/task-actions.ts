@@ -4,7 +4,6 @@
  * a move/create/update/delete is allowed, instead of duplicating the same `ward.explain` +
  * `createTaskMachine` checks at every call site.
  */
-import type { Task, TaskStatus } from './types';
 
 import { currentUser, getPrincipal, ward } from './auth';
 import { boardSignal } from './board-store';
@@ -12,6 +11,7 @@ import { bus } from './events';
 import { createTask, deleteTask, editTask, moveTask, type NewTask } from './history';
 import { logger } from './logger';
 import { createTaskMachine } from './task-machine';
+import type { Task, TaskStatus } from './types';
 
 type TaskAction = 'create' | 'delete' | 'move' | 'read' | 'update';
 type FsmEventType = 'APPROVE' | 'REJECT' | 'REOPEN' | 'RESET' | 'START' | 'SUBMIT';

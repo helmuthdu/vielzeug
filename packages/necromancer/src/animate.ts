@@ -1,9 +1,8 @@
-import type { AnimateOptions, AnimationHandle, Keyframes } from './types';
-
 import { interruptAnimations, trackAnimation } from './_active';
 import { createAnimationHandle } from './_handle';
 import { resolveAnimationOptions, shouldReduceMotion } from './_motion';
 import { NecromancerUnsupportedError } from './errors';
+import type { AnimateOptions, AnimationHandle, Keyframes } from './types';
 
 /**
  * Starts a lifecycle-owned native Web Animation for one element.

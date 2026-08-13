@@ -1,6 +1,5 @@
-import type { Readable, Signal } from '@vielzeug/ripple';
-
 import { bind } from '@vielzeug/ore';
+import type { Readable, Signal } from '@vielzeug/ripple';
 
 import type { ComponentSize } from '../../types';
 

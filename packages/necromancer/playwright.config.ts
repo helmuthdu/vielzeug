@@ -1,6 +1,6 @@
-import { defineConfig, devices } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { defineConfig, devices } from '@playwright/test';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -13,7 +13,7 @@ export default defineConfig({
     },
   ],
   reporter: 'list',
-  retries: process.env['CI'] ? 2 : 0,
+  retries: process.env.CI ? 2 : 0,
   testDir: path.join(__dirname, 'src'),
   testMatch: '**/*.e2e.ts',
   use: {
@@ -22,5 +22,5 @@ export default defineConfig({
     trace: 'retain-on-failure',
     video: 'off',
   },
-  workers: process.env['CI'] ? 2 : undefined,
+  workers: process.env.CI ? 2 : undefined,
 });

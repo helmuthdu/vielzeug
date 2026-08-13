@@ -1,4 +1,4 @@
-import { define, html, bind } from '@vielzeug/ore';
+import { bind, define, html } from '@vielzeug/ore';
 
 import slideStyles from './carousel-slide.css?inline';
 

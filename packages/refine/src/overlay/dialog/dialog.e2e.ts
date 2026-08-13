@@ -33,7 +33,7 @@ test.describe('Interaction', () => {
     );
 
     await page.evaluate(() => {
-      document.getElementById('dlg')!.setAttribute('open', '');
+      document.getElementById('dlg')?.setAttribute('open', '');
     });
 
     await expect(page.locator('ore-dialog[open]')).toBeVisible();

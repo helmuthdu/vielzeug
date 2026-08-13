@@ -1,6 +1,5 @@
-import type { Stream } from '../types';
-
 import { stream } from '../core';
+import type { Stream } from '../types';
 
 type QueryCache = {
   getSnapshot<T>(key: readonly unknown[]): T | null;

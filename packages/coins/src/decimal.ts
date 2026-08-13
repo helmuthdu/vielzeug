@@ -1,6 +1,5 @@
-import type { Decimal, RoundingMode } from './types';
-
 import { CoinsError } from './errors';
+import type { Decimal, RoundingMode } from './types';
 
 const DECIMAL = /^(-?)(\d+)(?:\.(\d+))?$/;
 const MAX_DECIMAL_DIGITS = 1000;

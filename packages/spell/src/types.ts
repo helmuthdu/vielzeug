@@ -128,7 +128,7 @@ export type CheckContext = {
  * s.string().check((value) => value.length > 0 || 'Cannot be empty')
  * ```
  */
-export type ValidateResult = boolean | null | void | string;
+export type ValidateResult = boolean | null | undefined | string;
 
 /** Re-exported from errors for convenience — defined there. */
 export type { FlatError, FlatErrorFirst } from './errors';

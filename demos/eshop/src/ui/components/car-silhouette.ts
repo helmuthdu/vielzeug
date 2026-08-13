@@ -1,11 +1,8 @@
-import { define, getHost, html, prop } from '@vielzeug/ore';
-import { unsafeHtml } from '@vielzeug/ore';
+import { define, getHost, html, prop, unsafeHtml } from '@vielzeug/ore';
 import { computed, effect } from '@vielzeug/ripple';
-
-import type { BodyType } from '../../core/types';
-
 import carSvgMarkup from '../../assets/car.svg?raw';
 import { prefersReducedMotion } from '../../core/motion';
+import type { BodyType } from '../../core/types';
 
 /**
  * The car artwork — `src/assets/car.svg`, injected via `@vielzeug/ore`'s `unsafeHtml()` directive.

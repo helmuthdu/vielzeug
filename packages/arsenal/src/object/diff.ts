@@ -1,7 +1,6 @@
-import type { Obj } from '../types';
-
 import { isUnsafeKey } from '../_common/unsafePaths';
 import { isEqual } from '../guards/isEqual';
+import type { Obj } from '../types';
 
 export type DiffResult<T extends Obj> = {
   /** Keys present in `after` but not in `before`. */

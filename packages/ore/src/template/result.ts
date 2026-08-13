@@ -6,7 +6,7 @@
  * through `utils/brand.ts` (`Symbol.for`) — see that module for why.
  */
 
-import { signal, type Signal } from '@vielzeug/ripple';
+import { type Signal, signal } from '@vielzeug/ripple';
 
 import { makeBrand } from '../utils/brand';
 
@@ -66,10 +66,10 @@ export interface HTMLResult {
  * public API. Consumers only ever see `HTMLResult`.
  */
 export interface CompiledHTMLResult extends HTMLResult {
-  /** The DOM fragment ready to insert into the document. Consumed on insertion. */
-  readonly fragment: DocumentFragment;
   /** Wire up reactive effects to the fragment's nodes. Call after insertion. */
   apply(registerCleanup: (fn: () => void) => void): void;
+  /** The DOM fragment ready to insert into the document. Consumed on insertion. */
+  readonly fragment: DocumentFragment;
 }
 
 const htmlResultBrand = makeBrand<CompiledHTMLResult>('ore:html-result');

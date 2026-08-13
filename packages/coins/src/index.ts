@@ -1,8 +1,8 @@
-export { clamp, allocate, sum } from './aggregate';
+export { allocate, clamp, sum } from './aggregate';
 export { BHD, currency, defineCurrency, EUR, GBP, isCurrency, JPY, KRW, KWD, USD } from './currency';
 export { decimal } from './decimal';
-export { CoinsError, CurrencyMismatchError, InvalidCurrencyError } from './errors';
 export type { CoinsErrorCode } from './errors';
+export { CoinsError, CurrencyMismatchError, InvalidCurrencyError } from './errors';
 export { exchange, exchangeRate } from './exchange';
 export { format, formatParts } from './format';
 export {

@@ -1,14 +1,11 @@
-import type { VaultStore } from '@vielzeug/vault';
-
 import { effect } from '@vielzeug/ripple';
+import type { VaultStore } from '@vielzeug/vault';
 import { table } from '@vielzeug/vault';
 import { createLocalStorage } from '@vielzeug/vault/local-storage';
-
-import type { ThemePreference } from './theme';
-import type { Board } from './types';
-
 import { boardSignal } from './board-store';
+import type { ThemePreference } from './theme';
 import { setThemePreference, themePreference } from './theme';
+import type { Board } from './types';
 
 // The schema carries each row's real record and portable string-key types into the store.
 type BoardRow = { board: Board; id: 'current' };

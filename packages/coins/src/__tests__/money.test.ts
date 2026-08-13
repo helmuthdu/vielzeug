@@ -1,20 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  EUR,
-  JPY,
-  USD,
-  CoinsError,
   add,
+  CoinsError,
   compare,
   decimal,
   divide,
+  EUR,
+  JPY,
   money,
   multiply,
   parseMoney,
   round,
   subtract,
   toDecimal,
+  USD,
 } from '../index';
 
 describe('money', () => {

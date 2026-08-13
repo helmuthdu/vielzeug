@@ -3,6 +3,9 @@
   "version": "2.0.2",
   "description": "Immutable typed form state with focused fields and explicit full-form validation",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "files": [
     "dist"
   ],
@@ -11,69 +14,29 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
     },
     "./devtools": {
-      "types": "./dist/devtools.d.ts",
       "import": "./dist/devtools.js",
-      "require": "./dist/devtools.cjs"
+      "require": "./dist/devtools.cjs",
+      "types": "./dist/devtools.d.ts"
     },
     "./dom": {
-      "types": "./dist/dom.d.ts",
       "import": "./dist/dom.js",
-      "require": "./dist/dom.cjs"
+      "require": "./dist/dom.cjs",
+      "types": "./dist/dom.d.ts"
     },
     "./spell": {
-      "types": "./dist/spell.d.ts",
       "import": "./dist/spell.js",
-      "require": "./dist/spell.cjs"
+      "require": "./dist/spell.cjs",
+      "types": "./dist/spell.d.ts"
     },
     "./vault": {
-      "types": "./dist/vault.d.ts",
       "import": "./dist/vault.js",
-      "require": "./dist/vault.cjs"
-    }
-  },
-  "scripts": {
-    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
-    "build:types": "tsc -p tsconfig.declarations.json",
-    "fix": "eslint --fix src",
-    "lint": "eslint src",
-    "prepublishOnly": "pnpm run build",
-    "preview": "vite preview",
-    "test": "vitest",
-    "build:bundle": "vite build --config vite.bundle.config.ts"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "engines": {
-    "node": ">=22"
-  },
-  "dependencies": {
-    "@vielzeug/arsenal": "workspace:*"
-  },
-  "devDependencies": {
-    "@types/node": "^26.1.2",
-    "@vielzeug/spell": "workspace:*",
-    "@vielzeug/vault": "workspace:*",
-    "typescript": "^6.0.3",
-    "vite": "^8.2.0",
-    "vitest": "^4.1.10"
-  },
-  "peerDependencies": {
-    "@vielzeug/spell": "workspace:*",
-    "@vielzeug/vault": "workspace:*"
-  },
-  "peerDependenciesMeta": {
-    "@vielzeug/spell": {
-      "optional": true
-    },
-    "@vielzeug/vault": {
-      "optional": true
+      "require": "./dist/vault.cjs",
+      "types": "./dist/vault.d.ts"
     }
   },
   "typesVersions": {
@@ -91,5 +54,42 @@
         "dist/vault.d.ts"
       ]
     }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "biome check --write src",
+    "lint": "biome ci src",
+    "prepublishOnly": "pnpm run build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@vielzeug/arsenal": "workspace:*"
+  },
+  "peerDependencies": {
+    "@vielzeug/spell": "workspace:*",
+    "@vielzeug/vault": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@vielzeug/spell": {
+      "optional": true
+    },
+    "@vielzeug/vault": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@vielzeug/spell": "workspace:*",
+    "@vielzeug/vault": "workspace:*",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
   }
 }

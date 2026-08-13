@@ -1,8 +1,7 @@
 /// <reference lib="dom" />
 
-import type { QueryBuilder } from './query';
-
 import { VaultError } from './errors';
+import type { QueryBuilder } from './query';
 import { assertTtlMs, type TtlMs } from './ttl';
 
 export type { TtlMs };
@@ -164,8 +163,12 @@ export type TransactionContext<S extends AnySchema, K extends keyof S & string =
 export interface VaultStore<S extends AnySchema> {
   clear<K extends keyof S & string>(table: K): Promise<void>;
   count<K extends keyof S & string>(table: K): Promise<number>;
+  debug(): Promise<DebugInfo<S>>;
   delete<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean>;
   deleteMany<K extends keyof S & string>(table: K, keys: KeyOf<S, K>[]): Promise<number>;
+  readonly disposalSignal: AbortSignal;
+  dispose(): Promise<void>;
+  readonly disposed: boolean;
   entries<K extends keyof S & string>(table: K): Promise<Array<[KeyOf<S, K>, RecordOf<S, K>]>>;
   get<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
   getAll<K extends keyof S & string>(table: K): Promise<RecordOf<S, K>[]>;
@@ -179,6 +182,12 @@ export interface VaultStore<S extends AnySchema> {
   has<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean>;
   isEmpty<K extends keyof S & string>(table: K): Promise<boolean>;
   keys<K extends keyof S & string>(table: K, filter?: (record: RecordOf<S, K>) => boolean): Promise<KeyOf<S, K>[]>;
+  observe<K extends keyof S & string>(
+    table: K,
+    listener: Observer<RecordOf<S, K>>,
+    options?: { immediate?: boolean; signal?: AbortSignal },
+  ): Unsubscribe;
+  pruneExpired(): Promise<Record<keyof S & string, number>>;
   put<K extends keyof S & string>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void>;
   putAll<K extends keyof S & string>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void>;
   query<K extends keyof S & string>(table: K): QueryBuilder<RecordOf<S, K>>;
@@ -194,16 +203,6 @@ export interface VaultStore<S extends AnySchema> {
     fn: (existing: RecordOf<S, K> | undefined) => RecordOf<S, K>,
     ttl?: TtlMs,
   ): Promise<RecordOf<S, K>>;
-  pruneExpired(): Promise<Record<keyof S & string, number>>;
-  debug(): Promise<DebugInfo<S>>;
-  observe<K extends keyof S & string>(
-    table: K,
-    listener: Observer<RecordOf<S, K>>,
-    options?: { immediate?: boolean; signal?: AbortSignal },
-  ): Unsubscribe;
-  dispose(): Promise<void>;
-  readonly disposed: boolean;
-  readonly disposalSignal: AbortSignal;
   [Symbol.asyncDispose](): Promise<void>;
 }
 

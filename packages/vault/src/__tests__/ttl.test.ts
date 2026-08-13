@@ -1,4 +1,4 @@
-import { table, ttl, type TtlMs } from '../index';
+import { type TtlMs, table, ttl } from '../index';
 import { createLocalStorage } from '../local-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };

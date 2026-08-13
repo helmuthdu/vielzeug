@@ -1,6 +1,6 @@
 import { signal } from '@vielzeug/ripple';
 
-import { prop, onCleanup, onMounted, watchEffect } from '../index';
+import { onCleanup, onMounted, prop, watchEffect } from '../index';
 import { cleanup, renderHook } from '../testing';
 
 describe('renderHook()', () => {

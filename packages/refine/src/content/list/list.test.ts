@@ -217,8 +217,8 @@ describe('ore-list', () => {
       });
 
       const items = fixture.element.querySelectorAll('ore-list-item');
-      const firstRow = items[0].shadowRoot!.querySelector<HTMLElement>('.row')!;
-      const secondRow = items[1].shadowRoot!.querySelector<HTMLElement>('.row')!;
+      const firstRow = items[0].shadowRoot?.querySelector<HTMLElement>('.row')!;
+      const secondRow = items[1].shadowRoot?.querySelector<HTMLElement>('.row')!;
 
       firstRow.focus();
       dispatchRowKeydown(firstRow, 'ArrowDown');
@@ -234,7 +234,7 @@ describe('ore-list', () => {
       });
 
       const items = fixture.element.querySelectorAll('ore-list-item');
-      const firstRow = items[0].shadowRoot!.querySelector<HTMLElement>('.row')!;
+      const firstRow = items[0].shadowRoot?.querySelector<HTMLElement>('.row')!;
 
       firstRow.focus();
       dispatchRowKeydown(firstRow, 'ArrowDown');
@@ -250,7 +250,7 @@ describe('ore-list', () => {
       });
 
       const item = fixture.element.querySelector('ore-list-item')!;
-      const row = item.shadowRoot!.querySelector<HTMLElement>('.row')!;
+      const row = item.shadowRoot?.querySelector<HTMLElement>('.row')!;
 
       row.focus();
       row.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter' }));

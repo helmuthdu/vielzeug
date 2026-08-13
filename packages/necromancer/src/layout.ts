@@ -1,8 +1,7 @@
-import type { LayoutAnimationOptions, LayoutCaptureOptions, LayoutTransition } from './types';
-
 import { uniqueElements } from './_elements';
 import { animateEach } from './animate-each';
 import { NecromancerConfigError } from './errors';
+import type { LayoutAnimationOptions, LayoutCaptureOptions, LayoutTransition } from './types';
 
 type LayoutRect = Readonly<Pick<DOMRectReadOnly, 'height' | 'width' | 'x' | 'y'>>;
 type LayoutEntry = Readonly<{ element: Element; rect: LayoutRect }>;

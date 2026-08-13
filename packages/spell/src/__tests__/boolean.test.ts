@@ -1,4 +1,4 @@
-import { s, SpellValidationError } from '../index';
+import { SpellValidationError, s } from '../index';
 
 describe('s.boolean()', () => {
   it('accepts true and false', () => {

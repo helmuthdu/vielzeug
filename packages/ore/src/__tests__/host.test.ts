@@ -1,12 +1,12 @@
 import { effect, type Readable, signal } from '@vielzeug/ripple';
 
 import {
+  bind,
   createContext,
   html,
-  inject,
   type InjectionKey,
+  inject,
   injectStrict,
-  bind,
   onCleanup,
   onMounted,
   provide,

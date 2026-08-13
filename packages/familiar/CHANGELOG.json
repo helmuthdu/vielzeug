@@ -1,173 +1,173 @@
 {
-  "name": "@vielzeug/familiar",
   "entries": [
     {
-      "version": "2.0.0",
-      "tag": "@vielzeug/familiar_v2.0.0",
-      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
       "comments": {
         "major": [
           {
-            "comment": "refactor!: replace inline workers with module-worker pools",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor!: replace inline workers with module-worker pools",
             "commit": "8538aec24a6c7bef4382aabdebf2628280c234b3"
           }
         ]
-      }
+      },
+      "date": "Mon, 10 Aug 2026 15:11:23 GMT",
+      "tag": "@vielzeug/familiar_v2.0.0",
+      "version": "2.0.0"
     },
     {
-      "version": "1.0.8",
-      "tag": "@vielzeug/familiar_v1.0.8",
-      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "49ec292706645d1f4937897ac628d852f3a11736"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.1`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "publish clean export metadata and classic TypeScript subpath mappings",
+            "commit": "49ec292706645d1f4937897ac628d852f3a11736"
+          }
         ]
-      }
+      },
+      "date": "Thu, 06 Aug 2026 07:20:49 GMT",
+      "tag": "@vielzeug/familiar_v1.0.8",
+      "version": "1.0.8"
     },
     {
-      "version": "1.0.7",
-      "tag": "@vielzeug/familiar_v1.0.7",
-      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
       "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.0`"
           }
         ]
-      }
+      },
+      "date": "Wed, 05 Aug 2026 16:48:52 GMT",
+      "tag": "@vielzeug/familiar_v1.0.7",
+      "version": "1.0.7"
     },
     {
-      "version": "1.0.6",
-      "tag": "@vielzeug/familiar_v1.0.6",
-      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "refactor(familiar): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor(familiar): derive vite external list from package.json via readWorkspaceDeps() instead of hand-listing dependencies",
             "commit": "1cf43b6f5e28b52f0c80f47b93e15ec42be3cef4"
           }
         ]
-      }
+      },
+      "date": "Sun, 26 Jul 2026 06:43:54 GMT",
+      "tag": "@vielzeug/familiar_v1.0.6",
+      "version": "1.0.6"
     },
     {
-      "version": "1.0.5",
-      "tag": "@vielzeug/familiar_v1.0.5",
-      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.1.2`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: bump engines.node to >=22 to match .nvmrc/CLAUDE.md's Node 22 requirement",
+            "commit": "4e7dc7926228d131c373fa97bca62441a7f8ce1f"
+          }
         ]
-      }
+      },
+      "date": "Fri, 24 Jul 2026 05:28:41 GMT",
+      "tag": "@vielzeug/familiar_v1.0.5",
+      "version": "1.0.5"
     },
     {
-      "version": "1.0.4",
-      "tag": "@vielzeug/familiar_v1.0.4",
-      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
       "comments": {
         "patch": [
           {
-            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: rewrite workspace:* deps to real semver on publish (was shipping literal 'workspace:*' to npm, breaking installs outside this monorepo)",
             "commit": "1a8008d19848e2db3dace46af8c9710eb79be07a"
           }
         ]
-      }
+      },
+      "date": "Tue, 14 Jul 2026 06:12:09 GMT",
+      "tag": "@vielzeug/familiar_v1.0.4",
+      "version": "1.0.4"
     },
     {
-      "version": "1.0.3",
-      "tag": "@vielzeug/familiar_v1.0.3",
-      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
       "comments": {
-        "patch": [
-          {
-            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.1.1`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.0.2",
-      "tag": "@vielzeug/familiar_v1.0.2",
-      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "fix(familiar): stale README/docs error-class references, bounded batch(ordered:false) buffering, timer-unref consistency, and coverage gaps",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "f69427ddba818030bb3e27eabb5ac03b7de8ba60"
+            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
+            "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
           }
-        ],
+        ]
+      },
+      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
+      "tag": "@vielzeug/familiar_v1.0.3",
+      "version": "1.0.3"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.1.0`"
           }
-        ]
-      }
-    },
-    {
-      "version": "1.0.1",
-      "tag": "@vielzeug/familiar_v1.0.1",
-      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
-      "comments": {
+        ],
         "patch": [
           {
-            "comment": "chore(familiar): rename internal _warn.ts to _dev.ts",
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "1b696f77f93b469187d4d7bae13012812a126885"
+            "comment": "fix(familiar): stale README/docs error-class references, bounded batch(ordered:false) buffering, timer-unref consistency, and coverage gaps",
+            "commit": "f69427ddba818030bb3e27eabb5ac03b7de8ba60"
           }
-        ],
+        ]
+      },
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "tag": "@vielzeug/familiar_v1.0.2",
+      "version": "1.0.2"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.0.1`"
           }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(familiar): rename internal _warn.ts to _dev.ts",
+            "commit": "1b696f77f93b469187d4d7bae13012812a126885"
+          }
         ]
-      }
+      },
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "tag": "@vielzeug/familiar_v1.0.1",
+      "version": "1.0.1"
     },
     {
-      "version": "1.0.0",
-      "tag": "@vielzeug/familiar_v1.0.0",
-      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
       "comments": {
-        "major": [
-          {
-            "comment": "Initial public release",
-            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "commit": "2a622e2058ae28a3e3ffd33f639ad8c3d9579aa4"
-          }
-        ],
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.0.0`"
           }
+        ],
+        "major": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Initial public release",
+            "commit": "2a622e2058ae28a3e3ffd33f639ad8c3d9579aa4"
+          }
         ]
-      }
+      },
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "tag": "@vielzeug/familiar_v1.0.0",
+      "version": "1.0.0"
     }
-  ]
+  ],
+  "name": "@vielzeug/familiar"
 }

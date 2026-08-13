@@ -5,10 +5,10 @@ export type Alignment = 'start' | 'end';
 export type Placement = Side | `${Side}-${Alignment}`;
 
 export interface Rect {
+  height: number;
+  width: number;
   x: number;
   y: number;
-  width: number;
-  height: number;
 }
 
 export interface VirtualReference {
@@ -19,10 +19,10 @@ export interface VirtualReference {
 export type ReferenceElement = Element | VirtualReference;
 
 export interface SideObject {
-  top: number;
-  right: number;
   bottom: number;
   left: number;
+  right: number;
+  top: number;
 }
 
 export type Padding = number | Partial<SideObject>;
@@ -30,11 +30,11 @@ export type Padding = number | Partial<SideObject>;
 // ── Middleware data shapes ────────────────────────────────────────────────────
 
 export interface ArrowData {
-  x?: number;
-  y?: number;
   centerOffset: number;
   /** `true` when the arrow was clamped away from its ideal center position (e.g. floating element shifted by `shift()`). */
   constrained: boolean;
+  x?: number;
+  y?: number;
 }
 
 export interface FlipData {
@@ -57,8 +57,8 @@ export interface HideData {
 }
 
 export interface SizeData {
-  availableWidth: number;
   availableHeight: number;
+  availableWidth: number;
 }
 
 export interface MiddlewareData {
@@ -73,17 +73,17 @@ export interface MiddlewareData {
 // ── Middleware pipeline ───────────────────────────────────────────────────────
 
 export interface MiddlewareState {
-  x: number;
-  y: number;
-  initialPlacement: Placement;
-  placement: Placement;
-  rects: { floating: Rect; reference: Rect };
-  elements: { floating: HTMLElement; reference: ReferenceElement };
-  middlewareData: MiddlewareData;
   /** Global default boundary for overflow detection. Per-middleware `boundary` takes precedence. */
   boundary?: Element | Rect;
+  elements: { floating: HTMLElement; reference: ReferenceElement };
+  initialPlacement: Placement;
+  middlewareData: MiddlewareData;
   /** Global default padding for overflow detection. Per-middleware `padding` takes precedence. */
   padding?: Padding;
+  placement: Placement;
+  rects: { floating: Rect; reference: Rect };
+  x: number;
+  y: number;
 }
 
 /**
@@ -106,29 +106,30 @@ export type MiddlewareReset = {
 };
 
 export interface MiddlewareResult {
+  data?: MiddlewareData;
+  placement?: Placement;
+  reset?: MiddlewareReset;
   x?: number;
   y?: number;
-  placement?: Placement;
-  data?: MiddlewareData;
-  reset?: MiddlewareReset;
 }
 
-export type Middleware = (state: MiddlewareState) => MiddlewareResult | void;
+export type Middleware = (state: MiddlewareState) => MiddlewareResult | undefined;
 
 // ── Public API types ──────────────────────────────────────────────────────────
 
 export interface ComputePositionResult {
+  middlewareData: MiddlewareData;
+  placement: Placement;
   x: number;
   y: number;
-  placement: Placement;
-  middlewareData: MiddlewareData;
 }
 
 export interface ComputePositionOptions {
-  /** Middleware pipeline to run in the supplied order. */
-  middleware?: readonly Middleware[];
-  /** Initial placement. Defaults to `'bottom'`. */
-  placement?: Placement;
+  /**
+   * Default boundary for all overflow-aware middleware (`flip`, `shift`, `autoPlacement`, `size`, `hide`).
+   * Per-middleware `boundary` takes precedence. Defaults to the visual viewport when omitted.
+   */
+  boundary?: Element | Rect;
   /**
    * The containing block element for `position: absolute` floating elements.
    * Provide the floating element's `offsetParent` to convert viewport-relative
@@ -137,16 +138,15 @@ export interface ComputePositionOptions {
    * Without this option, coordinates are viewport-relative (correct for `position: fixed`).
    */
   containingBlock?: Element | null;
-  /**
-   * Default boundary for all overflow-aware middleware (`flip`, `shift`, `autoPlacement`, `size`, `hide`).
-   * Per-middleware `boundary` takes precedence. Defaults to the visual viewport when omitted.
-   */
-  boundary?: Element | Rect;
+  /** Middleware pipeline to run in the supplied order. */
+  middleware?: readonly Middleware[];
   /**
    * Default padding for all overflow-aware middleware.
    * Per-middleware `padding` takes precedence. Defaults to `0` when omitted.
    */
   padding?: Padding;
+  /** Initial placement. Defaults to `'bottom'`. */
+  placement?: Placement;
 }
 
 export interface DetectOverflowOptions {

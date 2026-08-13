@@ -1,8 +1,7 @@
-import type { EventKey, MessageMap, PulseChannel, Unsubscribe } from './types';
-
 import { deriveAbortController } from './_utils';
 import { createWaitPromise } from './_wait';
 import { PulseDisposedError } from './errors';
+import type { EventKey, MessageMap, PulseChannel, Unsubscribe } from './types';
 
 type SendFn = (channel: string, event: string, payload: unknown) => void;
 type SubscribeFn = (channel: string, event: string, handler: (payload: unknown) => void) => () => void;

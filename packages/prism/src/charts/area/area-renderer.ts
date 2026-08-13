@@ -1,12 +1,11 @@
-import type { Point } from '../../svg/path';
-import type { Datum, Scale, TransitionConfig } from '../../types';
-
 import { warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
 import { createSvgElement, setAttributes } from '../../svg/element';
+import type { Point } from '../../svg/path';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
+import type { Datum, Scale, TransitionConfig } from '../../types';
 
 export interface AreaRenderOptions {
   color: string;

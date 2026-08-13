@@ -1,9 +1,7 @@
 import { signal } from '@vielzeug/ripple';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import type { ChartPlugin } from '../types';
-
 import { createBarChart } from '../charts/bar';
+import type { ChartPlugin } from '../types';
 
 describe('createBarChart', () => {
   let container: HTMLElement;
@@ -146,9 +144,9 @@ describe('createBarChart', () => {
     const legend = container.querySelector('.prism-legend');
 
     expect(legend).not.toBeNull();
-    expect(legend!.querySelectorAll('.prism-legend-item').length).toBe(2);
-    expect(legend!.querySelectorAll('.prism-legend-label')[0].textContent).toBe('Alpha');
-    expect(legend!.querySelectorAll('.prism-legend-label')[1].textContent).toBe('Beta');
+    expect(legend?.querySelectorAll('.prism-legend-item').length).toBe(2);
+    expect(legend?.querySelectorAll('.prism-legend-label')[0].textContent).toBe('Alpha');
+    expect(legend?.querySelectorAll('.prism-legend-label')[1].textContent).toBe('Beta');
     chart.dispose();
   });
 

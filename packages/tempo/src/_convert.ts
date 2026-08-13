@@ -1,9 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill';
-
-import type { AbsoluteTime, DisambiguationOptions, TimeInput, TimeZoneOptions, WallTime } from './types';
-
 import { validateTimeZone } from './_tz';
-import { TempoMissingTzError, TempoUnsupportedInputError, fail } from './errors';
+import { fail, TempoMissingTzError, TempoUnsupportedInputError } from './errors';
+import type { AbsoluteTime, DisambiguationOptions, TimeInput, TimeZoneOptions, WallTime } from './types';
 
 type ResolutionOptions = DisambiguationOptions & TimeZoneOptions;
 type RequiredResolutionOptions = ResolutionOptions & { timeZone: string };

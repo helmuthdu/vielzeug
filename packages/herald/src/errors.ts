@@ -19,8 +19,4 @@ export class BusDisposedError extends HeraldError {
 }
 
 /** Thrown when a herald API is called with invalid arguments or configuration. */
-export class HeraldConfigError extends HeraldError {
-  constructor(message: string) {
-    super(message);
-  }
-}
+export class HeraldConfigError extends HeraldError {}

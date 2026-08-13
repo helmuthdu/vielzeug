@@ -1,20 +1,29 @@
-import { define, html, prop, ref, bind, getHost, onCleanup, onElement, useEmit, watchEffect } from '@vielzeug/ore';
-import { useField } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
-
-import type { AddEventListeners, ComponentSize, RoundedSize, ThemeColor } from '../../types';
-import type { OreComboboxEvents, OreComboboxProps, ComboboxOptionInput, ComboboxOptionItem } from './combobox.types';
-
 import {
-  lifecycleSignal,
+  bind,
+  define,
+  getHost,
+  html,
+  onCleanup,
+  onElement,
+  prop,
+  ref,
+  useEmit,
+  useField,
+  watchEffect,
+} from '@vielzeug/ore';
+import { computed, signal } from '@vielzeug/ripple';
+import {
   createChoiceField,
   createInteraction,
   createListboxDropdown,
   type DropdownCloseReason,
+  lifecycleSignal,
   type OverlayOpenReason,
 } from '../../core';
 import { colorThemeMixin, reducedMotionMixin, roundedVariantMixin, srOnlyMixin } from '../../styles';
+import type { AddEventListeners, ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import { dispatchNativeFieldEvent } from '../shared/native-field-event';
+import type { ComboboxOptionInput, ComboboxOptionItem, OreComboboxEvents, OreComboboxProps } from './combobox.types';
 import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptions } from './combobox-options';
 import '../../feedback/chip/chip';
 import '../input/input';

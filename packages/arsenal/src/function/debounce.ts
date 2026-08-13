@@ -1,6 +1,5 @@
-import type { Fn } from '../types';
-
 import { warn } from '../_dev';
+import type { Fn } from '../types';
 
 export type DebounceOptions = {
   /** Invoke on the leading edge of the delay window. Default: `false`. */
