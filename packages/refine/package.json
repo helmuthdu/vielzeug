@@ -445,6 +445,15 @@
   ],
   "typesVersions": {
     "*": {
+      "frameworks/elements": [
+        "dist/frameworks/elements.d.ts"
+      ],
+      "frameworks/react": [
+        "dist/frameworks/react.d.ts"
+      ],
+      "frameworks/vue": [
+        "dist/frameworks/vue.d.ts"
+      ],
       "accordion": [
         "dist/disclosure/accordion/accordion.d.ts"
       ],
@@ -555,6 +564,9 @@
       ],
       "navbar": [
         "dist/layout/navbar/navbar.d.ts"
+      ],
+      "navigation-menu": [
+        "dist/overlay/navigation-menu/navigation-menu.d.ts"
       ],
       "number-input": [
         "dist/inputs/number-input/number-input.d.ts"
