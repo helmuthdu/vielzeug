@@ -2,6 +2,20 @@
   "name": "@vielzeug/refine",
   "entries": [
     {
+      "version": "2.1.0",
+      "tag": "@vielzeug/refine_v2.1.0",
+      "date": "Thu, 13 Aug 2026 06:06:28 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat: add navigation menu",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "870d1c1a51f5d0b115ee34662908254e41b31a8d"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.3",
       "tag": "@vielzeug/refine_v2.0.3",
       "date": "Mon, 10 Aug 2026 21:21:35 GMT",

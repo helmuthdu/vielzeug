@@ -2,6 +2,20 @@
   "name": "@vielzeug/codex",
   "entries": [
     {
+      "version": "2.1.2",
+      "tag": "@vielzeug/codex_v2.1.2",
+      "date": "Thu, 13 Aug 2026 06:06:28 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore(codex): refresh bundled docs data",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "dbf61dcc3211caada793f9526c4d48073ad7d5d7"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.1.1",
       "tag": "@vielzeug/codex_v2.1.1",
       "date": "Mon, 10 Aug 2026 21:21:35 GMT",

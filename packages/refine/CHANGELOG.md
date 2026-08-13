@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Mon, 10 Aug 2026 21:21:35 GMT and should not be manually modified.
+This log was last generated on Thu, 13 Aug 2026 06:06:28 GMT and should not be manually modified.
+
+## 2.1.0
+Thu, 13 Aug 2026 06:06:28 GMT
+
+### Minor changes
+
+- feat: add navigation menu
 
 ## 2.0.3
 Mon, 10 Aug 2026 21:21:35 GMT
