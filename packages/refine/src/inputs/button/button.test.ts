@@ -145,6 +145,15 @@ describe('ore-button', () => {
     });
   });
 
+  describe('Link styling', () => {
+    it('suppresses native underline styling on the anchor part', () => {
+      const match = buttonCss.match(/\[part='button'\]\s*{([^}]*)}/);
+
+      expect(match).not.toBeNull();
+      expect(match![1]).toContain('text-decoration: none');
+    });
+  });
+
   describe('Disabled state', () => {
     it('does not fire click when disabled', async () => {
       fixture = await mount('ore-button', { attrs: { disabled: '' } });

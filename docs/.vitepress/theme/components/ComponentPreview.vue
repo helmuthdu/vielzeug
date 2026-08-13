@@ -79,12 +79,7 @@ const {
             </ore-button-group>
           </div>
           <!-- Copy code button -->
-          <ore-button
-            variant="flat"
-            size="sm"
-            icon-only
-            @click="copyCode"
-            :title="isCopied ? 'Copied!' : 'Copy code'">
+          <ore-button variant="flat" size="sm" icon-only @click="copyCode" :title="isCopied ? 'Copied!' : 'Copy code'">
             <ore-icon :name="isCopied ? 'check' : 'copy'"></ore-icon>
           </ore-button>
 
@@ -115,10 +110,7 @@ const {
             class="preview-scroll-container"
             :style="!isMaximized && props.height ? { height: props.height, minHeight: props.height } : {}">
             <div class="preview-container-wrapper" :style="{ width: viewportWidth }">
-              <div
-                class="preview-container"
-                :class="{ colorful }"
-                :style="backgroundStyle">
+              <div class="preview-container" :class="{ colorful }" :style="backgroundStyle">
                 <ClientOnly>
                   <div ref="sandboxContainerRef" class="preview-sandbox"></div>
                 </ClientOnly>

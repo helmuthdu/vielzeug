@@ -95,6 +95,10 @@
      Used by all variants except heading.
      ======================================== */
 
+:host([size='2xs']) {
+  --_size: var(--text-size, var(--text-2xs));
+}
+
 :host([size='xs']) {
   --_size: var(--text-size, var(--text-xs));
 }

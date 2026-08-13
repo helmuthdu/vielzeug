@@ -6,7 +6,8 @@ import { PACKAGE_GROUPS } from './packageGroups';
 defineProps<{ screenMenu?: boolean }>();
 
 const route = useRoute();
-const isCurrentPackage = (packageId: string): boolean => route.path === `/${packageId}/` || route.path.startsWith(`/${packageId}/`);
+const isCurrentPackage = (packageId: string): boolean =>
+  route.path === `/${packageId}/` || route.path.startsWith(`/${packageId}/`);
 const MENU_COLUMNS = [
   PACKAGE_GROUPS.slice(0, 2),
   PACKAGE_GROUPS.slice(2, 3),
@@ -32,10 +33,7 @@ const MENU_COLUMNS = [
     <a class="screen-all-packages" href="/#packages">Browse all packages</a>
   </details>
 
-  <ore-navigation-menu
-    v-else
-    class="packages-menu"
-    placement="bottom-start">
+  <ore-navigation-menu v-else class="packages-menu" placement="bottom-start">
     <ore-navigation-menu-item value="packages">
       <span>Packages</span>
       <ore-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></ore-icon>

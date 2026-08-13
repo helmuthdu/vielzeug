@@ -4,8 +4,11 @@
       <span class="reference-title">Available Exports</span>
       <span class="reference-hint">Click any to insert at cursor</span>
       <div class="search-container">
-        <ore-input fullwidth :value="localSearchQuery" placeholder="Search exports..." @input="handleSearchInput">
-        </ore-input>
+        <ore-input
+          fullwidth
+          :value="localSearchQuery"
+          placeholder="Search exports..."
+          @input="handleSearchInput"></ore-input>
       </div>
     </div>
     <div class="function-categories">
@@ -19,9 +22,9 @@
             size="sm"
             variant="outline"
             @click="emit('insert-function', fn)"
-            title="Click to insert"
-            >{{ fn }}</ore-chip
-          >
+            title="Click to insert">
+            {{ fn }}
+          </ore-chip>
         </div>
       </div>
       <div v-if="filteredCategories.length === 0" class="no-results">

@@ -38,6 +38,7 @@
     line-height: var(--_line-height, var(--leading-normal));
     color: var(--_color);
     white-space: nowrap;
+    text-decoration: none;
     cursor: pointer;
     user-select: none;
     background: var(--_bg);

@@ -13,7 +13,10 @@
         </optgroup>
       </ore-select>
       <div class="toolbar-spacer" />
-      <span class="toolbar-shortcut"><kbd>⌘</kbd><kbd>Return</kbd></span>
+      <span class="toolbar-shortcut">
+        <kbd>⌘</kbd>
+        <kbd>Return</kbd>
+      </span>
       <ore-button
         size="sm"
         color="primary"
@@ -168,9 +171,22 @@
           </svg>
           <p>Run code to see output</p>
           <ul class="placeholder-steps">
-            <li><span class="step-num">1</span> Edit the code in the editor above</li>
-            <li><span class="step-num">2</span> Press <kbd>⌘</kbd><kbd>Return</kbd> or click <strong>Run</strong></li>
-            <li><span class="step-num">3</span> Results and logs appear here</li>
+            <li>
+              <span class="step-num">1</span>
+              Edit the code in the editor above
+            </li>
+            <li>
+              <span class="step-num">2</span>
+              Press
+              <kbd>⌘</kbd>
+              <kbd>Return</kbd>
+              or click
+              <strong>Run</strong>
+            </li>
+            <li>
+              <span class="step-num">3</span>
+              Results and logs appear here
+            </li>
           </ul>
           <span class="placeholder-note">Your edits are saved automatically in the browser</span>
         </div>
@@ -178,7 +194,9 @@
           <div v-for="line in execution.output.value" :key="line.id" class="output-line" :class="`output-${line.type}`">
             <span v-if="line.type !== 'result'" class="log-timestamp">{{ line.time }}</span>
             <span class="log-icon">{{ OUTPUT_ICON[line.type] }}</span>
-            <span class="log-content"><span class="log-text">{{ line.text }}</span></span>
+            <span class="log-content">
+              <span class="log-text">{{ line.text }}</span>
+            </span>
           </div>
         </div>
         <!-- Sandboxed execution target — invisible: this REPL only shows console/return-value
@@ -246,7 +264,9 @@ const examplesByCategory = computed(() => {
 
 /** This library plus every transitive @vielzeug dependency's registry entry, deps first. */
 const librariesInLoadOrder = computed<LibraryEntry[]>(() =>
-  [...props.library.dependencies, props.library.id].map((id) => (id === props.library.id ? props.library : LIBRARY_REGISTRY[id]!)),
+  [...props.library.dependencies, props.library.id].map((id) =>
+    id === props.library.id ? props.library : LIBRARY_REGISTRY[id]!,
+  ),
 );
 
 /** IIFE bundles to inline into the sandbox document, in dependency-first order. */

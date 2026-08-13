@@ -27,7 +27,7 @@ export type OreTextProps = {
   /** Clamp text to N lines with an ellipsis (multi-line truncation) */
   lines?: number;
   /** Text size — maps to --text-* tokens for body variants and --heading-* tokens for the heading variant */
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  size?: '2xs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   /** Enable single-line text truncation with ellipsis */
   truncate?: boolean;
   /** Text semantic variant */

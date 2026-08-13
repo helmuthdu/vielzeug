@@ -6,9 +6,10 @@
       <aside class="ide-sidebar" :class="{ 'is-ref-open': showReference }">
         <div class="sidebar-header">
           <img :src="withBase(`/logo-${selectedLibrary}.svg`)" :alt="selectedLibrary" class="sidebar-active-logo" />
-          <span class="sidebar-active-name"
-            >@vielzeug/<strong>{{ selectedLibrary }}</strong></span
-          >
+          <span class="sidebar-active-name">
+            @vielzeug/
+            <strong>{{ selectedLibrary }}</strong>
+          </span>
         </div>
         <nav class="sidebar-nav">
           <button

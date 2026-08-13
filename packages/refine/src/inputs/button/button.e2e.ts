@@ -52,4 +52,17 @@ test.describe('Layout', () => {
     // paddingX >= paddingY (2:1 design rule uses per-side, total should be >= 2x total Y)
     expect(paddingX).toBeGreaterThanOrEqual(paddingY);
   });
+
+  test('link buttons suppress native anchor underlines', async ({ page, refinePage }) => {
+    await refinePage.mountComponent('<ore-button id="link" href="/docs">Documentation</ore-button>');
+
+    const textDecorationLine = await page.evaluate(() => {
+      const button = document.getElementById('link')!;
+      const link = button.shadowRoot!.querySelector<HTMLAnchorElement>('a[part="button"]')!;
+
+      return getComputedStyle(link).textDecorationLine;
+    });
+
+    expect(textDecorationLine).toBe('none');
+  });
 });
