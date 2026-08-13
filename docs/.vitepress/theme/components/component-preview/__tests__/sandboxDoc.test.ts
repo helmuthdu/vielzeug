@@ -34,7 +34,20 @@ describe('buildSandboxDoc()', () => {
   it('parses user HTML before registering custom elements', () => {
     const { fragment } = buildSandboxDoc({ dark: false, dir: 'ltr', html: '<ore-menu></ore-menu>', vertical: false });
 
-    expect(fragment.indexOf('<div dir="ltr"')).toBeLessThan(fragment.indexOf('<script>'));
+    expect(fragment.indexOf('<div dir="ltr"')).toBeLessThan(fragment.indexOf('<script data-preview-refine>'));
+  });
+
+  it('loads shared dependencies before example scripts execute', () => {
+    const { fragment } = buildSandboxDoc({
+      dark: false,
+      dir: 'ltr',
+      html: '<div id="chart"></div><script>Prism.createLineChart(document.getElementById("chart"), {})</script>',
+      vertical: false,
+    });
+
+    expect(fragment.indexOf('<script data-preview-dependencies>')).toBeLessThan(
+      fragment.indexOf('Prism.createLineChart'),
+    );
   });
 
   it('registers every native-dialog overlay for preview state synchronization', () => {
@@ -45,6 +58,10 @@ describe('buildSandboxDoc()', () => {
     expect(fragment).toContain('ORE-DRAWER');
     expect(fragment).toContain("event.key !== 'Escape'");
     expect(fragment).toContain("overlay.removeAttribute('open')");
+    expect(fragment).toContain("if (typeof overlay.show === 'function')");
+    expect(fragment).toContain('overlay.show()');
+    expect(fragment).toContain('dialog.close()');
+    expect(fragment).not.toContain("overlay?.tagName === 'ORE-DRAWER'");
     expect(fragment).toContain('syncAllOverlays');
   });
 
@@ -73,10 +90,10 @@ describe('buildSandboxDoc()', () => {
     expect(fragment).toContain('justify-content: end');
   });
 
-  it('starts preview content on its main axis by default', () => {
+  it('centers preview content on its main axis by default', () => {
     const { fragment } = buildSandboxDoc({ dark: false, dir: 'ltr', html: '', vertical: false });
 
-    expect(fragment).toContain('justify-content: start');
+    expect(fragment).toContain('justify-content: center');
   });
 
   it('sets body flex-direction from `vertical` independently of `dir`', () => {

@@ -32,8 +32,30 @@ const overlayFromPath = (path) => path.find((node) => node instanceof HTMLElemen
 const syncOverlay = (overlay) => {
   const dialog = overlay.shadowRoot?.querySelector('dialog');
   if (!dialog) return;
-  dialog.toggleAttribute('open', overlay.hasAttribute('open'));
-  dialog.addEventListener('close', () => overlay.removeAttribute('open'), { once: true });
+
+  if (overlay.hasAttribute('open')) {
+    if (dialog.open) return;
+
+    // Attribute-driven examples need an explicit bridge in sandboxed iframes.
+    // Use the component API so its modal state, focus handling, and close path
+    // remain synchronized with the native dialog.
+    if (typeof overlay.show === 'function') {
+      overlay.show();
+      return;
+    }
+
+    try { dialog.showModal(); } catch { dialog.setAttribute('open', ''); }
+
+    return;
+  }
+
+  if (!dialog.open) return;
+
+  // Removing a modal dialog's open attribute only hides it. It remains in
+  // the browser's modal top layer and continues intercepting page interaction.
+  if (dialog.open) {
+    try { dialog.close(); } catch { dialog.removeAttribute('open'); }
+  }
 };
 const syncAllOverlays = () => document.querySelectorAll([...overlayTags].map((tag) => tag.toLowerCase()).join(',')).forEach(syncOverlay);
 new MutationObserver((records) => {
@@ -45,11 +67,6 @@ document.addEventListener('click', (event) => {
   const overlay = overlayFromPath(event.composedPath());
   const closeButton = event.composedPath().find((node) => node instanceof HTMLElement && /^(Close|Close dialog)$/.test(node.getAttribute('aria-label') ?? ''));
   if (overlay && closeButton) overlay.removeAttribute('open');
-}, { capture: true });
-document.addEventListener('pointerup', (event) => {
-  const overlay = overlayFromPath(event.composedPath());
-  const dragHandle = event.composedPath().find((node) => node instanceof HTMLElement && node.getAttribute('part') === 'drag-handle');
-  if (overlay?.tagName === 'ORE-DRAWER' && dragHandle) overlay.removeAttribute('open');
 }, { capture: true });
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
@@ -81,7 +98,7 @@ export interface SandboxDocResult {
 }
 
 export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
-  const { align = 'center', background, dark, dir, height, html, justify = 'start', vertical } = options;
+  const { align = 'center', background, dark, dir, height, html, justify = 'center', vertical } = options;
   const previewHtml = html.replace(/^\s*import\s+['"]@vielzeug\/refine\/[^'"]+['"];?\s*$/gm, '');
 
   const flexDirection = vertical ? 'column' : 'row';
@@ -112,13 +129,14 @@ export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
   // flex-centering layout above (`display: contents` removes the wrapper's own box, so its
   // children are laid out as if they were direct children of `body`).
   //
-  // Scripts follow user HTML so custom elements upgrade after their light-DOM
-  // slots are available to lifecycle hooks.
+  // The shared UMD dependencies must load before user scripts: chart examples
+  // access Prism and Ripple globals synchronously. Refine itself still follows
+  // user HTML so custom elements upgrade after their light-DOM slots exist.
   const fragment = `<style>${overrideCss}</style>
-<div dir="${dir}" style="display: contents">${previewHtml}</div>
 <script>${previewRuntime}</script>
-<script>${refineDeps}</script>
-<script>${refineJs}</script>`;
+<script data-preview-dependencies>${refineDeps}</script>
+<div dir="${dir}" style="display: contents">${previewHtml}</div>
+<script data-preview-refine>${refineJs}</script>`;
 
   return { fragment };
 }
