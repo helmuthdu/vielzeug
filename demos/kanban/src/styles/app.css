@@ -497,12 +497,6 @@ body {
   color: var(--text-color-tertiary);
 }
 
-.settings-view__option-buttons {
-  display: flex;
-  flex-shrink: 0;
-  gap: var(--size-2);
-}
-
 /* The developer group's one row is itself an accordion trigger (prefix icon + title +
    subtitle slots) — no extra `.settings-view__row` wrapper needed, refine's own accordion-item
    already lays those three slots out the same way. */

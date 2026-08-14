@@ -16,7 +16,7 @@ minimumReleaseAgeExclude:
   - '@vielzeug/ore@1.2.3'
   - '@vielzeug/prism@1.1.6'
   - '@vielzeug/pulse@1.0.7'
-  - '@vielzeug/refine@1.7.0'
+  - '@vielzeug/refine@1.7.0 || 2.1.0'
   - '@vielzeug/ripple@1.2.3'
   - '@vielzeug/rune@1.1.2'
   - '@vielzeug/scout@1.1.6'

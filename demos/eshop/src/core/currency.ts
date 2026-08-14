@@ -1,6 +1,6 @@
 import type { Currency } from '@vielzeug/coins';
 
-import { currency, EUR, exchange, exchangeRate, format as formatMoney, GBP, money, USD } from '@vielzeug/coins';
+import { EUR, exchange, exchangeRate, format as formatMoney, GBP, money, USD } from '@vielzeug/coins';
 import { signal } from '@vielzeug/ripple';
 
 const RATES = {
@@ -15,22 +15,27 @@ export function setCurrency(next: Currency): void {
   currentCurrency.value = next;
 }
 
-export function toDisplayCurrency(usdAmount: string) {
-  const selected = currentCurrency.value;
+function convertUsd(usdAmount: string) {
   const value = money(usdAmount, USD);
-  const converted = selected.code === USD.code ? value : exchange(value, RATES[selected.code as keyof typeof RATES]);
 
-  return converted;
+  switch (currentCurrency.value.code) {
+    case EUR.code:
+      return exchange(value, RATES.EUR);
+    case GBP.code:
+      return exchange(value, RATES.GBP);
+    default:
+      return value;
+  }
+}
+
+export function toDisplayCurrency(usdAmount: string) {
+  return convertUsd(usdAmount);
 }
 
 export function formatPrice(usdAmount: string): string {
-  const selected = currentCurrency.value;
-  const value = money(usdAmount, USD);
-  const converted = selected.code === USD.code ? value : exchange(value, RATES[selected.code as keyof typeof RATES]);
-
-  return formatMoney(converted, { maximumFractionDigits: 0 });
+  return formatMoney(convertUsd(usdAmount), { maximumFractionDigits: 0, minimumFractionDigits: 0 });
 }
 
 export function currencyFromCode(code: string): Currency {
-  return currency(code);
+  return SUPPORTED_CURRENCIES.find((supported) => supported.code === code) ?? USD;
 }

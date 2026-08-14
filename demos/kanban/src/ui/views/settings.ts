@@ -1,18 +1,17 @@
 import '@vielzeug/refine/select';
-import '@vielzeug/refine/button';
 import '@vielzeug/refine/icon';
 import '@vielzeug/refine/accordion';
 import '@vielzeug/refine/accordion-item';
 
 import { define, each, html, onCleanup, ref, when } from '@vielzeug/ore';
-import { signal } from '@vielzeug/ripple';
+import { computed, signal } from '@vielzeug/ripple';
 import type { LogEntry } from '@vielzeug/rune';
 
 import { currentUser } from '../../core/board-store';
 import { currentLocale, setLocale, t } from '../../core/i18n';
 import { ringBuffer } from '../../core/logger';
 import { seedUsers } from '../../core/seed-data';
-import { setThemePreference, themePreference } from '../../core/theme';
+import { setThemePreference, type ThemePreference, themePreference } from '../../core/theme';
 
 const LEVEL_COLORS: Record<string, string> = {
   debug: '#888',
@@ -22,18 +21,32 @@ const LEVEL_COLORS: Record<string, string> = {
   warn: '#fa0',
 };
 
-const LANGUAGES: Array<{ code: 'de' | 'en'; label: string }> = [
-  { code: 'en', label: 'English' },
-  { code: 'de', label: 'Deutsch' },
+const LANGUAGE_OPTIONS = [
+  { label: 'English', value: 'en' },
+  { label: 'Deutsch', value: 'de' },
 ];
 
-const THEMES: Array<{ code: 'dark' | 'light' | 'system'; label: () => string }> = [
-  { code: 'system', label: () => t('settings.themeSystem') },
-  { code: 'light', label: () => t('settings.themeLight') },
-  { code: 'dark', label: () => t('settings.themeDark') },
-];
+const THEME_OPTIONS = computed<Array<{ label: string; value: ThemePreference }>>(() => [
+  { label: t('settings.themeSystem'), value: 'system' },
+  { label: t('settings.themeLight'), value: 'light' },
+  { label: t('settings.themeDark'), value: 'dark' },
+]);
 
 const USER_OPTIONS = seedUsers.map((user) => ({ label: `${user.name} (${user.role})`, value: user.id }));
+
+type SelectElement = HTMLElement & { value: string };
+
+function selectValue(event: Event): string {
+  return (event.currentTarget as SelectElement).value;
+}
+
+function isLanguage(value: string): value is 'de' | 'en' {
+  return value === 'de' || value === 'en';
+}
+
+function isThemePreference(value: string): value is ThemePreference {
+  return value === 'dark' || value === 'light' || value === 'system';
+}
 
 function formatTimestamp(date: Date): string {
   const hh = String(date.getHours()).padStart(2, '0');
@@ -85,20 +98,14 @@ define('settings-view', {
           <div class="settings-view__row-text">
             <span class="settings-view__row-label">${() => t('settings.languageLabel')}</span>
           </div>
-          <div class="settings-view__option-buttons" role="group" aria-label=${() => t('settings.languageLabel')}>
-            ${each(
-              LANGUAGES,
-              (lang) => lang.code,
-              (lang) => html`
-                <ore-button
-                  size="sm"
-                  variant=${() => (currentLocale.value === lang.value.code ? 'solid' : 'bordered')}
-                  @click=${() => setLocale(lang.value.code)}>
-                  ${() => lang.value.label}
-                </ore-button>
-              `,
-            )}
-          </div>
+          <ore-select
+            options=${LANGUAGE_OPTIONS}
+            value=${() => currentLocale.value}
+            @change=${(e: Event) => {
+              const locale = selectValue(e);
+
+              if (isLanguage(locale)) setLocale(locale);
+            }}></ore-select>
         </div>
 
         <div class="settings-view__row">
@@ -107,20 +114,14 @@ define('settings-view', {
             <span class="settings-view__row-label">${() => t('settings.themeLabel')}</span>
             <span class="settings-view__row-hint">${() => t('settings.themeHint')}</span>
           </div>
-          <div class="settings-view__option-buttons" role="group" aria-label=${() => t('settings.themeLabel')}>
-            ${each(
-              THEMES,
-              (theme) => theme.code,
-              (theme) => html`
-                <ore-button
-                  size="sm"
-                  variant=${() => (themePreference.value === theme.value.code ? 'solid' : 'bordered')}
-                  @click=${() => setThemePreference(theme.value.code)}>
-                  ${() => theme.value.label()}
-                </ore-button>
-              `,
-            )}
-          </div>
+          <ore-select
+            options=${THEME_OPTIONS.value}
+            value=${() => themePreference.value}
+            @change=${(e: Event) => {
+              const preference = selectValue(e);
+
+              if (isThemePreference(preference)) setThemePreference(preference);
+            }}></ore-select>
         </div>
 
         <div class="settings-view__row">
@@ -133,7 +134,7 @@ define('settings-view', {
             options=${USER_OPTIONS}
             value=${() => currentUser.value.id}
             @change=${(e: Event) => {
-              const selected = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value;
+              const selected = selectValue(e);
               const user = seedUsers.find((u) => u.id === selected);
 
               if (user) currentUser.value = user;

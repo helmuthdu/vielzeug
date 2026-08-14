@@ -1613,12 +1613,6 @@ ul.orders-view__list {
   color: var(--text-color-tertiary);
 }
 
-.settings-view__option-buttons {
-  display: flex;
-  flex-shrink: 0;
-  gap: var(--size-2);
-}
-
 .settings-view__debug-log {
   max-height: 280px;
   padding: var(--size-2);

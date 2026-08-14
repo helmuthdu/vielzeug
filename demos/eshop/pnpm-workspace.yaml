@@ -1,2 +1,4 @@
 packages:
   - .
+minimumReleaseAgeExclude:
+  - '@vielzeug/refine@2.1.0'

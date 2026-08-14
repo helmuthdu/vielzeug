@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: reuse ElementInternals when a form-associated host reconnects",
+      "packageName": "@vielzeug/ore",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

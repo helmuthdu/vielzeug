@@ -159,6 +159,29 @@ describe('useField()', () => {
     ).rejects.toThrow(/useField\(\) was already called/);
   });
 
+  it('reuses form internals after reconnecting the same host element', async () => {
+    let setupCount = 0;
+    const fixture = await mount(
+      () => {
+        setupCount++;
+        useField({ value: signal('initial') });
+
+        return html`
+          <div></div>
+        `;
+      },
+      { componentOptions: { formAssociated: true } },
+    );
+    const attachInternals = vi.spyOn(fixture.element, 'attachInternals');
+
+    fixture.element.remove();
+    document.body.appendChild(fixture.element);
+    await fixture.flush();
+
+    expect(setupCount).toBe(2);
+    expect(attachInternals).not.toHaveBeenCalled();
+  });
+
   it('validity: checkValidity()/reportValidity() reflect the current validity signal', async () => {
     let handle!: ReturnType<typeof useField>;
     const required = signal(true);

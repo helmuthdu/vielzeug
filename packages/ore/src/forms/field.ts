@@ -6,6 +6,8 @@ import { getHost, onCleanup, onFormReset, watchEffect } from '../runtime';
 
 /** @internal */
 const internalsRegistry = new WeakMap<HTMLElement, ElementInternals>();
+/** @internal */
+const activeFieldRegistry = new WeakSet<HTMLElement>();
 
 export type FormFieldOptions<T = unknown> = {
   disabled?: Readable<boolean>;
@@ -66,14 +68,17 @@ export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHa
     throw new OreApiError(ORE_ERRORS.defineFieldRequiresFormAssociated(host.localName));
   }
 
-  if (internalsRegistry.has(host)) {
+  if (activeFieldRegistry.has(host)) {
     throw new OreApiError(ORE_ERRORS.useFieldAlreadyCalled(host.localName));
   }
 
-  const internals = host.attachInternals();
+  // ElementInternals may only be attached once for an element's lifetime, while setup
+  // legitimately runs again when a custom element is reconnected.
+  const internals = internalsRegistry.get(host) ?? host.attachInternals();
 
   internalsRegistry.set(host, internals);
-  onCleanup(() => internalsRegistry.delete(host));
+  activeFieldRegistry.add(host);
+  onCleanup(() => activeFieldRegistry.delete(host));
 
   const toFormValue =
     options.toFormValue ??

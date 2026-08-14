@@ -9,86 +9,86 @@ importers:
   .:
     dependencies:
       '@vielzeug/arsenal':
-        specifier: ^1.1.2
-        version: 1.1.2
+        specifier: ^2.0.1
+        version: 2.0.1
       '@vielzeug/clockwork':
-        specifier: ^1.1.2
-        version: 1.1.2
+        specifier: ^2.0.1
+        version: 2.0.1
       '@vielzeug/coins':
-        specifier: link:../../packages/coins
-        version: link:../../packages/coins
+        specifier: ^2.0.1
+        version: 2.0.1
       '@vielzeug/conduit':
-        specifier: link:../../packages/conduit
-        version: link:../../packages/conduit
+        specifier: ^2.0.1
+        version: 2.0.1
       '@vielzeug/courier':
-        specifier: link:../../packages/courier
-        version: link:../../packages/courier
+        specifier: ^2.0.1
+        version: 2.0.1
       '@vielzeug/dnd':
-        specifier: link:../../packages/dnd
-        version: link:../../packages/dnd
-      '@vielzeug/familiar':
-        specifier: link:../../packages/familiar
-        version: link:../../packages/familiar
-      '@vielzeug/flux':
-        specifier: ^1.0.8
-        version: 1.0.8(@vielzeug/courier@..+packages+courier)(@vielzeug/herald@1.0.5)(@vielzeug/pulse@1.0.8)
-      '@vielzeug/forge':
-        specifier: ^1.4.0
-        version: 1.4.0
-      '@vielzeug/herald':
-        specifier: ^1.0.5
-        version: 1.0.5
-      '@vielzeug/lingua':
-        specifier: link:../../packages/lingua
-        version: link:../../packages/lingua
-      '@vielzeug/orbit':
-        specifier: link:../../packages/orbit
-        version: link:../../packages/orbit
-      '@vielzeug/ore':
-        specifier: ^2.0.0
-        version: 2.0.0(@vielzeug/assay@2.0.0)(@vielzeug/ripple@1.3.0)
-      '@vielzeug/prism':
-        specifier: ^1.1.7
-        version: 1.1.7
-      '@vielzeug/pulse':
-        specifier: ^1.0.8
-        version: 1.0.8
-      '@vielzeug/refine':
         specifier: ^2.0.0
         version: 2.0.0
+      '@vielzeug/familiar':
+        specifier: ^2.0.0
+        version: 2.0.0
+      '@vielzeug/flux':
+        specifier: ^2.0.3
+        version: 2.0.3(@vielzeug/courier@2.0.1)(@vielzeug/herald@2.0.0)(@vielzeug/pulse@2.1.1)(@vielzeug/ripple@2.1.0)
+      '@vielzeug/forge':
+        specifier: ^2.0.2
+        version: 2.0.2(@vielzeug/spell@2.0.1)(@vielzeug/vault@2.1.0)
+      '@vielzeug/herald':
+        specifier: ^2.0.0
+        version: 2.0.0
+      '@vielzeug/lingua':
+        specifier: ^2.1.0
+        version: 2.1.0
+      '@vielzeug/orbit':
+        specifier: ^2.0.1
+        version: 2.0.1(@vielzeug/ripple@2.1.0)
+      '@vielzeug/ore':
+        specifier: ^2.0.3
+        version: 2.0.3(@vielzeug/assay@2.0.1)(@vielzeug/ripple@2.1.0)
+      '@vielzeug/prism':
+        specifier: ^2.1.1
+        version: 2.1.1
+      '@vielzeug/pulse':
+        specifier: ^2.1.1
+        version: 2.1.1
+      '@vielzeug/refine':
+        specifier: ^2.1.0
+        version: 2.1.0
       '@vielzeug/ripple':
-        specifier: ^1.3.0
-        version: 1.3.0
+        specifier: ^2.1.0
+        version: 2.1.0
       '@vielzeug/rune':
-        specifier: ^1.1.2
-        version: 1.1.2
+        specifier: ^2.0.0
+        version: 2.0.0
       '@vielzeug/sandbox':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^2.0.0
+        version: 2.0.0
       '@vielzeug/scout':
-        specifier: link:../../packages/scout
-        version: link:../../packages/scout
+        specifier: ^2.1.1
+        version: 2.1.1
       '@vielzeug/scroll':
-        specifier: ^1.1.4
-        version: 1.1.4
+        specifier: ^2.0.1
+        version: 2.0.1
       '@vielzeug/sourcerer':
-        specifier: link:../../packages/sourcerer
-        version: link:../../packages/sourcerer
+        specifier: ^2.0.1
+        version: 2.0.1
       '@vielzeug/spell':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^2.0.1
+        version: 2.0.1
       '@vielzeug/tempo':
-        specifier: link:../../packages/tempo
-        version: link:../../packages/tempo
+        specifier: ^2.0.0
+        version: 2.0.0
       '@vielzeug/vault':
-        specifier: ^1.0.4
-        version: 1.0.4
+        specifier: ^2.1.0
+        version: 2.1.0
       '@vielzeug/ward':
-        specifier: ^1.0.5
-        version: 1.0.5
+        specifier: ^2.0.0
+        version: 2.0.0
       '@vielzeug/wayfinder':
-        specifier: ^1.0.4
-        version: 1.0.4
+        specifier: ^2.0.0
+        version: 2.0.0
     devDependencies:
       playwright:
         specifier: ^1.62.1
@@ -97,8 +97,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       vite:
-        specifier: ^8.2.0
-        version: 8.2.0
+        specifier: ^8.2.1
+        version: 8.2.1
 
 packages:
 
@@ -202,33 +202,46 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
-  '@vielzeug/arsenal@1.1.2':
-    resolution: {integrity: sha512-kRQAvOHalL8aiTAqBWUWPyALq+oZiay+eNHfCe0hlutRMvHuA7TZ12P3eyoej3/eMeJD4FL/4HiSoip9BbXVXA==}
+  '@vielzeug/arsenal@2.0.1':
+    resolution: {integrity: sha512-7GhD4+WnBEyk/YARlQkhdzdtKfIk+WMJPpmzxSgVXv07SF0BLyfYSzkInBaUJ20i8bBfNd0kG9fHvIn2gSJKsg==}
     engines: {node: '>=22'}
 
-  '@vielzeug/arsenal@2.0.0':
-    resolution: {integrity: sha512-2IP9stIajcdGpTbz0zZJrB1xtZe8369kD5lSu5lJ5jpIyKl3CxnQTrn7HvYxT244oddmH8C4vrr8A8k1AED4MA==}
+  '@vielzeug/assay@2.0.1':
+    resolution: {integrity: sha512-83OKWukQWpnQqU8L48CI/WQxg3ra1yiZZh9d0yOp4TUU8uNUPl6mlngo3ihBRbaiR6cRU0p1RXqWY72rwRwiww==}
     engines: {node: '>=22'}
 
-  '@vielzeug/assay@2.0.0':
-    resolution: {integrity: sha512-Q8Wuo4UG4VVHvSc6oZgFvhukhZOuZ34cxljjR2lL17vm5VSP5v3Lzvgr9+MAami22w10z1U3FqQkUfg/3oVRXQ==}
+  '@vielzeug/clockwork@2.0.1':
+    resolution: {integrity: sha512-WOe3EpUBokuFkYWUEctFacMEeX4VqfGARbWliXn5HIcAV22vwU6zePMQ3ok1QEK1UOJYQTH45RY2dsi9LLSGkw==}
     engines: {node: '>=22'}
 
-  '@vielzeug/clockwork@1.1.2':
-    resolution: {integrity: sha512-B/oAEypYTiGzPq2GGqeVqP264g5rHzB05EpsdmALwULuzfoG/6cUDbDpdOmRCcFSFLaatzvXXcC91L7JPEga3Q==}
+  '@vielzeug/coins@2.0.1':
+    resolution: {integrity: sha512-NhXlpoerKVkS7J2JcBGKfFTyQ6IFkkyUTCzJe0QITcrGMezkqQfQE6kRD66XewIboLmUUCyr4M7EKthyy2vC9A==}
     engines: {node: '>=22'}
 
-  '@vielzeug/dnd@1.2.2':
-    resolution: {integrity: sha512-2Vus2/hYj46OzGTD+XUAqZaOlIzVQ+8zqPoFePctEXjB1GqU8bxTaYtLBF+h5lMtrwyEnglPHXcuQIlyxo3Zaw==}
+  '@vielzeug/conduit@2.0.1':
+    resolution: {integrity: sha512-8HCmgla3h3WCwVK5rqBuZyUuLjU/ME6m6rMmgmQD18ewNvOhUND2Cs36+3tQUaLYi02xJXmya3xnV/wLrxlvBg==}
     engines: {node: '>=22'}
 
-  '@vielzeug/flux@1.0.8':
-    resolution: {integrity: sha512-VQAlM+bKWMnm+QX12TgRS/Mpmbl07sfLAgQ4ZJeo2l10lY0uYXLT28rORJQ7JHajSAYZCzSPoeY0W7DRzbtp9Q==}
+  '@vielzeug/courier@2.0.1':
+    resolution: {integrity: sha512-StPjE74bxaBch4T3vI8wPZvNeRlMCprGbW1wkScvwxiOB33smHzUEKz+m8v63b0uBhdQqYA5+USizBa9LfS7vA==}
+    engines: {node: '>=22'}
+
+  '@vielzeug/dnd@2.0.0':
+    resolution: {integrity: sha512-OzR/NcN6WLKRYAkiOpKZYJI79ToE8/QShZ6U2jHKIM8JUxpUbGC6BB5mZKXmiMFWwI90UIsDSQT/+BE3TEg8UQ==}
+    engines: {node: '>=22'}
+
+  '@vielzeug/familiar@2.0.0':
+    resolution: {integrity: sha512-F0bfscmNMB/CVLRBjR3vleeuZUEmo3OlJmfhbG1sRhhkj3rnkCmKwnmc0rGdOdrK76oTlmZwwJpnxxq+rCkuiw==}
+    engines: {node: '>=22'}
+
+  '@vielzeug/flux@2.0.3':
+    resolution: {integrity: sha512-xl5DtM4tOoBOtr7HUBDiWt+S8NYOa1GNuI5Qe2BdXBZv7cgxZ8xR3ToKObADtRKyEyCnP6v/foC8fzHfqzrXvw==}
     engines: {node: '>=22'}
     peerDependencies:
-      '@vielzeug/courier': 1.1.5
-      '@vielzeug/herald': 1.0.5
-      '@vielzeug/pulse': 1.0.8
+      '@vielzeug/courier': 2.0.1
+      '@vielzeug/herald': 2.0.0
+      '@vielzeug/pulse': 2.1.1
+      '@vielzeug/ripple': 2.1.0
     peerDependenciesMeta:
       '@vielzeug/courier':
         optional: true
@@ -236,87 +249,106 @@ packages:
         optional: true
       '@vielzeug/pulse':
         optional: true
+      '@vielzeug/ripple':
+        optional: true
 
-  '@vielzeug/forge@1.4.0':
-    resolution: {integrity: sha512-TMrDOtaOu/Bmn/4XLGn1Uci0oznF9EgQ5YWHrMD+/8nz1+h8kAHeHqs3jLx0YRlcQ+UX5IebDBAlP614JP4k7Q==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/herald@1.0.5':
-    resolution: {integrity: sha512-sUhzfWkuFCoYUjxoZ70jl2uXr2W4xUzofJ73Ot9vWsiiTwY6ucyqrRMofFIYp3/iC5sezyCTWIck//hLDOaA3w==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/keymap@1.1.2':
-    resolution: {integrity: sha512-+PsSA/yFDSh/X+5CVV8e6ZlOEU8zAsuZIO6ZokXyvHG+LvBYyqJMmdbTQUvnUGvSKXyaTHwO6nCjBqlbUCyzYg==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/orbit@1.1.3':
-    resolution: {integrity: sha512-iGaX2PUxbZ7G/bn1M/vBDoIv/wksbB1GiosWZWAyzyVvrf2ag+dDiqDdi2vh0cr7IT/QQZPqq7grFwePMh30Jw==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/orbit@1.1.4':
-    resolution: {integrity: sha512-Hxljs2Jsm/DOtYaACqVPW3iG0MmQQdcvkj6yF8zD0RIwXCPNY1pA0d5msJW8UruG0HA+25Hl4yU7b/1dZdSqaw==}
-    engines: {node: '>=22'}
-
-  '@vielzeug/ore@2.0.0':
-    resolution: {integrity: sha512-k1AIcvija5XuMJeK1o3PxK6fGqJ3ySsoU9KAb2qlU8guw4WvihyI8+puiGzKMUuDv9VTcBrQT9KE8FwEyy1koQ==}
+  '@vielzeug/forge@2.0.2':
+    resolution: {integrity: sha512-zTg/KaninF5dIHr63FsY4hpo3ZfSFCKyVe5vJQFMOzlczgt5YaxAtNxnpSjhg0QmEyS++7KjxIWXG+CiypflSg==}
     engines: {node: '>=22'}
     peerDependencies:
-      '@vielzeug/assay': ^2.0.0
-      '@vielzeug/ripple': ^2.0.0
+      '@vielzeug/spell': 2.0.1
+      '@vielzeug/vault': 2.1.0
+    peerDependenciesMeta:
+      '@vielzeug/spell':
+        optional: true
+      '@vielzeug/vault':
+        optional: true
+
+  '@vielzeug/herald@2.0.0':
+    resolution: {integrity: sha512-I158GbLOfiHPNpxuZaPme82UkPdH3A+ocrAY07X7A0k8/aLU0WHflY3TysADZW9VSDVwNu5i7eodS7Wn564BEw==}
+    engines: {node: '>=22'}
+
+  '@vielzeug/keymap@2.0.0':
+    resolution: {integrity: sha512-vdHceNO7YKCq0hBkWxXv2ii7eMIE0s+ZabEoXoF1ACO3Bur+oekwAkPH6X9nHKzposKMLnY82mIARs3xhtTWMA==}
+    engines: {node: '>=22'}
+
+  '@vielzeug/lingua@2.1.0':
+    resolution: {integrity: sha512-QeIJxAtiigVRNw3js1TLlO/FuZZTtXIMJ70WG2Mh/U778QrGR5dq7eVdHc9KsQvF043eC87Ed96ADTgSy7a3Ag==}
+    engines: {node: '>=22'}
+
+  '@vielzeug/orbit@2.0.1':
+    resolution: {integrity: sha512-Gz6SNuP1bms69w/xXjiCMU1YuWLkS5JatGLEqEfr4EPOOsdc0H/jUrMASlgCQiV7KBAfuNIZGUESmQf1hITkcA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@vielzeug/ripple': ^2.1.0
+    peerDependenciesMeta:
+      '@vielzeug/ripple':
+        optional: true
+
+  '@vielzeug/ore@2.0.3':
+    resolution: {integrity: sha512-7uAlUoVsOqxq1BnZLZNkwJ3BG3QhTEJ7nUF3wUsTd07tZZh7gHjMEoC0JNxwnd4vJQgQlKqXmEgPGdU/uVkkdQ==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@vielzeug/assay': ^2.0.1
+      '@vielzeug/ripple': ^2.1.0
     peerDependenciesMeta:
       '@vielzeug/assay':
         optional: true
 
-  '@vielzeug/prism@1.1.7':
-    resolution: {integrity: sha512-IOBHvHcdyYzlfHPwO0TXxSisDDEtfFgsO8kX5r5VpVC7KB+G2lJ3zAWRtUpa1kF6xK/hxOni7g3J8JSymU/6pw==}
+  '@vielzeug/prism@2.1.1':
+    resolution: {integrity: sha512-SNU1yAnxw7rOJLVBwuBHueLFLVmzUWayH5y/6IEJXH8s+y0Ll+8Xx05u5zAFKwjTMLFUae6aHK9vQxydZ9xczQ==}
     engines: {node: '>=22'}
 
-  '@vielzeug/pulse@1.0.8':
-    resolution: {integrity: sha512-6dmcmzjeSU5hMc4yVLLYzeMos9dQ59iuCxiDThxUceEIQQ+WgEu+4vqQtl9VMTrQ6HRPCHCRX1YDWHhU86GeaQ==}
+  '@vielzeug/pulse@2.1.1':
+    resolution: {integrity: sha512-+xo3s9oWaQG5cRwrR4TgEqnxo3oUTe5gbwyCGOD24JK4fm7srOJ4sp7BvDnT/yk8WZP2r6fB5hgduW0a9Jac0Q==}
     engines: {node: '>=22'}
 
-  '@vielzeug/refine@2.0.0':
-    resolution: {integrity: sha512-xdGkszrw68ukttK9nB9Cb1GcOsrsQujemCi7YvONeJyjVwFnhsmsfahrC4gApOUbP29GnluF4NIxm4OEeym0gQ==}
+  '@vielzeug/refine@2.1.0':
+    resolution: {integrity: sha512-1yls4XIWOplPJlBhAi72Fz1Ltgv1GNGu0Dv24C+VihO7q35QQIJLgUYx+TWFqinv9UcUJtP7SpoiQEpNywGxhA==}
     engines: {node: '>=22'}
 
-  '@vielzeug/ripple@1.3.0':
-    resolution: {integrity: sha512-UVcawCHlddDhsMqtSsTnmIzTkNZeHjligb1A3/vkBOmmNQ8/qW9+JWXBHlIR++qsycL1eoMAPSajYl6GmrhcEA==}
+  '@vielzeug/ripple@2.1.0':
+    resolution: {integrity: sha512-LhmV94Hu+QoDXDllpLTbCwOpP60/jmd4xLJJ0fCVR8dAEmQ4wF3vETToMLzk2HwQLjvEMY8OKiiNJCH8lShq/g==}
     engines: {node: '>=22'}
 
-  '@vielzeug/ripple@2.0.0':
-    resolution: {integrity: sha512-rLBJVgsbnzFl5yjFymqhx4wwM/F8OxFRwHJ7018JxMGyDs90ePNMRQStodxG3MVR4AWp0VBa/A0GpIcjzV9qSw==}
+  '@vielzeug/rune@2.0.0':
+    resolution: {integrity: sha512-fGns+l/BQh8l7yF0RXJmupkvIwoxYJhBfGo32M9xz1ITToC8BjUNV38RPs4WyNawgmRFSCNoRbZmdAK1fXCFbw==}
     engines: {node: '>=22'}
 
-  '@vielzeug/rune@1.1.2':
-    resolution: {integrity: sha512-3CEfE8q6v4mJonV9Y6LQffoKzdP/vFHclEQTtZaHoSmfDhqSN0rqKjBk5mpG0nRntQ5GF/00rNbJS50adVH4Vw==}
+  '@vielzeug/sandbox@2.0.0':
+    resolution: {integrity: sha512-m40HBxGTEJ23VrMzH1dqsqcFWgZHUlqJJJkD+GtC/PmO4hWkhc37hhqXSRx24yucIbHvp7g5WDPxNDggs0xUMQ==}
     engines: {node: '>=22'}
 
-  '@vielzeug/sandbox@1.2.2':
-    resolution: {integrity: sha512-Mzr8DZka8vUh97p3zyBGkDhro4LkTuBXoFVoL+dZaFrFdB6EPYtSjad79lfusb0UCpICZn/4pjXvrSmpsl5pRQ==}
+  '@vielzeug/scout@2.1.1':
+    resolution: {integrity: sha512-IsCUv1HM1ldPCusqonVzpahpUf3tH1xMsseRIrt1y7KDINVUc0cluGOhIbKURDR8tYHN+AS8P0H8Dz3LoQmOEg==}
     engines: {node: '>=22'}
 
-  '@vielzeug/scroll@1.1.4':
-    resolution: {integrity: sha512-D4xppCA00qWED04/FmFs9BgQZaBEX+y32qmOtYn7O5lsVz2ZGf6HbT1EMH6RX9p+Jo6QVbVaKJvHW1gOcr/nNA==}
+  '@vielzeug/scroll@2.0.1':
+    resolution: {integrity: sha512-BBtU29JRbzMX8H5CbVngvoXPo3c2gBIRixWQuKLQ0qmPDIVm7C8ITGmZukDtrEcpJ1TsMybLLsVBPMYsp4wFug==}
     engines: {node: '>=22'}
 
-  '@vielzeug/spell@1.2.2':
-    resolution: {integrity: sha512-SHkPDUK7qRd4afac2dpDvC8lrMtEDIh3Ti7vwoO+dpDAvLUlGT/er2yGzWDmmu7/AvVrF3mUHo+hhLeSR7d4bg==}
+  '@vielzeug/sourcerer@2.0.1':
+    resolution: {integrity: sha512-FMUZtVF3Yu9RNknGsW+VUb/lbfIpI+S576NU0SZmUV3KjibkW0YZM43eVUY8qwOiMMSxKZoheZ4k9WdoWpEQaw==}
     engines: {node: '>=22'}
 
-  '@vielzeug/tempo@1.0.5':
-    resolution: {integrity: sha512-8cpqMfqHJhlzRLmrRdojVyL1tOctVG+Mi/sySwSm34F3hVBwYmGOXiL2XTfR+55XPgD/Dg4nJsY6sLO74iERlw==}
+  '@vielzeug/spell@2.0.1':
+    resolution: {integrity: sha512-0UNRU50v5ShisrBKBBQKzSvWvcyCU3e7zWqTYyoJsvTG20XJ5ITZXymQNOhzkF4ffbliFAJRt+H087tvidlcfg==}
     engines: {node: '>=22'}
 
-  '@vielzeug/vault@1.0.4':
-    resolution: {integrity: sha512-hDBS8d+gD7JCjF1h7aHRY9p18+tiRIWcpY3yefMiESsk3jz9JW8ZZ8BMNRAV5NCq7vBARsfDALmQRp3n8yrSmg==}
+  '@vielzeug/tempo@2.0.0':
+    resolution: {integrity: sha512-yT2QmpAeUa94ZZUo2Ph+u/j/Z8TZXHAsPi3U+lEjY8c9tVRrftR3+WgHWUdWelY0ojp9un94E5rkcjlNxjLwtA==}
     engines: {node: '>=22'}
 
-  '@vielzeug/ward@1.0.5':
-    resolution: {integrity: sha512-rtVj6dC9ZdihpMIfuQvcJh/TmbbnaVXkAjv92YH0lK/RMktgpvLSbSDSFHqyqjOojULzysg3YNgwKY5d4R03LQ==}
+  '@vielzeug/vault@2.1.0':
+    resolution: {integrity: sha512-R2q7lXxxb4rRVKGmbAkGVZmWBQ2e4bEl9ZuSOCdKdwG6c55iZUi4WdQhhKoAMluj5f3jXA1LFhQW7ICyDs73bg==}
     engines: {node: '>=22'}
 
-  '@vielzeug/wayfinder@1.0.4':
-    resolution: {integrity: sha512-bEiZb2Vpw+8MZb1vpgQtikNI5iiq2QN+qzp+jQGELNny/BTB1mAlednk7ZFXbMtJa9HqQFuHiWu+QAxEbh/swA==}
+  '@vielzeug/ward@2.0.0':
+    resolution: {integrity: sha512-fa7Su6tOArSsUJkRqDxMX9PBQBDtp8wYeBGE4NVQUg9otHGNdN910kNF1asha6yVwBgIU/EpswuiDsdQwtNj2g==}
+    engines: {node: '>=22'}
+
+  '@vielzeug/wayfinder@2.0.0':
+    resolution: {integrity: sha512-ggIorNSE4KmgYH+zpBXPs3r+UUAPZkutcSfITRS/6orv/VO+tFdjo9ZJodS78LGibjzTJVREKY0087mTen2aTw==}
     engines: {node: '>=22'}
 
   detect-libc@2.1.2:
@@ -466,8 +498,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  vite@8.2.0:
-    resolution: {integrity: sha512-pn+CFpM0lwDeKwmOq1ZaBK/9sjorZcgqxki6MbY/jPEVd9vichIlmlD4HmQ5wdP5EgqQCFRaACBxMC7uEGc6lQ==}
+  vite@8.2.1:
+    resolution: {integrity: sha512-EU/eS7BH3XROHh2YnBefjM6DBKA6ZeMZEYQbj7NLWg5wHYlhB8B/Mayd5XsgWq+NFYccDOTemRpdETWR6Ka/lw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -561,103 +593,106 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@vielzeug/arsenal@1.1.2': {}
+  '@vielzeug/arsenal@2.0.1': {}
 
-  '@vielzeug/arsenal@2.0.0': {}
+  '@vielzeug/assay@2.0.1': {}
 
-  '@vielzeug/assay@2.0.0': {}
+  '@vielzeug/clockwork@2.0.1': {}
 
-  '@vielzeug/clockwork@1.1.2':
+  '@vielzeug/coins@2.0.1': {}
+
+  '@vielzeug/conduit@2.0.1': {}
+
+  '@vielzeug/courier@2.0.1':
     dependencies:
-      '@vielzeug/ripple': 1.3.0
+      '@vielzeug/arsenal': 2.0.1
 
-  '@vielzeug/dnd@1.2.2': {}
+  '@vielzeug/dnd@2.0.0': {}
 
-  '@vielzeug/flux@1.0.8(@vielzeug/courier@..+packages+courier)(@vielzeug/herald@1.0.5)(@vielzeug/pulse@1.0.8)':
+  '@vielzeug/familiar@2.0.0':
     dependencies:
-      '@vielzeug/ripple': 1.3.0
+      '@vielzeug/arsenal': 2.0.1
+
+  '@vielzeug/flux@2.0.3(@vielzeug/courier@2.0.1)(@vielzeug/herald@2.0.0)(@vielzeug/pulse@2.1.1)(@vielzeug/ripple@2.1.0)':
     optionalDependencies:
-      '@vielzeug/courier': link:../../packages/courier
-      '@vielzeug/herald': 1.0.5
-      '@vielzeug/pulse': 1.0.8
+      '@vielzeug/courier': 2.0.1
+      '@vielzeug/herald': 2.0.0
+      '@vielzeug/pulse': 2.1.1
+      '@vielzeug/ripple': 2.1.0
 
-  '@vielzeug/forge@1.4.0':
+  '@vielzeug/forge@2.0.2(@vielzeug/spell@2.0.1)(@vielzeug/vault@2.1.0)':
     dependencies:
-      '@vielzeug/arsenal': 1.1.2
-      '@vielzeug/ripple': 1.3.0
-
-  '@vielzeug/herald@1.0.5': {}
-
-  '@vielzeug/keymap@1.1.2': {}
-
-  '@vielzeug/orbit@1.1.3':
-    dependencies:
-      '@vielzeug/arsenal': 1.1.2
-      '@vielzeug/ripple': 1.3.0
-
-  '@vielzeug/orbit@1.1.4':
-    dependencies:
-      '@vielzeug/arsenal': 2.0.0
-      '@vielzeug/ripple': 2.0.0
-
-  '@vielzeug/ore@2.0.0(@vielzeug/assay@2.0.0)(@vielzeug/ripple@1.3.0)':
-    dependencies:
-      '@vielzeug/ripple': 1.3.0
+      '@vielzeug/arsenal': 2.0.1
     optionalDependencies:
-      '@vielzeug/assay': 2.0.0
+      '@vielzeug/spell': 2.0.1
+      '@vielzeug/vault': 2.1.0
 
-  '@vielzeug/ore@2.0.0(@vielzeug/assay@2.0.0)(@vielzeug/ripple@2.0.0)':
-    dependencies:
-      '@vielzeug/ripple': 2.0.0
+  '@vielzeug/herald@2.0.0': {}
+
+  '@vielzeug/keymap@2.0.0': {}
+
+  '@vielzeug/lingua@2.1.0': {}
+
+  '@vielzeug/orbit@2.0.1(@vielzeug/ripple@2.1.0)':
     optionalDependencies:
-      '@vielzeug/assay': 2.0.0
+      '@vielzeug/ripple': 2.1.0
 
-  '@vielzeug/prism@1.1.7':
+  '@vielzeug/ore@2.0.3(@vielzeug/assay@2.0.1)(@vielzeug/ripple@2.1.0)':
     dependencies:
-      '@vielzeug/orbit': 1.1.3
-      '@vielzeug/ripple': 1.3.0
+      '@vielzeug/ripple': 2.1.0
+    optionalDependencies:
+      '@vielzeug/assay': 2.0.1
 
-  '@vielzeug/pulse@1.0.8':
+  '@vielzeug/prism@2.1.1':
     dependencies:
-      '@vielzeug/ripple': 1.3.0
+      '@vielzeug/orbit': 2.0.1(@vielzeug/ripple@2.1.0)
+      '@vielzeug/ripple': 2.1.0
 
-  '@vielzeug/refine@2.0.0':
+  '@vielzeug/pulse@2.1.1':
     dependencies:
-      '@vielzeug/arsenal': 2.0.0
-      '@vielzeug/assay': 2.0.0
-      '@vielzeug/dnd': 1.2.2
-      '@vielzeug/keymap': 1.1.2
-      '@vielzeug/orbit': 1.1.4
-      '@vielzeug/ore': 2.0.0(@vielzeug/assay@2.0.0)(@vielzeug/ripple@2.0.0)
-      '@vielzeug/ripple': 2.0.0
-      '@vielzeug/tempo': 1.0.5
+      '@vielzeug/ripple': 2.1.0
+
+  '@vielzeug/refine@2.1.0':
+    dependencies:
+      '@vielzeug/arsenal': 2.0.1
+      '@vielzeug/assay': 2.0.1
+      '@vielzeug/dnd': 2.0.0
+      '@vielzeug/keymap': 2.0.0
+      '@vielzeug/orbit': 2.0.1(@vielzeug/ripple@2.1.0)
+      '@vielzeug/ore': 2.0.3(@vielzeug/assay@2.0.1)(@vielzeug/ripple@2.1.0)
+      '@vielzeug/ripple': 2.1.0
+      '@vielzeug/tempo': 2.0.0
       lucide: 1.28.0
 
-  '@vielzeug/ripple@1.3.0': {}
+  '@vielzeug/ripple@2.1.0': {}
 
-  '@vielzeug/ripple@2.0.0': {}
+  '@vielzeug/rune@2.0.0': {}
 
-  '@vielzeug/rune@1.1.2': {}
+  '@vielzeug/sandbox@2.0.0': {}
 
-  '@vielzeug/sandbox@1.2.2': {}
-
-  '@vielzeug/scroll@1.1.4':
+  '@vielzeug/scout@2.1.1':
     dependencies:
-      '@vielzeug/ripple': 1.3.0
+      '@vielzeug/ripple': 2.1.0
 
-  '@vielzeug/spell@1.2.2':
+  '@vielzeug/scroll@2.0.1':
     dependencies:
-      '@vielzeug/arsenal': 1.1.2
+      '@vielzeug/ripple': 2.1.0
 
-  '@vielzeug/tempo@1.0.5':
+  '@vielzeug/sourcerer@2.0.1': {}
+
+  '@vielzeug/spell@2.0.1':
+    dependencies:
+      '@vielzeug/arsenal': 2.0.1
+
+  '@vielzeug/tempo@2.0.0':
     dependencies:
       '@js-temporal/polyfill': 0.5.1
 
-  '@vielzeug/vault@1.0.4': {}
+  '@vielzeug/vault@2.1.0': {}
 
-  '@vielzeug/ward@1.0.5': {}
+  '@vielzeug/ward@2.0.0': {}
 
-  '@vielzeug/wayfinder@1.0.4': {}
+  '@vielzeug/wayfinder@2.0.0': {}
 
   detect-libc@2.1.2: {}
 
@@ -773,7 +808,7 @@ snapshots:
 
   typescript@6.0.3: {}
 
-  vite@8.2.0:
+  vite@8.2.1:
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.5
