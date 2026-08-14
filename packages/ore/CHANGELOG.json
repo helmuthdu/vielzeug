@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: reuse ElementInternals when a form-associated host reconnects",
+            "commit": "65773d2f79bc96dac3a82db5bd50f4c88de8eaec"
+          }
+        ]
+      },
+      "date": "Fri, 14 Aug 2026 09:10:58 GMT",
+      "tag": "@vielzeug/ore_v2.0.4",
+      "version": "2.0.4"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.1.0`"

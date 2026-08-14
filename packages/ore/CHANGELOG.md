@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Mon, 10 Aug 2026 21:21:35 GMT and should not be manually modified.
+This log was last generated on Fri, 14 Aug 2026 09:10:58 GMT and should not be manually modified.
+
+## 2.0.4
+Fri, 14 Aug 2026 09:10:58 GMT
+
+### Patches
+
+- fix: reuse ElementInternals when a form-associated host reconnects
 
 ## 2.0.3
 Mon, 10 Aug 2026 21:21:35 GMT
