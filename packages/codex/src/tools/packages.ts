@@ -1,8 +1,7 @@
 import { DOC_PAGES } from '../types.js';
-import { PACKAGE_SLUG_PROPERTY, parseArgs, type ToolSchema } from './schema.js';
+import { EMPTY_SCHEMA, PACKAGE_SLUG_PROPERTY, parseArgs, type ToolSchema } from './schema.js';
 import type { ToolDefinition } from './shared.js';
 
-const empty = { properties: {}, type: 'object' } satisfies ToolSchema;
 const slug = {
   properties: { packageSlug: PACKAGE_SLUG_PROPERTY },
   required: ['packageSlug'],
@@ -42,7 +41,7 @@ export const packageTools: ToolDefinition[] = [
   {
     description: 'List every Vielzeug package. Start here for package discovery.',
     execute: (_args, catalog) => catalog.listPackages(),
-    inputSchema: empty,
+    inputSchema: EMPTY_SCHEMA,
     name: 'list-packages',
   },
   {
@@ -56,7 +55,7 @@ export const packageTools: ToolDefinition[] = [
     execute: (args, catalog) => {
       const input = parseArgs(docs, args);
 
-      return catalog.getDocs(input.packageSlug, input.page as (typeof DOC_PAGES)[number]);
+      return catalog.getDocs(input.packageSlug, input.page);
     },
     inputSchema: docs,
     name: 'get-docs',

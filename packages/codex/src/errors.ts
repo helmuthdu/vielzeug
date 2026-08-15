@@ -5,8 +5,4 @@ export class CodexError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is CodexError {
-    return err instanceof CodexError;
-  }
 }

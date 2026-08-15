@@ -85,7 +85,7 @@ export interface PackageContent {
   typeSignatures: Record<string, string>;
 }
 
-export interface SnapshotCatalog {
+export interface CatalogFile {
   packages: PackageMeta[];
   version: string;
 }
@@ -117,7 +117,7 @@ export interface SnapshotManifest {
 }
 
 export interface SnapshotArtifacts {
-  catalog: SnapshotCatalog;
+  catalog: CatalogFile;
   contents: ReadonlyMap<string, PackageContent>;
   manifest: SnapshotManifest;
   refineComponents: CemDeclaration[];

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { CodexError } from './errors.js';
 import {
+  type CatalogFile,
   type CemDeclaration,
   DOC_PAGES,
   type DocPage,
@@ -12,7 +13,6 @@ import {
   type PackageMeta,
   type SearchRecord,
   SNAPSHOT_SCHEMA_VERSION,
-  type SnapshotCatalog,
   type SnapshotManifest,
   type SnapshotPointer,
 } from './types.js';
@@ -135,7 +135,7 @@ export function parseManifest(value: unknown): SnapshotManifest {
   };
 }
 
-export function parseCatalog(value: unknown): SnapshotCatalog {
+export function parseCatalog(value: unknown): CatalogFile {
   const input = record(value, 'catalog.json');
 
   if (!Array.isArray(input.packages)) fail('catalog.json.packages', 'must be an array.');
@@ -193,7 +193,7 @@ export function parseContent(value: unknown, slug: string): PackageContent {
   };
 }
 
-export function parseSearch(value: unknown, catalog: SnapshotCatalog): SearchRecord[] {
+export function parseSearch(value: unknown, catalog: CatalogFile): SearchRecord[] {
   if (!Array.isArray(value)) fail('search.json', 'must be an array.');
 
   const catalogSlugs = new Set(catalog.packages.map((pkg) => pkg.slug));
@@ -251,7 +251,7 @@ export function parseRefine(value: unknown): CemDeclaration[] {
 }
 
 export interface LoadedSnapshot {
-  catalog: SnapshotCatalog;
+  catalog: CatalogFile;
   contentDirectory: string;
   manifest: SnapshotManifest;
   refineComponents: CemDeclaration[];

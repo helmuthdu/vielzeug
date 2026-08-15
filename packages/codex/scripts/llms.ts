@@ -1,4 +1,4 @@
-import type { DocPage, PackageContent, PackageMeta, SnapshotCatalog } from '../src/types.ts';
+import type { CatalogFile, DocPage, PackageContent, PackageMeta } from '../src/types.ts';
 
 export function stripDocMarkup(markdown: string): string {
   return markdown
@@ -19,7 +19,7 @@ function overview(packages: readonly PackageMeta[], version: string): string {
   return `${lines.join('\n')}\n`;
 }
 
-function full(catalog: SnapshotCatalog, contents: ReadonlyMap<string, PackageContent>): string {
+function full(catalog: CatalogFile, contents: ReadonlyMap<string, PackageContent>): string {
   const lines = ['# Vielzeug — Full Documentation', '', `> Complete documentation for ${catalog.packages.length} packages. Version: ${catalog.version}`];
   for (const pkg of catalog.packages) {
     const content = contents.get(pkg.slug);
@@ -35,6 +35,6 @@ function full(catalog: SnapshotCatalog, contents: ReadonlyMap<string, PackageCon
   return `${lines.join('\n').trimEnd()}\n`;
 }
 
-export function generateLlmsTxt(catalog: SnapshotCatalog, contents: ReadonlyMap<string, PackageContent>): { llmsFullTxt: string; llmsTxt: string } {
+export function generateLlmsTxt(catalog: CatalogFile, contents: ReadonlyMap<string, PackageContent>): { llmsFullTxt: string; llmsTxt: string } {
   return { llmsFullTxt: full(catalog, contents), llmsTxt: overview(catalog.packages, catalog.version) };
 }

@@ -27,6 +27,9 @@ export interface ToolSchema {
   type: 'object';
 }
 
+/** Schema for tools that take no arguments. */
+export const EMPTY_SCHEMA: ToolSchema = { properties: {}, type: 'object' };
+
 /** A property shared by every tool that takes a package slug — one definition, reused everywhere. */
 export const PACKAGE_SLUG_PROPERTY: ToolProperty = {
   description: 'Package folder name, e.g. "ripple"',

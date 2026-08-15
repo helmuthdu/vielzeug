@@ -1,5 +1,5 @@
 import type { CemAttribute, CemDeclaration } from '../types.js';
-import { parseArgs, type ToolSchema } from './schema.js';
+import { EMPTY_SCHEMA, parseArgs, type ToolSchema } from './schema.js';
 import type { ToolDefinition } from './shared.js';
 
 const tag = {
@@ -85,7 +85,7 @@ export const refineTools: ToolDefinition[] = [
           description: component.description ?? '',
           tagName: component.tagName,
         })),
-    inputSchema: { properties: {}, type: 'object' },
+    inputSchema: EMPTY_SCHEMA,
     name: 'refine-list-components',
   },
   {

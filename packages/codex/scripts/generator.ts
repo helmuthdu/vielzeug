@@ -6,6 +6,7 @@ import { parseFrontmatter } from '../../../scripts/lib/markdown.ts';
 import { listPackageDirs } from '../../../scripts/vielzeug-packages.ts';
 import {
   DOC_PAGES,
+  type CatalogFile,
   type CemDeclaration,
   type DocPage,
   type PackageContent,
@@ -13,7 +14,6 @@ import {
   type SearchRecord,
   SNAPSHOT_SCHEMA_VERSION,
   type SnapshotArtifacts,
-  type SnapshotCatalog,
   type SnapshotManifest,
 } from '../src/types.ts';
 import { readReplExamples } from './repl-examples.ts';
@@ -128,7 +128,7 @@ export function generateSnapshot(options: GeneratorOptions = {}): SnapshotArtifa
     search: 'search.json',
     version,
   };
-  const catalog: SnapshotCatalog = { packages: built.map((entry) => entry.meta), version };
+  const catalog: CatalogFile = { packages: built.map((entry) => entry.meta), version };
   return {
     catalog,
     contents: new Map(built.map((entry) => [entry.meta.slug, entry.content])),
