@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: deduplicate assertDuration into _numeric.ts; consolidate assertPositiveInteger usage in _iterator.ts and concatMap; consolidate assertNonNegativeInteger usage in take, retry, and toArray; remove FluxError.is() static type guard (use instanceof FluxError); remove fromSse() courier adapter (zero consumers, StreamEvent type never exported)",
+            "commit": "5ea1788f6351d524cd9db5f6d8f4f65e8fb05a18"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 11:19:49 GMT",
+      "tag": "@vielzeug/flux_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/courier\" to `2.1.0`"
