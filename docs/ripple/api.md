@@ -317,7 +317,7 @@ interface Ripple {
 
 | Error | Trigger | Notable properties |
 | --- | --- | --- |
-| `RippleError` | Base Ripple error | `RippleError.is(error)` narrows unknown values. |
+| `RippleError` | Base Ripple error | Use `instanceof RippleError` to narrow unknown values. |
 | `RippleComputedCycleError` | Computed dependency reads itself through a cycle | Extends `RippleError`. |
 | `RippleDisposedRuntimeError` | Factory or execution API used after `ripple.dispose()` | Extends `RippleError`. |
 | `RippleDisposedScopeError` | `scope.run()` after scope disposal | Extends `RippleError`. |

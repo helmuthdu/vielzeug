@@ -1,21 +1,13 @@
-import type { EffectHandle, Signal } from './types';
+import type { Disposable, EffectHandle, Readable, Signal } from './types';
 
 export type AsyncState<T> =
   | { readonly previous?: T; readonly status: 'pending' }
   | { readonly status: 'success'; readonly value: T }
   | { readonly error: unknown; readonly previous?: T; readonly status: 'error' };
 
-export type Resource<T> = {
-  [Symbol.dispose](): void;
-  readonly disposalSignal: AbortSignal;
-  dispose(): void;
-  readonly disposed: boolean;
-  readonly name?: string;
-  peek(): AsyncState<T>;
+export interface Resource<T> extends Readable<AsyncState<T>>, Disposable {
   reload(): void;
-  subscribe(listener: () => void): () => void;
-  readonly value: AsyncState<T>;
-};
+}
 
 export type ResourceOptions = {
   name?: string;

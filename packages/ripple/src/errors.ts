@@ -4,10 +4,6 @@ export class RippleError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(error: unknown): error is RippleError {
-    return error instanceof RippleError;
-  }
 }
 
 export class RippleComputedCycleError extends RippleError {}

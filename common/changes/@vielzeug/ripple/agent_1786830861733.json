@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Remove RippleError.is() static type guard (use instanceof RippleError); make Resource an extends interface matching docs; simplify watch once disposal naming with TDZ explanatory comment",
+      "packageName": "@vielzeug/ripple",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

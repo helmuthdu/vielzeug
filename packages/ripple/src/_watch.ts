@@ -22,7 +22,10 @@ export const createWatch =
     const equals = options?.equals ?? Object.is;
     let initial = true;
     let previous: T | undefined;
-    let stopAfterInitialRun = false;
+    // `handle` is in the temporal dead zone during the effect's initial synchronous run —
+    // `runtime.effect()` calls `node.run()` before returning. Defer disposal until after
+    // the constructor returns so `handle.dispose()` is reachable from inside the callback.
+    let disposeAfterInit = false;
 
     const handle = runtime.effect(
       () => {
@@ -32,9 +35,10 @@ export const createWatch =
           initial = false;
           previous = value;
 
-          if (options?.immediate) callback(value, undefined);
-
-          stopAfterInitialRun = options?.once === true && options.immediate === true;
+          if (options?.immediate) {
+            callback(value, undefined);
+            if (options?.once) disposeAfterInit = true;
+          }
 
           return;
         }
@@ -51,7 +55,7 @@ export const createWatch =
       { name: options?.name },
     );
 
-    if (stopAfterInitialRun) handle.dispose();
+    if (disposeAfterInit) handle.dispose();
 
     return handle;
   };
