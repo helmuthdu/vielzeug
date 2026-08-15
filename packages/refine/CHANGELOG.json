@@ -4,6 +4,31 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/orbit\" to `2.0.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ore\" to `2.0.5`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.0`"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: update 29 ripple imports from /watch subpath to root after ripple 3.0 subpath collapse",
+            "commit": "4458eb04699965e95cdb2b1146e9d0e8afc54488"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 06:26:02 GMT",
+      "tag": "@vielzeug/refine_v2.1.2",
+      "version": "2.1.2"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/ore\" to `2.0.4`"
           }
         ]

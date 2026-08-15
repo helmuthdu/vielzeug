@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Fri, 14 Aug 2026 09:10:58 GMT and should not be manually modified.
+This log was last generated on Sat, 15 Aug 2026 06:26:02 GMT and should not be manually modified.
+
+## 2.0.5
+Sat, 15 Aug 2026 06:26:02 GMT
+
+### Patches
+
+- fix: update signal.test.ts ripple import from /watch subpath to root after ripple 3.0 subpath collapse
 
 ## 2.0.4
 Fri, 14 Aug 2026 09:10:58 GMT

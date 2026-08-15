@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Fri, 14 Aug 2026 09:10:58 GMT and should not be manually modified.
+This log was last generated on Sat, 15 Aug 2026 06:26:02 GMT and should not be manually modified.
+
+## 2.1.2
+Sat, 15 Aug 2026 06:26:02 GMT
+
+### Patches
+
+- fix: update 29 ripple imports from /watch subpath to root after ripple 3.0 subpath collapse
 
 ## 2.1.1
 Fri, 14 Aug 2026 09:10:58 GMT

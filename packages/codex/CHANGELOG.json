@@ -5,6 +5,20 @@
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "docs: update ripple documentation for 3.0 (api, usage, migration, examples, REPL, sidebar)",
+            "commit": "4458eb04699965e95cdb2b1146e9d0e8afc54488"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 06:26:02 GMT",
+      "tag": "@vielzeug/codex_v2.1.4",
+      "version": "2.1.4"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "chore(codex): refresh bundled docs data",
             "commit": "9f5b5b2bd64cb896d328cb608ecbd255fb7b61e9"
           }

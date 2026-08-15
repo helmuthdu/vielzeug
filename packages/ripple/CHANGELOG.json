@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: collapse subpaths to root export, remove Store primitive (signal.update replaces it), simplify Resource disposal, remove dead isSignal/isComputed",
+            "commit": "4458eb04699965e95cdb2b1146e9d0e8afc54488"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 06:26:02 GMT",
+      "tag": "@vielzeug/ripple_v2.2.0",
+      "version": "2.2.0"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "refactor: make isolated graph disposal terminal — writes, subscriptions, graph factories, and batch/untrack now throw RippleDisposedRuntimeError after dispose; Ripple exposes disposed",
             "commit": "352bf87a0875d78e0701ea25763f29eb47f6c56b"
           }

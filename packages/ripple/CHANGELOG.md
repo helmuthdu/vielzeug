@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ripple
 
-This log was last generated on Mon, 10 Aug 2026 21:21:35 GMT and should not be manually modified.
+This log was last generated on Sat, 15 Aug 2026 06:26:02 GMT and should not be manually modified.
+
+## 2.2.0
+Sat, 15 Aug 2026 06:26:02 GMT
+
+### Minor changes
+
+- refactor: collapse subpaths to root export, remove Store primitive (signal.update replaces it), simplify Resource disposal, remove dead isSignal/isComputed
 
 ## 2.1.0
 Mon, 10 Aug 2026 21:21:35 GMT

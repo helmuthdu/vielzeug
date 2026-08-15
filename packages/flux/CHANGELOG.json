@@ -4,6 +4,27 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.0`"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 06:26:02 GMT",
+      "tag": "@vielzeug/flux_v2.0.4",
+      "version": "2.0.4"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.1`"
           },
           {
