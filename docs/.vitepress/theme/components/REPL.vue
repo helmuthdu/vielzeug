@@ -57,14 +57,20 @@
 </template>
 
 <script setup lang="ts">
+import { useData } from 'vitepress';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
-import type REPLEditor from './REPLEditor.vue';
+import REPLEditor from './REPLEditor.vue';
+import REPLReference from './REPLReference.vue';
+import { examples } from './repl/examples';
 import { LIBRARY_REGISTRY } from './repl/registry.generated';
 
 // ============================================================================
 // State
 // ============================================================================
+
+const { site } = useData();
+const withBase = (path: string): string => `${site.value.base.replace(/\/$/, '')}${path}`;
 
 const editorRef = ref<InstanceType<typeof REPLEditor> | null>(null);
 const selectedLibrary = ref('arsenal');
@@ -73,19 +79,19 @@ const isDark = ref(true);
 // since the sidebar has no room to show the package list, search, and export chips all at once.
 const showReference = ref(false);
 
-const _libraries = Object.values(LIBRARY_REGISTRY);
-const _currentLibrary = computed(() => LIBRARY_REGISTRY[selectedLibrary.value]!);
+const libraries = Object.values(LIBRARY_REGISTRY);
+const currentLibrary = computed(() => LIBRARY_REGISTRY[selectedLibrary.value]!);
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
-const _insertFunction = (item: string): void => {
+const insertFunction = (item: string): void => {
   editorRef.value?.insertTextAtCursor(item);
   showReference.value = false;
 };
 
-const _selectLibrary = (id: string): void => {
+const selectLibrary = (id: string): void => {
   selectedLibrary.value = id;
   showReference.value = false;
 };
