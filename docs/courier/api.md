@@ -23,7 +23,6 @@ description: Reference for Courier HTTP, cache, mutation, interceptor, and strea
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/courier` | Client factory, errors, interceptors, and public types |
-| `@vielzeug/courier/devtools` | `debugCourier()` with logging preconfigured |
 
 ## Client
 
@@ -101,7 +100,7 @@ await courier.queries.fetch({
 | `get(key)` | `T \| undefined` | Returns successful cached data |
 | `getSnapshot(key)` | `AsyncState<T> \| null` | Returns snapshot by key |
 | `set(key, data, options?)` | `void` | Sets successful cache value |
-| `invalidate(key)` | `void` | Marks matching key prefixes stale |
+| `invalidate(prefix)` | `void` | Marks matching key prefixes stale |
 | `refetchStale()` | `void` | Starts stale successful entries in background |
 | `keys()` | `QueryKey[]` | Lists known keys |
 | `subscribe(key, listener)` | `Unsubscribe` | Subscribes to one key |
@@ -185,7 +184,7 @@ type QueryCache = {
   fetch<T>(definition: QueryDefinition<T>, options?: { force?: boolean }): Promise<T>;
   get<T>(key: QueryKey): T | undefined;
   getSnapshot<T>(key: QueryKey): AsyncState<T> | null;
-  invalidate(key: QueryKey): void;
+  invalidate(prefix: readonly unknown[]): void;
   keys(): QueryKey[];
   refetchStale(): void;
   set<T>(key: QueryKey, data: T, options?: { updatedAt?: number }): void;

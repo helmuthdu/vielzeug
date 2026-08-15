@@ -60,7 +60,7 @@ removeRequestId();
 removeAuth();
 ```
 
-Use `debugCourier()` from `@vielzeug/courier/devtools` to create a logging-enabled client during local
+Use `withLogging()` to create a logging-enabled client during local
 development. `withLogging()` includes full URLs, so sanitize query values before persistent logging.
 
 ## Cached Queries
@@ -87,7 +87,7 @@ stop();
 ```
 
 `queries.fetch(definition)` reuses fresh data. Pass `{ force: true }` to fetch regardless of freshness.
-`invalidate(key)` marks matching keys stale but does not fetch. Call `queries.refetchStale()` when visible data
+`invalidate(prefix)` marks matching key prefixes stale but does not fetch. Call `queries.refetchStale()` when visible data
 must refresh now.
 
 ## Direct Mutations

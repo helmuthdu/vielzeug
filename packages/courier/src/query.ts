@@ -149,10 +149,10 @@ export function createQueryCache(options?: { signal?: AbortSignal; staleTime?: n
     getSnapshot<T>(key: QueryKey): AsyncState<T> | null {
       return (entries.get(hash(key))?.snapshot as AsyncState<T> | undefined) ?? null;
     },
-    invalidate(key: QueryKey): void {
+    invalidate(prefix: readonly unknown[]): void {
       for (const entry of entries.values()) {
         const matches =
-          key.length <= entry.key.length && key.every((atom, index) => hash(atom) === hash(entry.key[index]));
+          prefix.length <= entry.key.length && prefix.every((atom, index) => hash(atom) === hash(entry.key[index]));
 
         if (matches) {
           if (entry.snapshot.status === 'success') entry.snapshot = { ...entry.snapshot, updatedAt: 0 };

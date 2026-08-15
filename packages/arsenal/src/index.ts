@@ -1,4 +1,3 @@
-export * from './errors';
 export * from './array/chunk';
 export * from './array/filterMap';
 export * from './array/groupBy';
@@ -10,6 +9,7 @@ export * from './async/attempt';
 export * from './async/parallel';
 export * from './async/retry';
 export * from './async/sleep';
+export * from './errors';
 export * from './function/debounce';
 export * from './function/once';
 export * from './function/pipe';

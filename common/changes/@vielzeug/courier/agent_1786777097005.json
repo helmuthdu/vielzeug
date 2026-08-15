@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: widen invalidate() type to readonly unknown[]; remove res.text() fallback for broken fetch fakes",
+      "packageName": "@vielzeug/courier",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/courier"
+}

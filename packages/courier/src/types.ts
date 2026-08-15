@@ -46,7 +46,8 @@ export type QueryCache = {
   fetch<T>(definition: QueryDefinition<T>, options?: { force?: boolean }): Promise<T>;
   get<T>(key: QueryKey): T | undefined;
   getSnapshot<T>(key: QueryKey): AsyncState<T> | null;
-  invalidate(key: QueryKey): void;
+  /** Invalidate all entries whose key starts with `prefix`. An empty prefix invalidates every entry. */
+  invalidate(prefix: readonly unknown[]): void;
   keys(): QueryKey[];
   refetchStale(): void;
   set<T>(key: QueryKey, data: T, options?: { updatedAt?: number }): void;
