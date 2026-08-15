@@ -138,7 +138,7 @@ export function assertValidPackages(packages) {
         pkg[field] !== undefined &&
         (!Array.isArray(pkg[field]) || pkg[field].some((dependency) => typeof dependency !== 'string'))
       ) {
-        throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" ${field} must be an array of strings`);
+        throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" ${field} must be an array of strings when present`);
       }
     }
   }
@@ -165,14 +165,22 @@ export function mergePackageData(curatedPackages, livePackages) {
   }
 
   return curatedPackages
-    .map((pkg) => ({
-      ...pkg,
-      // Architecture note: these fields are derived from package.json so the curated file never
-      // becomes a second hidden dependency source.
-      dependencies: liveBySlug.get(pkg.slug).dependencies,
-      optionalPeers: liveBySlug.get(pkg.slug).optionalPeers,
-      peerDependencies: liveBySlug.get(pkg.slug).peerDependencies,
-    }))
+    .map((pkg) => {
+      const live = liveBySlug.get(pkg.slug);
+      const merged = {
+        ...pkg,
+        // Architecture note: these fields are derived from package.json so the curated file never
+        // becomes a second hidden dependency source.
+        dependencies: live.dependencies,
+        optionalPeers: live.optionalPeers,
+        peerDependencies: live.peerDependencies,
+      };
+      // Omit empty arrays to reduce noise — sparse fields are optional in output.
+      if (merged.dependencies?.length === 0) delete merged.dependencies;
+      if (merged.optionalPeers?.length === 0) delete merged.optionalPeers;
+      if (merged.peerDependencies?.length === 0) delete merged.peerDependencies;
+      return merged;
+    })
     .sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
@@ -207,9 +215,9 @@ export function renderPackagesTable(packages) {
     pkg.category,
     pkg.domOutput ? 'yes' : 'no',
     pkg.description,
-    pkg.dependencies.length > 0 ? pkg.dependencies.map((dep) => `\`${dep}\``).join(', ') : '—',
+    pkg.dependencies?.length > 0 ? pkg.dependencies.map((dep) => `\`${dep}\``).join(', ') : '—',
     pkg.peerDependencies?.length > 0 ? pkg.peerDependencies.map((dep) => `\`${dep}\``).join(', ') : '—',
-    pkg.optionalPeers.length > 0 ? pkg.optionalPeers.map((dep) => `\`${dep}\``).join(', ') : '—',
+    pkg.optionalPeers?.length > 0 ? pkg.optionalPeers.map((dep) => `\`${dep}\``).join(', ') : '—',
     pkg.testCommand ? `\`${pkg.testCommand}\`` : '—',
   ]);
   const row = (cells) => `| ${cells.join(' | ')} |`;
@@ -290,11 +298,6 @@ export function collectAiReferenceSources(root = ROOT) {
       const nowInsideAi = insideAi || entry.name === '.ai';
       const relPath = path.relative(root, abs);
       if (entry.isDirectory()) {
-        if (relPath === '.ai/state') {
-          const contract = path.join(abs, 'AGENTS.md');
-          if (existsSync(contract)) files.push(path.relative(root, contract));
-          continue;
-        }
         if (!nowInsideAi && AI_REF_IGNORE_DIRS.has(entry.name)) continue;
         walk(abs, nowInsideAi);
         continue;
@@ -309,7 +312,7 @@ export function collectAiReferenceSources(root = ROOT) {
 }
 
 /** Pulls every literal `.ai/...` path token out of `text`, deduplicated. Skips obvious
- * placeholders (e.g. `.ai/state/<scope>.json`) — anything containing `<` is a template, not a
+ * placeholders (e.g. `.ai/tasks/<task>.md`) — anything containing `<` is a template, not a
  * real reference to validate. */
 export function extractAiReferences(text) {
   const matches = text.match(AI_REF_PATTERN) ?? [];

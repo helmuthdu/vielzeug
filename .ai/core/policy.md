@@ -24,14 +24,6 @@ Stable repo-wide rules for AI-driven work. Task docs should reference this file 
 - Prefer deleting obsolete patterns to wrapping them.
 - When valid approaches conflict, choose one definitive design favoring lower coupling, fewer moving parts, explicit behavior, and idiomatic TypeScript. Do not ship parallel alternatives unless explicitly required.
 
-## Approved breaking redesigns
-
-- `migrationMode` is `compatible` by default. Use `breaking-approved` only after explicit approval of the affected public API break.
-- Under `breaking-approved`, replace old behavior across implementation, exports, tests, docs, recipes, README, REPL examples, and internal call sites.
-- Do not retain deprecated symbols, compatibility shims, transitional wrappers, obsolete tests, or removal-later TODOs unless explicitly approved.
-- Remove dead exports and unreachable implementation in the same change.
-- Record affected dependents, migration impact, and required major release in `[IMPACT]` output.
-
 ## Escalate before proceeding when
 
 - the baseline is already red and the task is not clearly about fixing it
@@ -40,33 +32,6 @@ Stable repo-wide rules for AI-driven work. Task docs should reference this file 
 - the change needs a new dependency, data migration, or irreversible deletion
 
 Surface an escalation with a `[BLOCKED]` marker (see Structured markers below) instead of proceeding silently or burying it in prose — a breaking change fixed quietly under review pressure is the single easiest way for this rule to get skipped in practice.
-
-## Design decision ownership
-
-Centralize shared decisions; decentralize implementation.
-
-- The primary planner must resolve cross-cutting design decisions before delegating implementation.
-- Give every shared design decision one owner and one recorded outcome.
-- Keep delegated scopes disjoint by decision authority, not only by file path.
-- Delegates may gather evidence and propose options, but must not independently choose a contract shared with another scope.
-- When a delegate encounters an unresolved shared decision, return `[BLOCKED]` to the primary planner.
-- Before integrating delegated work, verify API names, types, errors, lifecycle, exports, and documentation follow the same decisions.
-- Record an ID, owner, outcome, and affected surfaces for a decision that changes a public contract, architecture boundary, or multiple delegated scopes.
-- Keep decision registers for resumable work under `.ai/state/<scope>/`; do not encode run-specific decisions in canonical policy or task docs.
-
-## Concurrent work
-
-- Assign exclusive write ownership for each file or tightly coupled file group before concurrent work.
-- Do not edit a file with an active conflicting owner.
-- When overlapping work becomes necessary, stop and return `[BLOCKED]` with both scopes, files, and required reconciliation.
-- One designated integrator reconciles conflicting changes; workers must not overwrite or abandon another scope's changes.
-- Re-read final affected files before validating integrated work.
-
-## Scope widening
-
-- A worker may widen scope for a directly necessary internal coherence fix only when it changes no public API, package dependency, migration, or irreversible operation.
-- Report widened scope with `[FIXED]`, affected files, rationale, and focused validation.
-- For public or cross-package breakage, return `[BLOCKED]`; do not use compiler failures as delegation.
 
 ## Rigor
 
@@ -107,8 +72,4 @@ Every code change should finish with the narrowest useful validation:
 - package lint/build where relevant
 - docs or REPL validation when those surfaces changed
 
-## State
-
-Ephemeral run state belongs under `.ai/state/` — see `.ai/state/AGENTS.md` for the full contract (when to use it, file shapes, cleanup rules). Never encode the resumable state directly in canonical task docs.
-
-Capture durable, source-verifiable surprises in the existing canonical `.ai` file that owns them. Keep run-specific, tentative, or unverified observations in `.ai/state/`; do not promote them without validation.
+The enforcement map in `.ai/core/conventions.md` is the single source of truth for which validation applies to which surface.

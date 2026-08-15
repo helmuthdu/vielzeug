@@ -9,21 +9,10 @@ Investigate, audit, redesign, plan, or review code without making changes unless
 - `scope`
 - `goal`
 - `mode`: `current` (default), `greenfield`, or `pr`
-- `reviewPass`: `primary` (default) or `independent`; `independent` applies only to `pr`
 - `intent`: PR description, change-file summary, or explicit goal
 - `changedFiles`: branch diff or named files
-- `comparison`: `diff` or named before/after implementation
 - `checks`: `correctness`, `architecture`, `design`, `dx`, `maintainability`, `simplicity`, `readability`, `performance`, `regression`, `types`, `security`, `coverage`, `testQuality`
 - `depth`: `quick` or `full`
-
-### Valid combinations
-
-| Mode | Required | Optional | Invalid |
-| --- | --- | --- | --- |
-| `current` | `scope`, `goal` | `checks`, `depth` | `reviewPass`, `intent`, `changedFiles`, `comparison` |
-| `greenfield` | `scope`, `goal` | `checks`, `depth` | `reviewPass`, `intent`, `changedFiles`, `comparison` |
-| `pr` primary | `scope`, `intent`, `changedFiles` | `goal`, `checks`, `depth` | `comparison` |
-| `pr` independent | `scope`, `intent`, `changedFiles`, `comparison` | `goal`, `checks`, `depth` | — |
 
 ### Default checks
 
@@ -33,7 +22,7 @@ Investigate, audit, redesign, plan, or review code without making changes unless
 - Add `security` when security-sensitive code is in scope.
 - Add `performance` only for hot paths, measurable regressions, or explicit performance goals.
 
-`quick` may combine selected checks, but never skips mode-required evidence: full changed-file reads and call-site checks for `pr`; prior/new comparison for an independent pass; impact inventory for a breaking greenfield recommendation.
+`quick` may combine selected checks, but never skips mode-required evidence: full changed-file reads and call-site checks for `pr`; impact inventory for a breaking greenfield recommendation.
 
 ## Load
 
@@ -61,7 +50,7 @@ State assumptions before analysis when required files, runtime behavior, consume
 
 - Evaluate selected checks within approved compatibility constraints.
 - Recommend source-backed improvements only.
-- Inspect changed and adjacent coordination hotspots for mixed responsibilities; report `[DECOMPOSE]` when cohesive extraction reduces future change coupling.
+- Inspect changed and adjacent coordination hotspots for mixed responsibilities.
 
 ## Greenfield mode
 
@@ -69,7 +58,6 @@ State assumptions before analysis when required files, runtime behavior, consume
 - Challenge boundaries and abstractions but preserve source-backed mechanisms whose benefits exceed their complexity.
 - Before recommending removal, replacement, or incompatible redesign, enumerate source references, public exports, dependent packages, tests, and documentation surfaces; state unknown external usage separately.
 - Recommend deletion explicitly when an abstraction, layer, or extension point has no source-backed benefit proportional to its cost.
-- Apply policy decision-ownership rules before delegating recommendation workstreams.
 
 ## PR mode
 
@@ -79,13 +67,7 @@ State assumptions before analysis when required files, runtime behavior, consume
 4. Review change files, docs, types, exports, tests, and generated artifacts when the changed surface requires them.
 5. Run narrow relevant validation when execution access exists; report each command and result. Otherwise mark unavailable execution `[VERIFY]`.
 
-### Independent pass
-
-- Read new and prior implementations in full, or the complete diff plus affected surrounding source.
-- Evaluate fitness for stated intent against prior behavior.
-- Treat prior review findings and implementation claims as unverified until confirmed from source or validation.
-- Actively seek counterexamples, failure modes, changed-call-site regressions, and simpler alternatives.
-- State tradeoffs in complexity, flexibility, performance, coupling, testability, and DX.
+For an independent pass (reviewing a PR fresh, not building on a prior review), read both new and prior implementations in full. Actively seek counterexamples, failure modes, changed-call-site regressions, and simpler alternatives. State tradeoffs in complexity, flexibility, performance, coupling, testability, and DX.
 
 ## Checks
 
@@ -115,15 +97,13 @@ Use this scale for every finding:
 
 Do not report style-only nits unless they impair readability, maintainability, or correctness.
 
-## Common output
+## Output
 
 `[FINDING] <High|Medium|Low> — <file:line> — <problem> — <evidence> — <recommended fix>`
 
-`[DECOMPOSE] <file> — <evidence> — <suggested module boundaries>`
-
 `[IMPACT] <proposal> — <references/packages/surfaces checked> — <known and unknown consumers>`
 
-Also report `[DEFERRED]`, `[VERIFY]`, and `[BLOCKED]` as needed. Persist a report under `.ai/state/<scope>/` only when another session must resume it.
+Also report `[DEFERRED]`, `[VERIFY]`, and `[BLOCKED]` as needed.
 
 ## Greenfield output
 
@@ -150,14 +130,4 @@ Explicitly report:
 - Contracts: types, docs, exports, and change files aligned, or gaps.
 - Cleanup: dead, transitional, or redundant code removed, or findings.
 
-## Independent PR output
-
-Start with `## Executive Summary`: 2–3 sentences covering better, worse, or mixed fitness for intent; main tradeoff; and final decision.
-
-Then report:
-
-- Tradeoffs: complexity, flexibility, performance, coupling, testability, and DX.
-- Risks: overlooked edge cases or source-backed consumer regressions.
-- Abstraction: justified, or a simpler alternative sufficient.
-- Complexity: increased only where benefit is source-backed.
-- Decision: `Approve`, `Approve with nits`, `Request changes`, or `Reject`; state minimum changes required. This is review output, not approval to merge, push, or release.
+For an independent PR pass, start with `## Executive Summary`: 2–3 sentences covering better, worse, or mixed fitness for intent; main tradeoff; and final decision. Then report tradeoffs, risks, abstraction justification, complexity, and decision (`Approve`, `Approve with nits`, `Request changes`, or `Reject`). This is review output, not approval to merge, push, or release.

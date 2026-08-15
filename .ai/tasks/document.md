@@ -58,8 +58,5 @@ Keep package README aligned with public entry points and generated sections. Nev
 
 ## Output
 
-- `[UPDATED] <file>: <source-backed summary>`
-- `[ADDED]` / `[REMOVED] <file>: <reason>`
-- `[SKIP] <surface>: <reason>`
 - `[VERIFY] <claim>: <reason>`
 - `[BLOCKED] <decision>`

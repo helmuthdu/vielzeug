@@ -11,13 +11,6 @@ Change package source, tests, tooling, CI, or public behavior.
 - `migrationMode`: `compatible` (default) or `breaking-approved`
 - `depth`: `quick` or `full`
 
-### Migration modes
-
-| Mode | Public API | Dependents | Release impact |
-| --- | --- | --- | --- |
-| `compatible` | Must remain compatible | Check when contracts change | Patch or minor as appropriate |
-| `breaking-approved` | Explicitly approved breaks only | Update all known internal call sites | Major |
-
 `quick` never skips public-impact analysis, dependency checks, required validation, or approval gates.
 
 ## Load
@@ -30,9 +23,7 @@ Change package source, tests, tooling, CI, or public behavior.
 
 ## Preconditions
 
-Use `[BLOCKED]` before changing a public API incompatibly under `compatible` mode, adding a dependency, performing an irreversible operation, or proceeding from an unrelated red baseline. `breaking-approved` requires explicit approval, a public API/dependent impact check, and migration scope before editing.
-
-A baseline records the exact command, result, and whether failures predate the work. Do not claim a regression without comparing against it.
+Use `[BLOCKED]` before changing a public API incompatibly under `compatible` mode, adding a dependency, performing an irreversible operation, or proceeding from an unrelated red baseline. `breaking-approved` requires explicit approval, a public API/dependent impact check, and migration scope before editing. A baseline records the exact command, result, and whether failures predate the work. Do not claim a regression without comparing against it.
 
 ## Common flow
 
@@ -50,6 +41,7 @@ A baseline records the exact command, result, and whether failures predate the w
 - Add or update behavior-focused contract tests before or alongside implementation.
 - Implement the smallest coherent change; update source, exports, types, and error/disposal contracts together.
 - Update documentation, README, recipes, and REPL examples when public use changes.
+- Under `breaking-approved`, replace incompatible behavior across implementation, exports, types, errors, lifecycle, tests, docs, examples, and internal call sites. Remove compatibility shims and dead implementation, add migration guidance, report dependent impact, and mark affected packages for a major release.
 
 ## Test maintenance
 
@@ -67,13 +59,6 @@ When tests are primary scope:
 - For canonical AI-data changes, regenerate derived adapters/references with `pnpm gen:ai-data`, then run `pnpm check:ai-data`.
 - For AI-document-only changes, run `pnpm check:ai-data` without regenerating unrelated output.
 
-## Breaking-approved change
-
-- Replace obsolete behavior across implementation, exports, tests, docs, recipes, README, REPL examples, and internal call sites.
-- Remove compatibility shims, transitional wrappers, deprecated symbols, obsolete tests, and dead implementation unless explicitly approved.
-- Add migration guidance for removed or renamed public APIs.
-- Report every affected package as major release impact; do not create release artifacts in this task.
-
 ## Propagation
 
 - Search before propagating.
@@ -85,38 +70,14 @@ When tests are primary scope:
 
 ## Validation
 
-Classify each changed file as package source, public API, tests, docs, REPL, tooling, AI metadata, release metadata, or cross-package call site. Apply every matching row.
-
-| Changed surface | Required validation |
-| --- | --- |
-| Package source | focused tests, lint, build |
-| Public API | package source validation; focused docs and REPL validation when examples exist |
-| Tests only | focused tests; lint/build only when test config or imports require them |
-| Documentation | `pnpm validate:docs -- --package=<name>`, Codex build, docs build |
-| REPL | `pnpm validate:repl -- --package=<name>`, docs build |
-| Tooling | focused script tests and direct smoke command |
-| AI metadata | `pnpm gen:ai-data` when canonical data changed; `pnpm check:ai-data` |
-| Release metadata | validate scoped artifact format and package/version intent |
-| Cross-package call sites | focused tests, lint, and build for every affected package |
+Classify each changed file and apply the matching validation from the enforcement map in `.ai/core/conventions.md`. Run the narrowest useful validation for the changed surface — `quick` depth may combine checks for a trivial change, but never skips validation required by a public API or cross-package change.
 
 ## Common output
 
-- `[UPDATED] <file>: <reason>`
-- `[FIXED] <finding>: <validation>`
 - `[BASELINE] <command> — <result> — <pre-existing failures>`
-- `[RELEASE] <package> — <none|patch|minor|major> — <reason>`
+- `[IMPACT] <public change> — <dependent packages/call sites checked> — <propagation outcome>`
 - `[DEFERRED] <work>: <reason>`
 - `[BLOCKED] <decision>`
-
-## Public and cross-package output
-
-- `[IMPACT] <public change> — <dependent packages/call sites checked> — <propagation outcome>`
-- `[PROPAGATED] <pattern> — <scope searched> — <confirmed files/packages>`
-
-## Test output
-
-- `[TESTS] <area> — <behaviors added/rewritten/removed> — <reason>`
-- `[COVERAGE] <before/after or unavailable> — <gaps/restoration/justification>`
 
 ## Completion
 

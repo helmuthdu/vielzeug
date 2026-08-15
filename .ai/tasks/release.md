@@ -37,6 +37,5 @@ Never commit, push, tag, release, publish, rewrite history, or delete branches w
 
 ## Output
 
-- `[READY] <artifact>: <validation>`
 - `[DEFERRED] <artifact>: <reason>`
 - `[BLOCKED] <approval or decision>`

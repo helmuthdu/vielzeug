@@ -15,7 +15,7 @@
     },
     {
       "description": "Investigate, audit, redesign, plan, or review code.",
-      "inputs": ["scope", "goal", "mode", "reviewPass", "intent", "changedFiles", "comparison", "checks", "depth"],
+      "inputs": ["scope", "goal", "mode", "intent", "changedFiles", "checks", "depth"],
       "key": "review",
       "references": [
         ".ai/core/policy.md",

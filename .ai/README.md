@@ -8,7 +8,6 @@ The design is intentionally small:
 - `tasks/` — task playbooks for the common kinds of work
 - `data/` — machine-readable metadata that scripts and adapters can consume
 - `reference/` — human-readable reference material: generated from `data/` (`packages.md`) or hand-curated and shared by multiple tasks (`docs-template.md`, `security-checklist.md`)
-- `state/` — gitignored scratch state for an active run
 
 ## Start here
 
@@ -31,7 +30,6 @@ Load `.ai/core/conventions.md` before editing package source. Follow relevant `A
 
 - Prefer the smallest task that solves the problem.
 - Use structured data from `.ai/data/` instead of copying facts into prose.
-- Keep state machine logic out of markdown. Persistent scratch state belongs in `.ai/state/`.
 - Keep adapter- or client-specific files outside the canonical task docs.
 - When a task needs a checklist or template, keep it with the task or in `reference/`.
 - Keep every `.ai/...` cross-reference real — `pnpm check:ai-data` fails on a dangling one (see `scripts/sync-ai-data.mjs`).
@@ -46,7 +44,3 @@ Shared reference material:
 - Human-readable package reference (generated) — `.ai/reference/packages.md`
 - Documentation page template — `.ai/reference/docs-template.md`
 - Security review checklist — `.ai/reference/security-checklist.md`
-
-## State
-
-Active run state is ephemeral and gitignored. See `.ai/state/AGENTS.md`.

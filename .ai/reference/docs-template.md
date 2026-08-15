@@ -15,15 +15,13 @@ Apply to every page you edit:
 
 ## Package archetypes
 
-Not every package is a consumed library. Identify the archetype before applying the template — a package can match more than one row. Check `package.json` (`bin`, `exports`, `engines`) and `src/cli.ts` before assuming the Library default, and check `packages/<name>/AGENTS.md` for declared exceptions.
+Not every package is a consumed library. Identify the archetype before applying the template. Check `package.json` (`bin`, `exports`, `engines`) and `src/cli.ts` before assuming the Library default, and check `packages/<name>/AGENTS.md` for declared exceptions.
 
 | Archetype                    | Indicators                                                               | Adaptations                                                                                                                                                                                                                             |
 | ---------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Library** (default)        | `src/index.ts` exports functions/classes; imported by userland           | None — use the full template as written                                                                                                                                                                                                 |
 | **CLI / executable tool**    | `bin` field in `package.json`; primary interaction is a terminal command | Quick Start leads with the shell command, not TypeScript; `usage.md`'s Framework Integration becomes "Embedding in a `<Runtime>` Process" (programmatic use as secondary); comparison table compares invocation modes, not API surfaces |
 | **DOM-output / headless UI** | Renders DOM directly (`refine`, `prism`); no REPL examples by convention | No REPL examples or Monaco types; Framework Integration shows web-component HTML/JS usage, not React/Vue/Svelte unless the package ships adapters                                                                                       |
-| **Build / dev tool**         | `devDependencies`-only; runs at build time                               | Quick Start shows CLI invocation or config; `usage.md`'s Basic Usage starts with config, not code; API reference may be a config schema                                                                                                 |
-| **Pure type package**        | Exports only `type`/`interface`; no runtime code                         | Skip Quick Start code block; `api.md` is types-only; examples only for non-obvious patterns                                                                                                                                             |
 
 ## Validator contracts
 

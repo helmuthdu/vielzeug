@@ -31,7 +31,6 @@ Default guidance: prefer one focused task plus the smallest useful validation in
 
 ## Local Contracts
 
-- `.ai/state/` (AI scratch state) is gitignored, not part of the DOX chain — see `.ai/state/AGENTS.md`.
 - Do not duplicate canonical context; link to the relevant `.ai/core/**/*.md`, `.ai/tasks/**/*.md`, `.ai/data/**/*.json`, or `.ai/reference/**/*.md` file.
 
 ## Work Guidance
@@ -54,4 +53,3 @@ Defer to `.ai/core/conventions.md` for engineering conventions, `.ai/data/packag
 - `docs/AGENTS.md` — VitePress documentation site and REPL.
 - `scripts/AGENTS.md` — repo tooling: release automation, worktree helper, generated-doc sync, REPL codegen/validation, and the shared `scripts/lib/` primitives they're all built on. No top-level router/CLI entrypoint exists on purpose — run `pnpm run` (no args) to see every available command; see `scripts/AGENTS.md`'s Layout section for why a hand-maintained routing table was rejected.
 - `.github/AGENTS.md` — CI/CD workflow YAML and the `scripts/release/` automation it calls into; the npm Trusted Publishing constraints that shape `publish.yml`'s design.
-- `.ai/state/AGENTS.md` — lifecycle contract for gitignored AI scratch state. Not itself committed history — describes ephemeral state, not a package.

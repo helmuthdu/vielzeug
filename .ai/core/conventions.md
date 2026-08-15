@@ -171,13 +171,17 @@ Do not hand-edit docs alias maps or generated package lists; `scripts/vielzeug-p
 
 ## Enforcement map
 
-| Convention                           | Enforcement                     |
-| ------------------------------------ | ------------------------------- |
-| Import/export ordering               | Biome organize imports           |
-| Formatting                           | Biome / `pnpm fix`              |
-| Package metadata and task references | `pnpm check:ai-data`            |
-| Package behavior                     | focused Vitest tests            |
-| Package lint/build                   | package lint and build commands |
-| Documentation structure              | `pnpm validate:docs`            |
-| REPL examples                        | `pnpm validate:repl`            |
-| Production dev-warning gate          | `pnpm verify:prod-gate`         |
+| Convention / changed surface          | Enforcement                                                        |
+| ------------------------------------- | ------------------------------------------------------------------ |
+| Import/export ordering                | Biome organize imports                                             |
+| Formatting                            | Biome / `pnpm fix`                                                 |
+| Package source                        | focused tests, package lint, package build                         |
+| Public API                            | package validation plus affected docs and REPL validation          |
+| Tests only                            | focused tests; lint/build only when config or imports require them |
+| Documentation                         | docs validation, Codex build, docs build                           |
+| REPL                                  | REPL validation, docs build                                        |
+| Tooling                               | focused script tests and a direct smoke command                    |
+| AI metadata                           | `pnpm gen:ai-data`, then `pnpm check:ai-data`                      |
+| Release metadata                      | scoped artifact format and package/version intent                  |
+| Cross-package call sites              | focused tests, lint, and build for every affected package          |
+| Production dev-warning gate           | `pnpm verify:prod-gate`                                            |

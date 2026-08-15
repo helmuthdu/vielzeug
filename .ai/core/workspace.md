@@ -68,7 +68,3 @@ Format: `feat(courier): add retry logic`.
 - `fix` → `patch` bump
 - `feat` → `minor` bump
 - `feat!` / any breaking change → `major` bump
-
-## Scratch state
-
-AI scratch state is gitignored under `.ai/state/` — see `.ai/state/AGENTS.md` for the contract (when to use it, file shapes, cleanup rules).

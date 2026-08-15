@@ -123,7 +123,6 @@ describe('mergePackageData()', () => {
         domOutput: false,
         name: '@vielzeug/forge',
         dependencies: ['arsenal', 'ripple'],
-        optionalPeers: [],
         peerDependencies: ['spell'],
       },
     ]);
@@ -212,7 +211,7 @@ describe('extractAiReferences()', () => {
   });
 
   it('ignores templated placeholders containing "<"', () => {
-    expect(extractAiReferences('Store state under `.ai/state/<scope>.json`.')).toEqual([]);
+    expect(extractAiReferences('Load `.ai/tasks/<task>.md`.')).toEqual([]);
   });
 
   it('returns an empty list when there are no references', () => {
