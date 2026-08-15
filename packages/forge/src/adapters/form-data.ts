@@ -1,4 +1,4 @@
-import { flattenValues } from '../_utils';
+import { flattenPaths as flattenValues } from '@vielzeug/arsenal/object';
 
 /**
  * Converts a form values object into a `FormData` instance.

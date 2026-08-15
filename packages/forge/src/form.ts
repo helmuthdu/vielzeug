@@ -41,43 +41,6 @@ type InternalState<TValues extends Record<string, unknown>> = Readonly<{
   value: TValues;
 }>;
 
-type Store<T> = {
-  dispose(): void;
-  read(): T;
-  subscribe(listener: () => void): Unsubscribe;
-  write(next: T): void;
-};
-
-function createStore<T>(initial: T, onListenerError: (error: unknown) => void): Store<T> {
-  let current = initial;
-  const listeners = new Set<() => void>();
-
-  return {
-    dispose() {
-      listeners.clear();
-    },
-    read: () => current,
-    subscribe(listener) {
-      listeners.add(listener);
-
-      return () => listeners.delete(listener);
-    },
-    write(next) {
-      if (next === current) return;
-
-      current = next;
-
-      for (const listener of [...listeners]) {
-        try {
-          listener();
-        } catch (error) {
-          onListenerError(error);
-        }
-      }
-    },
-  };
-}
-
 function rethrowAsync(error: unknown): void {
   queueMicrotask(() => {
     throw error;
@@ -126,19 +89,17 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
     }
   }
 
-  const store = createStore<InternalState<TValues>>(
-    {
-      baseline: initial,
-      error: undefined,
-      errors: undefined,
-      isSubmitting: false,
-      isValidating: false,
-      submitCount: 0,
-      touched: {},
-      value: initial,
-    },
-    reportListenerError,
-  );
+  let current: InternalState<TValues> = {
+    baseline: initial,
+    error: undefined,
+    errors: undefined,
+    isSubmitting: false,
+    isValidating: false,
+    submitCount: 0,
+    touched: {},
+    value: initial,
+  };
+  const listeners = new Set<() => void>();
   const disposalController = new AbortController();
   let disposed = false;
   let validationController: AbortController | undefined;
@@ -147,8 +108,19 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
     if (disposed) throw new ForgeDisposedError(operation);
   }
 
+  function notify(): void {
+    for (const listener of [...listeners]) {
+      try {
+        listener();
+      } catch (error) {
+        reportListenerError(error);
+      }
+    }
+  }
+
   function write(update: (current: InternalState<TValues>) => InternalState<TValues>): void {
-    store.write(Object.freeze(update(store.read())));
+    current = Object.freeze(update(current));
+    notify();
   }
 
   async function validate(externalSignal?: AbortSignal): Promise<ValidationResult<TValues>> {
@@ -163,7 +135,7 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
 
     try {
       const result: ValidationErrors<TValues> | undefined = options.validate
-        ? await options.validate(store.read().value as ReadonlyDeep<TValues>, signal)
+        ? await options.validate(current.value as ReadonlyDeep<TValues>, signal)
         : undefined;
 
       if (signal.aborted || validationController !== controller) return Object.freeze({ status: 'aborted' });
@@ -194,10 +166,10 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
   function createField<V>(path: readonly string[]): Field<V> {
     const common = {
       get dirty() {
-        return makeFieldState<V>(store.read() as InternalState<Record<string, unknown>>, path).dirty;
+        return makeFieldState<V>(current as InternalState<Record<string, unknown>>, path).dirty;
       },
       get error() {
-        return makeFieldState<V>(store.read() as InternalState<Record<string, unknown>>, path).error;
+        return makeFieldState<V>(current as InternalState<Record<string, unknown>>, path).error;
       },
       reset() {
         ensureActive('field().reset');
@@ -212,7 +184,7 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
         ensureActive('field().set');
         validationController?.abort();
 
-        const previous = readAtPath<V>(store.read().value, path) as ReadonlyDeep<V>;
+        const previous = readAtPath<V>(current.value, path) as ReadonlyDeep<V>;
         const value = typeof next === 'function' ? (next as (current: ReadonlyDeep<V>) => V)(previous) : next;
 
         write((current) => ({ ...current, value: writeAtPath(current.value, path, value) }));
@@ -220,12 +192,12 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
       subscribe(listener: (state: FieldState<V>) => void, subscribeOptions: SubscribeOptions = {}): Unsubscribe {
         ensureActive('field().subscribe');
 
-        let previous = makeFieldState<V>(store.read() as InternalState<Record<string, unknown>>, path);
+        let previous = makeFieldState<V>(current as InternalState<Record<string, unknown>>, path);
 
         if (subscribeOptions.immediate) listener(previous);
 
-        return store.subscribe(() => {
-          const next = makeFieldState<V>(store.read() as InternalState<Record<string, unknown>>, path);
+        const filtered = () => {
+          const next = makeFieldState<V>(current as InternalState<Record<string, unknown>>, path);
 
           if (
             next.value === previous.value &&
@@ -238,17 +210,21 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
 
           previous = next;
           listener(next);
-        });
+        };
+
+        listeners.add(filtered);
+
+        return () => listeners.delete(filtered);
       },
       touch() {
         ensureActive('field().touch');
         write((current) => ({ ...current, touched: writeMeta(current.touched, path, true) }));
       },
       get touched() {
-        return makeFieldState<V>(store.read() as InternalState<Record<string, unknown>>, path).touched;
+        return makeFieldState<V>(current as InternalState<Record<string, unknown>>, path).touched;
       },
       get value() {
-        return makeFieldState<V>(store.read() as InternalState<Record<string, unknown>>, path).value;
+        return makeFieldState<V>(current as InternalState<Record<string, unknown>>, path).value;
       },
     };
 
@@ -256,9 +232,9 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
       field<K extends keyof NonNullable<V> & string>(key: K): Field<NonNullable<V>[K]> {
         assertSafeKey(key);
 
-        const current = readAtPath(store.read().value, path);
+        const currentVal = readAtPath(current.value, path);
 
-        if (current !== undefined && !isRecord(current)) {
+        if (currentVal !== undefined && !isRecord(currentVal)) {
           throw new ForgeConfigError(`Cannot select '${key}' because the current field value is not an object.`);
         }
 
@@ -277,7 +253,7 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
       disposed = true;
       disposalController.abort();
       validationController?.abort();
-      store.dispose();
+      listeners.clear();
     },
     get disposed() {
       return disposed;
@@ -291,7 +267,7 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
       ensureActive('reset');
       validationController?.abort();
 
-      const baseline = next === undefined ? store.read().baseline : immutable(next);
+      const baseline = next === undefined ? current.baseline : immutable(next);
 
       write((current) => ({
         ...current,
@@ -312,15 +288,14 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
       write((current) => ({ ...current, error: undefined, errors: undefined, value: immutable(value) }));
     },
     get state() {
-      return makeFormState(store.read());
+      return makeFormState(current);
     },
     async submit<TResult = void>(
       handler: (values: ReadonlyDeep<TValues>) => MaybePromise<TResult>,
     ): Promise<SubmitResult<TResult, TValues>> {
       ensureActive('submit');
 
-      if (store.read().isSubmitting)
-        throw new ForgeSubmitError('submit() called while a submission is already in progress');
+      if (current.isSubmitting) throw new ForgeSubmitError('submit() called while a submission is already in progress');
 
       write((current) => ({
         ...current,
@@ -351,16 +326,20 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
     subscribe(listener, subscribeOptions: SubscribeOptions = {}): Unsubscribe {
       ensureActive('subscribe');
 
-      if (subscribeOptions.immediate) listener(makeFormState(store.read()));
+      if (subscribeOptions.immediate) listener(makeFormState(current));
 
-      return store.subscribe(() => listener(makeFormState(store.read())));
+      const formListener = () => listener(makeFormState(current));
+
+      listeners.add(formListener);
+
+      return () => listeners.delete(formListener);
     },
     [Symbol.dispose]() {
       form.dispose();
     },
     validate,
     get value() {
-      return store.read().value as ReadonlyDeep<TValues>;
+      return current.value as ReadonlyDeep<TValues>;
     },
   };
 

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: inline createStore into createForm; remove unused _utils.ts",
+      "packageName": "@vielzeug/forge",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/forge"
+}

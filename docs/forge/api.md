@@ -16,7 +16,6 @@ description: Complete reference for immutable forms, fields, validation, seriali
 | `form.reset()` | Restore or replace baseline | Sync | `reset(next)` makes `next` clean |
 | `form.subscribe()` | Observe form metadata | Sync | Throws after disposal |
 | `toFormData()` | Serialize values for multipart transport | Sync | `FileList` is transport-only |
-| `debugForm()` | Log public state transitions | Sync | Import from `/devtools` |
 | `bindField()` | Bind one DOM element | Sync | Does not schedule validation |
 | `customValidator()` | Adapt a Spell schema | Async | Does not transform `form.value` |
 | `saveForm()` / `loadForm()` | Persist explicit Vault records | Async | FormDraftCodec owns record shape |
@@ -26,7 +25,6 @@ description: Complete reference for immutable forms, fields, validation, seriali
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/forge` | Core form factory, serialization helper, types, and errors |
-| `@vielzeug/forge/devtools` | `debugForm()` |
 | `@vielzeug/forge/dom` | `bindField()` and DOM binding types |
 | `@vielzeug/forge/spell` | `customValidator()` |
 | `@vielzeug/forge/vault` | `saveForm()`, `loadForm()`, and `FormDraftCodec` |
@@ -145,29 +143,7 @@ Touches all fields, validates once, and invokes `handler` when validation is val
 const result = await form.submit((value) => Promise.resolve(value));
 ```
 
-## Devtools and Adapters
-
-### `debugForm(form, options?)`
-
-```ts
-function debugForm<TValues extends Record<string, unknown>>(
-  form: Form<TValues>,
-  options?: ForgeDevtoolsOptions,
-): Unsubscribe;
-```
-
-Logs public validity, validation, and submission transitions through `console.debug`.
-
-**Example:**
-
-```ts
-import { debugForm } from '@vielzeug/forge/devtools';
-
-const stop = debugForm(form, { label: 'checkout' });
-stop();
-```
-
----
+## Adapters
 
 ### `bindField(element, field, options)`
 
@@ -250,7 +226,7 @@ type ReadonlyDeep<T> = T extends (...args: never[]) => unknown
 type FormErrors<T> = T extends readonly unknown[]
   ? string
   : T extends Record<string, unknown>
-    ? { readonly [K in keyof T]?: FormErrors<T[K]> }
+    ? string | { readonly [K in keyof T]?: FormErrors<T[K]> }
     : string;
 
 type ValidationErrors<TValues extends Record<string, unknown>> = Readonly<{
@@ -325,8 +301,6 @@ type Form<TValues extends Record<string, unknown>> = {
   subscribe(listener: (state: FormState<TValues>) => void, options?: SubscribeOptions): Unsubscribe;
   validate(signal?: AbortSignal): Promise<ValidationResult<TValues>>;
 };
-
-type ForgeDevtoolsOptions = Readonly<{ label?: string }>;
 
 type FieldBindingOptions<Element extends HTMLElement, V> = Readonly<{
   event?: keyof HTMLElementEventMap;

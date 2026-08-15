@@ -28,12 +28,6 @@ const result = await form.submit((value) => saveProfile(value));
 - `@vielzeug/forge/spell` — typed `customValidator(schema)` adapter with per-union diagnostics.
 - `@vielzeug/forge/vault` — explicit `saveForm()` and `loadForm()` draft helpers.
 
-## Breaking 2.0 changes
-
-- Removed field validation, numeric array field handles, stable field identity, direct metadata getters, and Ripple runtime coupling.
-- `validate()` returns `{ status: 'valid' | 'invalid' | 'aborted' }`.
-- Read metadata from `form.state`; read values from `form.value`.
-
 ## Documentation
 
 - [Overview](https://vielzeug.dev/forge/)

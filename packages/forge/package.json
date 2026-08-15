@@ -18,11 +18,6 @@
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
     },
-    "./devtools": {
-      "import": "./dist/devtools.js",
-      "require": "./dist/devtools.cjs",
-      "types": "./dist/devtools.d.ts"
-    },
     "./dom": {
       "import": "./dist/dom.js",
       "require": "./dist/dom.cjs",
@@ -41,9 +36,6 @@
   },
   "typesVersions": {
     "*": {
-      "devtools": [
-        "dist/devtools.d.ts"
-      ],
       "dom": [
         "dist/dom.d.ts"
       ],
