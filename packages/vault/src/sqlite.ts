@@ -6,3 +6,4 @@ export type {
   SQLiteVaultStore,
 } from './adapters/sqlite';
 export { createSQLite } from './adapters/sqlite';
+export type { TransactionContext } from './types';

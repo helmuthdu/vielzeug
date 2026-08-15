@@ -27,14 +27,6 @@ export function assertTtlMs(ttlMs: number, source: string): TtlMs {
   return ttlMs as TtlMs;
 }
 
-export function wrapStored<T>(value: T, ttlMs?: TtlMs): StoredRecord<T> {
-  return ttlMs === undefined ? { value } : { expiresAt: Date.now() + ttlMs, value };
-}
-
-export function unwrapStored<T>(raw: StoredRecord<T>): T | undefined {
-  return isExpired(raw.expiresAt) ? undefined : raw.value;
-}
-
 export function parseStored<T>(raw: unknown): StoredRecord<T> | undefined {
   if (typeof raw !== 'object' || raw === null || !('value' in raw)) return undefined;
 
@@ -45,14 +37,4 @@ export function parseStored<T>(raw: unknown): StoredRecord<T> | undefined {
   }
 
   return record as StoredRecord<T>;
-}
-
-export function readWithTtl<T>(raw: unknown): { expired: boolean; found: boolean; value: T | undefined } {
-  const parsed = parseStored<T>(raw);
-
-  if (!parsed) return { expired: false, found: false, value: undefined };
-
-  const value = unwrapStored(parsed);
-
-  return { expired: value === undefined, found: true, value };
 }

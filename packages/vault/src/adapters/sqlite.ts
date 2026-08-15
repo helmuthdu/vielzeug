@@ -224,7 +224,7 @@ function decodeJson(json: string): object {
 
     return value;
   } catch (error) {
-    if (VaultError.is(error)) throw error;
+    if (error instanceof VaultError) throw error;
 
     throw new VaultError('stored record contains invalid JSON', { cause: error });
   }

@@ -9,10 +9,6 @@ export class VaultError extends Error {
     // Ensures `instanceof` works correctly when transpiled to ES5.
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is VaultError {
-    return err instanceof VaultError;
-  }
 }
 
 /** Thrown when an operation is attempted on a disposed adapter or observer hub. */

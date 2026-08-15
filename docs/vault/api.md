@@ -26,7 +26,7 @@ description: Reference for Vault schemas, adapter entry points, storage capabili
 | `@vielzeug/vault/local-storage` | `createLocalStorage` |
 | `@vielzeug/vault/session-storage` | `createSessionStorage` |
 | `@vielzeug/vault/indexeddb` | `createIndexedDB`, migrations, and IndexedDB-only types |
-| `@vielzeug/vault/sqlite` | `createSQLite` and the SQLite driver protocol types |
+| `@vielzeug/vault/sqlite` | `createSQLite`, the SQLite driver protocol types, and `TransactionContext` |
 
 ## Schemas and TTL
 
@@ -500,7 +500,7 @@ interface SQLiteVaultStore<S extends AnySchema>
   extends TransactionalVaultStore<S>, IterableVaultStore<S> {}
 ```
 
-`TransactionContext` has the same CRUD, query, and TTL methods as `VaultStore`, narrowed to the tables declared in `batch()`.
+`TransactionContext` has the same CRUD, query, and TTL methods as `VaultStore`, narrowed to the tables declared in `batch()`. Import it from `@vielzeug/vault/indexeddb` or `@vielzeug/vault/sqlite`.
 
 ## Errors
 
