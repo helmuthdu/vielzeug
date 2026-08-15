@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Sat, 15 Aug 2026 10:39:54 GMT and should not be manually modified.
+This log was last generated on Sat, 15 Aug 2026 15:36:50 GMT and should not be manually modified.
+
+## 2.2.0
+Sat, 15 Aug 2026 15:36:50 GMT
+
+### Minor changes
+
+- chore: rename SnapshotCatalog interface to CatalogFile (eliminates name collision with SnapshotCatalog class); remove CodexError.is() static type guard (use instanceof CodexError); remove redundant cast in get-docs tool (InferArgs already infers DocPage from enum); extract EMPTY_SCHEMA to schema.ts (shared between packages.ts and refine.ts)
 
 ## 2.1.5
 Sat, 15 Aug 2026 10:39:54 GMT

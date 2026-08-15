@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: rename SnapshotCatalog interface to CatalogFile (eliminates name collision with SnapshotCatalog class); remove CodexError.is() static type guard (use instanceof CodexError); remove redundant cast in get-docs tool (InferArgs already infers DocPage from enum); extract EMPTY_SCHEMA to schema.ts (shared between packages.ts and refine.ts)",
+            "commit": "5df2bfdf699987e0c4739d49848a91d375a8c06a"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 15:36:50 GMT",
+      "tag": "@vielzeug/codex_v2.2.0",
+      "version": "2.2.0"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
