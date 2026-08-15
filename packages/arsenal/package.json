@@ -2,6 +2,11 @@
   "name": "@vielzeug/arsenal",
   "version": "2.0.1",
   "description": "Tree-shakeable TypeScript utility library — array, object, string, async, cache, math, and more",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/arsenal"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

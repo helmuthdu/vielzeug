@@ -2,6 +2,11 @@
   "name": "@vielzeug/tempo",
   "version": "2.0.0",
   "description": "Date and time utilities — timezone conversion, DST-safe arithmetic, and Intl formatting",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/tempo"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

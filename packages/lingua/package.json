@@ -2,6 +2,11 @@
   "name": "@vielzeug/lingua",
   "version": "2.2.0",
   "description": "Explicit typed localization with pluralization, lazy locale catalogs, and SSR hydration",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/lingua"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

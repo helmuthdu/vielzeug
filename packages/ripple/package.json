@@ -2,6 +2,11 @@
   "name": "@vielzeug/ripple",
   "version": "2.2.0",
   "description": "Fine-grained reactive runtime — signals, derived values, effects, scopes, and optional state tools",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/ripple"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

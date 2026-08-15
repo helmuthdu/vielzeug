@@ -2,6 +2,11 @@
   "name": "@vielzeug/scroll",
   "version": "2.0.2",
   "description": "Virtual list engine — variable-height rows, smooth scrolling, and zero-layout-thrash rendering",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/scroll"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

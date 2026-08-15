@@ -2,6 +2,11 @@
   "name": "@vielzeug/keymap",
   "version": "2.0.0",
   "description": "Headless keyboard shortcut manager with chord sequences, context guards, and disposable bindings",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/keymap"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

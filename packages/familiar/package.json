@@ -2,6 +2,11 @@
   "name": "@vielzeug/familiar",
   "version": "2.0.0",
   "description": "Typed ES module Worker pools with queueing, streaming, and AbortSignal cancellation",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/familiar"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

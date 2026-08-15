@@ -2,6 +2,11 @@
   "name": "@vielzeug/sourcerer",
   "version": "2.1.0",
   "description": "Framework-agnostic reactive collection sources with local, page, cursor, and infinite pagination",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/sourcerer"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

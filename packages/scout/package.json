@@ -2,6 +2,11 @@
   "name": "@vielzeug/scout",
   "version": "2.1.2",
   "description": "Fast fuzzy-search with a trigram index, per-field weighting, match highlighting, and an optional reactive layer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/scout"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

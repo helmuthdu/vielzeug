@@ -2,6 +2,11 @@
   "name": "@vielzeug/flux",
   "version": "2.1.0",
   "description": "Minimal push streams with explicit ownership, buffering, and ecosystem adapters",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/flux"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

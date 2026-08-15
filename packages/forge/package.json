@@ -2,6 +2,11 @@
   "name": "@vielzeug/forge",
   "version": "2.1.0",
   "description": "Immutable typed form state with focused fields and explicit full-form validation",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/forge"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

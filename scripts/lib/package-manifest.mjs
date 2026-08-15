@@ -102,8 +102,24 @@ export function normalizePackageManifest(manifest) {
   const exports = stripSourceCondition(manifest.exports);
   const typesVersions = createTypesVersions(exports, manifest.typesVersions);
 
+  // npm provenance (OIDC trusted publishing) requires `repository.url` to match the GitHub
+  // repo the publish runs from. Every published @vielzeug/* package lives in this monorepo,
+  // so inject it centrally here instead of repeating it in 32+ hand-maintained package.json
+  // files. Root and demo manifests are private (never published), so they don't need it.
+  // Always overwrite for @vielzeug/* so the URL stays in sync with the provenance expectation
+  // (no `.git` suffix — npm compares it verbatim against the GitHub Actions OIDC claim).
+  const repository =
+    manifest.name?.startsWith('@vielzeug/')
+      ? {
+          type: 'git',
+          url: 'https://github.com/helmuthdu/vielzeug',
+          directory: `packages/${manifest.name.replace(/^@vielzeug\//, '')}`,
+        }
+      : manifest.repository;
+
   return orderManifest({
     ...manifest,
+    ...(repository && { repository }),
     ...(manifest.exports && { exports }),
     ...(typesVersions ? { typesVersions } : {}),
   });

@@ -2,6 +2,11 @@
   "name": "@vielzeug/rune",
   "version": "2.0.0",
   "description": "Structured logging — scoped loggers, pluggable transports, log levels, and remote log draining",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/rune"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

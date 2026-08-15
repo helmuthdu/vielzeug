@@ -2,6 +2,11 @@
   "name": "@vielzeug/courier",
   "version": "2.1.0",
   "description": "HTTP client with caching, request deduplication, typed mutations, SSE streaming, and interceptors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/courier"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

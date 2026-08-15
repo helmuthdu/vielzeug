@@ -2,6 +2,11 @@
   "name": "@vielzeug/ledger",
   "version": "2.1.2",
   "description": "Serialized reversible command history with atomic Ripple state and cancellation ownership",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/ledger"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"

@@ -2,6 +2,11 @@
   "name": "@vielzeug/orbit",
   "version": "2.0.2",
   "description": "Dependency-free floating UI positioning with lifecycle-owned geometry and middleware",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/orbit"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"
