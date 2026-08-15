@@ -18,8 +18,6 @@ export type CatalogLoader<C extends Catalog = Catalog> = () => Promise<C>;
 export type CatalogSource<C extends Catalog = Catalog> = C | CatalogLoader<C>;
 /** Locale declarations may contain static catalogs or lazy loaders. */
 export type CatalogSources<C extends Catalog = Catalog> = Record<Locale, CatalogSource<C>>;
-/** Resolved catalog payload used for SSR serialization and hydration. */
-export type LoadedCatalogs<C extends Catalog = Catalog> = Catalogs<C>;
 
 export type MessageKey<
   C,
@@ -94,7 +92,7 @@ export type TranslationStoreOptions<C extends Catalog = Catalog> = TranslatorOpt
 };
 
 export type TranslationState<C extends Catalog = Catalog> = {
-  readonly catalogs: LoadedCatalogs<C>;
+  readonly catalogs: Catalogs<C>;
   readonly locale: Locale;
   readonly version: 3;
 };

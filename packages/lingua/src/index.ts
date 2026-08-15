@@ -22,7 +22,6 @@ export type {
   CatalogSources,
   Catalogs,
   CatalogTranslatorOptions,
-  LoadedCatalogs,
   Locale,
   MessageKey,
   PluralCategory,

@@ -247,14 +247,13 @@ type CatalogTranslatorOptions = Omit<TranslatorOptions, 'fallback'>;
 type CatalogLoader<C extends Catalog = Catalog> = () => Promise<C>;
 type CatalogSource<C extends Catalog = Catalog> = C | CatalogLoader<C>;
 type CatalogSources<C extends Catalog = Catalog> = Record<Locale, CatalogSource<C>>;
-type LoadedCatalogs<C extends Catalog = Catalog> = Catalogs<C>;
 
 type TranslationStoreOptions<C extends Catalog = Catalog> = TranslatorOptions & {
   catalogs: CatalogSources<C>;
 };
 
 type TranslationState<C extends Catalog = Catalog> = {
-  readonly catalogs: LoadedCatalogs<C>;
+  readonly catalogs: Catalogs<C>;
   readonly locale: Locale;
   readonly version: 3;
 };
@@ -277,6 +276,19 @@ type TranslationStore<C extends Catalog = Catalog> = Translator<C> & {
   subscribe(listener: (snapshot: TranslationSnapshot<C>) => void, options?: SubscribeOptions): () => void;
   [Symbol.dispose](): void;
 };
+
+type Translator<C extends Catalog = Catalog> = {
+  readonly locale: Locale;
+  segments<V>(key: TextKey<C>, options: TranslateOptions & { values: Record<string, V> }): Array<string | V>;
+  segments<V>(key: PluralKey<C>, options: PluralOptions & { values?: Record<string, V> }): Array<string | number | V>;
+  segmentsDynamic<V>(
+    key: string,
+    options: (TranslateOptions | PluralOptions) & { values?: Record<string, V> },
+  ): Array<string | number | V>;
+  translate(key: TextKey<C>, options?: TranslateOptions): string;
+  translate(key: PluralKey<C>, options: PluralOptions): string;
+  translateDynamic(key: string, options?: TranslateOptions | PluralOptions): string;
+};
 ```
 
 ```ts
@@ -290,6 +302,48 @@ type TranslatorOptions = {
   onMissingValue?: (name: string, key: string, locale: Locale) => string;
 };
 type SubscribeOptions = { immediate?: boolean; signal?: AbortSignal };
+
+type MessageKey<
+  C,
+  Prefix extends string = '',
+  Depth extends readonly unknown[] = readonly [1, 1, 1, 1, 1, 1],
+> = Depth extends readonly [unknown, ...infer Rest]
+  ? C extends string | PluralMessage
+    ? Prefix
+    : C extends Catalog
+      ? {
+          [K in string & keyof C]: MessageKey<C[K], Prefix extends '' ? K : `${Prefix}.${K}`, Rest>;
+        }[string & keyof C]
+      : never
+  : never;
+
+type TextKey<
+  C,
+  Prefix extends string = '',
+  Depth extends readonly unknown[] = readonly [1, 1, 1, 1, 1, 1],
+> = Depth extends readonly [unknown, ...infer Rest]
+  ? C extends string
+    ? Prefix
+    : C extends Catalog
+      ? {
+          [K in string & keyof C]: TextKey<C[K], Prefix extends '' ? K : `${Prefix}.${K}`, Rest>;
+        }[string & keyof C]
+      : never
+  : never;
+
+type PluralKey<
+  C,
+  Prefix extends string = '',
+  Depth extends readonly unknown[] = readonly [1, 1, 1, 1, 1, 1],
+> = Depth extends readonly [unknown, ...infer Rest]
+  ? C extends PluralMessage
+    ? Prefix
+    : C extends Catalog
+      ? {
+          [K in string & keyof C]: PluralKey<C[K], Prefix extends '' ? K : `${Prefix}.${K}`, Rest>;
+        }[string & keyof C]
+      : never
+  : never;
 
 type DurationValue = Partial<Record<
   'days' | 'hours' | 'microseconds' | 'milliseconds' | 'minutes' | 'months' | 'nanoseconds' | 'seconds' | 'weeks' | 'years',

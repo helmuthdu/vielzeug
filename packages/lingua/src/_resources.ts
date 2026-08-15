@@ -1,7 +1,7 @@
 import { type CompiledCatalog, compileCatalog } from './_catalog';
 import { canonicalLocale } from './_locale';
 import { LinguaMissingCatalogError } from './errors';
-import type { Catalog, CatalogSources, LoadedCatalogs, Locale, TranslationState } from './types';
+import type { Catalog, CatalogSources, Catalogs, Locale, TranslationState } from './types';
 
 /** One catalog state machine owns static sources, lazy sources, and in-flight work. */
 export function createCatalogStore<C extends Catalog>(sources: CatalogSources<C>) {
@@ -68,7 +68,7 @@ export function createCatalogStore<C extends Catalog>(sources: CatalogSources<C>
     },
     load,
     state(locale: Locale): TranslationState<C> {
-      const catalogs: LoadedCatalogs<C> = {};
+      const catalogs: Catalogs<C> = {};
 
       for (const [loadedLocale, { catalog }] of loaded) catalogs[loadedLocale] = catalog;
 

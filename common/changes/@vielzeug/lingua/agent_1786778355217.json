@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: remove redundant LoadedCatalogs type alias (use Catalogs directly); document Translator, MessageKey, TextKey, PluralKey types in api.md",
+      "packageName": "@vielzeug/lingua",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/lingua"
+}
