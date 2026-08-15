@@ -1,7 +1,7 @@
 import { signal } from '@vielzeug/ripple';
 import { describe, expect, it, vi } from 'vitest';
 
-import { fromQuery, fromSse } from '../adapters/courier';
+import { fromQuery } from '../adapters/courier';
 import { fromBus, toBus } from '../adapters/herald';
 import { fromPresence, fromPulse } from '../adapters/pulse';
 import { fromSignal, toSignal } from '../adapters/ripple';
@@ -82,22 +82,7 @@ describe('courier adapter', () => {
     listener?.();
     subscription.unsubscribe();
 
-    async function* events() {
-      yield { data: 'skip', event: 'other' };
-      yield { data: 'keep', event: 'message' };
-    }
-
-    const eventValues: string[] = [];
-
-    await new Promise<void>((resolve) => {
-      fromSse(events(), 'message').subscribe({
-        complete: resolve,
-        next: (value) => eventValues.push(value),
-      });
-    });
-
     expect(values).toEqual([1, 1]);
-    expect(eventValues).toEqual(['keep']);
   });
 });
 

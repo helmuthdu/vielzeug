@@ -1,4 +1,5 @@
 import { link } from '../_link';
+import { assertNonNegativeInteger } from '../_numeric';
 import { tryCall } from '../_safe';
 import { defaultScheduler } from '../_scheduler';
 import { stream } from '../core';
@@ -23,9 +24,7 @@ function abortError(): DOMException {
 }
 
 export function retry<T>(options: RetryOptions): Operator<T, T> {
-  if (!Number.isInteger(options.attempts) || options.attempts < 0) {
-    throw new RangeError('retry attempts must be a non-negative integer');
-  }
+  assertNonNegativeInteger(options.attempts, 'retry attempts');
 
   return (source) =>
     stream((sink, signal) => {
@@ -151,9 +150,7 @@ export function last<T>(source: Stream<T>, options?: ValueOptions): Promise<T | 
 }
 
 export function toArray<T>(source: Stream<T>, options: ToArrayOptions): Promise<T[]> {
-  if (!Number.isInteger(options.maxItems) || options.maxItems < 0) {
-    throw new RangeError('toArray maxItems must be a non-negative integer');
-  }
+  assertNonNegativeInteger(options.maxItems, 'toArray maxItems');
 
   return new Promise<T[]>((resolve, reject) => {
     const controller = new AbortController();

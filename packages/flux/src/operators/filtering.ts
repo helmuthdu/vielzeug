@@ -1,4 +1,5 @@
 import { link } from '../_link';
+import { assertDuration, assertNonNegativeInteger } from '../_numeric';
 import { defaultScheduler } from '../_scheduler';
 import { stream } from '../core';
 import { FluxTimeoutError } from '../errors';
@@ -12,16 +13,8 @@ export type TimeoutOptions = {
   after: number;
 };
 
-function assertDuration(milliseconds: number, name: string): void {
-  if (!Number.isFinite(milliseconds) || milliseconds < 0) {
-    throw new RangeError(`${name} must be a finite number greater than or equal to zero`);
-  }
-}
-
 export function take<T>(count: number): Operator<T, T> {
-  if (!Number.isInteger(count) || count < 0) {
-    throw new RangeError('take count must be a non-negative integer');
-  }
+  assertNonNegativeInteger(count, 'take count');
 
   return (source) =>
     stream((sink, signal) => {

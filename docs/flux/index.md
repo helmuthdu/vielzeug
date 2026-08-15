@@ -100,7 +100,7 @@ try {
 - `toAsyncIterable()` — explicit capacity and overflow policy for pull consumers
 - `retry()` — retry failures with optional backoff
 - `fromSignal()` / `toSignal()` — bridge Ripple signals
-- `fromQuery()` / `fromSse()` — adapt Courier state and events
+- `fromQuery()` — adapt Courier query state
 
 </div>
 

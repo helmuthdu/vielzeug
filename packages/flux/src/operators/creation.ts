@@ -1,3 +1,4 @@
+import { assertDuration } from '../_numeric';
 import { defaultScheduler } from '../_scheduler';
 import { stream } from '../core';
 import type { Stream } from '../types';
@@ -10,12 +11,6 @@ export type TimerOptions = {
   delay: number;
   interval?: number;
 };
-
-function assertDuration(milliseconds: number, name: string): void {
-  if (!Number.isFinite(milliseconds) || milliseconds < 0) {
-    throw new RangeError(`${name} must be a finite number greater than or equal to zero`);
-  }
-}
 
 export function of<T>(...values: T[]): Stream<T> {
   return stream((sink) => {

@@ -1,4 +1,5 @@
 import { link } from '../_link';
+import { assertPositiveInteger } from '../_numeric';
 import { tryCall } from '../_safe';
 import { stream } from '../core';
 import type { Operator, Stream, Subscription } from '../types';
@@ -168,9 +169,7 @@ export function mergeMap<A, B>(project: (value: A) => Stream<B>): Operator<A, B>
 }
 
 export function concatMap<A, B>(project: (value: A) => Stream<B>, options: ConcatMapOptions): Operator<A, B> {
-  if (!Number.isInteger(options.capacity) || options.capacity < 1) {
-    throw new RangeError('concatMap capacity must be a positive integer');
-  }
+  assertPositiveInteger(options.capacity, 'concatMap capacity');
 
   return (source) =>
     stream((sink, signal) => {

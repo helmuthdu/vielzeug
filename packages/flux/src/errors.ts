@@ -4,10 +4,6 @@ export class FluxError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is FluxError {
-    return err instanceof FluxError;
-  }
 }
 
 export class FluxTimeoutError extends FluxError {

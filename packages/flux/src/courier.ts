@@ -1,1 +1,1 @@
-export { fromQuery, fromSse } from './adapters/courier';
+export { fromQuery } from './adapters/courier';

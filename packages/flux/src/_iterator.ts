@@ -1,3 +1,4 @@
+import { assertPositiveInteger } from './_numeric';
 import type { AsyncIterableOptions, Observer, Stream } from './types';
 
 type Pending<T> = {
@@ -10,15 +11,9 @@ type IteratorState<T> =
   | { kind: 'error'; queue: T[]; reason: unknown }
   | { kind: 'returned' };
 
-function assertOptions(options: AsyncIterableOptions): void {
-  if (!Number.isInteger(options.capacity) || options.capacity < 1) {
-    throw new RangeError('Async iterable capacity must be a positive integer');
-  }
-}
-
 /** Async iteration requires explicit queue policy because streams are push based. */
 export function toIterator<T>(source: Stream<T>, options: AsyncIterableOptions): AsyncIterableIterator<T> {
-  assertOptions(options);
+  assertPositiveInteger(options.capacity, 'Async iterable capacity');
 
   const controller = new AbortController();
   const pending: Pending<T>[] = [];

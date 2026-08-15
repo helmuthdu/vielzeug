@@ -401,7 +401,6 @@ fromQuery<T extends { key: readonly unknown[]; fetch: (...args: never[]) => Prom
   cache: { getSnapshot<T>(key: readonly unknown[]): T | null; subscribe(key: readonly unknown[], listener: () => void): () => void },
   definition: T,
 ): Stream<AsyncState<Awaited<ReturnType<T['fetch']>>> | null>
-fromSse<T>(source: AsyncIterable<{ data: T; event: string }>, event: string): Stream<T>
 ```
 
 `fromQuery()` infers data from `definition.fetch` and emits Courier-compatible `AsyncState` snapshots.
@@ -469,7 +468,7 @@ type ChannelOptions<T> = { initial?: T; replay?: number };
 
 ### `FluxError`
 
-Base Flux error. Use `FluxError.is(reason)` to narrow unknown values.
+Base Flux error. Use `instanceof FluxError` to narrow unknown values.
 
 ### `FluxTimeoutError`
 
