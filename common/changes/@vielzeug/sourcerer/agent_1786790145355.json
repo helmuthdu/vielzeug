@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore: remove debugSource() devtools subpath (zero consumers, trivially replaceable via subscribe); rename PageLoadContext to LoadContext (generic context used by all async sources, not page-specific); LocalSource methods return void instead of boolean (parallel with async source contracts, no consumer used the boolean); remove dead Predicate and Sorter type exports (never used internally or externally)",
+      "packageName": "@vielzeug/sourcerer",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/sourcerer"
+}

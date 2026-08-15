@@ -27,15 +27,13 @@ exports:
     LocalQueryPatch,
     LocalSource,
     LocalSourceConfig,
-    PageLoadContext,
+    LoadContext,
     PagePagination,
     PageQuery,
     PageQueryPatch,
     PageResult,
     PageSource,
     PageSourceConfig,
-    Predicate,
-    Sorter,
     Source,
     SourceSnapshot,
   ]
@@ -145,7 +143,6 @@ try {
 - `createCursorSource()` — sequential opaque-cursor navigation
 - `createInfiniteSource()` — append-only page loading
 - `SourceSnapshot` — loaded `query`, `data`, and `pagination` plus optional `pendingQuery`
-- `debugSource()` — opt-in `console.debug` observer from `/devtools`
 
 </div>
 

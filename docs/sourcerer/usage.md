@@ -137,18 +137,6 @@ it('loads first page', async () => {
 });
 ```
 
-Use `debugSource()` only while investigating state transitions.
-
-```ts
-import { debugSource } from '@vielzeug/sourcerer/devtools';
-import { createLocalSource } from '@vielzeug/sourcerer';
-
-const source = createLocalSource(['Ada']);
-const stopDebugging = debugSource(source, { label: 'users' });
-stopDebugging();
-source.dispose();
-```
-
 ## Framework Integration
 
 Subscribe through each framework’s lifecycle. Keep source creation stable across renders.

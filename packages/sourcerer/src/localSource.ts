@@ -68,14 +68,14 @@ export function createLocalSource<T>(data: readonly T[], config: LocalSourceConf
     return true;
   };
 
-  const setQuery = (patch: LocalQueryPatch): boolean => {
+  const setQuery = (patch: LocalQueryPatch): void => {
     const next = normalizeQuery(query, patch, store.value.pagination.count);
 
-    if (sameQuery(next, query)) return false;
+    if (sameQuery(next, query)) return;
 
     query = next;
 
-    return commit();
+    commit();
   };
 
   const source: LocalSource<T> = {
@@ -91,28 +91,28 @@ export function createLocalSource<T>(data: readonly T[], config: LocalSourceConf
 
     page: {
       go(index) {
-        return setQuery({ page: index });
+        setQuery({ page: index });
       },
 
       last() {
-        return setQuery({ page: store.value.pagination.count });
+        setQuery({ page: store.value.pagination.count });
       },
 
       next() {
-        return store.value.pagination.hasNext && setQuery({ page: store.value.pagination.index + 1 });
+        if (store.value.pagination.hasNext) setQuery({ page: store.value.pagination.index + 1 });
       },
 
       previous() {
-        return store.value.pagination.hasPrevious && setQuery({ page: store.value.pagination.index - 1 });
+        if (store.value.pagination.hasPrevious) setQuery({ page: store.value.pagination.index - 1 });
       },
     },
 
     setData(nextData) {
-      if (nextData === allData) return false;
+      if (nextData === allData) return;
 
       allData = nextData;
 
-      return commit();
+      commit();
     },
 
     setQuery,

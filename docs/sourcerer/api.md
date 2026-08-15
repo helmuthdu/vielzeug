@@ -14,14 +14,12 @@ description: Public API for @vielzeug/sourcerer.
 | `createCursorSource()` | Cursor-based async pages | Async | `after` and `before` cannot coexist |
 | `createInfiniteSource()` | Appended async pages | Async | `loadMore()` does nothing while fetching or exhausted |
 | `SourceSnapshot` | Atomic loaded state plus pending request | Type | Read `pendingQuery` for newer in-flight state |
-| `debugSource()` | Console debug observer | Sync | Import from `/devtools` |
 
 ## Package Entry Point
 
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/sourcerer` | Factories and public types |
-| `@vielzeug/sourcerer/devtools` | `debugSource()` observer |
 
 ## Factories
 
@@ -194,12 +192,12 @@ type PageQueryPatch<TFilter = unknown, TSort = unknown> = Readonly<{
 }>;
 
 type PageResult<T> = Readonly<{ data: readonly T[]; total: number }>;
-type PageLoadContext<TQuery> = Readonly<{ query: TQuery; signal: AbortSignal }>;
+type LoadContext<TQuery> = Readonly<{ query: TQuery; signal: AbortSignal }>;
 
 type PageSourceConfig<T, TFilter = unknown, TSort = unknown> = Readonly<{
   autoStart?: boolean;
   initialQuery?: PageQueryPatch<TFilter, TSort>;
-  load(context: PageLoadContext<PageQuery<TFilter, TSort>>): Promise<PageResult<T>>;
+  load(context: LoadContext<PageQuery<TFilter, TSort>>): Promise<PageResult<T>>;
 }>;
 
 type PageSource<T, TFilter = unknown, TSort = unknown> = Source<T, PageQuery<TFilter, TSort>, PagePagination> & {
@@ -226,13 +224,13 @@ type LocalSourceConfig<T> = Readonly<{
 
 type LocalSource<T> = Source<T, LocalQuery, PagePagination> & {
   readonly page: Readonly<{
-    go(index: number): boolean;
-    last(): boolean;
-    next(): boolean;
-    previous(): boolean;
+    go(index: number): void;
+    last(): void;
+    next(): void;
+    previous(): void;
   }>;
-  setData(data: readonly T[]): boolean;
-  setQuery(changes: LocalQueryPatch): boolean;
+  setData(data: readonly T[]): void;
+  setQuery(changes: LocalQueryPatch): void;
 };
 ```
 
@@ -272,7 +270,7 @@ type CursorResult<T, TCursor = string> = Readonly<{
 type CursorSourceConfig<T, TCursor = string> = Readonly<{
   autoStart?: boolean;
   initialQuery?: CursorQueryPatch<TCursor>;
-  load(context: PageLoadContext<CursorQuery<TCursor>>): Promise<CursorResult<T, TCursor>>;
+  load(context: LoadContext<CursorQuery<TCursor>>): Promise<CursorResult<T, TCursor>>;
 }>;
 
 type CursorSource<T, TCursor = string> = Source<T, CursorQuery<TCursor>, CursorPagination<TCursor>> & {
@@ -295,7 +293,7 @@ type InfiniteQueryPatch = Readonly<{ pageSize?: number; search?: string }>;
 type InfiniteSourceConfig<T> = Readonly<{
   autoStart?: boolean;
   initialQuery?: InfiniteQueryPatch;
-  load(context: PageLoadContext<PageQuery>): Promise<PageResult<T>>;
+  load(context: LoadContext<PageQuery>): Promise<PageResult<T>>;
 }>;
 
 type InfiniteSource<T> = Source<T, InfiniteQuery, InfinitePagination> & {
@@ -309,15 +307,4 @@ type InfiniteSource<T> = Source<T, InfiniteQuery, InfinitePagination> & {
 
 ```ts
 type AnyPagination = CursorPagination<unknown> | InfinitePagination | PagePagination;
-type Predicate<T> = (value: T, index: number, values: readonly T[]) => boolean;
-type Sorter<T> = (left: T, right: T) => number;
-```
-
-## Devtools
-
-```ts
-import { debugSource } from '@vielzeug/sourcerer/devtools';
-
-const stopDebugging = debugSource(source, { label: 'users' });
-stopDebugging();
 ```

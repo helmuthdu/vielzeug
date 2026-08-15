@@ -30,7 +30,7 @@ describe('createLocalSource', () => {
 
     source.subscribe(listener);
 
-    expect(source.setQuery({ page: 1 })).toBe(false);
+    source.setQuery({ page: 1 });
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -39,17 +39,26 @@ describe('createLocalSource', () => {
       initialQuery: { pageSize: 1 },
       match: (value, search) => value.toLowerCase().includes(search.toLowerCase()),
     });
+    const listener = vi.fn();
 
-    expect(source.page.next()).toBe(true);
-    expect(source.setQuery({ search: 'ada' })).toBe(true);
+    source.subscribe(listener);
+
+    source.page.next();
+    expect(listener).toHaveBeenCalledTimes(1);
+    source.setQuery({ search: 'ada' });
+    expect(listener).toHaveBeenCalledTimes(2);
     expect(source.snapshot.data).toEqual(['Ada']);
     expect(source.snapshot.pagination.index).toBe(1);
   });
 
   it('ignores undefined patch fields and rejects invalid query values', () => {
     const source = createLocalSource([1]);
+    const listener = vi.fn();
 
-    expect(source.setQuery({ pageSize: undefined, search: undefined })).toBe(false);
+    source.subscribe(listener);
+
+    source.setQuery({ pageSize: undefined, search: undefined });
+    expect(listener).not.toHaveBeenCalled();
     expect(() => source.setQuery({ pageSize: 0 })).toThrow('pageSize must be a positive integer');
   });
 });

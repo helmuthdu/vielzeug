@@ -17,18 +17,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
-    },
-    "./devtools": {
-      "import": "./dist/devtools.js",
-      "require": "./dist/devtools.cjs",
-      "types": "./dist/devtools.d.ts"
-    }
-  },
-  "typesVersions": {
-    "*": {
-      "devtools": [
-        "dist/devtools.d.ts"
-      ]
     }
   },
   "publishConfig": {

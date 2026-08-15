@@ -1,6 +1,3 @@
-export type Predicate<T> = (value: T, index: number, values: readonly T[]) => boolean;
-export type Sorter<T> = (left: T, right: T) => number;
-
 export type Disposable = {
   [Symbol.dispose](): void;
   readonly disposalSignal: AbortSignal;
@@ -73,7 +70,7 @@ export type PageResult<T> = Readonly<{
   total: number;
 }>;
 
-export type PageLoadContext<TQuery> = Readonly<{
+export type LoadContext<TQuery> = Readonly<{
   query: TQuery;
   signal: AbortSignal;
 }>;
@@ -92,7 +89,7 @@ export type PageSource<T, TFilter = unknown, TSort = unknown> = Source<T, PageQu
 export type PageSourceConfig<T, TFilter = unknown, TSort = unknown> = Readonly<{
   autoStart?: boolean;
   initialQuery?: PageQueryPatch<TFilter, TSort>;
-  load(context: PageLoadContext<PageQuery<TFilter, TSort>>): Promise<PageResult<T>>;
+  load(context: LoadContext<PageQuery<TFilter, TSort>>): Promise<PageResult<T>>;
 }>;
 
 export type LocalQuery = Readonly<{
@@ -109,13 +106,13 @@ export type LocalQueryPatch = Readonly<{
 
 export type LocalSource<T> = Source<T, LocalQuery, PagePagination> & {
   readonly page: Readonly<{
-    go(index: number): boolean;
-    last(): boolean;
-    next(): boolean;
-    previous(): boolean;
+    go(index: number): void;
+    last(): void;
+    next(): void;
+    previous(): void;
   }>;
-  setData(data: readonly T[]): boolean;
-  setQuery(changes: LocalQueryPatch): boolean;
+  setData(data: readonly T[]): void;
+  setQuery(changes: LocalQueryPatch): void;
 };
 
 export type LocalSourceConfig<T> = Readonly<{
@@ -156,7 +153,7 @@ export type CursorSource<T, TCursor = string> = Source<T, CursorQuery<TCursor>, 
 export type CursorSourceConfig<T, TCursor = string> = Readonly<{
   autoStart?: boolean;
   initialQuery?: CursorQueryPatch<TCursor>;
-  load(context: PageLoadContext<CursorQuery<TCursor>>): Promise<CursorResult<T, TCursor>>;
+  load(context: LoadContext<CursorQuery<TCursor>>): Promise<CursorResult<T, TCursor>>;
 }>;
 
 export type InfiniteQuery = Readonly<{
@@ -178,5 +175,5 @@ export type InfiniteSource<T> = Source<T, InfiniteQuery, InfinitePagination> & {
 export type InfiniteSourceConfig<T> = Readonly<{
   autoStart?: boolean;
   initialQuery?: InfiniteQueryPatch;
-  load(context: PageLoadContext<PageQuery>): Promise<PageResult<T>>;
+  load(context: LoadContext<PageQuery>): Promise<PageResult<T>>;
 }>;
