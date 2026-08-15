@@ -1,5 +1,5 @@
+import { warn } from '../_dev';
 import type { MessageFn, SchemaDescriptor } from '../core';
-
 import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 import {
   isBase64,
@@ -24,7 +24,6 @@ import {
   isUrl,
   isUuid,
 } from '../formats';
-import { _dev } from '../messages';
 
 /* -------------------- Typed annotations -------------------- */
 
@@ -226,7 +225,7 @@ export class StringSchema<Input = string, Mode extends import('../core').SchemaM
         if (ann.pattern === undefined) return { ...ann, pattern: safePattern.source };
 
         if (ann.pattern !== safePattern.source) {
-          _dev(
+          warn(
             '[spell] Multiple .regex() constraints detected on a single string schema. ' +
               'JSON Schema `pattern` cannot represent multiple patterns and will be omitted from definition output.',
           );

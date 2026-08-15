@@ -39,9 +39,6 @@ export type MessageFn<Ctx extends Record<string, unknown> = Record<string, unkno
 /** Plain JSON Schema object (targeting JSON Schema 2020-12). */
 export type JsonSchema = Record<string, unknown>;
 
-/** Frozen data-only representation of a schema that can be exported to tooling. */
-export type SchemaDefinition = SchemaDescriptor;
-
 /* -------------------- Issues -------------------- */
 
 /**
@@ -272,7 +269,7 @@ export type SchemaMode = 'async' | 'sync';
 export type SchemaSurface<Output = unknown, Input = Output, Mode extends SchemaMode = SchemaMode> = {
   _parseFullAsync(value: unknown, ctx?: ParseContext): Promise<{ data: unknown; issues: Issue[] }>;
   _parseFullSync(value: unknown, ctx?: ParseContext): { data: unknown; issues: Issue[] };
-  definition(): SchemaDefinition;
+  definition(): SchemaDescriptor;
   isOptional: boolean;
   optional(): SchemaSurface<Output | undefined, Input | undefined, Mode>;
   required(): SchemaSurface<Exclude<Output, undefined>, Exclude<Input, undefined>, Mode>;

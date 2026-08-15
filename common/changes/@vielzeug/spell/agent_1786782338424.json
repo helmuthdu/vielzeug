@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore: remove SchemaDefinition synonym type (use SchemaDescriptor directly)",
+      "packageName": "@vielzeug/spell",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/spell"
+}

@@ -1,7 +1,6 @@
+import { warn } from '../_dev';
 import type { MessageFn, SchemaDescriptor } from '../core';
-
 import { ErrorCode, fail, resolveMessage, Schema } from '../core';
-import { _dev } from '../messages';
 
 export class BigIntSchema<Input = bigint, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
   bigint,
@@ -135,7 +134,7 @@ export class BigIntSchema<Input = bigint, Mode extends import('../core').SchemaM
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
     if (this.state.validators.length > 0) {
-      _dev(
+      warn(
         'definition(): this bigint schema has constraints (e.g. min(), max(), positive()). ' +
           'BigInt constraints are not serializable and will not appear in the definition.',
       );

@@ -245,17 +245,6 @@ const _builtinMessages: Messages = {
   },
 };
 
-/**
- * Built-in constraint callbacks predate ParseContext and resolve their default
- * messages lazily. This stack scopes that lookup to one synchronous validator
- * invocation; it never crosses an await boundary, so concurrent parses stay isolated.
- * @internal
- */
-/** @internal */
-export function _dev(message: string): void {
-  warn(message);
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -267,7 +256,7 @@ function mergeMessages<T extends Record<string, unknown>>(base: T, patch: DeepPa
     if (value === undefined) continue;
 
     if (isUnsafeObjectKey(key)) {
-      _dev(`[spell] Ignoring unsafe message override key "${key}" to prevent prototype mutation.`);
+      warn(`[spell] Ignoring unsafe message override key "${key}" to prevent prototype mutation.`);
       continue;
     }
 

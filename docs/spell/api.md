@@ -175,7 +175,7 @@ if (!result.success) {
 | `ParseResult<T>`                  | Tagged safe-parse result                                          |
 | `Issue`                           | Validation issue union                                            |
 | `CheckContext` / `ValidateResult` | Custom check callback contracts                                   |
-| `SchemaDefinition`                | Frozen portable schema definition                                 |
+| `SchemaDescriptor`                | Frozen portable schema definition                                 |
 | `JsonSchema`                      | JSON Schema object shape                                          |
 | `Messages` / `DeepPartial<T>`     | Parse-context message overrides                                   |
 | `SchemaWalker<R>`                 | Schema traversal visitor                                          |

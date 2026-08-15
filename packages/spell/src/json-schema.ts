@@ -1,7 +1,7 @@
 import { defineOwnProperty } from './safe-object';
-import type { JsonSchema, SchemaDefinition, SchemaDescriptor } from './types';
+import type { JsonSchema, SchemaDescriptor } from './types';
 
-export function definitionToJsonSchema(definition: SchemaDefinition): JsonSchema {
+export function definitionToJsonSchema(definition: SchemaDescriptor): JsonSchema {
   return descriptorToJsonSchema(definition);
 }
 

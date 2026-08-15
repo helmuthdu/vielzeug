@@ -101,7 +101,6 @@ export const EXPORTS = {
 };
 
 export const ROOT_EXPORTS = [
-  'errors',
   'array/chunk',
   'array/filterMap',
   'array/groupBy',
@@ -113,6 +112,7 @@ export const ROOT_EXPORTS = [
   'async/parallel',
   'async/retry',
   'async/sleep',
+  'errors',
   'function/debounce',
   'function/once',
   'function/pipe',

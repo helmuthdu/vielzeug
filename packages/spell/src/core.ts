@@ -20,7 +20,6 @@ import {
   type Messages,
   type ParseContext,
   type ParseResult,
-  type SchemaDefinition,
   type SchemaDescriptor,
   type SchemaMode,
   type SchemaWalker,
@@ -56,7 +55,6 @@ export {
   type Messages,
   type ParseContext,
   type ParseResult,
-  type SchemaDefinition,
   type SchemaDescriptor,
   type SchemaMode,
   type SchemaWalker,
@@ -471,7 +469,7 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
     return cloned;
   }
 
-  definition(): SchemaDefinition {
+  definition(): SchemaDescriptor {
     if (
       this.state.catch ||
       this.state.defaultValue ||
@@ -484,7 +482,7 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
       );
     }
 
-    return deepFreeze(this._toDescriptorImpl()) as SchemaDefinition;
+    return deepFreeze(this._toDescriptorImpl()) as SchemaDescriptor;
   }
 
   get description(): string | undefined {

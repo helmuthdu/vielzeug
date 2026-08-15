@@ -17,7 +17,6 @@ export type {
   Messages,
   ParseContext,
   ParseResult,
-  SchemaDefinition,
   SchemaDescriptor,
   SchemaMode,
   SchemaWalker,
