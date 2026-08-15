@@ -267,9 +267,14 @@ export class BaseElement extends HTMLElement {
         if (this._isStale(capturedGeneration)) return;
 
         // Snapshot callbacks so in-loop registrations don't extend this iteration.
+        // Nested onMounted registrations are appended to `batch` and run in the same
+        // microtask — no recursive scheduling. Index-based loop because the array
+        // grows as nested callbacks are discovered.
         const batch = this._component.mountCallbacks.splice(0);
 
-        for (const callback of batch) {
+        for (let i = 0; i < batch.length; i++) {
+          const callback = batch[i];
+
           try {
             const nestedCtx = createRuntimeContext(this);
 
@@ -282,7 +287,7 @@ export class BaseElement extends HTMLElement {
             });
 
             if (nestedCtx.mountCallbacks.length > 0) {
-              this._component.mountCallbacks.push(...nestedCtx.mountCallbacks);
+              batch.push(...nestedCtx.mountCallbacks);
             }
 
             if (nestedCtx.formResetCallbacks.length > 0) {
@@ -291,13 +296,6 @@ export class BaseElement extends HTMLElement {
           } catch (error) {
             this._reportLifecycleError(error, 'mounted');
           }
-        }
-
-        // If nested onMounted calls registered new callbacks, schedule them with
-        // a fresh token check in the next microtask. This happens *before* endWork()
-        // below runs so the counter never dips to zero between the two schedules.
-        if (this._component.mountCallbacks.length > 0) {
-          this._scheduleMountCallbacks();
         }
       } finally {
         endWork();

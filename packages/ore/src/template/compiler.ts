@@ -7,6 +7,8 @@
  * - Expose `getStaticTemplate()` for use by the instantiator.
  */
 
+import { ORE_ERRORS, OreApiError } from '../errors';
+
 // ─── Slot kinds ───────────────────────────────────────────────────────────────
 // Const object + derived union, same pattern as `ComponentPhase`/`LIFECYCLE_EVENTS`
 // in types.ts — used here (rather than plain string literals) because the kind
@@ -249,5 +251,3 @@ export const followPath = (root: Node, path: NodePath): Node => {
 
   return node;
 };
-
-import { ORE_ERRORS, OreApiError } from '../errors';

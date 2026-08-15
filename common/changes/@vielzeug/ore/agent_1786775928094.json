@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: remove reusable-tag optimization in mount.ts, flatten nested onMounted scheduling into single microtask, move compiler.ts import to top",
+      "packageName": "@vielzeug/ore",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

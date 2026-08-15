@@ -48,7 +48,7 @@ describe('Testing: Render Utilities', () => {
       expect(element.innerHTML).toContain('Content');
     });
 
-    it('reuses fixture classes for no-prop and form-associated inline setups', async () => {
+    it('gives each inline setup its own custom element class', async () => {
       const plainA = await mount(
         () => html`
           <div>plain A</div>
@@ -65,15 +65,8 @@ describe('Testing: Render Utilities', () => {
         `,
         { componentOptions: { formAssociated: true } },
       );
-      const formB = await mount(
-        () => html`
-          <div>form B</div>
-        `,
-        { componentOptions: { formAssociated: true } },
-      );
 
-      expect(plainA.element.constructor).toBe(plainB.element.constructor);
-      expect(formA.element.constructor).toBe(formB.element.constructor);
+      expect(plainA.element.constructor).not.toBe(plainB.element.constructor);
       expect(plainA.element.constructor).not.toBe(formA.element.constructor);
     });
 
