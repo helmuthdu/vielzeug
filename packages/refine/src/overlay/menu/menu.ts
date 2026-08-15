@@ -13,8 +13,7 @@ import {
   useSlots,
   watchEffect,
 } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
-import { watch as rippleWatch } from '@vielzeug/ripple/watch';
+import { computed, watch as rippleWatch, signal } from '@vielzeug/ripple';
 import {
   createDropdownPositioner,
   createInteraction,

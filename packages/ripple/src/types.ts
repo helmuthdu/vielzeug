@@ -25,6 +25,7 @@ export interface Readable<T> {
 }
 
 export interface Signal<T> extends Readable<T> {
+  update(updater: (prev: T) => T): void;
   value: T;
 }
 

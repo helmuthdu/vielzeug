@@ -1,5 +1,4 @@
 import { createResource, type Resource, type ResourceOptions } from './_async';
-import { createStore as createStoreFactory, type Store, type StoreOptions } from './_store';
 import { createWatch, type WatchOptions } from './_watch';
 import { ReactiveRuntime } from './runtime';
 import type {
@@ -18,7 +17,6 @@ export interface Ripple {
   batch<T>(fn: () => T): T;
   computed<T>(derive: () => T, options?: ComputedOptions<T>): Readable<T>;
   createScope(name?: string): Scope;
-  createStore<T>(initial: T, options?: StoreOptions): Store<T>;
   dispose(): void;
   readonly disposed: boolean;
   effect(callback: () => Cleanup | undefined, options?: EffectOptions): EffectHandle;
@@ -40,13 +38,11 @@ export interface Ripple {
 export const createRipple = (options?: RippleOptions): Ripple => {
   const runtime = new ReactiveRuntime(options);
   const resource = createResource(runtime);
-  const createStore = createStoreFactory(runtime);
 
   return {
     batch: runtime.batch,
     computed: runtime.computed,
     createScope: runtime.createScope,
-    createStore,
     dispose: () => runtime.dispose(),
     get disposed() {
       return runtime.disposed;
@@ -60,9 +56,8 @@ export const createRipple = (options?: RippleOptions): Ripple => {
 };
 
 /**
- * The shared default reactive graph. Private — `resource`/`createStore`/`watch` are reachable
- * only through their dedicated subpaths (`./async`, `./store`, `./watch`), never re-exported
- * from the package root, so there's exactly one canonical import path for each instead of two
- * that resolve to the same binding.
+ * The shared default reactive graph. Private — `signal`, `computed`, `effect`, `batch`,
+ * `createScope`, `untrack`, `watch`, and `resource` are re-exported from the package root
+ * as bound methods on this single graph instance.
  */
 export const defaultRipple = createRipple();

@@ -1,6 +1,5 @@
 import type { Readable } from '@vielzeug/ripple';
-
-import { watch } from '@vielzeug/ripple/watch';
+import { watch } from '@vielzeug/ripple';
 
 /** Shape every `ref` prop in this package uses — a JS-only escape hatch to the live element. */
 export type RefCallback<T> = ((el: T | null) => void) | null | undefined;

@@ -1,5 +1,5 @@
 import { define, html, prop } from '@vielzeug/ore';
-import { watch } from '@vielzeug/ripple/watch';
+import { watch } from '@vielzeug/ripple';
 import { announce } from '../../core';
 import { sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';

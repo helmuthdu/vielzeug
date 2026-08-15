@@ -1,5 +1,4 @@
-import { computed, type Readable, signal } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
 export type SortDirection = 'asc' | 'desc' | 'none';
 

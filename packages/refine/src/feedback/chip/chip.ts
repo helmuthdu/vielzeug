@@ -1,6 +1,5 @@
 import { bind, define, html, prop, useEmit } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 

@@ -113,14 +113,14 @@ user.dispose();
 
 ## Object State
 
-`createStore()` holds one value and exposes `set()` and `update()`. Return replacement objects from `update()` when object consumers depend on immutable updates.
+`signal()` with `update()` holds one value and supports immutable replacement patterns. Return replacement objects from `update()` when object consumers depend on immutable updates.
 
 ```ts
-const cart = ripple.createStore({ items: 0, label: 'empty' });
+const cart = ripple.signal({ items: 0, label: 'empty' });
 const items = ripple.computed(() => cart.value.items);
 
 cart.update((state) => ({ ...state, items: state.items + 1 }));
-cart.set({ items: 3, label: 'ready' });
+cart.value = { items: 3, label: 'ready' };
 
 console.log(items.value);
 ```

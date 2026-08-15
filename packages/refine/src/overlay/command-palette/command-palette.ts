@@ -1,7 +1,6 @@
 import { createKeymap } from '@vielzeug/keymap';
 import { define, getHost, html, onCleanup, onEvent, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { computed, signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
 import { announce, createListControl, lifecycleSignal } from '../../core';
 import { reducedMotionMixin } from '../../styles';

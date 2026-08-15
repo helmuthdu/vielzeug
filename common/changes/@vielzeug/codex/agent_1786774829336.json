@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "docs: update ripple documentation for 3.0 (api, usage, migration, examples, REPL, sidebar)",
+      "packageName": "@vielzeug/codex",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

@@ -11,10 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig(
   getConfig(__dirname, {
     entry: {
-      async: resolve(__dirname, 'src/async.ts'),
       'src/index': resolve(__dirname, 'src/index.ts'),
-      store: resolve(__dirname, 'src/store.ts'),
-      watch: resolve(__dirname, 'src/watch.ts'),
     },
     name: 'ripple',
   }),

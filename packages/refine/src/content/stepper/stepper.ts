@@ -11,8 +11,7 @@ import {
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { computed, type Readable, signal } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 import { createInteraction, createListControl, elementDirection, lifecycleSignal } from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import type { ComponentSize, ThemeColor } from '../../types';

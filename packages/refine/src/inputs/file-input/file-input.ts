@@ -14,8 +14,7 @@ import {
   useField,
   when,
 } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import '../../content/icon/icon';
 import '../../feedback/progress/progress';

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: update signal.test.ts ripple import from /watch subpath to root after ripple 3.0 subpath collapse",
+      "packageName": "@vielzeug/ore",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

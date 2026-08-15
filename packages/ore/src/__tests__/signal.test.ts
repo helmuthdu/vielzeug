@@ -2,8 +2,7 @@
  * Core - Signal System Tests
  * Comprehensive tests for signals, computed, effects, watchers, and batching
  */
-import { batch, computed, effect, signal, untrack } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { batch, computed, effect, signal, untrack, watch } from '@vielzeug/ripple';
 
 describe('Core: Signal System', () => {
   describe('signal()', () => {

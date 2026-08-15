@@ -1,6 +1,5 @@
 import { define, html, onEvent, onMounted, prop, ref, useEmit, useSlots } from '@vielzeug/ore';
-import { computed } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { computed, watch } from '@vielzeug/ripple';
 
 import { announce } from '../../core';
 import { reducedMotionMixin } from '../../styles';

@@ -33,4 +33,21 @@ describe('packPublishedPackage()', () => {
     expect(existsSync(packed.tarballPath)).toBe(false);
     packed.cleanup();
   });
+
+  it('accepts npm pack output returned as an object map', () => {
+    const folder = mkdtempSync(path.join(tmpdir(), 'vielzeug-pack-test-'));
+    const run = vi.fn(() =>
+      JSON.stringify({
+        example: { filename: 'example-1.0.0.tgz', files: [{ path: 'dist/index.js' }] },
+      }),
+    );
+    writeFileSync(path.join(folder, 'package.json'), JSON.stringify({ name: 'example', version: '1.0.0' }));
+    fixtures.push(folder);
+
+    const packed = packPublishedPackage(folder, { run });
+
+    expect(packed.files).toEqual([{ path: 'dist/index.js' }]);
+    expect(packed.tarballPath).toMatch(/example-1\.0\.0\.tgz$/);
+    packed.cleanup();
+  });
 });

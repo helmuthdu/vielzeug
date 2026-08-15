@@ -1,5 +1,4 @@
-import { type Readable, type Signal, signal, untrack } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { type Readable, type Signal, signal, untrack, watch } from '@vielzeug/ripple';
 
 // ── syncedSignal ──────────────────────────────────────────────────────────────
 

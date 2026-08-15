@@ -1,9 +1,9 @@
 ---
-title: 'Ripple Examples — Immutable Store'
-description: Update one replacement-based object value through a small store wrapper.
+title: 'Ripple Examples — Immutable State'
+description: Update one replacement-based object value through signal.update().
 ---
 
-## Replacement-Based Store
+## Replacement-Based State
 
 ### Problem
 
@@ -11,17 +11,17 @@ A feature needs one object value with explicit replacement operations while deri
 
 ### Solution
 
-Create a store, return replacement objects from `update()`, and derive the selected property through `computed()`.
+Create a signal, return replacement objects from `update()`, and derive the selected property through `computed()`.
 
 ```ts
 import { createRipple } from '@vielzeug/ripple';
 
 const ripple = createRipple();
-const user = ripple.createStore({ name: 'Ada', visits: 0 });
+const user = ripple.signal({ name: 'Ada', visits: 0 });
 const visits = ripple.computed(() => user.value.visits);
 
 user.update((value) => ({ ...value, visits: value.visits + 1 }));
-user.set({ name: 'Grace', visits: 5 });
+user.value = { name: 'Grace', visits: 5 };
 
 console.log(visits.value);
 ripple.dispose();
@@ -30,7 +30,7 @@ ripple.dispose();
 ### Pitfalls
 
 - Replace nested objects instead of mutating them in place.
-- Do not use store as a deep-mutation proxy.
+- Do not use signals as a deep-mutation proxy.
 - Use computed values for selected derived reads.
 
 ### Related

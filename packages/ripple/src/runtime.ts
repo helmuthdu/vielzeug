@@ -20,8 +20,6 @@ import type {
 } from './types';
 
 const REACTIVE = Symbol('ripple.reactive');
-const SIGNAL = Symbol('ripple.signal');
-const COMPUTED = Symbol('ripple.computed');
 const MAX_FLUSH_ITERATIONS = 100;
 const UNSET = Symbol('ripple.unset');
 
@@ -71,7 +69,6 @@ abstract class ReactiveNode<T> {
 }
 
 class SignalNode<T> extends ReactiveNode<T> implements Signal<T> {
-  readonly [SIGNAL] = true;
   private current: T;
   private readonly equals: (previous: T, next: T) => boolean;
 
@@ -102,10 +99,13 @@ class SignalNode<T> extends ReactiveNode<T> implements Signal<T> {
   peek(): T {
     return this.current;
   }
+
+  update(updater: (prev: T) => T): void {
+    this.value = updater(this.current);
+  }
 }
 
 class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
-  readonly [COMPUTED] = true;
   readonly dependencies = new Set<Dependency>();
   private computing = false;
   private disposed = false;
@@ -586,9 +586,3 @@ export class ReactiveRuntime {
 
 export const isReactive = <T>(value: T | Readable<T>): value is Readable<T> =>
   typeof value === 'object' && value !== null && REACTIVE in value;
-
-export const isSignal = <T>(value: unknown): value is Signal<T> =>
-  typeof value === 'object' && value !== null && SIGNAL in value;
-
-export const isComputed = (value: unknown): value is Readable<unknown> =>
-  typeof value === 'object' && value !== null && COMPUTED in value;

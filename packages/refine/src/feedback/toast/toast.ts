@@ -1,8 +1,7 @@
 import '../alert/alert';
 import { uuid } from '@vielzeug/arsenal/random';
 import { define, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { computed, signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
 import type { SwipeControl } from '../../core';
 import { createSwipeControl } from '../../core';

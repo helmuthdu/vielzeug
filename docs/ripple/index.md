@@ -1,11 +1,11 @@
 ---
 title: Ripple — Reactive graphs
-description: Framework-agnostic signals, derived values, effects, scopes, async resources, and immutable state.
+description: Framework-agnostic signals, derived values, effects, scopes, watchers, and async resources.
 package: ripple
 category: state
-keywords: [reactive, signals, computed, effects, graph, scope, batch, async]
+keywords: [reactive, signals, computed, effects, graph, scope, batch, watch, resource, async]
 related: [ore, clockwork, ledger]
-exports: [createRipple, signal, computed, effect, batch, createScope, untrack, isReactive]
+exports: [createRipple, signal, computed, effect, batch, createScope, untrack, watch, resource, isReactive]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -107,7 +107,6 @@ ripple.dispose();
 - `createScope()` groups owned reactive work.
 - `watch()` observes one selected source transition.
 - `resource()` loads async values with stale-work cancellation.
-- `createStore()` wraps explicit value replacement and updater functions.
 
 </div>
 

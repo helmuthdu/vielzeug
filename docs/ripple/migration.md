@@ -1,25 +1,59 @@
 ---
-title: Ripple 2.0 Migration
+title: Ripple Migration
 ---
 
 # Ripple 2.0 Migration
 
-Ripple 2.0 redesigns the reactive runtime and public API.
+Ripple 2.0 simplifies the public API surface: one entry point, no separate Store primitive, and no dead type guards.
 
-## Create explicit reactive graphs
+## Import from the root entry point
 
-Use `createRipple()` when a feature needs an isolated graph and lifecycle boundary. Create signals, computed values, effects, stores, resources, scopes, and watchers through that graph.
+The `./async`, `./store`, and `./watch` subpaths are removed. Import all primitives from `@vielzeug/ripple`.
 
 ```ts
-import { createRipple } from '@vielzeug/ripple';
+// Before
+import { signal } from '@vielzeug/ripple';
+import { watch } from '@vielzeug/ripple/watch';
+import { resource } from '@vielzeug/ripple/async';
+import { createStore } from '@vielzeug/ripple/store';
 
-const ripple = createRipple();
-const count = ripple.signal(0);
-const doubled = ripple.computed(() => count.value * 2);
+// After
+import { signal, watch, resource } from '@vielzeug/ripple';
 ```
 
-## Recheck ownership and cleanup
+## Replace createStore with signal.update
 
-Update reactive integrations to retain and dispose the handles returned by effects and watchers. Dispose feature-level Ripple graphs when their owning lifetime ends.
+`createStore()` is removed. `Signal<T>` now has an `update()` method that covers the same replacement-based pattern.
 
-Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for current signal, scope, store, resource, and watch contracts.
+```ts
+// Before
+const cart = ripple.createStore({ items: 0 });
+cart.update((state) => ({ ...state, items: 3 }));
+cart.set({ items: 5 });
+
+// After
+const cart = ripple.signal({ items: 0 });
+cart.update((state) => ({ ...state, items: 3 }));
+cart.value = { items: 5 };
+```
+
+## Remove isSignal and isComputed
+
+`isSignal()` and `isComputed()` are removed with no replacement. Use `isReactive()` for `Readable` identity checks.
+
+```ts
+// Before
+if (isSignal(value)) { /* ... */ }
+if (isComputed(value)) { /* ... */ }
+
+// After
+if (isReactive(value)) { /* ... */ }
+```
+
+## Review resource disposal signal
+
+`Resource.disposalSignal` now returns the underlying effect's signal directly instead of a proxy controller. The signal still aborts on disposal — no consumer code change required, but the internal indirection is gone.
+
+---
+
+Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for current contracts.

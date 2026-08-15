@@ -1,5 +1,4 @@
-import { type Readable, type Signal, signal } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { type Readable, type Signal, signal, watch } from '@vielzeug/ripple';
 
 import { createFocusManager, type DialogCloseReason, lifecycleSignal, type OverlayOpenReason } from '../../core';
 import { awaitExit } from './await-exit';

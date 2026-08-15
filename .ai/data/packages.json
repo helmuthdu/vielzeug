@@ -217,7 +217,7 @@
     {
       "category": "State",
       "dependencies": [],
-      "description": "Reactive runtime primitives: signals, derived values, effects, and scopes",
+      "description": "Reactive runtime primitives: signals, derived values, effects, scopes, watchers, and async resources",
       "domOutput": false,
       "name": "@vielzeug/ripple",
       "optionalPeers": [],

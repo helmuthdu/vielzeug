@@ -182,7 +182,6 @@ describe('ripple graph', () => {
         () => undefined,
       ),
     ).toThrow(RippleDisposedRuntimeError);
-    expect(() => ripple.createStore(0)).toThrow(RippleDisposedRuntimeError);
     expect(() => ripple.dispose()).not.toThrow();
   });
 
@@ -328,9 +327,9 @@ describe('bound helpers', () => {
     ripple.dispose();
   });
 
-  it('updates immutable stores', () => {
+  it('updates immutable state via signal.update', () => {
     const ripple = createRipple();
-    const cart = ripple.createStore({ items: 0, label: 'empty' });
+    const cart = ripple.signal({ items: 0, label: 'empty' });
     const items = ripple.computed(() => cart.value.items);
 
     cart.update((state) => ({ ...state, items: 3 }));

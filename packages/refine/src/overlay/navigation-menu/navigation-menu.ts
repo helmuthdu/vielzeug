@@ -1,6 +1,5 @@
 import { createStableId, define, getHost, html, onCleanup, onMounted, prop, useEmit, useSlots } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { OverlayOpenChangeDetail } from '../../core';
 

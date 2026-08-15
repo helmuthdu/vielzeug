@@ -1,26 +1,15 @@
-import { resource } from '../async';
-import * as root from '../index';
-import { signal } from '../index';
-import { createStore } from '../store';
-import { watch } from '../watch';
+import { computed, createRipple, effect, resource, signal, watch } from '../index';
 
-describe('default graph subpaths', () => {
-  it('keeps optional helpers on their dedicated subpaths', () => {
-    expect(root).toMatchObject({
-      batch: expect.any(Function),
-      computed: expect.any(Function),
-      createRipple: expect.any(Function),
-      createScope: expect.any(Function),
-      effect: expect.any(Function),
-      signal: expect.any(Function),
-      untrack: expect.any(Function),
-    });
-    expect('createStore' in root).toBe(false);
-    expect('resource' in root).toBe(false);
-    expect('watch' in root).toBe(false);
+describe('default graph exports', () => {
+  it('exports all primitives from root', () => {
+    const exports = { computed, createRipple, effect, resource, signal, watch };
+    for (const [name, fn] of Object.entries(exports)) {
+      expect(typeof fn).toBe('function');
+      expect(name).toBeTruthy();
+    }
   });
 
-  it('shares default graph across root and watch subpath', () => {
+  it('shares default graph across root exports', () => {
     const count = signal(0);
     const values: number[] = [];
     const stop = watch(count, (value) => values.push(value));
@@ -31,7 +20,7 @@ describe('default graph subpaths', () => {
     stop.dispose();
   });
 
-  it('shares default graph across root and async subpath', async () => {
+  it('shares default graph across signal and resource', async () => {
     const id = signal('first');
     const user = resource(
       () => id.value,
@@ -43,17 +32,12 @@ describe('default graph subpaths', () => {
     user.dispose();
   });
 
-  it('shares default graph across root and store subpath', () => {
-    const cart = createStore({ items: 0 });
-    const values: number[] = [];
-    const stop = watch(
-      () => cart.value.items,
-      (value) => values.push(value),
-    );
+  it('supports signal.update for immutable state', () => {
+    const cart = signal({ items: 0 });
+    const items = computed(() => cart.value.items);
 
-    cart.update((state) => ({ ...state, items: 1 }));
+    cart.update((state) => ({ ...state, items: 3 }));
 
-    expect(values).toEqual([1]);
-    stop.dispose();
+    expect(items.value).toBe(3);
   });
 });

@@ -36,7 +36,6 @@ export const createResource =
   ): Resource<Value> => {
     const state = runtime.signal<AsyncState<Value>>({ status: 'pending' }, { name: options?.name });
     const reloadEpoch = runtime.signal(0);
-    const controller = new AbortController();
     let active: AbortController | undefined;
     let disposed = false;
 
@@ -95,14 +94,13 @@ export const createResource =
       'abort',
       () => {
         disposed = true;
-        controller.abort();
       },
       { once: true },
     );
 
     return {
       get disposalSignal() {
-        return controller.signal;
+        return stop.disposalSignal;
       },
       dispose: () => stop.dispose(),
       get disposed() {

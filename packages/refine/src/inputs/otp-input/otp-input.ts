@@ -1,6 +1,5 @@
 import { bind, define, getHost, html, onCleanup, onMounted, prop, useEmit, useField } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { computed, signal, watch } from '@vielzeug/ripple';
 import { createListControl, lifecycleSignal } from '../../core';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, fieldVariantMixin, forcedColorsFocusMixin, sizeVariantMixin } from '../../styles';

@@ -1,6 +1,5 @@
 import { matchesAccept } from '@vielzeug/dnd';
-import { type Readable, signal } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { type Readable, signal, watch } from '@vielzeug/ripple';
 
 import { announce } from '../../core';
 

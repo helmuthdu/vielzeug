@@ -12,8 +12,7 @@ import {
   useField,
   useSlots,
 } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { computed, signal, watch } from '@vielzeug/ripple';
 import { createErrorHelperState, createSliderControl } from '../../core';
 import { disablableBundle, SLIDER_SIZE_PRESET, sizableBundle, themableBundle } from '../../shared';
 import { colorThemeMixin, disabledStateMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';

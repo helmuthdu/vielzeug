@@ -1,5 +1,6 @@
+export type { AsyncState, Resource, ResourceOptions } from './_async';
 export { createRipple, type Ripple } from './_default';
-
+export type { WatchOptions } from './_watch';
 export {
   RippleComputedCycleError,
   RippleDisposedRuntimeError,
@@ -28,12 +29,11 @@ export type {
 
 import { defaultRipple } from './_default';
 
-// `resource`/`createStore`/`watch` are deliberately NOT re-exported here — they're reachable
-// only through their dedicated subpaths (`./async`, `./store`, `./watch`), so there's exactly
-// one canonical import path per primitive instead of two that resolve to the same binding.
 export const signal = defaultRipple.signal;
 export const computed = defaultRipple.computed;
 export const effect = defaultRipple.effect;
 export const batch = defaultRipple.batch;
 export const createScope = defaultRipple.createScope;
 export const untrack = defaultRipple.untrack;
+export const watch = defaultRipple.watch;
+export const resource = defaultRipple.resource;

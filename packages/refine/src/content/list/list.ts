@@ -1,6 +1,5 @@
 import { bind, createContext, define, getHost, html, onCleanup, prop, provide, useEmit } from '@vielzeug/ore';
-import { computed, type Readable, signal } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 import { createListControl, lifecycleSignal } from '../../core';
 import { disablableBundle, LIST_SIZE_PRESET, sizableBundle } from '../../shared';
 import { sizeVariantMixin } from '../../styles';

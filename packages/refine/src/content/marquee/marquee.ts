@@ -1,5 +1,5 @@
 import { define, getHost, html, onMounted, prop } from '@vielzeug/ore';
-import { watch } from '@vielzeug/ripple/watch';
+import { watch } from '@vielzeug/ripple';
 
 import type { ThemeColor } from '../../types';
 

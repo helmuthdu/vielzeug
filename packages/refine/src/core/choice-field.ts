@@ -1,5 +1,4 @@
-import { computed, type Readable } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { computed, type Readable, watch } from '@vielzeug/ripple';
 
 import { createDirtyTracker, createField, type FieldHandle, type FieldOptions } from './field-base';
 import { syncedSignal } from './signals';

@@ -1,6 +1,5 @@
 import { bind, define, getHost, html, onCleanup, onMounted, prop, useEmit, useField, useSlots } from '@vielzeug/ore';
-import { computed, effect, signal } from '@vielzeug/ripple';
-import { watch } from '@vielzeug/ripple/watch';
+import { computed, effect, signal, watch } from '@vielzeug/ripple';
 
 import type { OverlayOpenChangeDetail, OverlayOpenReason } from '../../core';
 import { createChoiceField, createListboxDropdown, lifecycleSignal } from '../../core';

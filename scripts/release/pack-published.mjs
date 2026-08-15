@@ -17,7 +17,12 @@ export function packPublishedPackage(folder, { findProject, run = defaultRun } =
     const manifest = createPublishedManifest(JSON.parse(readFileSync(path.join(folder, 'package.json'), 'utf8')), { findProject });
     writeFileSync(path.join(staging, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
-    const [packed] = JSON.parse(run('npm', ['pack', '--ignore-scripts', '--json'], { cwd: staging }));
+    const packResult = JSON.parse(run('npm', ['pack', '--ignore-scripts', '--json'], { cwd: staging }));
+    const packed = Array.isArray(packResult)
+      ? packResult[0]
+      : typeof packResult?.filename === 'string'
+        ? packResult
+        : Object.values(packResult ?? {})[0];
     if (typeof packed?.filename !== 'string') throw new Error(`npm pack did not return an artifact for ${folder}`);
 
     return {

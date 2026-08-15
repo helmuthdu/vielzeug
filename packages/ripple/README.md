@@ -32,7 +32,7 @@ stop.dispose();
 ripple.dispose();
 ```
 
-`ripple.dispose()` is terminal: create a new graph instead of reusing a disposed one. Use default exports (`signal`, `computed`, `effect`, `batch`) only when application has one graph for full lifetime.
+`ripple.dispose()` is terminal: create a new graph instead of reusing a disposed one. Use default exports (`signal`, `computed`, `effect`, `batch`, `watch`, `resource`) only when application has one graph for full lifetime.
 
 ## Bound helpers
 
@@ -40,7 +40,7 @@ Every `Ripple` instance provides bound helpers:
 
 ```ts
 const user = ripple.resource(() => userId.value, loadUser);
-const cart = ripple.createStore({ items: 0 });
+const cart = ripple.signal({ items: 0 });
 const stop = ripple.watch(() => cart.value.items, renderItems);
 ```
 

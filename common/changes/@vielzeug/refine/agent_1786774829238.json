@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: update 29 ripple imports from /watch subpath to root after ripple 3.0 subpath collapse",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

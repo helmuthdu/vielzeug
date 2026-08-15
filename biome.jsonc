@@ -25,6 +25,7 @@
       "!common",
       "!scripts",
       "!**/scripts",
+      "!**/dist",
       "!docs/.vitepress/cache",
       "!docs/.vitepress/theme/components/repl/registry.generated.ts"
     ]
@@ -103,37 +104,13 @@
       "includes": ["package.json", "demos/*/package.json", "packages/*/package.json"]
     },
     {
-      "assist": {
-        "actions": {
-          "source": {
-            "organizeImports": "off"
-          }
-        }
-      },
-      "includes": ["packages/arsenal/src/index.ts"]
-    },
-    {
       "includes": ["docs/**/*.vue"],
       "linter": {
-        "rules": {
-          "correctness": {
-            "noUnusedVariables": "off"
-          }
-        }
+        "enabled": false
       }
     },
     {
-      "includes": ["docs/.vitepress/theme/components/REPL.vue"],
-      "linter": {
-        "rules": {
-          "style": {
-            "useVueMultiWordComponentNames": "off"
-          }
-        }
-      }
-    },
-    {
-      "includes": ["packages/refine/src/**/*.css"],
+      "includes": ["packages/**/*.css"],
       "linter": {
         "rules": {
           "style": {
