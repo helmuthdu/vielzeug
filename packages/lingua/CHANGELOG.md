@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/lingua
 
-This log was last generated on Wed, 05 Aug 2026 19:50:19 GMT and should not be manually modified.
+This log was last generated on Sat, 15 Aug 2026 10:39:54 GMT and should not be manually modified.
+
+## 2.2.0
+Sat, 15 Aug 2026 10:39:54 GMT
+
+### Minor changes
+
+- refactor: remove redundant LoadedCatalogs type alias (use Catalogs directly); document Translator, MessageKey, TextKey, PluralKey types in api.md
 
 ## 2.1.0
 Wed, 05 Aug 2026 19:50:19 GMT

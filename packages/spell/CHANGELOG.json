@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: remove SchemaDefinition synonym type (use SchemaDescriptor directly)",
+            "commit": "badca4d3b7ebd9af4078a410251fa710d892c99f"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 10:39:54 GMT",
+      "tag": "@vielzeug/spell_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.1`"

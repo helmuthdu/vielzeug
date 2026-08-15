@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Sat, 15 Aug 2026 06:26:02 GMT and should not be manually modified.
+This log was last generated on Sat, 15 Aug 2026 10:39:54 GMT and should not be manually modified.
+
+## 2.0.6
+Sat, 15 Aug 2026 10:39:54 GMT
+
+### Patches
+
+- refactor: remove reusable-tag optimization in mount.ts, flatten nested onMounted scheduling into single microtask, move compiler.ts import to top
 
 ## 2.0.5
 Sat, 15 Aug 2026 06:26:02 GMT

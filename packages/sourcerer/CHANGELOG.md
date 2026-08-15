@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/sourcerer
 
-This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+This log was last generated on Sat, 15 Aug 2026 10:39:54 GMT and should not be manually modified.
+
+## 2.1.0
+Sat, 15 Aug 2026 10:39:54 GMT
+
+### Minor changes
+
+- chore: remove debugSource() devtools subpath (zero consumers, trivially replaceable via subscribe); rename PageLoadContext to LoadContext (generic context used by all async sources, not page-specific); LocalSource methods return void instead of boolean (parallel with async source contracts, no consumer used the boolean); remove dead Predicate and Sorter type exports (never used internally or externally)
 
 ## 2.0.1
 Thu, 06 Aug 2026 07:20:49 GMT

@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: widen invalidate() type to readonly unknown[]; remove res.text() fallback for broken fetch fakes",
+            "commit": "ef6f8d98769c44d1f7e0769bba54ba994534151c"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 10:39:54 GMT",
+      "tag": "@vielzeug/courier_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.0.1`"

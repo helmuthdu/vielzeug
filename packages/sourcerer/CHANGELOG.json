@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: remove debugSource() devtools subpath (zero consumers, trivially replaceable via subscribe); rename PageLoadContext to LoadContext (generic context used by all async sources, not page-specific); LocalSource methods return void instead of boolean (parallel with async source contracts, no consumer used the boolean); remove dead Predicate and Sorter type exports (never used internally or externally)",
+            "commit": "b8aee4458bb6e88f2c62aeabba6bcc8217212784"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 10:39:54 GMT",
+      "tag": "@vielzeug/sourcerer_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

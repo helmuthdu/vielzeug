@@ -4,6 +4,18 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/ore\" to `2.0.6`"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 10:39:54 GMT",
+      "tag": "@vielzeug/refine_v2.1.3",
+      "version": "2.1.3"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/orbit\" to `2.0.2`"
           },
           {

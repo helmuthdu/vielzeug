@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/forge
 
-This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+This log was last generated on Sat, 15 Aug 2026 10:39:54 GMT and should not be manually modified.
+
+## 2.1.0
+Sat, 15 Aug 2026 10:39:54 GMT
+
+### Minor changes
+
+- refactor: inline createStore into createForm; remove unused _utils.ts
 
 ## 2.0.2
 Mon, 10 Aug 2026 15:11:23 GMT

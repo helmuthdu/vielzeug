@@ -4,6 +4,21 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `2.1.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `2.1.0`"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 10:39:54 GMT",
+      "tag": "@vielzeug/flux_v2.0.5",
+      "version": "2.0.5"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.2`"
           },
           {

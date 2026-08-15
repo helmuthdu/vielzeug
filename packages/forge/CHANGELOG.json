@@ -4,6 +4,28 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/spell\" to `2.1.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/spell\" to `2.1.0`"
+          }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: inline createStore into createForm; remove unused _utils.ts",
+            "commit": "54ede2038672df783ef122ec0fba0063316be19c"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 10:39:54 GMT",
+      "tag": "@vielzeug/forge_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/vault\" to `2.1.0`"
           },
           {

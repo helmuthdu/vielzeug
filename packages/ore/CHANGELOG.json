@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove reusable-tag optimization in mount.ts, flatten nested onMounted scheduling into single microtask, move compiler.ts import to top",
+            "commit": "b50528ac137619a40eb673eda553bde43bf97f8f"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 10:39:54 GMT",
+      "tag": "@vielzeug/ore_v2.0.6",
+      "version": "2.0.6"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.0`"

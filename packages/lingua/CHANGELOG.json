@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove redundant LoadedCatalogs type alias (use Catalogs directly); document Translator, MessageKey, TextKey, PluralKey types in api.md",
+            "commit": "fe080d4af6a8d582bbad7bc975731d54cb407302"
+          }
+        ]
+      },
+      "date": "Sat, 15 Aug 2026 10:39:54 GMT",
+      "tag": "@vielzeug/lingua_v2.2.0",
+      "version": "2.2.0"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "feat: add single-catalog translators and harden package resolution",
             "commit": "62592e8394077e557850a3b1983b87d04cee4a17"
           }
