@@ -281,7 +281,11 @@ jobs:
       # here — writing an .npmrc auth line breaks OIDC trusted publishing
       # (actions/setup-node#1440); the repo-root .npmrc's `registry=` line is all npm needs.
       - name: Upgrade npm for trusted publishing
-        run: npm install -g npm@latest
+        # Pin to npm 11 — npm 12.0.0 (released 2026-07-08) has a release packaging bug that
+        # omits the `sigstore` module from the published tarball, breaking OIDC trusted
+        # publishing with a misleading ENEEDAUTH error (npm/cli#9722). Stay on 11.x until
+        # npm 12.x ships a fixed release.
+        run: npm install -g npm@11
 
       - name: Publish versions missing on npm
         env:
