@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { consoleTransport, DEFAULT_THEME, resolveTheme } from '../console';
-import { RuneError } from '../errors';
 import { lazy } from '../lazy';
 import { createLogger, defaultLogger } from '../logger';
 import { batchTransport, jsonTransport, pipe, redactTransport, remoteTransport, sampleTransport } from '../transports';
@@ -2666,24 +2665,6 @@ describe('resolveTheme()', () => {
 
   it('an empty override object leaves every level identical to DEFAULT_THEME', () => {
     expect(resolveTheme({})).toEqual(DEFAULT_THEME);
-  });
-});
-
-/* ─── RuneError ─── */
-
-describe('RuneError', () => {
-  it('sets its name and remains a real Error', () => {
-    const err = new RuneError('generic failure');
-
-    expect(err.name).toBe('RuneError');
-    expect(err).toBeInstanceOf(Error);
-  });
-
-  it('identifies RuneError but not unrelated values', () => {
-    expect(RuneError.is(new RuneError('generic failure'))).toBe(true);
-    expect(RuneError.is(new Error('plain'))).toBe(false);
-    expect(RuneError.is('not an error')).toBe(false);
-    expect(RuneError.is(undefined)).toBe(false);
   });
 });
 

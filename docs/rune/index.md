@@ -21,7 +21,6 @@ exports:
     resolveTheme,
     DEFAULT_THEME,
     PRIORITY,
-    RuneError,
   ]
 environments: [browser, node, ssr, deno]
 ---

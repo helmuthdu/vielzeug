@@ -16,7 +16,6 @@ description: API reference for @vielzeug/rune exports, logger methods, configura
 | `isLevelEnabled()`   | Utility: test whether a level passes a threshold | Sync           | `'off'` always returns `false`                               |
 | `PRIORITY`           | Numeric priority table backing `isLevelEnabled()`| —              | Lower number = more verbose                                  |
 | `resolveTheme()`     | Merge a partial theme onto the default           | Sync           | Returns a fully-populated `ResolvedTheme`                    |
-| `RuneError`          | Base class for all `rune`-originated errors      | —              | Use `RuneError.is(err)` as the type guard                    |
 | `consoleTransport()` | Styled console output                            | Sync           | Theme is resolved once at factory call, not per entry        |
 | `remoteTransport()`  | Async HTTP/webhook delivery                      | Async          | Handler errors are swallowed to `console.warn`               |
 | `jsonTransport()`    | NDJSON to stdout or a custom sink                | Sync           | `process.stdout` is unavailable in browsers                  |
@@ -464,30 +463,6 @@ PRIORITY: Record<LogLevel, number>
 ```
 
 Numeric priority for each level (`debug: 0`, `info: 1`, `warn: 2`, `error: 3`, `fatal: 4`, `off: 5`) — lower is more verbose. Exported for transport/middleware authors building custom level-comparison logic; `isLevelEnabled()` is built directly on top of it.
-
-## Errors
-
-### RuneError
-
-Base class for all `rune`-originated errors. Use `instanceof RuneError` or `RuneError.is(err)` to catch any error the package throws.
-
-```ts
-import { RuneError } from '@vielzeug/rune';
-
-try {
-  // ...
-} catch (err) {
-  if (RuneError.is(err)) {
-    // handle a rune-originated error
-  }
-}
-```
-
-**Static methods:**
-
-| Method       | Returns                | Description                                  |
-| ------------ | ----------------------- | --------------------------------------------- |
-| `is(err)`    | `err is RuneError`      | Type guard — `true` for `RuneError` and subclasses |
 
 ## Types
 

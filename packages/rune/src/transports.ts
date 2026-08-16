@@ -15,8 +15,6 @@ import type {
 } from './types';
 import { isLevelEnabled } from './types';
 
-export type { RemoteLogData };
-
 /* ─── Environment detection ─── */
 
 function detectEnv(): 'development' | 'production' {
@@ -27,7 +25,7 @@ function detectEnv(): 'development' | 'production' {
       : 'development';
   }
 
-  return (import.meta as ImportMeta & { env?: { PROD?: boolean } }).env?.PROD ? 'production' : 'development';
+  return 'development';
 }
 
 /* ─── remoteTransport ─── */

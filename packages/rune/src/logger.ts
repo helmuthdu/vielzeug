@@ -1,7 +1,7 @@
 import { warn } from './_dev';
 import { isUnsafeObjectKey } from './_prototype';
 import { consoleTransport, DEFAULT_THEME, renderGroup } from './console';
-import { resolveBindings } from './lazy';
+import { isLazy } from './lazy';
 import type { Bindings, LogEntry, Logger, LogLevel, LogMiddleware, LogType, RuneOptions, Transport } from './types';
 import { isLevelEnabled } from './types';
 
@@ -11,15 +11,21 @@ function serializeError(err: Error): { message: string; name: string; stack?: st
   return { message: err.message, name: err.name, stack: err.stack };
 }
 
-function serializeErrors(ctx: Bindings): Bindings {
+/**
+ * Resolve lazy bindings and serialize Errors in a single pass.
+ * Always allocates a fresh object — the result is never an alias of the input.
+ */
+function prepareBindings(bindings: Bindings): Bindings {
   const out: Bindings = {};
 
-  for (const [k, v] of Object.entries(ctx)) {
+  for (const [k, v] of Object.entries(bindings)) {
     // Guard against a `__proto__`/`constructor`/`prototype` field name hijacking out's own
     // prototype via the bracket-assignment accessor — see _prototype.ts.
     if (isUnsafeObjectKey(k)) continue;
 
-    out[k] = v instanceof Error ? serializeError(v) : v;
+    const resolved = isLazy(v) ? v.factory() : v;
+
+    out[k] = resolved instanceof Error ? serializeError(resolved) : resolved;
   }
 
   return out;
@@ -140,12 +146,10 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
     if (!passes(type)) return;
 
     const { context, message } = parseArgs(msgOrCtx, second, third);
-    // serializeErrors() always allocates a fresh object, so `data` is never an alias of `ownBindings`.
-    const resolvedBindings = serializeErrors(resolveBindings(ownBindings));
-
+    // prepareBindings() always allocates a fresh object, so `data` is never an alias of `ownBindings`.
     const data: Bindings = context
-      ? { ...resolvedBindings, ...serializeErrors(resolveBindings(context)) }
-      : resolvedBindings;
+      ? { ...prepareBindings(ownBindings), ...prepareBindings(context) }
+      : prepareBindings(ownBindings);
 
     dispatch({
       data,
