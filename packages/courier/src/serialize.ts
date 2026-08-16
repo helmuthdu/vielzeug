@@ -1,7 +1,3 @@
-import { hash } from '@vielzeug/arsenal/object';
-
-export { hash };
-
 /**
  * Build a `RequestInit` object from the request components, handling body serialisation.
  * Plain objects/arrays are JSON-serialised and `content-type: application/json` is added.

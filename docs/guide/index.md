@@ -345,7 +345,7 @@ const api = await container.resolve(ApiToken);
 | **Clockwork + Herald**      | Publish state-change events to decouple multiple machines from each other                                    |
 | **Flux + Ripple**           | `fromSignal()` / `toSignal()` bridge signals and streams — Ripple for state, Flux for pipelines             |
 | **Flux + Herald**           | `fromBus()` / `toBus()` turn a Herald bus into a Flux stream and back                                       |
-| **Flux + Courier** | `fromSse()` / `fromQuery()` adapt Courier event iterators and cache entries into stream pipelines |
+| **Flux + Courier** | `fromQuery()` adapts Courier cache entries into stream pipelines |
 | **Flux + Pulse**            | `fromPulse()` / `fromPresence()` convert Pulse WebSocket channels into composable Flux streams              |
 | **Scout + Ripple**          | `createReactiveSearch()` wraps the index in Ripple signals — query and results are reactive computed values  |
 | **Scout + Sourcerer**       | `toSearchMatcher()` wires a Scout index into `createLocalSource` as its matcher                 |

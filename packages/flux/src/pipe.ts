@@ -1,4 +1,3 @@
-import { applyOperators } from './_pipe';
 import type { Operator, PipedStream, Stream, ValidPipe } from './types';
 
 /** Standalone composition preserves contextual types for inline generic operators. */
@@ -93,5 +92,8 @@ export function pipe<Input, const Operators extends readonly unknown[]>(
   source: Stream<Input>,
   ...operators: Operators & ValidPipe<Input, Operators>
 ): PipedStream<Input, Operators> {
-  return applyOperators(source as Stream<unknown>, operators) as PipedStream<Input, Operators>;
+  return operators.reduce(
+    (current: Stream<unknown>, operator: Operator) => operator(current),
+    source as Stream<unknown>,
+  ) as PipedStream<Input, Operators>;
 }

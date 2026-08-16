@@ -32,7 +32,7 @@ try {
   if (previous) courier.queries.set(key, previous);
   throw error;
 } finally {
-  courier.queries.invalidate(key);
+  courier.queries.invalidate(key, { refetch: true });
 }
 ```
 

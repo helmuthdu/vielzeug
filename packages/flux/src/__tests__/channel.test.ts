@@ -58,4 +58,8 @@ describe('createChannel()', () => {
     expect(() => createChannel({ replay: -1 })).toThrow(RangeError);
     expect(() => createChannel({ replay: 1.5 })).toThrow(RangeError);
   });
+
+  it('rejects replay: 0 with initial — initial would be silently dropped', () => {
+    expect(() => createChannel({ initial: 0, replay: 0 })).toThrow(RangeError);
+  });
 });

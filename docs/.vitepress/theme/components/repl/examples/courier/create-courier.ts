@@ -27,7 +27,7 @@ console.log('Cached user:', courier.queries.getSnapshot(key)?.data.name)
 
 const created = await courier.mutate({
   request: ({ signal }) => courier.post('/users', { body: { name: 'Courier' }, signal }),
-  onSuccess: (createdUser, queries) => queries.set(['users', createdUser.id], createdUser),
+  invalidateKeys: [['users']],
 })
 
 console.log('Created id:', created.id)

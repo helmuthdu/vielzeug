@@ -111,9 +111,9 @@ try {
 <div class="features-grid">
 
 - **`createCourier()`** — one lifecycle, interceptor pipeline, header store, and cancellation boundary.
-- **`get()` / `post()` / `request()`** — typed paths, query strings, request bodies, validation, and structured errors.
-- **`queries.fetch()`** — key-based cached reads, subscriptions, invalidation, and explicit revalidation.
-- **`mutate()`** — direct write operation with a cache callback, without hidden retries or a second state store.
+- **`get()` / `post()` / `put()` / `patch()` / `delete()`** — typed paths, query strings, request bodies, validation, and structured errors.
+- **`queries.fetch()`** — key-based cached reads, subscriptions, invalidation with refetch, and automatic garbage collection.
+- **`mutate()`** — direct write operation with `invalidateKeys` for one-step cache refetch, without hidden retries or a second state store.
 - **`events()` / `read()`** — abortable SSE, text, and NDJSON iteration with normalized request errors.
 - **`withBearerAuth()` / `withRequestId()` / `withLogging()`** — composable transport policies.
 

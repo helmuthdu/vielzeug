@@ -7,6 +7,8 @@ import type { Stream, Subscription } from '../types';
 
 export type ToSignalOptions<T> = {
   initial: T;
+  /** Called when the source stream errors. If omitted, the error is logged via `console.error` (dev-only) and the binding disposes — the signal freezes at its last value. */
+  onError?: (reason: unknown) => void;
   signal?: AbortSignal;
 };
 
@@ -46,7 +48,15 @@ export function toSignal<T>(source: Stream<T>, options: ToSignalOptions<T>): Sig
     {
       complete: dispose,
       error(reason) {
-        error('toSignal source error', reason);
+        if (options.onError) {
+          try {
+            options.onError(reason);
+          } catch (callbackError) {
+            error('toSignal onError callback threw', callbackError);
+          }
+        } else {
+          error('toSignal source error', reason);
+        }
         dispose();
       },
       next(value) {

@@ -48,6 +48,34 @@ describe('ripple adapter', () => {
     error.mockRestore();
   });
 
+  it('calls onError when source errors, then disposes', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const onError = vi.fn();
+    const binding = toSignal(
+      stream<number>((sink) => sink.error(new Error('offline'))),
+      { initial: 0, onError },
+    );
+
+    expect(onError).toHaveBeenCalledOnce();
+    expect(onError.mock.calls[0][0]).toBeInstanceOf(Error);
+    expect((onError.mock.calls[0][0] as Error).message).toBe('offline');
+    expect(binding.disposed).toBe(true);
+    expect(binding.disposalSignal.aborted).toBe(true);
+    error.mockRestore();
+  });
+
+  it('does not log to console.error when onError is provided', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const onError = vi.fn();
+    toSignal(
+      stream<number>((sink) => sink.error(new Error('offline'))),
+      { initial: 0, onError },
+    );
+
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
   it('disposes binding when external signal aborts', () => {
     const controller = new AbortController();
     const binding = toSignal(

@@ -133,7 +133,7 @@ export function createTransportCore(opts: TransportOptions = {}) {
     };
   }
 
-  function headers(updates: Record<string, string | undefined>): void {
+  function setHeaders(updates: Record<string, string | undefined>): void {
     for (const [key, value] of Object.entries(updates)) {
       const k = key.toLowerCase();
 
@@ -213,8 +213,8 @@ export function createTransportCore(opts: TransportOptions = {}) {
     getTimeout(): number {
       return timeout;
     },
-    headers,
     mergeHeaders,
+    setHeaders,
     track,
     use,
   };

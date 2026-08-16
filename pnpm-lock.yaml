@@ -54,6 +54,182 @@ importers:
         specifier: ^3.5.41
         version: 3.5.41(typescript@6.0.3)
 
+  demos/eshop:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../../packages/arsenal
+      '@vielzeug/clockwork':
+        specifier: workspace:*
+        version: link:../../packages/clockwork
+      '@vielzeug/coins':
+        specifier: workspace:*
+        version: link:../../packages/coins
+      '@vielzeug/conduit':
+        specifier: workspace:*
+        version: link:../../packages/conduit
+      '@vielzeug/courier':
+        specifier: workspace:*
+        version: link:../../packages/courier
+      '@vielzeug/dnd':
+        specifier: workspace:*
+        version: link:../../packages/dnd
+      '@vielzeug/familiar':
+        specifier: workspace:*
+        version: link:../../packages/familiar
+      '@vielzeug/flux':
+        specifier: workspace:*
+        version: link:../../packages/flux
+      '@vielzeug/forge':
+        specifier: workspace:*
+        version: link:../../packages/forge
+      '@vielzeug/herald':
+        specifier: workspace:*
+        version: link:../../packages/herald
+      '@vielzeug/lingua':
+        specifier: workspace:*
+        version: link:../../packages/lingua
+      '@vielzeug/orbit':
+        specifier: workspace:*
+        version: link:../../packages/orbit
+      '@vielzeug/ore':
+        specifier: workspace:*
+        version: link:../../packages/ore
+      '@vielzeug/prism':
+        specifier: workspace:*
+        version: link:../../packages/prism
+      '@vielzeug/pulse':
+        specifier: workspace:*
+        version: link:../../packages/pulse
+      '@vielzeug/refine':
+        specifier: workspace:*
+        version: link:../../packages/refine
+      '@vielzeug/ripple':
+        specifier: workspace:*
+        version: link:../../packages/ripple
+      '@vielzeug/rune':
+        specifier: workspace:*
+        version: link:../../packages/rune
+      '@vielzeug/sandbox':
+        specifier: workspace:*
+        version: link:../../packages/sandbox
+      '@vielzeug/scout':
+        specifier: workspace:*
+        version: link:../../packages/scout
+      '@vielzeug/scroll':
+        specifier: workspace:*
+        version: link:../../packages/scroll
+      '@vielzeug/sourcerer':
+        specifier: workspace:*
+        version: link:../../packages/sourcerer
+      '@vielzeug/spell':
+        specifier: workspace:*
+        version: link:../../packages/spell
+      '@vielzeug/tempo':
+        specifier: workspace:*
+        version: link:../../packages/tempo
+      '@vielzeug/vault':
+        specifier: workspace:*
+        version: link:../../packages/vault
+      '@vielzeug/ward':
+        specifier: workspace:*
+        version: link:../../packages/ward
+      '@vielzeug/wayfinder':
+        specifier: workspace:*
+        version: link:../../packages/wayfinder
+    devDependencies:
+      playwright:
+        specifier: ^1.62.1
+        version: 1.62.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.2.1
+        version: 8.2.1(@types/node@26.2.0)(esbuild@0.27.7)(jiti@2.7.0)
+
+  demos/kanban:
+    dependencies:
+      '@vielzeug/clockwork':
+        specifier: workspace:*
+        version: link:../../packages/clockwork
+      '@vielzeug/coins':
+        specifier: workspace:*
+        version: link:../../packages/coins
+      '@vielzeug/courier':
+        specifier: workspace:*
+        version: link:../../packages/courier
+      '@vielzeug/dnd':
+        specifier: workspace:*
+        version: link:../../packages/dnd
+      '@vielzeug/familiar':
+        specifier: workspace:*
+        version: link:../../packages/familiar
+      '@vielzeug/flux':
+        specifier: workspace:*
+        version: link:../../packages/flux
+      '@vielzeug/herald':
+        specifier: workspace:*
+        version: link:../../packages/herald
+      '@vielzeug/keymap':
+        specifier: workspace:*
+        version: link:../../packages/keymap
+      '@vielzeug/ledger':
+        specifier: workspace:*
+        version: link:../../packages/ledger
+      '@vielzeug/lingua':
+        specifier: workspace:*
+        version: link:../../packages/lingua
+      '@vielzeug/ore':
+        specifier: workspace:*
+        version: link:../../packages/ore
+      '@vielzeug/prism':
+        specifier: workspace:*
+        version: link:../../packages/prism
+      '@vielzeug/pulse':
+        specifier: workspace:*
+        version: link:../../packages/pulse
+      '@vielzeug/refine':
+        specifier: workspace:*
+        version: link:../../packages/refine
+      '@vielzeug/ripple':
+        specifier: workspace:*
+        version: link:../../packages/ripple
+      '@vielzeug/rune':
+        specifier: workspace:*
+        version: link:../../packages/rune
+      '@vielzeug/scout':
+        specifier: workspace:*
+        version: link:../../packages/scout
+      '@vielzeug/scroll':
+        specifier: workspace:*
+        version: link:../../packages/scroll
+      '@vielzeug/sourcerer':
+        specifier: workspace:*
+        version: link:../../packages/sourcerer
+      '@vielzeug/spell':
+        specifier: workspace:*
+        version: link:../../packages/spell
+      '@vielzeug/tempo':
+        specifier: workspace:*
+        version: link:../../packages/tempo
+      '@vielzeug/vault':
+        specifier: workspace:*
+        version: link:../../packages/vault
+      '@vielzeug/ward':
+        specifier: workspace:*
+        version: link:../../packages/ward
+      '@vielzeug/wayfinder':
+        specifier: workspace:*
+        version: link:../../packages/wayfinder
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.2.1
+        version: 8.2.1(@types/node@26.2.0)(esbuild@0.27.7)(jiti@2.7.0)
+
   packages/arsenal:
     devDependencies:
       '@types/node':

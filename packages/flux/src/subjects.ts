@@ -1,2 +1,2 @@
-export type { Channel, ChannelOptions } from './subject';
-export { createChannel } from './subject';
+export type { Channel, ChannelOptions } from './channel';
+export { createChannel } from './channel';

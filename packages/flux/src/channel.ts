@@ -17,9 +17,16 @@ export type Channel<T> = {
 };
 
 function replayCapacity<T>(options: ChannelOptions<T>): number {
-  const capacity = options.replay ?? ('initial' in options ? 1 : 0);
+  const hasInitial = 'initial' in options;
+  const capacity = options.replay ?? (hasInitial ? 1 : 0);
 
   assertNonNegativeInteger(capacity, 'Channel replay');
+
+  if (hasInitial && capacity === 0) {
+    throw new RangeError(
+      'Channel replay cannot be 0 when initial is provided — the initial value would be immediately dropped',
+    );
+  }
 
   return capacity;
 }

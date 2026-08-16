@@ -1,15 +1,20 @@
 import { CourierDisposedError, CourierHttpError, CourierParseError, classifyRequestError } from './errors';
 import { buildRequestInit } from './serialize';
 import { anySignal, buildTimeoutSignal, type TransportCore } from './transport';
-import type { Params } from './url';
+import type { HttpRequestConfig, Params } from './url';
 import { buildUrl } from './url';
 
-export type StreamOptions<P extends string = string> = {
+export type StreamOptions<P extends string = string> = Omit<HttpRequestConfig<P>, 'responseType' | 'schema'> & {
+  method?: string;
+};
+
+/** Runtime config without PathConfig's type-level constraints — open() just forwards params to buildUrl. */
+type StreamRuntimeConfig = {
   body?: unknown;
   fetchInit?: Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
   headers?: Record<string, string>;
   method?: string;
-  params?: P extends string ? Record<string, string | number | boolean> : never;
+  params?: Params;
   query?: Params;
   signal?: AbortSignal;
   timeout?: number;
@@ -42,7 +47,7 @@ function abortable<T>(create: (signal: AbortSignal) => AsyncGenerator<T>): Async
 async function open(
   transport: TransportCore,
   url: string,
-  config: StreamOptions,
+  config: StreamRuntimeConfig,
 ): Promise<{ controller: AbortController; response: Response; untrack: () => void }> {
   if (transport.disposed) throw new CourierDisposedError('Courier');
 
@@ -56,7 +61,7 @@ async function open(
   let fullUrl = url;
 
   try {
-    fullUrl = buildUrl(transport.baseUrl, url, config.params as Params | undefined, config.query);
+    fullUrl = buildUrl(transport.baseUrl, url, config.params, config.query);
 
     const headers = transport.mergeHeaders(config.headers);
     const { headers: requestHeaders, ...init } = buildRequestInit(
@@ -93,7 +98,7 @@ export function createStreams(transport: TransportCore) {
     url: P,
     config: StreamOptions<P>,
   ): AsyncGenerator<StreamEvent<T>> {
-    const { controller, response, untrack } = await open(transport, url, config);
+    const { controller, response, untrack } = await open(transport, url, config as StreamRuntimeConfig);
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -154,7 +159,7 @@ export function createStreams(transport: TransportCore) {
     url: P,
     config: StreamOptions<P> & { parse?: 'ndjson' | 'text' },
   ): AsyncGenerator<T> {
-    const { controller, response, untrack } = await open(transport, url, config);
+    const { controller, response, untrack } = await open(transport, url, config as StreamRuntimeConfig);
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -210,7 +215,7 @@ export function createStreams(transport: TransportCore) {
   return {
     events<T = unknown, P extends string = string>(
       url: P,
-      config: StreamOptions<P> = {},
+      config: StreamOptions<P> = {} as StreamOptions<P>,
     ): AsyncIterableIterator<StreamEvent<T>> {
       return abortable((signal) =>
         events<T, P>(url, {
@@ -222,7 +227,9 @@ export function createStreams(transport: TransportCore) {
     },
     read<T = string, P extends string = string>(
       url: P,
-      config: StreamOptions<P> & { parse?: 'ndjson' | 'text' } = {},
+      config: StreamOptions<P> & { parse?: 'ndjson' | 'text' } = {} as StreamOptions<P> & {
+        parse?: 'ndjson' | 'text';
+      },
     ): AsyncIterableIterator<T> {
       return abortable((signal) => read<T, P>(url, { ...config, signal: anySignal(config.signal, signal) }));
     },

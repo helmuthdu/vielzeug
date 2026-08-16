@@ -35,7 +35,7 @@ function dispose() {
 
 ### Pitfalls
 
-- Use `{ force: true }` for polling; `invalidate()` only marks query stale.
+- Use `{ force: true }` for polling; `invalidate()` only marks query stale unless `{ refetch: true }` is passed.
 - Pause polling while UI is hidden when that matches product requirements.
 - Avoid overlapping writes and refetches for same resource without application-level policy.
 

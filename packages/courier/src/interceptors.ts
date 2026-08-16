@@ -40,7 +40,7 @@ export function withRequestId(opts?: { generate?: () => string; header?: string 
 /**
  * Logs each request's method, URL, status code, and duration.
  *
- * Defaults to `console.debug`. Supply a custom `logger` for structured logging.
+ * Requires an explicit `logger` function — no default console output.
  *
  * **Security note:** The full URL is logged, including any query parameters.
  * If your URLs may contain sensitive data (tokens, PII), provide a custom
@@ -48,18 +48,14 @@ export function withRequestId(opts?: { generate?: () => string; header?: string 
  *
  * @example
  * ```ts
- * client.use(withLogging());
+ * client.use(withLogging({ logger: (msg) => console.log(msg) }));
  * client.use(withLogging({ logger: (msg, meta) => logger.info(meta) }));
  * ```
  */
-export function withLogging(opts?: {
-  logger?: (msg: string, meta: { duration: number; method: string; status: number; url: string }) => void;
+export function withLogging(opts: {
+  logger: (msg: string, meta: { duration: number; method: string; status: number; url: string }) => void;
 }): Interceptor {
-  const log =
-    opts?.logger ??
-    ((msg, meta) => {
-      console.debug(msg, meta);
-    });
+  const log = opts.logger;
 
   return async (ctx, next) => {
     const start = performance.now();

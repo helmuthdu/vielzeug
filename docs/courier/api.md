@@ -16,7 +16,7 @@ description: Reference for Courier HTTP, cache, mutation, interceptor, and strea
 | `events()` / `read()` | Opens abortable response iterators | Async iteration | Breaking iteration aborts request |
 | `withBearerAuth()` | Adds authorization interceptor | Sync | Token provider runs per request |
 | `withRequestId()` | Adds request identifier interceptor | Sync | Default generator uses `uuid()` |
-| `withLogging()` | Logs request result metadata | Sync | URLs may contain sensitive query values |
+| `withLogging()` | Logs request result metadata | Sync | Requires explicit logger; URLs may contain sensitive query values |
 
 ## Package Entry Point
 
@@ -41,6 +41,7 @@ Returns client sharing transport configuration, headers, interceptors, cancellat
 | `headers` | `Record<string, string>` | `{}` | Global request headers |
 | `timeout` | `number` | `30_000` | Default HTTP timeout in milliseconds |
 | `query.staleTime` | `number` | `0` | Cache freshness duration |
+| `query.gcTime` | `number` | `300_000` | Garbage-collect entries with no subscribers after this duration (ms); `Infinity` disables |
 
 **Returns:** `Courier`.
 
@@ -53,8 +54,7 @@ const courier = createCourier({ baseUrl: 'https://api.example.com' });
 | `Courier` member | Signature | Description |
 | --- | --- | --- |
 | `get` / `post` / `put` / `patch` / `delete` | `<T, P>(url: P, config?) => Promise<T>` | Sends one HTTP request |
-| `request` | `<T, P>(method, url: P, config?) => Promise<T>` | Sends custom HTTP method |
-| `headers` | `(updates) => void` | Updates global headers |
+| `setHeaders` | `(updates) => void` | Updates global headers |
 | `getHeaders` | `() => Readonly<Record<string, string>>` | Returns header snapshot |
 | `use` | `(interceptor) => () => void` | Registers interceptor |
 | `cancelAll` | `() => void` | Aborts active HTTP, cache, and mutation work |
@@ -100,8 +100,7 @@ await courier.queries.fetch({
 | `get(key)` | `T \| undefined` | Returns successful cached data |
 | `getSnapshot(key)` | `AsyncState<T> \| null` | Returns snapshot by key |
 | `set(key, data, options?)` | `void` | Sets successful cache value |
-| `invalidate(prefix)` | `void` | Marks matching key prefixes stale |
-| `refetchStale()` | `void` | Starts stale successful entries in background |
+| `invalidate(prefix, options?)` | `void` | Marks matching key prefixes stale; `options.refetch` triggers background refetch |
 | `keys()` | `QueryKey[]` | Lists known keys |
 | `subscribe(key, listener)` | `Unsubscribe` | Subscribes to one key |
 | `clear()` | `void` | Removes every cache entry |
@@ -116,12 +115,13 @@ await courier.queries.fetch({
 mutate<T>(options: MutationOptions<T>): Promise<T>;
 ```
 
-Runs `options.request` once, then calls `onSuccess` after successful completion.
+Runs `options.request` once, then calls `onSuccess` after successful completion, then invalidates (and refetches) each key in `invalidateKeys`.
 
 | `MutationOptions<T>` field | Type | Description |
 | --- | --- | --- |
 | `request` | `(context: MutationContext) => Promise<T>` | Write operation |
 | `onSuccess` | `(data, queries) => void \| Promise<void>` | Cache update callback |
+| `invalidateKeys` | `readonly (readonly unknown[])[]` | Key prefixes to invalidate and refetch after success |
 | `signal` | `AbortSignal` | Caller-controlled cancellation |
 
 **Returns:** Request result.
@@ -140,14 +140,8 @@ read<T, P extends string>(url: P, options?: StreamOptions<P> & { parse?: 'ndjson
 Both iterators abort request when `return()` runs or `for await` loop exits. `events()` parses `event` and `data`
 fields; it does not retain event IDs or reconnect.
 
-| `StreamOptions` field | Type | Description |
-| --- | --- | --- |
-| `body` | `unknown` | Request body |
-| `method` | `string` | Defaults to GET, or POST when body is present |
-| `params` / `query` | Path and query parameters | Builds URL |
-| `headers` / `fetchInit` | Request configuration | Adds per-request configuration |
-| `signal` | `AbortSignal` | Merges external cancellation |
-| `timeout` | `number` | Stream timeout; omitted means no timeout |
+`StreamOptions<P>` extends `RequestConfig<P>` (typed path params) with an optional `method` field. It omits
+`responseType` and `schema` (not applicable to streaming).
 
 **Returns:** Abortable async iterator.
 
@@ -160,12 +154,13 @@ fields; it does not retain event IDs or reconnect.
 ```ts
 withBearerAuth(token: string | (() => string | Promise<string>)): Interceptor;
 withRequestId(options?: { generate?: () => string; header?: string }): Interceptor;
-withLogging(options?: {
-  logger?: (message: string, meta: { duration: number; method: string; status: number; url: string }) => void;
+withLogging(options: {
+  logger: (message: string, meta: { duration: number; method: string; status: number; url: string }) => void;
 }): Interceptor;
 ```
 
-Each helper returns an `Interceptor` accepted by `courier.use()`.
+Each helper returns an `Interceptor` accepted by `courier.use()`. `withLogging` requires an explicit `logger`
+function — no default console output.
 
 ## Types
 
@@ -178,20 +173,20 @@ type AsyncState<T> =
 type QueryContext = { readonly key: QueryKey; readonly signal: AbortSignal };
 type QueryDefinition<T> = { fetch: (context: QueryContext) => Promise<T>; key: QueryKey; staleTime?: number };
 type QueryKey = readonly [QueryKeyAtom, ...QueryKeyAtom[]];
-type QueryKeyAtom = string | number | boolean | null | { readonly [key: string]: string | number | boolean | null };
+type QueryKeyAtom = string | number | boolean | null;
 type QueryCache = {
   clear(): void;
   fetch<T>(definition: QueryDefinition<T>, options?: { force?: boolean }): Promise<T>;
   get<T>(key: QueryKey): T | undefined;
   getSnapshot<T>(key: QueryKey): AsyncState<T> | null;
-  invalidate(prefix: readonly unknown[]): void;
+  invalidate(prefix: readonly unknown[], options?: { refetch?: boolean }): void;
   keys(): QueryKey[];
-  refetchStale(): void;
   set<T>(key: QueryKey, data: T, options?: { updatedAt?: number }): void;
   subscribe(key: QueryKey, listener: () => void): Unsubscribe;
 };
 type MutationContext = { readonly signal: AbortSignal };
 type MutationOptions<T> = {
+  invalidateKeys?: readonly (readonly unknown[])[];
   onSuccess?: (data: T, queries: QueryCache) => void | Promise<void>;
   request: (context: MutationContext) => Promise<T>;
   signal?: AbortSignal;
@@ -220,8 +215,8 @@ type RequestConfig<P extends string = string, T = unknown> = {
 
 | Error | Trigger | Notable properties |
 | --- | --- | --- |
-| `CourierError` | Base class for all Courier errors | `CourierError.is(error)` |
-| `CourierHttpError` | Non-2xx HTTP response | `status`, `data`, `headers`, `method`, `url` |
+| `CourierError` | Base class for all Courier errors | Use `instanceof` to narrow |
+| `CourierHttpError` | Non-2xx HTTP response | `status`, `data`, `headers`, `method`, `url`; `CourierHttpError.is(e, status?)` narrows by status |
 | `CourierNetworkError` | Request failure without response | `method`, `url`, `cause` |
 | `CourierTimeoutError` | Timeout signal aborts request | `method`, `url`, `cause` |
 | `CourierAbortError` | Caller, client, or iterator cancellation | `method`, `url`, `cause` |

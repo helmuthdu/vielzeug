@@ -6,6 +6,7 @@ import {
   CourierTimeoutError,
   createCourier,
   withBearerAuth,
+  withLogging,
   withRequestId,
 } from '../index';
 
@@ -56,7 +57,13 @@ describe('Courier HTTP client', () => {
 
   it('preserves HTTP error bodies and wraps schema failures', async () => {
     const httpCourier = createCourier({
-      fetch: vi.fn(async () => new Response(JSON.stringify({ code: 'missing' }), { status: 404 })),
+      fetch: vi.fn(
+        async () =>
+          new Response(JSON.stringify({ code: 'missing' }), {
+            headers: { 'content-type': 'application/json' },
+            status: 404,
+          }),
+      ),
     });
     const schemaCourier = createCourier({
       fetch: vi.fn(
@@ -65,7 +72,7 @@ describe('Courier HTTP client', () => {
     });
 
     await expect(httpCourier.get('/users/1')).rejects.toMatchObject<CourierHttpError>({
-      data: '{"code":"missing"}',
+      data: { code: 'missing' },
       status: 404,
     });
     await expect(
@@ -94,6 +101,39 @@ describe('Courier HTTP client', () => {
     courier.dispose();
 
     await expect(courier.get('/after-disposal')).rejects.toThrow('Courier disposed');
+  });
+
+  it('updates global headers via setHeaders', () => {
+    const courier = createCourier();
+
+    courier.setHeaders({ authorization: 'Bearer token' });
+    expect(courier.getHeaders()).toEqual({ authorization: 'Bearer token' });
+
+    courier.setHeaders({ authorization: undefined });
+    expect(courier.getHeaders()).toEqual({});
+  });
+
+  it('withLogging requires an explicit logger', async () => {
+    const logs: string[] = [];
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async () => new Response('ok', { headers: { 'content-type': 'text/plain' } }),
+    );
+    const courier = createCourier({ fetch });
+
+    courier.use(withLogging({ logger: (msg) => logs.push(msg) }));
+
+    await courier.get('/test');
+
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toContain('GET test 200');
+  });
+
+  it('handles empty JSON response bodies gracefully', async () => {
+    const courier = createCourier({
+      fetch: vi.fn(async () => new Response('', { headers: { 'content-type': 'application/json' }, status: 200 })),
+    });
+
+    await expect(courier.get('/empty')).resolves.toBeUndefined();
   });
 });
 
@@ -129,5 +169,28 @@ describe('Courier mutations', () => {
     courier.dispose();
 
     await expect(courier.mutate({ request: async () => 'never' })).rejects.toThrow('Courier disposed');
+  });
+
+  it('invalidates and refetches via invalidateKeys after success', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async () => new Response(JSON.stringify([{ id: 1 }]), { headers: { 'content-type': 'application/json' } }),
+    );
+    const courier = createCourier({ fetch });
+    const key = ['users'] as const;
+
+    await courier.queries.fetch({
+      fetch: () => courier.get('/users'),
+      key,
+      staleTime: 60_000,
+    });
+
+    expect(fetch).toHaveBeenCalledOnce();
+
+    await courier.mutate({
+      invalidateKeys: [key],
+      request: async () => ({ id: 2 }),
+    });
+
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
   });
 });

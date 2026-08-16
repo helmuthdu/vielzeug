@@ -1,17 +1,13 @@
 /**
  * Base class for all courier errors.
  * Use `instanceof CourierError` to catch any courier-originated error in one branch.
- * Use `HttpError.is(e, status?)` to check for a specific HTTP status code.
+ * Use `CourierHttpError.is(e, status?)` to check for a specific HTTP status code.
  */
 export class CourierError extends Error {
   constructor(message: string, opts?: ErrorOptions) {
     super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
-  }
-
-  static is(err: unknown): err is CourierError {
-    return err instanceof CourierError;
   }
 }
 

@@ -28,18 +28,15 @@ await courier.queries.fetch({
 });
 await courier.mutate({
   request: ({ signal }) => courier.post<User>('/users', { body: { name: 'Ada' }, signal }),
-  onSuccess: (user, queries) => {
-    queries.set(['users', user.id], user);
-    queries.invalidate(key);
-    queries.refetchStale();
-  },
+  onSuccess: (user, queries) => queries.set(['users', user.id], user),
+  invalidateKeys: [key],
 });
 ```
 
 ### Pitfalls
 
 - Cache keys must be stable values rather than values generated during render.
-- `invalidate()` marks cached data stale; it does not send request.
+- `invalidate()` marks cached data stale; pass `{ refetch: true }` to refetch in the background.
 - Prefer `set()` only when new value is known complete.
 
 ### Related

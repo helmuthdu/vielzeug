@@ -15,7 +15,7 @@ import type { HttpRequestConfig, Params } from './url';
 import { buildUrl } from './url';
 
 export type CourierOptions = TransportOptions & {
-  query?: { staleTime?: number };
+  query?: { gcTime?: number; staleTime?: number };
 };
 
 export type Courier = ReturnType<typeof createCourier>;
@@ -153,6 +153,10 @@ export function createCourier(options: CourierOptions = {}) {
 
       await options.onSuccess?.(data, queries);
 
+      for (const key of options.invalidateKeys ?? []) {
+        queries.invalidate(key, { refetch: true });
+      }
+
       return data;
     } finally {
       mutations.delete(controller);
@@ -181,14 +185,13 @@ export function createCourier(options: CourierOptions = {}) {
     events: streams.events,
     get: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('GET', url, cfg),
     getHeaders: transport.getHeaders,
-    headers: transport.headers,
     mutate,
     patch: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('PATCH', url, cfg),
     post: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('POST', url, cfg),
     put: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('PUT', url, cfg),
     queries,
     read: streams.read,
-    request,
+    setHeaders: transport.setHeaders,
     [Symbol.dispose]() {
       this.dispose();
     },

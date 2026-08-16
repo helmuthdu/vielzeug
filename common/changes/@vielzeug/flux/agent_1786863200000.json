@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: toSignal accepts onError callback for source error handling; fix: createChannel throws RangeError when replay: 0 is set with initial (previously silently dropped the initial value); refactor: rename subject.ts to channel.ts to match its content; inline _pipe.ts into pipe.ts",
+      "packageName": "@vielzeug/flux",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/flux"
+}

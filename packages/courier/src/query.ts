@@ -1,9 +1,9 @@
-import { warn } from './_dev';
+import { hash } from '@vielzeug/arsenal/object';
 import { CourierDisposedError } from './errors';
-import { hash } from './serialize';
 import type { AsyncState, QueryCache, QueryContext, QueryDefinition, QueryKey, Unsubscribe } from './types';
 
 const DEFAULT_STALE_TIME = 0;
+const DEFAULT_GC_TIME = 5 * 60_000;
 
 type Entry = {
   controller: AbortController | undefined;
@@ -21,14 +21,64 @@ function loading<T>(isFetching = false): AsyncState<T> {
   return { data: undefined, error: null, isFetching, status: 'loading', updatedAt: undefined };
 }
 
-/** Transport-agnostic cache. Queries are identified by explicit keys and fetch definitions. */
-export function createQueryCache(options?: { signal?: AbortSignal; staleTime?: number }): CancellableQueryCache {
+/** Transport-agnostic cache. Queries are identified by explicit keys and fetch definitions.
+ *  Entries with no subscribers are garbage-collected after `gcTime` (default 5 min; `Infinity` disables). */
+export function createQueryCache(options?: {
+  gcTime?: number;
+  signal?: AbortSignal;
+  staleTime?: number;
+}): CancellableQueryCache {
+  const staleTime = options?.staleTime ?? DEFAULT_STALE_TIME;
+  const gcTime = options?.gcTime ?? DEFAULT_GC_TIME;
   const entries = new Map<string, Entry>();
   const listeners = new Map<string, Set<Unsubscribe>>();
   let disposed = options?.signal?.aborted ?? false;
+  let gcTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const hasSubscribers = (id: string): boolean => (listeners.get(id)?.size ?? 0) > 0;
 
   const notify = (key: QueryKey): void => {
     for (const listener of [...(listeners.get(hash(key)) ?? [])]) listener();
+  };
+
+  const scheduleGc = (): void => {
+    if (gcTime === Number.POSITIVE_INFINITY || disposed) {
+      if (gcTimer) clearTimeout(gcTimer);
+      gcTimer = undefined;
+      return;
+    }
+
+    if (gcTimer) clearTimeout(gcTimer);
+
+    let earliest: number | undefined;
+
+    for (const entry of entries.values()) {
+      if (entry.snapshot.status !== 'success' || entry.promise) continue;
+      if (hasSubscribers(hash(entry.key))) continue;
+
+      const expiresAt = entry.snapshot.updatedAt + gcTime;
+
+      if (earliest === undefined || expiresAt < earliest) earliest = expiresAt;
+    }
+
+    if (earliest === undefined) {
+      gcTimer = undefined;
+      return;
+    }
+
+    gcTimer = setTimeout(runGc, Math.max(0, earliest - Date.now()));
+  };
+
+  const runGc = (): void => {
+    const now = Date.now();
+
+    for (const [id, entry] of entries) {
+      if (entry.snapshot.status !== 'success' || entry.promise) continue;
+      if (hasSubscribers(id)) continue;
+      if (now - entry.snapshot.updatedAt >= gcTime) entries.delete(id);
+    }
+
+    scheduleGc();
   };
 
   const cancelAll = (): void => {
@@ -40,6 +90,11 @@ export function createQueryCache(options?: { signal?: AbortSignal; staleTime?: n
 
     cancelAll();
     entries.clear();
+
+    if (gcTimer) {
+      clearTimeout(gcTimer);
+      gcTimer = undefined;
+    }
 
     for (const key of keys) notify(key);
   };
@@ -77,12 +132,12 @@ export function createQueryCache(options?: { signal?: AbortSignal; staleTime?: n
     if (!entry.definition)
       return Promise.reject(new Error(`No fetch function registered for query ${hash(entry.key)}.`));
 
-    const staleTime = entry.definition.staleTime ?? options?.staleTime ?? DEFAULT_STALE_TIME;
+    const entryStaleTime = entry.definition.staleTime ?? staleTime;
 
     if (
       !force &&
       entry.snapshot.status === 'success' &&
-      Date.now() - entry.snapshot.updatedAt < staleTime &&
+      Date.now() - entry.snapshot.updatedAt < entryStaleTime &&
       !entry.snapshot.isFetching
     ) {
       return Promise.resolve(entry.snapshot.data as T);
@@ -105,6 +160,7 @@ export function createQueryCache(options?: { signal?: AbortSignal; staleTime?: n
           entry.controller = undefined;
           entry.promise = undefined;
           notify(entry.key);
+          scheduleGc();
 
           return data;
         },
@@ -149,33 +205,32 @@ export function createQueryCache(options?: { signal?: AbortSignal; staleTime?: n
     getSnapshot<T>(key: QueryKey): AsyncState<T> | null {
       return (entries.get(hash(key))?.snapshot as AsyncState<T> | undefined) ?? null;
     },
-    invalidate(prefix: readonly unknown[]): void {
+    invalidate(prefix: readonly unknown[], invalidateOptions?: { refetch?: boolean }): void {
+      const refetch = invalidateOptions?.refetch ?? false;
+      let invalidated = false;
+
       for (const entry of entries.values()) {
-        const matches =
-          prefix.length <= entry.key.length && prefix.every((atom, index) => hash(atom) === hash(entry.key[index]));
+        const matches = prefix.length <= entry.key.length && prefix.every((atom, index) => atom === entry.key[index]);
 
         if (matches) {
           if (entry.snapshot.status === 'success') entry.snapshot = { ...entry.snapshot, updatedAt: 0 };
 
           notify(entry.key);
+
+          if (refetch && entry.definition && !entry.promise) {
+            void fetchEntry(entry, true).catch(() => {
+              /* Error surfaces through cache snapshot; suppress unhandled rejection. */
+            });
+          }
+
+          invalidated = true;
         }
       }
+
+      if (invalidated) scheduleGc();
     },
     keys(): QueryKey[] {
       return [...entries.values()].map((entry) => entry.key);
-    },
-    refetchStale(): void {
-      for (const entry of entries.values()) {
-        if (!entry.definition || entry.snapshot.status !== 'success' || entry.snapshot.isFetching) continue;
-
-        const staleTime = entry.definition.staleTime ?? options?.staleTime ?? DEFAULT_STALE_TIME;
-
-        if (Date.now() - entry.snapshot.updatedAt >= staleTime) {
-          void fetchEntry(entry, true).catch(() => {
-            warn(`Failed to refetch stale query ${hash(entry.key)}.`);
-          });
-        }
-      }
     },
     set<T>(key: QueryKey, data: T, setOptions?: { updatedAt?: number }): void {
       const entry = entryFor(key);
@@ -188,6 +243,7 @@ export function createQueryCache(options?: { signal?: AbortSignal; staleTime?: n
         updatedAt: setOptions?.updatedAt ?? Date.now(),
       };
       notify(key);
+      scheduleGc();
     },
     subscribe(key: QueryKey, listener: () => void): Unsubscribe {
       const id = hash(key);
@@ -199,7 +255,10 @@ export function createQueryCache(options?: { signal?: AbortSignal; staleTime?: n
       return () => {
         keyListeners.delete(listener);
 
-        if (keyListeners.size === 0) listeners.delete(id);
+        if (keyListeners.size === 0) {
+          listeners.delete(id);
+          scheduleGc();
+        }
       };
     },
   };

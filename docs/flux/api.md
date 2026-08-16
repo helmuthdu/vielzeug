@@ -378,6 +378,8 @@ createChannel<T>(options?: ChannelOptions<T>): Channel<T>
 
 Creates imperative multicast boundary. Disposal completes subscribers.
 
+> **`initial` + `replay` interaction:** When `initial` is set and `replay` is omitted, `replay` defaults to `1` so the initial value is retained. Setting `replay: 0` with `initial` throws `RangeError` — the initial value would be immediately dropped.
+
 | Option | Type | Description |
 | --- | --- | --- |
 | `initial` | `T` | Optional initial replay value |
@@ -392,7 +394,7 @@ fromSignal<T>(source: Readable<T>): Stream<T>
 toSignal<T>(source: Stream<T>, options: ToSignalOptions<T>): SignalBinding<T>
 ```
 
-`fromSignal()` emits current value first. `toSignal()` preserves final value then disposes binding when source completes, errors, or supplied signal aborts.
+`fromSignal()` emits current value first. `toSignal()` preserves final value then disposes binding when source completes, errors, or supplied signal aborts. On source error, `toSignal()` calls `options.onError` if provided (otherwise logs via `console.error` in dev — in production the log is stripped and the error is silently swallowed), then disposes — the signal freezes at its last value. Pass `onError` to surface source errors in production builds.
 
 ### `@vielzeug/flux/courier`
 
@@ -462,6 +464,15 @@ type RetryOptions = { attempts: number; delay?: number | ((attempt: number) => n
 type ToArrayOptions = { maxItems: number; signal?: AbortSignal };
 type ValueOptions = { signal?: AbortSignal };
 type ChannelOptions<T> = { initial?: T; replay?: number };
+type ToSignalOptions<T> = { initial: T; onError?: (reason: unknown) => void; signal?: AbortSignal };
+type SignalBinding<T> = {
+  [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
+  readonly signal: Readable<T>;
+  readonly value: T;
+};
 ```
 
 ## Errors

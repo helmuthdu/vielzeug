@@ -30,8 +30,7 @@ effect(() => {
 
 /** Revalidates every cached order list after the mock API changes. */
 export function refreshOrders(): void {
-  courier.queries.invalidate(['orders']);
-  courier.queries.refetchStale();
+  courier.queries.invalidate(['orders'], { refetch: true });
 }
 
 const allOrdersKey = ['orders', 'all'] as const;

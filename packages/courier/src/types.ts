@@ -1,9 +1,4 @@
-export type QueryKeyAtom =
-  | string
-  | number
-  | boolean
-  | null
-  | { readonly [key: string]: string | number | boolean | null };
+export type QueryKeyAtom = string | number | boolean | null;
 export type QueryKey = readonly [QueryKeyAtom, ...QueryKeyAtom[]];
 export type Unsubscribe = () => void;
 
@@ -46,16 +41,19 @@ export type QueryCache = {
   fetch<T>(definition: QueryDefinition<T>, options?: { force?: boolean }): Promise<T>;
   get<T>(key: QueryKey): T | undefined;
   getSnapshot<T>(key: QueryKey): AsyncState<T> | null;
-  /** Invalidate all entries whose key starts with `prefix`. An empty prefix invalidates every entry. */
-  invalidate(prefix: readonly unknown[]): void;
+  /** Invalidate entries whose key starts with `prefix`. An empty prefix invalidates every entry.
+   *  When `refetch` is true, invalidated entries with a registered definition are refetched in the background. */
+  invalidate(prefix: readonly unknown[], options?: { refetch?: boolean }): void;
   keys(): QueryKey[];
-  refetchStale(): void;
   set<T>(key: QueryKey, data: T, options?: { updatedAt?: number }): void;
   subscribe(key: QueryKey, listener: () => void): Unsubscribe;
 };
 
 export type MutationContext = { readonly signal: AbortSignal };
 export type MutationOptions<T> = {
+  /** Cache key prefixes to invalidate (and refetch) after a successful write. Replaces manual
+   *  `invalidate()` + `refetchStale()` calls in `onSuccess`. */
+  invalidateKeys?: readonly (readonly unknown[])[];
   onSuccess?: (data: T, queries: QueryCache) => void | Promise<void>;
   request: (context: MutationContext) => Promise<T>;
   signal?: AbortSignal;

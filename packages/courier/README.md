@@ -49,9 +49,8 @@ await client.queries.fetch({
 
 const nextUser = await client.mutate({
   request: ({ signal }) => client.post<User>('/users', { body: { name: 'Alice' }, signal }),
+  invalidateKeys: [['users']],
 });
-client.queries.set(['users', nextUser.id], nextUser);
-client.queries.invalidate(['users']);
 ```
 
 ## Documentation

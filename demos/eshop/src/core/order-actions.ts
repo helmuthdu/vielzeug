@@ -47,8 +47,8 @@ export async function attemptPlaceOrder(order: Order): Promise<Order | null> {
 
   try {
     const placed = await courier.mutate({
+      invalidateKeys: [['orders']],
       onSuccess: (placedOrder) => {
-        refreshOrders();
         bus.emit('order:placed', { orderId: placedOrder.id });
       },
       request: () => placeOrderRequest(order),

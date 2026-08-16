@@ -43,7 +43,7 @@ await courier.patch('/posts/{id}', {
 });
 ```
 
-Call `courier.headers({ authorization: 'Bearer token' })` to update subsequent calls.
+Call `courier.setHeaders({ authorization: 'Bearer token' })` to update subsequent calls.
 
 ## Interceptors
 
@@ -60,13 +60,20 @@ removeRequestId();
 removeAuth();
 ```
 
-Use `withLogging()` to create a logging-enabled client during local
-development. `withLogging()` includes full URLs, so sanitize query values before persistent logging.
+Use `withLogging()` with an explicit `logger` function to log requests during local development. `withLogging()`
+includes full URLs, so sanitize query values before persistent logging.
+
+```ts
+import { withLogging } from '@vielzeug/courier';
+
+courier.use(withLogging({ logger: (msg) => console.log(msg) }));
+```
 
 ## Cached Queries
 
 Pass a stable key and fetch definition to `queries.fetch()`. The cache owns data, snapshots, subscriptions, and
-in-flight deduplication for that key.
+in-flight deduplication for that key. Entries with no subscribers are garbage-collected after `gcTime` (default
+5 min; `Infinity` disables).
 
 ```ts
 const key = ['profile', 1] as const;
@@ -87,24 +94,23 @@ stop();
 ```
 
 `queries.fetch(definition)` reuses fresh data. Pass `{ force: true }` to fetch regardless of freshness.
-`invalidate(prefix)` marks matching key prefixes stale but does not fetch. Call `queries.refetchStale()` when visible data
-must refresh now.
+`invalidate(prefix, { refetch: true })` marks matching key prefixes stale and refetches them in the background
+in a single call.
 
 ## Direct Mutations
 
-Use `mutate()` for a write operation and update the cache in `onSuccess`. Courier never retries writes: retry
-only operations your application can prove idempotent.
+Use `mutate()` for a write operation. Pass `invalidateKeys` to invalidate and refetch cache entries after a
+successful write — no manual `invalidate()` + refetch boilerplate. Use `onSuccess` for custom cache writes
+(e.g. seeding a created entity). Courier never retries writes: retry only operations your application can prove
+idempotent.
 
 ```ts
 type User = { id: number; name: string };
 
-const created = await courier.mutate({
+const created = await courier.mutate<User>({
   request: ({ signal }) => courier.post<User>('/users', { body: { name: 'Ada' }, signal }),
-  onSuccess: (user, queries) => {
-    queries.set(['users', user.id], user);
-    queries.invalidate(['users']);
-    queries.refetchStale();
-  },
+  onSuccess: (user, queries) => queries.set(['users', user.id], user),
+  invalidateKeys: [['users']],
 });
 
 console.log(created.id);
@@ -237,21 +243,18 @@ Use Flux when cache snapshots or SSE events need filtering, composition, or subs
 UI framework. Pass cache and query definition to `fromQuery()`.
 
 ```ts
-import { fromQuery, fromSse } from '@vielzeug/flux/courier';
+import { fromQuery } from '@vielzeug/flux/courier';
 
 const profile = {
   key: ['profile'] as const,
   fetch: ({ signal }: { signal: AbortSignal }) => courier.get<{ id: number; name: string }>('/profile', { signal }),
 };
 const profile$ = fromQuery(courier.queries, profile);
-const notifications$ = fromSse(courier.events<{ text: string }>('/events'), 'message');
 
 void courier.queries.fetch(profile);
 
 const profileSubscription = profile$.subscribe((state) => console.log(state?.status));
-const notificationSubscription = notifications$.subscribe((notification) => console.log(notification.text));
 
-notificationSubscription.unsubscribe();
 profileSubscription.unsubscribe();
 ```
 
@@ -280,7 +283,7 @@ unsubscribe();
 - Create one Courier client per application or SSR request scope.
 - Use stable, complete cache keys for every cached response identity.
 - Fetch through `queries.fetch()` when work should deduplicate and cache.
-- Invalidate keys after writes, then refetch stale visible data when needed.
+- Use `invalidateKeys` on mutations to refetch affected cache entries in one step.
 - Keep retries outside mutations until operation idempotency is proven.
 - Dispose only at final application or request boundary.
 - Keep credentials out of URLs when using logging interceptors.

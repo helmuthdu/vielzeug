@@ -31,19 +31,29 @@ describe('Courier query cache', () => {
     expect(courier.queries.get(['status'])).toBe('next');
   });
 
-  it('marks an exact key and descendants stale before refetching them', async () => {
+  it('invalidates and refetches matching entries in one call', async () => {
     const courier = createCourier({ query: { staleTime: 60_000 } });
     const user = { fetch: vi.fn(async () => 'user'), key: ['users', 1] as const };
     const posts = { fetch: vi.fn(async () => 'posts'), key: ['users', 1, 'posts'] as const };
 
     await Promise.all([courier.queries.fetch(user), courier.queries.fetch(posts)]);
-    courier.queries.invalidate(['users', 1]);
-    courier.queries.refetchStale();
+    courier.queries.invalidate(['users', 1], { refetch: true });
 
     await vi.waitFor(() => {
       expect(user.fetch).toHaveBeenCalledTimes(2);
       expect(posts.fetch).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it('invalidates without refetching when refetch is false', async () => {
+    const courier = createCourier({ query: { staleTime: 60_000 } });
+    const user = { fetch: vi.fn(async () => 'user'), key: ['users', 1] as const };
+
+    await courier.queries.fetch(user);
+    courier.queries.invalidate(['users', 1]);
+
+    expect(user.fetch).toHaveBeenCalledOnce();
+    expect(courier.queries.getSnapshot(['users', 1])?.updatedAt).toBe(0);
   });
 
   it('clears cached snapshots without retaining handle state', () => {
@@ -87,5 +97,47 @@ describe('Courier query cache', () => {
     await expect(courier.queries.fetch({ fetch: async () => 'never', key: ['disposed-query'] })).rejects.toBeInstanceOf(
       CourierDisposedError,
     );
+  });
+
+  it('garbage-collects entries with no subscribers after gcTime', async () => {
+    const courier = createCourier({ query: { gcTime: 50 } });
+    const key = ['temp'] as const;
+
+    courier.queries.set(key, 'data');
+    expect(courier.queries.get(key)).toBe('data');
+
+    await vi.waitFor(() => {
+      expect(courier.queries.get(key)).toBeUndefined();
+      expect(courier.queries.keys()).toEqual([]);
+    });
+  });
+
+  it('does not garbage-collect entries with active subscribers', async () => {
+    const courier = createCourier({ query: { gcTime: 50 } });
+    const key = ['retained'] as const;
+
+    courier.queries.set(key, 'data');
+    const stop = courier.queries.subscribe(key, () => {});
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(courier.queries.get(key)).toBe('data');
+
+    stop();
+
+    await vi.waitFor(() => {
+      expect(courier.queries.get(key)).toBeUndefined();
+    });
+  });
+
+  it('disables GC when gcTime is Infinity', async () => {
+    const courier = createCourier({ query: { gcTime: Number.POSITIVE_INFINITY } });
+    const key = ['persisted'] as const;
+
+    courier.queries.set(key, 'data');
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(courier.queries.get(key)).toBe('data');
   });
 });
