@@ -1,5 +1,17 @@
 import type { AnimationGroup, AnimationHandle, AnimationResult } from './types';
 
+/**
+ * Attaches an abort listener to a signal and returns a function that removes it.
+ * When the signal aborts, calls the dispose function with the signal's reason.
+ */
+function attachAbortSignalListener(signal: AbortSignal, dispose: (reason?: unknown) => void): () => void {
+  const abort = () => dispose(signal.reason);
+
+  signal.addEventListener('abort', abort, { once: true });
+
+  return () => signal.removeEventListener('abort', abort);
+}
+
 function createResultPromise(animation: Animation, onSettled: () => void, reduced: boolean): Promise<AnimationResult> {
   return animation.finished.then(
     () => {
@@ -49,10 +61,7 @@ export function createAnimationHandle(animation: Animation, signal?: AbortSignal
   };
 
   if (signal) {
-    const abort = () => dispose(signal.reason);
-
-    signal.addEventListener('abort', abort, { once: true });
-    removeAbortListener = () => signal.removeEventListener('abort', abort);
+    removeAbortListener = attachAbortSignalListener(signal, dispose);
   }
 
   return {
@@ -92,10 +101,7 @@ export function createAnimationGroup(handles: readonly AnimationHandle[], signal
   };
 
   if (signal) {
-    const abort = () => dispose(signal.reason);
-
-    signal.addEventListener('abort', abort, { once: true });
-    removeAbortListener = () => signal.removeEventListener('abort', abort);
+    removeAbortListener = attachAbortSignalListener(signal, dispose);
   }
 
   return {
