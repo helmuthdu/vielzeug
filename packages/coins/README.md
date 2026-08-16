@@ -33,7 +33,6 @@ import {
   EUR,
   USD,
   allocate,
-  decimal,
   exchange,
   exchangeRate,
   format,
@@ -44,7 +43,7 @@ import {
 } from '@vielzeug/coins';
 
 const items = [money('12.50', USD), money('7.25', USD)];
-const subtotal = sum(items, { currency: USD });
+const subtotal = sum(items);
 const total = multiply(subtotal, '1.08', { rounding: 'halfEven' });
 const shares = allocate(total, 3);
 
@@ -53,7 +52,6 @@ const eurTotal = exchange(total, usdToEur, { rounding: 'halfEven' });
 
 console.log(format(eurTotal, { locale: 'de-DE' }));
 console.log(shares.map(toDecimal));
-console.log(decimal('1.075'));
 ```
 
 ## Currency Definitions
@@ -77,10 +75,10 @@ All failures extend `CoinsError` and expose `code`.
 import { CoinsError, money, USD } from '@vielzeug/coins';
 
 try {
-  money(100n, USD);
+  money('19.999', USD);
 } catch (error) {
   if (error instanceof CoinsError && error.code === 'INVALID_MONEY') {
-    // Bigint construction requires { unit: 'minor' }.
+    // Over-precise decimal requires a rounding mode.
   }
 }
 ```

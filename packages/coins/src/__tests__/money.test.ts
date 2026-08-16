@@ -4,7 +4,6 @@ import {
   add,
   CoinsError,
   compare,
-  decimal,
   divide,
   EUR,
   JPY,
@@ -54,19 +53,11 @@ describe('money', () => {
     expect(() => add(money('1', USD), { amount: 100n, currency: USD } as never)).toThrow(/canonical/);
   });
 
-  it('normalizes and bounds exact decimals', () => {
-    expect(decimal('1.0750')).toMatchObject({ denominator: 40n, numerator: 43n });
-    expect(decimal('-0.00')).toMatchObject({ denominator: 1n, numerator: 0n });
-    expect(() => decimal('1e3')).toThrow(/Invalid decimal/);
-    expect(() => decimal(`0.${'1'.repeat(101)}`)).toThrow(/precision/);
-    expect(() => decimal('1'.repeat(1001))).toThrow(/too long/);
-  });
-
   it('canonicalizes parsed values and rejects accessors', () => {
     const parsed = parseMoney({ amount: 1n, currency: USD });
 
     expect(Object.isFrozen(parsed)).toBe(true);
     expect(() => parseMoney(Object.defineProperty({ currency: USD }, 'amount', { get: () => 1n }))).toThrow(/data/);
-    expect(CoinsError.is(new CoinsError('INVALID_MONEY', 'bad'))).toBe(true);
+    expect(new CoinsError('INVALID_MONEY', 'bad') instanceof CoinsError).toBe(true);
   });
 });

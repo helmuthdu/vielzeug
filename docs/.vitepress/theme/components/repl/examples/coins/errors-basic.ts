@@ -2,7 +2,7 @@ export const errorsBasicExample = {
   code: `import { CoinsError, USD, money } from '@vielzeug/coins'
 
 try {
-  money(1999n, USD)
+  money('19.999', USD)
 } catch (error) {
   if (error instanceof CoinsError) {
     console.log(error.code)

@@ -1,6 +1,7 @@
 export type CoinsErrorCode =
   | 'CURRENCY_MISMATCH'
   | 'DIVISION_BY_ZERO'
+  | 'FORMAT_ERROR'
   | 'INVALID_ALLOCATION'
   | 'INVALID_CURRENCY'
   | 'INVALID_DECIMAL'
@@ -9,10 +10,6 @@ export type CoinsErrorCode =
 
 export class CoinsError extends Error {
   readonly code: CoinsErrorCode;
-
-  static is(error: unknown): error is CoinsError {
-    return error instanceof CoinsError;
-  }
 
   constructor(code: CoinsErrorCode, message: string, options?: ErrorOptions) {
     super(message, options);

@@ -18,7 +18,7 @@ const total = money('10.00', USD);
 const shares = allocate(total, ['1', '2', '1']);
 
 console.log(shares.map(toDecimal));
-console.log(toDecimal(sum(shares, { currency: USD })));
+console.log(toDecimal(sum(shares)));
 ```
 
 ### Pitfalls

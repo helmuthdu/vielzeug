@@ -1,21 +1,29 @@
 import { decimal, lcm } from './decimal';
 import { CoinsError, CurrencyMismatchError } from './errors';
-import { compare, isMoney, withMinor } from './money';
+import { isMoney, withMinor } from './money';
 import type { Currency, Money } from './types';
 
-export function sum<C extends Currency>(values: Iterable<Money<C>>, options: { currency: C }): Money<C> {
+export function sum<C extends Currency>(values: readonly Money<C>[]): Money<C>;
+export function sum<C extends Currency>(values: Iterable<Money<C>>, options: { currency: C }): Money<C>;
+export function sum<C extends Currency>(values: Iterable<Money<C>>, options?: { currency: C }): Money<C> {
   let amount = 0n;
+  let currency: C | undefined = options?.currency;
 
   for (const value of values) {
     if (!isMoney(value)) throw new CoinsError('INVALID_MONEY', 'sum() requires canonical money values');
 
-    if (value.currency !== options.currency)
-      throw new CurrencyMismatchError(options.currency.code, value.currency.code);
+    if (currency === undefined) {
+      currency = value.currency;
+    } else if (value.currency !== currency) {
+      throw new CurrencyMismatchError(currency.code, value.currency.code);
+    }
 
     amount += value.amount;
   }
 
-  return withMinor(amount, options.currency);
+  if (currency === undefined) throw new CoinsError('INVALID_MONEY', 'sum() of empty iterable requires { currency }');
+
+  return withMinor(amount, currency);
 }
 
 export function allocate<C extends Currency>(value: Money<C>, count: number): Money<C>[];
@@ -58,17 +66,6 @@ export function allocate<C extends Currency>(value: Money<C>, weightsOrCount: nu
   }
 
   return shares.map((amount) => withMinor(amount * sign, value.currency));
-}
-
-export function clamp<C extends Currency>(
-  value: Money<C>,
-  options: { max: Money<NoInfer<C>>; min: Money<NoInfer<C>> },
-): Money<C> {
-  if (compare(options.min, options.max) === 1) {
-    throw new CoinsError('INVALID_ALLOCATION', 'Clamp minimum cannot exceed maximum');
-  }
-
-  return compare(value, options.min) === -1 ? options.min : compare(value, options.max) === 1 ? options.max : value;
 }
 
 function allocateEvenly<C extends Currency>(value: Money<C>, countValue: number): Money<C>[] {

@@ -21,7 +21,6 @@ describe('public API', () => {
       'clamp',
       'compare',
       'currency',
-      'decimal',
       'defineCurrency',
       'divide',
       'exchange',

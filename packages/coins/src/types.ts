@@ -31,6 +31,7 @@ export type FormatOptions = Readonly<{
   locale?: string;
   maximumFractionDigits?: number;
   minimumFractionDigits?: number;
+  rounding?: RoundingMode;
   style?: 'code' | 'name' | 'narrowSymbol' | 'symbol';
 }>;
 

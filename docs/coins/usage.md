@@ -59,12 +59,13 @@ console.log(toDecimal(split), toDecimal(displayed));
 
 ## Aggregate and Allocate
 
-`sum` receives currency context, so empty collections produce a useful zero. `allocate` preserves every minor unit.
+`sum` infers currency from non-empty values. Pass `{ currency }` only for possibly empty collections. `allocate` preserves every minor unit.
 
 ```ts
 import { USD, allocate, money, sum, toDecimal } from '@vielzeug/coins';
 
-const total = sum([], { currency: USD });
+const total = sum([money('10.00', USD), money('5.00', USD)]);
+const zero = sum([], { currency: USD });
 const weighted = allocate(money('10.00', USD), ['1', '2', '1']);
 const even = allocate(money(5n, USD, { unit: 'minor' }), 2);
 
@@ -108,10 +109,10 @@ Use `CoinsError.code` for stable recovery branches.
 import { CoinsError, USD, money } from '@vielzeug/coins';
 
 try {
-  money(1999n, USD);
+  money('19.999', USD);
 } catch (error) {
   if (error instanceof CoinsError && error.code === 'INVALID_MONEY') {
-    console.log('Use { unit: \'minor\' } for bigint amounts.');
+    console.log('Over-precise decimal requires a rounding mode.');
   }
 }
 ```
@@ -122,6 +123,6 @@ try {
 - Use bigint only with `{ unit: 'minor' }`.
 - Pass named rounding options for division, scaling, and exchange.
 - Keep currency definitions at application boundaries.
-- Use `sum(values, { currency })` for possibly empty collections.
+- Use `sum(values)` for non-empty collections; `sum(values, { currency })` for possibly empty ones.
 - Serialize with `toJSON` and validate with `parseMoneyJSON`.
 - Format only at presentation boundaries.

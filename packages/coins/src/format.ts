@@ -1,9 +1,10 @@
 import { roundDivision } from './decimal';
 import { CoinsError } from './errors';
 import { isMoney } from './money';
-import type { FormatOptions, Money, MoneyFormatPart } from './types';
+import type { FormatOptions, Money, MoneyFormatPart, RoundingMode } from './types';
 
 const MAX_FRACTION_DIGITS = 20;
+const defaultFormatRounding: RoundingMode = 'halfAwayFromZero';
 const integerFormatters = new Map<string, Intl.NumberFormat>();
 const templates = new Map<string, Intl.NumberFormatPart[]>();
 
@@ -20,6 +21,7 @@ export function formatParts(value: Money, options: FormatOptions = {}): MoneyFor
     locale = 'en-US',
     maximumFractionDigits = value.currency.minorUnit,
     minimumFractionDigits = value.currency.minorUnit,
+    rounding = defaultFormatRounding,
     style = 'symbol',
   } = options;
 
@@ -29,11 +31,7 @@ export function formatParts(value: Money, options: FormatOptions = {}): MoneyFor
   const scaled =
     maximumFractionDigits >= value.currency.minorUnit
       ? value.amount * 10n ** BigInt(maximumFractionDigits - value.currency.minorUnit)
-      : roundDivision(
-          value.amount,
-          10n ** BigInt(value.currency.minorUnit - maximumFractionDigits),
-          'halfAwayFromZero',
-        );
+      : roundDivision(value.amount, 10n ** BigInt(value.currency.minorUnit - maximumFractionDigits), rounding);
   const negative = scaled < 0n;
   const absolute = negative ? -scaled : scaled;
   const integer = absolute / targetScale;
@@ -78,7 +76,7 @@ function validateFractionDigits(minimum: number, maximum: number): void {
     maximum > MAX_FRACTION_DIGITS
   ) {
     throw new CoinsError(
-      'INVALID_ROUNDING',
+      'FORMAT_ERROR',
       `Fraction digits must be integers satisfying 0 ≤ minimum ≤ maximum ≤ ${MAX_FRACTION_DIGITS}`,
     );
   }
@@ -108,7 +106,7 @@ function getTemplate(
 
     return template;
   } catch (error) {
-    throw new CoinsError('INVALID_CURRENCY', `Cannot format currency "${currency}" for locale "${locale}"`, {
+    throw new CoinsError('FORMAT_ERROR', `Cannot format currency "${currency}" for locale "${locale}"`, {
       cause: error,
     });
   }
@@ -126,6 +124,6 @@ function getIntegerFormatter(locale: string): Intl.NumberFormat {
 
     return formatter;
   } catch (error) {
-    throw new CoinsError('INVALID_ROUNDING', `Cannot create number formatter for locale "${locale}"`, { cause: error });
+    throw new CoinsError('FORMAT_ERROR', `Cannot create number formatter for locale "${locale}"`, { cause: error });
   }
 }

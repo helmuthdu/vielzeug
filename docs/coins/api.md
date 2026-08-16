@@ -14,8 +14,9 @@ description: Exact money, currency definitions, exchange, formatting, serializat
 | `defineCurrency` | Define an explicit scale | Sync | Code must be three uppercase letters |
 | `add` / `subtract` | Combine matching currencies | Sync | Mismatches throw |
 | `multiply` / `divide` | Exact decimal scaling | Sync | Use decimal strings |
-| `sum` | Aggregate with identity currency | Sync | Pass `{ currency }` |
+| `sum` | Aggregate with inferred currency | Sync | Empty iterable requires `{ currency }` |
 | `allocate` | Split without losing minor units | Sync | Weights must be non-negative |
+| `clamp` | Bound to min/max range | Sync | Min must not exceed max |
 | `exchange` | Convert through an exact rate | Sync | Rate source must match value currency |
 | `format` | Present money with `Intl` | Sync | Formatting does not define currency scale |
 | `toJSON` / `parseMoneyJSON` | Cross JSON boundary | Sync | Persisted amount uses minor units |
@@ -50,14 +51,6 @@ money('19.99', USD);
 money(1999n, USD, { unit: 'minor' });
 ```
 
-### decimal
-
-```ts
-decimal(value: string): Decimal
-```
-
-Creates an exact rational value for multiplication, division, or exchange rates.
-
 ## Arithmetic
 
 ```ts
@@ -66,6 +59,7 @@ subtract(left, right)
 multiply(value, factor, { rounding? })
 divide(value, divisor, { rounding? })
 compare(left, right)
+clamp(value, { min, max })
 abs(value)
 negate(value)
 round(value, { fractionDigits, rounding? })
@@ -76,13 +70,13 @@ round(value, { fractionDigits, rounding? })
 ## Aggregation
 
 ```ts
+sum(values)
 sum(values, { currency })
 allocate(value, count)
 allocate(value, weights)
-clamp(value, { min, max })
 ```
 
-`sum([], { currency: USD })` returns zero USD. `allocate` returns values whose minor-unit total exactly equals input.
+`sum` infers currency from non-empty values. `sum([], { currency: USD })` returns zero USD. `allocate` returns values whose minor-unit total exactly equals input.
 
 ## Exchange
 
@@ -103,7 +97,7 @@ format(value, options?): string
 formatParts(value, options?): MoneyFormatPart[]
 ```
 
-`FormatOptions` uses `locale`, `style`, `minimumFractionDigits`, and `maximumFractionDigits`.
+`FormatOptions` uses `locale`, `style`, `rounding`, `minimumFractionDigits`, and `maximumFractionDigits`.
 
 ## Serialization
 
@@ -135,6 +129,7 @@ Every Coins failure extends `CoinsError` and exposes `code`.
 - `INVALID_MONEY`
 - `INVALID_ALLOCATION`
 - `INVALID_ROUNDING`
+- `FORMAT_ERROR`
 - `DIVISION_BY_ZERO`
 - `CURRENCY_MISMATCH`
 

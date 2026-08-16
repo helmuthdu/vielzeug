@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { EUR, format, formatParts, JPY, money, USD } from '../index';
+import { CoinsError, EUR, format, formatParts, JPY, money, USD } from '../index';
 
 describe('format', () => {
   it('formats bigint-backed values without number conversion', () => {
@@ -28,11 +28,36 @@ describe('format', () => {
     expect(format(money('100.99', USD), { maximumFractionDigits: 0, minimumFractionDigits: 0 })).toBe('$101');
   });
 
+  it('honors rounding mode for visible digit rounding', () => {
+    const value = money('2.05', USD);
+
+    expect(format(value, { maximumFractionDigits: 1, minimumFractionDigits: 1, rounding: 'halfEven' })).toBe('$2.0');
+    expect(format(value, { maximumFractionDigits: 1, minimumFractionDigits: 1, rounding: 'halfAwayFromZero' })).toBe(
+      '$2.1',
+    );
+  });
+
   it('bounds fraction digits before bigint or Intl work', () => {
     expect(() => format(money('1', USD), { maximumFractionDigits: 21 })).toThrow(/maximum ≤ 20/);
   });
 
-  it('normalizes invalid locale failures into CoinsError', () => {
-    expect(() => format(money('1', USD), { locale: 'not_a_locale' })).toThrow(/Cannot/);
+  it('reports FORMAT_ERROR for invalid fraction digits', () => {
+    try {
+      format(money('1', USD), { maximumFractionDigits: 21 });
+      throw new Error('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(CoinsError);
+      expect((error as CoinsError).code).toBe('FORMAT_ERROR');
+    }
+  });
+
+  it('reports FORMAT_ERROR for invalid locale', () => {
+    try {
+      format(money('1', USD), { locale: 'not_a_locale' });
+      throw new Error('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(CoinsError);
+      expect((error as CoinsError).code).toBe('FORMAT_ERROR');
+    }
   });
 });

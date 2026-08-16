@@ -103,20 +103,32 @@ export function divide<C extends Currency>(
 
   if (scalar.numerator === 0n) throw new CoinsError('DIVISION_BY_ZERO', 'Cannot divide money by zero');
 
-  return createMoney(
-    roundDivision(
-      value.amount * scalar.denominator,
-      scalar.numerator < 0n ? -scalar.numerator : scalar.numerator,
-      options.rounding ?? defaultRounding,
-    ) * (scalar.numerator < 0n ? -1n : 1n),
-    value.currency,
+  const negative = scalar.numerator < 0n;
+  const absoluteDivisor = negative ? -scalar.numerator : scalar.numerator;
+  const quotient = roundDivision(
+    value.amount * scalar.denominator,
+    absoluteDivisor,
+    options.rounding ?? defaultRounding,
   );
+
+  return createMoney(negative ? -quotient : quotient, value.currency);
 }
 
 export function compare<C extends Currency>(left: Money<C>, right: Money<NoInfer<C>>): -1 | 0 | 1 {
   assertSameCurrency(left, right);
 
   return left.amount === right.amount ? 0 : left.amount < right.amount ? -1 : 1;
+}
+
+export function clamp<C extends Currency>(
+  value: Money<C>,
+  options: { max: Money<NoInfer<C>>; min: Money<NoInfer<C>> },
+): Money<C> {
+  if (compare(options.min, options.max) === 1) {
+    throw new CoinsError('INVALID_MONEY', 'Clamp minimum cannot exceed maximum');
+  }
+
+  return compare(value, options.min) === -1 ? options.min : compare(value, options.max) === 1 ? options.max : value;
 }
 
 export function abs<C extends Currency>(value: Money<C>): Money<C> {

@@ -31,8 +31,16 @@ describe('currency definitions', () => {
 });
 
 describe('aggregation', () => {
-  it('returns currency-aware zero for empty values', () => {
+  it('returns currency-aware zero for empty values with explicit currency', () => {
     expect(sum([], { currency: USD })).toMatchObject({ amount: 0n, currency: USD });
+  });
+
+  it('infers currency from non-empty values', () => {
+    expect(sum([money('1', USD), money('2', USD)])).toMatchObject({ amount: 300n, currency: USD });
+  });
+
+  it('throws on empty iterable without currency', () => {
+    expect(() => sum([])).toThrow(/empty/);
   });
 
   it('allocates every minor unit exactly and sign-symmetrically', () => {
@@ -41,7 +49,7 @@ describe('aggregation', () => {
 
     expect(positive.map((value) => value.amount)).toEqual([2n, 3n, 2n]);
     expect(negative.map((value) => value.amount)).toEqual([-2n, -3n, -2n]);
-    expect(sum(negative, { currency: USD }).amount).toBe(-7n);
+    expect(sum(negative).amount).toBe(-7n);
   });
 
   it('uses count allocation and explicit clamp bounds', () => {
@@ -50,8 +58,12 @@ describe('aggregation', () => {
     expect(toDecimal(clamp(money('12', USD), { max: money('10', USD), min: money('0', USD) }))).toBe('10.00');
   });
 
+  it('rejects clamp min exceeding max with INVALID_MONEY', () => {
+    expect(() => clamp(money('5', USD), { max: money('0', USD), min: money('10', USD) })).toThrow(/exceed/);
+  });
+
   it('rejects mixed-currency aggregates', () => {
-    expect(() => sum([money('1', USD), money('1', EUR) as never], { currency: USD })).toThrow(/Currency mismatch/);
+    expect(() => sum([money('1', USD), money('1', EUR) as never])).toThrow(/Currency mismatch/);
   });
 });
 
