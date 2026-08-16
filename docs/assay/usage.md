@@ -50,7 +50,7 @@ fireInput(input);
 
 fireKeyDown(input, { key: 'Enter' });
 fireClick(saveButton);
-fireCustom(panel, { detail: { value: 42 }, type: 'value-change' });
+fireCustom(panel, 'value-change', { detail: { value: 42 } });
 ```
 
 Every helper returns `dispatchEvent()`'s boolean result. `dispatch(target, event)` is available when an existing

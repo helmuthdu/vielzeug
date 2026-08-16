@@ -12,11 +12,7 @@ export const fireChange = (target: EventTarget, init: EventInit = {}): boolean =
 export const fireClick = (target: EventTarget, init: MouseEventInit = {}): boolean =>
   dispatch(target, new MouseEvent('click', { bubbles: true, cancelable: true, ...init }));
 
-export interface CustomEventOptions<T> extends CustomEventInit<T> {
-  type: string;
-}
-
-export const fireCustom = <T>(target: EventTarget, { type, ...init }: CustomEventOptions<T>): boolean =>
+export const fireCustom = <T>(target: EventTarget, type: string, init: CustomEventInit<T> = {}): boolean =>
   dispatch(target, new CustomEvent(type, { bubbles: true, cancelable: true, composed: false, ...init }));
 
 export const fireFocus = (target: EventTarget, init: FocusEventInit = {}): boolean =>

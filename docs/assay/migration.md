@@ -1,10 +1,43 @@
 ---
-title: Assay 2.0 Migration
+title: Assay Migration
 ---
 
-# Assay 2.0 Migration
+# Assay Migration
 
-Assay 2.0 replaces synthetic user interactions and duplicate query helpers with explicit event dispatch, scoped required queries, and cancellable waits.
+## Assay 2.0
+
+Assay 2.0 replaces synthetic user interactions and duplicate query helpers with explicit event dispatch, scoped required queries, cancellable waits, and removes the unused `AssayError.is()` type guard, and drops the dead `_dev.ts` module.
+
+### Pass the event type positionally to `fireCustom`
+
+`fireCustom` now takes the event type as its second positional argument, matching `addEventListener(target, type, options)` and the rest of the `fire*` family. The `CustomEventOptions` wrapper type is removed — use the platform `CustomEventInit` directly.
+
+```ts
+// Before
+import { fireCustom } from '@vielzeug/assay';
+
+fireCustom(element, { detail: { id: '42' }, type: 'item-added' });
+
+// After
+import { fireCustom } from '@vielzeug/assay';
+
+fireCustom(element, 'item-added', { detail: { id: '42' } });
+```
+
+### Replace `AssayError.is()` with `instanceof`
+
+The static `AssayError.is()` type guard is removed. Use `instanceof AssayError` to narrow unknown values to the Assay error hierarchy.
+
+```ts
+// Before
+if (AssayError.is(err)) { ... }
+
+// After
+if (err instanceof AssayError) { ... }
+```
+
+Review the [Usage Guide](./usage.md) and [API Reference](./api.md) for the 3.0 event, query, and wait contracts.
+
 
 ## Replace synthetic interactions
 

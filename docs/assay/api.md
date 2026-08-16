@@ -74,7 +74,7 @@ import {
 fireClick(button, { clientX: 20 });
 fireInput(input);
 fireKeyDown(input, { key: 'Enter' });
-fireCustom(element, { detail: { id: '42' }, type: 'item-added' });
+fireCustom(element, 'item-added', { detail: { id: '42' } });
 dispatch(element, new Event('ready'));
 ```
 
@@ -88,7 +88,7 @@ dispatch(element, new Event('ready'));
 | `fireSubmit`                | `SubmitEvent`   | `bubbles: true`, `cancelable: true`                    |
 | `fireCustom`                | `CustomEvent`   | `bubbles: true`, `cancelable: true`, `composed: false` |
 
-`fireCustom(target, { type, ...init })` requires the event type in its options object. Assay intentionally does not
+`fireCustom(target, type, init?)` dispatches a `CustomEvent` with the given type. Assay intentionally does not
 provide browser-default or fallback pointer/touch simulation.
 
 ## Async waiting
@@ -128,7 +128,7 @@ export interface QueryScope {
 }
 ```
 
-`CustomEventOptions`, `DelayOptions`, `RetryOptions`, and `WaitOptions` are exported option types for event and wait helpers.
+`CustomEventInit`, `DelayOptions`, `RetryOptions`, and `WaitOptions` are exported option types for event and wait helpers.
 
 ## Errors
 
@@ -138,4 +138,4 @@ export interface QueryScope {
 | `AssayQueryError`   | A required `get*` query had no match   |
 | `AssayTimeoutError` | A wait operation reached its timeout   |
 
-`AssayError.is(value)` narrows any value to the Assay error hierarchy.
+Use `instanceof AssayError` to narrow any value to the Assay error hierarchy.

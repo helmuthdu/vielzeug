@@ -86,7 +86,7 @@ describe('waitForEvent()', () => {
     const element = document.createElement('div');
     const promise = waitForEvent<CustomEvent>(element, 'my-event');
 
-    fireCustom(element, { detail: 42, type: 'my-event' });
+    fireCustom(element, 'my-event', { detail: 42 });
 
     const event = await promise;
 

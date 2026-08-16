@@ -61,17 +61,13 @@ export class PkgError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is PkgError {
-    return err instanceof PkgError;
-  }
 }
 
 export class PkgFooError extends PkgError {}
 ```
 
 - **MUST:** Define one `<Pkg>Error` base class; subtypes extend it, never `Error` directly.
-- **MUST:** Put `static is()` only on the base class.
+- **MUST:** Use `instanceof <Pkg>Error` to narrow unknown values to the package error hierarchy.
 - **MUST:** Use `opts?: ErrorOptions` for cause chaining.
 - **MUST:** Supply a meaningful error message; do not prefix messages with `[@vielzeug/<pkg>]`.
 - **MUST:** Export public error types from `src/index.ts`.

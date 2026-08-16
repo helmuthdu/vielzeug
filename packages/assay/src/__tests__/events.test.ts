@@ -76,7 +76,7 @@ describe('event dispatchers return dispatchEvent results', () => {
     const target = document.createElement('div');
 
     target.addEventListener('custom-event', (e) => e.preventDefault());
-    expect(fireCustom(target, { type: 'custom-event' })).toBe(false);
+    expect(fireCustom(target, 'custom-event')).toBe(false);
 
     target.addEventListener('ready', (e) => e.preventDefault());
     expect(dispatch(target, new Event('ready', { cancelable: true }))).toBe(false);
@@ -98,7 +98,7 @@ describe('fireCustom', () => {
     const handler = vi.fn();
 
     parent.addEventListener('cross-boundary', handler);
-    fireCustom(inner, { composed: true, type: 'cross-boundary' });
+    fireCustom(inner, 'cross-boundary', { composed: true });
 
     expect(handler).toHaveBeenCalledTimes(1);
 
@@ -116,7 +116,7 @@ describe('fireCustom', () => {
     const handler = vi.fn();
 
     parent.addEventListener('contained-event', handler);
-    fireCustom(inner, { type: 'contained-event' });
+    fireCustom(inner, 'contained-event');
 
     expect(handler).toHaveBeenCalledTimes(0);
 

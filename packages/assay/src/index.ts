@@ -1,7 +1,6 @@
 export { AssayError, AssayQueryError, AssayTimeoutError } from './errors';
 
 export {
-  type CustomEventOptions,
   dispatch,
   fireBlur,
   fireChange,
