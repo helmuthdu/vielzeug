@@ -47,13 +47,24 @@ The global shortcut (`mod+k` by default — `⌘K` on macOS, `Ctrl+K` elsewhere)
 
 Pass the `items` property for programmatically generated commands instead of (or in addition to) slotted `ore-command-palette-item` elements. The `items` property always takes precedence over slotted items when both are present.
 
+<ComponentPreview height="480px">
+
 ```html
+<ore-button id="open-btn">Open (⌘K / Ctrl+K)</ore-button>
+
 <ore-command-palette id="palette" label="Jump to…"></ore-command-palette>
 
 <script type="module">
   import '@vielzeug/refine/command-palette';
+  import '@vielzeug/refine/button';
 
-  document.getElementById('palette').items = [
+  const palette = document.getElementById('palette');
+
+  document.getElementById('open-btn').addEventListener('click', () => {
+    palette.setAttribute('open', '');
+  });
+
+  palette.items = [
     { value: 'dashboard', label: 'Go to Dashboard', group: 'Navigate' },
     { value: 'billing', label: 'Go to Billing', group: 'Navigate' },
     { value: 'invite', label: 'Invite Teammate', group: 'Actions', shortcut: '⌘+I' },
@@ -61,6 +72,8 @@ Pass the `items` property for programmatically generated commands instead of (or
   ];
 </script>
 ```
+
+</ComponentPreview>
 
 ## Groups and Icons
 
@@ -91,75 +104,134 @@ Items sharing a `group` value are clustered under a heading, in the order groups
 
 Set `disabled` on an item to keep it visible but skip it during keyboard navigation, typeahead-style filtering, and click selection.
 
+<ComponentPreview height="480px">
+
 ```html
-<ore-command-palette label="Command palette" open>
+<ore-button id="open-btn">Open (⌘K / Ctrl+K)</ore-button>
+
+<ore-command-palette id="palette" label="Command palette">
   <ore-command-palette-item value="export">Export Project</ore-command-palette-item>
   <ore-command-palette-item value="delete" disabled>Delete Project (no permission)</ore-command-palette-item>
 </ore-command-palette>
+
+<script type="module">
+  import '@vielzeug/refine/command-palette';
+  import '@vielzeug/refine/button';
+
+  document.getElementById('open-btn').addEventListener('click', () => {
+    document.getElementById('palette').setAttribute('open', '');
+  });
+</script>
 ```
+
+</ComponentPreview>
 
 ## Keeping the Palette Open
 
 By default, selecting an item closes the palette. Set `keep-open-on-select` for commands the user might invoke repeatedly (e.g. inserting several snippets in a row) — the search input is refocused after each selection.
 
+<ComponentPreview height="480px">
+
 ```html
-<ore-command-palette label="Insert snippet" keep-open-on-select open>
+<ore-button id="open-btn">Open (⌘K / Ctrl+K)</ore-button>
+
+<ore-command-palette id="palette" label="Insert snippet" keep-open-on-select>
   <ore-command-palette-item value="snippet-1">Insert "Hello world"</ore-command-palette-item>
   <ore-command-palette-item value="snippet-2">Insert date stamp</ore-command-palette-item>
 </ore-command-palette>
+
+<script type="module">
+  import '@vielzeug/refine/command-palette';
+  import '@vielzeug/refine/button';
+
+  document.getElementById('open-btn').addEventListener('click', () => {
+    document.getElementById('palette').setAttribute('open', '');
+  });
+</script>
 ```
+
+</ComponentPreview>
 
 ## Custom Shortcut, Filtering, and Empty State
 
 Override the global shortcut with `shortcut`, or set it to an empty string to disable the built-in trigger entirely and open the palette from your own UI instead. Use `no-filter` when `items` is already filtered server-side, and `empty-text` to customize the no-results message.
 
+<ComponentPreview height="480px">
+
 ```html
-<ore-command-palette id="search-palette" label="Search" shortcut="mod+shift+p" empty-text="No commands match." loading>
-</ore-command-palette>
+<ore-button id="open-btn">Open (Ctrl+Shift+P)</ore-button>
+
+<ore-command-palette id="search-palette" label="Search" shortcut="mod+shift+p" empty-text="No commands match."></ore-command-palette>
 
 <script type="module">
   import '@vielzeug/refine/command-palette';
+  import '@vielzeug/refine/button';
 
   const palette = document.getElementById('search-palette');
 
+  document.getElementById('open-btn').addEventListener('click', () => {
+    palette.setAttribute('open', '');
+  });
+
   palette.addEventListener('search', async (e) => {
     palette.setAttribute('loading', '');
-    palette.items = await fetchResults(e.detail.query);
+    // Simulate async fetch
+    await new Promise(r => setTimeout(r, 500));
+    palette.items = [
+      { value: 'cmd-1', label: 'Sample result for: ' + e.detail.query },
+      { value: 'cmd-2', label: 'Another match for: ' + e.detail.query },
+    ];
     palette.removeAttribute('loading');
   });
 </script>
 ```
 
+</ComponentPreview>
+
 Set `no-filter` on this pattern once results come back already scoped to the query — otherwise the built-in client-side filter runs again on top of the server response.
 
 ## Listening to Events
 
+<ComponentPreview height="480px" vertical>
+
 ```html
+<ore-button id="open-btn">Open (⌘K / Ctrl+K)</ore-button>
+
 <ore-command-palette id="palette" label="Command palette">
   <ore-command-palette-item value="new-file">New File</ore-command-palette-item>
   <ore-command-palette-item value="open-file">Open File…</ore-command-palette-item>
 </ore-command-palette>
 
+<ore-box id="log" style="margin-top: 1rem; font-family: monospace; font-size: 0.875rem; max-height: 200px; overflow-y: auto;"></ore-box>
+
 <script type="module">
   import '@vielzeug/refine/command-palette';
+  import '@vielzeug/refine/button';
 
   const palette = document.getElementById('palette');
+  const log = document.getElementById('log');
 
-  // Fired when a command is chosen (click or Enter)
-  palette.addEventListener('select', (e) => {
-    console.log('selected:', e.detail.value, e.detail.label);
+  document.getElementById('open-btn').addEventListener('click', () => {
+    palette.setAttribute('open', '');
   });
 
-  // Fired on every keystroke in the search input
+  palette.addEventListener('select', (e) => {
+    const msg = `Selected: ${e.detail.value} (${e.detail.label})`;
+    console.log(msg);
+    log.innerHTML += msg + '<br/>';
+  });
+
   palette.addEventListener('search', (e) => {
-    console.log('query:', e.detail.query);
+    console.log('search:', e.detail.query);
   });
 
   palette.addEventListener('open-change', (e) => {
-    console.log('palette open:', e.detail.open, e.detail.reason);
+    console.log('open:', e.detail.open);
   });
 </script>
 ```
+
+</ComponentPreview>
 
 Use `value` in a single `select` listener to dispatch commands rather than wiring per-item click handlers.
 
