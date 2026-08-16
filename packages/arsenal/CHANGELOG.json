@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove ArsenalError.is() type guard; use instanceof ArsenalError. Export abortable from async subpath. Remove side effect from cache.size getter. Simplify backoff to 2 ** n. Replace Reflect.apply in pipe with direct call.",
+            "commit": "a009872de689778d4cbc5b08e1e96c6b422ab422"
+          }
+        ]
+      },
+      "date": "Sun, 16 Aug 2026 09:15:39 GMT",
+      "tag": "@vielzeug/arsenal_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

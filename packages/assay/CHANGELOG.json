@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove AssayError.is() static type guard (use instanceof AssayError); delete dead _dev.ts (warnOnce/_resetWarnings had zero callers); change fireCustom signature from (target, { type, ...init }) to (target, type, init?) matching fire* family and addEventListener convention; remove CustomEventOptions type (use platform CustomEventInit); sync package.json description with .ai/data/packages.json",
+            "commit": "7c718e5d2c50d6879619c08854684c2b248c02cc"
+          }
+        ]
+      },
+      "date": "Sun, 16 Aug 2026 09:15:39 GMT",
+      "tag": "@vielzeug/assay_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

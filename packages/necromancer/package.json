@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/necromancer",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Dependency-free, lifecycle-owned animation primitives built on the Web Animations API",
   "repository": {
     "type": "git",

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/flux
 
-This log was last generated on Sat, 15 Aug 2026 11:19:49 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 09:15:39 GMT and should not be manually modified.
+
+## 2.2.0
+Sun, 16 Aug 2026 09:15:39 GMT
+
+### Minor changes
+
+- feat: toSignal accepts onError callback for source error handling; fix: createChannel throws RangeError when replay: 0 is set with initial (previously silently dropped the initial value); refactor: rename subject.ts to channel.ts to match its content; inline _pipe.ts into pipe.ts
 
 ## 2.1.0
 Sat, 15 Aug 2026 11:19:49 GMT

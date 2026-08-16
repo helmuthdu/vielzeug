@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: remove VaultError.is() static type guard (use instanceof VaultError); remove dead wrapStored/unwrapStored/readWithTtl helpers from ttl.ts; remove dead devOnly from _dev.ts; export TransactionContext type from @vielzeug/vault/sqlite subpath (was only available from indexeddb subpath)",
+            "commit": "0c22e485f1afdb80a8c4fdb5872150068929ada2"
+          }
+        ]
+      },
+      "date": "Sun, 16 Aug 2026 09:15:40 GMT",
+      "tag": "@vielzeug/vault_v2.2.0",
+      "version": "2.2.0"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "feat: add driver-neutral SQLite storage",
             "commit": "d8db96e972ca1a6b46f1ec50001bb3ae6f88a403"
           }

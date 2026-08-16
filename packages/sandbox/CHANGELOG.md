@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/sandbox
 
-This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 09:15:40 GMT and should not be manually modified.
+
+## 2.1.0
+Sun, 16 Aug 2026 09:15:40 GMT
+
+### Minor changes
+
+- refactor: remove SandboxError.is() static type guard (use instanceof SandboxError); delete _sandbox.ts re-export hub and move buildCsp to _policy.ts; inline buildRuntimeDocument wrapper into buildDocumentFromOptions; sort SandboxMessage union members alphabetically to remove eslint-disable suppressions
 
 ## 2.0.0
 Mon, 10 Aug 2026 15:11:23 GMT

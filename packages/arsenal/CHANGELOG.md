@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/arsenal
 
-This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 09:15:39 GMT and should not be manually modified.
+
+## 2.1.0
+Sun, 16 Aug 2026 09:15:39 GMT
+
+### Minor changes
+
+- refactor: remove ArsenalError.is() type guard; use instanceof ArsenalError. Export abortable from async subpath. Remove side effect from cache.size getter. Simplify backoff to 2 ** n. Replace Reflect.apply in pipe with direct call.
 
 ## 2.0.1
 Thu, 06 Aug 2026 07:20:49 GMT

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ripple
 
-This log was last generated on Sat, 15 Aug 2026 06:26:02 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 09:15:39 GMT and should not be manually modified.
+
+## 2.2.1
+Sun, 16 Aug 2026 09:15:39 GMT
+
+### Patches
+
+- fix: recognize Signals, computed values, and Resources across duplicate Ripple module graphs
 
 ## 2.2.0
 Sat, 15 Aug 2026 06:26:02 GMT

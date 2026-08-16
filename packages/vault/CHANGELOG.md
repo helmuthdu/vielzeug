@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/vault
 
-This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 09:15:40 GMT and should not be manually modified.
+
+## 2.2.0
+Sun, 16 Aug 2026 09:15:40 GMT
+
+### Minor changes
+
+- chore: remove VaultError.is() static type guard (use instanceof VaultError); remove dead wrapStored/unwrapStored/readWithTtl helpers from ttl.ts; remove dead devOnly from _dev.ts; export TransactionContext type from @vielzeug/vault/sqlite subpath (was only available from indexeddb subpath)
 
 ## 2.1.0
 Mon, 10 Aug 2026 15:11:23 GMT

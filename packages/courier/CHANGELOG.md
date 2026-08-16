@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/courier
 
-This log was last generated on Sat, 15 Aug 2026 10:39:54 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 09:15:39 GMT and should not be manually modified.
+
+## 2.2.0
+Sun, 16 Aug 2026 09:15:39 GMT
+
+### Minor changes
+
+- feat: add mutate.invalidateKeys for one-step cache invalidation+refetch after successful writes; feat: add query cache garbage collection (query.gcTime, default 5 min, Infinity disables); feat: invalidate() accepts { refetch: true } to refetch matching entries in the background; feat: parseResponse returns undefined for empty/whitespace JSON bodies; refactor: unify StreamOptions with HttpRequestConfig (typed path params); fix: parseJson trims whitespace before JSON.parse to avoid SyntaxError on whitespace-only bodies; fix: invalidate() now schedules GC for invalidated entries with no subscribers; BREAKING: remove courier.request() from public instance (use get/post/put/patch/delete); BREAKING: remove queries.refetchStale() (use invalidate(prefix, { refetch: true })); BREAKING: rename courier.headers() to courier.setHeaders(); BREAKING: withLogging() requires explicit logger (no default console.debug); BREAKING: remove CourierError.is() static guard (use instanceof); BREAKING: QueryKeyAtom no longer accepts objects (string|number|boolean|null only); BREAKING: remove _dev.ts and @vielzeug/courier/devtools subpath; chore: remove hash re-export from serialize.ts
 
 ## 2.1.0
 Sat, 15 Aug 2026 10:39:54 GMT

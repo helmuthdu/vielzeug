@@ -4,6 +4,62 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.1`"
+          }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: Add keyboard navigation support to all virtualizers. Enable with `keyboardScroll: true`. Supports Arrow/Page/Home/End keys with intelligent step sizing based on item estimates.",
+            "commit": "3b6ef6b4c0d55ecb5e1a4f979dbcf360541e55c2"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: Add auto-measurement feature with `autoMeasure: true` for dynamic variable-height content. Automatically measures visible items via ResizeObserver.",
+            "commit": "3b6ef6b4c0d55ecb5e1a4f979dbcf360541e55c2"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: Add Signal integration to all factories with `signal` option for reactive state. Enables seamless integration with @vielzeug/ripple.",
+            "commit": "3b6ef6b4c0d55ecb5e1a4f979dbcf360541e55c2"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: Remove createReactiveVirtualizer and related reactive wrappers. Use `signal` option directly on any factory instead.",
+            "commit": "3b6ef6b4c0d55ecb5e1a4f979dbcf360541e55c2"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: Extract sticky item computation to reusable `_sticky.ts` helper module. Eliminates duplication between virtualizer and grouped-virtualizer.",
+            "commit": "3b6ef6b4c0d55ecb5e1a4f979dbcf360541e55c2"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: Add destroyed state checks in keyboard event handlers to prevent calling computeVisible() after disposal.",
+            "commit": "3b6ef6b4c0d55ecb5e1a4f979dbcf360541e55c2"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: Improve arrow key step sizing to use estimated item size instead of fixed 40px value for better UX consistency.",
+            "commit": "3b6ef6b4c0d55ecb5e1a4f979dbcf360541e55c2"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "docs: Add comprehensive documentation for keyboard navigation and auto-measurement features with usage examples and requirements.",
+            "commit": "3b6ef6b4c0d55ecb5e1a4f979dbcf360541e55c2"
+          }
+        ]
+      },
+      "date": "Sun, 16 Aug 2026 09:15:40 GMT",
+      "tag": "@vielzeug/scroll_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.0`"
           }
         ]

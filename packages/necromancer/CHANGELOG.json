@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "comments": {},
+      "date": "Sun, 16 Aug 2026 09:15:39 GMT",
+      "tag": "@vielzeug/necromancer_v2.0.1",
+      "version": "2.0.1"
+    },
+    {
       "comments": {
         "major": [
           {

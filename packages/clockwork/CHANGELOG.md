@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/clockwork
 
-This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 09:15:39 GMT and should not be manually modified.
+
+## 2.1.0
+Sun, 16 Aug 2026 09:15:39 GMT
+
+### Minor changes
+
+- refactor: remove ClockworkError.is() type guard; use instanceof ClockworkError instead. Warn in development when actor.send() receives a malformed event.
 
 ## 2.0.1
 Thu, 06 Aug 2026 07:20:49 GMT

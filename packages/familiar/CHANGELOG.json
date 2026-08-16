@@ -2,6 +2,18 @@
   "entries": [
     {
       "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.1.0`"
+          }
+        ]
+      },
+      "date": "Sun, 16 Aug 2026 09:15:40 GMT",
+      "tag": "@vielzeug/familiar_v2.0.1",
+      "version": "2.0.1"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

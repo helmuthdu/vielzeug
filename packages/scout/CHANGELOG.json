@@ -4,6 +4,25 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.1`"
+          }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove ScoutError.is() static type guard (use instanceof ScoutError); delete _index-state.ts side-channel and expose revision as a readonly property on ScoutIndex interface for cache invalidation",
+            "commit": "04fb0c82ba944fe470a2bdf0324fd9f4e7759993"
+          }
+        ]
+      },
+      "date": "Sun, 16 Aug 2026 09:15:40 GMT",
+      "tag": "@vielzeug/scout_v2.2.0",
+      "version": "2.2.0"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.0`"
           }
         ]

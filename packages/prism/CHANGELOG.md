@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/prism
 
-This log was last generated on Sat, 15 Aug 2026 06:26:02 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 09:15:39 GMT and should not be manually modified.
+
+## 2.2.0
+Sun, 16 Aug 2026 09:15:39 GMT
+
+### Minor changes
+
+- refactor: remove PrismError.is() static type guard (use instanceof PrismError); remove speculative PrismDisposedError class (no code path threw it); remove deprecated ariaLabel field from BaseChartConfig and SparklineConfig (use a11y: { ariaLabel } instead); delete dead internal utilities (truncateText, measureTextWidth, createAxisLabel, nearestPointX, tweenColor); delete dead re-export files (line-types.ts, area-types.ts, bar-types.ts, charts/index.ts, axes/types.ts, scales/types.ts re-export line)
 
 ## 2.1.2
 Sat, 15 Aug 2026 06:26:02 GMT

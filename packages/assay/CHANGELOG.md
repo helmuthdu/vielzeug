@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/assay
 
-This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 09:15:39 GMT and should not be manually modified.
+
+## 2.1.0
+Sun, 16 Aug 2026 09:15:39 GMT
+
+### Minor changes
+
+- refactor: remove AssayError.is() static type guard (use instanceof AssayError); delete dead _dev.ts (warnOnce/_resetWarnings had zero callers); change fireCustom signature from (target, { type, ...init }) to (target, type, init?) matching fire* family and addEventListener convention; remove CustomEventOptions type (use platform CustomEventInit); sync package.json description with .ai/data/packages.json
 
 ## 2.0.1
 Thu, 06 Aug 2026 07:20:49 GMT

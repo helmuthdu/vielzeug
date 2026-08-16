@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove ClockworkError.is() type guard; use instanceof ClockworkError instead. Warn in development when actor.send() receives a malformed event.",
+            "commit": "10fdf2f0498e6d85c0f0d5d63dda596f68ee2a99"
+          }
+        ]
+      },
+      "date": "Sun, 16 Aug 2026 09:15:39 GMT",
+      "tag": "@vielzeug/clockwork_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

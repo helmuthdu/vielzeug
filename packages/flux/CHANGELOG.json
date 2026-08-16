@@ -2,6 +2,40 @@
   "entries": [
     {
       "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `2.2.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.3`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `2.2.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.1.3`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.1`"
+          }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: toSignal accepts onError callback for source error handling; fix: createChannel throws RangeError when replay: 0 is set with initial (previously silently dropped the initial value); refactor: rename subject.ts to channel.ts to match its content; inline _pipe.ts into pipe.ts",
+            "commit": "fba49f64c9353c78b3bf46a64b7ee7423b99b347"
+          }
+        ]
+      },
+      "date": "Sun, 16 Aug 2026 09:15:39 GMT",
+      "tag": "@vielzeug/flux_v2.2.0",
+      "version": "2.2.0"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

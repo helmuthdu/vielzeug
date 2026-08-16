@@ -1,6 +1,23 @@
 # Change Log - @vielzeug/scroll
 
-This log was last generated on Sat, 15 Aug 2026 06:26:02 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 09:15:40 GMT and should not be manually modified.
+
+## 2.1.0
+Sun, 16 Aug 2026 09:15:40 GMT
+
+### Minor changes
+
+- feat: Add keyboard navigation support to all virtualizers. Enable with `keyboardScroll: true`. Supports Arrow/Page/Home/End keys with intelligent step sizing based on item estimates.
+- feat: Add auto-measurement feature with `autoMeasure: true` for dynamic variable-height content. Automatically measures visible items via ResizeObserver.
+- refactor: Add Signal integration to all factories with `signal` option for reactive state. Enables seamless integration with @vielzeug/ripple.
+- refactor: Remove createReactiveVirtualizer and related reactive wrappers. Use `signal` option directly on any factory instead.
+
+### Patches
+
+- refactor: Extract sticky item computation to reusable `_sticky.ts` helper module. Eliminates duplication between virtualizer and grouped-virtualizer.
+- fix: Add destroyed state checks in keyboard event handlers to prevent calling computeVisible() after disposal.
+- fix: Improve arrow key step sizing to use estimated item size instead of fixed 40px value for better UX consistency.
+- docs: Add comprehensive documentation for keyboard navigation and auto-measurement features with usage examples and requirements.
 
 ## 2.0.2
 Sat, 15 Aug 2026 06:26:02 GMT

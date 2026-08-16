@@ -2,6 +2,18 @@
   "entries": [
     {
       "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.1.0`"
+          }
+        ]
+      },
+      "date": "Sun, 16 Aug 2026 09:15:40 GMT",
+      "tag": "@vielzeug/spell_v2.1.1",
+      "version": "2.1.1"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

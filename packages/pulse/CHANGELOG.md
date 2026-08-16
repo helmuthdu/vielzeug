@@ -1,6 +1,11 @@
 # Change Log - @vielzeug/pulse
 
-This log was last generated on Sat, 15 Aug 2026 06:26:02 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 09:15:40 GMT and should not be manually modified.
+
+## 2.1.3
+Sun, 16 Aug 2026 09:15:40 GMT
+
+_Version update only_
 
 ## 2.1.2
 Sat, 15 Aug 2026 06:26:02 GMT

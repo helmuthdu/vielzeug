@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/scout
 
-This log was last generated on Sat, 15 Aug 2026 06:26:02 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 09:15:40 GMT and should not be manually modified.
+
+## 2.2.0
+Sun, 16 Aug 2026 09:15:40 GMT
+
+### Minor changes
+
+- refactor: remove ScoutError.is() static type guard (use instanceof ScoutError); delete _index-state.ts side-channel and expose revision as a readonly property on ScoutIndex interface for cache invalidation
 
 ## 2.1.2
 Sat, 15 Aug 2026 06:26:02 GMT

@@ -4,6 +4,21 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `^2.2.1`"
+          }
+        ]
+      },
+      "date": "Sun, 16 Aug 2026 09:15:40 GMT",
+      "tag": "@vielzeug/orbit_v2.0.3",
+      "version": "2.0.3"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.0`"
           },
           {

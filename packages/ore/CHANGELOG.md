@@ -1,6 +1,11 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Sat, 15 Aug 2026 10:39:54 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 09:15:40 GMT and should not be manually modified.
+
+## 2.0.7
+Sun, 16 Aug 2026 09:15:40 GMT
+
+_Version update only_
 
 ## 2.0.6
 Sat, 15 Aug 2026 10:39:54 GMT

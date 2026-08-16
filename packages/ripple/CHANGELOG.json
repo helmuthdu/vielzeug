@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: recognize Signals, computed values, and Resources across duplicate Ripple module graphs",
+            "commit": "78955f4a4594e38b4fe1fd58a5379d48f50c5bc7"
+          }
+        ]
+      },
+      "date": "Sun, 16 Aug 2026 09:15:39 GMT",
+      "tag": "@vielzeug/ripple_v2.2.1",
+      "version": "2.2.1"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
