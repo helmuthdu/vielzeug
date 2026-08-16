@@ -5,10 +5,6 @@ export class ScoutError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is ScoutError {
-    return err instanceof ScoutError;
-  }
 }
 
 /** Thrown when a method is called on a disposed search state instance. */

@@ -1,4 +1,3 @@
-import { getIndexRevision } from './_index-state';
 import type { ScoutIndex } from './scout-index';
 import type { SearchConstraints } from './types';
 
@@ -15,11 +14,9 @@ export function toSearchMatcher<T>(
   let matches = new Set<T>();
 
   return (item, query) => {
-    const revision = getIndexRevision(index);
-
-    if (query !== lastQuery || revision !== lastRevision) {
+    if (query !== lastQuery || index.revision !== lastRevision) {
       lastQuery = query;
-      lastRevision = revision;
+      lastRevision = index.revision;
       matches = new Set(index.search(query, options).map((result) => result.item));
     }
 

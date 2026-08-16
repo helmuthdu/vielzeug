@@ -622,18 +622,6 @@ describe('ScoutError — named subclasses', () => {
     expect(new ScoutConfigurationError('').name).toBe('ScoutConfigurationError');
   });
 
-  it('ScoutError.is() returns true for any subclass', () => {
-    expect(ScoutError.is(new ScoutDisposedError(''))).toBe(true);
-    expect(ScoutError.is(new Error('plain'))).toBe(false);
-  });
-
-  it('ScoutError.is() returns false for non-Error values', () => {
-    expect(ScoutError.is(null)).toBe(false);
-    expect(ScoutError.is(undefined)).toBe(false);
-    expect(ScoutError.is('ScoutConfigurationError')).toBe(false);
-    expect(ScoutError.is({ name: 'ScoutConfigurationError' })).toBe(false);
-  });
-
   it('preserves the cause via ErrorOptions', () => {
     const cause = new Error('underlying failure');
     const err = new ScoutConfigurationError('wrapped', { cause });

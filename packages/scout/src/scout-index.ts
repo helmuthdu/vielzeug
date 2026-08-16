@@ -1,4 +1,3 @@
-import { registerIndexRevision } from './_index-state';
 import { ScoutConfigurationError } from './errors';
 import { findMatchRanges } from './highlight';
 import { defaultStringify, tokenize } from './tokenize';
@@ -50,6 +49,12 @@ export interface ScoutIndex<T> {
    * No-op if the item is not in the index.
    */
   remove(item: T): void;
+  /**
+   * Monotonically increasing counter, incremented after every changed `add()` / `remove()` /
+   * `reindex()` / `setItems()` operation. Use as a cache-busting token when caching search
+   * results outside the index — `toSearchMatcher()` uses it for this purpose.
+   */
+  readonly revision: number;
   /**
    * Searches the index for `query` and returns results sorted by score descending.
    *
@@ -349,6 +354,10 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
       if (removeItem(item)) notifyMutation();
     },
 
+    get revision(): number {
+      return revision;
+    },
+
     search(query: string, options?: SearchConstraints): SearchResult<T>[] {
       const threshold = requireFiniteNumber(options?.threshold ?? defaultThreshold, 'threshold', 0, 1);
       const limit = requireFiniteInteger(options?.limit ?? defaultLimit, 'limit', 0);
@@ -430,8 +439,6 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
       return itemData.size;
     },
   };
-
-  registerIndexRevision(index, () => revision);
 
   return index;
 }

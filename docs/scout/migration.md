@@ -7,7 +7,33 @@ description: Migrate Scout index configuration and corpus updates to Scout.
 
 ## Scout 2 Changes
 
-Scout 2 adds `setItems()` for refreshed corpora, validates numeric search configuration, and replaces `ScoutIndexError` with `ScoutConfigurationError`.
+Scout 2 adds `setItems()` for refreshed corpora, validates numeric search configuration, and replaces `ScoutIndexError` with `ScoutConfigurationError`, removes the unused `ScoutError.is()` type guard and exposes `revision` as a readonly property on the `ScoutIndex` interface.
+
+### Replace `ScoutError.is()` with `instanceof`
+
+The static `ScoutError.is()` type guard is removed. Use `instanceof ScoutError` to narrow unknown values to the Scout error hierarchy.
+
+```ts
+// Scout 2
+if (ScoutError.is(err)) { ... }
+
+// Scout 3
+if (err instanceof ScoutError) { ... }
+```
+
+### Use `index.revision` for cache invalidation
+
+The internal `_index-state` side-channel is removed. `ScoutIndex` now exposes `revision` as a readonly property — a monotonically increasing counter incremented after every changed mutation. Use it directly when caching search results outside the index.
+
+```ts
+// Scout 2 — internal side-channel (no public API)
+// toSearchMatcher() used a private WeakMap to track index revisions
+
+// Scout 3 — public readonly property
+const revision = index.revision;
+```
+
+`toSearchMatcher()` now reads `index.revision` directly. External code that cached search results can use the same property.
 
 Removed export:
 

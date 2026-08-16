@@ -16,6 +16,7 @@ description: Complete API reference for @vielzeug/scout — createIndex, createR
 | `ScoutIndex.reindex()`    | Re-index a mutated item in-place; preserves order     | Sync           | Call after mutating item properties; no-op if not in index    |
 | `ScoutIndex.setItems()`   | Reconcile a refreshed corpus in one mutation          | Sync           | Uses reference identity; duplicate references collapse        |
 | `ScoutIndex.items`        | All indexed items in insertion order                  | Sync           | Returns a new array snapshot each call                        |
+| `ScoutIndex.revision`     | Monotonic counter incremented after each mutation     | Sync           | Use as a cache-busting token for external result caches       |
 | `ScoutIndex.onMutate()`   | Subscribe to changed index mutations                   | Sync           | A changed `setItems()` reconciliation emits once; no-ops emit nothing |
 | `createSearch()`          | Reactive search state backed by a `ScoutIndex`        | Sync           | Requires `@vielzeug/ripple` — dispose when done               |
 | `createReactiveSearch()`  | One-call index + reactive search state                | Sync           | Exposes `.index` for incremental mutations                    |
@@ -150,6 +151,10 @@ const unsubscribe = index.onMutate(() => {
 index.add(newUser); // logs "Index changed — now 6 items"
 unsubscribe();
 ```
+
+### `.revision`
+
+`number` — monotonically increasing counter, incremented after every changed `add()` / `remove()` / `reindex()` / `setItems()` operation. Use as a cache-busting token when caching search results outside the index — `toSearchMatcher()` uses it for this purpose.
 
 ---
 
@@ -514,12 +519,10 @@ See `createReactiveSearch()` above.
 
 ### `ScoutError`
 
-Base class for all scout errors. Use `instanceof ScoutError` or `ScoutError.is()` to catch any scout-originated error.
+Base class for all scout errors. Use `instanceof ScoutError` to catch any scout-originated error.
 
 ```ts
-class ScoutError extends Error {
-  static is(err: unknown): err is ScoutError;
-}
+class ScoutError extends Error {}
 ```
 
 **Named subclasses**
