@@ -14,7 +14,8 @@ You have a long-running promise that has no built-in cancellation support and ne
 Use `abortable(promise, signal)` to wrap any promise and reject it when the signal aborts.
 
 ```ts
-import { abortable, isAbortError } from '@vielzeug/arsenal';
+import { abortable } from '@vielzeug/arsenal/async';
+import { isAbortError } from '@vielzeug/arsenal/guards';
 
 const controller = new AbortController();
 

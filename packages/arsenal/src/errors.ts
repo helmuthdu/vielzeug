@@ -5,10 +5,6 @@ export class ArsenalError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is ArsenalError {
-    return err instanceof ArsenalError;
-  }
 }
 
 /**

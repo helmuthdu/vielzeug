@@ -105,7 +105,7 @@ interface Cache<K, T> {
 cache<K, T>(options?: CacheOptions): Cache<K, T>
 ```
 
-Keys use native `Map` identity. Expiry is lazy, evaluated by `get`, `getOrLoad`, and `size`.
+Keys use native `Map` identity. Expiry is lazy, evaluated by `get` and `getOrLoad`. The `size` getter returns the live entry count without evicting.
 
 ```ts
 import { cache } from '@vielzeug/arsenal/cache';

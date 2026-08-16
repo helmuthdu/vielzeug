@@ -31,9 +31,9 @@ describe('ArsenalError', () => {
     expect(new ArsenalSerializationError('').name).toBe('ArsenalSerializationError');
   });
 
-  it('ArsenalError.is() recognizes serialization errors only', () => {
-    expect(ArsenalError.is(new ArsenalSerializationError(''))).toBe(true);
-    expect(ArsenalError.is(new Error('not arsenal'))).toBe(false);
+  it('instanceof recognizes serialization errors', () => {
+    expect(new ArsenalSerializationError('') instanceof ArsenalError).toBe(true);
+    expect(new Error('not arsenal') instanceof ArsenalError).toBe(false);
   });
 
   it('ArsenalError base accepts opts?.cause for chaining', () => {

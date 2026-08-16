@@ -29,7 +29,7 @@ export const EXPORTS = {
     'unzip',
     'zip',
   ],
-  async: ['abortError', 'attempt', 'backoff', 'parallel', 'retry', 'sleep', 'taskPool', 'waitFor'],
+  async: ['abortError', 'abortable', 'attempt', 'backoff', 'parallel', 'retry', 'sleep', 'taskPool', 'waitFor'],
   cache: ['cache', 'memo'],
   function: ['assert', 'debounce', 'once', 'pipe', 'runAll', 'tap', 'throttle'],
   guards: [

@@ -131,8 +131,6 @@ export function cache<K, T>({ capacity = Infinity, now = Date.now, ttlMs }: Cach
     getOrLoad,
     set,
     get size() {
-      trim();
-
       return entries.size;
     },
   };

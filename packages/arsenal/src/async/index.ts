@@ -1,3 +1,4 @@
+export * from './abortable';
 export * from './abortError';
 export * from './attempt';
 export * from './backoff';

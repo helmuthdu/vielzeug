@@ -23,5 +23,5 @@ users.delete('user:1');
 ### Pitfalls
 
 - Cache is in-memory only. Use Vault for persistence.
-- TTL expiry is lazy: reads and size checks remove expired entries.
+- TTL expiry is lazy: reads remove expired entries. The `size` getter does not evict.
 - Equal object literals are different keys; native `Map` identity applies.

@@ -40,8 +40,5 @@ export function pipe(...fns: Fn[]): Fn {
   const [firstFn, ...restFns] = fns;
 
   return (...args: never[]) =>
-    restFns.reduce(
-      (prev: unknown, fn) => Reflect.apply(fn, undefined, [prev]),
-      Reflect.apply(firstFn!, undefined, args),
-    );
+    restFns.reduce<unknown>((prev, fn) => (fn as (x: unknown) => unknown)(prev), firstFn(...args));
 }

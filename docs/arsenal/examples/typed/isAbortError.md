@@ -14,7 +14,7 @@ You need to distinguish an abort-caused rejection from other errors — for exam
 Use `isAbortError(value)` to check whether an error has `name === 'AbortError'`.
 
 ```ts
-import { isAbortError } from '@vielzeug/arsenal';
+import { isAbortError } from '@vielzeug/arsenal/guards';
 
 try {
   await abortableTask;

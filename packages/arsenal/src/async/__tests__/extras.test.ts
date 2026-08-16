@@ -1,5 +1,5 @@
-import { abortable } from '../../_common/_abortable';
 import { memo } from '../../cache/memo';
+import { abortable } from '../abortable';
 
 describe('async extras', () => {
   it('supports abortable promises', async () => {

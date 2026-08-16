@@ -19,5 +19,5 @@
 export function backoff(attempt: number, maxMs = 30_000): number {
   const n = Math.max(0, Number.isNaN(attempt) ? 0 : Math.floor(attempt));
 
-  return Math.min(1000 * (n <= 30 ? 1 << n : 2 ** n), maxMs);
+  return Math.min(1000 * 2 ** n, maxMs);
 }
