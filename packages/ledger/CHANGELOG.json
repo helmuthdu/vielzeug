@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove LedgerError.is() type guard; use instanceof LedgerError. Rename local signal variable in enqueue to abortSignal to avoid shadowing ripple import.",
+            "commit": "a0c83fd31018e565e2b4809d37c377867b3e9221"
+          }
+        ]
+      },
+      "date": "Sun, 16 Aug 2026 10:35:40 GMT",
+      "tag": "@vielzeug/ledger_v2.2.0",
+      "version": "2.2.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.1`"

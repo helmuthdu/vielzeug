@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove RuneError class (never thrown, no subclasses). Remove dead RemoteLogData re-export from transports.ts. Fix detectEnv to remove Vite-specific import.meta.env check — browser defaults to development. Merge resolveBindings + serializeErrors into single prepareBindings pass.",
+            "commit": "1aa0a46304ffdd7d3b224946cd69d1382be725ff"
+          }
+        ]
+      },
+      "date": "Sun, 16 Aug 2026 10:35:40 GMT",
+      "tag": "@vielzeug/rune_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

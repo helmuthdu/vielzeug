@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/orbit
 
-This log was last generated on Sun, 16 Aug 2026 09:15:40 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 10:35:40 GMT and should not be manually modified.
+
+## 2.1.0
+Sun, 16 Aug 2026 10:35:40 GMT
+
+### Minor changes
+
+- refactor: remove OrbitError.is() type guard (use instanceof). Remove computePositionAsync and computePositionRaf convenience wrappers. Remove getRects from public exports. Inline makePositioner into createPositioner. Fix devtools.ts to reuse applyDefault instead of duplicating positioning logic.
 
 ## 2.0.3
 Sun, 16 Aug 2026 09:15:40 GMT

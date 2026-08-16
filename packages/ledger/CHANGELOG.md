@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ledger
 
-This log was last generated on Sun, 16 Aug 2026 09:15:40 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 10:35:40 GMT and should not be manually modified.
+
+## 2.2.0
+Sun, 16 Aug 2026 10:35:40 GMT
+
+### Minor changes
+
+- refactor: remove LedgerError.is() type guard; use instanceof LedgerError. Rename local signal variable in enqueue to abortSignal to avoid shadowing ripple import.
 
 ## 2.1.3
 Sun, 16 Aug 2026 09:15:40 GMT

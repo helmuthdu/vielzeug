@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/rune
 
-This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+This log was last generated on Sun, 16 Aug 2026 10:35:40 GMT and should not be manually modified.
+
+## 2.1.0
+Sun, 16 Aug 2026 10:35:40 GMT
+
+### Minor changes
+
+- refactor: remove RuneError class (never thrown, no subclasses). Remove dead RemoteLogData re-export from transports.ts. Fix detectEnv to remove Vite-specific import.meta.env check — browser defaults to development. Merge resolveBindings + serializeErrors into single prepareBindings pass.
 
 ## 2.0.0
 Mon, 10 Aug 2026 15:11:23 GMT
