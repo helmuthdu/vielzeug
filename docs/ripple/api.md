@@ -64,9 +64,9 @@ ripple.dispose();
 function isReactive<T>(value: T | Readable<T>): value is Readable<T>;
 ```
 
-Tests whether a value is a Ripple readable node.
+Tests whether a value is a Ripple-created readable node, including `Resource`. Recognition works across duplicated Ripple module graphs.
 
-**Returns:** `true` for a `Signal`, computed value, or other `Readable` node.
+**Returns:** `true` for a Ripple `Signal`, computed value, or `Resource`; otherwise `false`.
 
 **Example:**
 

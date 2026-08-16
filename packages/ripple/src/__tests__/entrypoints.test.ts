@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { computed, createRipple, effect, resource, signal, watch } from '../index';
 
 describe('default graph exports', () => {
@@ -39,5 +40,23 @@ describe('default graph exports', () => {
     cart.update((state) => ({ ...state, items: 3 }));
 
     expect(items.value).toBe(3);
+  });
+
+  it('recognizes Ripple readables from another loaded module graph', async () => {
+    const first = await import('../index');
+    const ripple = first.createRipple();
+    const value = ripple.signal(0);
+    const resource = ripple.resource(
+      () => 'value',
+      async (input) => input,
+    );
+
+    vi.resetModules();
+    const second = await import('../index');
+
+    expect(second.isReactive(value)).toBe(true);
+    expect(second.isReactive(resource)).toBe(true);
+    expect(second.isReactive({ [Symbol.for('@vielzeug/ripple/reactive')]: true })).toBe(false);
+    ripple.dispose();
   });
 });

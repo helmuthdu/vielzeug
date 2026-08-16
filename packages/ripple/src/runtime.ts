@@ -19,7 +19,7 @@ import type {
   Unsubscribe,
 } from './types';
 
-const REACTIVE = Symbol('ripple.reactive');
+export const REACTIVE = Symbol.for('@vielzeug/ripple/reactive');
 const MAX_FLUSH_ITERATIONS = 100;
 const UNSET = Symbol('ripple.unset');
 
@@ -584,5 +584,10 @@ export class ReactiveRuntime {
   }
 }
 
-export const isReactive = <T>(value: T | Readable<T>): value is Readable<T> =>
-  typeof value === 'object' && value !== null && REACTIVE in value;
+export const isReactive = <T>(value: T | Readable<T>): value is Readable<T> => {
+  if (typeof value !== 'object' || value === null || !(REACTIVE in value)) return false;
+
+  const candidate = value as { peek?: unknown; subscribe?: unknown };
+
+  return typeof candidate.peek === 'function' && typeof candidate.subscribe === 'function';
+};

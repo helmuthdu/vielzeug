@@ -60,6 +60,28 @@ ripple.batch(() => {
 });
 ```
 
+## Scheduling and Subscriptions
+
+Ripple propagates every synchronous write before flushing effects. Each flush pass runs effects queued at its
+start before direct `subscribe()` listeners queued at its start. Work queued by either runs in a later pass.
+Effects using `scheduler: 'microtask'` join a later microtask and coalesce writes made before that task runs.
+
+```ts
+const count = ripple.signal(0);
+const log: string[] = [];
+
+ripple.effect(() => log.push(`effect: ${count.value}`));
+count.subscribe(() => log.push(`listener: ${count.value}`));
+ripple.effect(() => log.push(`deferred: ${count.value}`), { scheduler: 'microtask' });
+
+log.length = 0; // Ignore synchronous creation runs.
+count.value = 1;
+console.log(log); // ['effect: 1', 'listener: 1']
+
+await Promise.resolve();
+console.log(log); // ['effect: 1', 'listener: 1', 'deferred: 1']
+```
+
 ## Ownership with Scopes
 
 Create a scope when a group of effects or derived values shares one lifetime. Dispose the scope when its feature ends.

@@ -58,6 +58,53 @@ describe('ripple graph', () => {
     ripple.dispose();
   });
 
+  it('flushes effects before direct listeners after synchronous writes', () => {
+    const ripple = createRipple();
+    const count = ripple.signal(0);
+    const doubled = ripple.computed(() => count.value * 2);
+    const calls: string[] = [];
+
+    const stop = ripple.effect(() => {
+      calls.push(`effect: ${count.value}/${doubled.value}`);
+    });
+    const unsubscribe = count.subscribe(() => {
+      calls.push(`listener: ${count.value}/${doubled.value}`);
+    });
+
+    calls.length = 0;
+    count.value = 1;
+
+    expect(calls).toEqual(['effect: 1/2', 'listener: 1/2']);
+    unsubscribe();
+    stop.dispose();
+    ripple.dispose();
+  });
+
+  it('runs listeners before effects queued by earlier effects in same flush', () => {
+    const ripple = createRipple();
+    const source = ripple.signal(0);
+    const derived = ripple.signal(0);
+    const calls: string[] = [];
+
+    const writer = ripple.effect(() => {
+      if (source.value > 0) derived.value = source.value;
+      calls.push('writer');
+    });
+    const reader = ripple.effect(() => {
+      calls.push(`reader: ${derived.value}`);
+    });
+    const unsubscribe = source.subscribe(() => calls.push('listener'));
+
+    calls.length = 0;
+    source.value = 1;
+
+    expect(calls).toEqual(['writer', 'listener', 'reader: 1']);
+    unsubscribe();
+    writer.dispose();
+    reader.dispose();
+    ripple.dispose();
+  });
+
   it('coalesces microtask effects after synchronous writes', async () => {
     const ripple = createRipple();
     const count = ripple.signal(0);

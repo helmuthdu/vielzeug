@@ -1,3 +1,4 @@
+import { REACTIVE } from './runtime';
 import type { Disposable, EffectHandle, Readable, Signal } from './types';
 
 export type AsyncState<T> =
@@ -90,7 +91,7 @@ export const createResource =
       { once: true },
     );
 
-    return {
+    const resource: Resource<Value> = {
       get disposalSignal() {
         return stop.disposalSignal;
       },
@@ -115,4 +116,8 @@ export const createResource =
         return state.value;
       },
     };
+
+    Object.defineProperty(resource, REACTIVE, { value: true });
+
+    return resource;
   };
