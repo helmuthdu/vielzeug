@@ -1,3 +1,5 @@
+import type { Signal } from '@vielzeug/ripple';
+
 import { createScrollAdapter } from './_adapter';
 import { alignOffset } from './_alignment';
 import { createAxis1D, type VirtualItem } from './_axis1d';
@@ -58,6 +60,8 @@ export interface GridVirtualizerOptions {
   estimateRowSize?: number | ((row: number) => number);
   initialScrollLeft?: number;
   initialScrollTop?: number;
+  /** Enable keyboard navigation (Arrow/Page/Home/End keys). */
+  keyboardScroll?: boolean;
   /** Called after every render cycle with the new state. Replace through `update()`. */
   onChange?: (state: GridVirtualizerState) => void;
   /** Zero-allocation alternative to onChange for range-based consumers. */
@@ -68,6 +72,8 @@ export interface GridVirtualizerOptions {
   rowGap?: number;
   /** External measurement cache for rows. Share across instances for scroll restoration. */
   rowMeasurementCache?: Map<number, number>;
+  /** Optional signal factory for reactive state. */
+  signal?: (init: GridVirtualizerState) => Signal<GridVirtualizerState>;
 }
 
 /**
@@ -79,6 +85,7 @@ export interface GridVirtualizerUpdateOptions {
   colGap?: number;
   estimateColSize?: number | ((col: number) => number);
   estimateRowSize?: number | ((row: number) => number);
+  keyboardScroll?: boolean;
   onChange?: ((state: GridVirtualizerState) => void) | undefined;
   onRangeChange?: ((range: GridRangeChangeEvent) => void) | undefined;
   overscanX?: Overscan;
@@ -143,9 +150,23 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   let estimateColFn = resolveEstimateFn(options.estimateColSize, DEFAULT_ESTIMATE_SIZE);
   let overscanY = normalizeOverscan(options.overscanY, DEFAULT_OVERSCAN);
   let overscanX = normalizeOverscan(options.overscanX, DEFAULT_OVERSCAN);
+  let keyboardScrollEnabled = options.keyboardScroll ?? false;
 
   let onChange = options.onChange;
   let onRangeChange = options.onRangeChange;
+
+  // Optional signal for reactive state
+  let stateSignal: Signal<GridVirtualizerState> | null = null;
+  if (options.signal) {
+    const initialState: GridVirtualizerState = { cols: [], rows: [], totalHeight: 0, totalWidth: 0 };
+    stateSignal = options.signal(initialState);
+  }
+
+  // Helper to emit state to both callback and signal
+  function emitState(state: GridVirtualizerState): void {
+    if (stateSignal) stateSignal.value = state;
+    onChange?.(state);
+  }
 
   // External or internal measurement caches (numeric row/col index keys).
   const measuredRows: Map<number, number> = options.rowMeasurementCache ?? new Map();
@@ -210,7 +231,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
         colAx.commitDedup(-1, -1);
         rows = [];
         cols = [];
-        onChange?.({ cols: [], rows: [], totalHeight, totalWidth });
+        emitState({ cols: [], rows: [], totalHeight, totalWidth });
       }
 
       return;
@@ -265,7 +286,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     rows = nextRows;
     cols = nextCols;
 
-    onChange?.({ cols, rows, totalHeight, totalWidth });
+    emitState({ cols, rows, totalHeight, totalWidth });
   }
 
   // ─── Measurement helpers ───────────────────────────────────────────────────
@@ -593,6 +614,10 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
       }
     }
 
+    if (Object.hasOwn(next, 'keyboardScroll')) {
+      keyboardScrollEnabled = next.keyboardScroll ?? false;
+    }
+
     if (rebuildRows) rowAx.rebuild(true);
 
     if (rebuildCols) colAx.rebuild(true);
@@ -644,6 +669,77 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   scrollLeft = clampLeft(adapter.x.readOffset());
 
   computeVisible();
+
+  // ─── Keyboard scroll support ──────────────────────────────────────────────────
+
+  if (keyboardScrollEnabled) {
+    const handleKeyDown = (e: Event): void => {
+      if (disposed) return;
+      if (!(e instanceof KeyboardEvent)) return;
+      if (rowCount === 0 || colCount === 0) return;
+
+      let handled = false;
+      let newTop = scrollTop;
+      let newLeft = scrollLeft;
+      const pageScrollSize = Math.max(viewportHeight * 0.8, viewportHeight - 100);
+      const rowStepSize =
+        (typeof estimateRowFn(0) === 'number' ? estimateRowFn(0) : DEFAULT_ESTIMATE_SIZE) +
+        toNonNegativeInt(options.rowGap ?? 0);
+      const colStepSize =
+        (typeof estimateColFn(0) === 'number' ? estimateColFn(0) : DEFAULT_ESTIMATE_SIZE) +
+        toNonNegativeInt(options.colGap ?? 0);
+
+      switch (e.key) {
+        case 'ArrowUp':
+          newTop = Math.max(0, scrollTop - rowStepSize);
+          handled = true;
+          break;
+        case 'ArrowDown':
+          newTop = Math.min(rowAx.totalSize - viewportHeight, scrollTop + rowStepSize);
+          handled = true;
+          break;
+        case 'ArrowLeft':
+          newLeft = Math.max(0, scrollLeft - colStepSize);
+          handled = true;
+          break;
+        case 'ArrowRight':
+          newLeft = Math.min(colAx.totalSize - viewportWidth, scrollLeft + colStepSize);
+          handled = true;
+          break;
+        case 'PageUp':
+          newTop = Math.max(0, scrollTop - pageScrollSize);
+          handled = true;
+          break;
+        case 'PageDown':
+          newTop = Math.min(rowAx.totalSize - viewportHeight, scrollTop + pageScrollSize);
+          handled = true;
+          break;
+        case 'Home':
+          newTop = 0;
+          handled = true;
+          break;
+        case 'End':
+          newTop = Math.max(0, rowAx.totalSize - viewportHeight);
+          handled = true;
+          break;
+      }
+
+      if (handled) {
+        e.preventDefault();
+        adapter.scrollTo(newLeft, newTop, 'auto');
+        scrollTop = clampTop(newTop);
+        scrollLeft = clampLeft(newLeft);
+        if (!disposed) computeVisible();
+      }
+    };
+
+    if (typeof target === 'object' && target !== null && 'addEventListener' in target) {
+      (target as EventTarget).addEventListener('keydown', handleKeyDown);
+      ac.signal.addEventListener('abort', () => {
+        (target as EventTarget).removeEventListener('keydown', handleKeyDown);
+      });
+    }
+  }
 
   return {
     get cols() {

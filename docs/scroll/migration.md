@@ -1,59 +1,120 @@
 ---
-title: Scroll 2 Migration
-description: Migrate Scroll configuration validation and callback updates to Scroll 2.
+title: Scroll Migration
 ---
 
 [[toc]]
 
 ## Scroll 2 Changes
 
-Scroll 2 validates static virtualizer configuration and lets `update()` replace callbacks and `scrollEndDelay`.
+Scroll 2 removes deprecated reactive wrappers, adds keyboard navigation and auto-measurement features, and improves type consistency across all factories.
 
-Added export:
+Removed exports:
+- `createReactiveVirtualizer()`
+- `createReactiveGroupedVirtualizer()`
+- `ReactiveVirtualizer` (type)
+- `ReactiveGroupVirtualizer` (type)
 
-- `ScrollConfigurationError`
+Added options:
+- `keyboardScroll?: boolean` — Enable keyboard navigation (Arrow/Page/Home/End keys)
+- `autoMeasure?: boolean` — Automatically measure visible items via ResizeObserver
+- `signal?: (init: State) => Signal<State>` — Provide reactive signal support across all factories
 
-## Fix Invalid Static Options
+## Migrate from Reactive Wrappers to Signal Option
 
-Scroll 1 silently normalized many invalid static values. Scroll 2 throws `ScrollConfigurationError` before attaching listeners or applying an update.
-
-| Option | Scroll 2 domain |
-| --- | --- |
-| `count`, `rowCount`, `colCount` | finite non-negative integer |
-| `gap`, `rowGap`, `colGap` | finite non-negative integer |
-| `overscan` | finite non-negative integer values |
-| numeric size estimates | finite positive number up to `10_000_000` |
-| initial offsets, `scrollEndDelay`, stick threshold | finite non-negative number |
-
-Malformed JavaScript values such as `null`, arrays, and strings also throw `ScrollConfigurationError` instead of falling through to browser/runtime errors.
-
-```ts
-// Scroll 1: silently treated this as zero
-createVirtualizer(element, { count: -1 });
-
-// Scroll 2: provide a valid count
-createVirtualizer(element, { count: 0 });
-```
-
-Estimator callbacks remain resilient: thrown errors or invalid return values use the default estimate and emit a development warning. Runtime measurements remain no-ops when stale or invalid. Navigation keeps documented clamping/no-op behavior.
-
-## Replace Callbacks Without Recreating
-
-Scroll 1 treated callbacks and `scrollEndDelay` as construction-only.
+Scroll 1's `createReactiveVirtualizer()` and `createReactiveGroupedVirtualizer()` are removed. Use the new `signal` option on any factory instead.
 
 ```ts
 // Scroll 1
-virtualizer.dispose();
-virtualizer = createVirtualizer(element, { count, onChange: renderNext });
+import { createReactiveVirtualizer } from '@vielzeug/scroll';
+import { effect } from '@vielzeug/ripple';
+
+const virt = createReactiveVirtualizer(scrollEl, { count: 1000 });
+effect(() => {
+  const { items, totalSize } = virt.state.value;
+  // render...
+});
+
+// Scroll 2
+import { createVirtualizer } from '@vielzeug/scroll';
+import { signal, effect } from '@vielzeug/ripple';
+
+const stateSignal = signal({ items: [], stickyItems: [], totalSize: 0 });
+const virt = createVirtualizer(scrollEl, {
+  count: 1000,
+  signal: () => stateSignal,
+});
+effect(() => {
+  const { items, totalSize } = stateSignal.value;
+  // render...
+});
 ```
+
+The pattern now applies consistently to all factories:
 
 ```ts
-// Scroll 2
-virtualizer.update({ onChange: renderNext, scrollEndDelay: 100 });
+// Works with createDomVirtualList, createGroupedVirtualizer, createGridVirtualizer, etc.
+const virt = createDomVirtualList({
+  items,
+  scrollElement,
+  listElement,
+  signal: () => signal({ items: [], stickyItems: [], totalSize: 0 }),
+});
 ```
 
-`horizontal` and initial offsets remain construction-only.
+Advantages of the signal option over reactive wrappers:
+- Single pattern works for all factories
+- Explicit signal creation in user code (easier to understand)
+- `onChange` callback still works alongside signal
+- No metaprogramming required under the hood
 
-## Reactive Virtualizers
+## Enable Keyboard Navigation
 
-`createReactiveVirtualizer()` and `createReactiveGroupedVirtualizer()` retain their public API. Their implementation no longer uses a JavaScript `Proxy`; `state`, live getters, methods, disposal, object spreading, and enumeration continue working unchanged. Calling `update({ onChange })` preserves reactive `state` updates and invokes the supplied callback after the signal updates.
+Scroll 2 adds keyboard support to all factories via the `keyboardScroll` option.
+
+```ts
+const virt = createVirtualizer(scrollEl, {
+  count: 1000,
+  keyboardScroll: true,
+});
+```
+
+Supported keys:
+- Arrow Up/Down — Scroll by one estimated item size
+- Arrow Left/Right (horizontal lists) — Same
+- Page Up/Down — Scroll by ~80% of viewport
+- Home — Jump to start
+- End — Jump to end
+
+## Enable Auto-Measurement
+
+Scroll 2 adds automatic item measurement for dynamic content via the `autoMeasure` option.
+
+```ts
+const virt = createVirtualizer(scrollEl, {
+  count: 1000,
+  autoMeasure: true, // Auto-measure visible items
+  onChange: ({ items, totalSize }) => {
+    // Ensure every rendered item has data-vz-key attribute
+    for (const item of items) {
+      const el = listEl.querySelector(`[data-vz-key="${getItemKey(item.index)}"]`);
+      if (!el) continue;
+      // el is automatically measured via ResizeObserver
+    }
+  },
+});
+```
+
+Requirements:
+- Every rendered item must have a `data-vz-key` attribute
+- Must use a DOM scroll target (not `Window`)
+- Auto-measurement is disabled in Window scroll mode
+
+## Scroll 1 → Scroll 2 Compatibility
+
+All Scroll 1 code continues working unchanged:
+- Static validation remains
+- Callback updates via `update()` work as before
+- `scrollToIndex()`, `scrollToRow()`, `scrollToColumn()` unchanged
+- Measurement API unchanged
+- Sticky headers and grouped sections unchanged
+- Grid virtualization unchanged

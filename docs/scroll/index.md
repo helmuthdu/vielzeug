@@ -12,8 +12,6 @@ exports:
     createVirtualScroller,
     createGroupedVirtualizer,
     createGridVirtualizer,
-    createReactiveVirtualizer,
-    createReactiveGroupedVirtualizer,
     createMeasurementCache,
     ScrollConfigurationError,
     ScrollError,
@@ -139,7 +137,9 @@ All APIs export from a single entry: `@vielzeug/scroll`.
 - **Sticky headers** — mark items with `sticky` to pin them at the viewport top; `createGroupedVirtualizer` handles section headers automatically
 - **Grouped sections** — `createGroupedVirtualizer` virtualizes sectioned data with per-section headers, `onChange` state, and `scrollToSection`/`scrollToItem`
 - **Grid virtualization** — `createGridVirtualizer` virtualizes two-dimensional data with independent row/column measurement and `scrollToCell`
-- `createReactiveVirtualizer()` / `createReactiveGroupedVirtualizer()` — Expose current state as a Ripple `Signal`
+- **Reactive state** — provide a `signal` factory to expose current state as a Ripple `Signal`
+- **Keyboard navigation** — enable `keyboardScroll` for Arrow/Page/Home/End key support
+- **Auto-measurement** — enable `autoMeasure` to automatically measure visible items via `ResizeObserver`
 - **DOM adapter** — `createDomVirtualList` and `createVirtualScroller` manage virtualizer lifecycle, list-height styles, and DOM node pooling
 - **Skipped re-renders** — `onChange` is not called when a scroll event doesn't move the visible window across an item boundary
 - **Programmatic scrolling** — `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel control; `scrollToRow()`/`scrollToColumn()` for grids; all support `behavior: 'smooth'`

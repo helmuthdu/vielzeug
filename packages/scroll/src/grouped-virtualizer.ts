@@ -1,3 +1,5 @@
+import type { Signal } from '@vielzeug/ripple';
+
 import { resolveEstimateFn } from './_utils';
 import { requireNonNegativeNumber, requirePositiveNumber, validateOverscan } from './_validation';
 import {
@@ -79,6 +81,8 @@ export interface GroupVirtualizerOptions<T> {
    */
   scrollEndDelay?: number;
   sections: Array<GroupSection<T>>;
+  /** Optional signal factory for reactive state. */
+  signal?: (init: GroupVirtualizerState<T>) => Signal<GroupVirtualizerState<T>>;
 }
 
 export interface GroupVirtualizer<T> {
@@ -206,6 +210,19 @@ export function createGroupedVirtualizer<T>(
   let onScrollEnd = options.onScrollEnd;
   let onScrollingChange = options.onScrollingChange;
 
+  // Optional signal for reactive state
+  let stateSignal: Signal<GroupVirtualizerState<T>> | null = null;
+  if (options.signal) {
+    const initialState: GroupVirtualizerState<T> = { headers: [], items: [], stickyHeader: null, totalSize: 0 };
+    stateSignal = options.signal(initialState);
+  }
+
+  // Helper to emit state to both callback and signal
+  function emitState(state: GroupVirtualizerState<T>): void {
+    if (stateSignal) stateSignal.value = state;
+    onChange?.(state);
+  }
+
   function mapState(state: VirtualizerState): GroupVirtualizerState<T> {
     const items: Array<GroupVirtualItem<T>> = [];
     const headers: GroupVirtualHeader[] = [];
@@ -246,7 +263,7 @@ export function createGroupedVirtualizer<T>(
     onChange: (state) => {
       const mapped = mapState(state);
 
-      onChange?.(mapped);
+      emitState(mapped);
     },
     onScrollEnd: (offset) => onScrollEnd?.(offset),
     onScrollingChange: (isScrolling) => onScrollingChange?.(isScrolling),

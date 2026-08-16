@@ -28,8 +28,6 @@ export type {
   GroupVirtualizerUpdateOptions,
 } from './grouped-virtualizer';
 export { createGroupedVirtualizer } from './grouped-virtualizer';
-export type { ReactiveGroupVirtualizer, ReactiveVirtualizer, Signal } from './reactive';
-export { createReactiveGroupedVirtualizer, createReactiveVirtualizer } from './reactive';
 export type {
   MeasurementCache,
   Overscan,

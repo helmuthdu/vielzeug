@@ -9,15 +9,44 @@
 
 **Package:** `@vielzeug/scroll` &nbsp;·&nbsp; **Category:** UI Performance
 
-**Key exports:** `createVirtualizer`, `createDomVirtualList`, `createVirtualScroller`, `createGroupedVirtualizer`, `createGridVirtualizer`, `createReactiveVirtualizer`
+**Key exports:** `createVirtualizer`, `createDomVirtualList`, `createVirtualScroller`, `createGroupedVirtualizer`, `createGridVirtualizer`
 
-**When to use:** Render only visible rows in large lists. Supports fixed heights, variable heights, sticky headers, grouped sections, grid virtualization, programmatic scrolling, and reactive signal integration.
+**When to use:** Render only visible rows in large lists. Supports fixed heights, variable heights, sticky headers, grouped sections, grid virtualization, programmatic scrolling, and optional reactive signal integration.
 
 **Related:** [@vielzeug/dnd](https://vielzeug.dev/dnd/) · [@vielzeug/ore](https://vielzeug.dev/ore/) · [@vielzeug/refine](https://vielzeug.dev/refine/)
 
 </details>
 
-`@vielzeug/scroll` is part of Vielzeug and ships as a TypeScript package with ESM+CJS output. The only dependency is `@vielzeug/ripple`, used by the optional reactive integration.
+`@vielzeug/scroll` is part of Vielzeug and ships as a TypeScript package with ESM+CJS output. The only dependency is `@vielzeug/ripple`, used by the optional reactive signal integration.
+
+## Choosing a Factory
+
+Each factory serves a specific use case. Pick the one that matches your needs:
+
+| Factory | Use Case | Benefits | Trade-offs |
+|---------|----------|----------|-----------|
+| **`createVirtualizer`** | Low-level scroll optimization with manual DOM | Full control, minimal overhead | You manage layout and DOM updates |
+| **`createDomVirtualList`** | Rendering a data-bound list with automatic cleanup | Auto height management, item recycling, stick-to-bottom | Less control over container |
+| **`createVirtualScroller`** | Quick setup: auto-creates scroll + list containers | Minimal setup, self-contained | Less flexibility over structure |
+| **`createGroupedVirtualizer`** | Lists with grouped sections and sticky headers | Automatic sticky headers, section navigation | Not suitable for flat lists |
+| **`createGridVirtualizer`** | 2D grids (spreadsheets, photo galleries) | Row + column virtualization, automatic cell layout | More complex to render |
+
+### Quick Decision Tree
+
+```
+Do you need a 2D grid (rows AND columns)?
+├─ YES → createGridVirtualizer
+└─ NO
+   Do your items have sections with headers?
+   ├─ YES → createGroupedVirtualizer
+   └─ NO
+      Do you want scroll + list containers auto-created?
+      ├─ YES → createVirtualScroller
+      └─ NO
+         Do you have data items that need recycling?
+         ├─ YES → createDomVirtualList
+         └─ NO → createVirtualizer (full control)
+```
 
 ## Installation
 
@@ -160,17 +189,161 @@ grid.scrollToCell(500, 10, { rowAlign: 'center', colAlign: 'start' });
 grid.dispose();
 ```
 
-## Reactive Integration
+## Measurement Methods
 
-`createReactiveVirtualizer` wraps the core virtualizer and exposes state as a `Signal<VirtualizerState>` from `@vielzeug/ripple`:
+Items can have variable heights. Measure them once, and the offset table updates automatically.
+
+### `measure(index, size)`
+Measure a single item. Use when one item's size changes (e.g., image loaded).
+```ts
+virt.measure(42, 120);  // Item 42 is now 120px tall
+```
+
+### `measureBatch(entries)`
+Measure multiple items in one operation. Coalesces updates into a single rebuild.
+```ts
+virt.measureBatch([
+  { index: 10, size: 150 },
+  { index: 11, size: 140 },
+  { index: 12, size: 160 },
+]);
+```
+
+### `measureEl(index, el)`
+Auto-observe an element's size with `ResizeObserver`. Useful for dynamic content (videos, expanding text).
+```ts
+const disconnect = virt.measureEl(42, videoElement);
+// Later:
+disconnect();  // Stop observing
+```
+
+## Migration Guide
+
+### Switching from `createVirtualizer` to `createDomVirtualList`
+
+If you're manually managing a list and want item recycling + auto-height:
 
 ```ts
-import { createReactiveVirtualizer } from '@vielzeug/scroll';
-import { effect } from '@vielzeug/ripple';
+// Before:
+const virt = createVirtualizer(scrollEl, {
+  count: items.length,
+  onChange: ({ items: renderItems, totalSize }) => {
+    listEl.style.height = `${totalSize}px`;
+    // manual DOM updates
+  },
+});
 
-const virt = createReactiveVirtualizer(scrollEl, {
+// After:
+const virt = createDomVirtualList({
+  items,
+  scrollElement: scrollEl,
+  listElement: listEl,
+  render: ({ items: renderItems, recycle }) => {
+    // recycled DOM updates
+  },
+});
+virt.setItems(newItems);  // Auto-rebuilds
+```
+
+### Switching from flat list to grouped
+
+When your data gains structure (sections with headers):
+
+```ts
+// Before:
+const virt = createVirtualizer(scrollEl, { count: items.length });
+
+// After:
+const virt = createGroupedVirtualizer(scrollEl, {
+  sections: [
+    { label: 'Section A', items: itemsA },
+    { label: 'Section B', items: itemsB },
+  ],
+});
+```
+
+Changes needed in your render function:
+- Receive `headers` array in addition to `items`
+- Render headers with `.start`, `.size`, `.label`
+- Render items with `.data` field containing the item
+
+## Keyboard Navigation
+
+Enable keyboard-based scrolling with the `keyboardScroll` option:
+
+```ts
+const virt = createVirtualizer(scrollEl, {
   count: 1000,
   estimateSize: 40,
+  keyboardScroll: true,
+});
+```
+
+Supported keys:
+- **Arrow Up/Down** (or Left/Right for horizontal lists) — Scroll by one estimated item size
+- **Page Up/Down** — Scroll by ~80% of viewport height (configurable with Page Down/Up key modifiers)
+- **Home** — Jump to the start
+- **End** — Jump to the end
+
+**Requirements:**
+- The scroll container (or a descendant) must have focus for keyboard events to fire
+- Works with all factories: `createVirtualizer`, `createDomVirtualList`, `createGroupedVirtualizer`, `createGridVirtualizer`
+- Grid virtualization supports separate row/column scrolling (arrows navigate rows or columns independently)
+
+## Auto-Measurement
+
+For dynamic or user-generated content with variable sizes, enable `autoMeasure` to automatically measure visible items:
+
+```ts
+const virt = createVirtualizer(scrollEl, {
+  count: 1000,
+  estimateSize: 40,
+  autoMeasure: true,
+});
+```
+
+**How it works:**
+- Each rendered item is automatically measured via `ResizeObserver`
+- Measurements are cached and the virtualizer recomputes layout in real time
+- Useful for content that grows/shrinks (expanding text, loading spinners, videos)
+
+**Requirements:**
+- Every rendered item must have a `data-vz-key` attribute set to the item's key:
+  ```ts
+  const virt = createVirtualizer(scrollEl, {
+    count: items.length,
+    getItemKey: (i) => items[i].id,
+    onChange: ({ items: renderItems, totalSize }) => {
+      listEl.style.height = `${totalSize}px`;
+      for (const item of renderItems) {
+        const el = document.createElement('div');
+        el.setAttribute('data-vz-key', items[item.index].id);  // <-- Required
+        el.textContent = items[item.index].text;
+        listEl.appendChild(el);
+      }
+    },
+  });
+  ```
+- Must use a DOM scroll target (not `Window`)
+- For more control, use `measureEl()` manually instead
+
+**Caveats:**
+- `autoMeasure` queries the DOM every render cycle; avoid with very large visible windows (100+ items)
+- Elements are looked up in the scroll target; ensure elements are direct/indirect children
+- ResizeObserver cleanup is automatic on `dispose()`
+
+## Reactive Integration
+
+Any virtualizer can emit state to a reactive `Signal` from `@vielzeug/ripple` by providing a `signal` option:
+
+```ts
+import { createVirtualizer } from '@vielzeug/scroll';
+import { signal, effect } from '@vielzeug/ripple';
+
+const virt = createVirtualizer(scrollEl, {
+  count: 1000,
+  estimateSize: 40,
+  signal: (init) => signal(init),  // Create and emit to a signal
 });
 
 effect(() => {
@@ -181,6 +354,8 @@ effect(() => {
 
 virt.dispose();
 ```
+
+The `signal` option works with all factories (`createDomVirtualList`, `createGroupedVirtualizer`, `createGridVirtualizer`, etc.) and works alongside the `onChange` callback if provided.
 
 ## Documentation
 

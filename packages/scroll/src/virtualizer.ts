@@ -1,5 +1,8 @@
+import type { Signal } from '@vielzeug/ripple';
+
 import { createScrollAdapter } from './_adapter';
 import { createAxis1D, type VirtualItem } from './_axis1d';
+import { computeStickyItems } from './_sticky';
 import {
   createMeasurementCache,
   DEFAULT_ESTIMATE_SIZE,
@@ -41,12 +44,16 @@ export interface VirtualizerState {
 }
 
 export interface VirtualizerOptions {
+  /** Auto-attach ResizeObserver to visible items. */
+  autoMeasure?: boolean;
   count: number;
   estimateSize?: number | ((index: number) => number);
   gap?: number;
   getItemKey?: (index: number) => VirtualKey;
   horizontal?: boolean;
   initialOffset?: number;
+  /** Enable keyboard scroll (arrow keys, Page Up/Down, Home, End). */
+  keyboardScroll?: boolean;
   /** External measurement cache for scroll restoration or SSR pre-measurement. */
   measurementCache?: MeasurementCache;
   /** Called after every render cycle with the new state. Replace through `update()`. */
@@ -61,6 +68,8 @@ export interface VirtualizerOptions {
    * event is unavailable. Defaults to 150.
    */
   scrollEndDelay?: number;
+  /** Optional signal factory for reactive state. */
+  signal?: (init: VirtualizerState) => Signal<VirtualizerState>;
   sticky?: (index: number) => boolean;
 }
 
@@ -72,10 +81,12 @@ export interface VirtualizerOptions {
  * `initialOffset` (one-time bootstrap value).
  */
 export interface VirtualizerUpdateOptions {
+  autoMeasure?: boolean;
   count?: number;
   estimateSize?: number | ((index: number) => number);
   gap?: number;
   getItemKey?: ((index: number) => VirtualKey) | undefined;
+  keyboardScroll?: boolean;
   /** Replace the active measurement cache. Existing entries in the new cache are used immediately on the next rebuild. */
   measurementCache?: MeasurementCache;
   onChange?: ((state: VirtualizerState) => void) | undefined;
@@ -144,6 +155,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
   const horizontal = !!options.horizontal;
   const defaultItemKey = (index: number): VirtualKey => index;
+  const enableKeyboardScroll = options.keyboardScroll ?? false;
 
   let count = requireNonNegativeInteger(options.count, 'count');
   let estimateFn = resolveEstimateFn(options.estimateSize, DEFAULT_ESTIMATE_SIZE);
@@ -151,13 +163,26 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   let getItemKey = options.getItemKey ?? defaultItemKey;
   let overscan = normalizeOverscan(options.overscan, DEFAULT_OVERSCAN);
   let stickyFn: ((index: number) => boolean) | null = options.sticky ?? null;
+  let keyboardScrollEnabled = enableKeyboardScroll;
+  let autoMeasureEnabled = options.autoMeasure ?? false;
 
   let onChange = options.onChange;
   let onScrollEnd = options.onScrollEnd;
   let onScrollingChange = options.onScrollingChange;
   let scrollEndDelay = options.scrollEndDelay ?? 150;
 
-  let isScrolling = false;
+  // Optional signal for reactive state
+  let stateSignal: Signal<VirtualizerState> | null = null;
+  if (options.signal) {
+    const initialState: VirtualizerState = { items: [], stickyItems: [], totalSize: 0 };
+    stateSignal = options.signal(initialState);
+  }
+
+  // Helper to emit state to both callback and signal
+  function emitState(state: VirtualizerState): void {
+    if (stateSignal) stateSignal.value = state;
+    onChange?.(state);
+  }
   let scrollEndTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Detect native scrollend support (Chrome 114+, Firefox 109+)
@@ -205,6 +230,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   let viewportSize = 0;
   let prevScrollOffset = -1; // for sticky dedup
   let destroyed = false;
+  let isScrolling = false;
 
   // ─── Scroll clamping ─────────────────────────────────────────────────────────
 
@@ -213,54 +239,6 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     const maxOffset = Math.max(0, ax.totalSize - viewportSize);
 
     return Math.min(maxOffset, Math.max(0, safe));
-  }
-
-  // ─── Sticky items ─────────────────────────────────────────────────────────────
-
-  function computeStickyItems(): VirtualItem[] {
-    if (!stickyFn || count === 0 || scrollOffset <= 0) return [];
-
-    let lastAbove = -1;
-    let lo = 0;
-    let hi = count - 1;
-
-    while (lo <= hi) {
-      const mid = (lo + hi) >> 1;
-
-      if (ax.startAt(mid) < scrollOffset) {
-        lastAbove = mid;
-        lo = mid + 1;
-      } else {
-        hi = mid - 1;
-      }
-    }
-
-    if (lastAbove < 0) return [];
-
-    let activeIdx = -1;
-
-    for (let i = lastAbove; i >= 0; i--) {
-      if (stickyFn(i)) {
-        activeIdx = i;
-        break;
-      }
-    }
-
-    if (activeIdx === -1) return [];
-
-    const activeSize = ax.sizeAt(activeIdx);
-    let nextStickyStart = Infinity;
-
-    for (let i = activeIdx + 1; i < count; i++) {
-      if (stickyFn(i)) {
-        nextStickyStart = ax.startAt(i);
-        break;
-      }
-    }
-
-    const pinnedStart = Math.min(scrollOffset, nextStickyStart - activeSize);
-
-    return [{ end: pinnedStart + activeSize, index: activeIdx, size: activeSize, start: pinnedStart }];
   }
 
   // ─── Compute and emit ─────────────────────────────────────────────────────────
@@ -278,7 +256,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
         items = [];
         stickyItems = [];
 
-        if (onChange) onChange({ items, stickyItems, totalSize: ax.totalSize });
+        emitState({ items, stickyItems, totalSize: ax.totalSize });
       }
 
       return;
@@ -307,9 +285,28 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     }
 
     items = nextItems;
-    stickyItems = stickyFn ? computeStickyItems() : [];
+    stickyItems = stickyFn
+      ? computeStickyItems({ count, scrollOffset, sizeAt: ax.sizeAt, startAt: ax.startAt, stickyFn })
+      : [];
 
-    if (onChange) onChange({ items, stickyItems, totalSize: ax.totalSize });
+    emitState({ items, stickyItems, totalSize: ax.totalSize });
+
+    // Auto-measure visible items if enabled
+    if (autoMeasureEnabled && items.length > 0) {
+      // Queue microtask to allow DOM to render first
+      queueMicrotask(() => {
+        if (destroyed || target instanceof Window) return;
+
+        for (const item of items) {
+          const key = getItemKey(item.index);
+          const el = (target as HTMLElement)?.querySelector?.(`[data-vz-key="${key}"]`);
+
+          if (el instanceof HTMLElement) {
+            measureEl(item.index, el);
+          }
+        }
+      });
+    }
   }
 
   // ─── Measurement (R6: measure delegates to measureBatch) ─────────────────────
@@ -485,6 +482,14 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       needsCompute = true;
     }
 
+    if (Object.hasOwn(next, 'keyboardScroll')) {
+      keyboardScrollEnabled = next.keyboardScroll ?? false;
+    }
+
+    if (Object.hasOwn(next, 'autoMeasure')) {
+      autoMeasureEnabled = next.autoMeasure ?? false;
+    }
+
     if (needsRebuild) {
       recordScrollAnchor();
       ax.rebuild(true);
@@ -635,6 +640,67 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
   const adapter = createScrollAdapter(target, handleScroll, handleResize);
   const domAxis = horizontal ? adapter.x : adapter.y;
+
+  // ─── Keyboard scroll support ──────────────────────────────────────────────────
+
+  if (keyboardScrollEnabled) {
+    const handleKeyDown = (e: Event): void => {
+      if (destroyed) return;
+      if (!(e instanceof KeyboardEvent)) return;
+      if (count === 0) return;
+
+      let handled = false;
+      let newOffset = scrollOffset;
+      const pageScrollSize = Math.max(viewportSize * 0.8, viewportSize - 100);
+
+      switch (e.key) {
+        case 'ArrowUp':
+        case 'ArrowLeft': {
+          const itemSize = typeof estimateFn(0) === 'number' ? estimateFn(0) : DEFAULT_ESTIMATE_SIZE;
+          newOffset = Math.max(0, scrollOffset - (itemSize + gap));
+          handled = true;
+          break;
+        }
+        case 'ArrowDown':
+        case 'ArrowRight': {
+          const itemSize = typeof estimateFn(0) === 'number' ? estimateFn(0) : DEFAULT_ESTIMATE_SIZE;
+          newOffset = Math.min(ax.totalSize - viewportSize, scrollOffset + (itemSize + gap));
+          handled = true;
+          break;
+        }
+        case 'PageUp':
+          newOffset = Math.max(0, scrollOffset - pageScrollSize);
+          handled = true;
+          break;
+        case 'PageDown':
+          newOffset = Math.min(ax.totalSize - viewportSize, scrollOffset + pageScrollSize);
+          handled = true;
+          break;
+        case 'Home':
+          newOffset = 0;
+          handled = true;
+          break;
+        case 'End':
+          newOffset = Math.max(0, ax.totalSize - viewportSize);
+          handled = true;
+          break;
+      }
+
+      if (handled) {
+        e.preventDefault();
+        domAxis.writeOffset(newOffset, 'auto');
+        scrollOffset = clampScrollOffset(newOffset);
+        computeVisible();
+      }
+    };
+
+    if (typeof target === 'object' && target !== null && 'addEventListener' in target) {
+      (target as EventTarget).addEventListener('keydown', handleKeyDown);
+      ac.signal.addEventListener('abort', () => {
+        (target as EventTarget).removeEventListener('keydown', handleKeyDown);
+      });
+    }
+  }
 
   if (hasNativeScrollEnd) {
     (target as EventTarget).addEventListener('scrollend', notifyScrollEnd, { passive: true });

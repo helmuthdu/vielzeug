@@ -528,6 +528,110 @@ function remount(nextScrollContainerEl: HTMLElement) {
 } // → virt.dispose() called here
 ```
 
+## Keyboard Navigation
+
+Enable keyboard-based scrolling with the `keyboardScroll` option. Users can navigate lists using Arrow keys, Page Up/Down, Home, and End.
+
+```ts
+const virt = createVirtualizer(scrollEl, {
+  count: 1000,
+  estimateSize: 36,
+  keyboardScroll: true, // Enable keyboard navigation
+  onChange: render,
+});
+```
+
+**Supported keys:**
+- **Arrow Up/Down** (or Left/Right for horizontal lists) — Scroll by one estimated item height
+- **Page Up/Down** — Scroll by ~80% of viewport height
+- **Home** — Jump to the start of the list
+- **End** — Jump to the end of the list
+
+**Requirements:**
+- The scroll container (or a descendant) must have keyboard focus for events to fire
+- Works with all factories: `createVirtualizer`, `createDomVirtualList`, `createGroupedVirtualizer`, `createGridVirtualizer`
+- Arrow key step size is automatically calculated from your `estimateSize` (or `estimateRowSize`/`estimateColSize` for grids)
+
+## Auto-Measurement
+
+Enable automatic item measurement for dynamic or user-generated content that changes size. When `autoMeasure` is enabled, the virtualizer measures visible items via `ResizeObserver` and updates layout in real time.
+
+```ts
+const virt = createVirtualizer(scrollEl, {
+  count: messages.length,
+  estimateSize: 36, // Initial guess; will be measured
+  autoMeasure: true, // Automatically measure visible items
+  onChange: ({ items, totalSize }) => {
+    listEl.style.height = `${totalSize}px`;
+    listEl.replaceChildren();
+
+    for (const item of items) {
+      const el = document.createElement('div');
+      // IMPORTANT: Set data-vz-key for auto-measure to find the element
+      el.setAttribute('data-vz-key', String(item.index));
+      el.textContent = messages[item.index]?.text ?? '';
+      listEl.appendChild(el);
+    }
+  },
+});
+```
+
+**Requirements:**
+- Every rendered item must have a `data-vz-key` attribute with a unique value
+- Must use a DOM scroll target (not `Window`)
+- Elements must be in the DOM by the time `ResizeObserver` fires (usually the next microtask)
+
+**Use cases:**
+- Chat lists where messages expand on load
+- Expandable sections with collapsing text
+- Lazy-loaded thumbnails that arrive with unknown heights
+- User-resizable rows or dynamic content (videos, iframes)
+
+**Performance notes:**
+- Auto-measurement queries the DOM every render cycle — avoid with very large visible windows (100+ items)
+- For finer control, use the manual `measureEl()` method instead
+- Enable only on lists with truly variable-height items
+
+## Reactive Integration
+
+Expose virtualizer state to a reactive `Signal` from `@vielzeug/ripple` using the `signal` option. This works on all factories and pairs with your existing `onChange` callback.
+
+```ts
+import { createVirtualizer } from '@vielzeug/scroll';
+import { signal, effect } from '@vielzeug/ripple';
+
+// Create an empty signal with the initial state shape
+const scrollState = signal({ items: [], stickyItems: [], totalSize: 0 });
+
+const virt = createVirtualizer(scrollEl, {
+  count: 1000,
+  estimateSize: 36,
+  signal: () => scrollState, // Return the signal on each init
+  onChange: render, // Both signal and callback get the state
+});
+
+// React to state changes
+effect(() => {
+  const { totalSize, items } = scrollState.value;
+  console.log(`Visible: ${items.length} items, total height: ${totalSize}px`);
+});
+```
+
+**Why a signal factory instead of a direct signal?**
+The `signal` option receives a factory function so that if your component mounts/unmounts and recreates the virtualizer, the signal is also recreated with a fresh initial state. If you want to share state across multiple virtualizers or preserve it across disposal, create the signal in outer scope and return it from the factory:
+
+```ts
+// Shared signal across remounts
+const scrollState = signal({ items: [], stickyItems: [], totalSize: 0 });
+
+function createList() {
+  return createVirtualizer(scrollEl, {
+    count: 1000,
+    signal: () => scrollState, // Always return the same instance
+  });
+}
+```
+
 ## Framework Integration
 
 Scroll is rendering-layer agnostic. The pattern is always the same: create the virtualizer when your scroll container is mounted, re-render your DOM in `onChange`, and call `dispose()` on unmount.

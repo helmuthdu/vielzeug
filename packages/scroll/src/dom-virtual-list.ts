@@ -1,3 +1,5 @@
+import type { Signal } from '@vielzeug/ripple';
+
 import { DEFAULT_ESTIMATE_SIZE, DEFAULT_OVERSCAN, type MeasurementCache, type Overscan } from './_utils';
 import {
   requireNonNegativeInteger,
@@ -62,6 +64,8 @@ export type DomVirtualListOptions<T> = {
   gap?: number;
   getItemKey?: (index: number, item: T) => VirtualKey;
   horizontal?: boolean;
+  /** Enable keyboard navigation (Arrow/Page/Home/End keys). */
+  keyboardScroll?: boolean;
   listElement: HTMLElement;
   /** External measurement cache for scroll restoration. */
   measurementCache?: MeasurementCache;
@@ -78,6 +82,8 @@ export type DomVirtualListOptions<T> = {
   stickToBottom?: boolean | StickToBottomOptions;
   /** Mark items as sticky headers. Receives the item index and the item data. */
   sticky?: (index: number, item: T) => boolean;
+  /** Optional signal factory for reactive state. */
+  signal?: (init: VirtualizerState) => Signal<VirtualizerState>;
 };
 
 /**
@@ -178,6 +184,19 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
   let isDestroyed = false;
   const ac = new AbortController();
   const listEl = options.listElement;
+
+  // Optional signal for reactive state
+  let stateSignal: Signal<VirtualizerState> | null = null;
+  if (options.signal) {
+    const initialState: VirtualizerState = { items: [], stickyItems: [], totalSize: 0 };
+    stateSignal = options.signal(initialState);
+  }
+
+  // Helper to emit state to both callback and signal
+  function emitState(state: VirtualizerState): void {
+    if (stateSignal) stateSignal.value = state;
+    handleChange(state);
+  }
 
   // Pool must be declared before virtualizer since handleChange (passed as onChange)
   // is invoked during createVirtualizer initialization via computeVisible.
@@ -284,8 +303,9 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       gap: options.gap,
       getItemKey: resolveKey,
       horizontal: options.horizontal,
+      keyboardScroll: options.keyboardScroll,
       measurementCache: options.measurementCache,
-      onChange: handleChange,
+      onChange: emitState,
       overscan: options.overscan ?? DEFAULT_OVERSCAN,
       sticky: options.sticky
         ? (index) => {

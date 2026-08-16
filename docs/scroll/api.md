@@ -7,15 +7,13 @@ description: Complete API reference for the Scroll virtual list engine.
 
 ## API Overview
 
-| Symbol                               | Purpose                                         | Execution mode | Common gotcha                                                                         |
-| ------------------------------------ | ----------------------------------------------- | -------------- | ------------------------------------------------------------------------------------- |
-| `createVirtualizer()`                | Core 1D virtualizer                             | Sync           | `onChange` fires on construction — wire DOM first                                     |
-| `createDomVirtualList()`             | DOM adapter for dropdown/listbox UIs            | Sync           | Virtualizer is created lazily on first `setItems()`                                   |
-| `createVirtualScroller()`            | Self-contained scroller (creates its own DOM)   | Sync           | `dispose()` removes the generated scroll element                                      |
-| `createGroupedVirtualizer()`         | Sectioned list with sticky headers              | Sync           | `update()` preserves measured sizes — call `invalidate()` only on font/layout changes |
-| `createGridVirtualizer()`            | Two-dimensional grid virtualizer                | Sync           | `onRangeChange` fires even when `onChange` is omitted                                 |
-| `createReactiveVirtualizer()`        | Virtualizer with reactive signal output         | Sync           | `onChange` must not be passed — it is wired internally                                |
-| `createReactiveGroupedVirtualizer()` | Grouped virtualizer with reactive signal output | Sync           | `onChange` must not be passed — it is wired internally                                |
+| Symbol                       | Purpose                                | Execution mode | Common gotcha                                                                         |
+| ---------------------------- | -------------------------------------- | -------------- | ------------------------------------------------------------------------------------- |
+| `createVirtualizer()`        | Core 1D virtualizer                    | Sync           | `onChange` fires on construction — wire DOM first                                     |
+| `createDomVirtualList()`     | DOM adapter for dropdown/listbox UIs   | Sync           | Virtualizer is created lazily on first `setItems()`                                   |
+| `createVirtualScroller()`    | Self-contained scroller (creates DOM)  | Sync           | `dispose()` removes the generated scroll element                                      |
+| `createGroupedVirtualizer()` | Sectioned list with sticky headers     | Sync           | `update()` preserves measured sizes — call `invalidate()` only on font/layout changes |
+| `createGridVirtualizer()`    | Two-dimensional grid virtualizer       | Sync           | `onRangeChange` fires even when `onChange` is omitted                                 |
 
 ## Package Entry Point
 
@@ -28,7 +26,7 @@ import {
   createVirtualScroller,
   createGroupedVirtualizer,
   createGridVirtualizer,
-  createReactiveVirtualizer,
+  createMeasurementCache,
   type Virtualizer,
   type VirtualItem,
   type VirtualizerState,
@@ -85,12 +83,15 @@ const virt = createVirtualizer(scrollEl, {
 | `getItemKey`        | `(index: number) => string \| number`        | `index => index` | Stable key for the measurement cache                                                       |
 | `horizontal`        | `boolean`                                    | `false`          | Virtualize along the X axis instead of Y                                                   |
 | `initialOffset`     | `number`                                     | —                | Initial scroll position; applied once on construction                                      |
+| `keyboardScroll`    | `boolean`                                    | `false`          | Enable keyboard navigation (Arrow/Page/Home/End keys)                                      |
+| `autoMeasure`       | `boolean`                                    | `false`          | Automatically measure visible items via ResizeObserver                                     |
 | `measurementCache`  | `MeasurementCache`                           | —                | Shared external cache for scroll restoration or SSR pre-measurement                        |
 | `onChange`          | `(state: VirtualizerState) => void`          | —                | Called when the visible window changes; replace through `update()`.                         |
 | `onScrollEnd`       | `(offset: number) => void`                   | —                | Called when scrolling settles; replace through `update()`. |
 | `onScrollingChange` | `(isScrolling: boolean) => void`             | —                | Called when scroll activity starts or stops; replace through `update()`. |
 | `overscan`          | `number \| { start?: number; end?: number }` | `3`              | Extra items outside the viewport; number = symmetric on both sides                         |
 | `scrollEndDelay`    | `number`                                     | `150`            | Debounce delay (ms) used to detect scroll end when native `scrollend` is unavailable       |
+| `signal`            | `(init: VirtualizerState) => Signal<VirtualizerState>` | —        | Optional signal factory to expose state as a reactive Signal                              |
 | `sticky`            | `(index: number) => boolean`                 | —                | Mark an item as a sticky header (pinned at viewport top)                                   |
 
 Callbacks and `scrollEndDelay` can be replaced through `update()`; `horizontal` and `initialOffset` remain construction-only.
@@ -616,91 +617,6 @@ interface ScrollToCellOptions {
   rowAlign?: 'auto' | 'center' | 'end' | 'start';
 }
 ```
-
-## `createReactiveGroupedVirtualizer(target, options)`
-
-```ts
-createReactiveGroupedVirtualizer<T>(
-  target: ScrollTarget,
-  options: Omit<GroupVirtualizerOptions<T>, 'onChange'>,
-): ReactiveGroupVirtualizer<T>;
-```
-
-Wraps `createGroupedVirtualizer` and exposes state as a `Signal<GroupVirtualizerState<T>>` from `@vielzeug/ripple`. All `GroupVirtualizer<T>` methods and live getters are available. `onChange` must not be provided — it is wired internally.
-
-```ts
-import { createReactiveGroupedVirtualizer } from '@vielzeug/scroll';
-import { effect } from '@vielzeug/ripple';
-
-const virt = createReactiveGroupedVirtualizer<Contact>(scrollEl, {
-  estimateHeaderSize: 32,
-  estimateItemSize: 48,
-  sections,
-});
-
-effect(() => {
-  const { headers, items, stickyHeader, totalSize } = virt.state.value;
-  render(headers, items, stickyHeader, totalSize);
-});
-
-virt.update(nextSections);
-virt.dispose();
-```
-
-### `ReactiveGroupVirtualizer<T>`
-
-```ts
-interface ReactiveGroupVirtualizer<T> extends GroupVirtualizer<T> {
-  readonly state: Signal<GroupVirtualizerState<T>>;
-}
-```
-
-The `state` signal is updated synchronously on every render cycle. All live getters remain current through copied property descriptors.
-
-## `createReactiveVirtualizer(target, options)`
-
-```ts
-createReactiveVirtualizer(
-  target: ScrollTarget,
-  options: Omit<VirtualizerOptions, 'onChange'>,
-): ReactiveVirtualizer;
-```
-
-Wraps `createVirtualizer` and exposes state as a `Signal<VirtualizerState>` from `@vielzeug/ripple`. All `Virtualizer` methods and live getters are available on the returned object. `onChange` must not be provided — it is wired internally.
-
-```ts
-import { createReactiveVirtualizer } from '@vielzeug/scroll';
-import { effect } from '@vielzeug/ripple';
-
-const virt = createReactiveVirtualizer(scrollEl, {
-  count: 1000,
-  estimateSize: 40,
-});
-
-effect(() => {
-  const { items, totalSize } = virt.state.value;
-  listEl.style.height = `${totalSize}px`;
-  listEl.replaceChildren();
-  for (const item of items) {
-    const el = document.createElement('div');
-    el.style.cssText = `position:absolute;top:${item.start}px;height:${item.size}px;`;
-    listEl.appendChild(el);
-  }
-});
-
-virt.update({ count: 2000 });
-virt.dispose();
-```
-
-### `ReactiveVirtualizer`
-
-```ts
-interface ReactiveVirtualizer extends Virtualizer {
-  readonly state: Signal<VirtualizerState>;
-}
-```
-
-The `state` signal is updated synchronously whenever the visible window changes. All live getters (`count`, `items`, `totalSize`, `scrollOffset`, `stickyItems`) remain current.
 
 ## Types
 
