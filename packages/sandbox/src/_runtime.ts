@@ -1,5 +1,5 @@
 import { devOnly, warn } from './_dev.js';
-import { buildRuntimeDocument } from './_document.js';
+import { buildDocumentFromOptions } from './_document.js';
 import { normalizeSandboxOptions } from './_policy.js';
 import {
   type BridgeBootstrap,
@@ -159,7 +159,7 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     const documentOptions = { ...normalized, namedStyles: { ...namedStyles } };
 
     current.dataset.sandboxGeneration = String(generation);
-    current.srcdoc = buildRuntimeDocument(html, documentOptions, bootstrap);
+    current.srcdoc = buildDocumentFromOptions(html, documentOptions, bootstrap);
 
     const promise = new Promise<void>((resolve, reject) => {
       currentRender = { reject, resolve };

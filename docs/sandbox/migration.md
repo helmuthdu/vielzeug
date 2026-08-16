@@ -1,13 +1,29 @@
 ---
-title: Sandbox 2 Migration
-description: Migrate incremental body updates and configuration handling to Sandbox 2.
+title: Sandbox Migration
+description: Migrate incremental body updates, configuration handling, and error type guard changes across Sandbox releases.
 ---
 
 [[toc]]
 
 ## Sandbox 2 Changes
 
-Sandbox 2 keeps `createSandbox()`, `render()`, `ready`, state updates, style updates, and message subscriptions. It renames destructive body updates and rejects malformed document/CSP configuration instead of rewriting it.
+Sandbox 2 keeps `createSandbox()`, `render()`, `ready`, state updates, style updates, and message subscriptions. It renames destructive body updates, rejects malformed document/CSP configuration instead of rewriting it, and removes the unused `SandboxError.is()` type guard and sorts `SandboxMessage` union members alphabetically to remove `eslint-disable` suppressions.
+
+### Replace `SandboxError.is()` with `instanceof`
+
+The static `SandboxError.is()` type guard is removed. Use `instanceof SandboxError` to narrow unknown values to the Sandbox error hierarchy.
+
+```ts
+// Sandbox 1
+if (SandboxError.is(err)) { ... }
+
+// Sandbox 2
+if (err instanceof SandboxError) { ... }
+```
+
+### `SandboxMessage` field order
+
+`SandboxMessage` union members are now sorted alphabetically by field name. The runtime shape is unchanged — only the documented type definition order moved. Code that destructures by field name (the overwhelmingly common case) is unaffected. Position-sensitive tooling that keyed off field order in the type definition needs to re-read the [API Reference](./api.md).
 
 Removed API:
 

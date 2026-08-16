@@ -16,7 +16,7 @@ description: Full API reference for @vielzeug/sandbox — createSandbox, buildCs
 | `SandboxOptions` | Unified options for `createSandbox`, `buildCsp`, `buildDocument` | — | All fields are optional; defaults documented per field below |
 | `SandboxBridge` | Bridge API at `window.__sandbox__` inside sandbox documents | — | `emit()` sends events to the host; `onState()` only receives — there is no way to call host functions directly |
 | `SandboxMessage` | Application messages the sandbox sends to the host | — | `'ready'` is not part of this union — it resolves `render()` internally instead |
-| `SandboxError` | Base error class for `@vielzeug/sandbox` | — | Use `SandboxError.is(err)` to narrow package errors |
+| `SandboxError` | Base error class for `@vielzeug/sandbox` | — | Use `instanceof SandboxError` to narrow package errors |
 | `SandboxConfigurationError` | Thrown for invalid origins, URLs, nonces, language tags, or style IDs | — | Fix configuration rather than relying on sanitization |
 | `SandboxTimeoutError` | Thrown by `render()` when no `'ready'` signal arrives in time | — | Extends `SandboxError`; the document is likely missing the bridge script |
 | `SandboxStateUpdateDetail` | Detail payload of the sandbox-side `sandbox:state-update` CustomEvent | — | Only relevant inside sandbox documents, not on the host |
@@ -121,7 +121,7 @@ Unlike the other guard paths above, the `SandboxTimeoutError` rejection from `re
 try {
   await sandbox.render(html);
 } catch (err) {
-  if (SandboxError.is(err)) {
+  if (err instanceof SandboxError) {
     console.error('Sandbox failed to load:', err.message);
   }
 }
@@ -230,9 +230,9 @@ Application-level messages the sandbox sends to the host, received via `sandbox.
 
 ```ts
 type SandboxMessage =
-  | { type: 'error'; message: string; stack?: string }
-  | { type: 'custom'; event: string; detail: unknown }
-  | { type: 'resize'; height: number };
+  | { detail: unknown; event: string; type: 'custom' }
+  | { message: string; stack?: string; type: 'error' }
+  | { height: number; type: 'resize' };
 ```
 
 | Type | Fields | Description |
@@ -345,12 +345,10 @@ Return type of `onMessage()` and `SandboxBridge.onState()`. Calling it more than
 Base class for all `@vielzeug/sandbox` errors. Extends `Error`.
 
 ```ts
-class SandboxError extends Error {
-  static is(err: unknown): err is SandboxError;
-}
+class SandboxError extends Error {}
 ```
 
-`SandboxError.is()` is a type-safe static predicate — prefer it over `instanceof` in catch blocks that may receive unknown values. It also matches subclasses like `SandboxTimeoutError`:
+Use `instanceof SandboxError` to narrow package errors in catch blocks. It also matches subclasses like `SandboxTimeoutError`:
 
 ```ts
 import { SandboxError } from '@vielzeug/sandbox';
@@ -358,7 +356,7 @@ import { SandboxError } from '@vielzeug/sandbox';
 try {
   await sandbox.render(html);
 } catch (err) {
-  if (SandboxError.is(err)) {
+  if (err instanceof SandboxError) {
     console.error(err.message);
   }
 }

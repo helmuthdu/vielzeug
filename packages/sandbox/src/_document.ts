@@ -15,7 +15,11 @@ function escapeText(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function buildDocumentFromOptions(html: string, options: NormalizedSandboxOptions, bootstrap: BridgeBootstrap): string {
+export function buildDocumentFromOptions(
+  html: string,
+  options: NormalizedSandboxOptions,
+  bootstrap: BridgeBootstrap,
+): string {
   const csp = escapeAttr(buildCspFromOptions(options));
   const styles = Object.entries(options.namedStyles)
     .map(([id, css]) => `<style id="${escapeAttr(id)}">${escapeCss(css)}</style>`)
@@ -48,12 +52,4 @@ ${buildBridgeScript(bootstrap)}
 
 export function buildDocument(html: string, options: SandboxOptions = {}): string {
   return buildDocumentFromOptions(html, normalizeSandboxOptions(options), { channel: '', generation: 0 });
-}
-
-export function buildRuntimeDocument(
-  html: string,
-  options: NormalizedSandboxOptions,
-  bootstrap: BridgeBootstrap,
-): string {
-  return buildDocumentFromOptions(html, options, bootstrap);
 }

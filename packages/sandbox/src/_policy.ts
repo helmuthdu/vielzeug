@@ -122,3 +122,7 @@ export function buildCspFromOptions(options: NormalizedSandboxOptions): string {
     "base-uri 'none'",
   ].join('; ');
 }
+
+export function buildCsp(options: SandboxOptions = {}): string {
+  return buildCspFromOptions(normalizeSandboxOptions(options));
+}

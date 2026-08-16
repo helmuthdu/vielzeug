@@ -43,29 +43,5 @@ describe('SandboxError', () => {
 
     expect(err).toBeInstanceOf(SandboxError);
     expect(err.name).toBe('SandboxConfigurationError');
-    expect(SandboxError.is(err)).toBe(true);
-  });
-
-  describe('is()', () => {
-    it('returns true for a direct SandboxError instance', () => {
-      expect(SandboxError.is(new SandboxError('boom'))).toBe(true);
-    });
-
-    it('returns true for a subclass instance', () => {
-      class SandboxFooError extends SandboxError {}
-
-      expect(SandboxError.is(new SandboxFooError('boom'))).toBe(true);
-    });
-
-    it('returns false for a plain Error', () => {
-      expect(SandboxError.is(new Error('boom'))).toBe(false);
-    });
-
-    it('returns false for non-error values (null, undefined, string, object)', () => {
-      expect(SandboxError.is(null)).toBe(false);
-      expect(SandboxError.is(undefined)).toBe(false);
-      expect(SandboxError.is('boom')).toBe(false);
-      expect(SandboxError.is({ message: 'boom', name: 'SandboxError' })).toBe(false);
-    });
   });
 });

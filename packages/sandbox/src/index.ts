@@ -1,4 +1,6 @@
-export { buildCsp, buildDocument, createSandbox } from './_sandbox.js';
+export { buildDocument } from './_document.js';
+export { buildCsp } from './_policy.js';
+export { createSandbox } from './_runtime.js';
 export { SandboxConfigurationError, SandboxError, SandboxTimeoutError } from './errors.js';
 export type {
   SandboxBridge,

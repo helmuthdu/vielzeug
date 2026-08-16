@@ -142,7 +142,7 @@ import { SandboxError } from '@vielzeug/sandbox';
 try {
   await sandbox.render(html);
 } catch (err) {
-  if (SandboxError.is(err)) {
+  if (err instanceof SandboxError) {
     console.error('Sandbox failed to load:', err.message);
   }
 }

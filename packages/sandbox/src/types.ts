@@ -110,10 +110,8 @@ export interface SandboxStateUpdateDetail {
  * Never evaluate or execute message content on the host.
  */
 export type SandboxMessage =
-  // eslint-disable-next-line perfectionist/sort-object-types
-  | { type: 'error'; message: string; stack?: string }
-  // eslint-disable-next-line perfectionist/sort-object-types
-  | { type: 'custom'; event: string; detail: unknown }
+  | { detail: unknown; event: string; type: 'custom' }
+  | { message: string; stack?: string; type: 'error' }
   | { height: number; type: 'resize' };
 
 /** Handle for a running sandbox instance returned by createSandbox(). */

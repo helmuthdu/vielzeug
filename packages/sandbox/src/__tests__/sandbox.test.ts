@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { buildCsp, buildDocument, createSandbox } from '../_sandbox.js';
+import { buildDocument } from '../_document.js';
+import { buildCsp } from '../_policy.js';
+import { createSandbox } from '../_runtime.js';
 import { SandboxConfigurationError, SandboxTimeoutError } from '../errors.js';
 import { createSandboxTestHelpers } from '../testing.js';
 
