@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: remove LedgerError.is() type guard; use instanceof LedgerError. Rename local signal variable in enqueue to abortSignal to avoid shadowing ripple import.",
+      "packageName": "@vielzeug/ledger",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ledger"
+}

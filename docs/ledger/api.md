@@ -180,4 +180,4 @@ An already-aborted signal rejects before user code starts. Active commands recei
 | `LedgerDisposedError` | Operation submitted to sealed ledger | Queued work rejects without starting |
 | `LedgerExecutionError` | `apply()` fails | Original failure in `.cause` |
 | `LedgerRollbackError` | `revert()` fails | Entry remains in undo history |
-| `LedgerError` | Base class | `LedgerError.is(error)` narrows all Ledger errors |
+| `LedgerError` | Base class | `instanceof LedgerError` narrows all Ledger errors |

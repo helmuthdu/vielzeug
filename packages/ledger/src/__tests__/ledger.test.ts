@@ -217,10 +217,10 @@ describe('createLedger', () => {
 
 describe('LedgerError', () => {
   it('identifies every Ledger error subtype', () => {
-    expect(LedgerError.is(new LedgerCancelledError('cancelled'))).toBe(true);
-    expect(LedgerError.is(new LedgerDisposedError('disposed'))).toBe(true);
-    expect(LedgerError.is(new LedgerExecutionError('execution'))).toBe(true);
-    expect(LedgerError.is(new LedgerRollbackError('rollback'))).toBe(true);
-    expect(LedgerError.is(new Error('plain'))).toBe(false);
+    expect(new LedgerCancelledError('cancelled') instanceof LedgerError).toBe(true);
+    expect(new LedgerDisposedError('disposed') instanceof LedgerError).toBe(true);
+    expect(new LedgerExecutionError('execution') instanceof LedgerError).toBe(true);
+    expect(new LedgerRollbackError('rollback') instanceof LedgerError).toBe(true);
+    expect(new Error('plain') instanceof LedgerError).toBe(false);
   });
 });

@@ -5,10 +5,6 @@ export class LedgerError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is LedgerError {
-    return err instanceof LedgerError;
-  }
 }
 
 /** Thrown when a queued operation is cancelled before user code starts, or an active operation cooperatively stops. */

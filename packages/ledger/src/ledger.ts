@@ -116,7 +116,7 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
   ): Promise<void> {
     if (disposed) return Promise.reject(operationError(method, true));
 
-    const signal = externalSignal
+    const abortSignal = externalSignal
       ? AbortSignal.any([externalSignal, disposalController.signal])
       : disposalController.signal;
 
@@ -130,14 +130,14 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
       };
 
       Object.assign(operation, {
-        cancel: () => signal.removeEventListener('abort', onAbort),
+        cancel: () => abortSignal.removeEventListener('abort', onAbort),
         reject,
         resolve,
         settled: false,
         start: async () => {
           if (operation.settled) return;
 
-          if (disposed || signal.aborted) {
+          if (disposed || abortSignal.aborted) {
             updateState((current) => ({ ...current, queued: current.queued - 1 }));
             settle(operation, operationError(method, disposed));
 
@@ -148,7 +148,7 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
           updateState((current) => ({ ...current, queued: current.queued - 1, running: current.running + 1 }));
 
           try {
-            await task({ signal });
+            await task({ signal: abortSignal });
             settle(operation);
           } catch (error) {
             settle(operation, error);
@@ -159,7 +159,7 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
         started: false,
       });
 
-      signal.addEventListener('abort', onAbort, { once: true });
+      abortSignal.addEventListener('abort', onAbort, { once: true });
       operations.add(operation);
       updateState((current) => ({ ...current, queued: current.queued + 1 }));
       queue = queue.then(operation.start, operation.start);
