@@ -6,7 +6,9 @@ import { makeElements, setViewport } from './helpers';
 describe('debugPositioner', () => {
   beforeEach(() => setViewport());
   afterEach(() => {
-    document.querySelectorAll('[data-orbit-debug]').forEach((element) => element.remove());
+    document.querySelectorAll('[data-orbit-debug]').forEach((element) => {
+      element.remove();
+    });
     vi.restoreAllMocks();
   });
 

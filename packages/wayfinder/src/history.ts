@@ -52,7 +52,9 @@ export function createMemoryHistory(initialPath = '/'): HistoryDriver {
       if (cursor <= 0) return;
 
       cursor -= 1;
-      listeners.forEach((l) => l());
+      listeners.forEach((l) => {
+        l();
+      });
     },
     get location(): MemoryLocation {
       return stack[cursor]!;

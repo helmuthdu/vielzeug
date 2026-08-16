@@ -101,6 +101,7 @@ describe('coerceSearch', () => {
     // drop the keys from Object.keys(), etc).
     expect(Object.getPrototypeOf(query)).toBe(Object.prototype);
     expect(Object.keys(query)).toEqual(expect.arrayContaining(['__proto__', 'constructor']));
+    // biome-ignore lint/suspicious/noProto: query is a plain object with a `__proto__` key, not a prototype accessor
     expect(query.__proto__).toEqual(['a', 'b']);
     expect(query.constructor).toBe('c');
     router.dispose();

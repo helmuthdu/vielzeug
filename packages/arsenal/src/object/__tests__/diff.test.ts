@@ -50,7 +50,14 @@ describe('diff', () => {
   });
 
   it('uses a custom comparator when provided', () => {
-    const result = diff({ a: 1, b: 2 }, { a: 1, b: '2' }, (x, y) => x == y);
+    const result = diff(
+      { a: 1, b: 2 },
+      { a: 1, b: '2' },
+      (
+        x,
+        y, // biome-ignore lint/suspicious/noDoubleEquals: test deliberately exercises loose-equality coercion
+      ) => x == y,
+    );
 
     expect(result.changed).toEqual({});
   });

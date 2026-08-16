@@ -52,7 +52,7 @@ export function formatShortcut(shortcut: string, modKey: 'ctrl' | 'meta' = detec
     return '';
   }
 
-  let steps;
+  let steps: ReturnType<typeof parseShortcut>;
 
   try {
     steps = parseShortcut(shortcut, modKey);

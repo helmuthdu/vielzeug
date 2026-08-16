@@ -16,7 +16,9 @@ describe('announce()', () => {
 
   afterEach(() => {
     // Remove all announcer regions so each test starts with a clean DOM.
-    document.querySelectorAll('[data-block-announcer]').forEach((el) => el.remove());
+    document.querySelectorAll('[data-block-announcer]').forEach((el) => {
+      el.remove();
+    });
     vi.useRealTimers();
   });
 
@@ -135,7 +137,9 @@ describe('announce()', () => {
 
       expect(getRegion('polite')).not.toBeNull();
 
-      document.querySelectorAll('[data-block-announcer]').forEach((el) => el.remove());
+      document.querySelectorAll('[data-block-announcer]').forEach((el) => {
+        el.remove();
+      });
 
       expect(getRegion('polite')).toBeNull();
     });
@@ -145,7 +149,9 @@ describe('announce()', () => {
 
       expect(getRegion('assertive')).not.toBeNull();
 
-      document.querySelectorAll('[data-block-announcer]').forEach((el) => el.remove());
+      document.querySelectorAll('[data-block-announcer]').forEach((el) => {
+        el.remove();
+      });
 
       expect(getRegion('assertive')).toBeNull();
     });
@@ -154,7 +160,9 @@ describe('announce()', () => {
       announce('first round');
       vi.advanceTimersByTime(50);
 
-      document.querySelectorAll('[data-block-announcer]').forEach((el) => el.remove());
+      document.querySelectorAll('[data-block-announcer]').forEach((el) => {
+        el.remove();
+      });
 
       announce('second round');
       vi.advanceTimersByTime(50);

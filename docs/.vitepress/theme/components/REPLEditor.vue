@@ -4,8 +4,8 @@
     <div class="editor-toolbar">
       <ore-select
         label-placement="inset"
-        style="width: 180px"
         placeholder="Examples..."
+        style="width: 180px"
         :value="selectedExample"
         @change="handleExampleSelect">
         <optgroup v-for="category in examplesByCategory" :key="category.name" :label="category.name">
@@ -18,23 +18,23 @@
         <kbd>Return</kbd>
       </span>
       <ore-button
-        size="sm"
         color="primary"
+        size="sm"
         variant="solid"
         v-bind="execution.isExecuting.value ? { loading: true } : {}"
         @click="runCode">
         <svg
-          v-if="!execution.isExecuting.value"
-          slot="prefix"
-          xmlns="http://www.w3.org/2000/svg"
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
           fill="none"
+          height="14"
+          slot="prefix"
           stroke="currentColor"
-          stroke-width="2"
           stroke-linecap="round"
-          stroke-linejoin="round">
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="14"
+          xmlns="http://www.w3.org/2000/svg"
+          v-if="!execution.isExecuting.value">
           <polygon points="5 3 19 12 5 21 5 3" />
         </svg>
         Run
@@ -44,21 +44,21 @@
     <!-- Code Editor -->
     <div class="editor-section">
       <div class="editor-content-wrapper">
-        <div ref="editorContainer" class="code-editor"></div>
+        <div class="code-editor" ref="editorContainer" ></div>
         <div class="editor-floating-toolbar">
           <ore-tooltip content="Format Code" placement="top">
-            <ore-button icon-only variant="ghost" size="sm" @click="formatCode">
+            <ore-button icon-only size="sm" variant="ghost" @click="formatCode">
               <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
                 fill="none"
+                height="14"
+                id="svg8"
                 stroke="currentColor"
-                stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
+                stroke-width="2"
                 version="1.1"
-                id="svg8"
+                viewBox="0 0 24 24"
+                width="14"
                 xmlns="http://www.w3.org/2000/svg"
                 xmlns:svg="http://www.w3.org/2000/svg">
                 <defs id="defs8" />
@@ -71,52 +71,52 @@
             </ore-button>
           </ore-tooltip>
           <ore-tooltip content="Copy to Clipboard" placement="top">
-            <ore-button icon-only variant="ghost" size="sm" @click="copyCode">
+            <ore-button icon-only size="sm" variant="ghost" @click="copyCode">
               <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
                 fill="none"
+                height="14"
                 stroke="currentColor"
-                stroke-width="2"
                 stroke-linecap="round"
-                stroke-linejoin="round">
-                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="14"
+                xmlns="http://www.w3.org/2000/svg">
+                <rect height="14" rx="2" ry="2" width="14" x="8" y="8" />
                 <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
               </svg>
             </ore-button>
           </ore-tooltip>
           <ore-separator orientation="vertical" style="height: 14px; margin: 0 0.25rem"></ore-separator>
           <ore-tooltip content="Reset to Default" placement="top">
-            <ore-button icon-only variant="ghost" size="sm" @click="resetEditor">
+            <ore-button icon-only size="sm" variant="ghost" @click="resetEditor">
               <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
                 fill="none"
+                height="14"
                 stroke="currentColor"
-                stroke-width="2"
                 stroke-linecap="round"
-                stroke-linejoin="round">
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="14"
+                xmlns="http://www.w3.org/2000/svg">
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                 <path d="M3 3v5h5" />
               </svg>
             </ore-button>
           </ore-tooltip>
           <ore-tooltip content="Clear Editor" placement="top">
-            <ore-button icon-only variant="ghost" size="sm" color="error" @click="clearEditor">
+            <ore-button color="error" icon-only size="sm" variant="ghost" @click="clearEditor">
               <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
                 fill="none"
+                height="14"
                 stroke="currentColor"
-                stroke-width="2"
                 stroke-linecap="round"
-                stroke-linejoin="round">
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="14"
+                xmlns="http://www.w3.org/2000/svg">
                 <path d="M3 6h18" />
                 <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
                 <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
@@ -134,17 +134,17 @@
       <div class="output-header">
         <span class="output-label">Output</span>
         <ore-tooltip content="Clear Output" placement="bottom">
-          <ore-button icon-only variant="ghost" size="sm" @click="execution.clear">
+          <ore-button icon-only size="sm" variant="ghost" @click="execution.clear">
             <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
               fill="none"
+              height="14"
               stroke="currentColor"
-              stroke-width="2"
               stroke-linecap="round"
-              stroke-linejoin="round">
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="14"
+              xmlns="http://www.w3.org/2000/svg">
               <path d="M3 6h18" />
               <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
               <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
@@ -155,17 +155,17 @@
         </ore-tooltip>
       </div>
       <div class="output-area">
-        <div v-if="execution.output.value.length === 0" class="output-placeholder">
+        <div class="output-placeholder" v-if="execution.output.value.length === 0" >
           <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
             fill="none"
+            height="28"
             stroke="currentColor"
-            stroke-width="1.5"
             stroke-linecap="round"
-            stroke-linejoin="round">
+            stroke-linejoin="round"
+            stroke-width="1.5"
+            viewBox="0 0 24 24"
+            width="28"
+            xmlns="http://www.w3.org/2000/svg">
             <polyline points="16 18 22 12 16 6" />
             <polyline points="8 6 2 12 8 18" />
           </svg>
@@ -191,8 +191,8 @@
           <span class="placeholder-note">Your edits are saved automatically in the browser</span>
         </div>
         <div v-else>
-          <div v-for="line in execution.output.value" :key="line.id" class="output-line" :class="`output-${line.type}`">
-            <span v-if="line.type !== 'result'" class="log-timestamp">{{ line.time }}</span>
+          <div class="output-line" v-for="line in execution.output.value" :key="line.id" :class="`output-${line.type}`">
+            <span class="log-timestamp" v-if="line.type !== 'result'" >{{ line.time }}</span>
             <span class="log-icon">{{ OUTPUT_ICON[line.type] }}</span>
             <span class="log-content">
               <span class="log-text">{{ line.text }}</span>
@@ -201,13 +201,13 @@
         </div>
         <!-- Sandboxed execution target — invisible: this REPL only shows console/return-value
              output, never rendered DOM, so the iframe itself never needs to be seen. -->
-        <div ref="sandboxContainer" class="sandbox-host" aria-hidden="true"></div>
+        <div aria-hidden="true" class="sandbox-host" ref="sandboxContainer" ></div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
+<script lang="ts" setup >
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { ExampleModule } from './repl/examples/types';
 import type { SandboxLibrary } from './repl/execution/buildSandboxDocument';
@@ -487,13 +487,13 @@ defineExpose({ insertTextAtCursor });
 /* ── Shared toolbar ───────────────────────────────── */
 .editor-toolbar {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0 1rem;
-  height: 52px;
   flex-shrink: 0;
-  border-bottom: var(--border) solid var(--color-contrast-300);
+  gap: 0.5rem;
+  align-items: center;
+  height: 52px;
+  padding: 0 1rem;
   background: var(--color-contrast-100);
+  border-bottom: var(--border) solid var(--color-contrast-300);
 }
 
 .editor-toolbar > * {
@@ -512,8 +512,8 @@ defineExpose({ insertTextAtCursor });
 
 .toolbar-shortcut {
   display: flex;
-  align-items: center;
   gap: 0.125rem;
+  align-items: center;
   margin-right: 0.25rem;
 }
 
@@ -521,31 +521,31 @@ defineExpose({ insertTextAtCursor });
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 0.2rem 0.35rem;
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
   line-height: 1;
-  padding: 0.2rem 0.35rem;
+  color: var(--text-color-tertiary);
   background: var(--color-contrast-100);
   border: var(--border) solid var(--color-contrast-300);
   border-radius: var(--rounded-sm);
-  color: var(--text-color-tertiary);
   box-shadow: 0 1px 0 var(--color-contrast-300);
 }
 
 .editor-section {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
   background: var(--color-canvas);
-  display: flex;
-  flex-direction: column;
 }
 
 .output-section {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
   background: var(--color-contrast-100);
-  display: flex;
-  flex-direction: column;
   border-top: var(--border) solid var(--color-contrast-300);
 }
 
@@ -558,35 +558,36 @@ defineExpose({ insertTextAtCursor });
 /* ── Output header bar ──────────────────────────────── */
 .output-header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
-  padding: 0 0.75rem;
   height: 32px;
-  flex-shrink: 0;
-  border-bottom: var(--border) solid var(--color-contrast-300);
+  padding: 0 0.75rem;
   background: var(--color-contrast-100);
+  border-bottom: var(--border) solid var(--color-contrast-300);
 }
 
 .output-label {
   font-size: 0.6875rem;
   font-weight: 700;
+  color: var(--text-color-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--text-color-tertiary);
 }
 
 /* Editor & Output Areas */
 .editor-content-wrapper {
   position: relative;
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
 }
 
 .editor-floating-toolbar {
   position: absolute;
-  bottom: 0.75rem;
   right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 10;
   display: flex;
   gap: 0.25rem;
   padding: 0.25rem;
@@ -594,7 +595,6 @@ defineExpose({ insertTextAtCursor });
   border: var(--border) solid var(--color-contrast-300);
   border-radius: var(--rounded-xl);
   box-shadow: var(--shadow-sm);
-  z-index: 10;
   opacity: 0.55;
   transition:
     opacity var(--transition-fast),
@@ -604,10 +604,10 @@ defineExpose({ insertTextAtCursor });
 }
 
 .editor-floating-toolbar:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
   opacity: 1;
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--color-primary);
 }
 
 .code-editor,
@@ -623,42 +623,42 @@ defineExpose({ insertTextAtCursor });
 
 .output-area {
   padding: var(--size-5);
-  background: var(--color-contrast-100);
   overflow-y: auto;
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
+  background: var(--color-contrast-100);
 }
 
 /* Output Styles - for dynamically created DOM elements */
 .output-area .output-line {
-  margin: var(--size-1-5) 0;
-  padding: var(--size-0-5) 0;
   display: flex;
-  align-items: flex-start;
   gap: var(--size-4);
+  align-items: flex-start;
+  padding: var(--size-0-5) 0;
+  margin: var(--size-1-5) 0;
   border-bottom: var(--border) solid var(--color-contrast-300);
   opacity: 0.9;
 }
 
 .output-area .log-timestamp {
-  font-size: var(--text-xs);
-  color: var(--text-color-tertiary);
   min-width: 70px;
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
+  color: var(--text-color-tertiary);
 }
 
 .output-area .log-icon {
+  min-width: 16px;
   font-size: var(--text-sm);
   color: var(--text-color-secondary);
-  min-width: 16px;
   text-align: center;
 }
 
 .output-area .log-content {
   flex: 1;
+  color: var(--text-color-body);
   word-break: break-all;
   white-space: pre-wrap;
-  color: var(--text-color-body);
 }
 
 .output-area .log-text {
@@ -667,16 +667,16 @@ defineExpose({ insertTextAtCursor });
 }
 
 .output-area .output-result .log-text {
-  color: var(--color-primary);
-  font-weight: var(--font-semibold);
   font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-primary);
 }
 
 .output-area .output-error,
 .output-area .output-warn {
   padding: var(--size-2) var(--size-3);
-  border-radius: var(--rounded-md);
   margin: var(--size-2) 0;
+  border-radius: var(--rounded-md);
 }
 
 .output-area .output-error {
@@ -692,8 +692,8 @@ defineExpose({ insertTextAtCursor });
 }
 
 .output-area .output-result {
-  color: var(--color-primary);
   font-weight: var(--font-semibold);
+  color: var(--color-primary);
 }
 
 .output-area .output-log {
@@ -704,20 +704,20 @@ defineExpose({ insertTextAtCursor });
 .output-placeholder {
   display: flex;
   flex-direction: column;
+  gap: var(--size-2-5);
   align-items: center;
   justify-content: center;
   height: 100%;
+  padding: var(--size-8);
   color: var(--text-color-tertiary);
   text-align: center;
-  gap: var(--size-2-5);
-  padding: var(--size-8);
   user-select: none;
 }
 
 .output-placeholder p {
   margin: 0;
-  font-weight: var(--font-semibold);
   font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
   color: var(--text-color-secondary);
 }
 
@@ -726,53 +726,53 @@ defineExpose({ insertTextAtCursor });
 }
 
 .placeholder-steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   display: flex;
   flex-direction: column;
   gap: var(--size-1-5);
+  padding: 0;
+  margin: 0;
   text-align: left;
+  list-style: none;
 }
 
 .placeholder-steps li {
   display: flex;
-  align-items: center;
   gap: var(--size-2);
+  align-items: center;
   font-size: var(--text-xs);
   color: var(--text-color-tertiary);
 }
 
 .step-num {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
-  border: var(--border) solid var(--color-contrast-300);
   font-size: var(--text-2xs);
   font-weight: var(--font-semibold);
   color: var(--text-color-tertiary);
-  flex-shrink: 0;
+  border: var(--border) solid var(--color-contrast-300);
+  border-radius: 50%;
 }
 
 .placeholder-note {
+  margin-top: var(--size-1);
   font-size: var(--text-2xs);
   color: var(--text-color-tertiary);
   opacity: 0.7;
-  margin-top: var(--size-1);
 }
 
 .output-placeholder kbd {
   display: inline-block;
   padding: 0.1em 0.35em;
-  font-size: 0.75em;
   font-family: var(--font-mono);
+  font-size: 0.75em;
+  color: var(--text-color-secondary);
+  background: var(--color-canvas);
   border: var(--border) solid var(--color-contrast-300);
   border-radius: var(--rounded-sm);
-  background: var(--color-canvas);
-  color: var(--text-color-secondary);
 }
 
 /* Animations */

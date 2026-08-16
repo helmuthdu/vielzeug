@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup >
 import { useData } from 'vitepress';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import PackageInfo from './PackageInfo.vue';
@@ -218,19 +218,19 @@ onUnmounted(() => {
       <div class="hero-inner">
         <div class="hero-content">
           <div class="hero-badge">
-            <a href="#packages" class="hero-badge-link">
+            <a class="hero-badge-link" href="#packages" >
               <ore-badge variant="primary">{{ packageCount }} packages</ore-badge>
-              <ore-icon name="arrow-right" size="12" class="hero-badge-arrow" aria-hidden="true"></ore-icon>
+              <ore-icon aria-hidden="true" class="hero-badge-arrow" name="arrow-right" size="12" ></ore-icon>
             </a>
-            <ore-badge v-if="monoVersion" variant="secondary">{{ monoVersion }}</ore-badge>
+            <ore-badge variant="secondary" v-if="monoVersion" >{{ monoVersion }}</ore-badge>
           </div>
           <h1 class="hero-title">
-            <ore-text as="span" variant="heading" size="2xl" weight="bold" class="hero-title-main">Vielzeug</ore-text>
-            <ore-text as="span" variant="heading" size="lg" weight="medium" color="muted" class="hero-title-sub">
+            <ore-text as="span" class="hero-title-main" size="2xl" variant="heading" weight="bold" >Vielzeug</ore-text>
+            <ore-text as="span" class="hero-title-sub" color="muted" size="lg" variant="heading" weight="medium" >
               Many Tools. Zero Weight. Huge Impact.
             </ore-text>
           </h1>
-          <ore-text as="p" size="md" color="muted" class="hero-description">
+          <ore-text as="p" class="hero-description" color="muted" size="md" >
             Pick and compose the tools you need — from routing to charts. Shared conventions, unified architecture, and
             zero dependencies.
           </ore-text>
@@ -238,13 +238,13 @@ onUnmounted(() => {
             <ore-tooltip
               content="Built with TypeScript from the ground up, with strict types and no 'any'"
               placement="top">
-              <button type="button" class="value-item">
+              <button class="value-item" type="button" >
                 <ore-icon name="shield-check" size="16"></ore-icon>
                 Type-safe
               </button>
             </ore-tooltip>
             <ore-tooltip content="Import individual functions — bundlers include only what you use" placement="top">
-              <button type="button" class="value-item">
+              <button class="value-item" type="button" >
                 <ore-icon name="scissors" size="16"></ore-icon>
                 Tree-shakeable
               </button>
@@ -252,138 +252,138 @@ onUnmounted(() => {
             <ore-tooltip
               content="No external npm dependencies — only other vielzeug packages where needed"
               placement="top">
-              <button type="button" class="value-item">
+              <button class="value-item" type="button" >
                 <ore-icon name="package" size="16"></ore-icon>
                 Zero transitive deps
               </button>
             </ore-tooltip>
             <ore-tooltip content="Free to use in any project, commercial or open-source" placement="top">
-              <button type="button" class="value-item">
+              <button class="value-item" type="button" >
                 <ore-icon name="scale" size="16"></ore-icon>
                 MIT
               </button>
             </ore-tooltip>
           </div>
           <div class="hero-install">
-            <ore-copy-command :value="activeHeroPkg.cmd" class="install-row">
+            <ore-copy-command class="install-row" :value="activeHeroPkg.cmd" >
               <ore-button
-                slot="suffix"
-                size="sm"
-                variant="text"
                 icon-only
+                size="sm"
+                slot="suffix"
+                variant="text"
                 :aria-label="`Show next package example (${activeHeroIndex + 1} of ${heroPackages.length})`"
                 @click="cycleHeroPkg">
-                <ore-icon name="chevron-right" size="14" aria-hidden="true"></ore-icon>
+                <ore-icon aria-hidden="true" name="chevron-right" size="14" ></ore-icon>
               </ore-button>
             </ore-copy-command>
             <div class="hero-install-meta">
               <ore-text color="muted" size="sm">{{ activeHeroPkg.tagline }}</ore-text>
               <ore-text color="muted" size="sm" style="opacity: 0.5">•</ore-text>
-              <ore-text color="primary" size="sm" weight="semibold" family="mono">
-                <PackageInfo :package="activeHeroPkg.id" type="size" />
+              <ore-text color="primary" family="mono" size="sm" weight="semibold" >
+                <PackageInfo type="size" :package="activeHeroPkg.id" />
               </ore-text>
               <ore-text color="muted" size="sm" style="opacity: 0.5">•</ore-text>
-              <ore-text color="muted" size="sm" class="hero-install-counter">
+              <ore-text class="hero-install-counter" color="muted" size="sm" >
                 {{ activeHeroIndex + 1 }}/{{ heroPackages.length }}
               </ore-text>
             </div>
-            <span class="sr-only" role="status" aria-live="polite">{{ activeHeroAnnouncement }}</span>
+            <span aria-live="polite" class="sr-only" role="status" >{{ activeHeroAnnouncement }}</span>
           </div>
           <div class="hero-actions">
             <a href="/guide/">
-              <ore-button variant="solid" color="primary" size="md" effect="shine">
-                <ore-icon slot="prefix" name="book-open" size="16"></ore-icon>
+              <ore-button color="primary" effect="shine" size="md" variant="solid" >
+                <ore-icon name="book-open" size="16" slot="prefix" ></ore-icon>
                 Get Started
               </ore-button>
             </a>
-            <a href="https://github.com/helmuthdu/vielzeug" target="_blank" rel="noopener noreferrer">
-              <ore-button variant="outline" color="primary" size="md">View on GitHub</ore-button>
+            <a href="https://github.com/helmuthdu/vielzeug" rel="noopener noreferrer" target="_blank" >
+              <ore-button color="primary" size="md" variant="outline" >View on GitHub</ore-button>
             </a>
           </div>
         </div>
         <div class="hero-visual">
-          <div class="hero-logo-wrapper" :class="{ 'glow-paused': glowPaused }" aria-label="Vielzeug logo" role="img">
+          <div aria-label="Vielzeug logo" class="hero-logo-wrapper" role="img" :class="{ 'glow-paused': glowPaused }" >
             <svg
+              aria-hidden="true"
               class="hero-logo"
-              width="256"
+              fill="none"
               height="256"
               viewBox="0 0 64 64"
-              fill="none"
-              aria-hidden="true"
+              width="256"
               xmlns="http://www.w3.org/2000/svg">
               <g transform="matrix(4.0000082,0,0,4.0000082,-249.00051,-70.402338)">
                 <g transform="rotate(12.883023,70.356812,25.230466)">
                   <path style="fill: #e92063; fill-opacity: 1; stroke-width: 0.0103763" :d="nucleusTailD" />
-                  <circle style="fill: #f3f3f3; fill-opacity: 0.702703" cx="70.25032" cy="24.120285" r="1.1067405" />
+                  <circle cx="70.25032" cy="24.120285" r="1.1067405" style="fill: #f3f3f3; fill-opacity: 0.702703" />
                 </g>
                 <ellipse
-                  style="opacity: 0.7; fill: none; stroke: #ffffff; stroke-width: 0.3; stroke-opacity: 0.7"
                   cx="-25.600533"
                   cy="70.249397"
                   rx="7.2255325"
                   ry="2.805326"
+                  style="opacity: 0.7; fill: none; stroke: #ffffff; stroke-width: 0.3; stroke-opacity: 0.7"
                   transform="rotate(-90)" />
                 <ellipse
-                  style="opacity: 0.7; fill: none; stroke: #ffffff; stroke-width: 0.3; stroke-opacity: 0.7"
                   cx="-71.555634"
                   cy="14.138023"
                   rx="7.2255325"
                   ry="2.805326"
+                  style="opacity: 0.7; fill: none; stroke: #ffffff; stroke-width: 0.3; stroke-opacity: 0.7"
                   transform="rotate(-150)" />
                 <ellipse
-                  style="opacity: 0.7; fill: none; stroke: #ffffff; stroke-width: 0.3; stroke-opacity: 0.7"
                   cx="50.120911"
                   cy="56.111958"
                   rx="7.2255325"
                   ry="2.805326"
+                  style="opacity: 0.7; fill: none; stroke: #ffffff; stroke-width: 0.3; stroke-opacity: 0.7"
                   transform="rotate(-29.999999)" />
                 <template v-if="prefersReducedMotion">
                   <g transform="matrix(0.25,0,0,0.25,67.131837,13.058119)">
                     <ellipse
-                      style="fill: #f6f5f4; fill-opacity: 0.3"
                       cx="17.38196"
                       cy="33.16288"
                       rx="1.9409472"
                       ry="1.9135387"
+                      style="fill: #f6f5f4; fill-opacity: 0.3"
                       transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
                     <ellipse
-                      style="fill: #f6f5f4"
                       cx="17.38196"
                       cy="33.162884"
                       rx="1.5814766"
                       ry="1.5591443"
+                      style="fill: #f6f5f4"
                       transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
                   </g>
                   <g transform="matrix(0.25,0,0,0.25,57.257322,16.839563)">
                     <ellipse
-                      style="fill: #f6f5f4; fill-opacity: 0.3"
                       cx="17.38196"
                       cy="33.16288"
                       rx="1.9409472"
                       ry="1.9135387"
+                      style="fill: #f6f5f4; fill-opacity: 0.3"
                       transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
                     <ellipse
-                      style="fill: #f6f5f4"
                       cx="17.38196"
                       cy="33.162884"
                       rx="1.5814766"
                       ry="1.5591443"
+                      style="fill: #f6f5f4"
                       transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
                   </g>
                   <g transform="matrix(0.25,0,0,0.25,61.364494,24.126183)">
                     <ellipse
-                      style="fill: #f6f5f4; fill-opacity: 0.3"
                       cx="17.38196"
                       cy="33.16288"
                       rx="1.9409472"
                       ry="1.9135387"
+                      style="fill: #f6f5f4; fill-opacity: 0.3"
                       transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
                     <ellipse
-                      style="fill: #f6f5f4"
                       cx="17.38196"
                       cy="33.162884"
                       rx="1.5814766"
                       ry="1.5591443"
+                      style="fill: #f6f5f4"
                       transform="matrix(-0.26508582,0.96422482,0.96422482,0.26508582,0,0)" />
                   </g>
                 </template>
@@ -391,14 +391,14 @@ onUnmounted(() => {
               <template v-if="!prefersReducedMotion">
                 <g v-for="(e, i) in electrons" :key="i">
                   <circle
+                    fill="#f0eeff" 
                     v-for="(pt, t) in e.tail"
                     :key="t"
                     :cx="pt.x"
                     :cy="pt.y"
-                    :r="1.6 * Math.pow(1 - (t + 1) / (TAIL_LEN + 1), 1.4)"
-                    :fill-opacity="0.55 * Math.pow(1 - (t + 1) / (TAIL_LEN + 1), 1.2)"
-                    fill="#f0eeff" />
-                  <circle :cx="e.head.x" :cy="e.head.y" r="1.8" fill="#f0eeff" />
+                    :fill-opacity="0.55 * (1 - (t + 1) / (TAIL_LEN + 1)) ** 1.2"
+                    :r="1.6 * (1 - (t + 1) / (TAIL_LEN + 1)) ** 1.4"/>
+                  <circle fill="#f0eeff" r="1.8" :cx="e.head.x" :cy="e.head.y" />
                 </g>
               </template>
             </svg>
@@ -410,24 +410,24 @@ onUnmounted(() => {
     <!-- Framework compatibility strip -->
     <section class="compat">
       <div class="compat-inner">
-        <ore-text size="xs" color="muted" variant="overline" align="center">
+        <ore-text align="center" color="muted" size="xs" variant="overline" >
           Any framework. No framework. Your choice.
         </ore-text>
         <div class="compat-logos">
           <span class="compat-logo" title="Vue">
-            <img src="/logo-vue.svg" width="20" height="20" alt="Vue" @error="hideBrokenImage" />
+            <img alt="Vue" height="20" src="/logo-vue.svg" width="20" @error="hideBrokenImage" />
           </span>
           <span class="compat-logo" title="React">
-            <img src="/logo-react.svg" width="20" height="20" alt="React" @error="hideBrokenImage" />
+            <img alt="React" height="20" src="/logo-react.svg" width="20" @error="hideBrokenImage" />
           </span>
           <span class="compat-logo" title="Svelte">
-            <img src="/logo-svelte.svg" width="20" height="20" alt="Svelte" @error="hideBrokenImage" />
+            <img alt="Svelte" height="20" src="/logo-svelte.svg" width="20" @error="hideBrokenImage" />
           </span>
           <span class="compat-logo" title="Solid">
-            <img src="/logo-solidjs.svg" width="20" height="20" alt="Solid" @error="hideBrokenImage" />
+            <img alt="Solid" height="20" src="/logo-solidjs.svg" width="20" @error="hideBrokenImage" />
           </span>
           <span class="compat-logo" title="Angular">
-            <img src="/logo-angular.svg" width="20" height="20" alt="Angular" @error="hideBrokenImage" />
+            <img alt="Angular" height="20" src="/logo-angular.svg" width="20" @error="hideBrokenImage" />
           </span>
           <span class="compat-logo compat-logo--text" title="Vanilla TS">TS</span>
         </div>
@@ -438,11 +438,11 @@ onUnmounted(() => {
     <section class="why">
       <div class="why-inner">
         <div class="why-header">
-          <ore-text as="p" variant="overline" class="why-overline">A different kind of toolkit</ore-text>
-          <ore-text as="h2" variant="heading" size="xl" weight="bold" class="why-title">
+          <ore-text as="p" class="why-overline" variant="overline" >A different kind of toolkit</ore-text>
+          <ore-text as="h2" class="why-title" size="xl" variant="heading" weight="bold" >
             Everything fits. Nothing fights.
           </ore-text>
-          <ore-text as="p" color="muted" class="why-subtitle">
+          <ore-text as="p" class="why-subtitle" color="muted" >
             {{ packageCount }} packages built as one. Same conventions, same primitives, same release cadence — so you
             ship, not integrate.
           </ore-text>
@@ -451,58 +451,58 @@ onUnmounted(() => {
         <!-- Stat strip -->
         <div class="why-stats">
           <div class="why-stat">
-            <ore-text as="p" variant="heading" size="2xl" weight="bold" color="primary" class="why-stat-value">
+            <ore-text as="p" class="why-stat-value" color="primary" size="2xl" variant="heading" weight="bold" >
               0
             </ore-text>
-            <ore-text as="p" size="sm" color="muted" class="why-stat-label">
+            <ore-text as="p" class="why-stat-label" color="muted" size="sm" >
               Transitive dependencies across all {{ packageCount }} packages
             </ore-text>
           </div>
           <div class="why-stat-divider"></div>
           <div class="why-stat">
-            <ore-text as="p" variant="heading" size="2xl" weight="bold" color="primary" class="why-stat-value">
+            <ore-text as="p" class="why-stat-value" color="primary" size="2xl" variant="heading" weight="bold" >
               1
             </ore-text>
-            <ore-text as="p" size="sm" color="muted" class="why-stat-label">
+            <ore-text as="p" class="why-stat-label" color="muted" size="sm" >
               Shared API shape — learn once, use everywhere
             </ore-text>
           </div>
           <div class="why-stat-divider"></div>
           <div class="why-stat">
-            <ore-text as="p" variant="heading" size="2xl" weight="bold" color="primary" class="why-stat-value">
+            <ore-text as="p" class="why-stat-value" color="primary" size="2xl" variant="heading" weight="bold" >
               {{ packageCount }}
             </ore-text>
-            <ore-text as="p" size="sm" color="muted" class="why-stat-label">
+            <ore-text as="p" class="why-stat-label" color="muted" size="sm" >
               Independently installable packages
             </ore-text>
           </div>
         </div>
 
         <!-- Feature cards -->
-        <ore-grid cols="1" cols-md="3" gap="lg" class="why-cards">
-          <ore-card variant="flat" padding="lg" class="why-card">
+        <ore-grid class="why-cards" cols="1" cols-md="3" gap="lg" >
+          <ore-card class="why-card" padding="lg" variant="flat" >
             <div class="why-card-icon"><ore-icon name="book-open" size="20"></ore-icon></div>
-            <ore-text as="h4" weight="semibold" class="why-card-title">One mental model</ore-text>
-            <ore-text as="p" size="sm" color="muted" class="why-card-desc">
+            <ore-text as="h4" class="why-card-title" weight="semibold" >One mental model</ore-text>
+            <ore-text as="p" class="why-card-desc" color="muted" size="sm" >
               Same
               <code>dispose()</code>
               contract. Same signal shape. Same error format. Learn the pattern once — every new package feels familiar
               from line one.
             </ore-text>
           </ore-card>
-          <ore-card variant="flat" padding="lg" class="why-card">
+          <ore-card class="why-card" padding="lg" variant="flat" >
             <div class="why-card-icon"><ore-icon name="shield-check" size="20"></ore-icon></div>
-            <ore-text as="h4" weight="semibold" class="why-card-title">No hidden dependencies</ore-text>
-            <ore-text as="p" size="sm" color="muted" class="why-card-desc">
+            <ore-text as="h4" class="why-card-title" weight="semibold" >No hidden dependencies</ore-text>
+            <ore-text as="p" class="why-card-desc" color="muted" size="sm" >
               Every package you install is every package you own. No surprises in
               <code>node_modules</code>
               , no version conflicts six months from now.
             </ore-text>
           </ore-card>
-          <ore-card variant="flat" padding="lg" class="why-card">
+          <ore-card class="why-card" padding="lg" variant="flat" >
             <div class="why-card-icon"><ore-icon name="plug" size="20"></ore-icon></div>
-            <ore-text as="h4" weight="semibold" class="why-card-title">Built to work together</ore-text>
-            <ore-text as="p" size="sm" color="muted" class="why-card-desc">
+            <ore-text as="h4" class="why-card-title" weight="semibold" >Built to work together</ore-text>
+            <ore-text as="p" class="why-card-desc" color="muted" size="sm" >
               Validation schemas plug into form fields. Signals drive UI templates. No adapter layer, no boilerplate —
               just packages that know about each other.
             </ore-text>
@@ -512,15 +512,15 @@ onUnmounted(() => {
     </section>
 
     <!-- Code Showcase -->
-    <section id="showcase" class="showcase">
+    <section class="showcase" id="showcase" >
       <div class="showcase-inner">
-        <ore-text as="h2" variant="heading" size="xl" weight="bold" align="center" class="section-title">
+        <ore-text align="center" as="h2" class="section-title" size="xl" variant="heading" weight="bold" >
           Eliminate entire categories of glue code.
         </ore-text>
-        <ore-text as="p" color="muted" align="center" class="section-subtitle">
+        <ore-text align="center" as="p" class="section-subtitle" color="muted" >
           Each package is standalone — combined, they compose naturally.
         </ore-text>
-        <CodeWindow lang="ts" filename="app.ts">
+        <CodeWindow filename="app.ts" lang="ts" >
           <pre
             class="showcase-pre"><code><span class="hl-keyword">import</span> { <span class="hl-fn">createForm</span> } <span class="hl-keyword">from</span> <a href="/forge/" class="showcase-import-link"><span class="hl-string">'@vielzeug/forge'</span></a>;
 <span class="hl-keyword">import</span> { s } <span class="hl-keyword">from</span> <a href="/spell/" class="showcase-import-link"><span class="hl-string">'@vielzeug/spell'</span></a>;
@@ -549,45 +549,45 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
     </section>
 
     <!-- Package Explorer -->
-    <section id="packages" class="explorer">
+    <section class="explorer" id="packages" >
       <div class="explorer-inner">
-        <ore-text as="h2" variant="heading" size="xl" weight="bold" class="section-title">
+        <ore-text as="h2" class="section-title" size="xl" variant="heading" weight="bold" >
           All {{ packageCount }} packages, one search.
         </ore-text>
-        <ore-text as="p" color="muted" class="section-subtitle">
+        <ore-text as="p" class="section-subtitle" color="muted" >
           Organized by domain. Click any package to jump straight to its docs.
         </ore-text>
 
         <div class="explorer-toolbar">
           <ore-input
-            type="search"
-            :value="searchQuery"
-            placeholder="Search packages (e.g. ripple, component, state)..."
-            variant="outline"
-            color="primary"
-            rounded="full"
-            clearable
             class="explorer-search"
-            @input="(e: CustomEvent<{ value: string }>) => (searchQuery = e.detail.value)"
-            @change="(e: CustomEvent<{ value: string }>) => (searchQuery = e.detail.value)"></ore-input>
+            clearable
+            color="primary"
+            placeholder="Search packages (e.g. ripple, component, state)..."
+            rounded="full"
+            type="search"
+            variant="outline"
+            :value="searchQuery"
+            @change="(e: CustomEvent<{ value: string }>) => (searchQuery = e.detail.value)"
+            @input="(e: CustomEvent<{ value: string }>) => (searchQuery = e.detail.value)"></ore-input>
         </div>
 
-        <div v-if="!searchQuery" class="essentials-section">
-          <ore-text as="h3" variant="overline" class="essentials-title">Start here</ore-text>
-          <ore-grid responsive min-col-width="240px" gap="md">
-            <a v-for="pkg in coreEssentials" :key="pkg.id" :href="`/${pkg.id}/`" class="essential-card-link">
-              <ore-card variant="flat" padding="md" class="essential-card">
+        <div class="essentials-section" v-if="!searchQuery" >
+          <ore-text as="h3" class="essentials-title" variant="overline" >Start here</ore-text>
+          <ore-grid gap="md" min-col-width="240px" responsive >
+            <a class="essential-card-link" v-for="pkg in coreEssentials" :key="pkg.id" :href="`/${pkg.id}/`" >
+              <ore-card class="essential-card" padding="md" variant="flat" >
                 <div class="essential-card-header">
-                  <img :src="`/logo-${pkg.id}.svg`" alt="" class="essential-logo" />
+                  <img alt="" class="essential-logo" :src="`/logo-${pkg.id}.svg`" />
                   <div class="essential-name-group">
-                    <ore-text weight="bold" family="mono" class="essential-name">{{ pkg.id }}</ore-text>
-                    <ore-text size="xs" color="muted" class="essential-category">{{ pkg.category }}</ore-text>
+                    <ore-text class="essential-name" family="mono" weight="bold" >{{ pkg.id }}</ore-text>
+                    <ore-text class="essential-category" color="muted" size="xs" >{{ pkg.category }}</ore-text>
                   </div>
                 </div>
-                <ore-text as="p" size="sm" color="muted" class="essential-desc">{{ pkg.tagline }}</ore-text>
-                <div slot="footer" class="essential-footer">
-                  <PackageInfo :package="pkg.id" type="size" class="essential-size" />
-                  <ore-text size="xs" color="primary" weight="semibold" class="essential-link-label">
+                <ore-text as="p" class="essential-desc" color="muted" size="sm" >{{ pkg.tagline }}</ore-text>
+                <div class="essential-footer" slot="footer" >
+                  <PackageInfo class="essential-size" type="size" :package="pkg.id" />
+                  <ore-text class="essential-link-label" color="primary" size="xs" weight="semibold" >
                     View docs →
                   </ore-text>
                 </div>
@@ -596,43 +596,43 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
           </ore-grid>
         </div>
 
-        <ore-text v-if="!searchQuery" as="h3" variant="overline" class="all-packages-title">All packages</ore-text>
-        <ore-grid v-if="filteredCategories.length > 0" responsive min-col-width="320px" gap="xl" class="category-grid">
-          <div v-for="cat in filteredCategories" :key="cat.name" class="category-section">
-            <ore-text as="h3" weight="semibold" class="category-name">
-              <ore-icon :name="cat.icon" size="16"></ore-icon>
+        <ore-text as="h3" class="all-packages-title" variant="overline" v-if="!searchQuery" >All packages</ore-text>
+        <ore-grid class="category-grid" gap="xl" min-col-width="320px" responsive v-if="filteredCategories.length > 0" >
+          <div class="category-section" v-for="cat in filteredCategories" :key="cat.name" >
+            <ore-text as="h3" class="category-name" weight="semibold" >
+              <ore-icon size="16" :name="cat.icon" ></ore-icon>
               {{ cat.name }}
             </ore-text>
             <div class="package-list">
-              <a v-for="pkg in cat.packages" :key="pkg.id" :href="`/${pkg.id}/`" class="package-tile">
-                <img :src="`/logo-${pkg.id}.svg`" alt="" class="package-logo" @error="hideBrokenImage" />
+              <a class="package-tile" v-for="pkg in cat.packages" :key="pkg.id" :href="`/${pkg.id}/`" >
+                <img alt="" class="package-logo" :src="`/logo-${pkg.id}.svg`" @error="hideBrokenImage" />
                 <div class="package-info">
                   <span class="package-name">{{ pkg.id }}</span>
                   <span class="package-tagline">{{ pkg.tagline }}</span>
                 </div>
-                <span v-if="packages[pkg.id]" class="package-size">
+                <span class="package-size" v-if="packages[pkg.id]" >
                   {{ packages[pkg.id].size }}
                 </span>
               </a>
             </div>
           </div>
         </ore-grid>
-        <div v-else class="explorer-empty" role="status">
+        <div class="explorer-empty" role="status" v-else >
           <ore-text as="p" color="muted">No packages found matching "{{ searchQuery }}"</ore-text>
-          <ore-button variant="outline" color="primary" size="sm" @click="clearSearch">Clear search</ore-button>
+          <ore-button color="primary" size="sm" variant="outline" @click="clearSearch">Clear search</ore-button>
         </div>
       </div>
     </section>
 
     <!-- Codex AI Section -->
-    <section id="codex" class="codex-ai">
+    <section class="codex-ai" id="codex" >
       <div class="codex-ai-inner">
-        <ore-grid cols="1" cols-md="2" gap="2xl" align="start" class="codex-ai-content">
+        <ore-grid align="start" class="codex-ai-content" cols="1" cols-md="2" gap="2xl" >
           <div class="codex-ai-copy">
-            <ore-text as="h2" variant="heading" size="xl" weight="bold" class="codex-ai-title">
+            <ore-text as="h2" class="codex-ai-title" size="xl" variant="heading" weight="bold" >
               Your AI already knows Vielzeug
             </ore-text>
-            <ore-text as="p" color="muted" class="codex-ai-desc">
+            <ore-text as="p" class="codex-ai-desc" color="muted" >
               <code class="codex-inline-pkg">@vielzeug/codex</code>
               is an MCP server that bundles the entire documentation, package APIs, and Refine component metadata into a
               single offline snapshot. Wire it into Claude Desktop, Copilot Chat, or any MCP-compatible client — then
@@ -662,18 +662,18 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
               </li>
             </ul>
             <div class="codex-setup">
-              <ore-text color="muted" size="sm" weight="medium" class="codex-setup-label">
+              <ore-text class="codex-setup-label" color="muted" size="sm" weight="medium" >
                 Install via npm or run directly:
               </ore-text>
-              <ore-copy-command value="npx -y @vielzeug/codex" class="codex-setup-cmd"></ore-copy-command>
-              <a href="/codex/" class="codex-learn-link">
+              <ore-copy-command class="codex-setup-cmd" value="npx -y @vielzeug/codex" ></ore-copy-command>
+              <a class="codex-learn-link" href="/codex/" >
                 <ore-icon name="arrow-right" size="14"></ore-icon>
                 Setup guide &amp; all tools
               </a>
             </div>
           </div>
           <div class="codex-ai-demo">
-            <CodeWindow variant="chat" title="MCP tool call">
+            <CodeWindow title="MCP tool call" variant="chat" >
               <div class="chat-body">
                 <div class="chat-turn chat-user">
                   <span class="chat-role">user</span>
@@ -712,64 +712,64 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
     </section>
 
     <!-- Community & Support -->
-    <section id="community" class="community">
+    <section class="community" id="community" >
       <div class="community-inner">
-        <ore-text as="h2" variant="heading" size="xl" weight="bold" class="section-title">
+        <ore-text as="h2" class="section-title" size="xl" variant="heading" weight="bold" >
           Everything lives on GitHub.
         </ore-text>
-        <ore-text as="p" color="muted" class="section-subtitle">
+        <ore-text as="p" class="section-subtitle" color="muted" >
           Bug reports, questions, and contributions — all welcome. Open an issue or start a discussion.
         </ore-text>
         <div class="community-links">
           <a
+            class="community-card-link"
             href="https://github.com/helmuthdu/vielzeug/issues"
-            target="_blank"
             rel="noopener noreferrer"
-            class="community-card-link">
+            target="_blank">
             <ore-card padding="md">
               <div class="community-card-inner">
                 <div class="community-card-icon"><ore-icon name="circle-alert" size="22"></ore-icon></div>
                 <div class="community-card-body">
-                  <ore-text weight="semibold" class="community-card-title">GitHub Issues</ore-text>
-                  <ore-text color="muted" size="sm" class="community-card-desc">
+                  <ore-text class="community-card-title" weight="semibold" >GitHub Issues</ore-text>
+                  <ore-text class="community-card-desc" color="muted" size="sm" >
                     Report bugs or request features
                   </ore-text>
                 </div>
-                <ore-icon name="arrow-right" size="16" class="community-card-arrow"></ore-icon>
+                <ore-icon class="community-card-arrow" name="arrow-right" size="16" ></ore-icon>
               </div>
             </ore-card>
           </a>
           <a
+            class="community-card-link"
             href="https://github.com/helmuthdu/vielzeug/discussions"
-            target="_blank"
             rel="noopener noreferrer"
-            class="community-card-link">
+            target="_blank">
             <ore-card padding="md">
               <div class="community-card-inner">
                 <div class="community-card-icon"><ore-icon name="message-circle" size="22"></ore-icon></div>
                 <div class="community-card-body">
-                  <ore-text weight="semibold" class="community-card-title">Discussions</ore-text>
-                  <ore-text color="muted" size="sm" class="community-card-desc">Ask questions and share ideas</ore-text>
+                  <ore-text class="community-card-title" weight="semibold" >Discussions</ore-text>
+                  <ore-text class="community-card-desc" color="muted" size="sm" >Ask questions and share ideas</ore-text>
                 </div>
-                <ore-icon name="arrow-right" size="16" class="community-card-arrow"></ore-icon>
+                <ore-icon class="community-card-arrow" name="arrow-right" size="16" ></ore-icon>
               </div>
             </ore-card>
           </a>
           <a
+            class="community-card-link"
             href="https://github.com/helmuthdu/vielzeug/blob/main/CONTRIBUTING.md"
-            target="_blank"
             rel="noopener noreferrer"
-            class="community-card-link">
+            target="_blank">
             <ore-card padding="md">
               <div class="community-card-inner">
                 <div class="community-card-icon"><ore-icon name="git-pull-request" size="22"></ore-icon></div>
                 <div class="community-card-body">
-                  <ore-text weight="semibold" class="community-card-title">Contributing</ore-text>
-                  <ore-text color="muted" size="sm" class="community-card-desc">
+                  <ore-text class="community-card-title" weight="semibold" >Contributing</ore-text>
+                  <ore-text class="community-card-desc" color="muted" size="sm" >
                     Learn how to contribute and join the project
                   </ore-text>
                 </div>
-                <ore-icon name="arrow-right" size="16" class="community-card-arrow"></ore-icon>
+                <ore-icon class="community-card-arrow" name="arrow-right" size="16" ></ore-icon>
               </div>
             </ore-card>
           </a>
@@ -782,36 +782,36 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
       <div class="footer-top">
         <div class="footer-brand-col">
           <div class="footer-brand">
-            <img src="/logo-main.svg" alt="Vielzeug" class="footer-logo" />
+            <img alt="Vielzeug" class="footer-logo" src="/logo-main.svg" />
             <span class="footer-brand-name">Vielzeug</span>
           </div>
-          <ore-text color="muted" size="sm" class="footer-tagline">
+          <ore-text class="footer-tagline" color="muted" size="sm" >
             Modular TypeScript utilities. MIT licensed.
           </ore-text>
         </div>
-        <ore-grid cols="1" cols-sm="3" gap="xl" class="footer-links-col">
+        <ore-grid class="footer-links-col" cols="1" cols-sm="3" gap="xl" >
           <div class="footer-link-group">
-            <ore-text as="h4" weight="semibold" size="sm" class="footer-link-heading">Resources</ore-text>
+            <ore-text as="h4" class="footer-link-heading" size="sm" weight="semibold" >Resources</ore-text>
             <a href="/guide/">Documentation</a>
             <a href="/repl">REPL Playground</a>
             <a href="/refine/">Components</a>
           </div>
           <div class="footer-link-group">
-            <ore-text as="h4" weight="semibold" size="sm" class="footer-link-heading">Community</ore-text>
-            <a href="https://github.com/helmuthdu/vielzeug" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a href="https://github.com/helmuthdu/vielzeug/discussions" target="_blank" rel="noopener noreferrer">
+            <ore-text as="h4" class="footer-link-heading" size="sm" weight="semibold" >Community</ore-text>
+            <a href="https://github.com/helmuthdu/vielzeug" rel="noopener noreferrer" target="_blank" >GitHub</a>
+            <a href="https://github.com/helmuthdu/vielzeug/discussions" rel="noopener noreferrer" target="_blank" >
               Discussions
             </a>
             <a
               href="https://github.com/helmuthdu/vielzeug/blob/main/CONTRIBUTING.md"
-              target="_blank"
-              rel="noopener noreferrer">
+              rel="noopener noreferrer"
+              target="_blank">
               Contributing
             </a>
           </div>
           <div class="footer-link-group">
-            <ore-text as="h4" weight="semibold" size="sm" class="footer-link-heading">Legal</ore-text>
-            <a href="https://github.com/helmuthdu/vielzeug/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
+            <ore-text as="h4" class="footer-link-heading" size="sm" weight="semibold" >Legal</ore-text>
+            <a href="https://github.com/helmuthdu/vielzeug/blob/main/LICENSE" rel="noopener noreferrer" target="_blank" >
               MIT License
             </a>
           </div>
@@ -819,10 +819,10 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
       </div>
       <div class="footer-bottom">
         <ore-separator></ore-separator>
-        <ore-text as="p" size="sm" color="muted" align="center" class="footer-copyright">
+        <ore-text align="center" as="p" class="footer-copyright" color="muted" size="sm" >
           <ore-icon name="heart" size="14"></ore-icon>
           Built by
-          <a href="https://github.com/helmuthdu" target="_blank" rel="noopener noreferrer">Helmuth Saatkamp</a>
+          <a href="https://github.com/helmuthdu" rel="noopener noreferrer" target="_blank" >Helmuth Saatkamp</a>
         </ore-text>
       </div>
     </footer>
@@ -870,12 +870,12 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .hero-inner {
-  max-width: 1152px;
-  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3rem;
   align-items: center;
+  max-width: 1152px;
+  margin: 0 auto;
 }
 
 .hero-badge {
@@ -886,10 +886,10 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .hero-badge-link {
   display: inline-flex;
-  align-items: center;
   gap: 4px;
-  border-radius: var(--hp-radius);
+  align-items: center;
   text-decoration: none;
+  border-radius: var(--hp-radius);
   transition: opacity 0.15s ease-out;
 }
 
@@ -925,22 +925,22 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   display: block;
   font-size: clamp(2.5rem, 5vw, 3.5rem);
   line-height: 1.1;
-  letter-spacing: -0.03em;
   color: var(--hp-purple);
+  letter-spacing: -0.03em;
 }
 
 .hero-title-sub {
   display: block;
-  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
   margin-top: 0.5rem;
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
   letter-spacing: -0.01em;
   text-wrap: balance;
 }
 
 .hero-description {
-  line-height: 1.6;
   max-width: 520px;
   margin: 0 0 1.5rem;
+  line-height: 1.6;
 }
 
 .hero-values {
@@ -952,17 +952,17 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .value-item {
   display: inline-flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
   padding: 2px 4px;
-  border: none;
-  border-radius: 6px;
-  background: none;
-  color: var(--hp-text);
+  font-family: inherit;
   font-size: 0.875rem;
   font-weight: 500;
-  font-family: inherit;
+  color: var(--hp-text);
   cursor: default;
+  background: none;
+  border: none;
+  border-radius: 6px;
 }
 
 .value-item:hover,
@@ -1005,9 +1005,9 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+  clip: rect(0, 0, 0, 0);
 }
 
 .hero-actions {
@@ -1029,20 +1029,20 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .hero-logo-wrapper {
   position: relative;
-  width: 352px;
-  height: 352px;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 352px;
+  height: 352px;
 }
 
 .hero-logo-wrapper::before {
-  content: '';
   position: absolute;
-  left: 0;
+  top: -10%;
   right: 0;
   bottom: 0;
-  top: -10%;
+  left: 0;
+  content: '';
   background: conic-gradient(
     from 0deg at 45% 50%,
     oklch(56% 0.22 293deg),
@@ -1050,12 +1050,12 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
     oklch(55% 0.22 220deg),
     oklch(56% 0.22 293deg)
   );
-  filter: blur(80px);
+  border-radius: 50%;
   opacity: 0.55;
+  filter: blur(80px);
   animation: glow-rotate 8s linear infinite;
   animation-play-state: running;
   will-change: transform;
-  border-radius: 50%;
 }
 
 .hero-logo-wrapper.glow-paused::before {
@@ -1076,34 +1076,34 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .hero-logo {
   position: relative;
+  z-index: 1;
   width: 384px;
   height: 384px;
-  z-index: 1;
 }
 
 /* ── Compatibility strip ──────────────────────────────────── */
 
 .compat {
   padding: 1.5rem 1.5rem;
-  border-top: 1px solid var(--hp-border);
   background: var(--hp-surface-alt);
+  border-top: 1px solid var(--hp-border);
 }
 
 .compat-inner {
-  max-width: 900px;
-  margin: 0 auto;
   display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
-  flex-wrap: wrap;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .compat-logos {
   display: flex;
-  align-items: center;
-  gap: 1.25rem;
   flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: center;
 }
 
 .compat-logo {
@@ -1118,9 +1118,9 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .compat-logo--text {
+  font-family: var(--font-mono);
   font-size: 0.8125rem;
   font-weight: 700;
-  font-family: var(--font-mono);
   color: var(--hp-text);
   letter-spacing: 0.03em;
 }
@@ -1129,22 +1129,22 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .why {
   padding: 5rem 1.5rem;
-  border-top: 1px solid var(--hp-border);
   background: var(--hp-surface);
+  border-top: 1px solid var(--hp-border);
 }
 
 .why-inner {
-  max-width: 900px;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 3rem;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .why-header {
-  text-align: center;
   max-width: 640px;
   margin: 0 auto;
+  text-align: center;
 }
 
 .why-overline {
@@ -1152,14 +1152,14 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .why-title {
+  margin: 0 0 0.75rem;
   font-size: clamp(1.5rem, 3vw, 2.25rem);
   line-height: 1.2;
-  margin: 0 0 0.75rem;
 }
 
 .why-subtitle {
-  line-height: 1.7;
   margin: 0;
+  line-height: 1.7;
 }
 
 /* ── Stat strip ───────────────────────────────────────────── */
@@ -1167,38 +1167,38 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 .why-stats {
   display: flex;
   align-items: stretch;
+  overflow: hidden;
   background: var(--hp-surface-alt);
   border: 1px solid var(--hp-border);
   border-radius: var(--hp-radius);
-  overflow: hidden;
 }
 
 .why-stat {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
   gap: 0.4rem;
+  align-items: center;
   padding: 2rem 1.5rem;
+  text-align: center;
 }
 
 .why-stat-value {
+  margin: 0;
   font-size: clamp(2.5rem, 5vw, 3.5rem);
   line-height: 1;
-  margin: 0;
 }
 
 .why-stat-label {
-  margin: 0;
   max-width: 160px;
+  margin: 0;
 }
 
 .why-stat-divider {
-  width: 1px;
-  background: var(--hp-border);
   flex-shrink: 0;
   align-self: stretch;
+  width: 1px;
+  background: var(--hp-border);
 }
 
 /* ── Feature cards ────────────────────────────────────────── */
@@ -1214,17 +1214,17 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .why-card-icon {
-  margin-bottom: var(--size-2);
-  width: 40px;
-  height: 40px;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  border: 1px solid var(--hp-border);
-  background: var(--hp-surface);
+  width: 40px;
+  height: 40px;
+  margin-bottom: var(--size-2);
   color: var(--hp-purple);
-  flex-shrink: 0;
+  background: var(--hp-surface);
+  border: 1px solid var(--hp-border);
+  border-radius: 10px;
 }
 
 .why-card-title {
@@ -1232,16 +1232,16 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .why-card-desc {
-  line-height: 1.6;
   margin: 0;
+  line-height: 1.6;
 }
 
 .why-card-desc code {
+  padding: 1px 4px;
   font-family: var(--font-mono);
   font-size: 0.85em;
   color: var(--hp-purple);
   background: var(--hp-purple-subtle);
-  padding: 1px 4px;
   border-radius: 3px;
 }
 
@@ -1344,13 +1344,13 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .category-name {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
+  padding-bottom: 0.5rem;
+  margin: 0;
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--hp-text);
-  margin: 0;
-  padding-bottom: 0.5rem;
   border-bottom: 1px solid var(--hp-border);
 }
 
@@ -1362,12 +1362,12 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .package-tile {
   display: flex;
-  align-items: center;
   gap: 10px;
+  align-items: center;
   padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  text-decoration: none;
   color: var(--hp-text);
+  text-decoration: none;
+  border-radius: 8px;
   transition:
     background 0.15s ease-out,
     box-shadow 0.15s ease-out;
@@ -1385,39 +1385,39 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .package-logo {
+  flex-shrink: 0;
   width: 28px;
   height: 28px;
-  flex-shrink: 0;
 }
 
 .package-info {
   display: flex;
+  flex: 1;
   flex-direction: column;
   min-width: 0;
-  flex: 1;
 }
 
 .package-name {
+  font-family: var(--font-mono);
   font-size: 0.875rem;
   font-weight: 600;
-  font-family: var(--font-mono);
 }
 
 .package-tagline {
   display: -webkit-box;
+  -webkit-box-orient: vertical;
   overflow: hidden;
+  -webkit-line-clamp: 2;
   font-size: 0.75rem;
   color: var(--hp-text-muted);
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
 }
 
 .package-size {
-  font-size: 0.6875rem;
+  padding: 2px 6px;
   font-family: var(--font-mono);
+  font-size: 0.6875rem;
   color: var(--hp-text-muted);
   white-space: nowrap;
-  padding: 2px 6px;
   background: var(--hp-surface-alt);
   border-radius: var(--rounded-sm);
 }
@@ -1438,14 +1438,14 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
-  margin-top: 2rem;
   align-items: stretch;
+  margin-top: 2rem;
 }
 
 .community-card-link {
   display: block;
-  text-decoration: none;
   height: 100%;
+  text-decoration: none;
 }
 
 .community-card-link ore-card {
@@ -1468,33 +1468,33 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .community-card-inner {
   display: flex;
-  align-items: center;
   gap: 1rem;
+  align-items: center;
 }
 
 .community-card-icon {
-  width: 44px;
-  height: 44px;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: var(--rounded-md);
-  border: 1px solid oklch(70% 0.12 293deg / 20%);
+  width: 44px;
+  height: 44px;
   color: var(--hp-purple);
-  flex-shrink: 0;
+  border: 1px solid oklch(70% 0.12 293deg / 20%);
+  border-radius: var(--rounded-md);
 }
 
 .community-card-body {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
   min-width: 0;
 }
 
 .community-card-arrow {
-  color: var(--hp-text-muted);
   flex-shrink: 0;
+  color: var(--hp-text-muted);
   transition:
     color 0.15s ease-out,
     transform 0.15s ease-out;
@@ -1510,16 +1510,16 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .site-footer {
   padding: 3rem 1.5rem 2rem;
-  border-top: 1px solid var(--hp-border);
   background: var(--hp-surface-alt);
+  border-top: 1px solid var(--hp-border);
 }
 
 .footer-top {
-  max-width: 1152px;
-  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr 2fr;
   gap: 3rem;
+  max-width: 1152px;
+  margin: 0 auto;
 }
 
 .footer-brand-col {
@@ -1530,8 +1530,8 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .footer-brand {
   display: flex;
-  align-items: center;
   gap: 10px;
+  align-items: center;
 }
 
 .footer-logo {
@@ -1577,9 +1577,9 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .footer-copyright {
   display: flex;
+  gap: 6px;
   align-items: center;
   justify-content: center;
-  gap: 6px;
   margin: 0;
 }
 
@@ -1588,9 +1588,9 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .footer-copyright a {
+  font-weight: 500;
   color: var(--hp-text);
   text-decoration: none;
-  font-weight: 500;
 }
 
 .footer-copyright a:hover {
@@ -1623,48 +1623,48 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .codex-ai-title {
-  font-size: clamp(1.5rem, 3vw, 2rem);
   margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2rem);
   text-wrap: balance;
 }
 
 .codex-ai-desc {
-  line-height: 1.65;
   margin: 0;
+  line-height: 1.65;
 }
 
 .codex-inline-pkg {
+  padding: 1px 5px;
   font-family: var(--font-mono);
   font-size: 0.9em;
   color: var(--hp-purple);
   background: var(--hp-purple-subtle);
-  padding: 1px 5px;
   border-radius: 4px;
 }
 
 .codex-caps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
 }
 
 .codex-cap {
   display: flex;
-  align-items: baseline;
   gap: 0.625rem;
+  align-items: baseline;
   font-size: 0.9rem;
-  color: var(--hp-text);
   line-height: 1.5;
+  color: var(--hp-text);
 }
 
 .codex-cap ore-icon {
-  color: var(--hp-purple);
-  flex-shrink: 0;
   position: relative;
   top: 1px;
+  flex-shrink: 0;
+  color: var(--hp-purple);
 }
 
 .codex-cap strong {
@@ -1687,8 +1687,8 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .codex-learn-link {
   display: inline-flex;
-  align-items: center;
   gap: 5px;
+  align-items: center;
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--hp-purple);
@@ -1718,11 +1718,11 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .chat-role {
-  font-size: 0.6875rem;
   font-family: var(--font-mono);
+  font-size: 0.6875rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .chat-user .chat-role {
@@ -1748,16 +1748,18 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .chat-text code {
+  padding: 1px 4px;
   font-family: var(--font-mono);
   font-size: 0.85em;
   color: var(--hp-purple);
   background: var(--hp-purple-subtle);
-  padding: 1px 4px;
   border-radius: 3px;
 }
 
 .chat-call {
+  padding: 0.5rem 0.75rem;
   margin: 0;
+  overflow-x: auto;
   font-family: var(--font-mono);
   font-size: 0.8rem;
   line-height: 1.5;
@@ -1765,23 +1767,21 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   background: var(--hp-surface-alt);
   border: 1px solid var(--hp-border);
   border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-  overflow-x: auto;
 }
 
 .chat-code {
-  border-top: 1px solid var(--hp-border);
   padding-top: 0.875rem;
   margin-top: 0.125rem;
+  border-top: 1px solid var(--hp-border);
 }
 
 .chat-code pre {
   margin: 0;
+  overflow-x: auto;
   font-family: var(--font-mono);
   font-size: 0.8rem;
   line-height: 1.7;
   color: var(--hp-text);
-  overflow-x: auto;
 }
 
 /* ── Responsive ────────────────────────────────────────────── */
@@ -1883,8 +1883,8 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   }
 
   .community-card {
-    transition: none;
     transform: none;
+    transition: none;
   }
 
   .hero-logo-wrapper::before {
@@ -1896,11 +1896,11 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .hero-install-meta {
   display: flex;
-  justify-content: flex-start;
-  align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  align-items: center;
+  justify-content: flex-start;
   padding: 0 4px;
+  margin-top: 8px;
 }
 
 .hero-install-counter {
@@ -1913,15 +1913,15 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .showcase-import-link:hover .hl-string {
-  text-decoration: underline;
   color: var(--hp-purple);
+  text-decoration: underline;
 }
 
 /* Package Explorer Search & Essentials */
 .explorer-toolbar {
-  margin-bottom: 2rem;
   display: flex;
   justify-content: center;
+  margin-bottom: 2rem;
 }
 
 .explorer-search {
@@ -1944,8 +1944,8 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 .essential-card-link {
   display: block;
   height: 100%;
-  border-radius: var(--hp-radius);
   text-decoration: none;
+  border-radius: var(--hp-radius);
 }
 
 .essential-card-link:focus-visible {
@@ -1955,21 +1955,21 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .essential-card {
   height: 100%;
-  transition: all 0.2s ease-out;
   cursor: pointer;
+  transition: all 0.2s ease-out;
 }
 
 .essential-card-link:hover .essential-card,
 .essential-card-link:focus-visible .essential-card {
   --card-border-color: var(--hp-purple);
-  transform: translateY(-2px);
   box-shadow: 0 4px 20px var(--hp-purple-glow);
+  transform: translateY(-2px);
 }
 
 .essential-card-header {
   display: flex;
-  align-items: center;
   gap: var(--size-4);
+  align-items: center;
   margin-bottom: var(--size-2);
 }
 
@@ -1984,20 +1984,20 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .essential-logo {
+  flex-shrink: 0;
   width: 32px;
   height: 32px;
-  flex-shrink: 0;
 }
 
 .essential-desc {
-  margin: 0;
   flex: 1;
+  margin: 0;
 }
 
 .essential-footer {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   margin-top: 0.25rem;
 }
 
@@ -2013,24 +2013,24 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 .explorer-empty {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 1rem;
+  align-items: center;
   padding: 3rem 1.5rem;
-  color: var(--hp-text-muted);
   font-size: 0.9375rem;
+  color: var(--hp-text-muted);
   text-align: center;
   background: var(--hp-surface-alt);
-  border-radius: 8px;
   border: 1px dashed var(--hp-border);
+  border-radius: 8px;
 }
 
 /* Size badges */
 .essential-size {
-  font-size: 0.6875rem;
+  padding: 2px 6px;
   font-family: var(--font-mono);
+  font-size: 0.6875rem;
   color: var(--hp-text-muted);
   white-space: nowrap;
-  padding: 2px 6px;
   border-radius: var(--rounded-sm);
 }
 </style>

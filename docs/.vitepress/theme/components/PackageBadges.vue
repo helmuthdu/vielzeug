@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup >
 import { useData } from 'vitepress';
 import { computed } from 'vue';
 
@@ -63,12 +63,12 @@ const getBadgeUrl = (label: string, value: string | number, color: string) => {
 
 <template>
   <div class="badges">
-    <img src="https://github.com/helmuthdu/vielzeug/actions/workflows/ci.yml/badge.svg" alt="CI" />
+    <img alt="CI" src="https://github.com/helmuthdu/vielzeug/actions/workflows/ci.yml/badge.svg" />
     <img
       v-for="badge in badges"
       :key="badge.label"
-      :src="getBadgeUrl(badge.label, badge.value, badge.color)"
-      :alt="badge.alt" />
+      :alt="badge.alt" 
+      :src="getBadgeUrl(badge.label, badge.value, badge.color)"/>
   </div>
 </template>
 

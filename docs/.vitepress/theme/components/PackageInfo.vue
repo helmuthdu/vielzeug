@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup >
 import { useData } from 'vitepress';
 import { computed } from 'vue';
 

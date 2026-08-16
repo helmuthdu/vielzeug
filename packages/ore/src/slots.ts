@@ -112,7 +112,9 @@ const createSlots = (host: HTMLElement): ComponentSlots<string> => {
   };
 
   const bindAllSlots = (): void => {
-    host.shadowRoot?.querySelectorAll('slot').forEach((slotEl) => bindSlot(slotEl));
+    host.shadowRoot?.querySelectorAll('slot').forEach((slotEl) => {
+      bindSlot(slotEl);
+    });
   };
 
   const recomputeAllSlots = (): void => {

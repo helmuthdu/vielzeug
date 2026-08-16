@@ -590,7 +590,9 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   // ─── Private: listener notification ──────────────────────────────────────
 
   #notifyListeners(): void {
-    this.#listeners.forEach((listener) => listener(this.#currentState));
+    this.#listeners.forEach((listener) => {
+      listener(this.#currentState);
+    });
   }
 
   // ─── Private: data loaders ────────────────────────────────────────────────
@@ -1148,7 +1150,10 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     const search = new URLSearchParams();
 
     for (const [key, value] of Object.entries(location.query)) {
-      if (Array.isArray(value)) value.forEach((item) => search.append(key, item));
+      if (Array.isArray(value))
+        value.forEach((item) => {
+          search.append(key, item);
+        });
       else search.set(key, value);
     }
 

@@ -58,7 +58,9 @@ export function makeWindow(innerHeight = 300, innerWidth = 400): Window {
       bucket.add(cb);
     },
     dispatchEvent(event: Event) {
-      listeners.get(event.type)?.forEach((cb) => cb(event));
+      listeners.get(event.type)?.forEach((cb) => {
+        cb(event);
+      });
 
       return true;
     },

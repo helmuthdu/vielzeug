@@ -120,7 +120,7 @@ describe('timeScale', () => {
     const ticks = scale.ticks(6);
 
     expect(ticks.length).toBeGreaterThan(0);
-    ticks.forEach((t) => expect(t).toBeInstanceOf(Date));
+    for (const t of ticks) expect(t).toBeInstanceOf(Date);
   });
 
   it('returns zero pixel when domain range is zero', () => {

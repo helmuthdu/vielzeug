@@ -194,7 +194,10 @@ export function buildUrl(base: string, pattern: string, params: RouteParams = {}
     const search = new URLSearchParams();
 
     Object.entries(query).forEach(([key, value]) => {
-      if (Array.isArray(value)) value.forEach((item) => search.append(key, String(item)));
+      if (Array.isArray(value))
+        value.forEach((item) => {
+          search.append(key, String(item));
+        });
       else search.set(key, String(value));
     });
 
@@ -242,7 +245,9 @@ export function buildPreloadKey(base: string, path: string, params: RouteParams,
 
   for (const [key, value] of Object.entries(query)) {
     if (Array.isArray(value)) {
-      value.forEach((v) => search.append(key, v));
+      value.forEach((v) => {
+        search.append(key, v);
+      });
     } else {
       search.set(key, value);
     }

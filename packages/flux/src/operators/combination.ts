@@ -36,7 +36,10 @@ export function merge<T>(...sources: Stream<T>[]): Stream<T> {
       if (signal.aborted) break;
     }
 
-    return () => subscriptions.forEach((subscription) => subscription.unsubscribe());
+    return () =>
+      subscriptions.forEach((subscription) => {
+        subscription.unsubscribe();
+      });
   });
 }
 
@@ -119,6 +122,9 @@ export function combineLatest<T extends readonly Stream<unknown>[]>(...sources: 
       subscriptions.push(subscription);
     }
 
-    return () => subscriptions.forEach((subscription) => subscription.unsubscribe());
+    return () =>
+      subscriptions.forEach((subscription) => {
+        subscription.unsubscribe();
+      });
   });
 }

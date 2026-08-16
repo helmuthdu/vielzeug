@@ -125,7 +125,9 @@ export function createScopeTouchController(
     previewEl.setAttribute('data-dnd-touch-preview', '');
     previewEl.setAttribute('inert', '');
     previewEl.removeAttribute('id');
-    previewEl.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
+    previewEl.querySelectorAll('[id]').forEach((element) => {
+      element.removeAttribute('id');
+    });
     previewEl.style.pointerEvents = 'none';
     previewEl.style.position = 'fixed';
     previewEl.style.zIndex = String(PREVIEW_Z_INDEX);

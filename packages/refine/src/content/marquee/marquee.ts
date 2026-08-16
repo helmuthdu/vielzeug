@@ -97,7 +97,9 @@ define<OreMarqueeProps>(MARQUEE_TAG, {
       const slot = el.shadowRoot?.querySelector<HTMLSlotElement>('slot') ?? null;
 
       const removeClones = (): void => {
-        clones.forEach((clone) => clone.remove());
+        clones.forEach((clone) => {
+          clone.remove();
+        });
         clones = [];
       };
 

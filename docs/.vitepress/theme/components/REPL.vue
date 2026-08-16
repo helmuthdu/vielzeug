@@ -1,11 +1,11 @@
 <template>
-  <div id="repl-container" class="repl-container">
+  <div class="repl-container" id="repl-container" >
     <!-- IDE layout: sidebar + main -->
     <div class="ide-layout">
       <!-- Sidebar: library list -->
       <aside class="ide-sidebar" :class="{ 'is-ref-open': showReference }">
         <div class="sidebar-header">
-          <img :src="withBase(`/logo-${selectedLibrary}.svg`)" :alt="selectedLibrary" class="sidebar-active-logo" />
+          <img class="sidebar-active-logo" :alt="selectedLibrary" :src="withBase(`/logo-${selectedLibrary}.svg`)" />
           <span class="sidebar-active-name">
             @vielzeug/
             <strong>{{ selectedLibrary }}</strong>
@@ -13,13 +13,14 @@
         </div>
         <nav class="sidebar-nav">
           <button
+            class="sidebar-item"
+            type="button"
             v-for="lib in libraries"
             :key="lib.id"
-            class="sidebar-item"
             :class="{ 'is-active': selectedLibrary === lib.id }"
             :title="lib.description"
             @click="selectLibrary(lib.id)">
-            <img :src="withBase(`/logo-${lib.id}.svg`)" :alt="`${lib.id} logo`" class="sidebar-logo" />
+            <img class="sidebar-logo" :alt="`${lib.id} logo`" :src="withBase(`/logo-${lib.id}.svg`)" />
             <span class="sidebar-info">
               <span class="sidebar-name">{{ lib.id }}</span>
               <span class="sidebar-desc">{{ lib.description }}</span>
@@ -27,36 +28,42 @@
           </button>
         </nav>
         <button
-          type="button"
-          class="mobile-ref-toggle"
-          :aria-expanded="showReference"
           aria-controls="mobile-ref-panel"
+          class="mobile-ref-toggle"
+          type="button"
+          :aria-expanded="showReference"
           @click="showReference = !showReference">
           <ore-icon name="book-open" size="14"></ore-icon>
           <span>{{ showReference ? 'Hide' : 'Browse' }} exports</span>
-          <ore-icon :name="showReference ? 'chevron-down' : 'chevron-up'" size="14"></ore-icon>
+          <ore-icon size="14" :name="showReference ? 'chevron-down' : 'chevron-up'" ></ore-icon>
         </button>
-        <div id="mobile-ref-panel" class="sidebar-ref">
+        <div class="sidebar-ref" id="mobile-ref-panel" >
           <REPLReference :library="currentLibrary" @insert-function="insertFunction" />
         </div>
       </aside>
 
       <!-- Backdrop for the mobile reference drawer -->
-      <div v-if="showReference" class="mobile-ref-backdrop" @click="showReference = false"></div>
+      <div
+        class="mobile-ref-backdrop"
+        role="button"
+        tabindex="0"
+        v-if="showReference"
+        @click="showReference = false"
+        @keydown.enter="showReference = false"></div>
 
       <!-- Main: editor + output -->
       <div class="ide-main">
         <REPLEditor
           ref="editorRef"
-          :library="currentLibrary"
           :examples="examples[selectedLibrary] ?? {}"
-          :is-dark="isDark" />
+          :is-dark="isDark" 
+          :library="currentLibrary"/>
       </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
+<script lang="ts" setup >
 import { useData } from 'vitepress';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
@@ -130,9 +137,9 @@ onMounted(() => {
 /* ── IDE shell ─────────────────────────────────────────── */
 .repl-container {
   --sidebar-w: 280px;
+  height: calc(100vh - var(--vp-nav-height, 64px));
   overflow: hidden;
   background: var(--color-canvas);
-  height: calc(100vh - var(--vp-nav-height, 64px));
 }
 
 .ide-layout {
@@ -150,66 +157,66 @@ onMounted(() => {
 .ide-sidebar {
   display: flex;
   flex-direction: column;
-  background: var(--color-contrast-100);
-  overflow: hidden;
   height: 100%;
+  overflow: hidden;
+  background: var(--color-contrast-100);
   border-right: var(--border) solid var(--color-contrast-300);
 }
 
 .sidebar-header {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-bottom: var(--border) solid var(--color-contrast-300);
   flex-shrink: 0;
-  background: var(--color-contrast-100);
+  gap: 0.5rem;
+  align-items: center;
   height: 52px;
+  padding: 0.75rem 1rem;
+  background: var(--color-contrast-100);
+  border-bottom: var(--border) solid var(--color-contrast-300);
 }
 
 .sidebar-active-logo {
+  flex-shrink: 0;
   width: 20px;
   height: 20px;
   object-fit: contain;
-  flex-shrink: 0;
 }
 
 .sidebar-active-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: var(--text-sm);
   color: var(--text-color-secondary);
   letter-spacing: var(--tracking-tight);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .sidebar-active-name strong {
-  color: var(--text-color-heading);
   font-weight: var(--font-semibold);
+  color: var(--text-color-heading);
 }
 
 .sidebar-nav {
   flex: 1 1 0;
   min-height: 120px;
-  overflow-y: auto;
   padding: 0.375rem 0;
-  scrollbar-width: thin;
+  overflow-y: auto;
   scrollbar-color: var(--color-contrast-300) transparent;
+  scrollbar-width: thin;
 }
 
 .sidebar-item {
+  position: relative;
   display: flex;
-  align-items: flex-start;
   gap: 0.625rem;
+  align-items: flex-start;
   width: 100%;
   padding: 0.5rem 1rem;
-  border: none;
-  background: transparent;
-  color: var(--text-color-secondary);
   font-size: var(--text-sm);
-  cursor: pointer;
+  color: var(--text-color-secondary);
   text-align: left;
-  position: relative;
+  cursor: pointer;
+  background: transparent;
+  border: none;
   transition:
     color var(--transition-fast),
     background var(--transition-fast);
@@ -221,29 +228,29 @@ onMounted(() => {
 }
 
 .sidebar-item.is-active {
+  font-weight: var(--font-semibold);
   color: var(--color-primary);
   background: color-mix(in oklch, var(--color-primary) 10%, transparent);
-  font-weight: var(--font-semibold);
 }
 
 .sidebar-item.is-active::before {
-  content: '';
   position: absolute;
-  left: 0;
   top: 20%;
-  height: 60%;
+  left: 0;
   width: 3px;
-  border-radius: 0 2px 2px 0;
+  height: 60%;
+  content: '';
   background: var(--color-primary);
+  border-radius: 0 2px 2px 0;
 }
 
 .sidebar-logo {
+  flex-shrink: 0;
   width: 28px;
   height: 28px;
-  object-fit: contain;
-  flex-shrink: 0;
-  opacity: 0.8;
   margin-top: 1px;
+  object-fit: contain;
+  opacity: 0.8;
 }
 
 .sidebar-info {
@@ -256,23 +263,23 @@ onMounted(() => {
 .sidebar-name {
   font-size: var(--text-sm);
   font-weight: var(--font-semibold);
-  color: var(--text-color-heading);
   line-height: 1.2;
+  color: var(--text-color-heading);
   letter-spacing: -0.01em;
 }
 
 .sidebar-item:not(.is-active) .sidebar-name {
-  color: var(--text-color-secondary);
   font-weight: var(--font-medium);
+  color: var(--text-color-secondary);
 }
 
 .sidebar-desc {
-  font-size: var(--text-xs);
-  color: var(--text-color-tertiary);
-  line-height: 1.3;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: var(--text-xs);
+  line-height: 1.3;
+  color: var(--text-color-tertiary);
+  white-space: nowrap;
 }
 
 .sidebar-item.is-active .sidebar-logo {
@@ -280,11 +287,11 @@ onMounted(() => {
 }
 
 .sidebar-ref {
+  display: flex;
   flex: 1 1 0;
+  flex-direction: column;
   min-height: 200px;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
 .mobile-ref-toggle {
@@ -309,9 +316,9 @@ onMounted(() => {
   }
 
   .ide-sidebar {
-    border-left: none;
-    border-bottom: var(--border) solid var(--color-contrast-300);
     max-height: none;
+    border-bottom: var(--border) solid var(--color-contrast-300);
+    border-left: none;
   }
 
   /* Active library is already highlighted in the strip below — drop the duplicate header row. */
@@ -332,9 +339,9 @@ onMounted(() => {
   }
 
   .sidebar-item {
-    width: auto;
     flex: 0 0 auto;
     align-items: center;
+    width: auto;
     padding: var(--size-1) var(--size-2-5);
     border-radius: var(--rounded-md);
   }
@@ -356,18 +363,18 @@ onMounted(() => {
 
   .mobile-ref-toggle {
     display: flex;
-    align-items: center;
+    flex-shrink: 0;
     gap: 0.375rem;
+    align-items: center;
     width: 100%;
     padding: 0.5rem 1rem;
-    border: none;
-    border-top: var(--border) solid var(--color-contrast-300);
-    background: var(--color-contrast-100);
-    color: var(--text-color-secondary);
     font-size: var(--text-sm);
     font-weight: var(--font-medium);
+    color: var(--text-color-secondary);
     cursor: pointer;
-    flex-shrink: 0;
+    background: var(--color-contrast-100);
+    border: none;
+    border-top: var(--border) solid var(--color-contrast-300);
   }
 
   .mobile-ref-toggle:hover {
@@ -383,10 +390,10 @@ onMounted(() => {
      drawer that overlays the editor instead of permanently stealing space from it. */
   .sidebar-ref {
     position: fixed;
-    left: 0;
+    top: auto;
     right: 0;
     bottom: 0;
-    top: auto;
+    left: 0;
     z-index: 30;
     height: min(70vh, 32rem);
     min-height: 0;
@@ -402,13 +409,13 @@ onMounted(() => {
   }
 
   .mobile-ref-backdrop {
-    display: block;
     position: fixed;
     inset: 0;
     z-index: 25;
+    display: block;
     background: color-mix(in oklch, var(--color-canvas) 55%, transparent);
-    backdrop-filter: blur(2px);
     opacity: 1;
+    backdrop-filter: blur(2px);
     transition: opacity var(--transition-normal, 0.2s) ease;
   }
 

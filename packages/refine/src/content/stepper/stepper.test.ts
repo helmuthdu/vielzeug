@@ -145,7 +145,7 @@ describe('ore-stepper', () => {
 
       const steps = fixture.element.querySelectorAll('ore-step');
 
-      steps.forEach((step) => expect(step.hasAttribute('navigable')).toBe(false));
+      for (const step of steps) expect(step.hasAttribute('navigable')).toBe(false);
     });
 
     it('marks non-disabled steps navigable when clickable is set', async () => {
@@ -185,7 +185,7 @@ describe('ore-stepper', () => {
 
       const steps = fixture.element.querySelectorAll('ore-step');
 
-      steps.forEach((step) => expect(step.hasAttribute('navigable')).toBe(false));
+      for (const step of steps) expect(step.hasAttribute('navigable')).toBe(false);
     });
   });
 

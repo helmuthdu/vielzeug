@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup >
 interface Props {
   filename?: string;
   lang?: string;
@@ -15,7 +15,7 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <ore-code-window :variant="variant" :lang="lang" :filename="filename" :title="title">
+  <ore-code-window :filename="filename" :lang="lang" :title="title" :variant="variant" >
     <slot />
     <slot name="header-end" slot="header-end" />
   </ore-code-window>

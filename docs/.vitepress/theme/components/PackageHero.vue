@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup >
 import { useData } from 'vitepress';
 import { computed } from 'vue';
 
@@ -84,55 +84,55 @@ const categoryLabel = computed(() => {
       <div class="pkg-identity">
         <div class="pkg-hero-top">
           <img
-            :src="withBase(`/logo-${props.package}.svg`)"
-            :alt="`${props.package} logo`"
             class="pkg-logo-img"
+            :alt="`${props.package} logo`"
+            :src="withBase(`/logo-${props.package}.svg`)"
             @error="(e: Event) => ((e.target as HTMLImageElement).style.display = 'none')" />
-          <ore-text as="h1" variant="heading" size="lg" weight="bold" color="heading">{{ packageName }}</ore-text>
-          <ore-badge v-if="category" color="primary" variant="flat" size="xs" rounded="full">
+          <ore-text as="h1" color="heading" size="lg" variant="heading" weight="bold" >{{ packageName }}</ore-text>
+          <ore-badge color="primary" rounded="full" size="xs" variant="flat" v-if="category" >
             {{ categoryLabel }}
           </ore-badge>
         </div>
         <div class="pkg-identity-content">
-          <ore-text v-if="description" as="p" variant="body" size="md" color="secondary" class="pkg-hero-description">
+          <ore-text as="p" class="pkg-hero-description" color="secondary" size="md" variant="body" v-if="description" >
             {{ description }}
           </ore-text>
           <div class="pkg-install-action">
-            <ore-copy-command :value="installCommand" size="md" variant="bordered" class="pkg-install-command"></ore-copy-command>
+            <ore-copy-command class="pkg-install-command" size="md" variant="bordered" :value="installCommand" ></ore-copy-command>
           </div>
         </div>
       </div>
       <div class="pkg-hero-content">
-        <section class="pkg-facts-panel" aria-labelledby="pkg-facts-heading">
+        <section aria-labelledby="pkg-facts-heading" class="pkg-facts-panel" >
           <dl class="pkg-facts">
-            <div v-if="packageInfo.version" class="pkg-fact">
+            <div class="pkg-fact" v-if="packageInfo.version" >
               <dt><ore-text as="span" class="pkg-sr-only">Version</ore-text></dt>
               <dd>
                 <ore-tooltip content="Published package version" placement="top">
-                  <ore-chip color="primary" variant="flat" size="md" rounded="lg">
-                    <ore-icon slot="icon" name="package" size="14" aria-hidden="true"></ore-icon>
+                  <ore-chip color="primary" rounded="lg" size="md" variant="flat" >
+                    <ore-icon aria-hidden="true" name="package" size="14" slot="icon" ></ore-icon>
                     v{{ packageInfo.version }}
                   </ore-chip>
                 </ore-tooltip>
               </dd>
             </div>
-            <div v-if="packageInfo.size && packageInfo.size !== 'N/A'" class="pkg-fact">
+            <div class="pkg-fact" v-if="packageInfo.size && packageInfo.size !== 'N/A'" >
               <dt><ore-text as="span" class="pkg-sr-only">Size</ore-text></dt>
               <dd>
                 <ore-tooltip content="Compressed package size" placement="top">
-                  <ore-chip color="secondary" variant="flat" size="md" rounded="lg">
-                    <ore-icon slot="icon" name="file-archive" size="14" aria-hidden="true"></ore-icon>
+                  <ore-chip color="secondary" rounded="lg" size="md" variant="flat" >
+                    <ore-icon aria-hidden="true" name="file-archive" size="14" slot="icon" ></ore-icon>
                     {{ packageInfo.size }} gzip
                   </ore-chip>
                 </ore-tooltip>
               </dd>
             </div>
-            <div v-if="packageInfo.dependencies === 0" class="pkg-fact">
+            <div class="pkg-fact" v-if="packageInfo.dependencies === 0" >
               <dt><ore-text as="span" class="pkg-sr-only">Dependencies</ore-text></dt>
               <dd>
                 <ore-tooltip content="No runtime dependencies" placement="top">
-                  <ore-chip color="success" variant="flat" size="md" rounded="lg">
-                    <ore-icon slot="icon" name="layers" size="14" aria-hidden="true"></ore-icon>
+                  <ore-chip color="success" rounded="lg" size="md" variant="flat" >
+                    <ore-icon aria-hidden="true" name="layers" size="14" slot="icon" ></ore-icon>
                     Zero dependencies
                   </ore-chip>
                 </ore-tooltip>
@@ -142,60 +142,60 @@ const categoryLabel = computed(() => {
         </section>
         <ore-separator></ore-separator>
         <div class="pkg-details">
-          <section v-if="environments.length" class="pkg-runtime" aria-label="Runtime support">
-            <ore-text as="span" variant="label" size="sm" weight="semibold" color="body" class="pkg-section-label">
+          <section aria-label="Runtime support" class="pkg-runtime" v-if="environments.length" >
+            <ore-text as="span" class="pkg-section-label" color="body" size="sm" variant="label" weight="semibold" >
               Runtime support
             </ore-text>
             <div class="pkg-runtime-badges">
               <ore-badge
-                v-for="environment in environmentLabels"
-                :key="environment"
                 color="secondary"
-                variant="flat"
+                rounded="sm"
                 size="xs"
-                rounded="sm">
+                variant="flat"
+                v-for="environment in environmentLabels"
+                :key="environment">
                 {{ environment }}
               </ore-badge>
             </div>
           </section>
-          <section v-if="exports.length" class="pkg-exports-row">
-            <ore-text as="span" variant="label" size="sm" weight="semibold" color="body" class="pkg-section-label">
+          <section class="pkg-exports-row" v-if="exports.length" >
+            <ore-text as="span" class="pkg-section-label" color="body" size="sm" variant="label" weight="semibold" >
               Key exports
             </ore-text>
             <div class="pkg-export-list">
               <ore-badge
-                v-for="ex in featuredExports"
-                :key="ex"
-                variant="outline"
-                size="xs"
+                class="pkg-export-tag"
                 rounded="sm"
-                class="pkg-export-tag">
+                size="xs"
+                variant="outline"
+                v-for="ex in featuredExports"
+                :key="ex">
                 {{ ex }}
               </ore-badge>
               <ore-button
-                v-if="exports.length > featuredExports.length"
-                :href="withBase(`/${props.package}/api`)"
+                class="pkg-exports-more"
                 size="sm"
                 variant="text"
-                class="pkg-exports-more">
+                v-if="exports.length > featuredExports.length"
+                :href="withBase(`/${props.package}/api`)">
                 View all {{ exports.length }} exports
-                <ore-icon name="arrow-right" size="14" aria-hidden="true"></ore-icon>
+                <ore-icon aria-hidden="true" name="arrow-right" size="14" ></ore-icon>
               </ore-button>
             </div>
           </section>
-          <section v-if="related.length" class="pkg-related-row">
-            <ore-text as="span" variant="label" size="sm" weight="semibold" color="body" class="pkg-section-label">
+          <section class="pkg-related-row" v-if="related.length" >
+            <ore-text as="span" class="pkg-section-label" color="body" size="sm" variant="label" weight="semibold" >
               Works well with
             </ore-text>
             <div class="pkg-related-list">
               <ore-button
-                v-for="rel in related"
-                :key="rel"
-                :href="withBase(`/${rel}/`)"
+                class="pkg-related-button"
                 size="sm"
                 variant="ghost"
-                class="pkg-related-button">
-                <img slot="prefix" :src="withBase(`/logo-${rel}.svg`)" alt="" class="pkg-related-logo" />
+                v-for="rel in related"
+                :key="rel"
+                :href="withBase(`/${rel}/`)">
+                <img alt="" class="pkg-related-logo" slot="prefix" :src="withBase(`/logo-${rel}.svg`)" />
                 {{ rel }}
               </ore-button>
             </div>
@@ -209,8 +209,8 @@ const categoryLabel = computed(() => {
 <style scoped>
 .pkg-hero {
   box-sizing: border-box;
-  margin-bottom: var(--size-8);
   width: 100%;
+  margin-bottom: var(--size-8);
 }
 
 .pkg-hero-body {
@@ -248,17 +248,17 @@ const categoryLabel = computed(() => {
 
 .pkg-hero-top {
   display: flex;
-  align-items: center;
-  gap: var(--size-3);
   flex-wrap: wrap;
+  gap: var(--size-3);
+  align-items: center;
 }
 
 .pkg-install-action {
   display: flex;
+  flex-direction: column;
   flex-wrap: wrap;
   gap: var(--size-3);
   align-items: flex-start;
-  flex-direction: column;
 }
 
 .pkg-install-command {
@@ -267,8 +267,8 @@ const categoryLabel = computed(() => {
 }
 
 .pkg-hero-description {
-  margin: 0;
   max-width: 60ch;
+  margin: 0;
 }
 
 .pkg-facts {
@@ -299,9 +299,9 @@ const categoryLabel = computed(() => {
   height: 1px;
   padding: 0;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+  clip: rect(0, 0, 0, 0);
 }
 
 .pkg-details {
@@ -323,8 +323,8 @@ const categoryLabel = computed(() => {
 .pkg-related-list {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: var(--size-1);
+  align-items: center;
 }
 
 .pkg-export-tag {

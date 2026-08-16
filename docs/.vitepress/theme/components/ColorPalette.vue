@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup >
 interface ColorSwatch {
   label: string;
   textVariable?: string;
@@ -137,16 +137,16 @@ const contrastScale: ColorSwatch[] = [
     <section class="palette-section">
       <h3 class="section-title">Brand Colors</h3>
       <div class="group-grid">
-        <div v-for="group in brandGroups" :key="group.name" class="color-group">
+        <div class="color-group" v-for="group in brandGroups" :key="group.name" >
           <div class="group-header">
             <span class="group-name">{{ group.name }}</span>
             <span class="group-desc">{{ group.description }}</span>
           </div>
           <div class="swatch-row">
             <div
+              class="swatch"
               v-for="swatch in group.swatches"
               :key="swatch.variable"
-              class="swatch"
               :style="{
                 background: `var(${swatch.variable})`,
                 color: swatch.textVariable ? `var(${swatch.textVariable})` : 'var(--color-contrast-900)',
@@ -161,16 +161,16 @@ const contrastScale: ColorSwatch[] = [
     <section class="palette-section">
       <h3 class="section-title">Semantic Colors</h3>
       <div class="group-grid">
-        <div v-for="group in semanticGroups" :key="group.name" class="color-group">
+        <div class="color-group" v-for="group in semanticGroups" :key="group.name" >
           <div class="group-header">
             <span class="group-name">{{ group.name }}</span>
             <span class="group-desc">{{ group.description }}</span>
           </div>
           <div class="swatch-row">
             <div
+              class="swatch"
               v-for="swatch in group.swatches"
               :key="swatch.variable"
-              class="swatch"
               :style="{
                 background: `var(${swatch.variable})`,
                 color: swatch.textVariable ? `var(${swatch.textVariable})` : 'var(--color-contrast-900)',
@@ -185,16 +185,16 @@ const contrastScale: ColorSwatch[] = [
     <section class="palette-section">
       <h3 class="section-title">Shade Colors</h3>
       <div class="group-grid">
-        <div v-for="group in shadeGroups" :key="group.name" class="color-group">
+        <div class="color-group" v-for="group in shadeGroups" :key="group.name" >
           <div class="group-header">
             <span class="group-name">{{ group.name }}</span>
             <span class="group-desc">{{ group.description }}</span>
           </div>
           <div class="shade-row">
             <div
+              class="swatch"
               v-for="swatch in group.swatches"
               :key="swatch.variable"
-              class="swatch"
               :style="{
                 background: `var(${swatch.variable})`,
                 color: swatch.textVariable ? `var(${swatch.textVariable})` : 'var(--color-contrast-900)',
@@ -213,9 +213,9 @@ const contrastScale: ColorSwatch[] = [
       </p>
       <div class="contrast-row">
         <div
+          class="contrast-swatch"
           v-for="swatch in contrastScale"
           :key="swatch.variable"
-          class="contrast-swatch"
           :style="{
             background: `var(${swatch.variable})`,
             color: Number(swatch.label) >= 500 ? 'var(--color-contrast-50)' : 'var(--color-contrast-900)',
@@ -242,12 +242,12 @@ const contrastScale: ColorSwatch[] = [
 }
 
 .section-title {
+  padding-bottom: 0.5rem;
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
   color: var(--vp-c-text-1);
   border-bottom: 1px solid var(--vp-c-divider);
-  padding-bottom: 0.5rem;
 }
 
 .section-desc {
@@ -270,8 +270,8 @@ const contrastScale: ColorSwatch[] = [
 
 .group-header {
   display: flex;
-  align-items: baseline;
   gap: 0.625rem;
+  align-items: baseline;
 }
 
 .group-name {
@@ -288,43 +288,43 @@ const contrastScale: ColorSwatch[] = [
 .swatch-row {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
 }
 
 .shade-row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
 }
 
 .swatch {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   gap: 0.125rem;
-  padding: 0.625rem 0.5rem 0.5rem;
+  justify-content: flex-end;
   min-height: 72px;
+  padding: 0.625rem 0.5rem 0.5rem;
 }
 
 .contrast-row {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
-  border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
 }
 
 .contrast-swatch {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   gap: 0.125rem;
-  padding: 0.625rem 0.5rem 0.5rem;
+  justify-content: flex-end;
   min-height: 72px;
+  padding: 0.625rem 0.5rem 0.5rem;
 }
 
 .swatch-label {

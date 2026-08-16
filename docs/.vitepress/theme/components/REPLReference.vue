@@ -6,35 +6,35 @@
       <div class="search-container">
         <ore-input
           fullwidth
-          :value="localSearchQuery"
           placeholder="Search exports..."
+          :value="localSearchQuery"
           @input="handleSearchInput"></ore-input>
       </div>
     </div>
     <div class="function-categories">
-      <div v-for="category in filteredCategories" :key="category.name" class="category">
+      <div class="category" v-for="category in filteredCategories" :key="category.name" >
         <h4>{{ category.name }} ({{ category.functions.length }} exports)</h4>
         <div class="function-list">
           <ore-chip
-            v-for="fn in category.functions"
-            :key="fn"
             mode="action"
             size="sm"
+            title="Click to insert"
             variant="outline"
-            @click="emit('insert-function', fn)"
-            title="Click to insert">
+            v-for="fn in category.functions"
+            :key="fn"
+            @click="emit('insert-function', fn)">
             {{ fn }}
           </ore-chip>
         </div>
       </div>
-      <div v-if="filteredCategories.length === 0" class="no-results">
+      <div class="no-results" v-if="filteredCategories.length === 0" >
         No exports found matching "{{ localSearchQuery }}"
       </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
+<script lang="ts" setup >
 import { computed, ref } from 'vue';
 
 import type { LibraryEntry } from './repl/registry.generated';
@@ -85,24 +85,24 @@ const filteredCategories = computed(() => {
 <style scoped>
 /* Reference Section */
 .reference-section {
-  margin-top: 0;
-  background: var(--color-contrast-100);
-  overflow: hidden;
   display: flex;
+  flex: 1;
   flex-direction: column;
   height: 100%;
-  flex: 1;
+  margin-top: 0;
+  overflow: hidden;
+  background: var(--color-contrast-100);
 }
 
 .reference-header {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 0.375rem;
   padding: 0.625rem 1rem;
   background: var(--color-contrast-100);
   border-top: var(--border) solid var(--color-contrast-300);
   border-bottom: var(--border) solid var(--color-contrast-300);
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  flex-shrink: 0;
 }
 
 .reference-hint {
@@ -120,47 +120,47 @@ const filteredCategories = computed(() => {
 }
 
 .search-container {
-  width: 100%;
   display: block;
+  width: 100%;
 }
 
 .search-container :deep(ore-input),
 .search-container :deep(input) {
-  width: 100%;
   box-sizing: border-box;
+  width: 100%;
 }
 
 .function-categories {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 1rem;
   padding: 0.75rem 1rem;
   overflow-y: auto;
-  flex: 1;
-  scrollbar-width: thin;
   scrollbar-color: var(--color-contrast-300) transparent;
+  scrollbar-width: thin;
 }
 
 .no-results {
   grid-column: 1 / -1;
-  text-align: center;
   padding: 3rem;
-  color: var(--text-color-tertiary);
   font-style: italic;
+  color: var(--text-color-tertiary);
+  text-align: center;
   background: var(--color-contrast-100);
   border-radius: var(--rounded-lg);
 }
 
 .category h4 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   margin: 0 0 0.5rem;
-  color: var(--text-color-secondary);
   font-size: var(--text-xs);
   font-weight: var(--font-bold);
+  color: var(--text-color-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
 }
 
 .function-list {

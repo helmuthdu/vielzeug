@@ -91,7 +91,9 @@ describe('herald and pulse adapters', () => {
     const handlers = new Set<(value: string) => void>();
     const bus = {
       emit(_event: string, value: string) {
-        handlers.forEach((handler) => handler(value));
+        handlers.forEach((handler) => {
+          handler(value);
+        });
       },
       on(_event: string, handler: (value: string) => void) {
         handlers.add(handler);
@@ -114,7 +116,9 @@ describe('herald and pulse adapters', () => {
     } as unknown as import('@vielzeug/pulse').Pulse<{ event: string }>;
 
     fromPulse(pulse, 'event').subscribe((value) => received.push(value));
-    handlers.forEach((handler) => handler('pulse'));
+    handlers.forEach((handler) => {
+      handler('pulse');
+    });
 
     expect(received).toContain('forwarded');
     expect(received).toContain('hello');

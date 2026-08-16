@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup >
 import { useRoute, withBase } from 'vitepress';
 
 import { PACKAGE_GROUPS } from './packageGroups';
@@ -17,44 +17,44 @@ const MENU_COLUMNS = [
 </script>
 
 <template>
-  <details v-if="screenMenu" class="screen-menu">
+  <details class="screen-menu" v-if="screenMenu" >
     <summary>Packages</summary>
-    <div v-for="group in PACKAGE_GROUPS" :key="group.id" class="screen-group">
+    <div class="screen-group" v-for="group in PACKAGE_GROUPS" :key="group.id" >
       <p>{{ group.name }}</p>
       <a
         v-for="pkg in group.packages"
         :key="pkg.id"
         :aria-current="isCurrentPackage(pkg.id) ? 'page' : undefined"
         :href="`/${pkg.id}/`">
-        <img :src="withBase(`/logo-${pkg.id}.svg`)" alt="" class="screen-package-logo" />
+        <img alt="" class="screen-package-logo" :src="withBase(`/logo-${pkg.id}.svg`)" />
         <span>{{ pkg.id }}</span>
       </a>
     </div>
     <a class="screen-all-packages" href="/#packages">Browse all packages</a>
   </details>
 
-  <ore-navigation-menu v-else class="packages-menu" placement="bottom-start">
+  <ore-navigation-menu class="packages-menu" placement="bottom-start" v-else >
     <ore-navigation-menu-item value="packages">
       <span>Packages</span>
-      <ore-icon name="chevron-down" size="14" stroke-width="2" aria-hidden="true"></ore-icon>
+      <ore-icon aria-hidden="true" name="chevron-down" size="14" stroke-width="2" ></ore-icon>
     </ore-navigation-menu-item>
 
     <ore-navigation-menu-panel for="packages">
       <div
+        class="menu-column"
         v-for="(column, index) in MENU_COLUMNS"
         :key="index"
-        class="menu-column"
         :class="{ 'menu-column--separated': index > 0 }">
-        <section v-for="group in column" :key="group.id" class="group">
+        <section class="group" v-for="group in column" :key="group.id" >
           <p class="group-title">{{ group.name }}</p>
           <a
+            class="package-link"
             v-for="pkg in group.packages"
             :key="pkg.id"
-            class="package-link"
-            :class="{ current: isCurrentPackage(pkg.id) }"
             :aria-current="isCurrentPackage(pkg.id) ? 'page' : undefined"
+            :class="{ current: isCurrentPackage(pkg.id) }"
             :href="`/${pkg.id}/`">
-            <img :src="withBase(`/logo-${pkg.id}.svg`)" alt="" class="package-logo" />
+            <img alt="" class="package-logo" :src="withBase(`/logo-${pkg.id}.svg`)" />
             <span class="package-copy">
               <span class="package-name">{{ pkg.id }}</span>
               <span class="package-tagline">{{ pkg.tagline }}</span>
@@ -62,9 +62,9 @@ const MENU_COLUMNS = [
           </a>
         </section>
       </div>
-      <a slot="footer" class="all-packages" href="/#packages">
+      <a class="all-packages" href="/#packages" slot="footer" >
         Browse all packages
-        <ore-icon name="arrow-right" size="16" stroke-width="2" aria-hidden="true"></ore-icon>
+        <ore-icon aria-hidden="true" name="arrow-right" size="16" stroke-width="2" ></ore-icon>
       </a>
     </ore-navigation-menu-panel>
   </ore-navigation-menu>
@@ -72,16 +72,16 @@ const MENU_COLUMNS = [
 
 <style scoped>
 .packages-menu {
-  display: inline-flex;
   --navigation-menu-panel-columns: 4;
   --navigation-menu-panel-max-height: calc(100dvh - var(--size-16));
   --navigation-menu-panel-width: 72rem;
+  display: inline-flex;
 }
 
 ore-navigation-menu-panel::part(content) {
+  gap: var(--size-7) var(--size-5);
   align-content: start;
   align-items: start;
-  gap: var(--size-7) var(--size-5);
   padding: var(--size-6);
 }
 
@@ -99,17 +99,17 @@ ore-navigation-menu-panel::part(content) {
 }
 
 .menu-column--separated {
-  border-inline-start: var(--border) solid var(--color-divider);
   padding-inline-start: var(--size-5);
+  border-inline-start: var(--border) solid var(--color-divider);
 }
 
 .group-title {
   margin: 0 0 var(--size-1);
-  color: var(--color-contrast-500);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
-  letter-spacing: 0.06em;
+  color: var(--color-contrast-500);
   text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .package-link {
@@ -163,8 +163,8 @@ ore-navigation-menu-panel::part(content) {
 }
 
 .screen-menu {
-  border-bottom: var(--border) solid var(--vp-c-divider);
   color: var(--vp-c-text-1);
+  border-bottom: var(--border) solid var(--vp-c-divider);
 }
 
 .screen-menu summary {
@@ -182,19 +182,19 @@ ore-navigation-menu-panel::part(content) {
 
 .screen-group p {
   margin: 0;
-  color: var(--vp-c-text-2);
   font-size: var(--text-xs);
   font-weight: var(--font-semibold);
-  letter-spacing: 0.06em;
+  color: var(--vp-c-text-2);
   text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .screen-group a {
   display: flex;
   gap: var(--size-2);
   align-items: center;
-  color: var(--vp-c-text-1);
   font-size: var(--text-sm);
+  color: var(--vp-c-text-1);
   text-decoration: none;
 }
 
@@ -213,9 +213,9 @@ ore-navigation-menu-panel::part(content) {
 .screen-all-packages {
   display: block;
   padding: var(--size-3) 0;
-  color: var(--vp-c-brand-1);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
+  color: var(--vp-c-brand-1);
   text-decoration: none;
 }
 
@@ -226,8 +226,8 @@ ore-navigation-menu-panel::part(content) {
   }
 
   .menu-column--separated {
-    border-inline-start: 0;
     padding-inline-start: 0;
+    border-inline-start: 0;
   }
 }
 </style>

@@ -42,6 +42,7 @@
     "useEditorconfig": true
   },
   "html": {
+    "experimentalFullSupportEnabled": true,
     "formatter": {
       "indentScriptAndStyle": false,
       "selfCloseVoidElements": "always",
@@ -76,15 +77,12 @@
       "suspicious": {
         "noAssignInExpressions": "off",
         "noConfusingVoidType": "off",
-        "noDoubleEquals": "off",
         "noExplicitAny": "off",
         "noExportsInTest": "off",
-        "noImplicitAnyLet": "off",
         "noNonNullAssertedOptionalChain": "off",
         "noRedeclare": "off",
         "noShadowRestrictedNames": "off",
-        "noThenProperty": "off",
-        "useIterableCallbackReturn": "off"
+        "noThenProperty": "off"
       }
     }
   },
@@ -106,7 +104,26 @@
     {
       "includes": ["docs/**/*.vue"],
       "linter": {
-        "enabled": false
+        "rules": {
+          "a11y": {
+            // VitePress theme uses div overlays/backdrops where <button> isn't semantically right
+            // (no focusable content, pure click area). Re-enable when Biome supports dismiss-role.
+            "useSemanticElements": "off"
+          },
+          "correctness": {
+            // Biome doesn't track Vue `ref="binding"` string attributes as references yet —
+            // only `:prop="binding"` and `{{ binding }}` are seen. Re-enable when upstream lands.
+            // https://github.com/biomejs/biome/issues/2973
+            "noUnusedVariables": "off"
+          },
+          "style": {
+            // Scoped styles in Vue SFCs routinely need descending specificity for overrides.
+            "noDescendingSpecificity": "off",
+            // VitePress theme components are referenced by filename in config, not imported as
+            // Vue SFC components — single-word/acronym names like REPL.vue are intentional.
+            "useVueMultiWordComponentNames": "off"
+          }
+        }
       }
     },
     {
