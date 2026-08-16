@@ -55,7 +55,7 @@ describe('normalizePackageManifest()', () => {
           version: '1.0.0',
         }),
       ),
-    ).toEqual(['name', 'version', 'description', 'scripts', 'dependencies', 'custom']);
+    ).toEqual(['name', 'version', 'description', 'repository', 'scripts', 'dependencies', 'custom']);
   });
 });
 

@@ -120,6 +120,11 @@ describe('createPublishedManifest()', () => {
         './math': { import: './dist/math.js', require: './dist/math.cjs', types: './dist/math.d.ts' },
       },
       name: '@vielzeug/example',
+      repository: {
+        type: 'git',
+        url: 'https://github.com/helmuthdu/vielzeug',
+        directory: 'packages/example',
+      },
       typesVersions: { '*': { math: ['dist/math.d.ts'] } },
     });
     expect(pkg.exports['./math'].source).toBe('./src/math.ts');
