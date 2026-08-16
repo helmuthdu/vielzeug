@@ -31,7 +31,7 @@ for (const definition of [
   try {
     defineMachine()(definition)
   } catch (error) {
-    if (ClockworkError.is(error)) {
+    if (error instanceof ClockworkError) {
       console.log('Validation code:', error.code)
       console.log('Details:', error.details)
     }

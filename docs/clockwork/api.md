@@ -162,7 +162,7 @@ const actor = machine.createActor({
 send(event: Event): void;
 ```
 
-Dispatches a user event to the current actor state. Events sent while the actor is processing queue and flush synchronously; sends to a disposed actor are ignored. Use `actor.snapshot` after sending to read the current snapshot.
+Dispatches a user event to the current actor state. Events sent while the actor is processing queue and flush synchronously; sends to a disposed actor are ignored. For active actors, malformed events without a string `type` log a development warning and are ignored. Valid but unhandled event types are ignored without a warning. Use `actor.snapshot` after sending to read the current snapshot.
 
 **Returns:** Nothing.
 
@@ -419,10 +419,10 @@ Optional logger for `debugActor()`. Logger failures are ignored so observation c
 
 ### `ClockworkError`
 
-`ClockworkError` reports invalid definitions, contexts, snapshots, and actor transition limits. It has `code`, `details`, and standard `Error` fields. Use `ClockworkError.is(error)` to narrow an unknown error.
+`ClockworkError` reports invalid definitions, contexts, snapshots, and actor transition limits. It has `code`, `details`, and standard `Error` fields. Use `instanceof ClockworkError` to narrow an unknown error.
 
 ```ts
-if (ClockworkError.is(error)) {
+if (error instanceof ClockworkError) {
   console.error(error.code, error.details);
 }
 ```

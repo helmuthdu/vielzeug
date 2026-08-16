@@ -205,6 +205,60 @@ describe('actors', () => {
     expect(order).toEqual(['subscriber:1', 'exit:1', 'transition:1', 'entry:1']);
   });
 
+  it('warns and ignores malformed runtime events', () => {
+    type Event = { readonly type: 'GO' };
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
+      initial: 'idle',
+      states: { done: {}, idle: { on: { GO: { target: 'done' } } } },
+    });
+    const actor = machine.createActor();
+
+    actor.send({ type: 1 } as unknown as Event);
+
+    expect(warn).toHaveBeenCalledWith(
+      '[@vielzeug/clockwork] ignored malformed event; expected an object with a string `type`',
+    );
+    expect(actor.snapshot.state).toBe('idle');
+  });
+
+  it('silently ignores malformed events after disposal', () => {
+    type Event = { readonly type: 'GO' };
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
+      initial: 'idle',
+      states: { done: {}, idle: { on: { GO: { target: 'done' } } } },
+    });
+    const actor = machine.createActor();
+
+    actor.dispose();
+    actor.send({ type: 1 } as unknown as Event);
+
+    expect(warn).not.toHaveBeenCalled();
+    expect(actor.snapshot.state).toBe('idle');
+  });
+
+  it('silently ignores valid but unhandled events', () => {
+    type Event = { readonly type: 'GO' | 'UNKNOWN' };
+
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const machine = defineMachine<Record<string, never>, Event>()({
+      context: {},
+      initial: 'idle',
+      states: { done: {}, idle: { on: { GO: { target: 'done' } } } },
+    });
+    const actor = machine.createActor();
+
+    actor.send({ type: 'UNKNOWN' });
+
+    expect(warn).not.toHaveBeenCalled();
+    expect(actor.snapshot.state).toBe('idle');
+  });
+
   it('runs entry effects only for fresh actors while fresh and restored actors establish resources', async () => {
     vi.useFakeTimers();
     type Event = { readonly type: 'DONE' };

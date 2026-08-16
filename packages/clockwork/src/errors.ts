@@ -23,8 +23,4 @@ export class ClockworkError extends Error {
     this.details = Object.freeze({ ...details });
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(error: unknown): error is ClockworkError {
-    return error instanceof ClockworkError;
-  }
 }

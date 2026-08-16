@@ -7,7 +7,7 @@ description: Build deterministic state machines with pure transitions and actor-
 
 ## Basic Usage
 
-Define a non-array record context and an event union before supplying the flat definition. Create one actor for each independently owned workflow.
+Call `defineMachine<Context, Event>()` first to bind context and event types; the returned definition function infers state labels from `states`. Context is optional only when its type has no keys. Create one actor for each independently owned workflow.
 
 ```ts
 import { defineMachine } from '@vielzeug/clockwork';

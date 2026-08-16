@@ -1,3 +1,5 @@
+import { isContextRecord } from './_context.js';
+import { warn } from './_dev.js';
 import { type CompiledAfter, type CompiledMachine, type CompiledState, compileDefinition } from './definition.js';
 import { ClockworkError } from './errors.js';
 import type {
@@ -40,14 +42,6 @@ const createSnapshot = <State extends string, Context extends Record<string, unk
 
 const invalidSnapshot = (state: unknown): never => {
   throw new ClockworkError('INVALID_SNAPSHOT_STATE', `snapshot state "${String(state)}" is not declared`, { state });
-};
-
-const isContextRecord = (value: unknown): value is Record<string, unknown> => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-
-  const prototype = Object.getPrototypeOf(value);
-
-  return prototype === null || prototype === Object.prototype;
 };
 
 const isMachineEvent = (event: unknown): event is MachineEvent =>
@@ -216,7 +210,13 @@ const createActor = <State extends string, Context extends Record<string, unknow
   };
 
   const send = (event: Event): void => {
-    if (!isMachineEvent(event)) return;
+    if (disposed) return;
+
+    if (!isMachineEvent(event)) {
+      warn('ignored malformed event; expected an object with a string `type`');
+
+      return;
+    }
 
     run({ event, kind: 'event' });
   };

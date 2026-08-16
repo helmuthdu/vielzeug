@@ -1,3 +1,4 @@
+import { isContextRecord } from './_context.js';
 import { ClockworkError } from './errors.js';
 import type { After, Effect, Invoke, MachineConfig, MachineEvent, Transition } from './types.js';
 
@@ -25,14 +26,6 @@ export type CompiledMachine<
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
-
-const isContextRecord = (value: unknown): value is Record<string, unknown> => {
-  if (!isRecord(value) || Array.isArray(value)) return false;
-
-  const prototype = Object.getPrototypeOf(value);
-
-  return prototype === null || prototype === Object.prototype;
-};
 
 const fail = (code: ClockworkError['code'], message: string, details: Record<string, unknown>): never => {
   throw new ClockworkError(code, message, details);
