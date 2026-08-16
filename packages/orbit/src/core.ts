@@ -14,7 +14,7 @@ import { baseCoords, toRect } from './utils';
 // ── DOM helpers ────────────────────────────────────────────────────────────────────────────────
 
 /** Reads the bounding rects of the reference and floating elements from the DOM. */
-export function getRects(reference: ReferenceElement, floating: HTMLElement): MiddlewareState['rects'] {
+function getRects(reference: ReferenceElement, floating: HTMLElement): MiddlewareState['rects'] {
   return {
     floating: toRect(floating.getBoundingClientRect()),
     reference: toRect(reference.getBoundingClientRect()),
@@ -43,61 +43,6 @@ function mergeState(state: MiddlewareState, result: MiddlewareResult | undefined
 const MAX_RESETS = 8;
 
 // ── Public API ────────────────────────────────────────────────────────────────────────────────
-
-/**
- * Deferred position computation. Runs `computePosition` in the next **microtask** and
- * returns a `Promise<ComputePositionResult>`.
- *
- * Useful for async component lifecycles (e.g. `await nextTick()` in Vue/React) where the
- * synchronous `computePosition` would read stale DOM measurements because layout has not been
- * committed yet. Note: this defers to the microtask queue, not the next animation frame — if you
- * need post-layout measurements use `requestAnimationFrame` instead.
- *
- * @example
- * ```ts
- * const result = await computePositionAsync(reference, floating, { placement: 'top' });
- * floating.style.left = `${result.x}px`;
- * floating.style.top  = `${result.y}px`;
- * ```
- */
-export function computePositionAsync(
-  reference: ReferenceElement,
-  floating: HTMLElement,
-  options?: ComputePositionOptions,
-): Promise<ComputePositionResult> {
-  return Promise.resolve().then(() => computePosition(reference, floating, options));
-}
-
-/**
- * Deferred position computation. Runs `computePosition` in the next **animation frame** and
- * returns a `Promise<ComputePositionResult>`.
- *
- * Useful when the layout has not yet committed (e.g. immediately after DOM insertion). Unlike
- * `computePositionAsync` which defers to the microtask queue, this waits for the next
- * `requestAnimationFrame` tick — guaranteeing post-layout DOM measurements.
- *
- * @example
- * ```ts
- * const result = await computePositionRaf(reference, floating, { placement: 'top' });
- * floating.style.left = `${result.x}px`;
- * floating.style.top  = `${result.y}px`;
- * ```
- */
-export function computePositionRaf(
-  reference: ReferenceElement,
-  floating: HTMLElement,
-  options?: ComputePositionOptions,
-): Promise<ComputePositionResult> {
-  return new Promise((resolve, reject) => {
-    requestAnimationFrame(() => {
-      try {
-        resolve(computePosition(reference, floating, options));
-      } catch (err) {
-        reject(err);
-      }
-    });
-  });
-}
 
 /**
  * Runs the middleware pipeline and returns the final position.

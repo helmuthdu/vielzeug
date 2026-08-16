@@ -12,8 +12,6 @@ description: API reference for @vielzeug/orbit positioners, computation, updates
 | `createPositioner()` | Lifecycle-owned floating positioning | Sync | Call `start()` after mount |
 | `computePosition()` | Low-level geometry computation | Sync | Caller owns CSS application |
 | `autoUpdate()` | Listen for geometry changes | Sync | Call returned cleanup |
-| `computePositionAsync()` | Defer computation to microtask | Async | Does not wait for animation frame |
-| `computePositionRaf()` | Defer computation to next frame | Async | Browser-only invocation |
 | `createReactivePositioner()` | Optional Ripple position readable | Sync | Requires `@vielzeug/ripple` |
 | Middleware factories | Adjust placement and size | Sync | Order is explicit |
 
@@ -92,15 +90,6 @@ Calls `update` immediately, then on relevant scroll, viewport, resize, and optio
 
 **Returns:** cleanup callback.
 
-### Deferred Computation
-
-```ts
-function computePositionAsync(...): Promise<ComputePositionResult>;
-function computePositionRaf(...): Promise<ComputePositionResult>;
-```
-
-`computePositionAsync()` queues a microtask. `computePositionRaf()` waits for next animation frame.
-
 ## Middleware
 
 ```ts
@@ -157,4 +146,4 @@ See source declarations for complete geometry and middleware option types.
 | Error | Trigger | Notable properties |
 | --- | --- | --- |
 | `OrbitConfigError` | Invalid middleware reset configuration | Extends `OrbitError` |
-| `OrbitError` | Base Orbit error | `OrbitError.is(error)` narrows Orbit errors |
+| `OrbitError` | Base Orbit error | `instanceof OrbitError` narrows Orbit errors |

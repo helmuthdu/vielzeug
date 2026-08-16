@@ -8,7 +8,7 @@
  */
 
 import type { Positioner, PositionerOptions } from './float';
-import { createPositioner } from './float';
+import { applyDefault, createPositioner } from './float';
 import type { ComputePositionResult, ReferenceElement } from './types';
 
 // ── Overlay helpers ───────────────────────────────────────────────────────────
@@ -129,8 +129,7 @@ export function debugPositioner(
     if (userApply) {
       userApply(result);
     } else {
-      floating.style.left = `${result.x}px`;
-      floating.style.top = `${result.y}px`;
+      applyDefault(result, floating, options.strategy ?? 'fixed');
     }
 
     renderOverlay(result);

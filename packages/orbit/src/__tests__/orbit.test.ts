@@ -4,8 +4,6 @@ import {
   autoPlacement,
   autoUpdate,
   computePosition,
-  computePositionAsync,
-  computePositionRaf,
   createPositioner,
   detectOverflow,
   flip,
@@ -87,13 +85,6 @@ describe('computePosition', () => {
     computePosition(reference, floating, { middleware: [unsafe] });
 
     expect(({} as { polluted?: boolean }).polluted).toBeUndefined();
-  });
-
-  it('supports synchronous, microtask, and animation-frame scheduling', async () => {
-    const { floating, reference } = makeElements({ height: 20, width: 40, x: 100, y: 100 }, { height: 20, width: 40 });
-
-    await expect(computePositionAsync(reference, floating)).resolves.toMatchObject({ x: 100, y: 120 });
-    await expect(computePositionRaf(reference, floating)).resolves.toMatchObject({ x: 100, y: 120 });
   });
 });
 
@@ -247,7 +238,7 @@ describe('utilities and errors', () => {
   });
 
   it('recognizes Orbit errors', () => {
-    expect(OrbitError.is(new OrbitConfigError('bad config'))).toBe(true);
-    expect(OrbitError.is(new Error('plain'))).toBe(false);
+    expect(new OrbitConfigError('bad config') instanceof OrbitError).toBe(true);
+    expect(new Error('plain') instanceof OrbitError).toBe(false);
   });
 });

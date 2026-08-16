@@ -23,49 +23,14 @@ export interface Positioner {
   [Symbol.dispose](): void;
 }
 
-function makePositioner(
-  rawDispose: () => void,
-  getPosition: () => ComputePositionResult | null,
-  start: () => void,
-  update: () => void,
-): Positioner {
-  const controller = new AbortController();
-  let disposed = false;
-
-  return {
-    get disposalSignal() {
-      return controller.signal;
-    },
-    dispose() {
-      if (disposed) return;
-
-      disposed = true;
-      controller.abort();
-      rawDispose();
-    },
-    get disposed() {
-      return disposed;
-    },
-    getPosition,
-    start(): void {
-      if (!disposed) start();
-    },
-    [Symbol.dispose](): void {
-      this.dispose();
-    },
-    update(): void {
-      if (!disposed) update();
-    },
-  };
-}
-
 function resolveContainingBlock(floating: HTMLElement, strategy: PositionStrategy): Element | null {
   if (strategy === 'absolute') return floating.offsetParent instanceof Element ? floating.offsetParent : null;
 
   return getContainingBlock(floating);
 }
 
-function applyDefault(result: ComputePositionResult, floating: HTMLElement, strategy: PositionStrategy): void {
+/** @internal — default apply: sets position, left, top on the floating element. */
+export function applyDefault(result: ComputePositionResult, floating: HTMLElement, strategy: PositionStrategy): void {
   floating.style.position = strategy;
   floating.style.left = `${result.x}px`;
   floating.style.top = `${result.y}px`;
@@ -90,7 +55,9 @@ export function createPositioner(
     strategy = 'fixed',
   }: PositionerOptions = {},
 ): Positioner {
+  const controller = new AbortController();
   let active = true;
+  let disposed = false;
   let cleanup: (() => void) | undefined;
   let lastPosition: ComputePositionResult | null = null;
   let started = false;
@@ -107,7 +74,7 @@ export function createPositioner(
   }
 
   function start(): void {
-    if (started) return;
+    if (started || disposed) return;
 
     started = true;
 
@@ -115,13 +82,28 @@ export function createPositioner(
     else cleanup = autoUpdate(reference, floating, update, autoUpdateOptions);
   }
 
-  return makePositioner(
-    () => {
+  return {
+    get disposalSignal() {
+      return controller.signal;
+    },
+    dispose() {
+      if (disposed) return;
+
+      disposed = true;
       active = false;
+      controller.abort();
       cleanup?.();
     },
-    () => lastPosition,
+    get disposed() {
+      return disposed;
+    },
+    getPosition: () => lastPosition,
     start,
-    update,
-  );
+    [Symbol.dispose]() {
+      this.dispose();
+    },
+    update() {
+      if (!disposed) update();
+    },
+  };
 }

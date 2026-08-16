@@ -5,10 +5,6 @@ export class OrbitError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is OrbitError {
-    return err instanceof OrbitError;
-  }
 }
 
 /** Thrown when a middleware pipeline is configured incorrectly. */
