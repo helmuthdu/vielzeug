@@ -1,5 +1,6 @@
 import { warn } from '../_dev';
-import type { BandScale, BandScaleConfig } from './types';
+import type { BandScale } from '../types';
+import type { BandScaleConfig } from './types';
 
 export function bandScale(config: BandScaleConfig): BandScale {
   // Every method below closes over `config`/these helpers directly instead of reading

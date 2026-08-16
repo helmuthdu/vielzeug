@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { resolveEasing } from '../animation/easing';
 import { resolveMotion } from '../animation/motion';
 import { animate } from '../animation/transition';
-import { tweenColor, tweenNumber } from '../animation/tween';
+import { tweenNumber } from '../animation/tween';
 
 // ─── tweenNumber ──────────────────────────────────────────────────────────────
 
@@ -22,38 +22,6 @@ describe('tweenNumber', () => {
 
   it('handles negative range', () => {
     expect(tweenNumber(100, 0, 0.25)).toBe(75);
-  });
-});
-
-// ─── tweenColor ───────────────────────────────────────────────────────────────
-
-describe('tweenColor', () => {
-  it('returns from color at t=0', () => {
-    expect(tweenColor('#000000', '#ffffff', 0)).toBe('rgb(0,0,0)');
-  });
-
-  it('returns to color at t=1', () => {
-    expect(tweenColor('#000000', '#ffffff', 1)).toBe('rgb(255,255,255)');
-  });
-
-  it('interpolates midpoint', () => {
-    expect(tweenColor('#000000', '#ffffff', 0.5)).toBe('rgb(128,128,128)');
-  });
-
-  it('handles shorthand hex', () => {
-    expect(tweenColor('#000', '#fff', 1)).toBe('rgb(255,255,255)');
-  });
-
-  it('parses rgb() format', () => {
-    expect(tweenColor('rgb(0,0,0)', 'rgb(100,100,100)', 0.5)).toBe('rgb(50,50,50)');
-  });
-
-  it('falls back to from color for invalid input at t<0.5', () => {
-    expect(tweenColor('not-a-color', '#fff', 0.3)).toBe('not-a-color');
-  });
-
-  it('falls back to to color for invalid input at t>=0.5', () => {
-    expect(tweenColor('not-a-color', '#fff', 0.7)).toBe('#fff');
   });
 });
 

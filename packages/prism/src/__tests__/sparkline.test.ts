@@ -135,8 +135,8 @@ describe('createSparkline', () => {
     chart.dispose();
   });
 
-  it('sets aria-label and role=img when ariaLabel is provided', () => {
-    const chart = createSparkline(container, { ariaLabel: 'Revenue trend', data: [1, 2, 3] });
+  it('sets aria-label and role=img when a11y.ariaLabel is provided', () => {
+    const chart = createSparkline(container, { a11y: { ariaLabel: 'Revenue trend' }, data: [1, 2, 3] });
 
     expect(chart.el.getAttribute('aria-label')).toBe('Revenue trend');
     expect(chart.el.getAttribute('role')).toBe('img');
@@ -224,8 +224,8 @@ describe('createSparkline', () => {
     chart.dispose();
   });
 
-  it('passes axe accessibility audit (labelled with ariaLabel)', async () => {
-    const chart = createSparkline(container, { ariaLabel: 'Revenue trend', data: [1, 2, 3] });
+  it('passes axe accessibility audit (labelled with a11y.ariaLabel)', async () => {
+    const chart = createSparkline(container, { a11y: { ariaLabel: 'Revenue trend' }, data: [1, 2, 3] });
     const results = await axeCheck(container);
 
     expect(results.violations).toHaveLength(0);

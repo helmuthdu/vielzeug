@@ -17,7 +17,7 @@ export interface ChartBase {
 
 export function createChartBase(
   container: HTMLElement,
-  options: { a11y?: ChartA11y; ariaHidden?: boolean; ariaLabel?: string; margin?: Partial<ChartMargin> },
+  options: { a11y?: ChartA11y; ariaHidden?: boolean; margin?: Partial<ChartMargin> },
 ): ChartBase {
   // Duck-typed rather than `instanceof Element` — an `instanceof` check would reject a
   // structurally valid Element from a different realm (e.g. an Element created via
@@ -44,7 +44,7 @@ export function createChartBase(
   }
 
   const margin = resolveMargin(options.margin);
-  const a11y = options.a11y ?? (options.ariaLabel ? { ariaLabel: options.ariaLabel } : undefined);
+  const a11y = options.a11y;
   const svg = createSvgElement('svg', {
     ...(options.ariaHidden || a11y?.decorative
       ? { 'aria-hidden': 'true' }

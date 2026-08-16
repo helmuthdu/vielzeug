@@ -445,7 +445,7 @@ describe('createBarChart', () => {
 
   it('passes axe accessibility audit', async () => {
     const chart = createBarChart(container, {
-      ariaLabel: 'Bar chart test',
+      a11y: { ariaLabel: 'Bar chart test' },
       series: [
         {
           data: [

@@ -23,6 +23,7 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `animate()`          | Animate SVG element attributes via RAF                | `() => void` (cancel function) |
 | `debugChart()`       | Wrap a `ChartHandle` with lifecycle logging (`/devtools` subpath) | `ChartHandle`       |
 | `PrismError`         | Base class for all prism-originated errors            | class                          |
+| `ChartA11y`          | Accessibility intent (labelled or decorative)         | type                           |
 | `LegendState`        | Live legend state object (plugin API)                 | type                           |
 | `TooltipState`       | Live tooltip state object (plugin API)                | type                           |
 | `ChartPluginContext` | Context object passed to `ChartPlugin.install()`      | type                           |
@@ -178,6 +179,30 @@ Categorical scale dividing the range into equal bands with configurable padding.
 
 ## Types
 
+### `ChartA11y`
+
+Accessibility intent for a chart's root `<svg>` element. Discriminated union: either explicitly decorative, or labelled with an accessible name.
+
+```ts
+type ChartA11y =
+  | { readonly decorative: true }
+  | {
+      readonly ariaLabel: string;
+      readonly decorative?: false;
+      readonly description?: string;
+    };
+```
+
+| Variant                | Field         | Type     | Description                                                                                       |
+| ---------------------- | ------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| Decorative             | `decorative`  | `true`   | Marks the SVG `aria-hidden="true"` — excluded from the accessibility tree                         |
+| Labelled               | `ariaLabel`   | `string` | Sets `role="img"` + `aria-label` on the SVG; exposes the chart to assistive technology            |
+| Labelled               | `description` | `string` | Optional longer description; sets `aria-description` if supported                                 |
+
+> **Default:** When `a11y` is omitted entirely, scaffolded charts (line/bar/area/pie) render with `role="img"` but no `aria-label`; sparklines render as `aria-hidden="true"` (decorative). Set `a11y: { ariaLabel: '…' }` to label a chart, or `a11y: { decorative: true }` to explicitly mark it decorative.
+
+---
+
 ### `ChartHandle`
 
 Returned by all chart factories.
@@ -239,7 +264,7 @@ Shared configuration inherited by all chart config types.
 
 ```ts
 interface BaseChartConfig {
-  ariaLabel?: string;
+  a11y?: ChartA11y;
   legend?: boolean | LegendConfig;
   margin?: Partial<ChartMargin>;
   onClick?: (event: ChartEvent) => void;
@@ -254,7 +279,7 @@ interface BaseChartConfig {
 
 | Field        | Type                                  | Description                             |
 | ------------ | ------------------------------------- | --------------------------------------- |
-| `ariaLabel`  | `string`                              | Accessible label on the SVG element     |
+| `a11y`       | `ChartA11y`                           | Accessibility intent — labelled (`{ ariaLabel: '…' }`) or decorative (`{ decorative: true }`) |
 | `legend`     | `boolean \| LegendConfig`             | Show a series legend                    |
 | `margin`     | `Partial<ChartMargin>`                | Override chart margins                  |
 | `onClick`    | `(event: ChartEvent) => void`         | Fired when a data point is clicked      |
@@ -448,7 +473,7 @@ One element + attribute map for use with `animate()`. Each attribute entry speci
 
 ### `PieChartConfig`
 
-Extends [`BaseChartConfig`](#basechartconfig) (inherits `ariaLabel`, `legend`, `margin`, `plugins`, `tooltip`, `transition`). Overrides `onClick`/`onHover` with pie-specific slice signatures.
+Extends [`BaseChartConfig`](#basechartconfig) (inherits `a11y`, `legend`, `margin`, `plugins`, `tooltip`, `transition`). Overrides `onClick`/`onHover` with pie-specific slice signatures.
 
 ```ts
 interface PieChartConfig extends Omit<BaseChartConfig, 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
@@ -472,7 +497,7 @@ interface PieChartConfig extends Omit<BaseChartConfig, 'onClick' | 'onHover' | '
 | `onClick`      | `(slice, index) => void`             | —                                      | Fired on slice click                                    |
 | `onHover`      | `(slice\|null, index\|null) => void` | —                                      | Fired on hover; `null` on mouseleave                    |
 
-> Inherited `BaseChartConfig` fields (`tooltip`, `transition`, `legend`, `margin`, `ariaLabel`, `plugins`) behave identically to other chart types.
+> Inherited `BaseChartConfig` fields (`tooltip`, `transition`, `legend`, `margin`, `a11y`, `plugins`) behave identically to other chart types.
 
 ### `PieSliceConfig`
 
@@ -508,7 +533,7 @@ type PieVariant = 'donut' | 'pie' | 'semi';
 
 ```ts
 interface SparklineConfig {
-  ariaLabel?: string;
+  a11y?: ChartA11y;
   color?: string;
   cornerRadius?: number;
   curve?: 'linear' | 'monotone' | 'step';
@@ -527,13 +552,13 @@ interface SparklineConfig {
 | -------------- | ----------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `data`         | `MaybeSignal<number[] \| StackSegment[]>` | —                      | Numeric values, or `StackSegment[]` for `'stack'` variant                                                      |
 | `variant`      | `SparklineVariant`                        | `'line'`               | Chart style                                                                                                    |
+| `a11y`         | `ChartA11y`                               | decorative             | Accessibility intent — labelled (`{ ariaLabel: '…' }`) or decorative (`{ decorative: true }`). Defaults to decorative when omitted |
 | `color`        | `string`                                  | `var(--prism-color-1)` | Stroke/fill color (line/area/bar only)                                                                         |
 | `curve`        | `'linear' \| 'monotone' \| 'step'`        | `'linear'`             | Line interpolation (line/area only)                                                                            |
 | `strokeWidth`  | `number`                                  | `1.5`                  | Line stroke width (line/area only)                                                                             |
 | `fillOpacity`  | `number`                                  | `0.2`                  | Fill opacity (area only)                                                                                       |
 | `cornerRadius` | `number`                                  | `4`                    | Rounded corners for stack segments in pixels. Stack variant only — no effect on line/area/bar                  |
 | `padPixels`    | `number`                                  | `0`                    | Gap between stack segments in pixels. Stack variant only — no effect on line/area/bar                          |
-| `ariaLabel`    | `string`                                  | —                      | Accessible label; sets `role="img"` on the SVG. If omitted the SVG is marked `aria-hidden="true"` (decorative) |
 | `transition`   | `TransitionConfig`                        | —                      | Enter animation (bar/stack only; line/area use RAF interpolation)                                              |
 | `onClick`      | `(index, value) => void`                  | —                      | Called on click with nearest data index. Not fired for 0- or 1-point data                                      |
 | `onHover`      | `(index\|null, value\|null) => void`      | —                      | Called on mousemove; `null` on mouseleave. Not fired for 0- or 1-point data                                    |
@@ -559,7 +584,7 @@ interface StackSegment {
 }
 ```
 
-> **Accessibility:** Without `ariaLabel` the SVG is marked `aria-hidden="true"` (decorative). Set `ariaLabel` to expose the chart to assistive technology — the SVG will carry `role="img"` and the provided label.
+> **Accessibility:** Without `a11y` the SVG is marked `aria-hidden="true"` (decorative). Set `a11y: { ariaLabel: '…' }` to expose the chart to assistive technology — the SVG will carry `role="img"` and the provided label.
 
 ---
 
@@ -926,12 +951,10 @@ chart.dispose();
 
 ### `PrismError`
 
-Base class for all prism errors. Use `instanceof PrismError` or `PrismError.is()` to catch any prism-originated error.
+Base class for all prism errors. Use `instanceof PrismError` to catch any prism-originated error.
 
 ```ts
-class PrismError extends Error {
-  static is(err: unknown): err is PrismError;
-}
+class PrismError extends Error {}
 ```
 
 **Named subclasses**
@@ -939,4 +962,3 @@ class PrismError extends Error {
 | Class                | Thrown when                                                                                                                                             |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PrismRenderError`   | A chart is given a structurally invalid configuration it cannot render at all (e.g. a non-`Element` `container`). Recoverable issues like empty or malformed data emit a dev-mode warning instead — they do not throw. |
-| `PrismDisposedError` | Reserved for future disposal-sensitive APIs on `ChartHandle`. No code path throws this yet — calling `dispose()` more than once is currently a documented no-op, not an error. |

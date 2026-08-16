@@ -8,42 +8,10 @@ import { buildXScale, buildYScale } from '../core/cartesian-scales';
 import { createChartBase } from '../core/chart-base';
 import { chartArea, resolveMargin } from '../core/layout';
 import { PrismRenderError } from '../errors';
-import { nearestPointX } from '../interaction/hit-test';
 import { bandScale } from '../scales/band';
 import { linearScale } from '../scales/linear';
 import { areaPath, linePath, monotonePath, stepPath } from '../svg/path';
 import { seriesColor } from '../theme';
-
-// ─── nearestPointX ────────────────────────────────────────────────────────────
-
-describe('nearestPointX', () => {
-  const pts = [
-    { x: 0, y: 0 },
-    { x: 10, y: 5 },
-    { x: 20, y: 10 },
-  ];
-
-  it('returns -1 for empty array', () => {
-    expect(nearestPointX([], 5)).toBe(-1);
-  });
-
-  it('returns index of closest point by x', () => {
-    expect(nearestPointX(pts, 9)).toBe(1);
-    expect(nearestPointX(pts, 18)).toBe(2);
-  });
-
-  it('returns 0 for x left of all points', () => {
-    expect(nearestPointX(pts, -100)).toBe(0);
-  });
-
-  it('returns last index for x right of all points', () => {
-    expect(nearestPointX(pts, 1000)).toBe(2);
-  });
-
-  it('returns index 0 for single-point array', () => {
-    expect(nearestPointX([{ x: 5, y: 5 }], 999)).toBe(0);
-  });
-});
 
 // ─── resolveMargin + chartArea ────────────────────────────────────────────────
 

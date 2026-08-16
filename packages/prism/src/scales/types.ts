@@ -1,5 +1,3 @@
-export type { BandScale, Scale } from '../types';
-
 export interface BandScaleConfig {
   domain: string[];
   padding?: number;

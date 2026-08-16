@@ -306,7 +306,7 @@ describe('createAreaChart', () => {
 
   it('passes axe accessibility audit', async () => {
     const chart = createAreaChart(container, {
-      ariaLabel: 'Area chart test',
+      a11y: { ariaLabel: 'Area chart test' },
       series: [
         {
           data: [

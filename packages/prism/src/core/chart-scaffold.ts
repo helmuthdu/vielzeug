@@ -82,7 +82,7 @@ function runScaffold<TCtx>(
   ) => TCtx,
   renderFn: (ctx: TCtx) => ChartEventHandlers | undefined,
 ): ChartHandle {
-  const base = createChartBase(container, { a11y: config.a11y, ariaLabel: config.ariaLabel, margin: config.margin });
+  const base = createChartBase(container, { a11y: config.a11y, margin: config.margin });
   const tooltip = config.tooltip ? createTooltip(container, config.tooltip) : null;
   const legend = config.legend ? createLegend(container, config.legend) : null;
   const ac = new AbortController();

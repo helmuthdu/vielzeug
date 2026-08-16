@@ -20,6 +20,7 @@ exports:
     resetTheme,
     animate,
     PrismError,
+    ChartA11y,
     AnimationTarget,
     EasingFn,
     LegendState,

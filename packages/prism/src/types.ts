@@ -178,8 +178,6 @@ export type ChartA11y =
 export interface BaseChartConfig {
   /** Explicit decorative/informative accessibility intent. */
   a11y?: ChartA11y;
-  /** @deprecated Use `a11y: { ariaLabel }` instead. */
-  ariaLabel?: string;
   legend?: LegendConfig | boolean;
   margin?: Partial<ChartMargin>;
   onClick?: (event: ChartEvent) => void;
@@ -261,7 +259,8 @@ export interface StackSegment {
   value: number;
 }
 
-export interface SparklineConfig extends Pick<BaseChartConfig, 'ariaLabel' | 'transition'> {
+export interface SparklineConfig {
+  a11y?: ChartA11y;
   color?: string;
   cornerRadius?: number;
   curve?: 'linear' | 'monotone' | 'step';
@@ -271,5 +270,6 @@ export interface SparklineConfig extends Pick<BaseChartConfig, 'ariaLabel' | 'tr
   onHover?: (index: number | null, value: number | null) => void;
   padPixels?: number;
   strokeWidth?: number;
+  transition?: TransitionConfig;
   variant?: SparklineVariant;
 }

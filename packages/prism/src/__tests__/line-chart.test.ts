@@ -363,7 +363,7 @@ describe('createLineChart', () => {
 
   it('passes axe accessibility audit', async () => {
     const chart = createLineChart(container, {
-      ariaLabel: 'Line chart test',
+      a11y: { ariaLabel: 'Line chart test' },
       series: [
         {
           data: [

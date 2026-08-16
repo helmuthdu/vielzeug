@@ -11,7 +11,7 @@ export { createLineChart } from './charts/line';
 export { createPieChart } from './charts/pie';
 export { createSparkline } from './charts/sparkline';
 // Error classes
-export { PrismDisposedError, PrismError, PrismRenderError } from './errors';
+export { PrismError, PrismRenderError } from './errors';
 // Interaction types (useful for plugin authors)
 export type { LegendState } from './interaction/legend';
 export type { TooltipState } from './interaction/tooltip';

@@ -71,7 +71,6 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
     container,
     {
       a11y: config.a11y,
-      ariaLabel: config.ariaLabel,
       legend: config.legend,
       plugins: config.plugins,
       tooltip: config.tooltip,

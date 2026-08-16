@@ -189,7 +189,11 @@ describe('createPieChart', () => {
   });
 
   it('passes axe accessibility audit', async () => {
-    const chart = createPieChart(container, { ariaLabel: 'Pie chart test', data: DATA, transition: { duration: 0 } });
+    const chart = createPieChart(container, {
+      a11y: { ariaLabel: 'Pie chart test' },
+      data: DATA,
+      transition: { duration: 0 },
+    });
     const results = await axeCheck(container);
 
     expect(results.violations).toHaveLength(0);

@@ -160,7 +160,7 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
   const fillOpacity = config.fillOpacity ?? 0.2;
 
   const base = createChartBase(container, {
-    ...(config.ariaLabel ? { ariaLabel: config.ariaLabel } : { ariaHidden: true }),
+    ...(config.a11y ? { a11y: config.a11y } : { ariaHidden: true }),
     margin: { bottom: 0, left: 0, right: 0, top: 0 },
   });
 
