@@ -76,3 +76,15 @@ const label = status ?? 'safe';
 ## Temporal Export
 
 `Temporal` remains exported from `@vielzeug/tempo`. No migration needed for advanced Temporal use.
+
+## Narrow Errors With `instanceof`
+
+`TempoError.is()` is removed. Use `instanceof TempoError` to narrow any tempo-originated error.
+
+```ts
+// Tempo 1
+if (TempoError.is(err)) { ... }
+
+// Tempo 2
+if (err instanceof TempoError) { ... }
+```

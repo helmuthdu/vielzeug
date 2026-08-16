@@ -52,8 +52,4 @@ export function inferSharedTimeZone(inputs: readonly TimeInput[], options: TimeZ
   return inferred;
 }
 
-export function normalizeRange(start: Temporal.Instant, end: Temporal.Instant): [Temporal.Instant, Temporal.Instant] {
-  return Temporal.Instant.compare(start, end) <= 0 ? [start, end] : [end, start];
-}
-
 export const CALENDAR_UNITS = new Set<CalendarUnit>(['day', 'month', 'week', 'year']);

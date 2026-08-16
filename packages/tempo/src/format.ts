@@ -276,7 +276,12 @@ export function formatRangeParts(
 
 /**
  * Serializes `input` to a UTC ISO 8601 instant string (`2026-03-21T10:15:30Z`).
- * Requires `options.timeZone` when input is a `PlainDate` or `PlainDateTime`.
+ *
+ * Pass `options.timeZone` when `input` is a `PlainDate` or `PlainDateTime`.
+ * Inferred from `ZonedDateTime`; ignored for `Instant`.
+ *
+ * @throws {TempoMissingTzError} When `input` is a `PlainDate` or `PlainDateTime` and `options.timeZone` is omitted.
+ * @throws {TempoInvalidTzError} When `options.timeZone` is not a valid IANA timezone or UTC offset.
  *
  * @example
  * ```ts
@@ -291,10 +296,11 @@ export function formatInstant(input: TimeInput, options: TimeZoneOptions = {}): 
 /**
  * Serializes `input` to a zoned ISO 8601 string (`2026-03-21T11:15:30+01:00[Europe/Berlin]`).
  *
- * @param options.timeZone - Required when `input` is a `PlainDate` or `PlainDateTime`.
- *   Inferred automatically from a `ZonedDateTime` or `Instant` input.
+ * @param options.timeZone - Required when `input` is a `PlainDate`, `PlainDateTime`, or `Instant`.
+ *   Inferred automatically from a `ZonedDateTime` input.
  *
- * @throws {TempoError} When `input` is a `PlainDate` or `PlainDateTime` and `options.timeZone` is omitted.
+ * @throws {TempoMissingTzError} When `input` is not a `ZonedDateTime` and `options.timeZone` is omitted.
+ * @throws {TempoInvalidTzError} When `options.timeZone` is not a valid IANA timezone or UTC offset.
  *
  * @example
  * ```ts

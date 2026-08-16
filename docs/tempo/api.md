@@ -225,7 +225,7 @@ formatRelative(input: RelativeTimeInput, options?: RelativeFormatOptions): strin
 formatDuration(input: string | Temporal.DurationLike, options?: DurationFormatOptions): string;
 ```
 
-`formatInstant()` produces UTC transport text. `formatZoned()` produces zoned ISO text. `formatDuration()` falls back to English when `Intl.DurationFormat` is unavailable.
+`formatInstant()` produces UTC transport text (`timeZone` needed for wall-time input, ignored for `Instant`). `formatZoned()` produces zoned ISO text (`timeZone` required for non-`ZonedDateTime` input). `formatDuration()` falls back to English when `Intl.DurationFormat` is unavailable.
 
 ### `formatParts()` / `formatRange()` / `formatRangeParts()`
 
@@ -338,7 +338,7 @@ interface ClassifyExpiryInput<K extends string> extends TimeZoneOptions {
 
 | Error | Trigger | Notable properties |
 | --- | --- | --- |
-| `TempoError` | Base Tempo error | `TempoError.is(value)` narrows every subtype |
+| `TempoError` | Base Tempo error | `instanceof TempoError` narrows every subtype |
 | `TempoInvalidInputError` | Invalid parse, duration, or fixed-threshold input | Extends `TempoError` |
 | `TempoInvalidTzError` | Invalid IANA zone or offset | Extends `TempoError` |
 | `TempoMissingTzError` | Wall time without required `timeZone` | Extends `TempoError` |

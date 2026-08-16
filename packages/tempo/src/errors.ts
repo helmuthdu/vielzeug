@@ -5,10 +5,6 @@ export class TempoError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is TempoError {
-    return err instanceof TempoError;
-  }
 }
 
 /** Thrown when a date/time input string or value cannot be parsed. */
