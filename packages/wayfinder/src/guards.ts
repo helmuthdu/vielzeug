@@ -18,7 +18,7 @@ export type RegisteredBlocker = {
  * A snapshot of the blocker set is taken before iteration so that guards added or removed
  * during execution do not affect the current run.
  *
- * R4: `destination` is passed to each blocker so guards can make context-aware decisions.
+ * `destination` is passed to each blocker so guards can make context-aware decisions.
  */
 export async function runLeaveBlockers(
   blockers: ReadonlySet<RegisteredBlocker>,

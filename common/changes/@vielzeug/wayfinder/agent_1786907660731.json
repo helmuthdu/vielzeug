@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: remove WayfinderError.is() type guard (use instanceof). Remove MatchStatus type alias (use NavigationStatus). Remove devOnly dead code. Remove RouterErrorSource and RouteChildren from public exports. Remove unused _initialBranch parameter from #runTerminal. Make commit callback required in #handleRoute. Document loadPath middleware skip behavior.",
+      "packageName": "@vielzeug/wayfinder",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/wayfinder"
+}

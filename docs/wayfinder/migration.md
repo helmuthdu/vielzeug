@@ -5,6 +5,90 @@ description: Migrate to the breaking Wayfinder navigation and path-inspection AP
 
 [[toc]]
 
+## Wayfinder 2.0
+
+Wayfinder 2.0 removes unused exports, dead code, and internal type aliases to shrink the public surface and align with monorepo conventions.
+
+Removed exports:
+
+- `WayfinderError.is()` (static type guard)
+- `MatchStatus` (type alias of `NavigationStatus`)
+- `RouterErrorSource` (type alias of `RouterErrorContext['source']`)
+- `RouteChildren` (internal type leaked to public exports)
+- `devOnly` (internal helper leaked to public exports)
+
+### Replace `WayfinderError.is()` with `instanceof`
+
+The static type guard is removed. Use `instanceof WayfinderError` to narrow unknown errors.
+
+```ts
+// Before
+if (WayfinderError.is(err)) {
+  // handle router error
+}
+```
+
+```ts
+// After
+if (err instanceof WayfinderError) {
+  // handle router error
+}
+```
+
+### Replace `MatchStatus` with `NavigationStatus`
+
+`MatchStatus` was a pure alias of `NavigationStatus` with no semantic distinction. Use `NavigationStatus` directly.
+
+```ts
+// Before
+import { MatchStatus } from '@vielzeug/wayfinder';
+
+const status: MatchStatus = match.status;
+```
+
+```ts
+// After
+import { NavigationStatus } from '@vielzeug/wayfinder';
+
+const status: NavigationStatus = match.status;
+```
+
+### Replace `RouterErrorSource`
+
+The convenience alias `RouterErrorSource = RouterErrorContext['source']` is removed. Access the union via `RouterErrorContext['source']` or use the string literals directly.
+
+```ts
+// Before
+import { RouterErrorSource } from '@vielzeug/wayfinder';
+
+const source: RouterErrorSource = context.source;
+```
+
+```ts
+// After
+import { RouterErrorContext } from '@vielzeug/wayfinder';
+
+const source: RouterErrorContext['source'] = context.source;
+```
+
+### Remove `RouteChildren` imports
+
+`RouteChildren` was an internal type leaked to public exports. It is no longer exported. If you referenced it in type annotations, inline the definition or use `Record<string, RouteDefinition>`.
+
+```ts
+// Before
+import { RouteChildren } from '@vielzeug/wayfinder';
+
+const children: RouteChildren = { ... };
+```
+
+```ts
+// After
+import { RouteDefinition } from '@vielzeug/wayfinder';
+
+const children: Record<string, RouteDefinition> = { ... };
+```
+
 ## Rename Path Inspection APIs
 
 Replace the former synchronous `resolve()` API with `matchPath()`. It inspects the route branch without running middleware or data loaders.
@@ -69,3 +153,11 @@ const requireAuth = async (ctx, next) => {
   await next();
 };
 ```
+
+### Upgrade Checklist
+
+- Replace `WayfinderError.is(err)` with `err instanceof WayfinderError`.
+- Replace `MatchStatus` imports with `NavigationStatus`.
+- Replace `RouterErrorSource` imports with `RouterErrorContext['source']`.
+- Remove `RouteChildren` imports — inline as `Record<string, RouteDefinition>`.
+- Remove `devOnly` imports — use `import.meta.env.DEV` or your own dev guard.

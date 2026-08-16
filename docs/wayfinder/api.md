@@ -19,7 +19,7 @@ description: Complete API reference for Wayfinder.
 | `router.url(name, params?, query?)`     | Build a URL for a named route                              | Sync                 | Throws if the route name is unknown                                                                       |
 | `router.isActive(name, options?)`       | Check if a named route matches the current URL             | Sync                 | Compares against the current snapshot pathname, not `history.location` directly                           |
 | `router.matchPath(pathname)`            | Inspect a pathname as a branch without side effects            | Sync                 | Returns `null` for redirect routes                                                                    |
-| `router.loadPath(url, options?)`        | Load a URL into a full state including data loaders         | Async                | Lazy modules are resolved as a side effect                                                            |
+| `router.loadPath(url, options?)`        | Load a URL into a full state including data loaders         | Async                | Middleware is not executed; lazy modules are resolved as a side effect                                                            |
 | `router.ready`                          | Await the initial navigation                                | Async                | Rejects when initial loading fails                                                                    |
 | `router.preload(name, params?, query?)` | Eagerly run data loaders without navigating                | Async                | Pass `query` to match the navigation cache key; rejects with `WayfinderDisposedError` if the router is disposed |
 | `router.waitFor(name)`                  | Wait for the router to settle on a named route             | Async                | Rejects immediately if `status === 'error'`; rejects with `WayfinderDisposedError` if disposed while pending |
@@ -270,6 +270,8 @@ const state = await router.loadPath('/dashboard', { signal: controller.signal })
 ```
 
 Load a full URL into a `RouteState` including data loader results, without modifying router state or history. Follows declarative redirects (up to five hops) and resolves lazy modules as a side effect. Returns `null` for unmatched URLs.
+
+Middleware is **not** executed — `loadPath` is a data-only prefetch for SSR and pre-rendering where middleware side effects are not wanted. If your data loaders depend on `ctx.locals` set by middleware, use `navigate()` instead.
 
 When a `data()` function throws, the returned state has `status: 'error'` and `error` set to the thrown value.
 
@@ -570,7 +572,7 @@ type RouteMatch = {
   readonly params: RouteParams;
   readonly pathname: string;
   /** Per-node loading status. Reflects individual loader state in nested layouts. */
-  readonly status: MatchStatus;
+  readonly status: NavigationStatus;
 };
 ```
 
@@ -615,13 +617,7 @@ type NavigationStatus = 'idle' | 'loading' | 'streaming' | 'error';
 
 Top-level status of the router. `'streaming'` means at least one active data loader is an async generator and has yielded at least one value but has not yet returned.
 
-### `MatchStatus`
-
-```ts
-type MatchStatus = NavigationStatus;
-```
-
-Per-node status on each `RouteMatch`. Alias of `NavigationStatus`; useful for nested layouts that want to show per-slot loading indicators.
+Each `RouteMatch` also carries a `status: NavigationStatus` for per-node loading state in nested layouts.
 
 ### `RouteMiddleware<Path, TRoutes>`
 
@@ -705,8 +701,6 @@ type RouterErrorContext =
   | { routeName: string; source: 'data-loader' } // data() threw
   | { routeName: string; source: 'middleware' } // middleware threw
   | { source: 'coerce-search' | 'history-listener' | 'initial-navigation' | 'preload' };
-
-type RouterErrorSource = RouterErrorContext['source'];
 ```
 
 Passed to the `onError` callback in `createRouter` options. The `routeName` is present when the error originates from a named route's `data()` or `middleware`.
@@ -777,7 +771,7 @@ type Unsubscribe = () => void;
 
 ### `WayfinderError`
 
-Base class for every error Wayfinder throws. Catch this to handle any router-originated error without enumerating subclasses. `WayfinderError.is(err)` is equivalent to `err instanceof WayfinderError`.
+Base class for every error Wayfinder throws. Catch this to handle any router-originated error without enumerating subclasses.
 
 ```ts
 import { WayfinderError } from '@vielzeug/wayfinder';
@@ -785,7 +779,7 @@ import { WayfinderError } from '@vielzeug/wayfinder';
 try {
   await router.navigate({ name: 'home' });
 } catch (e) {
-  if (WayfinderError.is(e)) {
+  if (e instanceof WayfinderError) {
     // any router-originated error — check e.name or `instanceof` a subclass for detail
   }
 }

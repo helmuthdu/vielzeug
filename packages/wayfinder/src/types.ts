@@ -33,11 +33,8 @@ export type MaybePromise<T> = T | Promise<T>;
  */
 export type DataStream<T = unknown> = AsyncGenerator<T, T>;
 
-/** Navigation status for the whole router and per-route match status (F1). */
+/** Navigation status for the whole router and per-route match status. */
 export type NavigationStatus = 'error' | 'idle' | 'loading' | 'streaming';
-
-/** Per-route match status (F1). Reflects whether this specific branch node is still loading. */
-export type MatchStatus = NavigationStatus;
 
 export type IsActiveOptions = {
   /** Require an exact pathname match. Defaults to prefix matching. */
@@ -47,7 +44,7 @@ export type ScrollPosition = { x: number; y: number };
 export type ScrollDecision = ScrollPosition | 'preserve' | 'top';
 
 /**
- * Discriminated error context passed to `onError` (R3).
+ * Discriminated error context passed to `onError`.
  * Each variant carries enough information to distinguish where the error originated.
  */
 export type RouterErrorContext =
@@ -73,7 +70,7 @@ export type RouterErrorSource = RouterErrorContext['source'];
 export type CoerceSearchFn<Q extends ResolvedQueryParams = ResolvedQueryParams> = (raw: QueryParams) => Q;
 
 /**
- * Destination info passed to `beforeLeave` blockers (R4).
+ * Destination info passed to `beforeLeave` blockers.
  * Gives guards enough context to make an informed allow/block decision.
  */
 export type NavigationDestination = {
@@ -126,8 +123,9 @@ export type NavigationTarget = UntypedNamedNavigationTarget | RawNavigationTarge
 /**
  * Context available in middleware and data loaders.
  *
- * R7: `TLocals` has been removed. Use `locals: Record<string, unknown>` and cast
- * inside your middleware when you need typed access (e.g. `ctx.locals as AuthCtx`).
+ * `locals` is a mutable bag for passing values between middleware functions in a navigation.
+ * Reset to an empty object at the start of every navigation. Cast inside your middleware when
+ * you need typed access (e.g. `ctx.locals as AuthCtx`).
  */
 export type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends RouteTable = RouteTable> = {
   readonly hash: string;
@@ -219,7 +217,7 @@ type ContentRouteDefinition<Path extends string = string> = RouteCommon &
     /**
      * Data loader. Runs after middleware; result is available as `match.data` in the matched branch.
      * Supports streaming via AsyncGenerator. May also perform side effects directly
-     * (rendering, state hydration) — replaces the former `handler` concept (F4).
+     * (rendering, state hydration) — replaces the former `handler` concept.
      */
     data?: DataFn<PathParams<Path>>;
     /** Lazy-load the route module. The resolved export replaces data/component/meta. */
@@ -316,7 +314,7 @@ export type NamedNavigationTarget<TRoutes extends RouteTable> = {
 /**
  * A single node in the matched route branch (root → leaf).
  *
- * F1: Each match node carries its own `status` so nested layouts can reflect
+ * Each match node carries its own `status` so nested layouts can reflect
  * per-slot loading/streaming state without polling the router-level status.
  */
 export type RouteMatch<TMeta = unknown, TComponent = unknown> = {
@@ -328,8 +326,8 @@ export type RouteMatch<TMeta = unknown, TComponent = unknown> = {
   readonly name: string;
   readonly params: RouteParams;
   readonly pathname: string;
-  /** F1: Per-node loading status. Reflects individual loader state in nested layouts. */
-  readonly status: MatchStatus;
+  /** Per-node loading status. Reflects individual loader state in nested layouts. */
+  readonly status: NavigationStatus;
 };
 
 /** Ordered array of matched route nodes from the root layout down to the active leaf. */
@@ -377,7 +375,7 @@ export type RouterOptions<TRoutes extends RouteTable = RouteTable, TMeta = unkno
   /** Global middleware applied to every route. */
   middleware?: Middleware<TRoutes>[];
   /**
-   * F5: Fallback route rendered when no route matches.
+   * Fallback route rendered when no route matches.
    * Declared explicitly and matched last after all routes.
    * The `data` function receives the unmatched pathname via `ctx.pathname`.
    */

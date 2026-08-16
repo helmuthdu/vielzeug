@@ -1,7 +1,6 @@
 import { error as logError } from './_dev';
 import { WayfinderApiError } from './errors';
 import type {
-  MatchStatus,
   Middleware,
   NavigationStatus,
   ResolvedQueryParams,
@@ -17,7 +16,7 @@ import type {
 
 // ─── Route state ──────────────────────────────────────────────────────────────
 
-/** R5: No defensive deep-copy — RouteState is typed readonly; callers always pass fresh objects. */
+/** No defensive deep-copy — RouteState is typed readonly; callers always pass fresh objects. */
 export function createRouteState<TMeta = unknown, TComponent = unknown>(input: {
   error?: unknown;
   location: RouteLocation;
@@ -34,14 +33,14 @@ export function createRouteState<TMeta = unknown, TComponent = unknown>(input: {
 
 /**
  * Build a RouteMatchBranch from compiled defs, data results, and optional per-node statuses.
- * F1: Each node carries its own `status` for fine-grained nested layout feedback.
+ * Each node carries its own `status` for fine-grained nested layout feedback.
  */
 export function buildMatchBranch<TMeta = unknown, TComponent = unknown>(
   branchDefs: readonly RouteBranchDef<TMeta, TComponent>[],
   params: RouteParams,
   pathname: string,
   dataResults: unknown[],
-  statuses?: readonly MatchStatus[],
+  statuses?: readonly NavigationStatus[],
 ): RouteMatchBranch<TMeta, TComponent> {
   return branchDefs.map((def, i): RouteMatchBranch<TMeta, TComponent>[number] => ({
     component: def.component as TComponent,

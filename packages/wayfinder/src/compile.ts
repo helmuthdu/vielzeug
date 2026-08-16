@@ -55,7 +55,7 @@ export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
       }
     }
 
-    // R9: emit a record for leaf routes (no children), redirects, lazy routes, and routes with data.
+    // Emit a record for leaf routes (no children), redirects, lazy routes, and routes with data.
     // A bare parent-only route (children but no data/lazy/redirect) is not emitted as a leaf.
     if (route.lazy !== undefined || route.redirect !== undefined || !route.children || route.data !== undefined) {
       const leaf = branchDefs[branchDefs.length - 1]!;

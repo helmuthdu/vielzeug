@@ -31,11 +31,11 @@ import type {
   DataFn,
   HistoryDriver,
   IsActiveOptions,
-  MatchStatus,
   Middleware,
   NamedNavigationTarget,
   NavigateOptions,
   NavigationDestination,
+  NavigationStatus,
   PathParams,
   QueryParams,
   RawNavigationTarget,
@@ -150,7 +150,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   readonly #disposeController = new AbortController();
   #lastHref = '/';
   readonly #listeners = new Set<(state: RouteState<TMeta, TComponent>) => void>();
-  // F5: compiled notFound fallback record
+  // Compiled notFound fallback record
   readonly #notFoundRecord: RouteRecord<TMeta, TComponent> | null;
 
   // Sub-managers
@@ -182,7 +182,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
       status: 'idle',
     });
 
-    // F5: Build a synthetic RouteRecord for the notFound fallback.
+    // Build a synthetic RouteRecord for the notFound fallback.
     if (options.notFound) {
       const nf = options.notFound;
       const leafDef: RouteBranchDef<TMeta, TComponent> = {
@@ -214,9 +214,6 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     this.ready = this.#handleRoute(
       attempt,
       readLocation(this.#base, this.#history),
-      undefined,
-      0,
-      false,
       (location, replace) => {
         if (!attempt.isCurrent()) return;
 
@@ -226,6 +223,9 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
         this.#lastHref = href;
       },
+      undefined,
+      0,
+      false,
     ).then(() => undefined);
     this.#runInBackground(this.ready, { source: 'initial-navigation' });
 
@@ -336,8 +336,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   /**
    * Load a URL into a route state including data loader results, without modifying
    * router state or history. Follows declarative redirects and may resolve lazy modules.
-   *
-   * R5: Accepts an options object instead of a bare AbortSignal.
+   * Middleware is not executed — use `navigate()` when middleware side effects are needed.
    */
   async loadPath(url: string, options?: { signal?: AbortSignal }): Promise<RouteState<TMeta, TComponent> | null> {
     const prepared = await this.#resolveUrl(url);
@@ -556,9 +555,6 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     const terminalRan = await this.#handleRoute(
       attempt,
       readLocation(this.#base, this.#history),
-      undefined,
-      0,
-      false,
       (location, replace) => {
         if (!attempt.isCurrent()) return;
 
@@ -568,6 +564,9 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
         this.#lastHref = href;
       },
+      undefined,
+      0,
+      false,
     );
 
     if (attempt.isCurrent() && !terminalRan) {
@@ -700,7 +699,9 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
       streamingData[idx] = value;
 
-      const nodeStatuses: MatchStatus[] = defs.map((_, i) => (streamingIndices.includes(i) ? 'streaming' : 'idle'));
+      const nodeStatuses: NavigationStatus[] = defs.map((_, i) =>
+        streamingIndices.includes(i) ? 'streaming' : 'idle',
+      );
 
       this.#currentState = createRouteState<TMeta, TComponent>({
         location,
@@ -868,14 +869,13 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     }
   }
 
-  // ─── Private: terminal (data only — F4: handler removed) ─────────────────
+  // ─── Private: terminal (data only) ────────────────────────────────────────
 
   async #runTerminal(
     record: RouteRecord<TMeta, TComponent>,
     context: RouteContext<RouteParams, TRoutes>,
     location: RouteLocation,
     params: RouteParams,
-    _initialBranch: RouteMatchBranch<TMeta, TComponent>,
     signal: AbortSignal,
     isCurrent: () => boolean,
   ): Promise<void> {
@@ -892,8 +892,8 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
       if (cached) {
         dataResults = cached;
       } else {
-        // Emit per-node loading state (F1) while data is in-flight.
-        const loadingStatuses: MatchStatus[] = defs.map((d) => (d.dataFn ? 'loading' : 'idle'));
+        // Emit per-node loading state while data is in-flight.
+        const loadingStatuses: NavigationStatus[] = defs.map((d) => (d.dataFn ? 'loading' : 'idle'));
 
         this.#currentState = createRouteState<TMeta, TComponent>({
           location,
@@ -913,7 +913,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
             matches: buildMatchBranch(defs, params, location.pathname, dataResults),
             status: 'error',
           });
-          // R3: attach enriched context so the eventual reporter uses it.
+          // Attach enriched context so the eventual reporter uses it.
           attachErrorContext(error, { routeName: record.leaf.name, source: 'data-loader' });
           // Do not call #notifyListeners here — the finally block in #handleRoute does it once.
           throw error;
@@ -961,10 +961,10 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   async #handleRoute(
     attempt: NavigationAttempt,
     currentLocation: RouteLocation,
+    commit: (location: RouteLocation, replace: boolean) => void,
     useTransition?: boolean,
     depth = 0,
     replace = false,
-    commit: (location: RouteLocation, replace: boolean) => void = () => undefined,
   ): Promise<boolean> {
     const prevState = this.#currentState;
     const isCurrent = (): boolean => attempt.isCurrent() && !this.#disposed;
@@ -978,15 +978,15 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
       return this.#handleRoute(
         attempt,
         this.#locationFromPath(prepared.redirectTo, currentLocation.historyState),
+        commit,
         useTransition,
         depth + 1,
         true,
-        commit,
       );
     }
 
     if (prepared.type === 'unmatched') {
-      // F5: fall back to notFound record when defined.
+      // Fall back to notFound record when defined.
       if (this.#notFoundRecord) {
         const nfDefs = [this.#notFoundRecord.leaf];
         const nfBranch = buildMatchBranch(nfDefs, {}, currentLocation.pathname, [undefined]);
@@ -1027,15 +1027,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
               if (!isCurrent()) return;
 
-              await this.#runTerminal(
-                this.#notFoundRecord!,
-                context,
-                currentLocation,
-                {},
-                nfBranch,
-                attempt.signal,
-                isCurrent,
-              );
+              await this.#runTerminal(this.#notFoundRecord!, context, currentLocation, {}, attempt.signal, isCurrent);
             },
           );
         };
@@ -1091,7 +1083,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
           if (!isCurrent()) return;
 
-          await this.#runTerminal(record, context, location, params, branch, attempt.signal, isCurrent);
+          await this.#runTerminal(record, context, location, params, attempt.signal, isCurrent);
         },
       );
     };
@@ -1197,9 +1189,6 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     await this.#handleRoute(
       attempt,
       this.#locationFromPath(destination, options.state),
-      options.viewTransition,
-      0,
-      options.replace ?? false,
       (location, replace) => {
         if (!attempt.isCurrent()) return;
 
@@ -1210,6 +1199,9 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
         this.#lastHref = href;
       },
+      options.viewTransition,
+      0,
+      options.replace ?? false,
     );
   }
 }
