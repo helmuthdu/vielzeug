@@ -3,7 +3,7 @@
 
 # Vielzeug
 
-**30 independent, zero-dependency TypeScript packages for modern JavaScript**
+**32 independent, zero-dependency TypeScript packages for modern JavaScript**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](https://www.npmjs.com/org/vielzeug)
@@ -892,21 +892,38 @@ Each package is individually licensed under the MIT License. See the `LICENSE` f
 
 ### Why Vielzeug instead of [other library]?
 
-Vielzeug packages are designed to work together as a coherent system while remaining individually useful. The fantasy naming (`ripple`, `forge`, `spell`, `herald`…) reflects the same philosophy: each package is a distinct spell that, combined, gives you a complete grimoire.
+Most ecosystem libraries either solve one problem well but don't interoperate, or bundle many solutions behind a single install with coupling you can't opt out of. Vielzeug splits the difference: 32 focused packages with zero external runtime dependencies, each independently versioned and installable, but sharing consistent conventions — disposal via `Symbol.dispose`, structured error hierarchies, dev-only warnings compiled out in production, and ESM + CJS + type declarations on every release. You adopt exactly the pieces you need (`wayfinder` for routing, `forge` for forms, `courier` for HTTP) without pulling in a reactive core, component layer, or build toolchain you didn't ask for.
 
 ### Can I use individual packages?
 
-Yes — every package is independent. Install only what you need; there are no required peer dependencies outside the `@vielzeug` family.
+Yes — every package is independent. Install only what you need; there are no required peer dependencies outside the `@vielzeug` family. Inter-package dependencies (e.g. `forge` uses `ripple` for reactivity) are resolved within the `@vielzeug` namespace, so you never end up with conflicting versions of a third-party library.
 
 ### Is it production-ready?
 
-Yes. All packages ship strict TypeScript, zero external dependencies, and comprehensive test suites.
+Yes. All packages ship strict TypeScript, zero external dependencies, and comprehensive test suites. Each package follows a consistent disposal convention (`dispose()` + `Symbol.dispose`), structured error hierarchy, and dev-only warnings that are compiled out in production builds.
+
+### What about bundle size?
+
+Every package is tree-shakeable and ships as ESM + CJS with full type declarations. Most packages gzip to under 5 KB. See the [Bundle Sizes](#-bundle-sizes) table above for per-package measurements.
+
+### Do I need a specific framework?
+
+No. Vielzeug is framework-agnostic — works with React, Vue, Svelte, Angular, or vanilla JS. Packages like `ripple` (signals) and `forge` (forms) integrate with any rendering layer. The `ore` and `refine` packages provide web components for component-oriented apps, but they're optional, not required.
+
+### How are dependencies handled between packages?
+
+Inter-package dependencies use `workspace:*` during development and are pinned to exact versions on publish. No package depends on anything outside `@vielzeug` at runtime. This means a single `@vielzeug/courier` install pulls only `@vielzeug` packages — never a transitive third-party dependency you didn't vet.
+
+### What's the versioning strategy?
+
+Packages follow semantic versioning independently. Each package has its own changelog and release cadence — a breaking change in `ward` doesn't force a major bump in `ripple`. Rush changefiles track per-package changes, and the monorepo tooling handles version bumping and publishing.
 
 ### Where can I get help?
 
 - 📖 [Documentation](https://vielzeug.dev/)
 - 💬 [GitHub Discussions](https://github.com/helmuthdu/vielzeug/discussions)
 - 🐛 [Issue Tracker](https://github.com/helmuthdu/vielzeug/issues)
+- 🤝 [Contributing Guide](#-contributing)
 
 ---
 

@@ -13,6 +13,7 @@ export const DESCRIPTIONS: Record<string, string> = {
   keymap: 'Headless keyboard shortcut manager with chord sequences, context guards, and disposable bindings.',
   ledger: 'Async undo/redo command stack with serialised queueing and Ripple reactive signals.',
   lingua: 'Internationalization library with TypeScript support.',
+  necromancer: 'Lifecycle-owned DOM animation primitives built on the Web Animations API.',
   orbit: 'Lightweight floating-element positioning for elements.',
   pulse: 'WebSocket client with auto-reconnect, message buffering, and more.',
   refine: 'Accessible, themeable web components built on Ore.',
