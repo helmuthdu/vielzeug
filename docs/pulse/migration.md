@@ -1,74 +1,146 @@
 ---
 title: Pulse Migration
-description: Migrate to explicit Pulse connections, schema-bound scopes, and transforms.
+description: Breaking changes and migration guide.
+package: pulse
+category: websockets
 ---
 
-# Pulse 2.0 Migration
+<!-- markdownlint-disable MD025 -->
 
-Pulse 2.0 makes connection readiness and scope ownership explicit. It removes automatic connection, message buffering, memoized channel/presence objects, continuation middleware, and lifecycle callback clusters.
+## Overview
 
-## Connect before sending
+Pulse 2.0 simplifies the room/presence API, consolidates the schema generic, and removes the separate `join`/`leave`/`presence` methods. The result is fewer concepts, fewer moving parts, and a single typed entry point.
 
-Pulse no longer opens a socket during `createPulse()`. `send()`, channel sends, room operations, and presence updates throw `PulseConnectionError` until `connect()` resolves.
+## Breaking changes
+
+### 1. Unified schema generic
+
+**Before:** Four generic parameters on `createPulse()`.
 
 ```ts
-// Before
-const pulse = createPulse<ServerEvents, ClientEvents>(url);
-pulse.send('chat:send', { text: 'Hello!' });
-
-// After
-const pulse = createPulse<ServerEvents, ClientEvents>(url);
-await pulse.connect();
-pulse.send('chat:send', { text: 'Hello!' });
+const pulse = createPulse<TServer, TClient, TChannels, TPresence>('ws://...', { ... });
 ```
 
-Remove `lazy`; construction is always lazy. Remove `buffer`; Pulse never queues application messages implicitly.
-
-## Define named scope schemas at construction
-
-Channel and presence generics now belong to the session schema, not each `channel()` or `presence()` call.
+**After:** One `PulseSchema` generic.
 
 ```ts
-// Before
-const chat = pulse.channel<ChatServer, ChatClient>('chat');
-const lobby = pulse.presence<MemberState>('lobby');
-
-// After
-type Channels = {
-  chat: { client: ChatClient; server: ChatServer };
-};
-type Presence = { lobby: MemberState };
-
-const pulse = createPulse<ServerEvents, ClientEvents, Channels, Presence>(url);
-const chat = pulse.channel('chat');
-const lobby = pulse.presence('lobby');
+const pulse = createPulse<{
+  server: { 'chat:message': { text: string } };
+  client: { 'chat:send': { text: string } };
+  channels: {
+    chat: {
+      client: { send: { text: string } };
+      server: { message: { text: string } };
+    };
+  };
+  rooms: {
+    lobby: { presence: { name: string } };
+  };
+}>('ws://...', { ... });
 ```
 
-Each call now returns an independent disposable scope. The server subscription or room remains active until every scope for that name is disposed.
+### 2. Rooms and presence unified into `room()`
 
-## Replace middleware and lifecycle callbacks
-
-Replace `middleware` with one `transform` function. Return `null` to filter an application message.
+**Before:** Separate `join()`/`leave()` methods and a `presence` API on channels.
 
 ```ts
-// Before
-createPulse(url, { middleware: [(_event, _payload, next) => next()] });
+const channel = pulse.channel('lobby');
+await pulse.join('lobby');
+const presence = channel.presence;
+presence.update({ name: 'Ada' });
+presence.onJoin((id, state) => { ... });
+pulse.leave('lobby');
+```
 
-// After
-createPulse(url, {
-  transform: (message) => (message.event.startsWith('debug:') ? null : message),
+**After:** A single `room()` method returns a ref-counted room scope. When the room definition includes `presence`, the scope exposes reactive presence state.
+
+```ts
+const lobby = pulse.room('lobby');
+await lobby.joined;
+lobby.updatePresence({ name: 'Ada' });
+lobby.onJoin((id, state) => { ... });
+lobby.onLeave((id) => { ... });
+lobby.dispose();
+```
+
+### 3. `pulse.join()` and `pulse.leave()` removed
+
+Use `pulse.room(name)` to join and `scope.dispose()` to leave. Room memberships are reference-counted across independent scopes.
+
+### 4. `channel.presence` removed
+
+Presence is now a property of room scopes, not channel scopes. Use `pulse.room(name).presence` instead.
+
+### 5. `PulsePresenceError` removed
+
+Room join failures now use standard error types:
+- `PulseConnectionError` — transport close before confirmation.
+- `PulseRoomTimeoutError` — join timeout (new).
+- `PulseAbortError` — join aborted via AbortSignal.
+- `PulseDisposedError` — instance disposed before confirmation.
+
+### 6. `pulse.rooms` is now a reactive `Readable<ReadonlySet<string>>`
+
+**Before:** `pulse.rooms` was a signal of room names with presence.
+
+**After:** `pulse.rooms` is a `Readable<ReadonlySet<string>>` tracking confirmed room memberships (with or without presence).
+
+```ts
+import { effect } from '@vielzeug/ripple';
+
+effect(() => {
+  console.log('Joined rooms:', [...pulse.rooms.value]);
 });
 ```
 
-Replace `onOpen`, `onClose`, `onMessage`, and `onReconnect` with the `status` readable and typed `onError`.
+### 7. `PulseRoomTimeoutError` added
+
+Room scopes accept a `timeout` option. If the server does not confirm membership in time, `joined` rejects with `PulseRoomTimeoutError`.
 
 ```ts
-const pulse = createPulse(url, {
-  onError: console.error,
-  reconnect: true,
-});
+const lobby = pulse.room('lobby', { timeout: 5_000 });
+try {
+  await lobby.joined;
+} catch (error) {
+  if (error instanceof PulseRoomTimeoutError) {
+    // handle timeout
+  }
+}
 ```
 
-## Recheck reconnect semantics
+### 8. `RoomScope` type
 
-Reconnect restores active channel subscriptions, desired rooms, and the latest local presence state in that order. `rooms` is cleared when transport closes and repopulates only after the replacement server session confirms membership.
+Room scopes are typed as `RoomScope<R>` where `R` is the room definition. When `R` includes `presence`, the scope is a `PresenceRoomScope<T>`; otherwise it is a `RoomScopeBase`.
+
+```ts
+// lobby has presence → PresenceRoomScope<{ name: string }>
+const lobby = pulse.room('lobby');
+lobby.updatePresence({ name: 'Ada' }); // typed
+
+// announcements has no presence → RoomScopeBase
+const announcements = pulse.room('announcements');
+// announcements.updatePresence — TypeScript error
+```
+
+## Migration checklist
+
+1. Replace `createPulse<TServer, TClient, TChannels, TPresence>` with `createPulse<PulseSchema>`.
+2. Replace `pulse.join(name)` / `pulse.leave(name)` with `pulse.room(name)` / `scope.dispose()`.
+3. Replace `channel.presence` with `pulse.room(name).presence`.
+4. Replace `PulsePresenceError` handling with the appropriate new error type.
+5. Update `pulse.rooms` consumers to read from the `Readable<ReadonlySet<string>>`.
+6. Add `timeout` and `signal` options to room scopes where appropriate.
+
+## Flux adapter changes
+
+The `@vielzeug/flux` adapter `fromPresence` is renamed to `fromRoomPresence` and now accepts a `PresenceRoomScope` instead of a presence channel.
+
+```ts
+// Before
+import { fromPresence } from '@vielzeug/flux/pulse';
+fromPresence(channel.presence).subscribe(...);
+
+// After
+import { fromRoomPresence } from '@vielzeug/flux/pulse';
+fromRoomPresence(room).subscribe(...);
+```

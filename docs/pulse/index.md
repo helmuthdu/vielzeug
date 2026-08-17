@@ -1,25 +1,31 @@
 ---
 title: Pulse — Typed WebSocket sessions
-description: Explicitly connected, typed WebSocket sessions with scoped channels, presence, reconnect restoration, and heartbeat.
+description: Explicitly connected, typed WebSocket sessions with scoped channels, ref-counted rooms with reactive presence, reconnect restoration, and heartbeat.
 package: pulse
 category: websockets
-keywords: [websocket, realtime, channels, presence, reconnect, heartbeat, typed-messaging, ripple]
+keywords: [websocket, realtime, channels, presence, rooms, reconnect, heartbeat, typed-messaging, ripple]
 related: [herald, ripple, courier, clockwork]
 exports:
   [
     createPulse,
     Pulse,
     PulseChannel,
-    PresenceChannel,
+    RoomScope,
+    RoomScopeBase,
+    PresenceRoomScope,
     PulseOptions,
+    PulseSchema,
     ChannelDefinition,
     ChannelDefinitions,
-    PresenceDefinitions,
+    RoomDefinition,
+    RoomDefinitions,
+    RoomOptions,
     OutgoingMessage,
     OutgoingTransform,
     PulseError,
     PulseConnectionError,
     PulseTimeoutError,
+    PulseRoomTimeoutError,
     PulseAbortError,
     PulseDisposedError,
     PulseProtocolError,
@@ -42,7 +48,10 @@ socket.addEventListener('message', (event) => route(JSON.parse(event.data)));
 socket.addEventListener('close', () => setTimeout(() => reconnect(), 1_000));
 
 // After
-const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws', { reconnect: true });
+const pulse = createPulse<{ server: { 'chat:message': { text: string } }; client: { 'chat:send': { text: string } } }>(
+  'wss://api.example.com/ws',
+  { reconnect: true },
+);
 try {
   await pulse.connect();
   pulse.on('chat:message', (message) => console.log(message.text));
@@ -58,6 +67,7 @@ try {
 | Explicit readiness | <ore-icon name="check" size="16"></ore-icon> | Manual | <ore-icon name="check" size="16"></ore-icon> |
 | Session restoration | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Protocol-specific |
 | Typed scoped channels | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Basic |
+| Typed rooms with presence | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
 | Zero runtime dependencies | <ore-icon name="triangle-alert" size="16"></ore-icon> ripple | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
 
 <div class="decision-callout">
@@ -88,32 +98,37 @@ yarn add @vielzeug/pulse @vielzeug/ripple
 
 ## Quick Start
 
-Define the protocol at construction time, create scopes, then connect before sending.
+Define the protocol schema at construction time, create scopes, then connect before sending.
 
 ```ts
 import { createPulse } from '@vielzeug/pulse';
 
-type ServerEvents = { 'chat:message': { text: string } };
-type ClientEvents = { 'chat:send': { text: string } };
-type Channels = {
-  chat: {
-    client: { send: { text: string } };
-    server: { message: { text: string } };
+type Schema = {
+  server: { 'chat:message': { text: string } };
+  client: { 'chat:send': { text: string } };
+  channels: {
+    chat: {
+      client: { send: { text: string } };
+      server: { message: { text: string } };
+    };
+  };
+  rooms: {
+    lobby: { presence: { name: string } };
   };
 };
-type Presence = { lobby: { name: string } };
 
-const pulse = createPulse<ServerEvents, ClientEvents, Channels, Presence>('wss://api.example.com/ws', {
+const pulse = createPulse<Schema>('wss://api.example.com/ws', {
   reconnect: true,
   onError: (error) => console.error(error),
 });
 const chat = pulse.channel('chat');
-const lobby = pulse.presence('lobby');
+const lobby = pulse.room('lobby');
 
 try {
   await pulse.connect();
   chat.send('send', { text: 'Hello!' });
-  lobby.update({ name: 'Ada' });
+  await lobby.joined;
+  lobby.updatePresence({ name: 'Ada' });
 } catch (error) {
   console.error('Pulse connection failed:', error);
 }
@@ -127,8 +142,8 @@ pulse.dispose();
 
 - **`connect()`** — explicit readiness; application messages throw while disconnected.
 - **`channel()`** — named, schema-bound scopes with independent disposal and reference-counted server subscriptions.
-- **`presence()`** — named, schema-bound reactive presence scopes with reference-counted room membership.
-- **`reconnect`** — ordered restoration of channel subscriptions, rooms, and local presence state.
+- **`room()`** — named, schema-bound ref-counted room scopes with optional reactive presence. The first scope sends `join`; the last disposal sends `leave`.
+- **`reconnect`** — ordered restoration of channel subscriptions, room memberships, and local presence state.
 - **`transform`** — one synchronous transform or filter for application messages.
 - **`onError`** — typed connection and protocol errors.
 - **`heartbeat`** — ping/pong liveness detection that uses the same reconnect controller.
@@ -143,7 +158,7 @@ pulse.dispose();
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
 - [Examples](./examples.md)
-- [Pulse 3.0 Migration](./migration.md)
+- [Migration Guide](./migration.md)
 
 </div>
 

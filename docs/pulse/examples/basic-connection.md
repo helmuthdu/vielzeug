@@ -16,10 +16,12 @@ Subscribe before connecting, then await `connect()` before sending.
 ```ts
 import { createPulse } from '@vielzeug/pulse';
 
-type ServerEvents = { 'chat:message': { text: string } };
-type ClientEvents = { 'chat:send': { text: string } };
+type Schema = {
+  server: { 'chat:message': { text: string } };
+  client: { 'chat:send': { text: string } };
+};
 
-const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws', {
+const pulse = createPulse<Schema>('wss://api.example.com/ws', {
   onError: (error) => console.error(error),
   reconnect: true,
 });

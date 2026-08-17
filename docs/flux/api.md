@@ -417,8 +417,8 @@ toBus<T extends EventMap, K extends EventKey<T>>(bus: Bus<T>, event: K): Operato
 ### `@vielzeug/flux/pulse`
 
 ```ts
-fromPulse<T extends MessageMap, K extends EventKey<T>>(pulse: Pulse<T>, event: K): Stream<T[K]>
-fromPresence<T>(presence: PresenceChannel<T>): Stream<ReadonlyMap<string, T>>
+fromPulse<S extends PulseSchema, K extends EventKey<ServerEvents<S>>>(pulse: Pulse<S>, event: K): Stream<ServerEvents<S>[K]>
+fromRoomPresence<T>(room: PresenceRoomScope<T>): Stream<ReadonlyMap<string, T>>
 ```
 
 ## Types

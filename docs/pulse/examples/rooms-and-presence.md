@@ -11,42 +11,52 @@ You need server-confirmed room membership and reactive member state that survive
 
 ### Solution
 
-Define room state at construction. Create a presence scope, connect, then publish state.
+Define room schemas at construction. Create a room scope, connect, then publish state.
 
 ```ts
 import { createPulse } from '@vielzeug/pulse';
 import { effect } from '@vielzeug/ripple';
 
-type Presence = { lobby: { name: string; status: 'online' | 'away' } };
+type Schema = {
+  rooms: {
+    lobby: { presence: { name: string; status: 'online' | 'away' } };
+    announcements: {};
+  };
+};
 
-const pulse = createPulse<{}, {}, {}, Presence>('wss://api.example.com/ws', { reconnect: true });
-const lobby = pulse.presence('lobby');
+const pulse = createPulse<Schema>('wss://api.example.com/ws', { reconnect: true });
+const lobby = pulse.room('lobby');
 
 try {
   await pulse.connect();
-  lobby.update({ name: 'Ada', status: 'online' });
+  await lobby.joined;
+  lobby.updatePresence({ name: 'Ada', status: 'online' });
 } catch (error) {
   console.error('Pulse connection failed:', error);
 }
 
 effect(() => {
-  for (const [memberId, member] of lobby.state.value) {
+  for (const [memberId, member] of lobby.presence.value) {
     console.log(memberId, member);
   }
 });
 
 lobby.onLeave((memberId) => console.log('left', memberId));
 
-await pulse.join('announcements');
-await pulse.leave('announcements');
+const announcements = pulse.room('announcements');
+await announcements.joined;
+console.log('rooms:', [...pulse.rooms.value]);
+
+announcements.dispose();
 lobby.dispose();
+pulse.dispose();
 ```
 
 ### Pitfalls
 
-- **Presence types belong to `createPulse()`.** `presence()` no longer accepts a generic type argument.
+- **Room schemas belong to `createPulse()`.** `room()` infers its types from the schema.
 - **`rooms` is server-confirmed.** It clears on a disconnected transport and returns after `joined` frames.
-- **A room remains active while any presence scope owns it.** Dispose every scope before expecting a leave frame.
+- **A room remains active while any scope owns it.** Dispose every scope before expecting a leave frame.
 
 ### Related
 

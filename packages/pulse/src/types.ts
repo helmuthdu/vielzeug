@@ -1,8 +1,9 @@
 import type { Readable } from '@vielzeug/ripple';
+import type { PulseError } from './errors';
 
 // ─── Core map types ────────────────────────────────────────────────────────────
 
-/** A map of event name → payload type. Use as the generic parameter for Pulse. */
+/** A map of event name → payload type. */
 export type MessageMap = Record<string, unknown>;
 
 /** Extract valid event keys from a MessageMap. */
@@ -10,6 +11,37 @@ export type EventKey<T extends MessageMap> = keyof T & string;
 
 /** A function that removes a listener subscription. */
 export type Unsubscribe = () => void;
+
+// ─── Schema ────────────────────────────────────────────────────────────────────
+
+/**
+ * Declare server events, client events, channel schemas, and room schemas once
+ * at construction. All named scopes infer their types from this schema.
+ */
+export type PulseSchema = {
+  /** Root events the server sends to the client. */
+  server?: MessageMap;
+  /** Root events the client sends to the server. */
+  client?: MessageMap;
+  /** Named channel schemas. */
+  channels?: ChannelDefinitions;
+  /** Named room schemas with optional presence state. */
+  rooms?: RoomDefinitions;
+};
+
+/** Extract server events from a schema, defaulting to an empty map. */
+export type ServerEvents<S extends PulseSchema> = S extends { server: infer M extends MessageMap } ? M : MessageMap;
+
+/** Extract client events from a schema, defaulting to an empty map. */
+export type ClientEvents<S extends PulseSchema> = S extends { client: infer M extends MessageMap } ? M : MessageMap;
+
+/** Extract channel definitions from a schema, defaulting to an empty map. */
+export type ChannelMap<S extends PulseSchema> = S extends { channels: infer C extends ChannelDefinitions }
+  ? C
+  : ChannelDefinitions;
+
+/** Extract room definitions from a schema, defaulting to an empty map. */
+export type RoomMap<S extends PulseSchema> = S extends { rooms: infer R extends RoomDefinitions } ? R : RoomDefinitions;
 
 // ─── Connection status ─────────────────────────────────────────────────────────
 
@@ -39,11 +71,15 @@ export type HeartbeatOptions = {
   timeout?: number;
 };
 
+// ─── Transform ─────────────────────────────────────────────────────────────────
+
 /** An outgoing application message before it is serialized. Return `null` to drop it. */
 export type OutgoingMessage = { channel?: string; event: string; payload: unknown };
 
 /** Transform or filter outgoing application messages. Internal protocol frames bypass this hook. */
 export type OutgoingTransform = (message: Readonly<OutgoingMessage>) => OutgoingMessage | null;
+
+// ─── Channels ──────────────────────────────────────────────────────────────────
 
 /** Server and client event maps for one named channel. */
 export type ChannelDefinition = { client: MessageMap; server: MessageMap };
@@ -51,8 +87,16 @@ export type ChannelDefinition = { client: MessageMap; server: MessageMap };
 /** Named channel schemas supplied when creating Pulse. */
 export type ChannelDefinitions = Record<string, ChannelDefinition>;
 
-/** Named presence-state schemas supplied when creating Pulse. */
-export type PresenceDefinitions = Record<string, unknown>;
+// ─── Rooms ─────────────────────────────────────────────────────────────────────
+
+/** A room definition with optional presence state type. */
+export type RoomDefinition = { presence?: unknown };
+
+/** Named room schemas supplied when creating Pulse. */
+export type RoomDefinitions = Record<string, RoomDefinition>;
+
+/** Options for creating a room scope. */
+export type RoomOptions = { signal?: AbortSignal; timeout?: number };
 
 // ─── Options ───────────────────────────────────────────────────────────────────
 
@@ -63,7 +107,7 @@ export type PulseOptions = {
    */
   heartbeat?: boolean | HeartbeatOptions;
   /** Receives typed transport and protocol failures. */
-  onError?: (error: import('./errors').PulseError) => void;
+  onError?: (error: PulseError) => void;
   /** Sub-protocols to pass to the WebSocket constructor. */
   protocols?: string | string[];
   /**
@@ -75,7 +119,7 @@ export type PulseOptions = {
   transform?: OutgoingTransform;
 };
 
-// ─── Channel ───────────────────────────────────────────────────────────────────
+// ─── Channel scope ─────────────────────────────────────────────────────────────
 
 /**
  * An isolated message namespace multiplexed over the shared WebSocket connection.
@@ -117,55 +161,57 @@ export type PulseChannel<TServer extends MessageMap = MessageMap, TClient extend
   wait<K extends EventKey<TServer>>(event: K, opts?: { signal?: AbortSignal; timeout?: number }): Promise<TServer[K]>;
 };
 
-// ─── Presence ──────────────────────────────────────────────────────────────────
+// ─── Room scope ────────────────────────────────────────────────────────────────
 
-/**
- * A reactive presence channel that tracks members' state in a room.
- * Obtain one via `pulse.presence(room)`.
- *
- * @example
- * const lobby = pulse.presence('lobby');
- * effect(() => console.log('Online:', [...lobby.state.value.keys()]));
- * lobby.update({ name: 'Alice', status: 'online' });
- */
-export type PresenceChannel<T = unknown> = {
+/** Base room scope: ref-counted server membership with explicit disposal. */
+export type RoomScopeBase = {
   /** Delegates to `dispose()`. Enables `using` declarations. */
   [Symbol.dispose](): void;
   /** `AbortSignal` aborted when `dispose()` is called. */
   readonly disposalSignal: AbortSignal;
-  /** Releases this scope's listeners and room reference. */
+  /** Releases this scope's room reference and listeners. */
   dispose(): void;
-  /** Whether this presence channel has been disposed. */
+  /** Whether this room scope has been disposed. */
   readonly disposed: boolean;
+  /** Room name passed to `pulse.room()`. */
+  readonly name: string;
   /**
-   * Register a handler called whenever a new member joins with their initial state.
-   * Returns an unsubscribe function.
+   * Resolves when the server confirms membership with a `joined` frame.
+   * Rejects on transport close, timeout, abort, or disposal.
+   * For post-reconnect membership, read `pulse.rooms` instead.
    */
-  onJoin(handler: (memberId: string, state: T) => void): Unsubscribe;
-  /**
-   * Register a handler called whenever a member leaves.
-   * Returns an unsubscribe function.
-   */
-  onLeave(handler: (memberId: string) => void): Unsubscribe;
-  /** Room name passed to `pulse.presence()`. */
-  readonly room: string;
+  readonly joined: Promise<void>;
+};
+
+/** Room scope with reactive presence state tracking. */
+export type PresenceRoomScope<T = unknown> = RoomScopeBase & {
   /** Reactive map of `memberId → state`. Updates whenever any member joins, leaves, or updates. */
-  readonly state: Readable<ReadonlyMap<string, T>>;
+  readonly presence: Readable<ReadonlyMap<string, T>>;
   /**
    * Broadcast this client's presence state to all room members.
    * Throws `PulseConnectionError` unless the connection is open.
    */
-  update(state: T): void;
+  updatePresence(state: T): void;
+  /** Register a handler called whenever a new member joins with their initial state. */
+  onJoin(handler: (memberId: string, state: T) => void): Unsubscribe;
+  /** Register a handler called whenever a member leaves. */
+  onLeave(handler: (memberId: string) => void): Unsubscribe;
 };
+
+/**
+ * A room scope. When the room definition includes `presence`, the scope
+ * exposes reactive presence state, join/leave handlers, and `updatePresence()`.
+ * Otherwise it is a plain ref-counted room membership.
+ */
+export type RoomScope<R extends RoomDefinition = RoomDefinition> = R extends { presence: infer P }
+  ? P extends undefined
+    ? RoomScopeBase
+    : PresenceRoomScope<P>
+  : RoomScopeBase;
 
 // ─── Main Pulse interface ──────────────────────────────────────────────────────
 
-export type Pulse<
-  TServer extends MessageMap = MessageMap,
-  TClient extends MessageMap = MessageMap,
-  TChannels extends ChannelDefinitions = ChannelDefinitions,
-  TPresence extends PresenceDefinitions = PresenceDefinitions,
-> = {
+export type Pulse<S extends PulseSchema = PulseSchema> = {
   /** Delegates to `dispose()`. Enables `using` declarations. */
   [Symbol.dispose](): void;
 
@@ -176,7 +222,9 @@ export type Pulse<
    * Each call returns an independently disposable scope. The server subscription
    * remains active until every scope for this name is disposed.
    */
-  channel<K extends keyof TChannels & string>(name: K): PulseChannel<TChannels[K]['server'], TChannels[K]['client']>;
+  channel<K extends keyof ChannelMap<S> & string>(
+    name: K,
+  ): PulseChannel<ChannelMap<S>[K]['server'], ChannelMap<S>[K]['client']>;
 
   // ── Connection ─────────────────────────────────────────────────────────────
 
@@ -201,49 +249,41 @@ export type Pulse<
   /** Whether the instance has been permanently disposed. */
   readonly disposed: boolean;
 
-  // ── Rooms ──────────────────────────────────────────────────────────────────
-
-  /**
-   * Request to join a room. Resolves when the server confirms with a `joined` frame.
-   * Rejects if the pulse is disposed, the signal aborts, or the timeout elapses.
-   */
-  join(room: string, opts?: { signal?: AbortSignal; timeout?: number }): Promise<void>;
-  /**
-   * Request to leave a room. Resolves when the server confirms with a `left` frame.
-   * Rejects if the pulse is disposed, the signal aborts, or the timeout elapses.
-   */
-  leave(room: string, opts?: { signal?: AbortSignal; timeout?: number }): Promise<void>;
-
   // ── Messaging ──────────────────────────────────────────────────────────────
 
   /**
    * Subscribe to a typed server event. Returns an unsubscribe function.
    * The same handler can be registered multiple times independently.
    */
-  on<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe;
+  on<K extends EventKey<ServerEvents<S>>>(event: K, handler: (payload: ServerEvents<S>[K]) => void): Unsubscribe;
   /** Subscribe once — auto-removes after first invocation. */
-  once<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe;
+  once<K extends EventKey<ServerEvents<S>>>(event: K, handler: (payload: ServerEvents<S>[K]) => void): Unsubscribe;
 
-  // ── Presence ───────────────────────────────────────────────────────────────
+  // ── Rooms ──────────────────────────────────────────────────────────────────
 
   /**
-   * Create a presence scope that tracks all members' state in a room.
-   * Each call returns an independently disposable scope. The room remains joined
-   * until every scope for this name is disposed.
+   * Create a ref-counted room scope. The first scope for a room sends a `join`
+   * frame; the last disposal sends a `leave` frame. When the room definition
+   * includes `presence`, the scope exposes reactive presence state.
    */
-  presence<K extends keyof TPresence & string>(room: K): PresenceChannel<TPresence[K]>;
-  /** Reactive set of rooms the client is currently a member of. */
+  room<K extends keyof RoomMap<S> & string>(name: K, opts?: RoomOptions): RoomScope<RoomMap<S>[K]>;
+
+  /** Reactive set of rooms the client is currently a confirmed member of. */
   readonly rooms: Readable<ReadonlySet<string>>;
+
   /**
    * Send a typed event to the server.
    * Throws `PulseConnectionError` unless the connection is open.
    */
-  send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void;
+  send<K extends EventKey<ClientEvents<S>>>(event: K, payload: ClientEvents<S>[K]): void;
   /** Reactive connection status. */
   readonly status: Readable<PulseStatus>;
   /**
    * Resolve on the next emission of the given server event.
    * Rejects when `opts.signal` aborts or the instance is disposed.
    */
-  wait<K extends EventKey<TServer>>(event: K, opts?: { signal?: AbortSignal; timeout?: number }): Promise<TServer[K]>;
+  wait<K extends EventKey<ServerEvents<S>>>(
+    event: K,
+    opts?: { signal?: AbortSignal; timeout?: number },
+  ): Promise<ServerEvents<S>[K]>;
 };

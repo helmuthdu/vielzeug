@@ -17,19 +17,25 @@ Enable reconnect and heartbeat, create scopes before connecting, and react to th
 import { createPulse } from '@vielzeug/pulse';
 import { effect } from '@vielzeug/ripple';
 
-type Channels = {
-  chat: {
-    client: { send: { text: string } };
-    server: { message: { text: string } };
+type Schema = {
+  channels: {
+    chat: {
+      client: { send: { text: string } };
+      server: { message: { text: string } };
+    };
+  };
+  rooms: {
+    lobby: { presence: { name: string } };
   };
 };
 
-const pulse = createPulse<{}, {}, Channels>('wss://api.example.com/ws', {
+const pulse = createPulse<Schema>('wss://api.example.com/ws', {
   heartbeat: { interval: 20_000, timeout: 8_000 },
   onError: console.error,
   reconnect: { delay: (attempt) => Math.min(500 * 2 ** attempt, 30_000), maxAttempts: 8 },
 });
 const chat = pulse.channel('chat');
+const lobby = pulse.room('lobby');
 
 effect(() => {
   console.log('Pulse status:', pulse.status.value);
@@ -38,6 +44,8 @@ effect(() => {
 try {
   await pulse.connect();
   chat.on('message', ({ text }) => console.log(text));
+  await lobby.joined;
+  lobby.updatePresence({ name: 'Ada' });
 } catch (error) {
   console.error('Pulse connection failed:', error);
 }

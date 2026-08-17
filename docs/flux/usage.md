@@ -196,7 +196,7 @@ Import adapters from dedicated subpaths. Core Flux does not require adapter peer
 ```ts
 import { fromQuery } from '@vielzeug/flux/courier';
 import { fromBus } from '@vielzeug/flux/herald';
-import { fromPresence } from '@vielzeug/flux/pulse';
+import { fromRoomPresence } from '@vielzeug/flux/pulse';
 import { fromSignal, toSignal } from '@vielzeug/flux/ripple';
 ```
 

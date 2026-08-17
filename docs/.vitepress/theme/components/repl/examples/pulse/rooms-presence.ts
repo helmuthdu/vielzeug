@@ -1,37 +1,38 @@
 export const roomsPresenceExample = {
   code: `import { createPulse } from '@vielzeug/pulse'
 
-// Reactive presence channel — implicitly joins 'lobby'
+// Room scopes: ref-counted membership with reactive presence
 const pulse = createPulse('wss://api.example.com/ws')
-const lobby = pulse.presence('lobby')
+const lobby = pulse.room('lobby')
 
 try {
   await pulse.connect()
 
-  // Broadcast our own presence
-  lobby.update({ avatar: '/me.png', name: 'Alice', status: 'online' })
+  // Wait for server confirmation
+  await lobby.joined
+  console.log('joined lobby, rooms:', [...pulse.rooms.value])
 
-  // Explicit room management (join resolves on server confirmation)
-  await pulse.join('game-room')
-  console.log('rooms:', [...pulse.rooms.value])
-  await pulse.leave('game-room')
-  console.log('rooms after leave:', [...pulse.rooms.value])
+  // Broadcast our own presence
+  lobby.updatePresence({ avatar: '/me.png', name: 'Alice', status: 'online' })
+
+  // Reactive presence map: memberId → state
+  const printMembers = () => {
+    for (const [id, state] of lobby.presence.value) {
+      console.log('  ' + id + ': ' + state.name + ' (' + state.status + ')')
+    }
+  }
+
+  // React to individual joins and leaves
+  lobby.onJoin((id, state) => console.log(state.name + ' joined'))
+  lobby.onLeave((id) => console.log(id + ' left'))
 } catch (err) {
   console.log('connection or room operation failed:', err.message)
 }
 
-// Subscribe to state changes manually (state.value is a ReadonlyMap)
-const printMembers = () => {
-  for (const [id, state] of lobby.state.value) {
-    console.log('  ' + id + ': ' + state.name + ' (' + state.status + ')')
-  }
-}
-
-// React to individual joins and leaves
-lobby.onJoin((id, state) => console.log(state.name + ' joined'))
-lobby.onLeave((id) => console.log(id + ' left'))
-
+// Dispose the room scope — sends leave when last scope is released
 lobby.dispose()
+console.log('rooms after leave:', [...pulse.rooms.value])
+
 pulse.dispose()`,
   name: 'Rooms & Presence',
 };

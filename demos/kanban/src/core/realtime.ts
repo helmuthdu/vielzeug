@@ -1,6 +1,6 @@
-import { fromPresence } from '@vielzeug/flux/pulse';
+import { fromRoomPresence } from '@vielzeug/flux/pulse';
 import { toSignal } from '@vielzeug/flux/ripple';
-import { type ChannelDefinitions, createPulse } from '@vielzeug/pulse';
+import { createPulse } from '@vielzeug/pulse';
 import { computed } from '@vielzeug/ripple';
 
 // ---------------------------------------------------------------------------
@@ -11,7 +11,11 @@ export interface PresenceUser {
   name: string;
 }
 
-type RealtimePresence = { board: PresenceUser };
+type Schema = {
+  rooms: {
+    board: { presence: PresenceUser };
+  };
+};
 
 // ---------------------------------------------------------------------------
 // Mock WebSocket
@@ -47,8 +51,11 @@ class MockWebSocket {
     // Fire onopen on the next tick so pulse has time to assign the handlers.
     setTimeout(() => this.onopen?.(new Event('open')), 0);
 
-    // After open, send the initial presence snapshot.
-    setTimeout(() => this._sendPresenceState(), 50);
+    // After open, send the initial presence snapshot and confirm room join.
+    setTimeout(() => {
+      this._emit({ room: 'board', type: 'joined' });
+      this._sendPresenceState();
+    }, 50);
 
     // Every 5 s, toggle a third user (Charlie) to demonstrate live presence.
     this._interval = setInterval(() => this._simulateActivity(), 5000);
@@ -130,8 +137,8 @@ export const presenceCount = computed(() => presenceSignal.value.size);
 // ---------------------------------------------------------------------------
 
 /**
- * Install the mock WebSocket, create a Pulse connection, subscribe to
- * presence on the 'board' room, and wire up the reactive `presenceSignal`.
+ * Install the mock WebSocket, create a Pulse connection, join the 'board' room,
+ * and wire up the reactive `presenceSignal`.
  *
  * Call once at application startup (e.g. from main.ts).
  */
@@ -139,15 +146,13 @@ export function setupRealtime(): void {
   // Replace the real WebSocket with the mock BEFORE createPulse() constructs one.
   (globalThis as Record<string, unknown>).WebSocket = MockWebSocket;
 
-  const pulse = createPulse<Record<string, never>, Record<string, never>, ChannelDefinitions, RealtimePresence>(
-    'wss://kanban-demo/ws',
-  );
+  const pulse = createPulse<Schema>('wss://kanban-demo/ws');
 
   void pulse.connect().catch(console.error);
 
-  const presenceChannel = pulse.presence('board');
+  const board = pulse.room('board');
 
-  const presence$ = fromPresence(presenceChannel);
+  const presence$ = fromRoomPresence(board);
 
   _presenceBinding = toSignal(presence$, { initial: new Map<string, PresenceUser>() });
 }

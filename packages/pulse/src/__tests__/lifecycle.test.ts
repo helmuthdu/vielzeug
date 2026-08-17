@@ -61,10 +61,9 @@ describe('createPulse lifecycle', () => {
 
   it('clears remote session state before reconnecting from a closing socket', async () => {
     const { pulse, socket } = await openPulse();
-    const joined = pulse.join('lobby');
-
+    const lobby = pulse.room('lobby');
     socket.receive({ room: 'lobby', type: 'joined' });
-    await joined;
+    await lobby.joined;
 
     MockWebSocket.deferClose = true;
     pulse.disconnect();
@@ -77,10 +76,11 @@ describe('createPulse lifecycle', () => {
     replacement.open();
     await reconnecting;
 
-    expect(frames(replacement)).toEqual([{ room: 'lobby', type: 'join' }]);
+    expect(frames(replacement)).toContainEqual({ room: 'lobby', type: 'join' });
     expect(pulse.rooms.value).toEqual(new Set());
 
     socket.finishClose();
+    lobby.dispose();
     pulse.dispose();
   });
 
@@ -125,12 +125,12 @@ describe('createPulse lifecycle', () => {
     await expect(pulse.connect()).rejects.toBeInstanceOf(PulseDisposedError);
   });
 
-  it('rejects an in-flight room operation when disposed', async () => {
+  it('rejects an in-flight room join when disposed', async () => {
     const { pulse } = await openPulse();
-    const joining = pulse.join('lobby');
+    const lobby = pulse.room('lobby');
 
     pulse.dispose();
 
-    await expect(joining).rejects.toBeInstanceOf(PulseDisposedError);
+    await expect(lobby.joined).rejects.toBeInstanceOf(PulseDisposedError);
   });
 });

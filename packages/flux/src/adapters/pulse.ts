@@ -1,17 +1,20 @@
-import type { EventKey, MessageMap, PresenceChannel, Pulse } from '@vielzeug/pulse';
+import type { EventKey, PresenceRoomScope, Pulse, PulseSchema, ServerEvents } from '@vielzeug/pulse';
 import { stream } from '../core';
 import type { Stream } from '../types';
 
-export function fromPulse<T extends MessageMap, K extends EventKey<T>>(pulse: Pulse<T>, event: K): Stream<T[K]> {
+export function fromPulse<S extends PulseSchema, K extends EventKey<ServerEvents<S>>>(
+  pulse: Pulse<S>,
+  event: K,
+): Stream<ServerEvents<S>[K]> {
   return stream((sink) => pulse.on(event, (payload) => sink.next(payload)));
 }
 
-export function fromPresence<T>(presence: PresenceChannel<T>): Stream<ReadonlyMap<string, T>> {
+export function fromRoomPresence<T>(room: PresenceRoomScope<T>): Stream<ReadonlyMap<string, T>> {
   return stream((sink) => {
-    sink.next(presence.state.value);
+    sink.next(room.presence.value);
 
-    const stopJoin = presence.onJoin(() => sink.next(presence.state.value));
-    const stopLeave = presence.onLeave(() => sink.next(presence.state.value));
+    const stopJoin = room.onJoin(() => sink.next(room.presence.value));
+    const stopLeave = room.onLeave(() => sink.next(room.presence.value));
 
     return () => {
       stopJoin();

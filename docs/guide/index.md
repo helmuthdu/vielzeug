@@ -346,7 +346,7 @@ const api = await container.resolve(ApiToken);
 | **Flux + Ripple**           | `fromSignal()` / `toSignal()` bridge signals and streams — Ripple for state, Flux for pipelines             |
 | **Flux + Herald**           | `fromBus()` / `toBus()` turn a Herald bus into a Flux stream and back                                       |
 | **Flux + Courier** | `fromQuery()` adapts Courier cache entries into stream pipelines |
-| **Flux + Pulse**            | `fromPulse()` / `fromPresence()` convert Pulse WebSocket channels into composable Flux streams              |
+| **Flux + Pulse**            | `fromPulse()` / `fromRoomPresence()` convert Pulse WebSocket events and room presence into composable Flux streams              |
 | **Scout + Ripple**          | `createReactiveSearch()` wraps the index in Ripple signals — query and results are reactive computed values  |
 | **Scout + Sourcerer**       | `toSearchMatcher()` wires a Scout index into `createLocalSource` as its matcher                 |
 | **Keymap + Ledger**         | Wire `ctrl+z` / `ctrl+shift+z` to `ledger.undo()` / `ledger.redo()` with no boilerplate                    |

@@ -16,12 +16,14 @@ Use `transform` to return the serialized message shape or `null` to filter it.
 ```ts
 import { createPulse } from '@vielzeug/pulse';
 
-type ClientEvents = {
-  'chat:send': { text: string };
-  'debug:trace': { detail: string };
+type Schema = {
+  client: {
+    'chat:send': { text: string };
+    'debug:trace': { detail: string };
+  };
 };
 
-const pulse = createPulse<{}, ClientEvents>('wss://api.example.com/ws', {
+const pulse = createPulse<Schema>('wss://api.example.com/ws', {
   transform: (message) => {
     if (message.event.startsWith('debug:')) return null;
 

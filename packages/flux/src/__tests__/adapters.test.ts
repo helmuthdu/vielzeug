@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { fromQuery } from '../adapters/courier';
 import { fromBus, toBus } from '../adapters/herald';
-import { fromPresence, fromPulse } from '../adapters/pulse';
+import { fromPulse, fromRoomPresence } from '../adapters/pulse';
 import { fromSignal, toSignal } from '../adapters/ripple';
 import { stream } from '../core';
 import { of } from '../operators/creation';
@@ -141,7 +141,7 @@ describe('herald and pulse adapters', () => {
 
         return () => handlers.delete(handler);
       },
-    } as unknown as import('@vielzeug/pulse').Pulse<{ event: string }>;
+    } as unknown as import('@vielzeug/pulse').Pulse<{ server: { event: string } }>;
 
     fromPulse(pulse, 'event').subscribe((value) => received.push(value));
     handlers.forEach((handler) => {
@@ -157,7 +157,7 @@ describe('herald and pulse adapters', () => {
     const members = new Map([['first', 'Ada']]);
     let joined: () => void = () => {};
     let left: () => void = () => {};
-    const presence = {
+    const room = {
       onJoin(callback: () => void) {
         joined = callback;
 
@@ -168,15 +168,15 @@ describe('herald and pulse adapters', () => {
 
         return () => {};
       },
-      state: {
+      presence: {
         get value() {
           return members;
         },
       },
-    } as unknown as import('@vielzeug/pulse').PresenceChannel<string>;
+    } as unknown as import('@vielzeug/pulse').PresenceRoomScope<string>;
     const values: number[] = [];
 
-    fromPresence(presence).subscribe((value) => values.push(value.size));
+    fromRoomPresence(room).subscribe((value) => values.push(value.size));
     members.set('second', 'Bea');
     joined();
     members.delete('first');

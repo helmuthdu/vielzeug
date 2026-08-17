@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: unify room/presence API under single schema generic. Replace four createPulse generics (TServer, TClient, TChannels, TPresence) with one PulseSchema type declaring server, client, channels, and rooms. Remove pulse.join(), pulse.leave(), and channel.presence; replace with pulse.room(name) returning a ref-counted RoomScope. When the room definition includes presence, the scope exposes reactive presence state (presence, updatePresence, onJoin, onLeave); otherwise it is a plain RoomScopeBase. Extract room/presence logic into RoomRegistry (new room.ts module; presence.ts deleted). Add PulseRoomTimeoutError for room join timeouts. Fix onOpen errors during session restore being swallowed; add transportClosed guard preventing double-reset on disconnect. dispose() now rejects pending room joins with PulseDisposedError before transport close. Simplify protocol.ts type guards. Update tests, docs, REPL examples, and demos (kanban, eshop) to the new API.",
+      "packageName": "@vielzeug/pulse",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/pulse"
+}

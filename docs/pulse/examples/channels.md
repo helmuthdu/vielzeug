@@ -11,19 +11,21 @@ Several features share a WebSocket but need independently disposable listeners w
 
 ### Solution
 
-Declare channel maps once at session construction. Each call creates an independent scope and Pulse reference-counts the server subscription.
+Declare channel schemas once at session construction. Each call creates an independent scope and Pulse reference-counts the server subscription.
 
 ```ts
 import { createPulse } from '@vielzeug/pulse';
 
-type Channels = {
-  chat: {
-    client: { send: { text: string } };
-    server: { message: { text: string } };
+type Schema = {
+  channels: {
+    chat: {
+      client: { send: { text: string } };
+      server: { message: { text: string } };
+    };
   };
 };
 
-const pulse = createPulse<{}, {}, Channels>('wss://api.example.com/ws');
+const pulse = createPulse<Schema>('wss://api.example.com/ws');
 const composer = pulse.channel('chat');
 const transcript = pulse.channel('chat');
 
@@ -39,7 +41,7 @@ pulse.dispose();
 
 ### Pitfalls
 
-- **Channel types belong to `createPulse()`.** `channel()` no longer accepts per-call event map generics.
+- **Channel schemas belong to `createPulse()`.** `channel()` infers its types from the schema.
 - **Each call returns a new scope.** Do not compare channel objects for identity.
 - **A scope can send only while connected.** Reconnect restores active subscriptions before messages can be sent.
 

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore: rename fromPresence to fromRoomPresence in @vielzeug/flux/pulse adapter. Now accepts a PresenceRoomScope from the new Pulse room() API instead of a presence channel. Update peer dependency on @vielzeug/pulse to 3.0.0.",
+      "packageName": "@vielzeug/flux",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/flux"
+}

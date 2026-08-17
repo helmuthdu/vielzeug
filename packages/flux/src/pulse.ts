@@ -1,1 +1,1 @@
-export { fromPresence, fromPulse } from './adapters/pulse';
+export { fromPulse, fromRoomPresence } from './adapters/pulse';

@@ -1,7 +1,11 @@
 ---
-title: Pulse — API Reference
-description: Complete API reference for @vielzeug/pulse.
+title: API — Pulse
+description: Complete API reference for Pulse, including schema types, options, scopes, and error classes.
+package: pulse
+category: websockets
 ---
+
+<!-- markdownlint-disable MD025 -->
 
 [[toc]]
 
@@ -9,150 +13,72 @@ description: Complete API reference for @vielzeug/pulse.
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `createPulse()` | Creates an explicitly connected WebSocket session | Sync | Call `connect()` before sends |
-| `Pulse` | Root session API | Sync / Async | Named schemas are fixed at construction |
-| `PulseChannel` | Disposable channel listener scope | Sync / Async | Each call is a distinct scope |
-| `PresenceChannel` | Disposable reactive presence scope | Sync | `update()` requires an open connection |
-| `OutgoingTransform` | Transforms or filters application messages | Sync | Return `null` to filter |
-| `PulseError` types | Typed transport and protocol failures | Sync | Handle rejected promises as well as `onError` |
+| `createPulse()` | Create a typed WebSocket session instance. | Sync (returns `Pulse`) | Does not open the connection — call `connect()`. |
+| `Pulse` | Main instance: channels, rooms, messaging, lifecycle. | Sync methods, async `connect()`/`wait()` | `send()` throws while disconnected. |
+| `PulseChannel` | Scoped channel namespace with independent disposal. | Sync methods, async `wait()` | Each call returns a new scope; ref-counted subscription. |
+| `RoomScope` | Ref-counted room membership with optional presence. | Sync methods, async `joined` | `joined` rejects on transport close or timeout. |
+| `PulseSchema` | Declares server/client events, channels, and rooms. | Type-only | Infer all named scope types from this schema. |
+| `PulseOptions` | Configuration: heartbeat, reconnect, transform, onError. | Type-only | `reconnect` and `heartbeat` default to `false`. |
+| `PulseError` | Base class for all Pulse errors. | Runtime | Check `instanceof` against subclasses. |
 
 ## Package Entry Point
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/pulse` | All public values, errors, and types |
+| `@vielzeug/pulse` | All public exports: `createPulse`, types, and error classes. |
 
-## Core Functions
-
-### `createPulse()`
+## `createPulse()`
 
 ```ts
-createPulse<
-  TServer extends MessageMap = MessageMap,
-  TClient extends MessageMap = MessageMap,
-  TChannels extends ChannelDefinitions = ChannelDefinitions,
-  TPresence extends PresenceDefinitions = PresenceDefinitions,
->(url: string, options?: PulseOptions): Pulse<TServer, TClient, TChannels, TPresence>
+function createPulse<S extends PulseSchema = PulseSchema>(url: string, options?: PulseOptions): Pulse<S>
 ```
 
-Creates a closed session. `connect()` opens the socket and restores active session state.
+Creates a Pulse instance. The WebSocket is not opened until `connect()` is called.
+
+### Type parameters
+
+| Parameter | Constraint | Description |
+| --- | --- | --- |
+| `S` | `PulseSchema` | Schema declaring server events, client events, channels, and rooms. |
+
+### Parameters
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `url` | `string` | WebSocket URL |
-| `options` | `PulseOptions` | Transport, error, reconnect, heartbeat, and transform configuration |
+| `url` | `string` | WebSocket URL. |
+| `options` | `PulseOptions` | Optional configuration. |
 
-**Returns:** `Pulse<TServer, TClient, TChannels, TPresence>`
+### Returns
 
-```ts
-import { createPulse } from '@vielzeug/pulse';
+`Pulse<S>` — the Pulse instance.
 
-type ServerEvents = { notice: string };
-type ClientEvents = { acknowledge: { id: string } };
+---
 
-const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws');
-await pulse.connect();
-```
-
-## Session API
-
-| Member | Returns | Contract |
-| --- | --- | --- |
-| `connect()` | `Promise<void>` | Opens transport and restores session state |
-| `disconnect(code?, reason?)` | `void` | Cancels retry and closes transport |
-| `send(event, payload)` | `void` | Throws `PulseConnectionError` unless open |
-| `on()` / `once()` / `wait()` | `Unsubscribe` / `Promise` | Root server-event subscriptions |
-| `channel(name)` | `PulseChannel` | Creates a schema-bound disposable scope |
-| `join()` / `leave()` | `Promise<void>` | Require an open connection and server confirmation |
-| `presence(room)` | `PresenceChannel` | Creates a schema-bound reference-counted room scope |
-| `status` / `rooms` | `Readable` | Transport state and server-confirmed room membership |
-| `dispose()` | `void` | Releases the whole session |
-
-### `pulse.channel()`
+## `PulseSchema`
 
 ```ts
-channel<K extends keyof TChannels & string>(name: K): PulseChannel<TChannels[K]['server'], TChannels[K]['client']>
-```
-
-Each call creates a separate scope. Pulse sends `subscribe` for the first active scope and `unsubscribe` after the last is disposed.
-
-### `pulse.presence()`
-
-```ts
-presence<K extends keyof TPresence & string>(room: K): PresenceChannel<TPresence[K]>
-```
-
-Each call creates a separate presence scope. Pulse keeps the room joined while at least one scope remains.
-
-### `pulse.send()`
-
-```ts
-send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void
-```
-
-Sends a root application message. Throws `PulseConnectionError` unless the socket is open.
-
-### `pulse.wait()`
-
-```ts
-wait<K extends EventKey<TServer>>(event: K, opts?: { signal?: AbortSignal; timeout?: number }): Promise<TServer[K]>
-```
-
-Resolves with the next matching event. Rejects with `PulseAbortError` or `PulseTimeoutError`.
-
-### `pulse.join()` and `pulse.leave()`
-
-```ts
-join(room: string, opts?: { signal?: AbortSignal; timeout?: number }): Promise<void>
-leave(room: string, opts?: { signal?: AbortSignal; timeout?: number }): Promise<void>
-```
-
-Both methods require an open transport and resolve only after the matching server confirmation. Opposing in-flight requests are serialized, so the final confirmed state follows the last request.
-
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `room` | `string` | Server room identifier |
-| `opts.signal` | `AbortSignal` | Cancels the caller's wait; Pulse reconciles any request already sent |
-| `opts.timeout` | `number` | Maximum confirmation wait in milliseconds |
-
-**Returns:** A promise that rejects with `PulseConnectionError`, `PulseAbortError`, `PulseTimeoutError`, or `PulseDisposedError` when applicable.
-
-### `pulse.disconnect()`
-
-```ts
-disconnect(code?: number, reason?: string): void
-```
-
-Closes the current session, cancels scheduled reconnects, and clears confirmed remote room and presence state immediately. Calling `connect()` afterward starts a new session from the retained desired scopes.
-
-## Scoped Handles
-
-`PulseChannel` and `PresenceChannel` are independently disposable. Disposing one scope removes only that scope's listeners and ownership reference.
-
-## Types
-
-```ts
-import type { Readable } from '@vielzeug/ripple';
-
-type MessageMap = Record<string, unknown>;
-type EventKey<T extends MessageMap> = keyof T & string;
-type Unsubscribe = () => void;
-type PulseStatus = 'connecting' | 'open' | 'reconnecting' | 'closed';
-
-type ChannelDefinition = { client: MessageMap; server: MessageMap };
-type ChannelDefinitions = Record<string, ChannelDefinition>;
-type PresenceDefinitions = Record<string, unknown>;
-
-type OutgoingMessage = { channel?: string; event: string; payload: unknown };
-type OutgoingTransform = (message: Readonly<OutgoingMessage>) => OutgoingMessage | null;
-
-type ReconnectOptions = {
-  delay?: number | ((attempt: number) => number);
-  maxAttempts?: number;
+type PulseSchema = {
+  server?: MessageMap;
+  client?: MessageMap;
+  channels?: ChannelDefinitions;
+  rooms?: RoomDefinitions;
 };
+```
 
-type HeartbeatOptions = { interval?: number; timeout?: number };
+Declare all protocol surfaces once at construction. Named scopes infer their types from this schema.
 
+| Field | Type | Description |
+| --- | --- | --- |
+| `server` | `MessageMap` | Root events the server sends. |
+| `client` | `MessageMap` | Root events the client sends. |
+| `channels` | `ChannelDefinitions` | Named channel schemas. |
+| `rooms` | `RoomDefinitions` | Named room schemas with optional presence. |
+
+---
+
+## `PulseOptions`
+
+```ts
 type PulseOptions = {
   heartbeat?: boolean | HeartbeatOptions;
   onError?: (error: PulseError) => void;
@@ -162,65 +88,290 @@ type PulseOptions = {
 };
 ```
 
-```ts
-type PulseChannel<TServer extends MessageMap = MessageMap, TClient extends MessageMap = MessageMap> = {
-  [Symbol.dispose](): void;
-  readonly disposalSignal: AbortSignal;
-  dispose(): void;
-  readonly disposed: boolean;
-  readonly name: string;
-  on<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe;
-  once<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe;
-  send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void;
-  wait<K extends EventKey<TServer>>(event: K, opts?: { signal?: AbortSignal; timeout?: number }): Promise<TServer[K]>;
-};
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `heartbeat` | `boolean \| HeartbeatOptions` | `false` | Ping/pong keep-alive. |
+| `onError` | `(error: PulseError) => void` | — | Receives typed transport and protocol errors. |
+| `protocols` | `string \| string[]` | — | Sub-protocols passed to the WebSocket constructor. |
+| `reconnect` | `boolean \| ReconnectOptions` | `false` | Auto-reconnect on unexpected close. |
+| `transform` | `OutgoingTransform` | — | Transform or filter outgoing application messages. |
 
-type PresenceChannel<T = unknown> = {
-  [Symbol.dispose](): void;
-  readonly disposalSignal: AbortSignal;
-  dispose(): void;
-  readonly disposed: boolean;
-  onJoin(handler: (memberId: string, state: T) => void): Unsubscribe;
-  onLeave(handler: (memberId: string) => void): Unsubscribe;
-  readonly room: string;
-  readonly state: Readable<ReadonlyMap<string, T>>;
-  update(state: T): void;
+---
+
+## `HeartbeatOptions`
+
+```ts
+type HeartbeatOptions = {
+  interval?: number;
+  timeout?: number;
 };
 ```
 
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `interval` | `number` | `30_000` | Interval between pings in ms. |
+| `timeout` | `number` | `5_000` | How long to wait for a pong before treating the connection as dead. |
+
+---
+
+## `ReconnectOptions`
+
 ```ts
-type Pulse<
-  TServer extends MessageMap = MessageMap,
-  TClient extends MessageMap = MessageMap,
-  TChannels extends ChannelDefinitions = ChannelDefinitions,
-  TPresence extends PresenceDefinitions = PresenceDefinitions,
-> = {
-  [Symbol.dispose](): void;
-  channel<K extends keyof TChannels & string>(name: K): PulseChannel<TChannels[K]['server'], TChannels[K]['client']>;
+type ReconnectOptions = {
+  delay?: number | ((attempt: number) => number);
+  maxAttempts?: number;
+};
+```
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `delay` | `number \| ((attempt: number) => number)` | Full-jitter exponential backoff capped at 30 s | Delay between reconnect attempts in ms. `attempt` is zero-based. |
+| `maxAttempts` | `number` | `5` | Maximum number of reconnect attempts after initial failure. |
+
+---
+
+## `OutgoingTransform`
+
+```ts
+type OutgoingTransform = (message: Readonly<OutgoingMessage>) => OutgoingMessage | null;
+```
+
+Transform or filter outgoing application messages. Internal protocol frames (subscribe, join, leave, presence, ping) bypass this hook. Return `null` to drop the message.
+
+---
+
+## `Pulse`
+
+```ts
+type Pulse<S extends PulseSchema = PulseSchema> = {
+  // Channels
+  channel<K extends keyof ChannelMap<S> & string>(name: K): PulseChannel<...>;
+
+  // Connection
   connect(): Promise<void>;
   disconnect(code?: number, reason?: string): void;
+
+  // Lifecycle
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
-  join(room: string, opts?: { signal?: AbortSignal; timeout?: number }): Promise<void>;
-  leave(room: string, opts?: { signal?: AbortSignal; timeout?: number }): Promise<void>;
-  on<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe;
-  once<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe;
-  presence<K extends keyof TPresence & string>(room: K): PresenceChannel<TPresence[K]>;
+
+  // Messaging
+  on<K extends EventKey<ServerEvents<S>>>(event: K, handler: (payload: ServerEvents<S>[K]) => void): Unsubscribe;
+  once<K extends EventKey<ServerEvents<S>>>(event: K, handler: (payload: ServerEvents<S>[K]) => void): Unsubscribe;
+  send<K extends EventKey<ClientEvents<S>>>(event: K, payload: ClientEvents<S>[K]): void;
+  wait<K extends EventKey<ServerEvents<S>>>(event: K, opts?: { signal?: AbortSignal; timeout?: number }): Promise<ServerEvents<S>[K]>;
+
+  // Rooms
+  room<K extends keyof RoomMap<S> & string>(name: K, opts?: RoomOptions): RoomScope<RoomMap<S>[K]>;
   readonly rooms: Readable<ReadonlySet<string>>;
-  send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void;
+
+  // Status
   readonly status: Readable<PulseStatus>;
-  wait<K extends EventKey<TServer>>(event: K, opts?: { signal?: AbortSignal; timeout?: number }): Promise<TServer[K]>;
+
+  [Symbol.dispose](): void;
 };
 ```
+
+### `channel(name)`
+
+Creates an isolated message namespace over the shared connection. Each call returns an independently disposable scope. The server subscription is reference-counted.
+
+### `connect()`
+
+Explicitly opens the connection. Resolves after session restoration completes. Rejects if the connection closes before opening.
+
+### `disconnect(code?, reason?)`
+
+Closes the connection without triggering reconnection. Default code is `1000`.
+
+### `dispose()`
+
+Permanently closes the connection and releases all resources. Idempotent.
+
+### `on(event, handler)`
+
+Subscribes to a typed server event. Returns an unsubscribe function.
+
+### `once(event, handler)`
+
+Subscribes once — auto-removes after first invocation.
+
+### `send(event, payload)`
+
+Sends a typed event to the server. Throws `PulseConnectionError` unless the connection is open.
+
+### `wait(event, opts?)`
+
+Resolves on the next emission of the given server event. Rejects when `opts.signal` aborts, the timeout elapses, or the instance is disposed.
+
+### `room(name, opts?)`
+
+Creates a ref-counted room scope. The first scope sends `join`; the last disposal sends `leave`. When the room definition includes `presence`, the scope exposes reactive presence state.
+
+### `rooms`
+
+Reactive set of rooms the client is currently a confirmed member of.
+
+### `status`
+
+Reactive connection status: `'connecting' | 'open' | 'reconnecting' | 'closed'`.
+
+---
+
+## `PulseChannel`
+
+```ts
+type PulseChannel<TServer extends MessageMap, TClient extends MessageMap> = {
+  readonly disposalSignal: AbortSignal;
+  readonly disposed: boolean;
+  readonly name: string;
+  dispose(): void;
+  on<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe;
+  once<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe;
+  send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void;
+  wait<K extends EventKey<TServer>>(event: K, opts?: { signal?: AbortSignal; timeout?: number }): Promise<TServer[K]>;
+  [Symbol.dispose](): void;
+};
+```
+
+---
+
+## `RoomScope`
+
+A room scope. When the room definition includes `presence`, the scope is a `PresenceRoomScope`; otherwise it is a `RoomScopeBase`.
+
+### `RoomScopeBase`
+
+```ts
+type RoomScopeBase = {
+  readonly disposalSignal: AbortSignal;
+  readonly disposed: boolean;
+  readonly name: string;
+  readonly joined: Promise<void>;
+  dispose(): void;
+  [Symbol.dispose](): void;
+};
+```
+
+### `PresenceRoomScope`
+
+```ts
+type PresenceRoomScope<T = unknown> = RoomScopeBase & {
+  readonly presence: Readable<ReadonlyMap<string, T>>;
+  updatePresence(state: T): void;
+  onJoin(handler: (memberId: string, state: T) => void): Unsubscribe;
+  onLeave(handler: (memberId: string) => void): Unsubscribe;
+};
+```
+
+| Member | Type | Description |
+| --- | --- | --- |
+| `presence` | `Readable<ReadonlyMap<string, T>>` | Reactive map of `memberId → state`. |
+| `updatePresence(state)` | `(state: T) => void` | Broadcast this client's presence state. Throws `PulseConnectionError` unless open. |
+| `onJoin(handler)` | `(handler) => Unsubscribe` | Called whenever a new member joins with their initial state. |
+| `onLeave(handler)` | `(handler) => Unsubscribe` | Called whenever a member leaves. |
+
+### `RoomOptions`
+
+```ts
+type RoomOptions = {
+  signal?: AbortSignal;
+  timeout?: number;
+};
+```
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `signal` | `AbortSignal` | Aborts the join, rejecting `joined` with `PulseAbortError`. |
+| `timeout` | `number` | Join timeout in ms. Rejects `joined` with `PulseRoomTimeoutError`. |
+
+---
 
 ## Errors
 
-| Class | Triggers | Notable properties |
-| --- | --- | --- |
-| `PulseError` | Base class for every Pulse error | `PulseError.is(error)` |
-| `PulseConnectionError` | Send before open, transport error, or exhausted reconnect | `url` |
-| `PulseTimeoutError` | A `wait()`, `join()`, or `leave()` timeout | `event` |
-| `PulseAbortError` | An abort signal cancels `wait()`, `join()`, or `leave()` | — |
-| `PulseDisposedError` | An operation targets a disposed scope or session | — |
-| `PulseProtocolError` | A malformed, unknown, server-error, or failed handler frame | `raw` |
+All errors extend `PulseError`.
+
+### `PulseError`
+
+Base class for all Pulse errors.
+
+### `PulseConnectionError`
+
+Transport failure, send while disconnected, or room join rejected on close.
+
+### `PulseProtocolError`
+
+Malformed frame or server error frame.
+
+### `PulseTimeoutError`
+
+`wait()` timed out before the server event arrived.
+
+### `PulseRoomTimeoutError`
+
+Room scope `joined` timed out before the server confirmed membership.
+
+### `PulseAbortError`
+
+`wait()` or room `joined` aborted via AbortSignal.
+
+### `PulseDisposedError`
+
+Operation attempted after disposal.
+
+---
+
+## Channel and room definitions
+
+### `ChannelDefinition`
+
+```ts
+type ChannelDefinition = { client: MessageMap; server: MessageMap };
+```
+
+### `ChannelDefinitions`
+
+```ts
+type ChannelDefinitions = Record<string, ChannelDefinition>;
+```
+
+### `RoomDefinition`
+
+```ts
+type RoomDefinition = { presence?: unknown };
+```
+
+### `RoomDefinitions`
+
+```ts
+type RoomDefinitions = Record<string, RoomDefinition>;
+```
+
+---
+
+## Utility types
+
+### `MessageMap`
+
+```ts
+type MessageMap = Record<string, unknown>;
+```
+
+### `EventKey`
+
+```ts
+type EventKey<T extends MessageMap> = keyof T & string;
+```
+
+### `Unsubscribe`
+
+```ts
+type Unsubscribe = () => void;
+```
+
+### `PulseStatus`
+
+```ts
+type PulseStatus = 'connecting' | 'open' | 'reconnecting' | 'closed';
+```

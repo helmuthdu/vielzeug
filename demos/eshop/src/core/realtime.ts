@@ -1,13 +1,17 @@
-import { fromPresence } from '@vielzeug/flux/pulse';
+import { fromRoomPresence } from '@vielzeug/flux/pulse';
 import { toSignal } from '@vielzeug/flux/ripple';
-import { type ChannelDefinitions, createPulse } from '@vielzeug/pulse';
+import { createPulse } from '@vielzeug/pulse';
 import { computed } from '@vielzeug/ripple';
 
 export interface PresenceShopper {
   name: string;
 }
 
-type RealtimePresence = { showroom: PresenceShopper };
+type Schema = {
+  rooms: {
+    showroom: { presence: PresenceShopper };
+  };
+};
 
 /**
  * A scripted mock WebSocket simulating other shoppers browsing the showroom concurrently.
@@ -34,7 +38,10 @@ class MockWebSocket {
 
   constructor(_url: string, _protocols?: string | string[]) {
     setTimeout(() => this.onopen?.(new Event('open')), 0);
-    setTimeout(() => this._sendPresenceState(), 50);
+    setTimeout(() => {
+      this._emit({ room: 'showroom', type: 'joined' });
+      this._sendPresenceState();
+    }, 50);
     this._scheduleNextActivity();
   }
 
@@ -102,14 +109,12 @@ export const presenceCount = computed(() => presenceSignal.value.size);
 export function setupRealtime(): void {
   (globalThis as Record<string, unknown>).WebSocket = MockWebSocket;
 
-  const pulse = createPulse<Record<string, never>, Record<string, never>, ChannelDefinitions, RealtimePresence>(
-    'wss://argentum-motors-demo/ws',
-  );
+  const pulse = createPulse<Schema>('wss://argentum-motors-demo/ws');
 
   void pulse.connect().catch(console.error);
 
-  const presenceChannel = pulse.presence('showroom');
-  const presence$ = fromPresence(presenceChannel);
+  const showroom = pulse.room('showroom');
+  const presence$ = fromRoomPresence(showroom);
 
   _presenceBinding = toSignal(presence$, { initial: new Map<string, PresenceShopper>() });
 }

@@ -38,7 +38,7 @@ events.dispose();
 ```ts
 import { fromQuery } from '@vielzeug/flux/courier';
 import { fromBus } from '@vielzeug/flux/herald';
-import { fromPresence } from '@vielzeug/flux/pulse';
+import { fromRoomPresence } from '@vielzeug/flux/pulse';
 import { fromSignal, toSignal } from '@vielzeug/flux/ripple';
 ```
 

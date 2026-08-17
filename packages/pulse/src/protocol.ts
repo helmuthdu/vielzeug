@@ -99,16 +99,12 @@ function getStringProp(frame: unknown, key: string): string | null {
   return typeof value === 'string' ? value : null;
 }
 
+function hasRoom(frame: unknown): frame is { room: string } {
+  return getStringProp(frame, 'room') !== null;
+}
+
 export function isErrorFrame(frame: unknown): frame is InErrorFrame {
   return getStringProp(frame, 'code') !== null && getStringProp(frame, 'message') !== null;
-}
-
-export function isJoinedFrame(frame: unknown): frame is InJoinedFrame {
-  return getStringProp(frame, 'room') !== null;
-}
-
-export function isLeftFrame(frame: unknown): frame is InLeftFrame {
-  return getStringProp(frame, 'room') !== null;
 }
 
 export function isMessageFrame(frame: unknown): frame is InMessageFrame {
@@ -138,11 +134,7 @@ export function isPresenceStateFrame(frame: unknown): frame is InPresenceStateFr
   return isObjectRecord(frame) && getStringProp(frame, 'room') !== null && isObjectRecord(frame.members);
 }
 
-function isSubscribedFrame(frame: unknown): frame is InSubscribedFrame {
-  return getStringProp(frame, 'channel') !== null;
-}
-
-function isUnsubscribedFrame(frame: unknown): frame is InUnsubscribedFrame {
+function hasChannel(frame: unknown): frame is { channel: string } {
   return getStringProp(frame, 'channel') !== null;
 }
 
@@ -160,11 +152,11 @@ export function decodeValidated(raw: unknown): DecodedInFrame {
 
       break;
     case 'joined':
-      if (isJoinedFrame(frame)) return { frame, kind: 'known' };
+      if (hasRoom(frame)) return { frame: frame as InJoinedFrame, kind: 'known' };
 
       break;
     case 'left':
-      if (isLeftFrame(frame)) return { frame, kind: 'known' };
+      if (hasRoom(frame)) return { frame: frame as InLeftFrame, kind: 'known' };
 
       break;
     case 'message':
@@ -188,11 +180,11 @@ export function decodeValidated(raw: unknown): DecodedInFrame {
 
       break;
     case 'subscribed':
-      if (isSubscribedFrame(frame)) return { frame, kind: 'known' };
+      if (hasChannel(frame)) return { frame: frame as InSubscribedFrame, kind: 'known' };
 
       break;
     case 'unsubscribed':
-      if (isUnsubscribedFrame(frame)) return { frame, kind: 'known' };
+      if (hasChannel(frame)) return { frame: frame as InUnsubscribedFrame, kind: 'known' };
 
       break;
     default:

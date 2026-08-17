@@ -83,12 +83,14 @@ describe('createPulse messaging', () => {
     pulse.dispose();
   });
 
-  it('rejects room operations when disconnected', async () => {
+  it('rejects room joined when disconnected', async () => {
     const { pulse } = await openPulse();
+    const lobby = pulse.room('lobby');
 
     pulse.disconnect();
 
-    await expect(pulse.join('lobby')).rejects.toBeInstanceOf(PulseConnectionError);
+    await expect(lobby.joined).rejects.toBeInstanceOf(PulseConnectionError);
+
     pulse.dispose();
   });
 });

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore(codex): refresh bundled pulse and flux docs for the Pulse 3.0 room/presence API redesign",
+      "packageName": "@vielzeug/codex",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/codex"
+}

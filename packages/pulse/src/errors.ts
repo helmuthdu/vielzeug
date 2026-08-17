@@ -28,8 +28,7 @@ export class PulseConnectionError extends PulseError {
 }
 
 /**
- * Thrown when `wait()` or `join()`/`leave()` times out before receiving a
- * server response, or when an AbortSignal fires before the event arrives.
+ * Thrown when `wait()` times out before the server event arrives.
  */
 export class PulseTimeoutError extends PulseError {
   readonly event: string;
@@ -41,7 +40,21 @@ export class PulseTimeoutError extends PulseError {
 }
 
 /**
- * Thrown when `wait()` is aborted via an AbortSignal before the event fires.
+ * Thrown when a room scope's `joined` promise times out before the server
+ * confirms membership, or when an AbortSignal fires before confirmation.
+ */
+export class PulseRoomTimeoutError extends PulseError {
+  readonly room: string;
+
+  constructor(room: string, opts?: ErrorOptions) {
+    super(`Timed out waiting for room "${room}"`, opts);
+    this.room = room;
+  }
+}
+
+/**
+ * Thrown when `wait()` is aborted via an AbortSignal before the event fires,
+ * or when a room scope's join is aborted before the server confirms.
  */
 export class PulseAbortError extends PulseError {
   constructor(opts?: ErrorOptions) {

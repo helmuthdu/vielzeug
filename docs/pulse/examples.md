@@ -1,12 +1,14 @@
 ---
-title: Pulse — Examples
-description: Practical examples and recipes for @vielzeug/pulse.
+title: Examples — Pulse
+description: Practical examples for common Pulse usage patterns.
+package: pulse
+category: websockets
 ---
 
-## Examples
+<!-- markdownlint-disable MD025 -->
 
 - [Basic Connection](./examples/basic-connection.md)
 - [Channel Multiplexing](./examples/channels.md)
-- [Rooms and Presence](./examples/rooms-and-presence.md)
-- [Reconnect and Heartbeat](./examples/reconnect-and-heartbeat.md)
 - [Outgoing Transform](./examples/middleware.md)
+- [Reconnect and Heartbeat](./examples/reconnect-and-heartbeat.md)
+- [Rooms and Presence](./examples/rooms-and-presence.md)

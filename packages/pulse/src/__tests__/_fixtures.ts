@@ -1,5 +1,5 @@
 import { createPulse } from '../pulse';
-import type { ChannelDefinitions, MessageMap, PresenceDefinitions, PulseOptions } from '../types';
+import type { PulseSchema } from '../types';
 
 export class MockWebSocket {
   static CLOSED = 3;
@@ -31,7 +31,6 @@ export class MockWebSocket {
   close(code = 1000, reason = ''): void {
     if (MockWebSocket.deferClose) {
       this.readyState = MockWebSocket.CLOSING;
-
       return;
     }
 
@@ -65,26 +64,26 @@ export class MockWebSocket {
   }
 }
 
-export type ServerEvents = { greet: { name: string }; notice: string };
-export type ClientEvents = { reply: { text: string } };
-export type Channels = {
-  chat: {
-    client: { send: { text: string } };
-    server: { message: { text: string } };
+export type TestSchema = PulseSchema & {
+  server: { greet: { name: string }; notice: string };
+  client: { reply: { text: string } };
+  channels: {
+    chat: {
+      client: { send: { text: string } };
+      server: { message: { text: string } };
+    };
+  };
+  rooms: {
+    lobby: { presence: { name: string } };
+    announcements: Record<string, never>;
   };
 };
-export type Presence = { lobby: { name: string } };
 
-export async function openPulse<
-  TServer extends MessageMap = ServerEvents,
-  TClient extends MessageMap = ClientEvents,
-  TChannels extends ChannelDefinitions = Channels,
-  TPresence extends PresenceDefinitions = Presence,
->(options: PulseOptions = {}) {
+export async function openPulse(options: Parameters<typeof createPulse<TestSchema>>[1] = {}) {
   MockWebSocket.deferClose = false;
   MockWebSocket.instances = [];
 
-  const pulse = createPulse<TServer, TClient, TChannels, TPresence>('ws://test', options);
+  const pulse = createPulse<TestSchema>('ws://test', options);
   const connected = pulse.connect();
   const socket = MockWebSocket.instances[0]!;
 
