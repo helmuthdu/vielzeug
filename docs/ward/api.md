@@ -29,12 +29,12 @@ description: Complete API reference for @vielzeug/ward.
 
 ```ts
 createWard<TAction extends string = string, TData = unknown>(
-  rules: ReadonlyArray<Readonly<WardRule<TAction, TData>>>,
+  rules: ReadonlyArray<Readonly<WardRule<TAction, TData>> | readonly Readonly<WardRule<TAction, TData>>[]>,
   options?: WardOptions<TAction, TData>,
 ): Ward<TAction, TData>;
 ```
 
-Creates an immutable ward instance. Validates `logger`, `onConflict`, and `maxConflicts` options before compiling rules; invalid values throw `WardConfigError`.
+Creates an immutable ward instance. `rules` accepts a flat mix of single rules and rule arrays — `allow()`/`deny()`/`ruleFor()` results can be passed directly without spread. Validates `logger`, `onConflict`, and `maxConflicts` options before compiling rules; invalid values throw `WardConfigError`.
 
 ## Rule Builders
 
@@ -194,6 +194,14 @@ export type WardRule<TAction extends string = string, TData = unknown> = Readonl
   role: string | typeof ANONYMOUS | readonly (string | typeof ANONYMOUS)[];
   when?: WardPredicate<TData>;
 }>;
+export type NormalizedWardRule<TAction extends string = string, TData = unknown> = Readonly<{
+  action: TAction | typeof WILDCARD;
+  effect: 'allow' | 'deny';
+  priority: number;
+  resource: string | typeof WILDCARD;
+  role: readonly string[];
+  when?: WardPredicate<TData>;
+}>;
 export type WardDecisionInput<TAction extends string = string, TData = unknown> = {
   action: TAction;
   data?: TData;
@@ -206,8 +214,10 @@ export type BoundWardDecisionInput<TAction extends string = string, TData = unkn
 >;
 ```
 
+`WardDecision`, `WardDecisionResult`, `WardTrace`, `WardTraceCandidate`, and `WardConflict` reference `NormalizedWardRule` (always-array `role`, always-number `priority`).
+
 `Ward`, `BoundWard`, `WardDecision`, `WardDecisionResult`, `WardTrace`, `WardTraceCandidate`, `WardConflict`,
-`WardOptions`, `WardCheck`, `WardAllowedActionsInput`, `WardRulesInScopeInput`, `RuleContext`,
+`NormalizedWardRule`, `WardOptions`, `WardCheck`, `WardAllowedActionsInput`, `WardRulesInScopeInput`, `RuleContext`,
 `WardLoggerContext`, and `ConflictKind` are exported from the root entry point.
 
 ## Errors

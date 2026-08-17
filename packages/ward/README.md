@@ -14,9 +14,9 @@ pnpm add @vielzeug/ward
 import { ANONYMOUS, WILDCARD, allow, createWard, deny, owns } from '@vielzeug/ward';
 
 const ward = createWard<'read' | 'update', { authorId: string }>([
-  ...allow([ANONYMOUS, 'viewer'], 'posts', ['read']),
-  ...allow('editor', 'posts', ['update'], { when: owns('authorId') }),
-  ...deny('blocked', WILDCARD, [WILDCARD], { priority: 100 }),
+  allow([ANONYMOUS, 'viewer'], 'posts', ['read']),
+  allow('editor', 'posts', ['update'], { when: owns('authorId') }),
+  deny('blocked', WILDCARD, [WILDCARD], { priority: 100 }),
 ]);
 
 const principal = { id: 'u1', roles: ['editor'] };

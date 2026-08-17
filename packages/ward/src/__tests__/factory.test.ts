@@ -2,7 +2,7 @@ import { vi } from 'vitest';
 
 import type { BoundWard, Principal, Ward, WardLoggerContext, WardPredicate } from '../index';
 
-import { ANONYMOUS, createWard, owns, WardConfigError, WardPredicateError, WILDCARD } from '../index';
+import { ANONYMOUS, allow, createWard, deny, owns, WardConfigError, WardPredicateError, WILDCARD } from '../index';
 
 const can = <TAction extends string, TData>(
   ward: Ward<TAction, TData>,
@@ -142,6 +142,56 @@ describe('ward: core decision model', () => {
 
     expect(can(permit, { id: 'u1', roles: ['admin', 'blocked'] }, 'posts', 'read')).toBe(false);
     expect(can(permit, { id: 'u1', roles: ['blocked', 'admin'] }, 'posts', 'read')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createWard accepts allow()/deny() results without spread
+// ---------------------------------------------------------------------------
+
+describe('ward: flattened rule input', () => {
+  it('accepts allow() results directly without spread', () => {
+    const permit = createWard([allow('viewer', 'posts', ['read']), deny('viewer', 'posts', ['delete'])]);
+
+    expect(can(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read')).toBe(true);
+    expect(can(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'delete')).toBe(false);
+  });
+
+  it('accepts a mix of single rules and rule arrays', () => {
+    const permit = createWard([
+      { action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' },
+      allow('editor', 'posts', ['update']),
+    ]);
+
+    expect(can(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read')).toBe(true);
+    expect(can(permit, { id: 'u2', roles: ['editor'] }, 'posts', 'update')).toBe(true);
+  });
+
+  it('still accepts spread for backward compatibility', () => {
+    const permit = createWard([...allow('viewer', 'posts', ['read']), ...deny('viewer', 'posts', ['delete'])]);
+
+    expect(can(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// NormalizedWardRule in decision output
+// ---------------------------------------------------------------------------
+
+describe('ward: NormalizedWardRule output', () => {
+  it('returns role as array and priority as number from decision.rule', () => {
+    const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }]);
+    const decision = permit.explain({
+      action: 'read',
+      principal: { id: 'u1', roles: ['viewer'] },
+      resource: 'posts',
+    });
+
+    expect(decision.allowed).toBe(true);
+    if (decision.allowed) {
+      expect(Array.isArray(decision.rule.role)).toBe(true);
+      expect(decision.rule.priority).toBe(0);
+    }
   });
 });
 

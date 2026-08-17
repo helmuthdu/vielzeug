@@ -8,16 +8,16 @@ description: Build deterministic authorization policies with immutable rule sets
 ## Basic Usage
 
 ```ts
-import { WILDCARD, createWard } from '@vielzeug/ward';
+import { WILDCARD, allow, createWard, deny } from '@vielzeug/ward';
 
 const ward = createWard([
-  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
-  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow' },
-  { role: 'blocked', resource: 'posts', action: WILDCARD, effect: 'deny', priority: 100 },
+  allow('viewer', 'posts', ['read']),
+  allow('editor', 'posts', ['update']),
+  deny('blocked', 'posts', [WILDCARD], { priority: 100 }),
 ]);
 ```
 
-Rules are immutable after creation. Create a new ward to update policy.
+`allow()`, `deny()`, and `ruleFor()` return `WardRule[]` (one rule per action). Pass them directly to `createWard` — no spread needed. Rules are immutable after creation. Create a new ward to update policy.
 
 ## Explain a Decision
 

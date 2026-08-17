@@ -8,16 +8,16 @@ export type OrderAction = 'cancel' | 'create' | 'read' | 'updateStatus';
 
 export const ward = createWard<OrderAction, Order>([
   // admin: full access to every order action.
-  ...allow('admin', 'order', ['create', 'read', 'cancel', 'updateStatus']),
+  allow('admin', 'order', ['create', 'read', 'cancel', 'updateStatus']),
 
   // sales: read every order and progress its status, but never place or cancel one on a
   // customer's behalf — that stays a self-service (or admin override) action.
-  ...allow('sales', 'order', ['read', 'updateStatus']),
+  allow('sales', 'order', ['read', 'updateStatus']),
 
   // customer: can always place a new order (there's no `data` to own yet at that point), but
   // may only read/cancel orders they themselves placed.
-  ...allow('customer', 'order', ['create']),
-  ...allow<OrderAction, Order>('customer', 'order', ['read', 'cancel'], { when: owns('userId') }),
+  allow('customer', 'order', ['create']),
+  allow<OrderAction, Order>('customer', 'order', ['read', 'cancel'], { when: owns('userId') }),
 ]);
 
 /** Starts as the seed customer — Settings lets you switch roles to see ward's effect live. */

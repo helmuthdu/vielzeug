@@ -9,6 +9,7 @@ export type {
   BoundWardDecisionInput,
   BoundWardRulesInScopeInput,
   ConflictKind,
+  NormalizedWardRule,
   Principal,
   RuleContext,
   UserPrincipal,

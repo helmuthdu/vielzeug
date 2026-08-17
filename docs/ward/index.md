@@ -5,7 +5,7 @@ package: ward
 category: auth
 keywords: [authorization, rbac, permissions, policy, roles, wildcard, predicates]
 related: [wayfinder, conduit, herald]
-exports: [createWard, allow, deny, ruleFor, owns, predicate, ANONYMOUS, WILDCARD, WardError, WardConfigError, WardPredicateError, matchesPattern, patternCovers]
+exports: [createWard, allow, deny, ruleFor, owns, predicate, ANONYMOUS, WILDCARD, WardError, WardConfigError, WardPredicateError, NormalizedWardRule, matchesPattern, patternCovers]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -22,10 +22,10 @@ Ward keeps authorization policies declarative and decision ordering deterministi
 const canUpdate = user.roles.includes('editor') && post.authorId === user.id;
 
 // After
-import { createWard, owns } from '@vielzeug/ward';
+import { allow, createWard, owns } from '@vielzeug/ward';
 
 const ward = createWard([
-  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow', when: owns('authorId') },
+  allow('editor', 'posts', ['update'], { when: owns('authorId') }),
 ]);
 
 const decision = ward.explain({ principal: user, resource: 'posts', action: 'update', data: post });
@@ -70,11 +70,11 @@ yarn add @vielzeug/ward
 Create a small policy and handle both allowed and denied decisions at the request boundary.
 
 ```ts
-import { createWard } from '@vielzeug/ward';
+import { allow, createWard } from '@vielzeug/ward';
 
 const ward = createWard([
-  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
-  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow' },
+  allow('viewer', 'posts', ['read']),
+  allow('editor', 'posts', ['update']),
 ]);
 
 const decision = ward.explain({
@@ -91,7 +91,7 @@ else console.log(decision.reason);
 
 <div class="features-grid">
 
-- `createWard()` creates immutable typed policy instances.
+- `createWard()` creates immutable typed policy instances. Accepts `allow()`/`deny()` results directly — no spread needed.
 - `allow()`, `deny()`, and `ruleFor()` build role/resource/action rules.
 - `WILDCARD` and `ANONYMOUS` model broad or unauthenticated access explicitly.
 - `owns()` and `predicate` constrain rules with synchronous request data.

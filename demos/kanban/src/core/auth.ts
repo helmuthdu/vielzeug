@@ -14,19 +14,19 @@ const isOwnerOrAssignee = predicate.or<Task>(owns('ownerId'), owns('assigneeId')
 
 export const ward = createWard<TaskAction, Task>([
   // admin: full access to all task actions
-  ...allow('admin', 'task', ['create', 'delete', 'move', 'read', 'update']),
+  allow('admin', 'task', ['create', 'delete', 'move', 'read', 'update']),
 
   // member: create, read, move freely
-  ...allow('member', 'task', ['create', 'move', 'read']),
+  allow('member', 'task', ['create', 'move', 'read']),
 
   // member: update tasks they own or are assigned to; delete only tasks they own — deletion is
   // destructive and irreversible (task-dialog.ts's `attemptDeleteTask` comment), so it stays
   // scoped to whoever created the task, not whoever's merely working on it.
-  ...allow<TaskAction, Task>('member', 'task', ['update'], { when: isOwnerOrAssignee }),
-  ...allow<TaskAction, Task>('member', 'task', ['delete'], { when: owns('ownerId') }),
+  allow<TaskAction, Task>('member', 'task', ['update'], { when: isOwnerOrAssignee }),
+  allow<TaskAction, Task>('member', 'task', ['delete'], { when: owns('ownerId') }),
 
   // viewer: read only
-  ...allow('viewer', 'task', ['read']),
+  allow('viewer', 'task', ['read']),
 ]);
 
 export const currentUser = signal<User>(seedUsers[0]);

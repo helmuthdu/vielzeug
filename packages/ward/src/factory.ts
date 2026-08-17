@@ -9,6 +9,7 @@ import type {
   BoundWardAllowedActionsInput,
   BoundWardDecisionInput,
   BoundWardRulesInScopeInput,
+  NormalizedWardRule,
   Principal,
   UserPrincipal,
   Ward,
@@ -18,6 +19,7 @@ import type {
   WardDecision,
   WardDecisionInput,
   WardDecisionResult,
+  WardLoggerContext,
   WardOptions,
   WardRule,
   WardRulesInScopeInput,
@@ -59,14 +61,14 @@ function coreRulesInScope<TAction extends string, TData>(
   principal: Principal,
   resource: string,
   data: TData | undefined,
-): CompiledEntry<TAction, TData>['rule'][] {
+): NormalizedWardRule<TAction, TData>[] {
   const skipPredicate = data === undefined;
-  const result: CompiledEntry<TAction, TData>['rule'][] = [];
+  const result: NormalizedWardRule<TAction, TData>[] = [];
 
   for (const entry of entries) {
     if (!matchesRule(entry, principal, resource, undefined, data, skipPredicate)) continue;
 
-    result.push(entry.rule);
+    result.push(entry.rule as NormalizedWardRule<TAction, TData>);
   }
 
   return result;
@@ -88,7 +90,7 @@ function coreRulesInScope<TAction extends string, TData>(
  *    **first in the input array** wins.
  */
 export function createWard<TAction extends string = string, TData = unknown>(
-  rules: readonly WardRule<TAction, TData>[] = [],
+  rules: readonly (WardRule<TAction, TData> | readonly WardRule<TAction, TData>[])[] = [],
   options: WardOptions<TAction, TData> = {},
 ): Ward<TAction, TData> {
   if (options.logger !== undefined && typeof options.logger !== 'function') {
@@ -106,7 +108,17 @@ export function createWard<TAction extends string = string, TData = unknown>(
   }
 
   const { logger, maxConflicts = Infinity } = options;
-  const entries = rules.map((rule, i) => compileEntry(rule, i));
+  const flat: WardRule<TAction, TData>[] = [];
+
+  for (const entry of rules) {
+    if (Array.isArray(entry)) {
+      for (const rule of entry) flat.push(rule);
+    } else {
+      flat.push(entry as WardRule<TAction, TData>);
+    }
+  }
+
+  const entries = flat.map((rule, i) => compileEntry(rule, i));
 
   // Warn in development when an ANONYMOUS-role rule has a predicate.
   warn(entries);
@@ -124,7 +136,15 @@ export function createWard<TAction extends string = string, TData = unknown>(
   ): void {
     if (!logger) return;
 
-    logger({ ...decision, action, data, principal, resource } as Parameters<typeof logger>[0]);
+    const ctx = {
+      ...decision,
+      action,
+      data,
+      principal,
+      resource,
+    } as WardLoggerContext<TAction, TData>;
+
+    logger(ctx);
   }
 
   function evaluateAndLog(
@@ -185,7 +205,9 @@ export function createWard<TAction extends string = string, TData = unknown>(
     return coreAllowedActions(entries, principal, resource, knownActions, data);
   }
 
-  function rulesInScope(input: WardRulesInScopeInput<TData>): ReadonlyArray<Readonly<WardRule<TAction, TData>>> {
+  function rulesInScope(
+    input: WardRulesInScopeInput<TData>,
+  ): ReadonlyArray<Readonly<NormalizedWardRule<TAction, TData>>> {
     const { data, principal, resource } = input;
 
     validatePrincipal(principal);

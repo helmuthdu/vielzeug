@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: createWard accepts allow()/deny() results without spread (flattens WardRule | readonly WardRule[] input). Add NormalizedWardRule type for decision output (role always array, priority always number). Replace unsafe WardLoggerContext cast with explicit context construction.",
+      "packageName": "@vielzeug/ward",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ward"
+}

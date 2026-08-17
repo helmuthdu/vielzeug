@@ -2,7 +2,7 @@ import type { CompiledEntry } from './_compile';
 import { ANONYMOUS, WILDCARD } from './constants';
 import { WardConfigError, WardPredicateError } from './errors';
 import { matchesPattern } from './resource';
-import type { Principal, UserPrincipal, WardDecision, WardRule } from './types';
+import type { NormalizedWardRule, Principal, UserPrincipal, WardDecision } from './types';
 
 // ---------------------------------------------------------------------------
 // Principal validation
@@ -138,8 +138,12 @@ export function toDecision<TAction extends string, TData>(
   if (!winner) return { allowed: false, reason: 'no-matching-rule' };
 
   if (winner.rule.effect === 'deny') {
-    return { allowed: false, reason: 'explicit-deny', rule: winner.rule as Readonly<WardRule<TAction, TData>> };
+    return {
+      allowed: false,
+      reason: 'explicit-deny',
+      rule: winner.rule as Readonly<NormalizedWardRule<TAction, TData>>,
+    };
   }
 
-  return { allowed: true, rule: winner.rule as Readonly<WardRule<TAction, TData>> };
+  return { allowed: true, rule: winner.rule as Readonly<NormalizedWardRule<TAction, TData>> };
 }
