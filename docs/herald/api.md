@@ -291,4 +291,4 @@ Creates a bus with `console.debug` logging. Import from `@vielzeug/herald/devtoo
 | --- | --- | --- |
 | `BusDisposedError` | `wait()` or `waitAny()` interrupted by disposal | Bus name appears when configured. |
 | `HeraldConfigError` | Invalid stream buffer, empty pipe entries, or fewer than two `waitAny()` events | — |
-| `HeraldError` | Base class for Herald-originated errors | `HeraldError.is(error)` narrows subclasses. |
+| `HeraldError` | Base class for Herald-originated errors | `instanceof HeraldError` narrows subclasses. |

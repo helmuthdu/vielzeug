@@ -178,7 +178,7 @@ export type Bus<T extends EventMap> = {
    *
    * @remarks **Buffer:** Internal buffer is unbounded by default. Pass `maxBuffer` to cap it — oldest
    * values are dropped when the buffer is full. Validation is synchronous: `maxBuffer ≤ 0` throws
-   * `RangeError` at call time, before any iteration.
+   * `HeraldConfigError` at call time, before any iteration.
    *
    * @remarks **Cleanup:** Returns an `EventStream` — use `await using` for guaranteed cleanup:
    * ```ts

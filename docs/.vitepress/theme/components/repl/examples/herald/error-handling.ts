@@ -20,11 +20,11 @@ console.log('captured errors:', errors)
 // [{ event: 'order:placed', message: 'inventory check failed' }]
 
 // Without onError, the first error rethrows once every listener has run —
-// HeraldError.is() catches it without importing every herald error subclass
+// instanceof HeraldError catches it without importing every herald error subclass
 try {
   bus.waitAny(['event-a']) // waitAny requires at least 2 event keys
 } catch (err) {
-  console.log('caught herald error?', HeraldError.is(err), '-', err.message)
+  console.log('caught herald error?', err instanceof HeraldError, '-', err.message)
 }
 
 bus.dispose()`,

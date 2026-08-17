@@ -5,10 +5,6 @@ export class HeraldError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is HeraldError {
-    return err instanceof HeraldError;
-  }
 }
 
 /** Thrown when an operation is attempted on a disposed event bus. */

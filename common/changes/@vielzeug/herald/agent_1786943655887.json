@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: fix InternalBusOptions leak — split createBus into public createBus(BusOptions) and @internal createBusInternal(InternalBusOptions). Remove HeraldError.is() type guard (use instanceof). Fix maxBuffer JSDoc to document HeraldConfigError instead of RangeError. Inline _prototype.ts isUnsafeObjectKey into testing/testing.ts and delete _prototype.ts. Update REPL error-handling example to use instanceof.",
+      "packageName": "@vielzeug/herald",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/herald"
+}

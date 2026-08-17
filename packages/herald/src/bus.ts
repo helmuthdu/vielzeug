@@ -85,7 +85,14 @@ export type InternalBusOptions<T extends EventMap> = BusOptions<T> & {
   _onDispatch?: (event: EventKey<T>, payload: unknown) => void;
 };
 
-export function createBus<T extends EventMap = Record<string, unknown>>(options?: InternalBusOptions<T>): Bus<T> {
+export function createBus<T extends EventMap = Record<string, unknown>>(options?: BusOptions<T>): Bus<T> {
+  return createBusInternal(options);
+}
+
+/** @internal */
+export function createBusInternal<T extends EventMap = Record<string, unknown>>(
+  options?: InternalBusOptions<T>,
+): Bus<T> {
   // Per-event set of Entry objects. Set identity prevents accidental dedup of entries;
   // the same fn can appear in multiple entries with independent lifetimes.
   const listeners = new Map<string, Set<Entry>>();
@@ -305,7 +312,7 @@ export function createBus<T extends EventMap = Record<string, unknown>>(options?
 
   // events() subscribes eagerly — the listener is registered when events() is called, not when
   // the first .next() runs. This ensures events emitted before iteration begins are buffered.
-  // maxBuffer is validated synchronously so callers get a RangeError at call time.
+  // maxBuffer is validated synchronously so callers get a HeraldConfigError at call time.
   function events<K extends EventKey<T>>(
     event: K,
     opts?: { maxBuffer?: number; signal?: AbortSignal },

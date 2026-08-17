@@ -1,7 +1,13 @@
 import type { Bus, BusOptions, EventKey, EventMap } from '..';
-import { isUnsafeObjectKey } from '../_prototype';
-import type { InternalBusOptions } from '../bus';
-import { createBus } from '../bus';
+import { createBusInternal } from '../bus';
+
+// Property names that must never be used as a bracket-assignment key on a plain object literal —
+// `obj[key] = value` for `key === '__proto__'` invokes `Object.prototype`'s `__proto__` accessor
+// and reassigns `obj`'s own prototype instead of setting an own property. `constructor` and
+// `prototype` are excluded defensively for the same class of risk.
+// Event names come from a caller-supplied `EventMap` type, but nothing prevents a caller from
+// wiring in a dynamically-determined (e.g. user-supplied) event name at runtime.
+const UNSAFE_OBJECT_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 /** A test bus is a regular bus with typed emission recording on top. */
 export type TestBus<T extends EventMap> = Bus<T> & {
@@ -17,7 +23,7 @@ export type TestBus<T extends EventMap> = Bus<T> & {
 
 export function createTestBus<T extends EventMap = Record<string, unknown>>(options?: BusOptions<T>): TestBus<T> {
   const records = new Map<string, unknown[]>();
-  const bus = createBus<T>({
+  const bus = createBusInternal<T>({
     ...options,
     _onDispatch: (event: EventKey<T>, payload: unknown) => {
       const list = records.get(event);
@@ -25,14 +31,14 @@ export function createTestBus<T extends EventMap = Record<string, unknown>>(opti
       if (list) list.push(payload);
       else records.set(event, [payload]);
     },
-  } as InternalBusOptions<T>);
+  });
   const disposeBus = bus.dispose;
 
   function allEmitted(): { [K in EventKey<T>]?: T[K][] } {
     const result: { [K in EventKey<T>]?: T[K][] } = {};
 
     for (const [key, list] of records) {
-      if (isUnsafeObjectKey(key)) continue;
+      if (UNSAFE_OBJECT_KEYS.has(key)) continue;
 
       (result as Record<string, unknown[]>)[key] = [...list];
     }

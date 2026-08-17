@@ -5,7 +5,7 @@ package: herald
 category: events
 keywords: [event-bus, typed-events, pub-sub, async-streams, abort-signal]
 related: [ripple, wayfinder, familiar]
-exports: [createBus, pipeEvents, combineSignals, BusDisposedError, HeraldConfigError]
+exports: [createBus, pipeEvents, combineSignals, HeraldError, BusDisposedError, HeraldConfigError]
 environments: [browser, node, ssr, deno]
 ---
 

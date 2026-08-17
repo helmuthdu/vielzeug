@@ -1697,15 +1697,15 @@ describe('createBus - events() maxBuffer guards', () => {
   });
 });
 
-describe('HeraldError.is()', () => {
+describe('HeraldError instanceof', () => {
   it('returns true for BusDisposedError and HeraldConfigError instances', () => {
-    expect(HeraldError.is(new BusDisposedError())).toBe(true);
-    expect(HeraldError.is(new HeraldConfigError('bad config'))).toBe(true);
+    expect(new BusDisposedError()).toBeInstanceOf(HeraldError);
+    expect(new HeraldConfigError('bad config')).toBeInstanceOf(HeraldError);
   });
 
   it('returns false for a plain Error or a non-error value', () => {
-    expect(HeraldError.is(new Error('plain'))).toBe(false);
-    expect(HeraldError.is('not an error')).toBe(false);
-    expect(HeraldError.is(undefined)).toBe(false);
+    expect(new Error('plain')).not.toBeInstanceOf(HeraldError);
+    expect('not an error').not.toBeInstanceOf(HeraldError);
+    expect(undefined).not.toBeInstanceOf(HeraldError);
   });
 });
