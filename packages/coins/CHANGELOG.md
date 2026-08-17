@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/coins
 
-This log was last generated on Thu, 06 Aug 2026 07:20:49 GMT and should not be manually modified.
+This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+
+## 2.1.0
+Mon, 17 Aug 2026 10:42:29 GMT
+
+### Minor changes
+
+- chore: remove decimal() from public API (Decimal type remains exported for ExchangeRate.value). Remove CoinsError.is() static method (use instanceof CoinsError). sum() now infers currency from non-empty values; { currency } only required for empty iterables. Add rounding option to FormatOptions (default halfAwayFromZero). Add FORMAT_ERROR code for format failures (replaces mislabeled INVALID_ROUNDING/INVALID_CURRENCY). Simplify divide() sign handling for readability.
 
 ## 2.0.1
 Thu, 06 Aug 2026 07:20:49 GMT

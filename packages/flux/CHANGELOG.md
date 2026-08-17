@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/flux
 
-This log was last generated on Sun, 16 Aug 2026 09:15:39 GMT and should not be manually modified.
+This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+
+## 2.3.0
+Mon, 17 Aug 2026 10:42:29 GMT
+
+### Minor changes
+
+- chore: rename fromPresence to fromRoomPresence in @vielzeug/flux/pulse adapter. Now accepts a PresenceRoomScope from the new Pulse room() API instead of a presence channel. Update peer dependency on @vielzeug/pulse to 3.0.0.
 
 ## 2.2.0
 Sun, 16 Aug 2026 09:15:39 GMT

@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove WayfinderError.is() type guard (use instanceof). Remove MatchStatus type alias (use NavigationStatus). Remove devOnly dead code. Remove RouterErrorSource and RouteChildren from public exports. Remove unused _initialBranch parameter from #runTerminal. Make commit callback required in #handleRoute. Document load middleware skip behavior. Rename matchPath() to match() and loadPath() to load() for terser public API.",
+            "commit": "718bcc53ebc51e8a171aeb3ead2518de72f6563e"
+          }
+        ]
+      },
+      "date": "Mon, 17 Aug 2026 10:42:29 GMT",
+      "tag": "@vielzeug/wayfinder_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

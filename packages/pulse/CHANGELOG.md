@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/pulse
 
-This log was last generated on Sun, 16 Aug 2026 09:15:40 GMT and should not be manually modified.
+This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+
+## 2.2.0
+Mon, 17 Aug 2026 10:42:29 GMT
+
+### Minor changes
+
+- refactor: unify room/presence API under single schema generic. Replace four createPulse generics (TServer, TClient, TChannels, TPresence) with one PulseSchema type declaring server, client, channels, and rooms. Remove pulse.join(), pulse.leave(), and channel.presence; replace with pulse.room(name) returning a ref-counted RoomScope. When the room definition includes presence, the scope exposes reactive presence state (presence, updatePresence, onJoin, onLeave); otherwise it is a plain RoomScopeBase. Extract room/presence logic into RoomRegistry (new room.ts module; presence.ts deleted). Add PulseRoomTimeoutError for room join timeouts. Fix onOpen errors during session restore being swallowed; add transportClosed guard preventing double-reset on disconnect. dispose() now rejects pending room joins with PulseDisposedError before transport close. Simplify protocol.ts type guards. Update tests, docs, REPL examples, and demos (kanban, eshop) to the new API.
 
 ## 2.1.3
 Sun, 16 Aug 2026 09:15:40 GMT

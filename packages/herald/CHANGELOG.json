@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: fix InternalBusOptions leak — split createBus into public createBus(BusOptions) and @internal createBusInternal(InternalBusOptions). Remove HeraldError.is() type guard (use instanceof). Fix maxBuffer JSDoc to document HeraldConfigError instead of RangeError. Inline _prototype.ts isUnsafeObjectKey into testing/testing.ts and delete _prototype.ts. Update REPL error-handling example to use instanceof.",
+            "commit": "a53ee49c52389753b8eacc843b574b8d9c7f23df"
+          }
+        ]
+      },
+      "date": "Mon, 17 Aug 2026 10:42:29 GMT",
+      "tag": "@vielzeug/herald_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

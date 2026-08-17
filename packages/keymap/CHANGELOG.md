@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/keymap
 
-This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+
+## 2.1.0
+Mon, 17 Aug 2026 10:42:29 GMT
+
+### Minor changes
+
+- feat(keymap): Add onChordState callback for chord progression observability. Emit 'started', 'progressed', and 'timeout' events independent of guard evaluation, enabling UI hints, logging, and debugging without blocking handler execution. Track chord state before guards to separate observation from execution. Improve documentation for guard composition and chord state independence. Add ChordStateChange to API overview.
 
 ## 2.0.0
 Mon, 10 Aug 2026 15:11:23 GMT

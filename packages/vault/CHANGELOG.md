@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/vault
 
-This log was last generated on Sun, 16 Aug 2026 09:15:40 GMT and should not be manually modified.
+This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+
+## 2.3.0
+Mon, 17 Aug 2026 10:42:29 GMT
+
+### Minor changes
+
+- refactor: simplify table() to options-object factory (replace .index().ttl() builder chain). Drop TtlMs branded type (ttl.* helpers return plain number). Merge totalCount() into count() (ignores limit/offset/orderBy). Simplify scheduleExpiredPrune (drop VaultDisposedError special-case, use shared assertPositiveFinite). Move MigrationContext, MigrationFn, MigrationStep, and defineMigration into @vielzeug/vault/indexeddb. Move TransactionContext out of root entry to /indexeddb and /sqlite subpaths. Simplify VaultLogger.error to message-first signature.
 
 ## 2.2.0
 Sun, 16 Aug 2026 09:15:40 GMT

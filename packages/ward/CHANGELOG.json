@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: createWard accepts allow()/deny() results without spread (flattens WardRule | readonly WardRule[] input). Add NormalizedWardRule type for decision output (role always array, priority always number). Replace unsafe WardLoggerContext cast with explicit context construction.",
+            "commit": "090a86b4a13e5173c60707392c9ba1b45316d4f3"
+          }
+        ]
+      },
+      "date": "Mon, 17 Aug 2026 10:42:29 GMT",
+      "tag": "@vielzeug/ward_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

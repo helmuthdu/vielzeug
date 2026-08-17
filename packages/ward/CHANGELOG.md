@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ward
 
-This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+
+## 2.1.0
+Mon, 17 Aug 2026 10:42:29 GMT
+
+### Minor changes
+
+- feat: createWard accepts allow()/deny() results without spread (flattens WardRule | readonly WardRule[] input). Add NormalizedWardRule type for decision output (role always array, priority always number). Replace unsafe WardLoggerContext cast with explicit context construction.
 
 ## 2.0.0
 Mon, 10 Aug 2026 15:11:23 GMT

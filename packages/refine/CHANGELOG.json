@@ -4,6 +4,21 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/keymap\" to `2.1.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/tempo\" to `2.1.0`"
+          }
+        ]
+      },
+      "date": "Mon, 17 Aug 2026 10:42:29 GMT",
+      "tag": "@vielzeug/refine_v2.1.6",
+      "version": "2.1.6"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/orbit\" to `2.1.0`"
           }
         ]

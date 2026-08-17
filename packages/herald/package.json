@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/herald",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Typed event bus — pub/sub with namespaces, wildcards, and once-listeners",
   "repository": {
     "type": "git",

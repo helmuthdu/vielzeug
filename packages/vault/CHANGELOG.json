@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: simplify table() to options-object factory (replace .index().ttl() builder chain). Drop TtlMs branded type (ttl.* helpers return plain number). Merge totalCount() into count() (ignores limit/offset/orderBy). Simplify scheduleExpiredPrune (drop VaultDisposedError special-case, use shared assertPositiveFinite). Move MigrationContext, MigrationFn, MigrationStep, and defineMigration into @vielzeug/vault/indexeddb. Move TransactionContext out of root entry to /indexeddb and /sqlite subpaths. Simplify VaultLogger.error to message-first signature.",
+            "commit": "2dee26580007bd090aadf60bcff6130169cbab43"
+          }
+        ]
+      },
+      "date": "Mon, 17 Aug 2026 10:42:29 GMT",
+      "tag": "@vielzeug/vault_v2.3.0",
+      "version": "2.3.0"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "chore: remove VaultError.is() static type guard (use instanceof VaultError); remove dead wrapStored/unwrapStored/readWithTtl helpers from ttl.ts; remove dead devOnly from _dev.ts; export TransactionContext type from @vielzeug/vault/sqlite subpath (was only available from indexeddb subpath)",
             "commit": "0c22e485f1afdb80a8c4fdb5872150068929ada2"
           }

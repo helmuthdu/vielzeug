@@ -6,6 +6,25 @@
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "chore(codex): refresh bundled docs data",
+            "commit": "562cdfef9c85cf413bf47a5ce1e5d929e77fc0b4"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(codex): refresh bundled pulse and flux docs for the Pulse 3.0 room/presence API redesign",
+            "commit": "79638456eb2011af16cfe4025447d2f677dda1a3"
+          }
+        ]
+      },
+      "date": "Mon, 17 Aug 2026 10:42:29 GMT",
+      "tag": "@vielzeug/codex_v2.2.3",
+      "version": "2.2.3"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(codex): refresh bundled docs data",
             "commit": "a0c83fd31018e565e2b4809d37c377867b3e9221"
           }
         ]

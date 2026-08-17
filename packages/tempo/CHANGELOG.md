@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/tempo
 
-This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+
+## 2.1.0
+Mon, 17 Aug 2026 10:42:29 GMT
+
+### Minor changes
+
+- refactor: remove TempoError.is() type guard (use instanceof). Fix formatZoned and formatInstant JSDoc to accurately document timeZone requirements and @throws clauses. Fix _floor.ts weekStartsOn type to use WeekStartDay instead of number. Move normalizeRange from _tz.ts to compare.ts (only consumer). Add tests for 12 previously untested functions: isValid, startOf, endOf, formatRange, formatRangeParts, formatZoned, formatRelative, formatParts, parseDuration, formatDuration, humanize, timeDiff.
 
 ## 2.0.0
 Mon, 10 Aug 2026 15:11:23 GMT

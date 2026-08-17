@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove TempoError.is() type guard (use instanceof). Fix formatZoned and formatInstant JSDoc to accurately document timeZone requirements and @throws clauses. Fix _floor.ts weekStartsOn type to use WeekStartDay instead of number. Move normalizeRange from _tz.ts to compare.ts (only consumer). Add tests for 12 previously untested functions: isValid, startOf, endOf, formatRange, formatRangeParts, formatZoned, formatRelative, formatParts, parseDuration, formatDuration, humanize, timeDiff.",
+            "commit": "cb414333224ffa459f38ff9a438d07ad5dcc8f22"
+          }
+        ]
+      },
+      "date": "Mon, 17 Aug 2026 10:42:29 GMT",
+      "tag": "@vielzeug/tempo_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
         "major": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

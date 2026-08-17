@@ -1,6 +1,14 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Sun, 16 Aug 2026 10:35:40 GMT and should not be manually modified.
+This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+
+## 2.2.3
+Mon, 17 Aug 2026 10:42:29 GMT
+
+### Patches
+
+- chore(codex): refresh bundled docs data
+- chore(codex): refresh bundled pulse and flux docs for the Pulse 3.0 room/presence API redesign
 
 ## 2.2.2
 Sun, 16 Aug 2026 10:35:40 GMT

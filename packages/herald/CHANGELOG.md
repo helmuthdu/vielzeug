@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/herald
 
-This log was last generated on Mon, 10 Aug 2026 15:11:23 GMT and should not be manually modified.
+This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+
+## 2.1.0
+Mon, 17 Aug 2026 10:42:29 GMT
+
+### Minor changes
+
+- refactor: fix InternalBusOptions leak — split createBus into public createBus(BusOptions) and @internal createBusInternal(InternalBusOptions). Remove HeraldError.is() type guard (use instanceof). Fix maxBuffer JSDoc to document HeraldConfigError instead of RangeError. Inline _prototype.ts isUnsafeObjectKey into testing/testing.ts and delete _prototype.ts. Update REPL error-handling example to use instanceof.
 
 ## 2.0.0
 Mon, 10 Aug 2026 15:11:23 GMT
