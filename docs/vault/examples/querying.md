@@ -11,9 +11,9 @@ You need to filter, sort, and paginate records from a table, and you need both a
 
 ### Solution
 
-Use `db.query(table)` to build a lazy pipeline. Chain filter operators (`filter`, `equals`, `between`, `startsWith`) and presentation operators (`orderBy`, `limit`, `offset`). Call `toArray()`, `first()`, `count()`, `totalCount()`, or `delete()` as the terminal step.
+Use `db.query(table)` to build a lazy pipeline. Chain filter operators (`filter`, `equals`, `between`, `startsWith`) and presentation operators (`orderBy`, `limit`, `offset`). Call `toArray()`, `first()`, `count()`, or `delete()` as the terminal step.
 
-`count()` respects `limit` and `offset` — it returns records in the current page slice. `totalCount()` ignores `limit`, `offset`, and `orderBy`, returning the full filtered-set size. Use both together for "page X of N" UIs.
+`count()` ignores `limit`, `offset`, and `orderBy` — it always returns the full filtered-set size. Use it for "page X of N" UIs without a second query.
 
 ```ts
 import { table } from '@vielzeug/vault';
@@ -45,7 +45,7 @@ const page = await q
 // → [{ id: 4, ... price: 19 }, { id: 2, ... price: 49 }]
 
 // Total filtered count — ignores limit/offset/orderBy
-const total = await q.totalCount();
+const total = await q.count();
 // → 3 (all peripherals, regardless of pagination)
 
 console.log(`Page ${pageIndex + 1} of ${Math.ceil(total / pageSize)}`); // Page 1 of 2
@@ -73,9 +73,9 @@ const deleted = await db
 
 ### Pitfalls
 
-- Query pipelines are lazy — calling `.limit(10)` does not execute anything. Only the terminal call (`toArray()`, `count()`, `totalCount()`, `first()`, `delete()`) triggers execution.
-- `count()` respects `limit` and `offset`. If you only want the filter count without pagination, call `totalCount()` on a pipeline without `limit`/`offset`, or call `totalCount()` on the paginated pipeline (it ignores them automatically).
-- `totalCount()` still applies all filter operators (`filter`, `equals`, `between`, `startsWith`). Only presentation-only operators (`limit`, `offset`, `orderBy`) are excluded. A bare `db.query('products').totalCount()` returns all live records.
+- Query pipelines are lazy — calling `.limit(10)` does not execute anything. Only the terminal call (`toArray()`, `count()`, `first()`, `delete()`) triggers execution.
+- `count()` ignores `limit`, `offset`, and `orderBy`. It always returns the full filtered-set size — use it directly for paginated total-count queries.
+- `count()` still applies all filter operators (`filter`, `equals`, `between`, `startsWith`). A bare `db.query('products').count()` returns all live records.
 - `between(field, lower, upper)` is inclusive on both ends. For exclusive ranges, use `.filter()` with a custom predicate.
 - Memory and Web Storage queries always scan the full table. IndexedDB can push an initial `equals()`, `between()`, or case-sensitive `startsWith()` filter to a primary key or declared secondary index. SQLite provides the same push-down for primary keys; other SQLite fields filter in memory. For large tables, prefer `iterate()` on IndexedDB or SQLite instead of materializing every record.
 

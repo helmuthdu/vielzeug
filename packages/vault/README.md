@@ -43,25 +43,6 @@ SQLite values must be JSON-compatible plain objects. SQLite operations execute s
 
 Vault stores record values and expiry metadata using each adapter's native layout. Number and string primary keys are tagged internally, so `1` and `'1'` are distinct everywhere.
 
-## Vault 3.0 migration
-
-Adapter factories no longer come from the root entry. Import shared schema and types from `@vielzeug/vault`, then import a factory from its dedicated subpath:
-
-```ts
-import { table } from '@vielzeug/vault';
-import { createIndexedDB } from '@vielzeug/vault/indexeddb';
-import { createLocalStorage } from '@vielzeug/vault/local-storage';
-```
-
-Import each adapter from its focused subpath so unused storage backends stay out of the bundle.
-
-## Vault 2.0 migration
-
-- Replace `Adapter` with `VaultStore`; replace `IndexedDbAdapter` with `IndexedDbVaultStore`.
-- `batch()` is available only on `createIndexedDB` and `createSQLite`. Use one of those adapters where atomic work is required.
-- Use `observe()` for reactivity. `watch`, `observeMany`, constructor `signals`, and `toReadableStream` were removed.
-- Custom codecs, `defaultCodec`, and `createVersionedCodec` were removed; migrate existing data to the fixed envelope before upgrading.
-
 ## Documentation
 
 - [Overview](https://vielzeug.dev/vault/)

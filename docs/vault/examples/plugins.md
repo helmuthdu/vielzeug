@@ -105,7 +105,7 @@ import { table } from '@vielzeug/vault';
 import { createIndexedDB, type MigrationFn } from '@vielzeug/vault/indexeddb';
 
 type User = { id: number; name: string };
-const schema = { users: table<User>('id').index('name') };
+const schema = { users: table<User>('id', { indexes: ['name'] }) };
 
 const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
   if (oldVersion < 2 && db.objectStoreNames.contains('users')) {

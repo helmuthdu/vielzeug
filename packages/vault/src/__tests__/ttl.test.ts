@@ -1,4 +1,4 @@
-import { type TtlMs, table, ttl } from '../index';
+import { table, ttl } from '../index';
 import { createLocalStorage } from '../local-storage';
 
 type User = { age?: number; city?: string; id: number; name?: string };
@@ -92,7 +92,7 @@ describe('ttl helpers', () => {
 
       const db = createLocalStorage({ name: 'TtlHelper', schema: userSchema });
 
-      await expect(db.put('users', { id: 1, name: 'Alice' }, Number.NaN as unknown as TtlMs)).rejects.toThrow(
+      await expect(db.put('users', { id: 1, name: 'Alice' }, Number.NaN)).rejects.toThrow(
         'expected a finite positive number',
       );
     });

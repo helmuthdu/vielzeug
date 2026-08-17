@@ -12,16 +12,85 @@ import { VaultDisposedError, VaultError, VaultMigrationError } from '../errors';
 import { encodeVaultKey, getRecordKey } from '../internal';
 import type { NativeRange } from '../query';
 import { isExpired, parseStored, type StoredRecord } from '../ttl';
-import type {
-  AnySchema,
-  BaseAdapterOptions,
-  IndexedDbVaultStore,
-  KeyOf,
-  MigrationFn,
-  RecordOf,
-  TransactionContext,
-  TtlMs,
-} from '../types';
+import type { AnySchema, BaseAdapterOptions, IndexedDbVaultStore, KeyOf, RecordOf, TransactionContext } from '../types';
+
+export type { IndexedDbVaultStore };
+
+/** IndexedDB-only migration context supplied to `MigrationFn` during `onupgradeneeded`. */
+export type MigrationContext = {
+  db: IDBDatabase;
+  newVersion: number | null;
+  oldVersion: number;
+  tx: IDBTransaction;
+};
+
+/** Synchronous IndexedDB schema upgrade callback. */
+export type MigrationFn = (ctx: MigrationContext) => void;
+
+/**
+ * A single step in a typed migration definition.
+ * Compose multiple steps to describe the full schema change between two versions.
+ */
+export type MigrationStep =
+  | { field: string; table: string; type: 'addIndex' }
+  | { field: string; table: string; type: 'removeIndex' }
+  | { name: string; type: 'addTable' }
+  | { name: string; type: 'removeTable' };
+
+/**
+ * Builds a typed `MigrationFn` from a declarative list of schema change steps.
+ * Each step is applied in order and is idempotent (safe to run when the target
+ * already exists or has already been removed).
+ *
+ * ```ts
+ * const migrate = defineMigration([
+ *   { type: 'addTable', name: 'sessions' },
+ *   { type: 'addIndex', table: 'users', field: 'email' },
+ *   { type: 'removeTable', name: 'legacyTokens' },
+ * ]);
+ *
+ * const db = createIndexedDB({ name: 'app', version: 2, schema, migrate });
+ * ```
+ */
+export function defineMigration(steps: MigrationStep[]): MigrationFn {
+  return ({ db, tx }) => {
+    for (const step of steps) {
+      switch (step.type) {
+        case 'addIndex': {
+          const store = tx.objectStore(step.table);
+
+          // keyPath mirrors the vault storage envelope: { value: T, expiresAt?: number }
+          if (!store.indexNames.contains(step.field)) {
+            store.createIndex(step.field, `value.${step.field}`);
+          }
+
+          break;
+        }
+        case 'addTable':
+          if (!db.objectStoreNames.contains(step.name)) {
+            db.createObjectStore(step.name);
+          }
+
+          break;
+        case 'removeIndex': {
+          const store = tx.objectStore(step.table);
+
+          if (store.indexNames.contains(step.field)) {
+            store.deleteIndex(step.field);
+          }
+
+          break;
+        }
+        case 'removeTable':
+          if (db.objectStoreNames.contains(step.name)) {
+            db.deleteObjectStore(step.name);
+          }
+
+          break;
+      }
+    }
+  };
+}
 
 function idbReq<R>(request: IDBRequest<R>): Promise<R> {
   return new Promise<R>((resolve, reject) => {
@@ -167,8 +236,8 @@ async function storePutAt<T>(
   store: IDBObjectStore,
   key: IDBValidKey,
   value: T,
-  encode: (v: T, ttl?: TtlMs) => unknown,
-  ttl?: TtlMs,
+  encode: (v: T, ttl?: number) => unknown,
+  ttl?: number,
 ): Promise<void> {
   await idbReq(store.put(encode(value, ttl), key));
 }
@@ -325,7 +394,7 @@ function buildIdbBatchCore<S extends AnySchema, K extends keyof S & string>(
   schema: S,
   idbTx: IDBTransaction,
   decode: <T extends object>(raw: unknown) => T | undefined,
-  encode: <T>(value: T, ttl?: TtlMs) => unknown,
+  encode: <T>(value: T, ttl?: number) => unknown,
 ): StorageBackend<S, K> {
   const storeOf = (table: K): IDBObjectStore => idbTx.objectStore(table);
 
@@ -384,7 +453,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
     return !stored || isExpired(stored.expiresAt) ? undefined : stored.value;
   };
 
-  const encode = <T>(value: T, ttl?: TtlMs): StoredRecord<T> => {
+  const encode = <T>(value: T, ttl?: number): StoredRecord<T> => {
     return ttl === undefined ? { value } : { expiresAt: Date.now() + ttl, value };
   };
 

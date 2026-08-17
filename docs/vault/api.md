@@ -15,7 +15,7 @@ description: Reference for Vault schemas, adapter entry points, storage capabili
 | `createSQLite()` | Driver-neutral SQLite store | Async API over a synchronous driver | Import from `/sqlite` |
 | `table()` | Typed record schema | Sync | The key field must be a string or finite number |
 | `ttl` | Valid expiration durations | Sync | Durations must be positive |
-| `scheduleExpiredPrune()` | Periodic TTL cleanup | Sync setup, async work | Stop it or give it an abort signal |
+| `scheduleExpiredPrune()` | Periodic TTL cleanup | Sync setup, async work | Pass `disposalSignal` to auto-cancel |
 
 ## Package Entry Points
 
@@ -25,7 +25,7 @@ description: Reference for Vault schemas, adapter entry points, storage capabili
 | `@vielzeug/vault/memory` | `createMemory` |
 | `@vielzeug/vault/local-storage` | `createLocalStorage` |
 | `@vielzeug/vault/session-storage` | `createSessionStorage` |
-| `@vielzeug/vault/indexeddb` | `createIndexedDB`, migrations, and IndexedDB-only types |
+| `@vielzeug/vault/indexeddb` | `createIndexedDB`, `defineMigration`, migrations, and IndexedDB-only types |
 | `@vielzeug/vault/sqlite` | `createSQLite`, the SQLite driver protocol types, and `TransactionContext` |
 
 ## Schemas and TTL
@@ -35,7 +35,8 @@ description: Reference for Vault schemas, adapter entry points, storage capabili
 ```ts
 function table<T extends object, Key extends keyof T & string = keyof T & string>(
   key: Key & (T[Key] extends VaultKey ? unknown : never),
-): TableBuilder<T, Key>;
+  options?: { defaultTtl?: number; indexes?: readonly (keyof T & string)[] },
+): SchemaEntry<T, Key>;
 ```
 
 Defines a typed table and its primary-key field.
@@ -43,13 +44,18 @@ Defines a typed table and its primary-key field.
 | Parameter | Description |
 | --- | --- |
 | `key` | A record field whose values are `string` or finite `number` keys |
+| `options.defaultTtl` | Per-table default TTL in milliseconds |
+| `options.indexes` | IndexedDB secondary index fields |
 
-**Returns:** A table builder. Call `.ttl()` to set a default expiry and `.index()` to declare an IndexedDB secondary index.
+**Returns:** A `SchemaEntry` describing the table.
 
 ```ts
 import { table, ttl } from '@vielzeug/vault';
 
-const users = table<{ id: number; email: string }>('id').index('email').ttl(ttl.days(7));
+const users = table<{ id: number; email: string }>('id', {
+  indexes: ['email'],
+  defaultTtl: ttl.days(7),
+});
 ```
 
 ---
@@ -58,17 +64,17 @@ const users = table<{ id: number; email: string }>('id').index('email').ttl(ttl.
 
 ```ts
 const ttl: {
-  days(n: number): TtlMs;
-  hours(n: number): TtlMs;
-  minutes(n: number): TtlMs;
-  ms(n: number): TtlMs;
-  seconds(n: number): TtlMs;
+  days(n: number): number;
+  hours(n: number): number;
+  minutes(n: number): number;
+  ms(n: number): number;
+  seconds(n: number): number;
 };
 ```
 
-Creates a branded, finite, positive duration for writes and table defaults.
+Creates a finite, positive duration in milliseconds for writes and table defaults.
 
-**Returns:** `TtlMs`.
+**Returns:** `number`.
 
 ```ts
 import { ttl } from '@vielzeug/vault';
@@ -339,11 +345,10 @@ interface QueryBuilder<T extends object, N extends T = T> {
   orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T, N>;
   startsWith(field: keyof T, prefix: string, options?: { ignoreCase?: boolean }): QueryBuilder<T, N>;
   toArray(): Promise<N[]>;
-  totalCount(): Promise<number>;
 }
 ```
 
-Builds a lazy table query. `count()` respects `limit()` and `offset()`; `totalCount()` ignores pagination and ordering.
+Builds a lazy table query. `count()` ignores `limit()`, `offset()`, and `orderBy()` — it always returns the full filtered-set size.
 
 ```ts
 const page = await store.query('users').startsWith('name', 'A').orderBy('name').limit(20).toArray();
@@ -364,14 +369,17 @@ function scheduleExpiredPrune<S extends AnySchema>(
 ): () => void;
 ```
 
-Schedules `pruneExpired()` at a finite, positive interval.
+Schedules `pruneExpired()` at a finite, positive interval. Pass `signal: store.disposalSignal` to auto-cancel when the store is torn down.
 
 **Returns:** A stop function.
 
 ```ts
 import { scheduleExpiredPrune, ttl } from '@vielzeug/vault';
 
-const stop = scheduleExpiredPrune(store, { interval: ttl.hours(1), signal: store.disposalSignal });
+const stop = scheduleExpiredPrune(store, {
+  interval: ttl.hours(1),
+  signal: store.disposalSignal,
+});
 stop();
 ```
 
@@ -397,25 +405,19 @@ const migrate = defineMigration([{ field: 'email', table: 'users', type: 'addInd
 
 ```ts
 type VaultKey = number | string;
-type TtlMs = number & { readonly [ttlMsBrand]: never };
 type Unsubscribe = () => void;
 type Observer<T> = (records: T[]) => void;
 type AnySchema = Record<string, {
-  defaultTtl?: TtlMs;
+  defaultTtl?: number;
   indexes?: readonly string[];
   key: string;
 }>;
 type SchemaEntry<T extends object, Key extends keyof T & string = keyof T & string> =
   T[Key] extends VaultKey ? {
-    defaultTtl?: TtlMs;
+    defaultTtl?: number;
     indexes?: readonly (keyof T & string)[];
     key: Key;
   } : never;
-type TableBuilder<T extends object, Key extends keyof T & string = keyof T & string> =
-  SchemaEntry<T, Key> & {
-    index: <F extends keyof T & string>(field: F) => TableBuilder<T, Key>;
-    ttl: (ms: TtlMs) => TableBuilder<T, Key>;
-  };
 type RecordOf<S extends AnySchema, K extends keyof S> =
   S[K] extends SchemaEntry<infer R, infer _Key> ? R : never;
 type KeyOf<S extends AnySchema, K extends keyof S> =
@@ -430,13 +432,13 @@ type BaseAdapterOptions<S extends AnySchema> = {
   validators?: TableValidators<S>;
 };
 
-interface VaultLogger {
-  error(messageOrContext?: Record<string, unknown> | Error | string, message?: string): void;
-}
+type VaultLogger = {
+  error(message: string, context?: Error | Record<string, unknown>): void;
+};
 
-interface RecordValidator<T> {
+type RecordValidator<T> = {
   parse(value: unknown): T;
-}
+};
 
 type TableValidators<S extends AnySchema> = {
   [K in keyof S]?: RecordValidator<RecordOf<S, K>>;
@@ -455,6 +457,9 @@ type DebugInfo<S extends AnySchema> = { tables: Array<{ name: keyof S & string }
 ```
 
 ```ts
+interface IndexedDbVaultStore<S extends AnySchema>
+  extends TransactionalVaultStore<S>, IterableVaultStore<S> {}
+
 type MigrationContext = {
   db: IDBDatabase;
   newVersion: number | null;
@@ -469,10 +474,9 @@ type MigrationStep =
   | { field: string; table: string; type: 'removeIndex' }
   | { name: string; type: 'addTable' }
   | { name: string; type: 'removeTable' };
-
-interface IndexedDbVaultStore<S extends AnySchema>
-  extends TransactionalVaultStore<S>, IterableVaultStore<S> {}
 ```
+
+Import `MigrationContext`, `MigrationFn`, and `MigrationStep` from `@vielzeug/vault/indexeddb`.
 
 ```ts
 type SQLiteParameter = null | number | string;

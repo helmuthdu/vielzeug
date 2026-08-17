@@ -2,7 +2,7 @@ import { VaultError } from './errors';
 
 type Predicate<T> = (value: T, index: number, array: T[]) => boolean;
 /**
- * `isNonFilter`: when true this op is excluded from `totalCount()` — it does not restrict
+ * `isNonFilter`: when true this op is excluded from `count()` — it does not restrict
  * *which* records match (limit, offset, orderBy), only how results are presented.
  */
 type QueryOp<T> = { apply: (data: T[]) => T[]; isNonFilter?: boolean };
@@ -58,9 +58,10 @@ type ChainedQuery<T extends object, N extends T, Self extends ChainedQuery<T, N,
     upper: Extract<NonNullable<T[K]>, number | string>,
   ): QueryBuilder<T, N>;
   /**
-   * Returns the number of records matching all applied operations, including `limit` and `offset`.
-   * To get the full filtered set size regardless of pagination (e.g. for "page X of N" UIs),
-   * use `totalCount()` instead.
+   * Returns the number of records matching the applied filter predicates.
+   * Presentation-only ops (`limit`, `offset`, `orderBy`) are intentionally ignored — this
+   * always counts the full filtered set, making paginated total-count queries possible
+   * without a second query.
    */
   count(): Promise<number>;
   /**
@@ -95,13 +96,6 @@ type ChainedQuery<T extends object, N extends T, Self extends ChainedQuery<T, N,
    */
   startsWith<K extends keyof T>(field: K, prefix: string, options?: { ignoreCase?: boolean }): QueryBuilder<T, N>;
   toArray(): Promise<N[]>;
-  /**
-   * Returns the number of records matching the applied filter predicates.
-   * Presentation-only ops (`limit`, `offset`, `orderBy`) are intentionally ignored — this
-   * always counts the full filtered set, making paginated total-count queries possible
-   * without a second query.
-   */
-  totalCount(): Promise<number>;
 };
 
 /** Extends the shared query API with `delete()`. Available on stores and IndexedDB transaction callbacks. */
@@ -174,7 +168,9 @@ export function createQueryBuilder<T extends object, N extends T = T>(
       }) as unknown as QueryBuilder<T, N>;
     },
     count(): Promise<number> {
-      return applyOps(ctx, ops).then((r) => r.length);
+      const filterOps = ops.filter((op) => !op.isNonFilter);
+
+      return applyOps(ctx, filterOps).then((r) => r.length);
     },
     async delete(): Promise<number> {
       if (!ctx.deleteMany) {
@@ -289,11 +285,6 @@ export function createQueryBuilder<T extends object, N extends T = T>(
     },
     toArray(): Promise<N[]> {
       return applyOps(ctx, ops) as Promise<N[]>;
-    },
-    totalCount(): Promise<number> {
-      const filterOps = ops.filter((op) => !op.isNonFilter);
-
-      return applyOps(ctx, filterOps).then((r) => r.length);
     },
   };
 }

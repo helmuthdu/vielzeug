@@ -8,7 +8,7 @@ const schema = {
 
 const db = createLocalStorage({ name: 'cache-demo', schema })
 
-// ttl helpers produce a branded TtlMs value — raw numbers are rejected by the type system
+// ttl helpers produce finite, positive millisecond durations
 await db.put('cache', { id: 'short', data: 'Expires in 1 second' }, ttl.seconds(1))
 await db.put('cache', { id: 'long', data: 'Expires in 5 minutes' }, ttl.minutes(5))
 console.log('Stored records with TTL')

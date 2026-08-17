@@ -8,7 +8,7 @@ import {
   getRecordKey,
 } from '../internal';
 import { isExpired, parseStored } from '../ttl';
-import type { AnySchema, BaseAdapterOptions, KeyOf, RecordOf, TtlMs, VaultStore } from '../types';
+import type { AnySchema, BaseAdapterOptions, KeyOf, RecordOf, VaultStore } from '../types';
 
 // Firefox historically threw 'NS_ERROR_DOM_QUOTA_REACHED'; modern browsers use the standard name.
 const QUOTA_ERROR_NAMES = new Set(['QuotaExceededError', 'NS_ERROR_DOM_QUOTA_REACHED']);
@@ -303,7 +303,7 @@ function createWebStorageAdapter<S extends AnySchema>(
       return expiredKeys.length;
     },
 
-    async put<K extends keyof S & string>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void> {
+    async put<K extends keyof S & string>(table: K, value: RecordOf<S, K>, ttl?: number): Promise<void> {
       const storageKey = encodeStorageKey(name, table, getRecordKey(schema, table, value));
       const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
 
@@ -311,7 +311,7 @@ function createWebStorageAdapter<S extends AnySchema>(
       ownedKeys.add(storageKey);
     },
 
-    async putAll<K extends keyof S & string>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void> {
+    async putAll<K extends keyof S & string>(table: K, values: RecordOf<S, K>[], ttl?: number): Promise<void> {
       const expiresAt = ttl !== undefined ? Date.now() + ttl : undefined;
 
       for (const value of values) {

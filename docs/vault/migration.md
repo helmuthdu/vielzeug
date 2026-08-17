@@ -3,6 +3,40 @@ title: Vault Migration
 description: Move Vault adapter imports to focused entry points and update capability-specific storage code.
 ---
 
+# Vault 2.3 Migration
+
+Vault 2.3 simplifies the schema builder, removes the TTL brand, consolidates query counts, and moves capability types out of the root entry.
+
+## Replace `table()` builder chain with options object
+
+```ts
+// Before
+const users = table<User>('id').index('email').ttl(ttl.days(7));
+
+// After
+const users = table<User>('id', { indexes: ['email'], defaultTtl: ttl.days(7) });
+```
+
+## Replace `totalCount()` with `count()`
+
+`count()` now ignores `limit`, `offset`, and `orderBy` — it always returns the full filtered-set size. The separate `totalCount()` method was removed.
+
+```ts
+// Before
+const total = await query.totalCount();
+
+// After
+const total = await query.count();
+```
+
+## Drop the `TtlMs` brand
+
+`ttl.*` helpers now return plain `number`. Remove any `TtlMs` type references — they accept `number` directly.
+
+## Move capability types to adapter subpaths
+
+`TransactionContext`, `MigrationContext`, `MigrationFn`, and `MigrationStep` are no longer in the root entry. Import them from `@vielzeug/vault/indexeddb` (and `TransactionContext` also from `@vielzeug/vault/sqlite`).
+
 # Vault 2.0 Migration
 
 Vault 2.0 redesigns browser storage around portable keys, fixed envelopes, capability-specific stores, `observe()` and makes the root entry adapter-free. Import schemas, shared types, TTL, errors, and pruning from `@vielzeug/vault`; import exactly one storage adapter from a dedicated subpath.
@@ -14,7 +48,6 @@ Vault 2.0 redesigns browser storage around portable keys, fixed envelopes, capab
 | `import { createMemory, table } from '@vielzeug/vault'` | `import { table } from '@vielzeug/vault'; import { createMemory } from '@vielzeug/vault/memory'` |
 | `createLocalStorage` / `createSessionStorage` from the root | `/local-storage` or `/session-storage` |
 | `createIndexedDB`, `defineMigration`, or IndexedDB types from the root | `@vielzeug/vault/indexeddb` |
-
 The `/browser` aggregate was removed. Import each browser adapter from its focused subpath. `@vielzeug/vault/sqlite` remains the opt-in SQLite entry.
 
 - Replace `Adapter` with `VaultStore`.

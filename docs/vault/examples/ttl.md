@@ -11,7 +11,7 @@ You need records to expire automatically after a fixed duration. You also want t
 
 ### Solution
 
-Pass a `TtlMs` value as the third argument to `put()` or `putAll()`. Use `ttl.*` helpers to create the value — raw numbers are rejected by the type system. For per-table defaults, chain `.ttl()` on the `table()` call. For explicit cleanup, call `pruneExpired()` or schedule it with `scheduleExpiredPrune`.
+Pass a positive millisecond duration as the third argument to `put()` or `putAll()`. Use `ttl.*` helpers to create the value. For per-table defaults, pass `defaultTtl` to the `table()` call. For explicit cleanup, call `pruneExpired()` or schedule it with `scheduleExpiredPrune`.
 
 ```ts
 import { scheduleExpiredPrune, table, ttl } from '@vielzeug/vault';
@@ -21,7 +21,7 @@ type Session = { id: string; userId: number };
 
 // Per-table default: every write to sessions uses 30 minutes unless overridden
 const schema = {
-  sessions: table<Session>('id').ttl(ttl.minutes(30)),
+  sessions: table<Session>('id', { defaultTtl: ttl.minutes(30) }),
 };
 
 const db = createMemory({ schema });
@@ -44,8 +44,11 @@ await db.put('sessions', { id: 's5', userId: 5 }, ttl.days(7));
 const pruned = await db.pruneExpired();
 console.log(pruned); // { sessions: 0 } — none have expired yet
 
-// Schedule periodic pruning for write-heavy tables
-const stop = scheduleExpiredPrune(db, { interval: ttl.hours(1), signal: db.disposalSignal });
+// Schedule periodic pruning tied to the adapter lifetime
+const stop = scheduleExpiredPrune(db, {
+  interval: ttl.hours(1),
+  signal: db.disposalSignal,
+});
 
 // On app teardown (before dispose)
 stop();
@@ -66,10 +69,10 @@ for (const t of info.tables) {
 
 ### Pitfalls
 
-- Expired records are evicted **lazily** on the next read to that key. If a table is written to frequently but rarely read, expired records accumulate. Call `pruneExpired()` or `scheduleExpiredPrune` to reclaim storage proactively.
+- Expired records are evicted **lazily** on the next read to that key. If a table is written to frequently but rarely read, expired records accumulate. Call `pruneExpired()` or use `scheduleExpiredPrune` to reclaim storage proactively.
 - `ttl.hours(0)` throws because TTL durations must be finite positive values. Omit TTL for records that should not expire.
 - On **IndexedDB**, `pruneExpired` uses a cursor-based pass — expired records are deleted without loading their values into memory. On **LocalStorage / SessionStorage** and **Memory**, each key is checked in sequence.
-- `scheduleExpiredPrune` uses `setInterval` internally. Call the returned `stop()` function before calling `db.dispose()` when a manual stop is needed. When `dispose()` is called without stopping the schedule first, the next interval tick will receive a `VaultDisposedError` and automatically clear the timer — so no dangling timer will fire after the adapter is torn down.
+- `scheduleExpiredPrune` uses `setInterval` internally. Pass `signal: store.disposalSignal` to auto-cancel when the store is torn down, or call the returned `stop()` function before `dispose()` when you need manual control.
 
 ### Related
 

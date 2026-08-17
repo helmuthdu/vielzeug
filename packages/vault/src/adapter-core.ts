@@ -1,7 +1,7 @@
 import { VaultDisposedError, VaultError, VaultScopeError } from './errors';
 import { createObserverHub, getRecordKey } from './internal';
 import { createQueryBuilder, type NativeRange, type QueryContext } from './query';
-import { assertTtlMs } from './ttl';
+import { assertPositiveFinite } from './ttl';
 import type {
   AnySchema,
   BaseAdapterOptions,
@@ -11,7 +11,6 @@ import type {
   MetricsEvent,
   RecordOf,
   TransactionContext,
-  TtlMs,
   VaultStore,
 } from './types';
 
@@ -60,8 +59,8 @@ export type StorageBackend<S extends AnySchema, K extends keyof S & string = key
    */
   pruneAllExpired?(): Promise<Record<string, number>>;
   pruneExpiredInTable<T extends K>(table: T): Promise<number>;
-  put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
-  putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
+  put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: number): Promise<void>;
+  putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: number): Promise<void>;
 };
 
 /** @internal */
@@ -87,9 +86,9 @@ export function assertBatchTables(tables: readonly string[]): void {
 function resolveTtl<S extends AnySchema, K extends keyof S & string>(
   schema: S,
   table: K,
-  ttl?: TtlMs,
-): TtlMs | undefined {
-  if (ttl !== undefined) assertTtlMs(ttl, 'put/putAll');
+  ttl?: number,
+): number | undefined {
+  if (ttl !== undefined) assertPositiveFinite(ttl, 'put/putAll');
 
   return ttl ?? schema[table].defaultTtl;
 }
@@ -344,7 +343,7 @@ export function buildAdapterOps<S extends AnySchema>(
     (table) => core.getAll(table),
     logger
       ? (err) =>
-          logger.error(err instanceof Error ? err : new Error(String(err)), '[vault] observer notification failed')
+          logger.error('[vault] observer notification failed', err instanceof Error ? err : new Error(String(err)))
       : undefined,
   );
 

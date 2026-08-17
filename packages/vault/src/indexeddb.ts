@@ -1,4 +1,8 @@
-export { createIndexedDB } from './adapters/indexeddb';
-export type { MigrationStep } from './migration';
-export { defineMigration } from './migration';
-export type { IndexedDbVaultStore, MigrationContext, MigrationFn, TransactionContext } from './types';
+export type {
+  IndexedDbVaultStore,
+  MigrationContext,
+  MigrationFn,
+  MigrationStep,
+} from './adapters/indexeddb';
+export { createIndexedDB, defineMigration } from './adapters/indexeddb';
+export type { TransactionContext } from './types';

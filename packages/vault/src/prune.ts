@@ -1,67 +1,42 @@
-import { warn } from './_dev';
-import { VaultDisposedError, VaultError } from './errors';
+import { error as logError } from './_dev';
+import { VaultError } from './errors';
+import { assertPositiveFinite } from './ttl';
 import type { AnySchema, VaultStore } from './types';
 
 /**
- * Schedules periodic calls to `adapter.pruneExpired()` using `setInterval`.
- * Returns a `stop` function to cancel the schedule.
+ * Schedules periodic `pruneExpired()` calls. Returns a `stop` function.
  *
- * The schedule auto-cancels if the adapter is disposed — no need to call `stop()`
- * in a dispose handler when the adapter lifetime matches the schedule lifetime.
+ * Pass `signal: store.disposalSignal` to auto-cancel when the store is torn down.
+ * Pass `onError` to handle non-disposal failures explicitly; without it, errors
+ * are logged via the dev channel and the schedule continues.
  *
  * ```ts
- * const stopPrune = scheduleExpiredPrune(db, { interval: ttl.hours(1) });
- * // later...
- * stopPrune();
+ * const stop = scheduleExpiredPrune(db, {
+ *   interval: ttl.hours(1),
+ *   signal: db.disposalSignal,
+ * });
  * ```
  */
 export function scheduleExpiredPrune<S extends AnySchema>(
   adapter: Pick<VaultStore<S>, 'pruneExpired'>,
   options: {
     interval: number;
-    /**
-     * Called when `pruneExpired()` throws an error that is NOT a `VaultDisposedError`.
-     * `VaultDisposedError` always stops the schedule automatically.
-     * Without this callback, non-disposal errors are silently swallowed.
-     */
     onError?: (err: unknown) => void;
-    /**
-     * When aborted, stops the schedule. Useful for tying the schedule lifetime
-     * to an adapter's `disposalSignal`:
-     * ```ts
-     * scheduleExpiredPrune(db, { interval: ttl.hours(1), signal: db.disposalSignal });
-     * ```
-     */
     signal?: AbortSignal;
   },
 ): () => void {
-  if (!Number.isFinite(options.interval) || options.interval <= 0) {
-    throw new VaultError('scheduleExpiredPrune: interval must be a finite positive number');
-  }
-
-  let active = true;
-
-  const stop = (): void => {
-    active = false;
-    clearInterval(id);
-  };
-
-  options.signal?.addEventListener('abort', stop, { once: true });
+  assertPositiveFinite(options.interval, 'scheduleExpiredPrune: interval');
 
   const id = setInterval(() => {
-    if (!active) return;
-
     void adapter.pruneExpired().catch((err) => {
-      if (err instanceof VaultDisposedError) {
-        active = false;
-        clearInterval(id);
-      } else if (options.onError) {
-        options.onError(err);
-      } else {
-        warn(`scheduleExpiredPrune: pruneExpired() threw — pass onError to handle this. ${String(err)}`);
-      }
+      if (options.onError) options.onError(err);
+      else logError('scheduleExpiredPrune: pruneExpired() threw — pass onError to handle this.', err);
     });
   }, options.interval);
+
+  const stop = (): void => clearInterval(id);
+
+  options.signal?.addEventListener('abort', stop, { once: true });
 
   return stop;
 }

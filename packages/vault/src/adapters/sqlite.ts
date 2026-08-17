@@ -15,7 +15,10 @@ import type {
   KeyOf,
   RecordOf,
   TransactionalVaultStore,
+  TransactionContext,
 } from '../types';
+
+export type { TransactionContext };
 
 export type SQLiteParameter = null | number | string;
 type SQLiteRow = Record<string, unknown>;

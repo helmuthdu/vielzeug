@@ -61,12 +61,12 @@ console.log(updated);
 
 ## Query Records
 
-Build a query from a table, then finish it with a terminal method. `totalCount()` ignores pagination, which makes it suitable for page controls.
+Build a query from a table, then finish it with a terminal method. `count()` ignores pagination, which makes it suitable for page controls.
 
 ```ts
 const query = store.query('preferences').startsWith('id', 'theme');
 const preferences = await query.orderBy('id').limit(10).toArray();
-const total = await query.totalCount();
+const total = await query.count();
 
 console.log({ preferences, total });
 ```
@@ -81,7 +81,10 @@ Use `ttl.*` helpers for expiring rows. Schedule pruning when stale rows can accu
 import { scheduleExpiredPrune, ttl } from '@vielzeug/vault';
 
 await store.put('preferences', { id: 'temporary', theme: 'dark' }, ttl.hours(1));
-const stopPrune = scheduleExpiredPrune(store, { interval: ttl.hours(6), signal: store.disposalSignal });
+const stopPrune = scheduleExpiredPrune(store, {
+  interval: ttl.hours(6),
+  signal: store.disposalSignal,
+});
 
 stopPrune();
 ```
@@ -162,7 +165,7 @@ Declare IndexedDB indexes in the schema. Use `migrate` only for IndexedDB versio
 import { table } from '@vielzeug/vault';
 import { createIndexedDB, type MigrationFn } from '@vielzeug/vault/indexeddb';
 
-const schema = { users: table<{ id: number; name: string }>('id').index('name') };
+const schema = { users: table<{ id: number; name: string }>('id', { indexes: ['name'] }) };
 const migrate: MigrationFn = ({ db, oldVersion, tx }) => {
   if (oldVersion < 2 && db.objectStoreNames.contains('users')) {
     tx.objectStore('users').createIndex('name', 'value.name');

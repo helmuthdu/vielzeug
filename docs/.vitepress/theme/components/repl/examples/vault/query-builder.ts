@@ -26,15 +26,12 @@ const q = db
   .filter((p) => p.inStock)
   .orderBy('price', 'asc')
 
-// count() respects limit/offset — returns records in the current page
+// count() ignores limit/offset/orderBy — returns the full filtered set size
 const page = await q.limit(pageSize).offset(pageIndex * pageSize).toArray()
-const pageCount = await q.limit(pageSize).offset(pageIndex * pageSize).count()
-
-// totalCount() ignores limit/offset/orderBy — returns the full filtered set
-const total = await q.totalCount()
+const total = await q.count()
 
 console.log('Page:', page.map((p) => p.name))
-console.log('Page count:', pageCount, '/ Total matching:', total)
+console.log('Total matching:', total)
 console.log('Page 1 of', Math.ceil(total / pageSize))
 
 // startsWith with case-insensitive flag
@@ -48,5 +45,5 @@ console.log('Removed out-of-stock:', removed)
 // first()
 const cheapest = await db.query('products').orderBy('price', 'asc').first()
 console.log('Cheapest:', cheapest?.name, cheapest?.price)`,
-  name: 'Query Builder — Filters, Pagination, totalCount',
+  name: 'Query Builder — Filters, Pagination, count',
 };
