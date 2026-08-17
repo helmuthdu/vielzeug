@@ -91,24 +91,24 @@ const children: Record<string, RouteDefinition> = { ... };
 
 ## Rename Path Inspection APIs
 
-Replace the former synchronous `resolve()` API with `matchPath()`. It inspects the route branch without running middleware or data loaders.
+Replace the former synchronous `resolve()` API with `match()`. It inspects the route branch without running middleware or data loaders.
 
 ```ts
 // Before
 const branch = router.resolve('/users/42');
 
 // After
-const branch = router.matchPath('/users/42');
+const branch = router.match('/users/42');
 ```
 
-Replace the former asynchronous `match()` API with `loadPath()`. It resolves lazy modules and runs data loaders without changing router state or history.
+Replace the former asynchronous `match()` API with `load()`. It resolves lazy modules and runs data loaders without changing router state or history.
 
 ```ts
 // Before
 const state = await router.match('/users/42');
 
 // After
-const state = await router.loadPath('/users/42');
+const state = await router.load('/users/42');
 ```
 
 `resolve()` and `match()` have been removed. Update every call site; there are no compatibility aliases.

@@ -25,8 +25,8 @@ console.log('userDetail isActive (prefix):', router.isActive('userDetail'))
 console.log('users isActive (prefix):',      router.isActive('users'))
 console.log('users isActive (exact):',       router.isActive('users', { exact: true }))
 
-// matchPath() returns the matched branch without navigating or running data().
-const branch = router.matchPath('/users/99')
+// match() returns the matched branch without navigating or running data().
+const branch = router.match('/users/99')
 console.log('matched name:', branch?.at(-1)?.name)
 console.log('matched params:', branch?.at(-1)?.params)
 

@@ -1,7 +1,7 @@
 export const urlBuildingExample = {
   code: `import { createMemoryHistory, createRouter } from '@vielzeug/wayfinder'
 
-// url(), matchPath(), and isActive() are synchronous and do not modify router state.
+// url(), match(), and isActive() are synchronous and do not modify router state.
 const router = createRouter({
   base: '/app',
   history: createMemoryHistory('/app/users/123'),
@@ -21,10 +21,10 @@ console.log('user:   ', router.url('user', { id: '42' }))
 console.log('search: ', router.url('search', undefined, { q: 'typescript', page: 2 }))
 console.log('comment:', router.url('comment', { postId: '10', commentId: '25' }))
 
-console.log('--- matchPath() ---')
-const branch = router.matchPath('/app/users/99')
+console.log('--- match() ---')
+const branch = router.match('/app/users/99')
 console.log('matched:', branch?.map((n) => n.name + ' params=' + JSON.stringify(n.params)))
-console.log('no match:', router.matchPath('/app/does-not-exist'))
+console.log('no match:', router.match('/app/does-not-exist'))
 
 console.log('--- isActive() ---')
 console.log('user (prefix):', router.isActive('user'))

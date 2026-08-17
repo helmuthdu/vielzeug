@@ -406,12 +406,12 @@ describe('Navigation', () => {
 
       await router.ready;
 
-      const { getSnapshot, isActive, matchPath, navigate, subscribe, url } = router;
+      const { getSnapshot, isActive, match, navigate, subscribe, url } = router;
       const listener = vi.fn();
       const unsubscribe = subscribe(listener);
 
       expect(url('page')).toBe('/page');
-      expect(matchPath('/page')?.at(-1)?.name).toBe('page');
+      expect(match('/page')?.at(-1)?.name).toBe('page');
       await navigate({ name: 'page' });
       expect(getSnapshot().location.pathname).toBe('/page');
       expect(isActive('page')).toBe(true);
@@ -448,7 +448,7 @@ describe('Navigation', () => {
         },
       });
 
-      expect(router.matchPath('/app/dashboard/settings')).toEqual([
+      expect(router.match('/app/dashboard/settings')).toEqual([
         {
           component: undefined,
           data: undefined,
@@ -468,7 +468,7 @@ describe('Navigation', () => {
           status: 'idle',
         },
       ]);
-      expect(router.matchPath('/app/missing')).toBeNull();
+      expect(router.match('/app/missing')).toBeNull();
     });
 
     it('returns null from resolve for redirect routes', () => {
@@ -479,8 +479,8 @@ describe('Navigation', () => {
         },
       });
 
-      expect(router.matchPath('/legacy')).toBeNull();
-      expect(router.matchPath('/current')).toEqual([
+      expect(router.match('/legacy')).toBeNull();
+      expect(router.match('/current')).toEqual([
         {
           component: undefined,
           data: undefined,

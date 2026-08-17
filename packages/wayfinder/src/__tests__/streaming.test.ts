@@ -3,7 +3,7 @@
  *
  * Covers: generator yields → 'streaming' status, return value → final data,
  * abort signal cleanup, navigation supersession, mixed loaders, drainGenerator
- * via loadPath() and preload().
+ * via load() and preload().
  */
 import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';
@@ -145,7 +145,7 @@ describe('streaming data loaders', () => {
     router.dispose();
   });
 
-  it('loadPath() drains the generator and resolves with the final return value', async () => {
+  it('load() drains the generator and resolves with the final return value', async () => {
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,

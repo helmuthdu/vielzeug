@@ -423,21 +423,21 @@ router.isActive('users', { exact: true });
 ## Match a Path Without Navigating
 
 ```ts
-const branch = router.matchPath('/app/dashboard/settings');
+const branch = router.match('/app/dashboard/settings');
 
 if (branch?.at(-1)?.name === 'dashboard.settings') {
   warmSettingsPanel();
 }
 ```
 
-`matchPath()` strips the configured base automatically and returns the full matched branch (root to leaf). Data loaders are not executed.
+`match()` strips the configured base automatically and returns the full matched branch (root to leaf). Data loaders are not executed.
 
 ## Load a Path for SSR
 
-Use `router.loadPath(url)` to load a full route state including data loader results without modifying router state or history. This is useful for server-side data prefetching.
+Use `router.load(url)` to load a full route state including data loader results without modifying router state or history. This is useful for server-side data prefetching.
 
 ```ts
-const state = await router.loadPath('/users/42');
+const state = await router.load('/users/42');
 
 if (state) {
   const data = state.matches.at(-1)?.data;
@@ -449,10 +449,10 @@ Pass an `AbortSignal` via the options object to cancel in-flight loaders:
 
 ```ts
 const controller = new AbortController();
-const state = await router.loadPath('/users/42', { signal: controller.signal });
+const state = await router.load('/users/42', { signal: controller.signal });
 ```
 
-`loadPath()` follows declarative redirects (up to five hops) and resolves lazy modules as a side effect.
+`load()` follows declarative redirects (up to five hops) and resolves lazy modules as a side effect.
 
 ## State and Subscriptions
 

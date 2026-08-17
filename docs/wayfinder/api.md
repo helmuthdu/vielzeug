@@ -7,24 +7,24 @@ description: Complete API reference for Wayfinder.
 
 ## API Overview
 
-| Symbol                                  | Purpose                                                    | Execution mode       | Common gotcha                                                                                             |
-| --------------------------------------- | ---------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------- |
-| `createRouter(options)`                 | Create a router from a route table                         | Sync                 | Initial navigation starts asynchronously in the constructor                                               |
-| `createBrowserHistory()`                | Create the default browser history driver                  | Sync                 | —                                                                                                         |
-| `createMemoryHistory(initialPath?)`     | Create an in-memory history driver                         | Sync                 | —                                                                                                         |
-| `redirectTo(target, options?)`          | Build redirect middleware                                  | Sync (returns fn)    | Does not call `next()` — always short-circuits the chain                                                  |
-| `router.navigate(target, options?)`     | Navigate to a named route, raw path object, or string path | Async                | No-op when destination equals current URL unless `force: true`                                            |
-| `router.getSnapshot()`                  | Return the current immutable route state                   | Sync                 | Does not subscribe — call `subscribe()` to react to changes                                               |
-| `router.subscribe(listener)`            | Register a listener for state changes                      | Sync (returns unsub) | Listener is **not** called immediately with current state                                                 |
-| `router.url(name, params?, query?)`     | Build a URL for a named route                              | Sync                 | Throws if the route name is unknown                                                                       |
-| `router.isActive(name, options?)`       | Check if a named route matches the current URL             | Sync                 | Compares against the current snapshot pathname, not `history.location` directly                           |
-| `router.matchPath(pathname)`            | Inspect a pathname as a branch without side effects            | Sync                 | Returns `null` for redirect routes                                                                    |
-| `router.loadPath(url, options?)`        | Load a URL into a full state including data loaders         | Async                | Middleware is not executed; lazy modules are resolved as a side effect                                                            |
-| `router.ready`                          | Await the initial navigation                                | Async                | Rejects when initial loading fails                                                                    |
+| Symbol                                  | Purpose                                                    | Execution mode       | Common gotcha                                                                                                   |
+|-----------------------------------------|------------------------------------------------------------|----------------------|-----------------------------------------------------------------------------------------------------------------|
+| `createRouter(options)`                 | Create a router from a route table                         | Sync                 | Initial navigation starts asynchronously in the constructor                                                     |
+| `createBrowserHistory()`                | Create the default browser history driver                  | Sync                 | —                                                                                                               |
+| `createMemoryHistory(initialPath?)`     | Create an in-memory history driver                         | Sync                 | —                                                                                                               |
+| `redirectTo(target, options?)`          | Build redirect middleware                                  | Sync (returns fn)    | Does not call `next()` — always short-circuits the chain                                                        |
+| `router.navigate(target, options?)`     | Navigate to a named route, raw path object, or string path | Async                | No-op when destination equals current URL unless `force: true`                                                  |
+| `router.getSnapshot()`                  | Return the current immutable route state                   | Sync                 | Does not subscribe — call `subscribe()` to react to changes                                                     |
+| `router.subscribe(listener)`            | Register a listener for state changes                      | Sync (returns unsub) | Listener is **not** called immediately with current state                                                       |
+| `router.url(name, params?, query?)`     | Build a URL for a named route                              | Sync                 | Throws if the route name is unknown                                                                             |
+| `router.isActive(name, options?)`       | Check if a named route matches the current URL             | Sync                 | Compares against the current snapshot pathname, not `history.location` directly                                 |
+| `router.match(pathname)`                | Inspect a pathname as a branch without side effects        | Sync                 | Returns `null` for redirect routes                                                                              |
+| `router.load(url, options?)`            | Load a URL into a full state including data loaders        | Async                | Middleware is not executed; lazy modules are resolved as a side effect                                          |
+| `router.ready`                          | Await the initial navigation                               | Async                | Rejects when initial loading fails                                                                              |
 | `router.preload(name, params?, query?)` | Eagerly run data loaders without navigating                | Async                | Pass `query` to match the navigation cache key; rejects with `WayfinderDisposedError` if the router is disposed |
-| `router.waitFor(name)`                  | Wait for the router to settle on a named route             | Async                | Rejects immediately if `status === 'error'`; rejects with `WayfinderDisposedError` if disposed while pending |
-| `router.beforeLeave(blocker, options?)` | Register a global leave guard                              | Sync (returns unsub) | Scoped to specific routes via `options.routes`                                                            |
-| `router.dispose()`                      | Remove listeners and shut down the router                  | Sync                 | Idempotent — safe to call multiple times                                                                  |
+| `router.waitFor(name)`                  | Wait for the router to settle on a named route             | Async                | Rejects immediately if `status === 'error'`; rejects with `WayfinderDisposedError` if disposed while pending    |
+| `router.beforeLeave(blocker, options?)` | Register a global leave guard                              | Sync (returns unsub) | Scoped to specific routes via `options.routes`                                                                  |
+| `router.dispose()`                      | Remove listeners and shut down the router                  | Sync                 | Idempotent — safe to call multiple times                                                                        |
 
 ## Package Entry Points
 
@@ -242,10 +242,10 @@ Check whether the current pathname matches a named route exactly or by prefix.
 
 **Returns:** `boolean`
 
-#### `router.matchPath(pathname)`
+#### `router.match(pathname)`
 
 ```ts
-router.matchPath('/app/dashboard/settings');
+router.match('/app/dashboard/settings');
 // => [
 //      { name: 'dashboard', ... },
 //      { name: 'dashboard.settings', ... },
@@ -258,20 +258,20 @@ Inspect a pathname without running middleware, data loaders, or subscribers. Str
 
 ---
 
-#### `router.loadPath(url, options?)`
+#### `router.load(url, options?)`
 
 ```ts
 // SSR data prefetch
-const state = await router.loadPath('/users/42');
+const state = await router.load('/users/42');
 
 // With cancellation
 const controller = new AbortController();
-const state = await router.loadPath('/dashboard', { signal: controller.signal });
+const state = await router.load('/dashboard', { signal: controller.signal });
 ```
 
 Load a full URL into a `RouteState` including data loader results, without modifying router state or history. Follows declarative redirects (up to five hops) and resolves lazy modules as a side effect. Returns `null` for unmatched URLs.
 
-Middleware is **not** executed — `loadPath` is a data-only prefetch for SSR and pre-rendering where middleware side effects are not wanted. If your data loaders depend on `ctx.locals` set by middleware, use `navigate()` instead.
+Middleware is **not** executed — `load` is a data-only prefetch for SSR and pre-rendering where middleware side effects are not wanted. If your data loaders depend on `ctx.locals` set by middleware, use `navigate()` instead.
 
 When a `data()` function throws, the returned state has `status: 'error'` and `error` set to the thrown value.
 

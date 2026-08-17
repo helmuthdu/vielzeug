@@ -234,8 +234,8 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     this.dispose = this.dispose.bind(this);
     this.getSnapshot = this.getSnapshot.bind(this);
     this.isActive = this.isActive.bind(this);
-    this.loadPath = this.loadPath.bind(this);
-    this.matchPath = this.matchPath.bind(this);
+    this.load = this.load.bind(this);
+    this.match = this.match.bind(this);
     this.navigate = this.navigate.bind(this);
     this.preload = this.preload.bind(this);
     this.subscribe = this.subscribe.bind(this);
@@ -316,7 +316,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   }
 
   /** Match a pathname to a route branch without running middleware or data loaders. Returns null for redirects or no match. */
-  matchPath(pathname: string): RouteMatchBranch<TMeta, TComponent> | null {
+  match(pathname: string): RouteMatchBranch<TMeta, TComponent> | null {
     const normalizedPathname = stripBase(normalizePath(pathname), this.#base);
     const { params, record } = matchRouteFor(normalizedPathname, this.#records);
 
@@ -338,7 +338,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
    * router state or history. Follows declarative redirects and may resolve lazy modules.
    * Middleware is not executed — use `navigate()` when middleware side effects are needed.
    */
-  async loadPath(url: string, options?: { signal?: AbortSignal }): Promise<RouteState<TMeta, TComponent> | null> {
+  async load(url: string, options?: { signal?: AbortSignal }): Promise<RouteState<TMeta, TComponent> | null> {
     const prepared = await this.#resolveUrl(url);
 
     if (prepared.type !== 'matched') return null;
@@ -620,7 +620,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
   /**
    * Drain all data loaders to completion. Async generators are consumed entirely.
-   * Used in `loadPath()` and `preload()`. Per-def `onError` boundaries are applied.
+   * Used in `load()` and `preload()`. Per-def `onError` boundaries are applied.
    */
   async #loadDataDrain(
     defs: readonly RouteBranchDef<TMeta, TComponent>[],

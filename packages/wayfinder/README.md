@@ -31,8 +31,8 @@
 - Declarative `notFound` fallback route
 - Browser and memory history drivers
 - `redirectTo()` middleware helper
-- SSR-compatible `loadPath()` for data prefetching without side effects
-- `matchPath()` for synchronous route inspection
+- SSR-compatible `load()` for data prefetching without side effects
+- `match()` for synchronous route inspection
 - `ready` and `waitFor(name)` for lifecycle coordination
 
 ## Installation

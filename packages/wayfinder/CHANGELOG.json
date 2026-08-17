@@ -5,7 +5,7 @@
         "major": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
-            "comment": "refactor!: redesign navigation coordination, add ready, and rename resolve/match to matchPath/loadPath",
+            "comment": "refactor!: redesign navigation coordination, add ready, and rename resolve/match to match/load",
             "commit": "b086ec9d0425054899992787d40b5de6f63ca220"
           }
         ]

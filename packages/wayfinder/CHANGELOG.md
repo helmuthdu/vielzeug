@@ -7,7 +7,7 @@ Mon, 10 Aug 2026 15:11:23 GMT
 
 ### Breaking changes
 
-- refactor!: redesign navigation coordination, add ready, and rename resolve/match to matchPath/loadPath
+- refactor!: redesign navigation coordination, add ready, and rename resolve/match to match/load
 
 ## 1.0.5
 Thu, 06 Aug 2026 07:20:49 GMT

@@ -11,7 +11,7 @@ Hosting an SPA under a subdirectory (e.g., `/my-app`) requires every `pushState`
 
 ### Solution
 
-Set `base` once at router creation. All route definitions, `url()`, `navigate()`, and `matchPath()` are then base-agnostic.
+Set `base` once at router creation. All route definitions, `url()`, `navigate()`, and `match()` are then base-agnostic.
 
 ```ts
 import { createRouter } from '@vielzeug/wayfinder';
@@ -28,13 +28,13 @@ const router = createRouter({
 
 await router.navigate({ name: 'about' }); // pushes /my-app/about
 const href = router.url('userDetail', { id: '7' }); // '/my-app/users/7'
-const branch = router.matchPath('/my-app/users/7'); // strips base: params.id = '7'
+const branch = router.match('/my-app/users/7'); // strips base: params.id = '7'
 ```
 
 ### Pitfalls
 
 - The server must rewrite all requests under `/my-app/*` to serve the SPA entry file. Without this, direct link access to `/my-app/about` returns 404.
-- When using `matchPath()`, always pass the full URL including the base prefix. Wayfinder strips the base internally.
+- When using `match()`, always pass the full URL including the base prefix. Wayfinder strips the base internally.
 - Do not set `base` in development if `vite.config.ts` already sets `base: '/my-app'`; double-prefixing breaks all navigation.
 
 ### Related

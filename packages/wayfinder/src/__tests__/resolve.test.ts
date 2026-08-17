@@ -1,17 +1,17 @@
 /**
- * matchPath() — synchronous pathname-to-branch resolution without side effects.
+ * match() — synchronous pathname-to-branch resolution without side effects.
  */
 import { createMemoryHistory, createRouter } from '../';
 import { settle } from './test-utils';
 
-describe('matchPath()', () => {
+describe('match()', () => {
   it('replaces the removed resolve() method without a compatibility alias', async () => {
     const router = createRouter({ history: createMemoryHistory('/'), routes: { home: { path: '/' } } });
 
     await router.ready;
 
     expect('resolve' in router).toBe(false);
-    expect(router.matchPath('/')).not.toBeNull();
+    expect(router.match('/')).not.toBeNull();
     router.dispose();
   });
 
@@ -27,7 +27,7 @@ describe('matchPath()', () => {
 
     await settle();
 
-    const branch = router.matchPath('/users/42');
+    const branch = router.match('/users/42');
 
     expect(branch).not.toBeNull();
     expect(branch?.at(-1)?.name).toBe('user');
@@ -44,7 +44,7 @@ describe('matchPath()', () => {
 
     await settle();
 
-    expect(router.matchPath('/does-not-exist')).toBeNull();
+    expect(router.match('/does-not-exist')).toBeNull();
     router.dispose();
   });
 
@@ -60,8 +60,8 @@ describe('matchPath()', () => {
 
     await settle();
 
-    // Redirect routes do not produce a usable branch — callers can use loadPath() for that.
-    expect(router.matchPath('/old')).toBeNull();
+    // Redirect routes do not produce a usable branch — callers can use load() for that.
+    expect(router.match('/old')).toBeNull();
     router.dispose();
   });
 
@@ -77,7 +77,7 @@ describe('matchPath()', () => {
 
     await settle();
 
-    router.matchPath('/page');
+    router.match('/page');
 
     expect(router.getSnapshot().location.pathname).toBe('/');
     router.dispose();
@@ -96,7 +96,7 @@ describe('matchPath()', () => {
 
     await settle();
 
-    const branch = router.matchPath('/page');
+    const branch = router.match('/page');
 
     expect(branch?.at(-1)?.name).toBe('page');
     router.dispose();
@@ -115,7 +115,7 @@ describe('matchPath()', () => {
 
     await settle();
 
-    const branch = router.matchPath('/page');
+    const branch = router.match('/page');
 
     expect(branch?.at(-1)?.data).toBeUndefined();
     expect(dataFn).not.toHaveBeenCalled();
@@ -136,7 +136,7 @@ describe('matchPath()', () => {
 
     await settle();
 
-    const branch = router.matchPath('/dashboard/settings');
+    const branch = router.match('/dashboard/settings');
 
     expect(branch?.map((n) => n.name)).toEqual(['dashboard', 'dashboard.settings']);
     router.dispose();

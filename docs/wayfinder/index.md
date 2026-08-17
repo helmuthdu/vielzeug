@@ -125,7 +125,7 @@ router.dispose();
 - `ready` — Signals that initial routing has settled.
 - `data()` — Receives cancellation through `AbortSignal` and can stream async-generator updates.
 - `beforeLeave()` — Blocks route exits before history changes.
-- `matchPath()` / `loadPath()` — Inspect routes synchronously or load route data without navigation.
+- `match()` / `load()` — Inspect routes synchronously or load route data without navigation.
 - `preload()` — Warms route data for a later matching navigation.
 - `createMemoryHistory()` — Runs routers in tests and non-browser environments.
 - `debugRouter()` — Logs navigation state from `@vielzeug/wayfinder/devtools`.
