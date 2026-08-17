@@ -187,25 +187,37 @@ body:has(#repl-container) {
 }
 
 /* Documentation links → compact pill cards */
+.doc-links {
+  padding: 0;
+  margin: 0;
+}
+
 .doc-links ul {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  align-items: center;
   padding: 0;
   list-style: none;
 }
 
 .doc-links li {
+  display: flex;
   margin: 0;
 }
 
+.doc-links li + li {
+  margin-top: 0;
+}
+
 .doc-links li a {
-  display: inline-flex;
+  display: flex;
   gap: var(--size-2);
   align-items: center;
   padding: var(--size-2) var(--size-3-5);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
+  line-height: 1;
   color: var(--text-color-body);
   text-decoration: none;
   background: var(--color-contrast-100);
