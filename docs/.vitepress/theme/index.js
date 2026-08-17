@@ -18,6 +18,18 @@ import '@vielzeug/prism/theme';
 
 import './theme.css';
 
+// Critical inline styles to prevent FOUC (Flash of Unstyled Content)
+// Hide all undefined custom elements until they're fully initialized
+if (typeof window !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = `
+    *:not(:defined) {
+      display: none;
+    }
+  `;
+  document.head.insertAdjacentElement('afterbegin', style);
+}
+
 // Register Refine's all-components entry as early as possible. The public root
 // is deliberately side-effect free, so it cannot register the custom elements
 // rendered by the docs theme.
