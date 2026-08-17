@@ -7,16 +7,31 @@ description: Complete API reference for @vielzeug/keymap bindings, chords, parsi
 
 ## API Overview
 
+### Core API (Most Users)
+
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
 | `createKeymap()` | Create shortcut manager | Sync | `dispose()` is terminal |
 | `findShortcutConflicts()` | Find duplicate and prefix paths | Sync | Invalid non-empty input throws |
 | `formatShortcut()` | Format shortcut labels | Sync | Invalid input returns `''` |
+| `ChordStateChange` | Type for chord state callback events | — | No 'completed' event; handler fires immediately when matched |
+
+### Power-User API (Custom Tooling)
+
+Use the power-user API if you're building keyboard-aware config validators, custom UI, or framework integrations.
+
+| Symbol | Purpose | Execution mode | Common gotcha |
+| --- | --- | --- | --- |
 | `parseShortcut()` | Strictly parse full shortcut | Sync | Empty input throws |
 | `parseStep()` | Parse one step without throwing | Sync | Invalid input returns `null` |
 | `canonicalizeShortcut()` | Create stable shortcut key | Sync | Input must already be parsed |
 | `matchStep()` | Test event against parsed step | Sync | Extra modifiers prevent a match |
 | `detectModKey()` | Resolve platform primary modifier | Sync | Returns `ctrl` without `navigator` |
+
+### Errors
+
+| Symbol | Purpose | Execution mode | Common gotcha |
+| --- | --- | --- | --- |
 | `KeymapError` | Base Keymap error | Sync | Includes parse and lifecycle errors |
 | `KeymapParseError` | Strict parser error | Sync | `parseStep()` never throws it |
 
@@ -268,8 +283,12 @@ interface KeymapOptions {
   preventDefault?: boolean;
   stopPropagation?: boolean;
   when?: When;
+  onChordState?: (change: ChordStateChange) => void;
 }
 ```
+
+- `when`: Guard function called for all bindings. When combined with per-binding `when` guards, both must return `true` for the handler to fire (AND composition). Global guard is checked first.
+- `onChordState`: Optional callback to observe chord state changes (started, progressed, or timeout). Useful for debugging, testing, logging, or implementing chord UI hints. Callback errors are caught and logged in development. Note: when a chord completes, the binding handler fires immediately; no separate 'completed' event is emitted.
 
 ### `BindingOptions`
 
@@ -315,19 +334,42 @@ interface ConflictOptions {
 }
 ```
 
-### Shortcut Parser Types
+### `ChordStateChange`
 
-Parsed shortcut data.
+Discriminated union type for chord state events emitted by `onChordState` callback. When a chord fully matches, the binding handler fires immediately; no separate 'completed' event is emitted.
 
 ```ts
-type ModifierKey = 'alt' | 'ctrl' | 'meta' | 'shift';
+type ChordStateChange =
+  | { type: 'started'; target: EventTarget; step: ShortcutStep; trigger: 'keydown' | 'keyup' }
+  | { type: 'progressed'; target: EventTarget; steps: readonly ShortcutStep[]; trigger: 'keydown' | 'keyup' }
+  | { type: 'timeout'; target: EventTarget; trigger: 'keydown' | 'keyup' };
+```
 
-type ShortcutStep = {
-  key: string;
-  modifiers: Set<ModifierKey>;
-};
+| Event | Fields | When | Use case |
+| --- | --- | --- | --- |
+| `started` | `target`, `step`, `trigger` | First key of a chord is pressed. | Show "waiting for next key" UI hint. |
+| `progressed` | `target`, `steps`, `trigger` | Additional step(s) added to pending chord. | Update chord hint with current progress. |
+| `timeout` | `target`, `trigger` | Chord was pending but timed out without completing. | Clear "waiting" UI state; log timeout for debugging. |
 
-type Shortcut = ShortcutStep[];
+```ts
+import { createKeymap } from '@vielzeug/keymap';
+
+const map = createKeymap(
+  { 'g g': () => scrollToTop() },
+  {
+    onChordState: (change) => {
+      if (change.type === 'started') {
+        console.log(`Chord started: ${change.step.key}`);
+      }
+      if (change.type === 'progressed') {
+        console.log(`Chord progress: ${change.steps.map((s) => s.key).join(' ')}`);
+      }
+      if (change.type === 'timeout') {
+        console.log('Chord timed out');
+      }
+    },
+  },
+);
 ```
 
 ## Errors

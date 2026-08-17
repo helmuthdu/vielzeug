@@ -98,6 +98,34 @@ const map = createKeymap(
 
 Zero-argument callbacks continue to work. Accept `KeyboardEvent` when guard logic needs target, modifier, composition, or shadow-DOM context.
 
+### Guard Composition: Global + Per-Binding
+
+When you provide both a global `when` (in `KeymapOptions`) and per-binding `when` guards, both must return `true` for the handler to fire. This is AND composition.
+
+**Guard evaluation and chord tracking order:**
+
+1. **Chord state is tracked independently of guards.** The chord tracker progresses through steps before any guard is checked.
+2. **Global guard checked first.** If it returns `false`, all bindings are skipped and the handler does not fire — but chord state events still emit.
+3. **Per-binding guard checked only after global passes.** Enables mixing global policy (e.g., "skip when modal open") with binding-specific checks (e.g., "only in this panel").
+
+Think of it as: chord tracking (independent observation) → global gate (app-level policy) AND per-binding gate (binding-level context).
+
+```ts
+const map = createKeymap(
+  {
+    'escape': { handler: closePanel, when: (event) => event.target === panel },
+    'ctrl+s': () => saveDocument(),
+  },
+  { when: (event) => !isModalOpen() && event.isTrusted },
+);
+
+// Global guard runs first; if false, both bindings are skipped (handler doesn't fire).
+// If global passes:
+//   - 'ctrl+s' handler fires immediately.
+//   - 'escape' handler fires only if event.target is the panel.
+// But chord state events emit regardless of guards.
+```
+
 ### Preserve Native Text Editing
 
 Use `event.composedPath()` to keep browser undo and redo inside inputs, textareas, and `contenteditable` elements. Kanban app shell uses this policy for its global undo and redo shortcuts.
@@ -174,6 +202,45 @@ if (conflicts.length === 0) map.bind('g g', () => scrollToBottom());
 ```
 
 Conflict detection compares only bindings with same trigger. An empty proposal returns no conflicts; other invalid proposals throw `KeymapParseError`.
+
+## Observe Chord State
+
+Track chord progression for debugging, logging, testing, or implementing chord UI hints (e.g., "you pressed 'g', press again to scroll").
+
+**Chord state tracking is independent of guards.** Events emit even if the global or per-binding guard would prevent the handler from firing. This allows you to show UI hints regardless of whether the binding is allowed to execute.
+
+```ts
+import { createKeymap } from '@vielzeug/keymap';
+
+const map = createKeymap(
+  {
+    'g g': () => window.scrollTo({ top: 0 }),
+    'ctrl+k ctrl+s': () => save(),
+  },
+  {
+    onChordState: (change) => {
+      switch (change.type) {
+        case 'started':
+          console.log(`Chord started: ${change.step.key} (${change.trigger})`);
+          showHint(`Press '${change.step.key}' again...`);
+          break;
+        case 'progressed':
+          console.log(`Waiting for: ${change.steps.map((s) => s.key).join(' → ?')}`);
+          updateHint(`${change.steps.map((s) => s.key).join(' → ?')}`);
+          break;
+        case 'timeout':
+          console.log('Chord timed out; resetting');
+          hideHint();
+          break;
+      }
+    },
+  },
+);
+```
+
+**Error handling:** Callback errors are caught and logged in development mode; they don't break binding execution. Use error handling in your callback to prevent typos from blocking shortcuts.
+
+**Per-target isolation:** Each mounted target maintains independent chord state. Use `change.target` when mounting the same keymap on multiple targets to distinguish progress per target.
 
 ## Mount Targets
 

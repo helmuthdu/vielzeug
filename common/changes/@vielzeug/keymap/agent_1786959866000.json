@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(keymap): Add onChordState callback for chord progression observability. Emit 'started', 'progressed', and 'timeout' events independent of guard evaluation, enabling UI hints, logging, and debugging without blocking handler execution. Track chord state before guards to separate observation from execution. Improve documentation for guard composition and chord state independence. Add ChordStateChange to API overview.",
+      "packageName": "@vielzeug/keymap",
+      "type": "minor"
+    }
+  ],
+  "email": "copilot@github.com",
+  "packageName": "@vielzeug/keymap"
+}

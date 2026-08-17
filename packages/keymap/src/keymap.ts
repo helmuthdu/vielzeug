@@ -1,8 +1,8 @@
 import { warn } from './_dev';
 import { KeymapError } from './errors';
-import type { Shortcut } from './parser';
+import type { Shortcut, ShortcutStep } from './parser';
 import { canonicalizeShortcut, detectModKey, matchStep, parseShortcut } from './parser';
-import type { BindingEntry, BindingValue, Handler, Keymap, KeymapOptions, When } from './types';
+import type { BindingEntry, BindingValue, ChordStateChange, Handler, Keymap, KeymapOptions, When } from './types';
 
 type ParsedBinding = {
   handler: Handler;
@@ -30,17 +30,40 @@ function resolveBinding(value: BindingValue): Omit<ParsedBinding, 'shortcut'> {
   };
 }
 
-function createChordTracker(getBindings: () => ParsedBinding[], chordTimeout: number) {
+type ChordTrackerCallbacks = {
+  onChordStart?: (target: EventTarget, step: ShortcutStep, trigger: 'keydown' | 'keyup') => void;
+  onChordProgress?: (target: EventTarget, steps: readonly ShortcutStep[], trigger: 'keydown' | 'keyup') => void;
+  onChordTimeout?: (target: EventTarget, trigger: 'keydown' | 'keyup') => void;
+};
+
+function createChordTracker(
+  getBindings: () => ParsedBinding[],
+  chordTimeout: number,
+  target: EventTarget,
+  trigger: 'keydown' | 'keyup',
+  callbacks?: ChordTrackerCallbacks,
+) {
   let pendingIndex = 0;
   let candidates: ParsedBinding[] = [];
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let pendingSteps: ShortcutStep[] = [];
 
-  function reset(): void {
+  function reset(emitTimeout = false): void {
     if (timer !== undefined) clearTimeout(timer);
+
+    // Emit timeout only if explicitly requested (from timeout event)
+    if (emitTimeout && pendingIndex > 0 && callbacks?.onChordTimeout) {
+      try {
+        callbacks.onChordTimeout(target, trigger);
+      } catch (err) {
+        warn(`onChordState callback error: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
 
     timer = undefined;
     pendingIndex = 0;
     candidates = [];
+    pendingSteps = [];
   }
 
   function advance(event: KeyboardEvent): ParsedBinding | undefined {
@@ -71,14 +94,33 @@ function createChordTracker(getBindings: () => ParsedBinding[], chordTimeout: nu
       return completed;
     }
 
+    // New step in chord progression
+    const currentStep = matched[0]!.shortcut[pendingIndex];
+    pendingSteps = matched[0]!.shortcut.slice(0, pendingIndex + 1);
+
+    // Emit started or progressed
+    if (pendingIndex === 0 && callbacks?.onChordStart) {
+      try {
+        callbacks.onChordStart(target, currentStep, trigger);
+      } catch (err) {
+        warn(`onChordState callback error: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    } else if (pendingIndex > 0 && callbacks?.onChordProgress) {
+      try {
+        callbacks.onChordProgress(target, pendingSteps, trigger);
+      } catch (err) {
+        warn(`onChordState callback error: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
     candidates = matched;
     pendingIndex += 1;
-    timer = setTimeout(reset, chordTimeout);
+    timer = setTimeout(() => reset(true), chordTimeout);
 
     return undefined;
   }
 
-  return { advance, reset };
+  return { advance, reset: () => reset() };
 }
 
 /**
@@ -106,6 +148,7 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
     preventDefault = true,
     stopPropagation = false,
     when: globalWhen,
+    onChordState: userOnChordState,
   } = options;
   const chordTimeout = Number.isFinite(rawChordTimeout) && rawChordTimeout > 0 ? rawChordTimeout : 1000;
 
@@ -156,6 +199,16 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
     return existed;
   }
 
+  function emitChordState(change: ChordStateChange): void {
+    if (!userOnChordState) return;
+
+    try {
+      userOnChordState(change);
+    } catch (err) {
+      warn(`onChordState callback error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   function makeHandler(target: EventTarget, chord: ChordTracker): EventListener {
     return (event) => {
       const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
@@ -165,9 +218,13 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
 
       const keyboardEvent = event as KeyboardEvent;
 
-      if (disposed || (globalWhen && !globalWhen(keyboardEvent))) return;
+      if (disposed) return;
 
+      // Track chord progression (independent of guards)
       const binding = chord.advance(keyboardEvent);
+
+      // Check guards AFTER tracking chord
+      if (globalWhen && !globalWhen(keyboardEvent)) return;
 
       if (!binding || (binding.when && !binding.when(keyboardEvent))) return;
 
@@ -232,8 +289,16 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
       let record = mounted.get(target);
 
       if (!record) {
-        const keydown = createChordTracker(() => bindingsDown, chordTimeout);
-        const keyup = createChordTracker(() => bindingsUp, chordTimeout);
+        const keydown = createChordTracker(() => bindingsDown, chordTimeout, target, 'keydown', {
+          onChordProgress: (t, steps, trigger) => emitChordState({ steps, target: t, trigger, type: 'progressed' }),
+          onChordStart: (t, step, trigger) => emitChordState({ step, target: t, trigger, type: 'started' }),
+          onChordTimeout: (t, trigger) => emitChordState({ target: t, trigger, type: 'timeout' }),
+        });
+        const keyup = createChordTracker(() => bindingsUp, chordTimeout, target, 'keyup', {
+          onChordProgress: (t, steps, trigger) => emitChordState({ steps, target: t, trigger, type: 'progressed' }),
+          onChordStart: (t, step, trigger) => emitChordState({ step, target: t, trigger, type: 'started' }),
+          onChordTimeout: (t, trigger) => emitChordState({ target: t, trigger, type: 'timeout' }),
+        });
         const onKeydown = makeHandler(target, keydown);
         const onKeyup = makeHandler(target, keyup);
 
