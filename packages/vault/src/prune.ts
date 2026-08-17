@@ -1,5 +1,4 @@
 import { error as logError } from './_dev';
-import { VaultError } from './errors';
 import { assertPositiveFinite } from './ttl';
 import type { AnySchema, VaultStore } from './types';
 
