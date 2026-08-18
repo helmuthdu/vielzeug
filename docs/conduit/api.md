@@ -115,10 +115,41 @@ Disposal blocks new work, aborts `disposalSignal`, disposes active child scopes,
 ## Types
 
 ```ts
-type Token<T> = symbol;
+type Token<T = unknown> = symbol;
 type ScopeToken = symbol;
 type Lifetime = 'singleton' | 'transient' | ScopeToken;
-type InferTokens<Tokens> = { [K in keyof Tokens]: Tokens[K] extends Token<infer T> ? T : never };
+
+type ValueOptions<T> = Readonly<{
+  dispose?: (value: T) => Promise<void> | void;
+}>;
+
+type FactoryOptions<T> = Readonly<{
+  dispose?: (value: T) => Promise<void> | void;
+  lifetime?: Lifetime;
+}>;
+
+type InferTokens<T extends readonly Token<unknown>[]> = {
+  [K in keyof T]: T[K] extends Token<infer Value> ? Value : never;
+};
+
+interface Container {
+  createScope(scope?: ScopeToken, options?: { name?: string }): Container;
+  readonly disposalSignal: AbortSignal;
+  dispose(): Promise<void>;
+  readonly disposed: boolean;
+  factory<T, Dependencies extends readonly Token<unknown>[]>(
+    token: Token<T>,
+    dependencies: Dependencies,
+    create: (...values: InferTokens<Dependencies>) => Promise<T> | T,
+    options?: FactoryOptions<T>,
+  ): this;
+  has<T>(token: Token<T>): boolean;
+  readonly name: string;
+  resolve<T>(token: Token<T>): Promise<T>;
+  validate(): this;
+  value<T>(token: Token<T>, value: T, options?: ValueOptions<T>): this;
+  [Symbol.asyncDispose](): Promise<void>;
+}
 ```
 
 ## Errors

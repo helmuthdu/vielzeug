@@ -417,6 +417,25 @@ Optional logger for `debugActor()`. Logger failures are ignored so observation c
 
 ## Errors
 
+### `ClockworkErrorCode`
+
+```ts
+type ClockworkErrorCode =
+  | 'INVALID_AFTER_DELAY'
+  | 'INVALID_CONTEXT'
+  | 'INVALID_DEFINITION'
+  | 'INVALID_EFFECT'
+  | 'INVALID_INITIAL_STATE'
+  | 'INVALID_INVOKE'
+  | 'INVALID_MAX_TRANSITIONS'
+  | 'INVALID_SNAPSHOT_STATE'
+  | 'INVALID_TRANSITION'
+  | 'INVALID_TRANSITION_LIMIT'
+  | 'UNKNOWN_TARGET';
+```
+
+Stable machine-readable code identifying a Clockwork failure category.
+
 ### `ClockworkError`
 
 `ClockworkError` reports invalid definitions, contexts, snapshots, and actor transition limits. It has `code`, `details`, and standard `Error` fields. Use `instanceof ClockworkError` to narrow an unknown error.

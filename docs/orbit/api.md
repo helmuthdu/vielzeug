@@ -93,7 +93,7 @@ Calls `update` immediately, then on relevant scroll, viewport, resize, and optio
 ## Middleware
 
 ```ts
-type Middleware = (state: MiddlewareState) => MiddlewareResult | void;
+type Middleware = (state: MiddlewareState) => MiddlewareResult | undefined;
 ```
 
 Built-in factories: `arrow`, `autoPlacement`, `flip`, `hide`, `inline`, `offset`, `shift`, `limitShift`, and `size`.
@@ -102,7 +102,7 @@ Built-in factories: `arrow`, `autoPlacement`, `flip`, `hide`, `inline`, `offset`
 const middleware = [offset(8), flip(), shift({ padding: 6 }), size()];
 ```
 
-`middlewareData` is `Record<string, unknown>`; narrow custom data at the consuming boundary.
+`middlewareData` is `MiddlewareData`; narrow custom data at the consuming boundary.
 
 ## Reactive Adapter
 
@@ -114,19 +114,131 @@ function createReactivePositioner(
 ): ReactivePositioner;
 ```
 
-`ReactivePositioner.position` is `Readable<ComputePositionResult | null>`.
+`ReactivePositioner.position` is `Readable<ComputePositionResult | null>`. Imported from `@vielzeug/orbit/reactive`.
 
 ## Types
 
 ```ts
+type Side = 'top' | 'bottom' | 'left' | 'right';
+type Alignment = 'start' | 'end';
+type Placement = Side | `${Side}-${Alignment}`;
+
+interface Rect {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
+interface VirtualReference {
+  getBoundingClientRect: () => DOMRect | Rect;
+  getClientRects?: () => DOMRectList | DOMRect[];
+}
+
+type ReferenceElement = Element | VirtualReference;
+
+interface SideObject {
+  bottom: number;
+  left: number;
+  right: number;
+  top: number;
+}
+
+type Padding = number | Partial<SideObject>;
+
+interface ArrowData {
+  centerOffset: number;
+  constrained: boolean;
+  x?: number;
+  y?: number;
+}
+
+interface FlipData {
+  skippedPlacements: Placement[];
+}
+
+interface ShiftData {
+  x: number;
+  y: number;
+}
+
+interface HideData {
+  escaped?: boolean;
+  escapedOffsets?: SideObject;
+  referenceHidden?: boolean;
+  referenceHiddenOffsets?: SideObject;
+}
+
+interface SizeData {
+  availableHeight: number;
+  availableWidth: number;
+}
+
+interface MiddlewareData {
+  arrow?: ArrowData;
+  flip?: FlipData;
+  hide?: HideData;
+  shift?: ShiftData;
+  size?: SizeData;
+  [key: string]: unknown;
+}
+
+interface MiddlewareState {
+  boundary?: Element | Rect;
+  elements: { floating: HTMLElement; reference: ReferenceElement };
+  initialPlacement: Placement;
+  middlewareData: MiddlewareData;
+  padding?: Padding;
+  placement: Placement;
+  rects: { floating: Rect; reference: Rect };
+  x: number;
+  y: number;
+}
+
+type MiddlewareReset = {
+  placement?: Placement;
+  rects?: MiddlewareState['rects'];
+  remeasure?: boolean;
+};
+
+interface MiddlewareResult {
+  data?: MiddlewareData;
+  placement?: Placement;
+  reset?: MiddlewareReset;
+  x?: number;
+  y?: number;
+}
+
+type Middleware = (state: MiddlewareState) => MiddlewareResult | undefined;
+
+interface ComputePositionResult {
+  middlewareData: MiddlewareData;
+  placement: Placement;
+  x: number;
+  y: number;
+}
+
+interface ComputePositionOptions {
+  boundary?: Element | Rect;
+  containingBlock?: Element | null;
+  middleware?: readonly Middleware[];
+  padding?: Padding;
+  placement?: Placement;
+}
+
+interface DetectOverflowOptions {
+  boundary?: Element | Rect;
+  padding?: Padding;
+}
+
 type PositionStrategy = 'absolute' | 'fixed';
 
-type PositionerOptions = Omit<ComputePositionOptions, 'boundary' | 'containingBlock'> & {
+interface PositionerOptions extends Omit<ComputePositionOptions, 'boundary' | 'containingBlock'> {
   apply?: (result: ComputePositionResult) => void;
   autoUpdate?: AutoUpdateOptions | false;
-  boundary?: Element | Rect | 'clippingAncestors';
+  boundary?: ComputePositionOptions['boundary'] | 'clippingAncestors';
   strategy?: PositionStrategy;
-};
+}
 
 interface Positioner {
   readonly disposalSignal: AbortSignal;
@@ -137,9 +249,78 @@ interface Positioner {
   update(): void;
   [Symbol.dispose](): void;
 }
-```
 
-See source declarations for complete geometry and middleware option types.
+interface AutoUpdateOptions {
+  animationFrame?: boolean;
+  observeAncestors?: boolean;
+  observeFloating?: boolean;
+  observeVisualViewport?: boolean;
+  pauseWhenHidden?: boolean;
+  throttle?: number;
+}
+
+interface ReactivePositioner extends Positioner {
+  readonly position: Readable<ComputePositionResult | null>;
+}
+
+interface ArrowOptions {
+  element: HTMLElement;
+  padding?: Padding;
+}
+
+interface AutoPlacementOptions extends DetectOverflowOptions {
+  alignment?: Alignment | null;
+  allowedPlacements?: Placement[];
+}
+
+interface FlipOptions extends DetectOverflowOptions {
+  fallbackPlacements?: Placement[];
+}
+
+interface HideOptions extends DetectOverflowOptions {
+  strategy?: 'referenceHidden' | 'escaped' | 'both';
+}
+
+type OffsetConfig = {
+  crossAxis?: number;
+  mainAxis?: number;
+};
+
+type OffsetValue = number | OffsetConfig | ((state: MiddlewareState) => number | OffsetConfig);
+
+type ShiftLimiter = (
+  state: MiddlewareState,
+  correction: { crossAxis: number; mainAxis: number },
+) => { crossAxis: number; mainAxis: number };
+
+interface LimitShiftOptions {
+  offset?: number | ((state: MiddlewareState) => number);
+}
+
+interface ShiftOptions extends DetectOverflowOptions {
+  crossAxis?: boolean;
+  limiter?: ShiftLimiter;
+}
+
+interface InlineOptions {
+  padding?: Padding;
+  x?: number;
+  y?: number;
+}
+
+type SizeOptions = DetectOverflowOptions;
+
+interface PositioningPreset {
+  middleware: Middleware[];
+  placement: Placement;
+}
+
+interface PresetOptions {
+  offset?: number;
+  padding?: number;
+  placement?: Placement;
+}
+```
 
 ## Errors
 

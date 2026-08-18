@@ -116,19 +116,42 @@ signal rejects with its reason and removes timers and event listeners.
 
 ```ts
 export interface QueryScope {
-  get(selector: string): Element;
-  query(selector: string): Element | null;
-  queryAll(selector: string): Element[];
-  getByText(text: string, selector?: string): Element;
-  queryByText(text: string, selector?: string): Element | null;
-  queryAllByText(text: string, selector?: string): Element[];
-  getByTestId(id: string): Element;
-  queryByTestId(id: string): Element | null;
-  queryAllByTestId(id: string): Element[];
+  get<E extends Element = Element>(selector: string): E;
+  getByTestId<E extends Element = Element>(testId: string): E;
+  getByText<E extends Element = Element>(text: string, selector?: string): E;
+  query<E extends Element = Element>(selector: string): E | null;
+  queryAll<E extends Element = Element>(selector: string): E[];
+  queryAllByTestId<E extends Element = Element>(testId: string): E[];
+  queryAllByText<E extends Element = Element>(text: string, selector?: string): E[];
+  queryByTestId<E extends Element = Element>(testId: string): E | null;
+  queryByText<E extends Element = Element>(text: string, selector?: string): E | null;
 }
 ```
 
-`CustomEventInit`, `DelayOptions`, `RetryOptions`, and `WaitOptions` are exported option types for event and wait helpers.
+Scoped query helpers returned by `within(root)`.
+
+```ts
+export interface WaitOptions {
+  /** Polling interval in ms (default: 50). */
+  interval?: number;
+  /** Cancel the pending wait. */
+  signal?: AbortSignal;
+  /** Maximum wait time in ms (default: 1000). */
+  timeout?: number;
+}
+
+export interface RetryOptions extends WaitOptions {
+  /** Context included in the timeout error. */
+  message?: string;
+}
+
+export interface DelayOptions {
+  /** Cancel the pending delay. */
+  signal?: AbortSignal;
+}
+```
+
+`WaitOptions` configures `waitUntil`. `RetryOptions` extends it for `retry`. `DelayOptions` configures `delay`.
 
 ## Errors
 

@@ -435,7 +435,7 @@ type RouteContext<Params extends RouteParams = RouteParams, TRoutes extends Rout
   locals: Record<string, unknown>;
   readonly matches: RouteMatchBranch;
   readonly navigate: (
-    target: NamedNavigationTarget<TRoutes> | RawNavigationTarget,
+    target: NamedNavigationTarget<TRoutes> | RawNavigationTarget | string,
     options?: NavigateOptions,
   ) => Promise<void>;
   readonly params: Params;

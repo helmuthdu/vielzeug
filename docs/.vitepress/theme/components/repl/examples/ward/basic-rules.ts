@@ -3,10 +3,10 @@ export const basicRulesExample = {
 
 // Role-based access control with wildcard and anonymous support
 const ward = createWard([
-  ...allow(WILDCARD,  'posts', ['read']),
-  ...allow('editor',  'posts', ['update']),
-  ...deny('blocked',  WILDCARD, [WILDCARD]),
-  ...allow(ANONYMOUS, 'posts', ['read']),
+  allow(WILDCARD,  'posts', ['read']),
+  allow('editor',  'posts', ['update']),
+  deny('blocked',  WILDCARD, [WILDCARD]),
+  allow(ANONYMOUS, 'posts', ['read']),
 ])
 
 const viewer   = { id: 'u1', roles: ['viewer'] }

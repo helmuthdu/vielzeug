@@ -7,26 +7,26 @@ description: Complete type signatures, parameter docs, and return values for eve
 
 ## API Overview
 
-| Symbol               | Purpose                                               | Returns                        |
-| -------------------- | ----------------------------------------------------- | ------------------------------ |
-| `createLineChart()`  | Reactive line chart with curves and interpolation     | `ChartHandle`                  |
-| `createBarChart()`   | Bar chart: grouped, stacked, horizontal variants      | `ChartHandle`                  |
-| `createAreaChart()`  | Filled area chart                                     | `ChartHandle`                  |
-| `linearScale()`      | Continuous numeric → pixel scale                      | `Scale<number>`                |
-| `timeScale()`        | Date → pixel scale                                    | `Scale<Date>`                  |
-| `bandScale()`        | Categorical → pixel band scale                        | `BandScale`                    |
-| `createSparkline()`  | Minimal inline sparkline (line/area/bar)              | `ChartHandle`                  |
-| `createPieChart()`   | Pie, donut, or semi-circle donut chart                | `ChartHandle`                  |
-| `seriesColor()`      | CSS variable color for series index                   | `string`                       |
-| `setTheme()`         | Apply custom palette / CSS tokens at runtime          | `void`                         |
-| `resetTheme()`       | Clear all custom theme overrides back to defaults     | `void`                         |
-| `animate()`          | Animate SVG element attributes via RAF                | `() => void` (cancel function) |
-| `debugChart()`       | Wrap a `ChartHandle` with lifecycle logging (`/devtools` subpath) | `ChartHandle`       |
-| `PrismError`         | Base class for all prism-originated errors            | class                          |
-| `ChartA11y`          | Accessibility intent (labelled or decorative)         | type                           |
-| `LegendState`        | Live legend state object (plugin API)                 | type                           |
-| `TooltipState`       | Live tooltip state object (plugin API)                | type                           |
-| `ChartPluginContext` | Context object passed to `ChartPlugin.install()`      | type                           |
+| Symbol               | Purpose                                               | Execution mode | Common gotcha                                                             |
+| -------------------- | ----------------------------------------------------- | -------------- | -------------------------------------------------------------------------- |
+| `createLineChart()`  | Reactive line chart with curves and interpolation     | Sync           | Container must have explicit dimensions before mount                       |
+| `createBarChart()`   | Bar chart: grouped, stacked, horizontal variants      | Sync           | Use `variant` to switch layout; default is `'grouped'`                     |
+| `createAreaChart()`  | Filled area chart                                     | Sync           | Container must have explicit dimensions before mount                       |
+| `linearScale()`      | Continuous numeric → pixel scale                      | Sync           | Config is not `MaybeSignal` — call again if domain/range changes           |
+| `timeScale()`        | Date → pixel scale                                    | Sync           | Config is not `MaybeSignal` — call again if domain/range changes           |
+| `bandScale()`        | Categorical → pixel band scale                        | Sync           | Config is not `MaybeSignal` — call again if domain/range changes           |
+| `createSparkline()`  | Minimal inline sparkline (line/area/bar)              | Sync           | Defaults to decorative (`aria-hidden="true"`); set `a11y` to label          |
+| `createPieChart()`   | Pie, donut, or semi-circle donut chart                | Sync           | `onClick`/`onHover` use slice signatures, not `ChartEvent`                 |
+| `seriesColor()`      | CSS variable color for series index                   | Sync           | Wraps at 8 colors; pass `override` to bypass the palette                   |
+| `setTheme()`         | Apply custom palette / CSS tokens at runtime          | Sync           | Call before mounting charts; clears unset color slots from prior theme     |
+| `resetTheme()`       | Clear all custom theme overrides back to defaults     | Sync           | Use in test teardown or theme-switcher reset                               |
+| `animate()`          | Animate SVG element attributes via RAF                | Async (RAF)    | Returns a cancel function; `duration: 0` sets attributes synchronously      |
+| `debugChart()`       | Wrap a `ChartHandle` with lifecycle logging           | Sync           | Import from `@vielzeug/prism/devtools`; tree-shaken in production          |
+| `PrismError`         | Base class for all prism-originated errors            | —              | Use `instanceof PrismError` to catch any prism error                       |
+| `ChartA11y`          | Accessibility intent (labelled or decorative)         | —              | Omitting `a11y` defaults to `role="img"` (scaffolded) or decorative (sparkline) |
+| `LegendState`        | Live legend state object (plugin API)                 | —              | `el` is `null` when no legend is configured                                 |
+| `TooltipState`       | Live tooltip state object (plugin API)                | —              | `el` is `null` when no tooltip is configured                                |
+| `ChartPluginContext` | Context object passed to `ChartPlugin.install()`      | —              | Use `disposalSignal` for plugin cleanup instead of overriding `dispose()`   |
 
 ## Package Entry Points
 
@@ -236,7 +236,7 @@ Passed to `onClick` and `onHover` callbacks.
 ```ts
 interface ChartEvent {
   datum: Datum;
-  originalEvent: MouseEvent;
+  originalEvent: Event;
   series: Series;
 }
 ```
@@ -391,71 +391,6 @@ interface Series {
 
 ---
 
-### `ScaffoldContext`
-
-Passed to `renderFn` inside `createChartScaffold` — the internal building block behind `createLineChart`/`createBarChart`/`createAreaChart`. Relevant only if you're building a custom cartesian chart type on top of prism's scaffold, not to `ChartPlugin.install()` (see [`ChartPluginContext`](#chartplugincontext) for that).
-
-```ts
-interface ScaffoldContext {
-  chartArea: SVGGElement;
-  container: HTMLElement;
-  dimensions: Readable<ChartDimensions>;
-  disposalSignal: AbortSignal;
-  groups: ScaffoldGroups;
-  legend: LegendState | null;
-  svg: SVGSVGElement;
-  tooltip: TooltipState | null;
-}
-```
-
----
-
-### `RadialScaffoldContext`
-
-The `createRadialScaffold` counterpart to `ScaffoldContext`, for chart types with no cartesian axis groups (pie, donut, semi). Backs `createPieChart`.
-
-```ts
-interface RadialScaffoldContext {
-  container: HTMLElement;
-  dimensions: Readable<ChartDimensions>;
-  disposalSignal: AbortSignal;
-  legend: LegendState | null;
-  svg: SVGSVGElement;
-  tooltip: TooltipState | null;
-}
-```
-
----
-
-### `ScaffoldGroups`
-
-```ts
-interface ScaffoldGroups {
-  grid: SVGGElement;
-  series: SVGGElement;
-  xAxis: SVGGElement;
-  yAxis: SVGGElement;
-}
-```
-
-SVG `<g>` elements created by `createChartScaffold`. Children of `chartArea`, appended in render order: `grid` → `xAxis` → `yAxis` → `series`.
-
----
-
-### `ChartEventHandlers`
-
-```ts
-interface ChartEventHandlers {
-  onClick?: (event: MouseEvent) => void;
-  onMouseLeave?: (event: MouseEvent) => void;
-  onMouseMove?: (event: MouseEvent) => void;
-}
-```
-
-Returned by the `renderFn` passed to `createChartScaffold`. The scaffold attaches and tears down these listeners automatically before each re-render.
-
----
-
 ### `AnimationTarget`
 
 ```ts
@@ -473,10 +408,10 @@ One element + attribute map for use with `animate()`. Each attribute entry speci
 
 ### `PieChartConfig`
 
-Extends [`BaseChartConfig`](#basechartconfig) (inherits `a11y`, `legend`, `margin`, `plugins`, `tooltip`, `transition`). Overrides `onClick`/`onHover` with pie-specific slice signatures.
+Extends [`BaseChartConfig`](#basechartconfig) (inherits `a11y`, `legend`, `plugins`, `tooltip`, `transition`). Overrides `onClick`/`onHover` with pie-specific slice signatures and omits `margin`/`xAxis`/`yAxis` (not applicable to radial charts).
 
 ```ts
-interface PieChartConfig extends Omit<BaseChartConfig, 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
+interface PieChartConfig extends Omit<BaseChartConfig, 'margin' | 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
   cornerRadius?: number;
   data: MaybeSignal<PieSliceConfig[]>;
   innerRadius?: number;
@@ -497,7 +432,7 @@ interface PieChartConfig extends Omit<BaseChartConfig, 'onClick' | 'onHover' | '
 | `onClick`      | `(slice, index) => void`             | —                                      | Fired on slice click                                    |
 | `onHover`      | `(slice\|null, index\|null) => void` | —                                      | Fired on hover; `null` on mouseleave                    |
 
-> Inherited `BaseChartConfig` fields (`tooltip`, `transition`, `legend`, `margin`, `a11y`, `plugins`) behave identically to other chart types.
+> Inherited `BaseChartConfig` fields (`tooltip`, `transition`, `legend`, `a11y`, `plugins`) behave identically to other chart types. `margin`, `xAxis`, and `yAxis` are omitted (not applicable to radial charts).
 
 ### `PieSliceConfig`
 
@@ -670,7 +605,7 @@ interface AreaSeriesConfig extends Series {
 
 ```ts
 interface AxisConfig {
-  position: 'top' | 'bottom' | 'left' | 'right';
+  position?: AxisPosition; // defaults to 'bottom' for xAxis, 'left' for yAxis
   tickCount?: number;
   tickFormat?: (value: Date | number | string) => string;
   label?: string;
@@ -725,6 +660,7 @@ interface LegendConfig {
 interface TransitionConfig {
   duration?: number; // ms, default: 300
   easing?: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' | ((t: number) => number);
+  preference?: 'always' | 'never' | 'system'; // respects `prefers-reduced-motion` when `'system'`
   stagger?: number; // ms delay between bar enter animations, default: 0
 }
 ```
@@ -740,6 +676,45 @@ interface ChartMargin {
   bottom: number; // default: 40
   left: number; // default: 50
 }
+```
+
+### `ChartDimensions`
+
+```ts
+interface ChartDimensions {
+  height: number;
+  margin: ChartMargin;
+  width: number;
+}
+```
+
+### `AxisPosition`
+
+```ts
+type AxisPosition = 'bottom' | 'left' | 'right' | 'top';
+```
+
+### `LegendPosition`
+
+```ts
+type LegendPosition = 'bottom' | 'left' | 'right' | 'top';
+```
+
+### `PrismTheme`
+
+```ts
+interface PrismTheme {
+  colors?: string[];
+  fontFamily?: string;
+  gridColor?: string;
+  gridOpacity?: number;
+}
+```
+
+### `BarVariant`
+
+```ts
+type BarVariant = 'grouped' | 'grouped-horizontal' | 'stacked' | 'stacked-horizontal';
 ```
 
 ---
@@ -824,7 +799,7 @@ The live legend object available on `ctx.legend` inside `ChartPlugin.install`. C
 interface TooltipState {
   dispose(): void;
   [Symbol.dispose](): void;
-  el: HTMLElement | null;
+  el: HTMLDivElement | null;
   hide(): void;
   show(x: number, y: number, datum: Datum, series: Series): void;
 }

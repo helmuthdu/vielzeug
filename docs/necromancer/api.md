@@ -7,16 +7,19 @@ description: API reference for @vielzeug/necromancer animation ownership, groups
 
 ## API Overview
 
-| Symbol | Purpose | Common gotcha |
-| --- | --- | --- |
-| `animate()` | Animate one element | Defaults to a visible `180ms` duration |
-| `animateEach()` | Animate a unique element group | Non-zero `stagger` needs numeric `delay` |
-| `captureLayout()` | Capture positions and create a one-shot FLIP transition | Capture before changing layout |
-| `NecromancerError` | Base package error | Use `NecromancerError.is()` to narrow unknown errors |
+| Symbol | Purpose | Execution mode | Common gotcha |
+| --- | --- | --- | --- |
+| `animate()` | Animate one element | Sync | Defaults to a visible `180ms` duration |
+| `animateEach()` | Animate a unique element group | Sync | Non-zero `stagger` needs numeric `delay` |
+| `captureLayout()` | Capture positions and create a one-shot FLIP transition | Sync | Capture before changing layout |
+| `NecromancerError` | Base package error | Sync | Use `NecromancerError.is()` to narrow unknown errors |
 
 ## Package Entry Point
 
-All public functions, errors, and types are exported from `@vielzeug/necromancer`.
+| Import | Purpose |
+| --- | --- |
+| `@vielzeug/necromancer` | Animation functions, types, and errors |
+| `@vielzeug/necromancer/testing` | jsdom test fakes for `Element.animate()` and `getBoundingClientRect()` |
 
 ## Animation Functions
 
@@ -190,6 +193,18 @@ interface LayoutTransition {
 ## Testing (`@vielzeug/necromancer/testing`)
 
 jsdom (and most non-browser DOM environments) do not implement `Element.animate()`. Import these from the `/testing` sub-path, not the root entry point.
+
+### `AnimationCall`
+
+```ts
+type AnimationCall = {
+  readonly animation: FakeAnimation;
+  readonly keyframes: Keyframe[] | PropertyIndexedKeyframes;
+  readonly options?: KeyframeAnimationOptions;
+};
+```
+
+One recorded invocation of `Element.prototype.animate` from `installFakeAnimations()`.
 
 ### `installFakeAnimations()`
 

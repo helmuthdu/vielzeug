@@ -187,7 +187,7 @@ search.clear(); // Resets query + results + isSearching synchronously
 
 ### Composing with ripple signals
 
-`search.results` is a `Computed` signal — compose it into other computed values:
+`search.results` is a `Readable` signal — compose it into other computed values:
 
 ```ts
 import { computed } from '@vielzeug/ripple';

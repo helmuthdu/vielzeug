@@ -180,8 +180,10 @@ function createSearch<T>(index: ScoutIndex<T>, options?: CreateSearchOptions): S
 | Member | Type | Description |
 | --- | --- | --- |
 | `query` | `Signal<string>` | Writable search query. Set `.value` to trigger search. |
-| `results` | `Computed<SearchResult<T>[]>` | Reactive results, updated after debounce. |
-| `isSearching` | `Computed<boolean>` | `true` during the debounce window. |
+| `results` | `Readable<SearchResult<T>[]>` | Reactive results, updated after debounce. |
+| `isSearching` | `Readable<boolean>` | `true` during the debounce window. |
+| `disposalSignal` | `AbortSignal` | Aborted when `dispose()` is called. Use to tie other lifecycles to this search. |
+| `disposed` | `boolean` | `true` after `dispose()` has been called. |
 | `clear()` | `() => void` | Resets query, cancels debounce, clears results synchronously. |
 | `dispose()` | `() => void` | Releases all reactive subscriptions. |
 | `[Symbol.dispose]()` | `() => void` | `using`-compatible disposal. |
@@ -501,7 +503,20 @@ type HighlightPart = {
 
 ### `SearchState<T>`
 
-See `createSearch()` above.
+```ts
+type SearchState<T> = {
+  readonly query: Signal<string>;
+  readonly results: Readable<SearchResult<T>[]>;
+  readonly isSearching: Readable<boolean>;
+  readonly disposalSignal: AbortSignal;
+  readonly disposed: boolean;
+  clear(): void;
+  dispose(): void;
+  [Symbol.dispose](): void;
+};
+```
+
+See `createSearch()` above for member descriptions.
 
 ### `ReactiveSearch<T>`
 

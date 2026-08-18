@@ -16,7 +16,6 @@ description: API reference for module-worker pools and worker-side protocol regi
 | `createTestWorker()` | Create an in-process task-pool test double | Sync | Task modules are not executed |
 | `exposeTask()` | Register worker task handler | Sync | Worker-only import |
 | `exposeStream()` | Register worker stream handler | Sync | Worker-only import |
-| `createTestWorker()` | Faithful in-process task-pool test adapter | Sync | Does not execute worker modules |
 
 ## Package Entry Point
 
@@ -194,6 +193,8 @@ interface StreamWorkerPool<TInput, TChunk> {
   prime(): Promise<void>;
   drain(options?: DrainOptions): Promise<void>;
   dispose(): void;
+  readonly disposed: boolean;
+  readonly disposalSignal: AbortSignal;
   readonly stats: WorkerStats;
   readonly status: WorkerStatus;
 }
@@ -207,6 +208,15 @@ type WorkerStats = {
   readonly completed: number;
   readonly failed: number;
   readonly queued: number;
+};
+```
+
+### `RunningStream`
+
+```ts
+type RunningStream<TChunk> = {
+  done: Promise<void>;
+  iterable: AsyncIterable<TChunk>;
 };
 ```
 

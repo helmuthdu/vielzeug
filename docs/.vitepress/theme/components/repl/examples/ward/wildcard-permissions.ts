@@ -2,8 +2,8 @@ export const wildcardPermissionsExample = {
   code: `import { WILDCARD, allow, createWard } from '@vielzeug/ward'
 
 const ward = createWard([
-  ...allow('admin', WILDCARD, [WILDCARD]),
-  ...allow('user',  'posts',  ['read']),
+  allow('admin', WILDCARD, [WILDCARD]),
+  allow('user',  'posts',  ['read']),
 ])
 
 const admin = { id: '1', roles: ['admin'] }

@@ -130,6 +130,16 @@ type ReconnectOptions = {
 
 ---
 
+## `OutgoingMessage`
+
+```ts
+type OutgoingMessage = { channel?: string; event: string; payload: unknown };
+```
+
+An outgoing application message before it is serialized.
+
+---
+
 ## `OutgoingTransform`
 
 ```ts
@@ -145,7 +155,9 @@ Transform or filter outgoing application messages. Internal protocol frames (sub
 ```ts
 type Pulse<S extends PulseSchema = PulseSchema> = {
   // Channels
-  channel<K extends keyof ChannelMap<S> & string>(name: K): PulseChannel<...>;
+  channel<K extends keyof ChannelMap<S> & string>(
+    name: K,
+  ): PulseChannel<ChannelMap<S>[K]['server'], ChannelMap<S>[K]['client']>;
 
   // Connection
   connect(): Promise<void>;
@@ -222,7 +234,7 @@ Reactive connection status: `'connecting' | 'open' | 'reconnecting' | 'closed'`.
 ## `PulseChannel`
 
 ```ts
-type PulseChannel<TServer extends MessageMap, TClient extends MessageMap> = {
+type PulseChannel<TServer extends MessageMap = MessageMap, TClient extends MessageMap = MessageMap> = {
   readonly disposalSignal: AbortSignal;
   readonly disposed: boolean;
   readonly name: string;
@@ -238,6 +250,14 @@ type PulseChannel<TServer extends MessageMap, TClient extends MessageMap> = {
 ---
 
 ## `RoomScope`
+
+```ts
+type RoomScope<R extends RoomDefinition = RoomDefinition> = R extends { presence: infer P }
+  ? P extends undefined
+    ? RoomScopeBase
+    : PresenceRoomScope<P>
+  : RoomScopeBase;
+```
 
 A room scope. When the room definition includes `presence`, the scope is a `PresenceRoomScope`; otherwise it is a `RoomScopeBase`.
 
@@ -363,6 +383,30 @@ type MessageMap = Record<string, unknown>;
 ```ts
 type EventKey<T extends MessageMap> = keyof T & string;
 ```
+
+### `ServerEvents`
+
+```ts
+type ServerEvents<S extends PulseSchema> = S extends { server: infer M extends MessageMap } ? M : MessageMap;
+```
+
+Extract server events from a schema, defaulting to an empty map.
+
+### `ClientEvents`
+
+```ts
+type ClientEvents<S extends PulseSchema> = S extends { client: infer M extends MessageMap } ? M : MessageMap;
+```
+
+Extract client events from a schema, defaulting to an empty map.
+
+### `RoomMap`
+
+```ts
+type RoomMap<S extends PulseSchema> = S extends { rooms: infer R extends RoomDefinitions } ? R : RoomDefinitions;
+```
+
+Extract room definitions from a schema, defaulting to an empty map.
 
 ### `Unsubscribe`
 

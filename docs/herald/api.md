@@ -63,8 +63,8 @@ bus.dispose();
 function pipeEvents<S extends EventMap, T extends EventMap>(
   source: Bus<S>,
   target: Bus<T>,
-  entries: readonly [PipeEntry<S, T>, ...PipeEntry<S, T>[]],
-  options?: { signal?: AbortSignal },
+  entries: readonly [NoInfer<PipeEntry<S, T>>, ...NoInfer<PipeEntry<S, T>>[]],
+  opts?: { signal?: AbortSignal },
 ): Unsubscribe;
 ```
 
@@ -75,7 +75,7 @@ Forwards listed compatible events until manually stopped, either bus disposes, o
 | `source` | `Bus<S>` | Bus that emits source events. |
 | `target` | `Bus<T>` | Bus that receives compatible events. |
 | `entries` | non-empty `PipeEntry` tuple | Same-name keys or compatible `{ from, to }` mappings. |
-| `options.signal` | `AbortSignal` | Optional pipe lifetime signal. |
+| `opts.signal` | `AbortSignal` | Optional pipe lifetime signal. |
 
 **Returns:** Idempotent `Unsubscribe` function.
 
@@ -135,7 +135,7 @@ type EventKey<T extends EventMap> = Extract<keyof T, string>;
 ### `BusOptions`
 
 ```ts
-type BusOptions<T extends EventMap> = {
+type BusOptions<T extends EventMap = EventMap> = {
   logger?: BusLogger;
   maxListeners?: number;
   middleware?: readonly Middleware<T>[];
@@ -159,25 +159,25 @@ type BusOptions<T extends EventMap> = {
 ### `Bus`
 
 ```ts
-interface Bus<T extends EventMap> {
+type Bus<T extends EventMap> = {
   [Symbol.dispose](): void;
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
   emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): number;
   eventNames(): EventKey<T>[];
-  events<K extends EventKey<T>>(event: K, options?: { maxBuffer?: number; signal?: AbortSignal }): EventStream<T[K]>;
+  events<K extends EventKey<T>>(event: K, opts?: { maxBuffer?: number; signal?: AbortSignal }): EventStream<T[K]>;
   listenerCount(event?: EventKey<T>): number;
-  on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, options?: SubscribeOptions): Unsubscribe;
-  onAny(listener: (event: EventKey<T>, payload: unknown) => void, options?: SubscribeOptions): Unsubscribe;
-  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, options?: { signal?: AbortSignal }): Unsubscribe;
-  wait<K extends EventKey<T>>(event: K, options?: { signal?: AbortSignal }): Promise<T[K]>;
+  on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe;
+  onAny(listener: (event: EventKey<T>, payload: unknown) => void, opts?: SubscribeOptions): Unsubscribe;
+  once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: { signal?: AbortSignal }): Unsubscribe;
+  wait<K extends EventKey<T>>(event: K, opts?: { signal?: AbortSignal }): Promise<T[K]>;
   waitAny<const K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
     events: K,
-    options?: { signal?: AbortSignal },
+    opts?: { signal?: AbortSignal },
   ): Promise<WaitAnyResult<T, K>>;
   wildcardCount(): number;
-}
+};
 ```
 
 `emit()` returns listener count or `0` after disposal, blocked middleware, or handled validation rejection.
@@ -202,14 +202,14 @@ type Unsubscribe = () => void;
 ### `EmissionErrorContext` and `Middleware`
 
 ```ts
-type EmissionErrorContext<T extends EventMap> = {
+type EmissionErrorContext<T extends EventMap = EventMap> = {
   err: unknown;
   event: EventKey<T>;
   payload: unknown;
   timestamp: number;
 };
 
-type Middleware<T extends EventMap> = (
+type Middleware<T extends EventMap = EventMap> = (
   event: EventKey<T>,
   payload: unknown,
   next: () => void,

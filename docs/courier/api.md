@@ -165,6 +165,26 @@ function — no default console output.
 ## Types
 
 ```ts
+type TransportOptions = {
+  baseUrl?: string;
+  fetch?: typeof globalThis.fetch;
+  headers?: Record<string, string>;
+  timeout?: number;
+};
+
+type CourierOptions = TransportOptions & {
+  query?: { gcTime?: number; staleTime?: number };
+};
+
+type FetchContext = {
+  readonly headers: Readonly<Record<string, string>>;
+  readonly init: Readonly<Omit<RequestInit, 'headers'>>;
+  readonly url: string;
+  withHeaders(updates: Record<string, string>): FetchContext;
+};
+
+type Interceptor = (ctx: FetchContext, next: (ctx: FetchContext) => Promise<Response>) => Promise<Response>;
+
 type AsyncState<T> =
   | { data: undefined; error: null; isFetching: boolean; status: 'loading'; updatedAt: undefined }
   | { data: T; error: null; isFetching: boolean; status: 'success'; updatedAt: number }
@@ -192,6 +212,9 @@ type MutationOptions<T> = {
   signal?: AbortSignal;
 };
 type StreamEvent<T = unknown> = { readonly data: T; readonly event: string };
+type StreamOptions<P extends string = string> = Omit<RequestConfig<P>, 'responseType' | 'schema'> & {
+  method?: string;
+};
 type Unsubscribe = () => void;
 ```
 

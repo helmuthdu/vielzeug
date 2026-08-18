@@ -2,8 +2,8 @@ export const roleHierarchyExample = {
   code: `import { allow, createWard } from '@vielzeug/ward'
 
 const ward = createWard([
-  ...allow('editor',    'posts', ['read']),
-  ...allow('moderator', 'posts', ['delete']),
+  allow('editor',    'posts', ['read']),
+  allow('moderator', 'posts', ['delete']),
 ])
 
 const user  = { id: '42', roles: ['editor', 'moderator'] }

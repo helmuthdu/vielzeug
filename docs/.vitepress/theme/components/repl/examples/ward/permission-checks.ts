@@ -2,9 +2,9 @@ export const permissionChecksExample = {
   code: `import { allow, createWard, deny } from '@vielzeug/ward'
 
 const ward = createWard([
-  ...allow('editor', 'articles', ['read', 'create', 'update']),
-  ...deny('editor',  'articles', ['delete']),
-  ...allow('viewer', 'articles', ['read']),
+  allow('editor', 'articles', ['read', 'create', 'update']),
+  deny('editor',  'articles', ['delete']),
+  allow('viewer', 'articles', ['read']),
 ])
 
 const editor = { id: '1', roles: ['editor'] }

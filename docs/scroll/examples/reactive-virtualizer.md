@@ -1,6 +1,6 @@
 ---
 title: 'Scroll Examples — Reactive Virtualizer'
-description: 'Use createReactiveVirtualizer to integrate scroll state with @vielzeug/ripple signals.'
+description: 'Use createVirtualizer with the signal option to integrate scroll state with @vielzeug/ripple signals.'
 ---
 
 ## Reactive Virtualizer
@@ -11,25 +11,28 @@ You are building a component with `@vielzeug/ripple` or `@vielzeug/ore` and want
 
 ### Solution
 
-Use `createReactiveVirtualizer`. It wraps `createVirtualizer` and exposes state as a `Signal<VirtualizerState>`. Use `effect` to re-render whenever the visible window changes.
+Pass a `signal` factory to `createVirtualizer`. The virtualizer calls it with the initial state and then updates the returned `Signal<VirtualizerState>` on every visible-window change. Use `effect` to re-render whenever the signal updates.
 
 ```ts
-import { createReactiveVirtualizer } from '@vielzeug/scroll';
-import { effect } from '@vielzeug/ripple';
+import { signal, effect } from '@vielzeug/ripple';
+import { createVirtualizer } from '@vielzeug/scroll';
 
 const rows = Array.from({ length: 50_000 }, (_, i) => ({ id: i, label: `Row ${i}` }));
 
 const scrollEl = document.getElementById('scroll')!;
 const listEl = document.getElementById('list')!;
 
-const virt = createReactiveVirtualizer(scrollEl, {
+const state = signal({ items: [], stickyItems: [], totalSize: 0 });
+
+const virt = createVirtualizer(scrollEl, {
   count: rows.length,
   estimateSize: 36,
+  signal: (init) => state,
 });
 
 // Re-render whenever the visible window changes
 effect(() => {
-  const { items, totalSize } = virt.state.value;
+  const { items, totalSize } = state.value;
 
   listEl.style.height = `${totalSize}px`;
   listEl.replaceChildren();
@@ -52,10 +55,10 @@ virt.dispose();
 
 ### Reading state outside an effect
 
-`virt.state` is a standard `Signal<VirtualizerState>`. Read `.value` anywhere:
+`state` is a standard `Signal<VirtualizerState>`. Read `.value` anywhere:
 
 ```ts
-const { items, totalSize } = virt.state.value;
+const { items, totalSize } = state.value;
 console.log(`${items.length} items visible, total ${totalSize}px`);
 ```
 
@@ -64,7 +67,7 @@ console.log(`${items.length} items visible, total ${totalSize}px`);
 ```ts
 import { computed } from '@vielzeug/ripple';
 
-const visibleCount = computed(() => virt.state.value.items.length);
+const visibleCount = computed(() => state.value.items.length);
 
 effect(() => {
   statusEl.textContent = `Showing ${visibleCount.value} of ${virt.count} rows`;
@@ -75,8 +78,8 @@ effect(() => {
 
 ### Pitfalls
 
-- `onChange` must not be passed to `createReactiveVirtualizer` — it is wired internally to update `virt.state`.
-- The `state` signal updates synchronously within the scroll handler. Avoid heavy DOM operations directly inside `effect` — batch DOM writes with `requestAnimationFrame` if needed.
+- The `signal` factory is called once on construction with the initial state. The virtualizer then updates the signal's `.value` on every scroll cycle — do not replace the signal object after construction.
+- The signal updates synchronously within the scroll handler. Avoid heavy DOM operations directly inside `effect` — batch DOM writes with `requestAnimationFrame` if needed.
 - All live getters (`count`, `items`, `totalSize`, `scrollOffset`, `stickyItems`) remain current on the returned virtualizer through copied property descriptors rather than snapshotting.
 
 ### Related

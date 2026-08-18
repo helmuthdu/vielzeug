@@ -2,7 +2,7 @@ export const dynamicPermissionsExample = {
   code: `import { allow, createWard, predicate } from '@vielzeug/ward'
 
 const ward = createWard([
-  ...allow('user', 'posts', ['update'], { when: predicate.owns('authorId') }),
+  allow('user', 'posts', ['update'], { when: predicate.owns('authorId') }),
 ])
 
 const user1 = { id: 'user1', roles: ['user'] }

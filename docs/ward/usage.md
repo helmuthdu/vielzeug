@@ -105,7 +105,7 @@ trace.candidates.forEach((c) => {
 import { owns, predicate } from '@vielzeug/ward';
 
 const isOwner = owns('authorId');
-const canEdit = predicate.and(isOwner, ({ principal }) => principal !== null);
+const canEdit = predicate.and(isOwner, ({ principal }) => principal.id !== '');
 ```
 
 Async predicates are rejected at runtime with `WardPredicateError`.

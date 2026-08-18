@@ -3,8 +3,8 @@ export const batchDecisionsExample = {
 
 // checkAll returns WardDecisionResult[] — each entry carries resource + action
 const ward = createWard([
-  ...allow('editor', 'posts', ['read', 'update']),
-  ...deny('editor',  'posts', ['delete']),
+  allow('editor', 'posts', ['read', 'update']),
+  deny('editor',  'posts', ['delete']),
 ])
 
 const editor = { id: 'u1', roles: ['editor'] }

@@ -120,7 +120,13 @@ from(Promise.resolve('ready')).subscribe({ error: console.error, next: console.l
 ### `fromEvent()`
 
 ```ts
-fromEvent<T = Event>(target, type: string): Stream<T>
+fromEvent<T = Event>(
+  target: {
+    addEventListener(type: string, listener: (event: T) => void): void;
+    removeEventListener(type: string, listener: (event: T) => void): void;
+  },
+  type: string,
+): Stream<T>
 ```
 
 Emits target events until subscription ends.
@@ -446,7 +452,7 @@ type Sink<T> = {
   next(value: T): void;
 };
 
-type Producer<T> = (sink: Sink<T>, signal: AbortSignal) => Teardown | void;
+type Producer<T> = (sink: Sink<T>, signal: AbortSignal) => Teardown | undefined;
 type Operator<A = unknown, B = unknown> = (source: Stream<A>) => Stream<B>;
 
 interface Stream<T> {
@@ -464,6 +470,14 @@ type RetryOptions = { attempts: number; delay?: number | ((attempt: number) => n
 type ToArrayOptions = { maxItems: number; signal?: AbortSignal };
 type ValueOptions = { signal?: AbortSignal };
 type ChannelOptions<T> = { initial?: T; replay?: number };
+type Channel<T> = {
+  [Symbol.dispose](): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
+  send(value: T): void;
+  readonly stream: Stream<T>;
+};
 type ToSignalOptions<T> = { initial: T; onError?: (reason: unknown) => void; signal?: AbortSignal };
 type SignalBinding<T> = {
   [Symbol.dispose](): void;

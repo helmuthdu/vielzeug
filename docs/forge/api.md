@@ -132,7 +132,7 @@ if (result.status === 'invalid') console.log(result.errors, result.formError);
 ### `form.submit(handler)`
 
 ```ts
-function submit<TResult>(handler: (values: ReadonlyDeep<TValues>) => MaybePromise<TResult>): Promise<SubmitResult<TResult, TValues>>;
+function submit<TResult = void>(handler: (values: ReadonlyDeep<TValues>) => MaybePromise<TResult>): Promise<SubmitResult<TResult, TValues>>;
 ```
 
 Touches all fields, validates once, and invokes `handler` when validation is valid.
@@ -152,7 +152,7 @@ function bindField<Element extends HTMLElement, V>(
   element: Element,
   field: Field<V>,
   options: FieldBindingOptions<Element, V>,
-): Unsubscribe;
+): () => void;
 ```
 
 Binds one field to one element, marks it touched on blur, suppresses writeback from its own input event, and returns teardown.
@@ -176,7 +176,7 @@ const stop = bindField(input, form.field('email'), {
 
 ```ts
 function customValidator<TValues extends Record<string, unknown>>(
-  schema: Schema<unknown, TValues>,
+  schema: Schema<unknown, TValues, SchemaMode>,
 ): FormValidator<TValues>;
 ```
 
@@ -241,7 +241,7 @@ type FormValidator<TValues extends Record<string, unknown>> = (
 type FormOptions<TValues extends Record<string, unknown>> = Readonly<{
   initialValues: TValues;
   onSubscriberError?: (error: unknown) => void;
-  validate?: FormValidator<TValues>;
+  validate?: FormValidator<NoInfer<TValues>>;
 }>;
 
 type SubscribeOptions = Readonly<{ immediate?: boolean }>;
@@ -253,7 +253,7 @@ type FieldState<V> = Readonly<{
   value: ReadonlyDeep<V>;
 }>;
 
-type FormState<TValues extends Record<string, unknown> = Record<string, unknown>> = Readonly<{
+type FormState<TValues extends Record<string, unknown>> = Readonly<{
   error: string | undefined;
   errors: FormErrors<TValues> | undefined;
   submitCount: number;
@@ -263,7 +263,7 @@ type FormState<TValues extends Record<string, unknown> = Record<string, unknown>
   validating: boolean;
 }>;
 
-type ValidationResult<TValues extends Record<string, unknown> = Record<string, unknown>> =
+type ValidationResult<TValues extends Record<string, unknown>> =
   | Readonly<{ status: 'aborted' }>
   | Readonly<{ status: 'valid' }>
   | Readonly<{ errors: FormErrors<TValues> | undefined; formError: string | undefined; status: 'invalid' }>;

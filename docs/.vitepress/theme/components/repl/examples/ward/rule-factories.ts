@@ -3,11 +3,11 @@ export const ruleFactoriesExample = {
 
 // Rule factories with ownership predicate
 const ward = createWard([
-  ...allow('viewer', 'posts', ['read']),
-  ...allow('editor', 'posts', ['read', 'update']),
+  allow('viewer', 'posts', ['read']),
+  allow('editor', 'posts', ['read', 'update']),
   // Ownership predicate — update only your own posts
-  ...allow('editor', 'posts', ['update'], { when: predicate.owns('authorId') }),
-  ...deny('blocked', 'posts', ['read', 'update']),
+  allow('editor', 'posts', ['update'], { when: predicate.owns('authorId') }),
+  deny('blocked', 'posts', ['read', 'update']),
 ])
 
 const editor = { id: 'u1', roles: ['editor'] }

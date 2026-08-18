@@ -3,10 +3,10 @@ export const boundViewExample = {
 
 // Principal-bound view: capture user once, check many times
 const ward = createWard([
-  ...allow('editor', 'posts', ['read', 'update']),
+  allow('editor', 'posts', ['read', 'update']),
   // delete: allow only when user owns the post (higher priority wins)
-  ...allow('editor', 'posts', ['delete'], { when: predicate.owns('authorId'), priority: 1 }),
-  ...deny('editor',  'posts', ['delete'], { priority: 0 }),
+  allow('editor', 'posts', ['delete'], { when: predicate.owns('authorId'), priority: 1 }),
+  deny('editor',  'posts', ['delete'], { priority: 0 }),
 ])
 
 const user = ward.forUser({ id: 'alice', roles: ['editor'] })

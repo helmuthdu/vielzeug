@@ -1,8 +1,10 @@
 export const reactiveGroupedListExample = {
-  code: `import { createReactiveGroupedVirtualizer } from '@vielzeug/scroll'
+  code: `import { signal } from '@vielzeug/ripple'
+import { createGroupedVirtualizer } from '@vielzeug/scroll'
 
-// Reactive grouped virtualizer — state exposed as a Signal
-// Useful for frameworks/systems built on @vielzeug/ripple
+// Reactive grouped virtualizer — state emitted through a Signal
+// from @vielzeug/ripple. Create the signal yourself, pass a factory
+// that returns it, then subscribe in effect().
 
 type Contact = { id: number; name: string }
 
@@ -30,17 +32,17 @@ const stickyEl = document.createElement('div')
 stickyEl.style.cssText = 'position:sticky;top:0;z-index:1;background:#f9fafb;border-bottom:1px solid #e5e5e5;padding:0 14px;height:32px;line-height:32px;font-size:12px;font-weight:700;color:#374151;display:none;'
 container.appendChild(stickyEl)
 
-const virt = createReactiveGroupedVirtualizer<Contact>(container, {
+const state = signal({ headers: [], items: [], stickyHeader: null, totalSize: 0 })
+
+const virt = createGroupedVirtualizer<Contact>(container, {
   estimateHeaderSize: 32,
   estimateItemSize: 44,
   sections,
+  signal: (init) => state,
 })
 
-// virt.state is a Signal<GroupVirtualizerState<Contact>>
-// In a reactive system, subscribe to it via effect().
-// Here we simulate with a manual render triggered by state reads.
 function render() {
-  const { headers, items, stickyHeader, totalSize } = virt.state.value
+  const { headers, items, stickyHeader, totalSize } = state.value
   spacer.style.height = totalSize + 'px'
   content.replaceChildren()
   headers.forEach(({ start, size, label: text }) => {
@@ -63,7 +65,6 @@ function render() {
   }
 }
 
-// Initial render from signal value
 render()
 container.addEventListener('scroll', render)
 

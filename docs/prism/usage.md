@@ -800,10 +800,35 @@ const chart = createBarChart(container, {
 });
 ```
 
+## Accessibility
+
+Accessibility is a hard requirement for every chart factory. Each chart's root `<svg>` carries `role="img"` and must have either an `aria-label` or `aria-hidden="true"` — set via the `a11y` config field.
+
+Label a chart that conveys meaningful data:
+
+```ts
+createLineChart(container, {
+  a11y: { ariaLabel: 'Revenue by month' },
+  series: [...],
+});
+```
+
+Mark a decorative chart (e.g. a sparkline next to a text label) to exclude it from the accessibility tree:
+
+```ts
+createSparkline(container, {
+  a11y: { decorative: true },
+  data: [...],
+});
+```
+
+When `a11y` is omitted, scaffolded charts (line/bar/area/pie) render with `role="img"` but no `aria-label`; sparklines default to `aria-hidden="true"`. Always set `a11y: { ariaLabel: '…' }` on charts that users need to understand.
+
 ## Best Practices
 
 - Ensure the container element has explicit dimensions before calling a chart factory — `ResizeObserver` needs a non-zero layout size to trigger the first render.
 - Call `chart.dispose()` in your framework's unmount/cleanup phase to cancel signal effects and remove DOM nodes.
 - Prefer `signal()` from Ripple for mutable data properties — charts re-render automatically when signals change, with no manual `update()` call.
+- Set `a11y: { ariaLabel: '…' }` on every chart that conveys meaningful data — accessibility is a hard requirement, not an optional add-on.
 - Wrap a chart with `debugChart()` from the `/devtools` subpath only in development code paths; it is tree-shaken in production.
 - For SSR, skip chart creation server-side — Prism depends on DOM APIs and `ResizeObserver`. Render charts only after hydration in a `onMounted`/`useEffect` callback.

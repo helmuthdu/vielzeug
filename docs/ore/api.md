@@ -435,10 +435,16 @@ See the [Ripple documentation](/ripple/) for the full API.
 
 ```ts
 type PropDef<T> = {
-  default: T;
-  parse: (value: string | null) => T;
+  readonly default: T;
+  readonly parse: (value: string | null) => T;
   reflect?: boolean;
 };
+
+type PropsDef<T extends Record<string, unknown>> = {
+  [K in keyof Required<T>]: PropDef<T[K & keyof T]>;
+};
+
+type PropInputDefs = Record<string, PropDef<unknown>>;
 
 /**
  * Infer reactive props type from a PropInputDefs map.
@@ -449,25 +455,38 @@ type InferProps<D extends PropInputDefs> = {
 };
 
 // Runtime hooks — all plain functions imported from '@vielzeug/ore', not fields on an object.
+type OnMountedCallback = () => Cleanup | undefined;
+type OnFormResetCallback = () => void;
+
 declare function onMounted(fn: OnMountedCallback): void; // DOM-ready callback; runs after each connection's render
-declare function onCleanup(fn: CleanupFn): void; // Register teardown; called on disconnect
-declare function onElement<T extends HTMLElement>(ref: Readable<T | null>, cb: (el: T) => CleanupFn | void): () => void;
+declare function onCleanup(fn: Cleanup): void; // Register teardown; called on disconnect
+declare function onElement<T extends HTMLElement>(
+  ref: Readable<T | null>,
+  callback: (el: T) => Cleanup | undefined,
+): () => void;
+declare function onEvent<K extends keyof HTMLElementEventMap>(
+  target: EventTarget | null | undefined,
+  event: K,
+  listener: (e: HTMLElementEventMap[K]) => void,
+  options?: AddEventListenerOptions,
+): void;
 declare function onEvent(
   target: EventTarget | null | undefined,
   event: string,
   listener: EventListener,
   options?: AddEventListenerOptions,
 ): void;
-declare function onFormReset(fn: () => void): void; // Runs on every ancestor <form> reset; formAssociated only
-declare function watchEffect(fn: EffectCallback): () => void; // Scoped reactive effect; auto-cleaned on disconnect
+declare function onFormReset(fn: OnFormResetCallback): void; // Runs on every ancestor <form> reset; formAssociated only
+declare function watchEffect(fn: () => Cleanup | undefined): () => void; // Scoped reactive effect; auto-cleaned on disconnect
 declare function bind(config: HostBindConfig, options?: BindOptions): () => void; // Bindings for host or any target element
 declare function provide<T>(key: InjectionKey<T>, value: T): void; // Register a context value on the host element
-declare function inject<T>(key: InjectionKey<T>, fallback?: T): T | undefined;
+declare function inject<T>(key: InjectionKey<T>): T | undefined;
+declare function inject<T>(key: InjectionKey<T>, fallback: T): T;
 declare function getHost(): HTMLElement; // The current component's host element
 declare function useEmit<Emits extends Record<string, unknown> = Record<string, never>>(): EmitFn<Emits>;
 declare function useSlots<SlotNames extends string = string>(): ComponentSlots<SlotNames>;
 
-type ComponentDefinition<Props> = {
+type ComponentDefinition<Props extends Record<string, unknown> = Record<never, never>> = {
   formAssociated?: boolean;
   props?: PropsDef<Props>;
   setup: (props: InferProps<PropsDef<Props>>) => HTMLResult | null;
@@ -475,13 +494,30 @@ type ComponentDefinition<Props> = {
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
 
+type HostBindingValue =
+  | (() => string | number | boolean | null | undefined)
+  | Readable<string | number | boolean | null | undefined>
+  | string
+  | number
+  | boolean
+  | null
+  | undefined;
+
+type ReflectConfig = Record<string, HostBindingValue>;
+
 type HostBindConfig = {
   aria?: ReflectConfig;
-  attr?: Record<string, HostBindingValue>;
-  class?: (() => Record<string, boolean>) | Record<string, boolean | (() => boolean) | Readable<boolean>>;
-  on?: Record<string, (event: Event) => void>;
+  attr?: ReflectConfig;
+  class?: (() => Record<string, boolean>) | Record<string, Readable<boolean> | (() => boolean) | boolean>;
+  on?: Record<string, ((event: Event) => void) | undefined>;
   style?: Record<string, HostBindingValue>;
 };
+
+type BindOptions = AddEventListenerOptions & {
+  target?: Element;
+};
+
+type HostBindFn = (config: HostBindConfig, options?: BindOptions) => () => void;
 
 type ComponentSlots<S extends string = string> = {
   elements(name?: S): Readable<Element[]>;
@@ -493,6 +529,50 @@ type Ref<T extends Element> = Signal<T | null>;
 type RefCallback<T extends Element> = (el: T | null) => void;
 
 type InjectionKey<T> = symbol & { readonly __ore_injection_key?: T };
+
+interface HTMLResult {
+  mount(
+    parent: ParentNode,
+    anchor: Node | null,
+    registerCleanup: (fn: () => void) => void,
+  ): Node[];
+}
+
+type CSSResult = {
+  content: string;
+  toString(): string;
+};
+
+type LiveBinding<T> = { readonly source: Readable<T> };
+
+type EmitFn<T extends Record<string, unknown>> = {
+  <K extends KeysWithoutDetail<T>>(event: K): boolean;
+  <K extends Exclude<keyof T, KeysWithoutDetail<T>>>(event: K, detail: T[K]): boolean;
+};
+// KeysWithoutDetail is an internal helper type, not exported.
+
+type FormFieldOptions<T = unknown> = {
+  disabled?: Readable<boolean>;
+  el?: HTMLElement;
+  emptyStringForNull?: boolean;
+  onReset?: () => void;
+  toFormValue?: (value: T) => File | FormData | string | null;
+  validationMessage?: Readable<string>;
+  validity?: Readable<ValidityStateFlags | null>;
+  value: Signal<T> | Readable<T>;
+};
+
+type FormFieldHandle = {
+  checkValidity: () => boolean;
+  readonly internals: ElementInternals;
+  reportValidity: () => boolean;
+  setCustomValidity: (message: string) => void;
+};
+
+type MutationObserverValue = {
+  entries: MutationRecord[];
+  latest: MutationRecord | null;
+};
 
 /** Phase in which a OreError occurred. */
 type OreErrorPhase = 'each-reconcile' | 'form-reset' | 'mounted' | 'setup';

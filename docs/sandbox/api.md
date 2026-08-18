@@ -22,7 +22,7 @@ description: Full API reference for @vielzeug/sandbox — createSandbox, buildCs
 | `SandboxStateUpdateDetail` | Detail payload of the sandbox-side `sandbox:state-update` CustomEvent | — | Only relevant inside sandbox documents, not on the host |
 | `Unsubscribe` | Return type of `onMessage()` and `SandboxBridge.onState()` | — | Calling it more than once is a safe no-op |
 
-## Package Entry Points
+## Package Entry Point
 
 | Import | Purpose |
 | ------ | ------- |

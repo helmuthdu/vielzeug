@@ -323,6 +323,21 @@ type BindingEntry = {
 };
 ```
 
+### `ModifierKey`, `Shortcut`, and `ShortcutStep`
+
+Parser types used by `parseShortcut()`, `parseStep()`, `matchStep()`, and `canonicalizeShortcut()`.
+
+```ts
+type ModifierKey = 'alt' | 'ctrl' | 'meta' | 'shift';
+
+type ShortcutStep = {
+  key: string;
+  modifiers: Set<ModifierKey>;
+};
+
+type Shortcut = ShortcutStep[];
+```
+
 ### `ConflictOptions`
 
 Comparison options for `findShortcutConflicts()`.

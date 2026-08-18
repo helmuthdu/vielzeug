@@ -305,7 +305,7 @@ interface Ripple {
   createScope(name?: string): Scope;
   dispose(): void;
   readonly disposed: boolean;
-  effect(callback: () => Cleanup | void, options?: EffectOptions): EffectHandle;
+  effect(callback: () => Cleanup | undefined, options?: EffectOptions): EffectHandle;
   resource<Source, Value>(source: () => Source, loader: (source: Source, context: { readonly signal: AbortSignal }) => Promise<Value>, options?: ResourceOptions): Resource<Value>;
   signal<T>(initial: T, options?: SignalOptions<T>): Signal<T>;
   untrack<T>(fn: () => T): T;

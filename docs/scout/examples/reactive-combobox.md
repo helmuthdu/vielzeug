@@ -107,7 +107,7 @@ stopDebugging();
 - Always call `search.dispose()` (or use `using`) — an undisposed `SearchState` leaks its `ripple` subscriptions and any pending debounce timer.
 - `debounce: 0` skips the `isSearching` flash entirely — don't rely on it for a loading indicator when using synchronous updates.
 - `search.clear()` throws `ScoutDisposedError` if called after `dispose()` — don't call lifecycle methods after teardown.
-- `search.index.add()` / `.remove()` / `.reindex()` / `.setItems()` update `results` even without a query change — no need to also bump `search.query` to force a refresh.
+- `index.add()` / `.remove()` / `.reindex()` / `.setItems()` update `results` even without a query change — no need to also bump `search.query` to force a refresh.
 
 ### Related
 

@@ -111,7 +111,8 @@ All five methods share the same signature:
 
 ```ts
 log.debug / info / warn / error / fatal(message: string): void
-log.debug / info / warn / error / fatal(error: Error, context?: Bindings, message?: string): void
+log.debug / info / warn / error / fatal(error: Error, message?: string): void
+log.debug / info / warn / error / fatal(error: Error, context: Bindings, message?: string): void
 log.debug / info / warn / error / fatal(context: Bindings, message?: string): void
 ```
 
@@ -361,6 +362,7 @@ Strips sensitive fields from `bindings` and `context` before forwarding. Redacti
 | Option        | Type        | Default        | Description                     |
 | ------------- | ----------- | -------------- | ------------------------------- |
 | `keys`        | `string[]`  | —              | Required. Field names to redact |
+| `maxDepth`    | `number`    | `20`           | Finite non-negative integer max nesting depth. Fields deeper than this are not redacted. |
 | `replacement` | `string`    | `'[REDACTED]'` | Replacement value               |
 | `transport`   | `Transport` | —              | Required. Downstream transport  |
 
@@ -517,6 +519,27 @@ Payload shape delivered to `RemoteTransportOptions.handler`:
 | --------- | ------------------------------------------- | ----------------------------------------------------- |
 | `onError` | `(error: unknown, entry: LogEntry) => void` | Called when a transport in the pipe throws or rejects |
 
+### ConsoleThemeEntry
+
+```ts
+type ConsoleThemeEntry = {
+  badge: string;
+  bg: string;
+  border: string;
+  color: string;
+};
+```
+
+Per-level style definition for the console transport. All fields are optional when providing a level override — unspecified fields fall back to the default theme.
+
+### ConsoleTheme
+
+```ts
+type ConsoleTheme = Partial<Record<LogType | 'group' | 'ns', Partial<ConsoleThemeEntry>>>;
+```
+
+Partial theme overrides merged on top of the default theme. Each level entry is also partial — only specify the fields you want to change.
+
 ### ResolvedTheme
 
 `Record<LogType | 'group' | 'ns', ConsoleThemeEntry>` — fully resolved theme with all fields populated.
@@ -536,7 +559,8 @@ Payload shape delivered to `RemoteTransportOptions.handler`:
 ```ts
 type LogMethod = {
   (message: string): void;
-  (error: Error, context?: Bindings, message?: string): void;
+  (error: Error, message?: string): void;
+  (error: Error, context: Bindings, message?: string): void;
   (context: Bindings, message?: string): void;
 };
 ```

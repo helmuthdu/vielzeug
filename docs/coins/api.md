@@ -29,21 +29,36 @@ description: Exact money, currency definitions, exchange, formatting, serializat
 
 ## Construction
 
-### currency / defineCurrency
+### `currency(code)`
 
 ```ts
-currency(code: string): Currency
-defineCurrency({ code, minorUnit }): Currency
+function currency(code: string): Currency;
 ```
 
-Built-ins: `USD`, `EUR`, `GBP`, `JPY`, `KRW`, `BHD`, `KWD`.
+Resolves a registered currency definition by ISO code. Throws `InvalidCurrencyError` for unknown codes. Built-in definitions: `USD`, `EUR`, `GBP`, `JPY`, `KRW`, `BHD`, `KWD`.
 
-### money
+### `defineCurrency({ code, minorUnit })`
 
 ```ts
-money(amount: string, currency: Currency): Money
-money(amount: string, currency: Currency, options: { rounding: RoundingMode }): Money
-money(amount: bigint, currency: Currency, options: { unit: 'minor' }): Money
+function defineCurrency<C extends string>({ code, minorUnit }: { code: C; minorUnit: number }): Currency<C>;
+```
+
+Defines an explicit scale for a custom currency. Code must be three uppercase letters; `minorUnit` must be an integer from 0 to 6. Built-in definitions are immutable and separate from custom definitions.
+
+### `isCurrency(value)`
+
+```ts
+function isCurrency(value: unknown): value is Currency;
+```
+
+Type guard for registered currency definitions.
+
+### `money(amount, currency, options?)`
+
+```ts
+function money<C extends Currency>(amount: string, currency: C): Money<C>;
+function money<C extends Currency>(amount: string, currency: C, options: { rounding: RoundingMode }): Money<C>;
+function money<C extends Currency>(amount: bigint, currency: C, options: { unit: 'minor' }): Money<C>;
 ```
 
 ```ts
@@ -51,29 +66,54 @@ money('19.99', USD);
 money(1999n, USD, { unit: 'minor' });
 ```
 
+Decimal strings that exceed the currency's precision require a `rounding` mode. Bigint amounts require `{ unit: 'minor' }`.
+
+### `parseMoney(value)`
+
+```ts
+function parseMoney(value: unknown): Money;
+```
+
+Validates an unknown value as canonical money. Requires a plain data object with a bigint `amount` and a registered currency.
+
+### `isMoney(value)`
+
+```ts
+function isMoney(value: unknown): value is Money;
+```
+
+Type guard for canonical Coins money values.
+
 ## Arithmetic
 
 ```ts
-add(left, right)
-subtract(left, right)
-multiply(value, factor, { rounding? })
-divide(value, divisor, { rounding? })
-compare(left, right)
-clamp(value, { min, max })
-abs(value)
-negate(value)
-round(value, { fractionDigits, rounding? })
+function add<C extends Currency>(left: Money<C>, right: Money<NoInfer<C>>): Money<C>;
+function subtract<C extends Currency>(left: Money<C>, right: Money<NoInfer<C>>): Money<C>;
+function multiply<C extends Currency>(value: Money<C>, factor: string, options?: { rounding?: RoundingMode }): Money<C>;
+function divide<C extends Currency>(value: Money<C>, divisor: string, options?: { rounding?: RoundingMode }): Money<C>;
+function compare<C extends Currency>(left: Money<C>, right: Money<NoInfer<C>>): -1 | 0 | 1;
+function clamp<C extends Currency>(
+  value: Money<C>,
+  options: { max: Money<NoInfer<C>>; min: Money<NoInfer<C>> },
+): Money<C>;
+function abs<C extends Currency>(value: Money<C>): Money<C>;
+function negate<C extends Currency>(value: Money<C>): Money<C>;
+function round<C extends Currency>(
+  value: Money<C>,
+  options: { fractionDigits: number; rounding?: RoundingMode },
+): Money<C>;
+function toDecimal(value: Money): string;
 ```
 
-`factor` and `divisor` are decimal strings. Matching currency is required for binary money operations.
+`factor` and `divisor` are decimal strings. Matching currency is required for binary money operations. `round`'s `fractionDigits` must be an integer from 0 to the currency's `minorUnit`.
 
 ## Aggregation
 
 ```ts
-sum(values)
-sum(values, { currency })
-allocate(value, count)
-allocate(value, weights)
+function sum<C extends Currency>(values: readonly Money<C>[]): Money<C>;
+function sum<C extends Currency>(values: Iterable<Money<C>>, options: { currency: C }): Money<C>;
+function allocate<C extends Currency>(value: Money<C>, count: number): Money<C>[];
+function allocate<C extends Currency>(value: Money<C>, weights: readonly string[]): Money<C>[];
 ```
 
 `sum` infers currency from non-empty values. `sum([], { currency: USD })` returns zero USD. `allocate` returns values whose minor-unit total exactly equals input.
@@ -81,8 +121,21 @@ allocate(value, weights)
 ## Exchange
 
 ```ts
-exchangeRate({ from, to, value }): ExchangeRate
-exchange(value, rate, { rounding? }): Money
+function exchangeRate<From extends Currency, To extends Currency>({
+  from,
+  to,
+  value,
+}: {
+  from: From;
+  to: To;
+  value: string;
+}): ExchangeRate<From, To>;
+
+function exchange<From extends Currency, To extends Currency>(
+  value: Money<From>,
+  rate: ExchangeRate<From, To>,
+  options?: { rounding?: RoundingMode },
+): Money<To>;
 ```
 
 ```ts
@@ -93,8 +146,8 @@ exchange(money('100.00', USD), rate);
 ## Formatting
 
 ```ts
-format(value, options?): string
-formatParts(value, options?): MoneyFormatPart[]
+function format(value: Money, options?: FormatOptions): string;
+function formatParts(value: Money, options?: FormatOptions): MoneyFormatPart[];
 ```
 
 `FormatOptions` uses `locale`, `style`, `rounding`, `minimumFractionDigits`, and `maximumFractionDigits`.
@@ -102,35 +155,93 @@ formatParts(value, options?): MoneyFormatPart[]
 ## Serialization
 
 ```ts
-toDecimal(value): string
-toJSON(value): MoneyJSON
-parseMoneyJSON(value: unknown, options?: { currency?: (code: string) => Currency }): Money
-parseMoney(value: unknown): Money
-isMoney(value: unknown): value is Money
+function toJSON(value: Money): MoneyJSON;
+function parseMoneyJSON(value: unknown, options?: { currency?: (code: string) => Currency }): Money;
 ```
+
+`toJSON` produces a `{ amount, currency, unit: 'minor' }` shape. `parseMoneyJSON` validates the shape, unit, and currency code; custom currencies require an explicit `currency` resolver.
 
 ## Types
 
 ```ts
-type Currency = { code: CurrencyCode; minorUnit: number };
-type Money = { amount: bigint; currency: Currency };
-type Decimal = { numerator: bigint; denominator: bigint };
-type ExchangeRate = { from: Currency; to: Currency; value: Decimal };
-type MoneyJSON = { amount: string; currency: string; unit: 'minor' };
+type CurrencyCode<C extends string = string> = C & { readonly [currencyBrand]: C };
+
+type Currency<C extends string = string> = Readonly<{
+  code: CurrencyCode<C>;
+  minorUnit: number;
+}>;
+
+type Decimal = Readonly<{
+  readonly [decimalBrand]: true;
+  denominator: bigint;
+  numerator: bigint;
+}>;
+
+type Money<C extends Currency = Currency> = Readonly<{
+  amount: bigint;
+  currency: C;
+  readonly [moneyBrand]: C;
+}>;
+
+type ExchangeRate<From extends Currency = Currency, To extends Currency = Currency> = Readonly<{
+  from: From;
+  to: To;
+  value: Decimal;
+}>;
+
+type FormatOptions = Readonly<{
+  locale?: string;
+  maximumFractionDigits?: number;
+  minimumFractionDigits?: number;
+  rounding?: RoundingMode;
+  style?: 'code' | 'name' | 'narrowSymbol' | 'symbol';
+}>;
+
+type MoneyFormatPart = Readonly<{
+  type: 'currency' | 'decimal' | 'fraction' | 'integer' | 'literal' | 'minusSign' | 'plusSign';
+  value: string;
+}>;
+
+type MoneyJSON = Readonly<{
+  amount: string;
+  currency: string;
+  unit: 'minor';
+}>;
+
 type RoundingMode = 'awayFromZero' | 'ceil' | 'floor' | 'halfAwayFromZero' | 'halfEven' | 'towardZero';
 ```
 
+`CurrencyCode`, `Decimal`, and `Money` carry phantom brand symbols that prevent unbranded values from being assigned where a canonical value is required.
+
 ## Errors
+
+```ts
+type CoinsErrorCode =
+  | 'CURRENCY_MISMATCH'
+  | 'DIVISION_BY_ZERO'
+  | 'FORMAT_ERROR'
+  | 'INVALID_ALLOCATION'
+  | 'INVALID_CURRENCY'
+  | 'INVALID_DECIMAL'
+  | 'INVALID_MONEY'
+  | 'INVALID_ROUNDING';
+```
 
 Every Coins failure extends `CoinsError` and exposes `code`.
 
-- `INVALID_CURRENCY`
-- `INVALID_DECIMAL`
-- `INVALID_MONEY`
-- `INVALID_ALLOCATION`
-- `INVALID_ROUNDING`
-- `FORMAT_ERROR`
-- `DIVISION_BY_ZERO`
-- `CURRENCY_MISMATCH`
+```ts
+class CoinsError extends Error {
+  readonly code: CoinsErrorCode;
+}
 
-`CurrencyMismatchError` and `InvalidCurrencyError` are specialized `CoinsError` subclasses.
+class CurrencyMismatchError extends CoinsError {
+  readonly expected: string;
+  readonly received: string;
+}
+
+class InvalidCurrencyError extends CoinsError {
+  readonly value: unknown;
+}
+```
+
+`CurrencyMismatchError` and `InvalidCurrencyError` are specialized `CoinsError` subclasses. Use `instanceof CoinsError` to narrow any value to the Coins error hierarchy.

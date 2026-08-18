@@ -100,7 +100,7 @@ nowInstant();
 
 ```ts
 toInstant(input: AbsoluteTime): Temporal.Instant;
-toInstant(input: WallTime, options: { timeZone: string; disambiguation?: Disambiguation }): Temporal.Instant;
+toInstant(input: WallTime, options: { timeZone: string } & DisambiguationOptions): Temporal.Instant;
 inTimeZone(input: TimeInput, timeZone: string): Temporal.ZonedDateTime;
 ```
 
@@ -121,10 +121,15 @@ inTimeZone(instant, 'Europe/Berlin');
 ### `shift(input, duration, options?)`
 
 ```ts
-shift(input: TimeInput, duration: Temporal.DurationLike, options?: ShiftOptions): Temporal.ZonedDateTime;
+shift(input: Temporal.ZonedDateTime, duration: Temporal.DurationLike, options?: ShiftOptions): Temporal.ZonedDateTime;
+shift(
+  input: Exclude<TimeInput, Temporal.ZonedDateTime>,
+  duration: Temporal.DurationLike,
+  options: ShiftOptions & { timeZone: string },
+): Temporal.ZonedDateTime;
 ```
 
-Adds a duration through Temporal calendar rules and returns a zoned value.
+Adds a duration through Temporal calendar rules and returns a zoned value. Non-`ZonedDateTime` inputs require `options.timeZone`.
 
 **Returns:** `Temporal.ZonedDateTime`.
 
@@ -170,10 +175,11 @@ Returns whether `value` lies in inclusive normalized bounds.
 ### `clamp({ value, start, end, ...options })`
 
 ```ts
-clamp(input: ClampInput): Temporal.Instant | Temporal.ZonedDateTime;
+clamp(input: ClampInput & { value: Temporal.ZonedDateTime }): Temporal.ZonedDateTime;
+clamp(input: ClampInput): Temporal.Instant;
 ```
 
-Returns the nearest bound when `value` falls outside the range.
+Returns the nearest bound when `value` falls outside the range. Returns a `ZonedDateTime` when `value` is one, otherwise an `Instant`.
 
 ### `isBefore(a, b, options?)` / `isAfter(a, b, options?)` / `isSame(a, b, options?)`
 

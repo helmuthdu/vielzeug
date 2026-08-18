@@ -3,10 +3,10 @@ export const basicSetupExample = {
 
 // role accepts a string or an array of strings (OR semantics)
 const ward = createWard([
-  ...allow(['viewer', 'editor', 'admin'], 'posts', ['read']),
-  ...allow(['editor', 'admin'],           'posts', ['update']),
-  ...allow('admin',                       'posts', ['delete']),
-  ...allow(ANONYMOUS,                     'posts', ['read']),
+  allow(['viewer', 'editor', 'admin'], 'posts', ['read']),
+  allow(['editor', 'admin'],           'posts', ['update']),
+  allow('admin',                       'posts', ['delete']),
+  allow(ANONYMOUS,                     'posts', ['read']),
 ])
 
 const viewer = { id: '1', roles: ['viewer'] }
