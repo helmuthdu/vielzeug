@@ -5,7 +5,7 @@ package: forge
 category: forms
 keywords: [form-state, validation, immutable, input, submission]
 related: [spell, vault, courier]
-exports: [createForm, toFormData, bindField, customValidator, saveForm, loadForm]
+exports: [createForm, bindField, customValidator, saveForm, loadForm]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -101,7 +101,7 @@ const result = await form.submit(async (value) => {
   return response.ok;
 });
 
-if (!result.ok && result.type === 'validation') console.log(result.errors);
+if (result.status === 'invalid') console.log(result.errors);
 ```
 
 ## Features
@@ -110,9 +110,10 @@ if (!result.ok && result.type === 'validation') console.log(result.errors);
 
 - `form.value` exposes one immutable nested value tree.
 - `form.field(key)` selects typed object branches without string paths.
-- `field.set(updater)` replaces array values without index handles.
+- `field.set(updater)` replaces array values through immutable updater functions.
+- `field.field(index)` selects typed array item fields by index.
 - `form.validate()` returns valid, invalid, or aborted results.
-- `form.submit(handler)` touches, validates, and invokes the handler when valid.
+- `form.submit(handler, signal?)` touches, validates, and invokes the handler when valid.
 - `bindField()` connects one DOM element without owning validation timing.
 - `customValidator()` maps Spell schema errors into Forge fields.
 - `saveForm()` and `loadForm()` persist explicit Vault draft records.

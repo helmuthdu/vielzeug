@@ -14,7 +14,8 @@ A contact form needs text validation plus one optional file attachment. The valu
 Store a selected `File`, not `FileList`, then serialize the submitted value with `toFormData()`.
 
 ```ts
-import { createForm, toFormData } from '@vielzeug/forge';
+import { createForm } from '@vielzeug/forge';
+import { toFormData } from '@vielzeug/forge/form-data';
 
 const form = createForm({
   initialValues: { attachment: null as File | null, email: '', message: '', name: '' },
@@ -35,7 +36,7 @@ const result = await form.submit((value) =>
   fetch('/api/contact', { body: toFormData(value), method: 'POST' }).then((response) => response.ok),
 );
 
-if (!result.ok && result.type === 'validation') console.log(result.errors);
+if (result.status === 'invalid') console.log(result.errors);
 ```
 
 ### Pitfalls

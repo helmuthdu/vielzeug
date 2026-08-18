@@ -39,13 +39,13 @@ const result = await form.submit(async (value) => {
   return response.ok;
 });
 
-if (!result.ok && result.type === 'validation') console.log(result.errors);
+if (result.status === 'invalid') console.log(result.errors);
 ```
 
 ### Pitfalls
 
 - Call `touch()` from the input blur handler when errors should follow user interaction.
-- Handle `result.type === 'aborted'` when external validation can be cancelled.
+- Handle `result.status === 'aborted'` when external validation can be cancelled.
 - Let handler failures reject; Forge only converts validation failure into a result.
 
 ### Related

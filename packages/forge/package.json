@@ -28,6 +28,11 @@
       "require": "./dist/dom.cjs",
       "types": "./dist/dom.d.ts"
     },
+    "./form-data": {
+      "import": "./dist/form-data.js",
+      "require": "./dist/form-data.cjs",
+      "types": "./dist/form-data.d.ts"
+    },
     "./spell": {
       "import": "./dist/spell.js",
       "require": "./dist/spell.cjs",
@@ -43,6 +48,9 @@
     "*": {
       "dom": [
         "dist/dom.d.ts"
+      ],
+      "form-data": [
+        "dist/form-data.d.ts"
       ],
       "spell": [
         "dist/spell.d.ts"
@@ -66,9 +74,7 @@
     "preview": "vite preview",
     "test": "vitest"
   },
-  "dependencies": {
-    "@vielzeug/arsenal": "workspace:*"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "@vielzeug/spell": "workspace:*",
     "@vielzeug/vault": "workspace:*"

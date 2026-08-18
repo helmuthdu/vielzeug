@@ -20,11 +20,12 @@ email.set('ada@example.com');
 const result = await form.submit((value) => saveProfile(value));
 ```
 
-`Form` owns one immutable value tree of primitives, plain objects, arrays, `File`, and `Blob`. Object fields select child branches. Arrays are replaced through immutable updater functions. One validator evaluates the whole form and returns `{ fields, formError }`.
+`Form` owns one immutable value tree of primitives, plain objects, arrays, `Date`, `File`, and `Blob`. Object fields select child branches and array items support per-index field handles. One validator evaluates the whole form and returns `{ fields, formError }`.
 
 ## Optional adapters
 
 - `@vielzeug/forge/dom` — explicit element binding; application owns validation timing.
+- `@vielzeug/forge/form-data` — `toFormData()` serializes nested values into `FormData`.
 - `@vielzeug/forge/spell` — typed `customValidator(schema)` adapter with per-union diagnostics.
 - `@vielzeug/forge/vault` — explicit `saveForm()` and `loadForm()` draft helpers.
 

@@ -1,13 +1,11 @@
+import { createField, type FieldAccess } from './_field';
+import { createNotifier } from './_notify';
 import {
   assertSafeKey,
-  hasAtPath,
   immutable,
   isRecord,
   type MetaRoot,
   normalizeErrors,
-  readAtPath,
-  readError,
-  readMeta,
   resetAtPath,
   touchAll,
   writeAtPath,
@@ -15,8 +13,6 @@ import {
 } from './core/path';
 import { ForgeConfigError, ForgeDisposedError, ForgeSubmitError, ForgeValidationError } from './errors';
 import type {
-  Field,
-  FieldState,
   Form,
   FormErrors,
   FormOptions,
@@ -24,114 +20,104 @@ import type {
   MaybePromise,
   ReadonlyDeep,
   SubmitResult,
-  SubscribeOptions,
   Unsubscribe,
   ValidationErrors,
   ValidationResult,
 } from './types';
 
+type Validity = 'invalid' | 'unknown' | 'valid';
+
 type InternalState<TValues extends Record<string, unknown>> = Readonly<{
   baseline: TValues;
-  error: string | undefined;
   errors: FormErrors<TValues> | undefined;
+  formError: string | undefined;
   isSubmitting: boolean;
   isValidating: boolean;
   submitCount: number;
   touched: MetaRoot;
+  validity: Validity;
   value: TValues;
 }>;
 
-function rethrowAsync(error: unknown): void {
-  queueMicrotask(() => {
-    throw error;
-  });
-}
-
-function makeFieldState<V>(state: InternalState<Record<string, unknown>>, path: readonly string[]): FieldState<V> {
-  const value = readAtPath<V>(state.value, path);
-  const baseline = readAtPath<V>(state.baseline, path);
-
-  return Object.freeze({
-    dirty: value !== baseline || hasAtPath(state.value, path) !== hasAtPath(state.baseline, path),
-    error: readError(state.errors, path),
-    touched: readMeta(state.touched, path),
-    value: value as ReadonlyDeep<V>,
-  });
-}
-
 function makeFormState<TValues extends Record<string, unknown>>(current: InternalState<TValues>): FormState<TValues> {
   return Object.freeze({
-    error: current.error,
     errors: current.errors,
+    formError: current.formError,
+    hasErrors: current.formError !== undefined || current.errors !== undefined,
     submitCount: current.submitCount,
     submitting: current.isSubmitting,
     touched: Object.keys(current.touched).length > 0,
-    valid: current.error === undefined && current.errors === undefined,
     validating: current.isValidating,
+    validity: current.validity,
   });
 }
 
 /** One immutable value tree and one explicit full-form validator keep form behavior locally understandable. */
 export function createForm<TValues extends Record<string, unknown>>(options: FormOptions<TValues>): Form<TValues> {
   const initial = immutable(options.initialValues);
-
-  function reportListenerError(error: unknown): void {
-    if (!options.onSubscriberError) {
-      rethrowAsync(error);
-
-      return;
-    }
-
-    try {
-      options.onSubscriberError(error);
-    } catch (reporterError) {
-      rethrowAsync(reporterError);
-    }
-  }
-
+  const notifier = createNotifier(options.onSubscriberError);
+  const disposalController = new AbortController();
+  let disposed = false;
+  let validationController: AbortController | undefined;
   let current: InternalState<TValues> = {
     baseline: initial,
-    error: undefined,
     errors: undefined,
+    formError: undefined,
     isSubmitting: false,
     isValidating: false,
     submitCount: 0,
     touched: {},
+    validity: 'unknown',
     value: initial,
   };
-  const listeners = new Set<() => void>();
-  const disposalController = new AbortController();
-  let disposed = false;
-  let validationController: AbortController | undefined;
 
   function ensureActive(operation: string): void {
     if (disposed) throw new ForgeDisposedError(operation);
   }
 
-  function notify(): void {
-    for (const listener of [...listeners]) {
-      try {
-        listener();
-      } catch (error) {
-        reportListenerError(error);
-      }
-    }
-  }
-
   function write(update: (current: InternalState<TValues>) => InternalState<TValues>): void {
     current = Object.freeze(update(current));
-    notify();
+    notifier.notify();
   }
+
+  function abortValidation(): void {
+    validationController?.abort();
+  }
+
+  const access: FieldAccess = {
+    abortValidation,
+    addListener: notifier.add,
+    ensureActive,
+    readState: () => current,
+    resetValue(path) {
+      write((c) => ({
+        ...c,
+        touched: writeMeta(c.touched, path, false),
+        validity: 'unknown',
+        value: resetAtPath(c.value, c.baseline, path),
+      }));
+    },
+    setTouched(path, touched) {
+      write((c) => ({ ...c, touched: writeMeta(c.touched, path, touched) }));
+    },
+    setValue(path, next) {
+      write((c) => ({
+        ...c,
+        validity: 'unknown',
+        value: writeAtPath(c.value, path, next),
+      }));
+    },
+  };
 
   async function validate(externalSignal?: AbortSignal): Promise<ValidationResult<TValues>> {
     ensureActive('validate');
-    validationController?.abort();
+    abortValidation();
 
     const controller = new AbortController();
     const signal = externalSignal ? AbortSignal.any([controller.signal, externalSignal]) : controller.signal;
 
     validationController = controller;
-    write((current) => ({ ...current, isValidating: true }));
+    write((c) => ({ ...c, isValidating: true }));
 
     try {
       const result: ValidationErrors<TValues> | undefined = options.validate
@@ -144,10 +130,11 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
         ? (normalizeErrors(immutable(result.fields)) as FormErrors<TValues> | undefined)
         : undefined;
       const formError = result?.formError;
+      const validity: Validity = errors === undefined && formError === undefined ? 'valid' : 'invalid';
 
-      write((current) => ({ ...current, error: formError, errors }));
+      write((c) => ({ ...c, errors, formError, validity }));
 
-      return errors === undefined && formError === undefined
+      return validity === 'valid'
         ? Object.freeze({ status: 'valid' })
         : Object.freeze({ errors, formError, status: 'invalid' });
     } catch (error) {
@@ -158,89 +145,9 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
       if (validationController === controller) {
         validationController = undefined;
 
-        if (!disposed) write((current) => ({ ...current, isValidating: false }));
+        if (!disposed) write((c) => ({ ...c, isValidating: false }));
       }
     }
-  }
-
-  function createField<V>(path: readonly string[]): Field<V> {
-    const common = {
-      get dirty() {
-        return makeFieldState<V>(current as InternalState<Record<string, unknown>>, path).dirty;
-      },
-      get error() {
-        return makeFieldState<V>(current as InternalState<Record<string, unknown>>, path).error;
-      },
-      reset() {
-        ensureActive('field().reset');
-        validationController?.abort();
-        write((current) => ({
-          ...current,
-          touched: writeMeta(current.touched, path, false),
-          value: resetAtPath(current.value, current.baseline, path),
-        }));
-      },
-      set(next: V | ((previous: ReadonlyDeep<V>) => V)) {
-        ensureActive('field().set');
-        validationController?.abort();
-
-        const previous = readAtPath<V>(current.value, path) as ReadonlyDeep<V>;
-        const value = typeof next === 'function' ? (next as (current: ReadonlyDeep<V>) => V)(previous) : next;
-
-        write((current) => ({ ...current, value: writeAtPath(current.value, path, value) }));
-      },
-      subscribe(listener: (state: FieldState<V>) => void, subscribeOptions: SubscribeOptions = {}): Unsubscribe {
-        ensureActive('field().subscribe');
-
-        let previous = makeFieldState<V>(current as InternalState<Record<string, unknown>>, path);
-
-        if (subscribeOptions.immediate) listener(previous);
-
-        const filtered = () => {
-          const next = makeFieldState<V>(current as InternalState<Record<string, unknown>>, path);
-
-          if (
-            next.value === previous.value &&
-            next.error === previous.error &&
-            next.touched === previous.touched &&
-            next.dirty === previous.dirty
-          ) {
-            return;
-          }
-
-          previous = next;
-          listener(next);
-        };
-
-        listeners.add(filtered);
-
-        return () => listeners.delete(filtered);
-      },
-      touch() {
-        ensureActive('field().touch');
-        write((current) => ({ ...current, touched: writeMeta(current.touched, path, true) }));
-      },
-      get touched() {
-        return makeFieldState<V>(current as InternalState<Record<string, unknown>>, path).touched;
-      },
-      get value() {
-        return makeFieldState<V>(current as InternalState<Record<string, unknown>>, path).value;
-      },
-    };
-
-    return Object.assign(common, {
-      field<K extends keyof NonNullable<V> & string>(key: K): Field<NonNullable<V>[K]> {
-        assertSafeKey(key);
-
-        const currentVal = readAtPath(current.value, path);
-
-        if (currentVal !== undefined && !isRecord(currentVal)) {
-          throw new ForgeConfigError(`Cannot select '${key}' because the current field value is not an object.`);
-        }
-
-        return createField<NonNullable<V>[K]>([...path, key]);
-      },
-    }) as Field<V>;
   }
 
   const form: Form<TValues> = {
@@ -252,87 +159,93 @@ export function createForm<TValues extends Record<string, unknown>>(options: For
 
       disposed = true;
       disposalController.abort();
-      validationController?.abort();
-      listeners.clear();
+      abortValidation();
+      notifier.clear();
     },
     get disposed() {
       return disposed;
     },
     field(key) {
       assertSafeKey(key);
+      if (!isRecord(current.value)) throw new ForgeConfigError('Form value must be an object.');
 
-      return createField<TValues[typeof key]>([key]);
+      return createField<TValues[typeof key]>([key], access);
     },
     reset(next) {
       ensureActive('reset');
-      validationController?.abort();
+      abortValidation();
 
       const baseline = next === undefined ? current.baseline : immutable(next);
 
-      write((current) => ({
-        ...current,
+      write((c) => ({
+        ...c,
         baseline,
-        error: undefined,
         errors: undefined,
+        formError: undefined,
         touched: {},
+        validity: 'unknown',
         value: baseline,
       }));
     },
     set(next) {
       ensureActive('set');
-      validationController?.abort();
+      abortValidation();
 
       const value =
         typeof next === 'function' ? (next as (current: ReadonlyDeep<TValues>) => TValues)(form.value) : next;
 
-      write((current) => ({ ...current, error: undefined, errors: undefined, value: immutable(value) }));
+      write((c) => ({ ...c, errors: undefined, formError: undefined, validity: 'unknown', value: immutable(value) }));
     },
     get state() {
       return makeFormState(current);
     },
     async submit<TResult = void>(
-      handler: (values: ReadonlyDeep<TValues>) => MaybePromise<TResult>,
+      handler: (values: ReadonlyDeep<TValues>, signal: AbortSignal) => MaybePromise<TResult>,
+      externalSignal?: AbortSignal,
     ): Promise<SubmitResult<TResult, TValues>> {
       ensureActive('submit');
 
-      if (current.isSubmitting) throw new ForgeSubmitError('submit() called while a submission is already in progress');
+      if (current.isSubmitting) {
+        throw new ForgeSubmitError('submit() called while a submission is already in progress');
+      }
 
-      write((current) => ({
-        ...current,
+      const signal = externalSignal
+        ? AbortSignal.any([disposalController.signal, externalSignal])
+        : disposalController.signal;
+
+      write((c) => ({
+        ...c,
         isSubmitting: true,
-        submitCount: current.submitCount + 1,
-        touched: touchAll(current.value),
+        submitCount: c.submitCount + 1,
+        touched: touchAll(c.value),
       }));
 
       try {
-        const result = await validate();
+        const result = await validate(externalSignal);
 
-        if (result.status === 'aborted') return Object.freeze({ ok: false, type: 'aborted' });
+        if (result.status === 'aborted') return Object.freeze({ status: 'aborted' });
 
         if (result.status === 'invalid') {
-          return Object.freeze({
-            errors: result.errors,
-            formError: result.formError,
-            ok: false,
-            type: 'validation',
-          });
+          return Object.freeze({ errors: result.errors, formError: result.formError, status: 'invalid' });
         }
 
-        return Object.freeze({ ok: true, value: await handler(form.value) });
+        try {
+          return Object.freeze({ status: 'ok', value: await handler(form.value, signal) });
+        } catch (error) {
+          if (signal.aborted) return Object.freeze({ status: 'aborted' });
+
+          throw error;
+        }
       } finally {
-        if (!disposed) write((current) => ({ ...current, isSubmitting: false }));
+        if (!disposed) write((c) => ({ ...c, isSubmitting: false }));
       }
     },
-    subscribe(listener, subscribeOptions: SubscribeOptions = {}): Unsubscribe {
+    subscribe(listener, subscribeOptions = {}): Unsubscribe {
       ensureActive('subscribe');
 
       if (subscribeOptions.immediate) listener(makeFormState(current));
 
-      const formListener = () => listener(makeFormState(current));
-
-      listeners.add(formListener);
-
-      return () => listeners.delete(formListener);
+      return notifier.add(() => listener(makeFormState(current)));
     },
     [Symbol.dispose]() {
       form.dispose();

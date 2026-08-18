@@ -10,9 +10,9 @@ description: Complete reference for immutable forms, fields, validation, seriali
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
 | `createForm()` | Create immutable form state | Sync | `initialValues` cannot contain mutable class instances |
-| `form.field()` | Select a top-level or object child field | Sync | Arrays have no index field handles |
+| `form.field()` | Select a top-level or object child field | Sync | Unsafe keys (`__proto__`, `constructor`, `prototype`) are rejected |
 | `form.validate()` | Validate complete value | Async | Handle `aborted` separately |
-| `form.submit()` | Touch, validate, then invoke handler | Async | Concurrent calls reject |
+| `form.submit(handler, signal?)` | Touch, validate, then invoke handler | Async | Concurrent calls reject |
 | `form.reset()` | Restore or replace baseline | Sync | `reset(next)` makes `next` clean |
 | `form.subscribe()` | Observe form metadata | Sync | Throws after disposal |
 | `toFormData()` | Serialize values for multipart transport | Sync | `FileList` is transport-only |
@@ -24,8 +24,9 @@ description: Complete reference for immutable forms, fields, validation, seriali
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/forge` | Core form factory, serialization helper, types, and errors |
+| `@vielzeug/forge` | Core form factory, types, and errors |
 | `@vielzeug/forge/dom` | `bindField()` and DOM binding types |
+| `@vielzeug/forge/form-data` | `toFormData()` |
 | `@vielzeug/forge/spell` | `customValidator()` |
 | `@vielzeug/forge/vault` | `saveForm()`, `loadForm()`, and `FormDraftCodec` |
 
@@ -41,7 +42,7 @@ Creates a form with immutable initial values and an optional full-form validator
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `options.initialValues` | `TValues` | Initial value and reset baseline. Supports primitives, plain objects, arrays, `File`, and `Blob`. |
+| `options.initialValues` | `TValues` | Initial value and reset baseline. Supports primitives, plain objects, arrays, `Date`, `File`, and `Blob`. |
 | `options.validate` | `FormValidator<TValues>` | Optional validator for the entire current value. |
 | `options.onSubscriberError` | `(error: unknown) => void` | Optional subscriber failure reporter. |
 
@@ -70,7 +71,7 @@ Converts nested values into `FormData` with dot-separated object keys and repeat
 **Example:**
 
 ```ts
-import { toFormData } from '@vielzeug/forge';
+import { toFormData } from '@vielzeug/forge/form-data';
 
 const body = toFormData({ profile: { email: 'ada@example.com' }, tags: ['typescript', 'forms'] });
 ```
@@ -89,7 +90,7 @@ const body = toFormData({ profile: { email: 'ada@example.com' }, tags: ['typescr
 | `set(next)` | `void` | Replace the complete value or derive a replacement. |
 | `reset(next?)` | `void` | Restore baseline or make `next` the baseline. |
 | `validate(signal?)` | `Promise<ValidationResult<TValues>>` | Run full-form validation. |
-| `submit(handler)` | `Promise<SubmitResult<TResult, TValues>>` | Touch, validate, and invoke handler when valid. |
+| `submit(handler, signal?)` | `Promise<SubmitResult<TResult, TValues>>` | Touch, validate, and invoke handler when valid. |
 | `subscribe(listener, options?)` | `Unsubscribe` | Observe form state; throws after disposal. |
 | `dispose()` | `void` | Abort validation and clear subscribers. |
 | `disposed` | `boolean` | Whether the form has been disposed. |
@@ -97,7 +98,7 @@ const body = toFormData({ profile: { email: 'ada@example.com' }, tags: ['typescr
 
 ### `Field<V>`
 
-`form.field(key)` and object-field `.field(key)` return this handle.
+`form.field(key)` and object-field `.field(key)` return this handle. Array-item `.field(index)` returns a per-item field handle.
 
 | Member | Signature | Description |
 | --- | --- | --- |
@@ -105,7 +106,8 @@ const body = toFormData({ profile: { email: 'ada@example.com' }, tags: ['typescr
 | `error` | `string \| undefined` | Current field error. |
 | `dirty` | `boolean` | Whether branch differs from baseline. |
 | `touched` | `boolean` | Whether field was touched. |
-| `field(key)` | `Field<V[K]>` | Select child object field only. |
+| `state` | `FieldState<V>` | Snapshot of `dirty`, `error`, `touched`, and `value` in one read. |
+| `field(key)` | `Field<V[K]>` | Select child object field or array item by index. |
 | `set(next)` | `void` | Replace branch or derive a replacement. |
 | `reset()` | `void` | Restore exact baseline branch. |
 | `touch()` | `void` | Mark field touched. |
@@ -129,15 +131,18 @@ const result = await form.validate();
 if (result.status === 'invalid') console.log(result.errors, result.formError);
 ```
 
-### `form.submit(handler)`
+### `form.submit(handler, signal?)`
 
 ```ts
-function submit<TResult = void>(handler: (values: ReadonlyDeep<TValues>) => MaybePromise<TResult>): Promise<SubmitResult<TResult, TValues>>;
+function submit<TResult = void>(
+  handler: (values: ReadonlyDeep<TValues>, signal: AbortSignal) => MaybePromise<TResult>,
+  signal?: AbortSignal,
+): Promise<SubmitResult<TResult, TValues>>;
 ```
 
-Touches all fields, validates once, and invokes `handler` when validation is valid.
+Touches all fields, validates once, and invokes `handler` when validation is valid. The handler receives an `AbortSignal` that is aborted when the external `signal` (or the form's disposal signal) aborts.
 
-**Returns:** `SubmitResult<TResult, TValues>`. Handler failures reject normally.
+**Returns:** `SubmitResult<TResult, TValues>`. Handler failures reject normally unless caused by signal abort, which returns `{ status: 'aborted' }`.
 
 ```ts
 const result = await form.submit((value) => Promise.resolve(value));
@@ -180,7 +185,7 @@ function customValidator<TValues extends Record<string, unknown>>(
 ): FormValidator<TValues>;
 ```
 
-Adapts a Spell schema. Every failing union maps its closest branch while preserving unrelated errors. Array item issues map to the parent array field; duplicate paths retain the first message.
+Adapts a Spell schema. Every failing union maps its closest branch while preserving unrelated errors. Array item issues map to per-item array fields; duplicate paths retain the first message.
 
 **Example:**
 
@@ -223,8 +228,8 @@ type ReadonlyDeep<T> = T extends (...args: never[]) => unknown
       ? { readonly [K in keyof T]: ReadonlyDeep<T[K]> }
       : T;
 
-type FormErrors<T> = T extends readonly unknown[]
-  ? string
+type FormErrors<T> = T extends readonly (infer Item)[]
+  ? string | readonly (FormErrors<Item> | undefined)[]
   : T extends Record<string, unknown>
     ? string | { readonly [K in keyof T]?: FormErrors<T[K]> }
     : string;
@@ -254,12 +259,13 @@ type FieldState<V> = Readonly<{
 }>;
 
 type FormState<TValues extends Record<string, unknown>> = Readonly<{
-  error: string | undefined;
   errors: FormErrors<TValues> | undefined;
+  formError: string | undefined;
+  hasErrors: boolean;
   submitCount: number;
   submitting: boolean;
   touched: boolean;
-  valid: boolean;
+  validity: 'invalid' | 'unknown' | 'valid';
   validating: boolean;
 }>;
 
@@ -269,18 +275,25 @@ type ValidationResult<TValues extends Record<string, unknown>> =
   | Readonly<{ errors: FormErrors<TValues> | undefined; formError: string | undefined; status: 'invalid' }>;
 
 type SubmitResult<TResult = void, TValues extends Record<string, unknown> = Record<string, unknown>> =
-  | Readonly<{ ok: true; value: TResult }>
-  | Readonly<{ ok: false; type: 'aborted' }>
-  | Readonly<{ errors: FormErrors<TValues> | undefined; formError: string | undefined; ok: false; type: 'validation' }>;
+  | Readonly<{ status: 'aborted' }>
+  | Readonly<{ errors: FormErrors<TValues> | undefined; formError: string | undefined; status: 'invalid' }>
+  | Readonly<{ status: 'ok'; value: TResult }>;
 ```
 
 ```ts
-type Field<V> = {
+type ChildField<V> =
+  NonNullable<V> extends readonly (infer Item)[]
+    ? { field(index: number): Field<Item> }
+    : NonNullable<V> extends Record<string, unknown>
+      ? { field<K extends keyof NonNullable<V> & string>(key: K): Field<NonNullable<V>[K]> }
+      : Record<never, never>;
+
+type Field<V> = ChildField<V> & {
   readonly dirty: boolean;
   readonly error: string | undefined;
+  readonly state: FieldState<V>;
   readonly touched: boolean;
   readonly value: ReadonlyDeep<V>;
-  field<K extends keyof NonNullable<V> & string>(key: K): Field<NonNullable<V>[K]>;
   reset(): void;
   set(next: V | ((previous: ReadonlyDeep<V>) => V)): void;
   subscribe(listener: (state: FieldState<V>) => void, options?: SubscribeOptions): Unsubscribe;
@@ -297,7 +310,10 @@ type Form<TValues extends Record<string, unknown>> = {
   field<K extends keyof TValues & string>(key: K): Field<TValues[K]>;
   reset(next?: TValues): void;
   set(next: TValues | ((previous: ReadonlyDeep<TValues>) => TValues)): void;
-  submit<TResult = void>(handler: (values: ReadonlyDeep<TValues>) => MaybePromise<TResult>): Promise<SubmitResult<TResult, TValues>>;
+  submit<TResult = void>(
+    handler: (values: ReadonlyDeep<TValues>, signal: AbortSignal) => MaybePromise<TResult>,
+    signal?: AbortSignal,
+  ): Promise<SubmitResult<TResult, TValues>>;
   subscribe(listener: (state: FormState<TValues>) => void, options?: SubscribeOptions): Unsubscribe;
   validate(signal?: AbortSignal): Promise<ValidationResult<TValues>>;
 };

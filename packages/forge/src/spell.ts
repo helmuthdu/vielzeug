@@ -1,8 +1,8 @@
 import type { Issue, Schema, SchemaMode } from '@vielzeug/spell';
+import type { ErrorTree } from './core/path';
 import { writeError } from './core/path';
 import type { FormErrors, FormValidator, ValidationErrors } from './types';
 
-type ErrorTree = Record<string, unknown>;
 type UnionIssue = Extract<Issue, { code: 'invalid_union' }>;
 
 function isUnionIssue(issue: Issue): issue is UnionIssue {
@@ -27,18 +27,6 @@ function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T | und
       },
     );
   });
-}
-
-function fieldPath(path: readonly (string | number)[]): string[] {
-  const segments: string[] = [];
-
-  for (const segment of path) {
-    if (typeof segment === 'number') break;
-
-    segments.push(segment);
-  }
-
-  return segments;
 }
 
 function prefixIssues(path: readonly (string | number)[], issues: readonly Issue[]): Issue[] {
@@ -70,7 +58,7 @@ export function customValidator<TValues extends Record<string, unknown>>(
         continue;
       }
 
-      fields = writeError(fields, fieldPath(issue.path), issue.message);
+      fields = writeError(fields, issue.path, issue.message);
     }
 
     const errors: ValidationErrors<TValues> = {

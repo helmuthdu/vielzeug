@@ -7,7 +7,7 @@ description: Build immutable forms, validate whole values, and use optional adap
 
 ## Basic Usage
 
-Create one form value and update object branches through stable typed operations. Form values support primitives, plain objects, arrays, `File`, and `Blob`; mutable class instances such as `Date`, `Map`, and `Set` are rejected.
+Create one form value and update object branches through stable typed operations. Form values support primitives, plain objects, arrays, `Date`, `File`, and `Blob`; mutable class instances such as `Map` and `Set` are rejected.
 
 ```ts
 import { createForm } from '@vielzeug/forge';
@@ -40,7 +40,7 @@ name.reset();
 form.reset({ profile: { email: 'ada@example.com', name: 'Ada' }, tags: [] });
 ```
 
-An absent optional parent remains absent after a child reset. Arrays are complete values; replace them with an updater instead of retaining index handles.
+An absent optional parent remains absent after a child reset. Array items support per-index field handles for reads, updates, and resets.
 
 ## Validate and Submit
 
@@ -64,7 +64,7 @@ if (validation.status === 'aborted') console.log('Validation cancelled');
 
 const result = await passwordForm.submit((value) => Promise.resolve(value.password.length));
 
-if (result.ok) console.log(result.value);
+if (result.status === 'ok') console.log(result.value);
 ```
 
 Starting another validation aborts the previous run. Field edits preserve existing errors until the next validation replaces them. Unexpected validator failures reject as `ForgeValidationError` with the original error as `cause`.
@@ -81,7 +81,7 @@ const observedForm = createForm({
 });
 
 const stopForm = observedForm.subscribe((state) => {
-  console.log(state.valid, state.submitting);
+  console.log(state.validity, state.submitting);
 }, { immediate: true });
 const stopField = observedForm.field('email').subscribe((state) => {
   console.log(state.value, state.error);
@@ -181,7 +181,7 @@ const Profile = s.object({ email: s.string().email() });
 const form = createForm({ initialValues: { email: '' }, validate: customValidator(Profile) });
 ```
 
-`customValidator()` preserves unrelated Spell errors, maps each union to its closest branch, and maps array-item failures to the parent array field. Parse again at the submit boundary when a Spell transform must produce the outgoing payload.
+`customValidator()` preserves unrelated Spell errors, maps each union to its closest branch, and maps array-item failures to per-item array fields. Parse again at the submit boundary when a Spell transform must produce the outgoing payload.
 
 ```ts
 import { loadForm, saveForm } from '@vielzeug/forge/vault';
@@ -195,7 +195,7 @@ console.log(restored);
 
 ## Best Practices
 
-- Keep form values to primitives, plain objects, arrays, `File`, and `Blob`.
+- Keep form values to primitives, plain objects, arrays, `Date`, `File`, and `Blob`.
 - Update array fields through immutable replacement functions.
 - Validate complete values instead of rebuilding field-validator graphs.
 - Handle `aborted` validation results before rendering errors.

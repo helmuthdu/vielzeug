@@ -4,6 +4,80 @@ title: Forge Migration
 
 # Forge Migration
 
+## Forge 2.2
+
+Forge 2.2 unifies result types, adds `submit(signal?)`, adds array item field handles, and moves `toFormData` to its own subpath.
+
+### Unified result types
+
+`ValidationResult` and `SubmitResult` now share a `status` discriminator (`'aborted' | 'invalid' | 'ok' | 'valid'`). The old `ok`/`type` fields on `SubmitResult` are removed.
+
+```ts
+// Before
+const result = await form.submit(handler);
+if (!result.ok && result.type === 'validation') console.log(result.errors);
+
+// After
+const result = await form.submit(handler);
+if (result.status === 'invalid') console.log(result.errors);
+```
+
+### `submit(handler, signal?)`
+
+`submit` now accepts an optional `AbortSignal` and passes an `AbortSignal` to the handler. When the signal aborts, `submit` returns `{ status: 'aborted' }` instead of rejecting.
+
+```ts
+// Before — no cancellation support
+const result = await form.submit(async (value) => save(value));
+
+// After — cancellable submission
+const controller = new AbortController();
+const result = await form.submit(async (value, signal) => save(value, signal), controller.signal);
+```
+
+### Array item field handles
+
+`field.field(index)` now supports array items. Array-item Spell errors map to per-item fields instead of the parent array field.
+
+```ts
+const items = form.field('items');
+items.field(0).set({ email: 'a@example.com' });
+items.field(0).field('email').error; // per-item error
+```
+
+### `toFormData` moved to `@vielzeug/forge/form-data`
+
+```ts
+// Before
+import { toFormData } from '@vielzeug/forge';
+
+// After
+import { toFormData } from '@vielzeug/forge/form-data';
+```
+
+### `FormState` changes
+
+`FormState.valid` is replaced by `FormState.validity` (`'invalid' | 'unknown' | 'valid'`). `FormState.error` is replaced by `FormState.formError`. `FormState.hasErrors` is added.
+
+```ts
+// Before
+form.state.valid;
+form.state.error;
+
+// After
+form.state.validity === 'valid';
+form.state.formError;
+form.state.hasErrors;
+```
+
+### `Field.state` added
+
+`Field` now exposes a `state` property that returns `{ dirty, error, touched, value }` in a single snapshot.
+
+### `Date` leaves accepted
+
+Form values now accept `Date` instances as atomic leaves. `Map` and `Set` remain rejected.
+
 ## Forge 2.0
 
 Forge 2.0 replaces the flat controller and Ripple runtime with explicit immutable forms, safe value constraints, and DOM, Spell `customValidator`, Vault adapters and removes the `./devtools` subpath and inlines the internal store into `createForm`.

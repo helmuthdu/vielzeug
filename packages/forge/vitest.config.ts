@@ -9,7 +9,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   resolve: {
     alias: [
-      { find: /^@vielzeug\/arsenal$/, replacement: path.resolve(__dirname, '../arsenal/src/index.ts') },
       { find: /^@vielzeug\/spell$/, replacement: path.resolve(__dirname, '../spell/src/index.ts') },
       { find: /^@vielzeug\/vault$/, replacement: path.resolve(__dirname, '../vault/src/index.ts') },
     ],

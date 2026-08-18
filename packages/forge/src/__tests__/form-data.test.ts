@@ -1,4 +1,4 @@
-import { toFormData } from '../../index';
+import { toFormData } from '../form-data';
 
 describe('toFormData adapter', () => {
   test('serializes primitive values as string entries', () => {

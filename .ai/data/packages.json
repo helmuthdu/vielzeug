@@ -77,7 +77,6 @@
     },
     {
       "category": "Forms",
-      "dependencies": ["arsenal"],
       "description": "Typed form state, validation, submission",
       "domOutput": false,
       "name": "@vielzeug/forge",

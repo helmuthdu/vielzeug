@@ -45,7 +45,20 @@ describe('form', () => {
     form.field('tags').set((tags) => [...tags, 'b']);
 
     expect(form.value.tags).toEqual(['a', 'b']);
-    expect(() => createForm({ initialValues: { dueAt: new Date() } })).toThrow(ForgeConfigError);
+    expect(() => createForm({ initialValues: { dueAt: new Map() } })).toThrow(ForgeConfigError);
+  });
+
+  test('accepts Date atomic leaves without freezing or rejection', () => {
+    const date = new Date('2026-01-01');
+    const form = createForm({ initialValues: { dueAt: date } });
+
+    expect(form.value.dueAt).toBe(date);
+
+    const next = new Date('2026-02-01');
+
+    form.field('dueAt').set(next);
+    expect(form.value.dueAt).toBe(next);
+    expect(form.value.dueAt).toEqual(new Date('2026-02-01'));
   });
 
   test('resets fields and forms to their baselines', () => {
@@ -90,6 +103,31 @@ describe('form', () => {
 
     await expect(form.validate()).resolves.toEqual({ status: 'valid' });
     expect(form.state.errors).toBeUndefined();
+  });
+
+  test('tracks validity as unknown after edits and resolved after validation', async () => {
+    const form = createForm({
+      initialValues: { email: '' },
+      validate: (value) => ({ fields: { email: value.email.includes('@') ? undefined : 'Invalid email' } }),
+    });
+
+    expect(form.state.validity).toBe('unknown');
+    expect(form.state.hasErrors).toBe(false);
+
+    await form.validate();
+
+    expect(form.state.validity).toBe('invalid');
+    expect(form.state.hasErrors).toBe(true);
+
+    form.field('email').set('a@example.com');
+
+    expect(form.state.validity).toBe('unknown');
+    expect(form.state.hasErrors).toBe(true);
+
+    await form.validate();
+
+    expect(form.state.validity).toBe('valid');
+    expect(form.state.hasErrors).toBe(false);
   });
 
   test('aborts superseded validation without stale writes', async () => {
@@ -140,8 +178,7 @@ describe('form', () => {
     await expect(form.submit(() => undefined)).resolves.toEqual({
       errors: { email: 'Required' },
       formError: undefined,
-      ok: false,
-      type: 'validation',
+      status: 'invalid',
     });
     expect(form.field('email').touched).toBe(true);
 
@@ -156,7 +193,75 @@ describe('form', () => {
 
     await expect(form.submit(() => undefined)).rejects.toBeInstanceOf(ForgeSubmitError);
     release();
-    await submission;
+    await expect(submission).resolves.toEqual({ status: 'ok', value: undefined });
+  });
+
+  test('submit passes a signal to the handler and returns aborted when cancelled', async () => {
+    const form = createForm({
+      initialValues: { email: 'a@example.com' },
+      validate: (value) => (value.email ? undefined : { fields: { email: 'Required' } }),
+    });
+
+    const controller = new AbortController();
+    let receivedSignal: AbortSignal | undefined;
+    let handlerStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      handlerStarted = resolve;
+    });
+
+    const submission = form.submit(async (_value, signal) => {
+      receivedSignal = signal;
+      handlerStarted();
+
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+      });
+    }, controller.signal);
+
+    await started;
+    controller.abort();
+
+    await expect(submission).resolves.toEqual({ status: 'aborted' });
+    expect(receivedSignal?.aborted).toBe(true);
+  });
+
+  test('submit handler receives disposal signal when no external signal is provided', async () => {
+    const form = createForm({
+      initialValues: { email: 'a@example.com' },
+      validate: (value) => (value.email ? undefined : { fields: { email: 'Required' } }),
+    });
+
+    let receivedSignal: AbortSignal | undefined;
+    let handlerStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      handlerStarted = resolve;
+    });
+
+    const submission = form.submit(async (_value, signal) => {
+      receivedSignal = signal;
+      handlerStarted();
+
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+      });
+    });
+
+    await started;
+    form.dispose();
+
+    await expect(submission).resolves.toEqual({ status: 'aborted' });
+    expect(receivedSignal?.aborted).toBe(true);
+  });
+
+  test('submit rethrows handler errors that are not signal aborts', async () => {
+    const form = createForm({ initialValues: { email: 'a@example.com' } });
+    const failure = new Error('handler failed');
+
+    await expect(
+      form.submit(async () => {
+        throw failure;
+      }),
+    ).rejects.toBe(failure);
   });
 
   test('isolates subscriber failures from form state transitions', async () => {
@@ -171,7 +276,7 @@ describe('form', () => {
       throw failure;
     });
 
-    await expect(form.submit(() => undefined)).resolves.toEqual({ ok: true, value: undefined });
+    await expect(form.submit(() => undefined)).resolves.toEqual({ status: 'ok', value: undefined });
     expect(form.state.submitting).toBe(false);
     expect(subscriberErrors).toContain(failure);
   });
@@ -189,6 +294,23 @@ describe('form', () => {
     expect(listener).toHaveBeenLastCalledWith(expect.objectContaining({ value: 'a@example.com' }));
   });
 
+  test('field state snapshot reads all properties in one path walk', () => {
+    const form = createForm({ initialValues: { email: '' } });
+    const email = form.field('email');
+
+    email.set('a@example.com');
+    email.touch();
+
+    const state = email.state;
+
+    expect(state).toEqual({
+      dirty: true,
+      error: undefined,
+      touched: true,
+      value: 'a@example.com',
+    });
+  });
+
   test('disposal aborts work and rejects future mutations', () => {
     const form = createForm({ initialValues: { name: '' } });
 
@@ -198,5 +320,111 @@ describe('form', () => {
     expect(() => form.set({ name: 'Ada' })).toThrow(ForgeDisposedError);
     expect(() => form.subscribe(() => {})).toThrow(ForgeDisposedError);
     expect(() => form.field('name').subscribe(() => {})).toThrow(ForgeDisposedError);
+  });
+
+  test('rejects unsafe top-level field keys', () => {
+    const form = createForm({ initialValues: { name: '' } });
+
+    expect(() => form.field('__proto__' as never)).toThrow(ForgeConfigError);
+    expect(() => form.field('constructor' as never)).toThrow(ForgeConfigError);
+  });
+
+  test('submit handler aborts on disposal even when an external signal is provided', async () => {
+    const form = createForm({
+      initialValues: { email: 'a@example.com' },
+      validate: (value) => (value.email ? undefined : { fields: { email: 'Required' } }),
+    });
+
+    const controller = new AbortController();
+    let handlerStarted!: () => void;
+    const started = new Promise<void>((resolve) => {
+      handlerStarted = resolve;
+    });
+
+    const submission = form.submit(async (_value, signal) => {
+      handlerStarted();
+
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+      });
+    }, controller.signal);
+
+    await started;
+    form.dispose();
+
+    await expect(submission).resolves.toEqual({ status: 'aborted' });
+    expect(controller.signal.aborted).toBe(false);
+  });
+
+  test('array item fields support per-item reads, updates, and resets', () => {
+    const form = createForm({ initialValues: { items: [{ email: 'a@example.com' }, { email: 'b@example.com' }] } });
+
+    const items = form.field('items');
+    const first = items.field(0);
+
+    expect(first.value).toEqual({ email: 'a@example.com' });
+    expect(first.dirty).toBe(false);
+
+    first.field('email').set('x@example.com');
+
+    expect(first.value).toEqual({ email: 'x@example.com' });
+    expect(first.dirty).toBe(true);
+    expect(form.value.items[1]).toEqual({ email: 'b@example.com' });
+    expect(form.value.items[1]).toBe(items.field(1).value);
+
+    first.reset();
+
+    expect(first.value).toEqual({ email: 'a@example.com' });
+    expect(first.dirty).toBe(false);
+  });
+
+  test('array item fields reject out-of-range indices and non-array values', () => {
+    const form = createForm({ initialValues: { items: ['a'] as string[], name: '' } });
+
+    expect(() => form.field('items').field(5)).not.toThrow();
+    expect(() => form.field('items').field(5).set('x')).toThrow(ForgeConfigError);
+    expect(() => form.field('name').field(0 as never)).toThrow(ForgeConfigError);
+  });
+
+  test('array item fields support per-item touch and subscribe', () => {
+    const form = createForm({ initialValues: { items: ['a', 'b'] } });
+    const listener = vi.fn();
+
+    const first = form.field('items').field(0);
+    const stop = first.subscribe(listener, { immediate: true });
+
+    first.touch();
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(listener).toHaveBeenLastCalledWith(expect.objectContaining({ touched: true }));
+
+    first.set('c');
+    expect(listener).toHaveBeenCalledTimes(3);
+    expect(listener).toHaveBeenLastCalledWith(expect.objectContaining({ dirty: true, value: 'c' }));
+
+    stop();
+    first.set('d');
+    expect(listener).toHaveBeenCalledTimes(3);
+  });
+
+  test('submit touches array items individually', async () => {
+    const form = createForm({
+      initialValues: { items: [{ email: '' }, { email: '' }] },
+      validate: (value) => ({
+        fields: {
+          items: [value.items[0].email ? undefined : 'Required', value.items[1].email ? undefined : 'Required'],
+        },
+      }),
+    });
+
+    await form.validate();
+
+    expect(form.field('items').field(0).error).toBe('Required');
+    expect(form.field('items').field(1).error).toBe('Required');
+    expect(form.field('items').error).toBeUndefined();
+
+    await form.submit(() => undefined);
+
+    expect(form.field('items').field(0).field('email').touched).toBe(true);
+    expect(form.field('items').field(1).field('email').touched).toBe(true);
   });
 });

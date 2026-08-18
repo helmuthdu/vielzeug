@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(forge): unify SubmitResult on status discriminator, add submit(signal?) with AbortSignal to handler, add array item field handles, add Field.state snapshot, accept Date as atomic leaf, move toFormData to @vielzeug/forge/form-data subpath, remove @vielzeug/arsenal dependency, map Spell array-item errors to per-item fields",
+      "packageName": "@vielzeug/forge",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/forge"
+}

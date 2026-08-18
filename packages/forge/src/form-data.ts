@@ -1,4 +1,30 @@
-import { flattenPaths as flattenValues } from '@vielzeug/arsenal/object';
+const unsafeKeys = new Set(['__proto__', 'constructor', 'prototype']);
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+
+  const prototype = Object.getPrototypeOf(value);
+
+  return prototype === Object.prototype || prototype === null;
+}
+
+function flatten(obj: Record<string, unknown>, prefix: string): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (unsafeKeys.has(key)) continue;
+
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+
+    if (isPlainObject(value)) {
+      Object.assign(result, flatten(value, fullKey));
+    } else {
+      result[fullKey] = value;
+    }
+  }
+
+  return result;
+}
 
 /**
  * Converts a form values object into a `FormData` instance.
@@ -14,7 +40,7 @@ export function toFormData(values: Record<string, unknown>): FormData {
   const isFileList = (value: unknown): value is FileList =>
     typeof FileList !== 'undefined' && value instanceof FileList;
 
-  for (const [name, value] of Object.entries(flattenValues(values))) {
+  for (const [name, value] of Object.entries(flatten(values, ''))) {
     if (value === null || value === undefined) continue;
 
     if (isFile(value) || isBlob(value)) {

@@ -22,7 +22,7 @@ describe('Spell adapter', () => {
     expect(form.value.profile.email).toBe('invalid');
   });
 
-  test('maps item failures to their parent array field', async () => {
+  test('maps item failures to per-item array fields', async () => {
     const schema = s.object({ items: s.array(s.object({ email: s.string().email() })) });
     const form = createForm({
       initialValues: { items: [{ email: 'invalid' }] },
@@ -30,11 +30,13 @@ describe('Spell adapter', () => {
     });
 
     await expect(form.validate()).resolves.toEqual({
-      errors: { items: 'Invalid email address' },
+      errors: { items: [{ email: 'Invalid email address' }] },
       formError: undefined,
       status: 'invalid',
     });
-    expect(form.field('items').error).toBe('Invalid email address');
+    expect(form.field('items').field(0).field('email').error).toBe('Invalid email address');
+    expect(form.field('items').field(0).error).toBeUndefined();
+    expect(form.field('items').error).toBeUndefined();
   });
 
   test('keeps the first duplicate message and ignores unsafe paths', async () => {
@@ -108,7 +110,7 @@ describe('Spell adapter', () => {
     expect(form.field('shipping').field('email').error).toBe('Invalid email address');
   });
 
-  test('maps array-item union errors to their parent array field', async () => {
+  test('maps array-item union errors to per-item fields', async () => {
     const option = s.union(s.object({ email: s.string().email() }), s.object({ id: s.number() }));
     const schema = s.object({ items: s.array(option) });
     const form = createForm({
@@ -118,7 +120,8 @@ describe('Spell adapter', () => {
 
     await form.validate();
 
-    expect(form.field('items').error).toBe('Invalid email address');
+    expect(form.field('items').field(0).field('email').error).toBe('Invalid email address');
+    expect(form.field('items').error).toBeUndefined();
   });
 
   test('handles late parser rejection after abort', async () => {
@@ -141,6 +144,6 @@ describe('Spell adapter', () => {
     await expect(validation).resolves.toEqual({ status: 'aborted' });
     release();
     await Promise.resolve();
-    expect(form.state.valid).toBe(true);
+    expect(form.state.validity).toBe('unknown');
   });
 });
