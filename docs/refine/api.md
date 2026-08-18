@@ -13,22 +13,27 @@ subpath and import its types from the same path.
 ## Styles
 
 ```ts
-import '@vielzeug/refine/tokens.css';
+import '@vielzeug/refine/fouc.css';           // Hide unupgraded custom elements until first paint
+import '@vielzeug/refine/tokens.css';          // Required: tokens, animations, cascade layers
 import '@vielzeug/refine/styles/preflight.css'; // Optional: normalizes browser defaults.
 ```
 
-`tokens.css` defines Refine's design tokens, animations, and cascade-layer order without modifying global element
-defaults. `preflight.css` is a separate opt-in reset.
+`fouc.css` suppresses flash-of-unstyled-content by hiding custom elements (`:not(:defined)`)
+until their shadow DOM attaches. Import it in your CSS bundle — not via JS injection — so the
+rule is available at first paint. `tokens.css` defines Refine's design tokens, animations, and
+cascade-layer order without modifying global element defaults. `preflight.css` is a separate
+opt-in reset that also imports `fouc.css`.
 
 Direct CSS entry points are also available when needed:
 
 | Import path | Purpose |
 | --- | --- |
+| `@vielzeug/refine/fouc.css` | FOUC suppression for unupgraded custom elements |
 | `@vielzeug/refine/tokens.css` | Tokens, animation helpers, and cascade layers |
 | `@vielzeug/refine/styles/theme.css` | Theme token declarations |
 | `@vielzeug/refine/styles/animation.css` | Animation helpers |
 | `@vielzeug/refine/styles/layers.css` | Cascade layer declarations |
-| `@vielzeug/refine/styles/preflight.css` | Optional browser-default reset |
+| `@vielzeug/refine/styles/preflight.css` | Optional browser-default reset (includes FOUC suppression) |
 
 ## Components
 

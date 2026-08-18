@@ -323,6 +323,10 @@
       "default": "./dist/styles/layer.css",
       "import": "./dist/styles/layer.css"
     },
+    "./fouc.css": {
+      "default": "./dist/styles/fouc.css",
+      "import": "./dist/styles/fouc.css"
+    },
     "./styles/preflight.css": {
       "default": "./dist/styles/preflight.css",
       "import": "./dist/styles/preflight.css"

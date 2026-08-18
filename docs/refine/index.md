@@ -135,7 +135,8 @@ yarn add @vielzeug/refine
 
 ```ts
 // 1. Import global styles once
-import '@vielzeug/refine/tokens.css';
+import '@vielzeug/refine/fouc.css';   // Hide unupgraded custom elements until first paint
+import '@vielzeug/refine/tokens.css'; // Tokens, animations, cascade layers
 
 // 2. Register only the elements you need
 import '@vielzeug/refine/button';
@@ -161,6 +162,7 @@ Use the self-contained IIFE bundle to load Refine directly from a CDN in any HTM
 
 ```html
 <!-- 1. Styles -->
+<link rel="stylesheet" href="https://unpkg.com/@vielzeug/refine/dist/styles/fouc.css" />
 <link rel="stylesheet" href="https://unpkg.com/@vielzeug/refine/dist/styles/tokens.css" />
 
 <!-- 2. All components (IIFE — registers global Refine namespace) -->
@@ -190,8 +192,9 @@ For bundler-based projects that still want a CDN URL, use the ESM bundle via an 
 
 | Import                   | Purpose                                   |
 | ------------------------ | ----------------------------------------- |
+| `@vielzeug/refine/fouc.css` | FOUC suppression for unupgraded custom elements |
 | `@vielzeug/refine/tokens.css` | Global design tokens and cascade layers |
-| `@vielzeug/refine/styles/preflight.css` | Optional browser-default reset |
+| `@vielzeug/refine/styles/preflight.css` | Optional browser-default reset (includes FOUC suppression) |
 
 Component registration happens through side-effect imports such as `@vielzeug/refine/button` and `@vielzeug/refine/dialog`.
 
@@ -225,7 +228,7 @@ Component registration happens through side-effect imports such as `@vielzeug/re
 ### Prerequisites
 
 - Browser runtime with Custom Elements support.
-- Import `@vielzeug/refine/tokens.css` before rendering components.
+- Import `@vielzeug/refine/fouc.css` and `@vielzeug/refine/tokens.css` before rendering components.
 - For SSR, render placeholders server-side and hydrate components only on the client.
 
 ## Documentation

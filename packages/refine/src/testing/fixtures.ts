@@ -56,7 +56,7 @@ const IIFE_ENTRIES: Array<{ path: string; shim?: string }> = [
 // Concatenating the files directly in the production cascade order
 // sidesteps needing a real file:// page origin at all.
 const STYLES_DIR = path.join(PKG, 'refine/dist/styles');
-const STYLES_CSS = ['preflight.css', 'theme.css', 'animation.css', 'layer.css']
+const STYLES_CSS = ['fouc.css', 'preflight.css', 'theme.css', 'animation.css', 'layer.css']
   .map((name) => readFileSync(path.join(STYLES_DIR, name), 'utf-8'))
   .join('\n');
 

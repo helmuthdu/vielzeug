@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(refine): add fouc.css export for FOUC suppression of unupgraded custom elements",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

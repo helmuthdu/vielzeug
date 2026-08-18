@@ -111,6 +111,7 @@ const staticExportKeys = new Set([
   './styles/layers.css',
   './styles/preflight.css',
   './styles/theme.css',
+  './fouc.css',
   './tokens.css',
   './frameworks/elements',
   './frameworks/react',
@@ -133,6 +134,10 @@ const staticCssExports = {
   './styles/theme.css': {
     import: './dist/styles/theme.css',
     default: './dist/styles/theme.css',
+  },
+  './fouc.css': {
+    import: './dist/styles/fouc.css',
+    default: './dist/styles/fouc.css',
   },
   './tokens.css': {
     import: './dist/styles/tokens.css',

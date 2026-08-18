@@ -12,26 +12,17 @@ import PackagesMenu from './components/PackagesMenu.vue';
 import Repl from './components/REPL.vue';
 
 // Import Refine styles - using direct paths for monorepo
+// FOUC prevention: hide unupgraded custom elements until their shadow DOM attaches.
+// Must be a CSS import (not JS-injected) so the rule is available at first paint.
+import '@vielzeug/refine/fouc.css';
 import '@vielzeug/refine/tokens.css';
 // Import Prism chart styles
 import '@vielzeug/prism/theme';
 
 import './theme.css';
 
-// Critical inline styles to prevent FOUC (Flash of Unstyled Content)
-// Hide all undefined custom elements until they're fully initialized
-if (typeof window !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = `
-    *:not(:defined) {
-      display: none;
-    }
-  `;
-  document.head.insertAdjacentElement('afterbegin', style);
-}
-
 // Register Refine's all-components entry as early as possible. The public root
-// is deliberately side-effect free, so it cannot register the custom elements
+// is deliberately side effect free, so it cannot register the custom elements
 // rendered by the docs theme.
 // Dynamic import is required for SSR safety (no `window` on server).
 // Moving it to module-level means it starts loading before enhanceApp runs.

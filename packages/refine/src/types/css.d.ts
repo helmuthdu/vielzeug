@@ -30,6 +30,12 @@ declare module '@vielzeug/refine/styles/layers.css' {
   export default styles;
 }
 
+declare module '@vielzeug/refine/fouc.css' {
+  const styles: string;
+
+  export default styles;
+}
+
 declare module '@vielzeug/refine/styles/preflight.css' {
   const styles: string;
 
