@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/forge
 
-This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+This log was last generated on Tue, 18 Aug 2026 11:28:52 GMT and should not be manually modified.
+
+## 2.2.0
+Tue, 18 Aug 2026 11:28:52 GMT
+
+### Minor changes
+
+- feat(forge): unify SubmitResult on status discriminator, add submit(signal?) with AbortSignal to handler, add array item field handles, add Field.state snapshot, accept Date as atomic leaf, move toFormData to @vielzeug/forge/form-data subpath, remove @vielzeug/arsenal dependency, map Spell array-item errors to per-item fields
 
 ## 2.1.2
 Mon, 17 Aug 2026 10:42:29 GMT

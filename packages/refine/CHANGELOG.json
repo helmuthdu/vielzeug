@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat(refine): add fouc.css export for FOUC suppression of unupgraded custom elements",
+            "commit": "38042c8bef9e78f0400700ebb55aac1a0f1e7339"
+          }
+        ]
+      },
+      "date": "Tue, 18 Aug 2026 11:28:52 GMT",
+      "tag": "@vielzeug/refine_v2.2.0",
+      "version": "2.2.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/keymap\" to `2.1.0`"

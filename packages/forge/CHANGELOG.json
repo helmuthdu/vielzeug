@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat(forge): unify SubmitResult on status discriminator, add submit(signal?) with AbortSignal to handler, add array item field handles, add Field.state snapshot, accept Date as atomic leaf, move toFormData to @vielzeug/forge/form-data subpath, remove @vielzeug/arsenal dependency, map Spell array-item errors to per-item fields",
+            "commit": "bc18656ec428a547461ff87e9ffd4e92fcef9571"
+          }
+        ]
+      },
+      "date": "Tue, 18 Aug 2026 11:28:52 GMT",
+      "tag": "@vielzeug/forge_v2.2.0",
+      "version": "2.2.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/vault\" to `2.3.0`"

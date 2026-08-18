@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+This log was last generated on Tue, 18 Aug 2026 11:28:52 GMT and should not be manually modified.
+
+## 2.2.0
+Tue, 18 Aug 2026 11:28:52 GMT
+
+### Minor changes
+
+- feat(refine): add fouc.css export for FOUC suppression of unupgraded custom elements
 
 ## 2.1.6
 Mon, 17 Aug 2026 10:42:29 GMT
