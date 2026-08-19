@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: provide() now registers onCleanup to delete its key from the context registry on disconnect — prevents stale context keys leaking to descendants across reconnect and eliminates spurious 'key already provided' dev warnings when setup() runs again on the same element",
+            "commit": "e3f64113f7cce794fd9ba9014b4e47c3d3b8c73b"
+          }
+        ]
+      },
+      "date": "Wed, 19 Aug 2026 09:25:42 GMT",
+      "tag": "@vielzeug/ore_v2.0.9",
+      "version": "2.0.9"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.2`"

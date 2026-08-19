@@ -1,6 +1,11 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 19 Aug 2026 06:57:36 GMT and should not be manually modified.
+This log was last generated on Wed, 19 Aug 2026 09:25:42 GMT and should not be manually modified.
+
+## 2.2.2
+Wed, 19 Aug 2026 09:25:42 GMT
+
+_Version update only_
 
 ## 2.2.1
 Wed, 19 Aug 2026 06:57:36 GMT
