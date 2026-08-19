@@ -40,6 +40,32 @@ describe('ripple graph', () => {
     ripple.dispose();
   });
 
+  it('recovers when a computed first run fails and a dependency later changes', () => {
+    const errors: string[] = [];
+    const ripple = createRipple({
+      onError(error, context) {
+        errors.push(`${context.kind}:${(error as Error).message}`);
+      },
+    });
+    const user = ripple.signal<{ name: string } | null>(null);
+    const name = ripple.computed(() => user.value.name);
+    const values: string[] = [];
+
+    expect(() => name.value).toThrow();
+
+    const stop = ripple.effect(() => {
+      values.push(name.value);
+    });
+
+    errors.length = 0;
+    user.value = { name: 'Ada' };
+
+    expect(values).toEqual(['Ada']);
+    expect(errors).toEqual([]);
+    stop.dispose();
+    ripple.dispose();
+  });
+
   it('batches dependent effects', () => {
     const ripple = createRipple();
     const count = ripple.signal(0);

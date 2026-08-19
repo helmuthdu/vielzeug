@@ -220,16 +220,6 @@ const index = createIndex(users, { fields: ['name'] });
 const source = createLocalSource(users, { match: toSearchMatcher(index) });
 ```
 
-## Best Practices
-
-- Dispose each source with its owning view, request, or scope.
-- Read one snapshot object per render instead of mixing source fields across updates.
-- Inspect `pendingQuery` before rendering controls for in-flight work.
-- Validate URL query values before passing them to `setQuery()`.
-- Keep caching, retries, polling, and optimistic writes in your transport layer.
-- Use `setData()` with prepared local collections; keep ranking and filtering explicit.
-- Debounce text inputs before updating remote source queries.
-
 ## Gotchas
 
 ### Navigation methods are no-ops while fetching
@@ -258,3 +248,13 @@ source.setQuery({ filter: undefined });
 // Cursor source: clear after cursor:
 source.setQuery({ after: undefined });
 ```
+
+## Best Practices
+
+- Dispose each source with its owning view, request, or scope.
+- Read one snapshot object per render instead of mixing source fields across updates.
+- Inspect `pendingQuery` before rendering controls for in-flight work.
+- Validate URL query values before passing them to `setQuery()`.
+- Keep caching, retries, polling, and optimistic writes in your transport layer.
+- Use `setData()` with prepared local collections; keep ranking and filtering explicit.
+- Debounce text inputs before updating remote source queries.

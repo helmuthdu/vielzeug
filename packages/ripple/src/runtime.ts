@@ -121,8 +121,12 @@ class ComputedNode<T> extends ReactiveNode<T> implements ObserverNode, Owned {
   }
 
   get value(): T {
-    this.refresh();
+    // Track before refresh: if refresh throws, the consumer still depends on
+    // this computed and must be notified when a dependency change might let it
+    // succeed. Without this, a first-run failure permanently severs the
+    // consumer from the computed.
     this.runtime.track(this);
+    this.refresh();
 
     return this.current as T;
   }
@@ -425,7 +429,11 @@ export class ReactiveRuntime {
   }
 
   collect<T>(observer: ObserverNode, fn: () => T): T {
-    return this.collectWith(observer, fn, false);
+    // On first run (no prior dependencies), commit partial dependencies even if
+    // derive throws — otherwise the computed would have zero dependencies and never
+    // be notified when its source changes, permanently stuck until a manual read.
+    // On subsequent runs, keep previous dependencies (tested behavior).
+    return this.collectWith(observer, fn, observer.dependencies.size === 0);
   }
 
   collectEffect<T>(observer: ObserverNode, fn: () => T): T {

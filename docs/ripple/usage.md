@@ -254,6 +254,16 @@ actor.dispose();
 ripple.dispose();
 ```
 
+## Gotchas
+
+### `subscribe()` forces computed evaluation
+
+`Readable.subscribe()` calls `peek()` before registering the listener. For signals this is a no-op, but for computeds it forces `refresh()` — the derivation runs immediately even if no one reads `.value`. This ensures `equals` comparison works on the first dependency change. Avoid subscribing to expensive computeds unless you need their value.
+
+### Computed first-run failure is recoverable
+
+If a computed's `derive` throws on its first run (e.g., a source is `null`), the computed commits the partial dependencies it tracked before the throw. When a dependency changes and the derivation can succeed, the computed refreshes and notifies its dependents. Effects that read a failing computed report the error through `onError` and re-run when the computed recovers.
+
 ## Best Practices
 
 - Create one graph per ownership boundary.
