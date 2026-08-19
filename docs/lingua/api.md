@@ -13,8 +13,10 @@ description: Complete API reference for @vielzeug/lingua.
 | `createTranslator()` | Compile immutable locale catalogs | Sync | Locale is fixed for translator lifetime |
 | `createTranslationStore()` | Create mutable locale and catalog store | Sync | Load lazy locale explicitly |
 | `hydrateTranslationStore()` | Create store from serialized loaded catalogs | Sync | Serialized state never includes loaders |
+| `catalogKeys()` | Enumerate message keys as dotted paths | Sync | Accepts store (current locale) or raw catalog; traverse subtrees for group-scoped keys |
 | `createFormatter()` | Format Intl values from `/format` | Sync | Import from subpath |
 | `validateCatalog()` | Check explicit plural forms from `/validate` | Sync | Import from subpath |
+| `compareCatalogs()` | Compare key parity across locales from `/validate` | Sync | First locale is the base; import from subpath |
 | `LinguaError` | Base class for Lingua errors | Sync | Use `LinguaError.is()` for broad narrowing |
 
 ## Package Entry Point
@@ -23,7 +25,7 @@ description: Complete API reference for @vielzeug/lingua.
 | --- | --- |
 | `@vielzeug/lingua` | Translation factories, state types, and Lingua errors |
 | `@vielzeug/lingua/format` | `createFormatter()` and formatter types |
-| `@vielzeug/lingua/validate` | `validateCatalog()` and `ValidationIssue` |
+| `@vielzeug/lingua/validate` | `validateCatalog()`, `compareCatalogs()`, and `ValidationIssue` |
 
 ## Translation Factories
 
@@ -177,6 +179,38 @@ const client = hydrateTranslationStore(server.serialize());
 client.translate('title');
 ```
 
+---
+
+## Catalog Utilities
+
+### catalogKeys
+
+```ts
+function catalogKeys<C extends Catalog>(source: TranslationStore<C> | C): ReadonlyArray<TextKey<C>>;
+```
+
+Enumerates every message key as a dotted path. Traverses nested grouping objects and explicit `{ plural: ... }` messages, producing the same paths that `TextKey<C>` represents at the type level. Pass a `TranslationStore` to read from its current locale catalog; pass a raw catalog object to enumerate directly.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `source` | `TranslationStore<C> \| C` | Store (uses current locale) or raw catalog object |
+
+**Returns:** `ReadonlyArray<TextKey<C>>` — dotted paths to every text and plural message.
+
+```ts
+import { catalogKeys, createTranslationStore } from '@vielzeug/lingua';
+
+const i18n = createTranslationStore({
+  catalogs: { en: { nav: { home: 'Home', settings: 'Settings' } } },
+  locale: 'en',
+});
+
+const allKeys = catalogKeys(i18n); // ['nav.home', 'nav.settings']
+const navKeys = catalogKeys(i18n.serialize().catalogs.en.nav); // ['home', 'settings']
+```
+
+---
+
 ## Formatting and Validation
 
 ### createFormatter
@@ -232,6 +266,30 @@ Validates explicit plural messages against locale plural categories after catalo
 import { validateCatalog } from '@vielzeug/lingua/validate';
 
 validateCatalog({ inbox: { plural: { one: 'One message' } } }, 'en');
+```
+
+### compareCatalogs
+
+```ts
+function compareCatalogs<C extends Catalog>(catalogs: Catalogs<C>): CatalogComparison;
+```
+
+Compares key sets across locales. First locale is the base — reports keys missing in each target and keys present in targets but absent from base. Validates each catalog structurally.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `catalogs` | `Catalogs<C>` | Locale-keyed catalogs to compare |
+
+**Returns:** `CatalogComparison` with `missing` and `extra` arrays.
+
+```ts
+import { compareCatalogs } from '@vielzeug/lingua/validate';
+
+const result = compareCatalogs({
+  en: { greeting: 'Hello', farewell: 'Goodbye' },
+  de: { greeting: 'Hallo' },
+});
+// { missing: [{ key: 'farewell', locale: 'de' }], extra: [] }
 ```
 
 ## Types
@@ -372,6 +430,10 @@ type Formatter = {
 };
 
 type ValidationIssue = { key: string; locale: Locale; missing: Intl.LDMLPluralRule };
+type CatalogComparison = {
+  readonly missing: ReadonlyArray<{ key: string; locale: Locale }>;
+  readonly extra: ReadonlyArray<{ key: string; locale: Locale }>;
+};
 ```
 
 ## Errors

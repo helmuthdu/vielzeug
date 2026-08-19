@@ -60,6 +60,48 @@ const translator = createCatalogTranslator(messages);
 const statusOptions = statusDefinitions.map(({ labelKey, value }) => ({ label: translator.translate(labelKey), value }));
 ```
 
+## Enumerate Catalog Keys
+
+Use `catalogKeys()` to derive key arrays from the catalog itself instead of maintaining a parallel list that can go stale. It traverses nested grouping objects and explicit `{ plural: ... }` messages, returning the same dotted paths that `TextKey<C>` represents at the type level.
+
+Pass a `TranslationStore` to enumerate keys from its current locale catalog without specifying a locale explicitly.
+
+```ts
+import { catalogKeys, createTranslationStore } from '@vielzeug/lingua';
+
+const i18n = createTranslationStore({
+  catalogs: {
+    en: {
+      greeting: 'Hello, {name}!',
+      inbox: { plural: { one: 'One message', other: '{count} messages' } },
+      nav: { home: 'Home', settings: 'Settings' },
+    },
+  },
+  locale: 'en',
+});
+
+const allKeys = catalogKeys(i18n);
+// ['greeting', 'inbox', 'nav.home', 'nav.settings']
+```
+
+Pass a raw catalog object to enumerate keys directly. Call `catalogKeys()` on a nested subtree to get exactly the keys in that group — no filtering, no casts.
+
+```ts
+import { catalogKeys } from '@vielzeug/lingua';
+
+const messages = {
+  nav: { home: 'Home', settings: 'Settings' },
+} as const;
+
+const allKeys = catalogKeys(messages);
+// ['nav.home', 'nav.settings']
+
+const navKeys = catalogKeys(messages.nav);
+// ['home', 'settings']
+```
+
+Use this for random message selection, cycling, or validation without a stale parallel array.
+
 ## Render Framework Content
 
 Use `segments()` when replacements are framework nodes, links, or other values that must not be stringified.
@@ -172,13 +214,25 @@ Import formatting and catalog validation from dedicated subpaths to keep transla
 
 ```ts
 import { createFormatter } from '@vielzeug/lingua/format';
-import { validateCatalog } from '@vielzeug/lingua/validate';
+import { compareCatalogs, validateCatalog } from '@vielzeug/lingua/validate';
 
 const formatter = createFormatter('en-US');
 const catalog = { inbox: { plural: { one: 'One message', other: '{count} messages' } } };
 
 console.log(formatter.currency(19.99, 'USD'));
 console.log(validateCatalog(catalog, 'en'));
+```
+
+Use `compareCatalogs()` to catch missing or extra keys across locales — the most common i18n defect. First locale is the base.
+
+```ts
+import { compareCatalogs } from '@vielzeug/lingua/validate';
+
+const result = compareCatalogs({
+  en: { greeting: 'Hello', farewell: 'Goodbye' },
+  de: { greeting: 'Hallo' },
+});
+// { missing: [{ key: 'farewell', locale: 'de' }], extra: [] }
 ```
 
 ## Framework Integration

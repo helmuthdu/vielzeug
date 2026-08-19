@@ -1,3 +1,4 @@
+export { catalogKeys } from './catalog';
 export {
   LinguaDisposedError,
   LinguaError,

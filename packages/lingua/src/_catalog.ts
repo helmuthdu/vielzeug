@@ -9,7 +9,7 @@ export type CompiledPlural = { readonly forms: ReadonlyMap<string, Template>; re
 export type CompiledMessage = CompiledPlural | CompiledText;
 export type CompiledCatalog = ReadonlyMap<string, CompiledMessage>;
 
-function isPluralMessage(node: CatalogNode): node is PluralMessage {
+export function isPluralMessage(node: CatalogNode): node is PluralMessage {
   return typeof node === 'object' && node !== null && Object.hasOwn(node, 'plural');
 }
 

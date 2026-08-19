@@ -19,47 +19,25 @@ export type CatalogSource<C extends Catalog = Catalog> = C | CatalogLoader<C>;
 /** Locale declarations may contain static catalogs or lazy loaders. */
 export type CatalogSources<C extends Catalog = Catalog> = Record<Locale, CatalogSource<C>>;
 
-export type MessageKey<
+/** Traverses a catalog type and collects dotted paths to nodes matching `Leaf`. */
+type CatalogPaths<
   C,
+  Leaf,
   Prefix extends string = '',
   Depth extends readonly unknown[] = readonly [1, 1, 1, 1, 1, 1],
 > = Depth extends readonly [unknown, ...infer Rest]
-  ? C extends string | PluralMessage
+  ? C extends Leaf
     ? Prefix
     : C extends Catalog
       ? {
-          [K in string & keyof C]: MessageKey<C[K], Prefix extends '' ? K : `${Prefix}.${K}`, Rest>;
+          [K in string & keyof C]: CatalogPaths<C[K], Leaf, Prefix extends '' ? K : `${Prefix}.${K}`, Rest>;
         }[string & keyof C]
       : never
   : never;
 
-export type TextKey<
-  C,
-  Prefix extends string = '',
-  Depth extends readonly unknown[] = readonly [1, 1, 1, 1, 1, 1],
-> = Depth extends readonly [unknown, ...infer Rest]
-  ? C extends string
-    ? Prefix
-    : C extends Catalog
-      ? {
-          [K in string & keyof C]: TextKey<C[K], Prefix extends '' ? K : `${Prefix}.${K}`, Rest>;
-        }[string & keyof C]
-      : never
-  : never;
-
-export type PluralKey<
-  C,
-  Prefix extends string = '',
-  Depth extends readonly unknown[] = readonly [1, 1, 1, 1, 1, 1],
-> = Depth extends readonly [unknown, ...infer Rest]
-  ? C extends PluralMessage
-    ? Prefix
-    : C extends Catalog
-      ? {
-          [K in string & keyof C]: PluralKey<C[K], Prefix extends '' ? K : `${Prefix}.${K}`, Rest>;
-        }[string & keyof C]
-      : never
-  : never;
+export type MessageKey<C> = CatalogPaths<C, string | PluralMessage>;
+export type TextKey<C> = CatalogPaths<C, string>;
+export type PluralKey<C> = CatalogPaths<C, PluralMessage>;
 
 export type Values = Record<string, unknown>;
 
