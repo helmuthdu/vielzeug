@@ -12,7 +12,7 @@
 
 import { warn } from './_dev';
 import { ORE_ERRORS, OreApiError } from './errors';
-import { type RuntimeContext, requireSetupContext } from './runtime';
+import { onCleanup, type RuntimeContext, requireSetupContext } from './runtime';
 
 const contextRegistry = new WeakMap<HTMLElement, Map<InjectionKey<unknown>, unknown>>();
 
@@ -69,7 +69,19 @@ const provideOnElement = <T>(el: HTMLElement, key: InjectionKey<T>, value: T): v
  * per consumer, so re-calling `provide()` with a new raw value later is not seen.
  */
 export const provide = <T>(key: InjectionKey<T>, value: T): void => {
-  provideOnElement(requireSetupContext('provide').element, key, value);
+  const el = requireSetupContext('provide').element;
+
+  provideOnElement(el, key, value);
+
+  onCleanup(() => {
+    const map = contextRegistry.get(el);
+
+    if (!map) return;
+
+    map.delete(key);
+
+    if (map.size === 0) contextRegistry.delete(el);
+  });
 };
 
 const NOT_FOUND_SENTINEL = Symbol('inject.not_found');

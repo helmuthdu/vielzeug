@@ -16,7 +16,7 @@ import {
   provide,
   ref,
 } from '../index';
-import { mount } from '../testing';
+import { flush, mount } from '../testing';
 
 describe('runtime lifecycle: onMounted', () => {
   it('runs mount callback after component renders', async () => {
@@ -382,6 +382,62 @@ describe('inject() inside onMounted (C3)', () => {
     );
 
     expect(resolved).toBe('hello-from-provider');
+  });
+});
+
+describe('provide() cleanup on disconnect/reconnect', () => {
+  it('does not warn about overwriting on reconnect', async () => {
+    const KEY = createContext<string>('reconnect-key');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { element } = await mount((_props) => {
+      provide(KEY, 'value');
+
+      return html` <div></div> `;
+    });
+
+    element.remove();
+    await flush();
+    document.body.appendChild(element);
+    await flush();
+
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('key already provided'));
+
+    warnSpy.mockRestore();
+  });
+
+  it('removes stale context keys after disconnect', async () => {
+    const KEY = createContext<string>('stale-key');
+    let resolved: string | undefined;
+    let firstConnect = true;
+
+    const { element } = await mount((_props) => {
+      if (firstConnect) provide(KEY, 'first');
+
+      firstConnect = false;
+
+      return html` <div></div> `;
+    });
+
+    element.remove();
+    await flush();
+
+    document.body.appendChild(element);
+    await flush();
+
+    const { element: child } = await mount(
+      (_props) => {
+        resolved = inject(KEY);
+
+        return html` <div></div> `;
+      },
+      { container: element.shadowRoot ?? undefined },
+    );
+
+    expect(resolved).toBeUndefined();
+
+    child.remove();
+    element.remove();
   });
 });
 

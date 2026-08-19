@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: provide() now registers onCleanup to delete its key from the context registry on disconnect — prevents stale context keys leaking to descendants across reconnect and eliminates spurious 'key already provided' dev warnings when setup() runs again on the same element",
+      "packageName": "@vielzeug/ore",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

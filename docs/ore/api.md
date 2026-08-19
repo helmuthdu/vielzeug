@@ -274,7 +274,9 @@ Slot signals update reactively when assigned content changes, including when slo
 DOM boundaries. `inject()` resolves and caches its result once per consumer — provide a `Readable` (signal/computed)
 rather than a raw value if descendants need to observe later changes; re-calling `provide()` with a new raw value
 afterward is not seen by consumers that already resolved it (a dev-mode warning fires when a key is provided twice on
-the same element).
+the same element). `provide()` registers cleanup automatically — context keys are removed from the registry when the
+providing component disconnects, so reconnecting the same element runs `setup()` fresh without spurious "overwriting"
+warnings or stale keys leaking to descendants.
 
 ## Utilities
 

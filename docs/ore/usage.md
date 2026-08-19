@@ -382,6 +382,8 @@ define('count-consumer', {
 });
 ```
 
+`provide()` registers cleanup automatically — context keys are removed from the registry when the providing component disconnects. On reconnect, `setup()` runs fresh and `provide()` re-registers without spurious "overwriting" warnings. Provide a `Readable` (signal/computed) rather than a raw value if descendants need to observe later changes — `inject()` resolves and caches the value once per consumer connection.
+
 ## form-associated elements
 
 ```ts
