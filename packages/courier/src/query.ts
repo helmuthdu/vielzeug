@@ -82,7 +82,11 @@ export function createQueryCache(options?: {
   };
 
   const cancelAll = (): void => {
-    for (const entry of entries.values()) entry.controller?.abort();
+    for (const entry of entries.values()) {
+      entry.controller?.abort();
+      entry.controller = undefined;
+      entry.promise = undefined;
+    }
   };
 
   const clear = (): void => {
@@ -156,6 +160,8 @@ export function createQueryCache(options?: {
       .then(() => entry.definition?.fetch({ key: entry.key, signal: controller.signal } as QueryContext))
       .then(
         (data) => {
+          if (entry.promise !== promise) return data;
+
           entry.snapshot = { data, error: null, isFetching: false, status: 'success', updatedAt: Date.now() };
           entry.controller = undefined;
           entry.promise = undefined;
@@ -165,6 +171,8 @@ export function createQueryCache(options?: {
           return data;
         },
         (cause: unknown) => {
+          if (entry.promise !== promise) throw cause;
+
           const error = cause instanceof Error ? cause : new Error(String(cause));
 
           entry.snapshot = {

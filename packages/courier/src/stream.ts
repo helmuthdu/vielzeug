@@ -1,23 +1,11 @@
 import { CourierDisposedError, CourierHttpError, CourierParseError, classifyRequestError } from './errors';
 import { buildRequestInit } from './serialize';
 import { anySignal, buildTimeoutSignal, type TransportCore } from './transport';
-import type { HttpRequestConfig, Params } from './url';
+import type { HttpRequestConfig } from './url';
 import { buildUrl } from './url';
 
 export type StreamOptions<P extends string = string> = Omit<HttpRequestConfig<P>, 'responseType' | 'schema'> & {
   method?: string;
-};
-
-/** Runtime config without PathConfig's type-level constraints — open() just forwards params to buildUrl. */
-type StreamRuntimeConfig = {
-  body?: unknown;
-  fetchInit?: Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
-  headers?: Record<string, string>;
-  method?: string;
-  params?: Params;
-  query?: Params;
-  signal?: AbortSignal;
-  timeout?: number;
 };
 
 export type StreamEvent<T = unknown> = { readonly data: T; readonly event: string };
@@ -44,10 +32,10 @@ function abortable<T>(create: (signal: AbortSignal) => AsyncGenerator<T>): Async
   };
 }
 
-async function open(
+async function open<P extends string>(
   transport: TransportCore,
   url: string,
-  config: StreamRuntimeConfig,
+  config: StreamOptions<P>,
 ): Promise<{ controller: AbortController; response: Response; untrack: () => void }> {
   if (transport.disposed) throw new CourierDisposedError('Courier');
 
@@ -98,7 +86,7 @@ export function createStreams(transport: TransportCore) {
     url: P,
     config: StreamOptions<P>,
   ): AsyncGenerator<StreamEvent<T>> {
-    const { controller, response, untrack } = await open(transport, url, config as StreamRuntimeConfig);
+    const { controller, response, untrack } = await open(transport, url, config);
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -159,7 +147,7 @@ export function createStreams(transport: TransportCore) {
     url: P,
     config: StreamOptions<P> & { parse?: 'ndjson' | 'text' },
   ): AsyncGenerator<T> {
-    const { controller, response, untrack } = await open(transport, url, config as StreamRuntimeConfig);
+    const { controller, response, untrack } = await open(transport, url, config);
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let buffer = '';

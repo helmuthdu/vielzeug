@@ -99,6 +99,45 @@ describe('Courier query cache', () => {
     );
   });
 
+  it('starts a fresh fetch after cancelAll, not a stale rejected promise', async () => {
+    let firstCall = true;
+    const fetch = vi.fn<typeof globalThis.fetch>((_, init) => {
+      const signal = init?.signal;
+      if (firstCall) {
+        firstCall = false;
+        return new Promise<Response>((_, reject) => {
+          if (signal?.aborted) reject(new DOMException('Aborted', 'AbortError'));
+          else signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+        });
+      }
+      return Promise.resolve(new Response('ok', { headers: { 'content-type': 'text/plain' } }));
+    });
+    const courier = createCourier({ fetch });
+    const key = ['test'] as const;
+    const def = { fetch: ({ signal }: { signal: AbortSignal }) => courier.get('/test', { signal }), key };
+
+    const first = courier.queries.fetch(def).catch((e) => e);
+    courier.cancelAll();
+    const second = courier.queries.fetch(def).then(
+      () => 'ok',
+      (e: unknown) => e,
+    );
+
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+
+    expect(firstResult).toBeInstanceOf(Error);
+    expect(secondResult).toBe('ok');
+    expect(fetch).toHaveBeenCalledTimes(2);
+
+    // Old rejection must not clobber the new fetch's cache state
+    await vi.waitFor(() => {
+      const snapshot = courier.queries.getSnapshot<string>(key);
+      expect(snapshot?.status).toBe('success');
+      expect(snapshot?.data).toBe('ok');
+    });
+    courier.dispose();
+  });
+
   it('garbage-collects entries with no subscribers after gcTime', async () => {
     const courier = createCourier({ query: { gcTime: 50 } });
     const key = ['temp'] as const;

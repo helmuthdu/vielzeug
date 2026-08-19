@@ -176,7 +176,6 @@ export function createCourier(options: CourierOptions = {}) {
     dispose() {
       for (const controller of mutations) controller.abort();
       mutations.clear();
-      queries.clear();
       transport.dispose();
     },
     get disposed() {

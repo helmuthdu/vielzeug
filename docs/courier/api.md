@@ -57,7 +57,7 @@ const courier = createCourier({ baseUrl: 'https://api.example.com' });
 | `setHeaders` | `(updates) => void` | Updates global headers |
 | `getHeaders` | `() => Readonly<Record<string, string>>` | Returns header snapshot |
 | `use` | `(interceptor) => () => void` | Registers interceptor |
-| `cancelAll` | `() => void` | Aborts active HTTP, cache, and mutation work |
+| `cancelAll` | `() => void` | Aborts active HTTP, cache, and mutation work; a subsequent `queries.fetch()` starts a fresh request |
 | `queries` | `QueryCache` | Owns keyed cache entries |
 | `mutate` | `<T>(options) => Promise<T>` | Runs one write operation |
 | `events` | `<T, P>(url, options?) => AsyncIterableIterator<StreamEvent<T>>` | Opens SSE iterator |

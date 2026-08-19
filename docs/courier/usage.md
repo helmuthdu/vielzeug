@@ -278,6 +278,20 @@ await courier.queries.fetch({
 unsubscribe();
 ```
 
+## Gotchas
+
+### `mutate()` runs `onSuccess` before `invalidateKeys`
+
+`mutate()` executes in order: `request` → `onSuccess` → `invalidateKeys`. If `onSuccess` calls `queries.set()` for a key also in `invalidateKeys`, the seeded data is overwritten by the background refetch. This is correct — `invalidateKeys` means "refetch to confirm" — but the order matters when `onSuccess` seeds optimistic data that `invalidateKeys` then replaces.
+
+### `baseUrl` should not include query parameters
+
+`buildUrl` joins `baseUrl` and path with `/`. A base URL like `https://api.example.com?token=abc` produces broken URLs (`https://api.example.com?token=abc/users`). Pass query parameters per-request via `config.query` instead.
+
+### Background refetch after error transitions through `loading`
+
+When `invalidate({ refetch: true })` triggers a background refetch on an error-state entry, the snapshot transitions to `loading` (losing the previous error). Consumers building "error + retrying" UI should track retry state separately — `AsyncState` has no `error` with `isFetching: true` variant.
+
 ## Best Practices
 
 - Create one Courier client per application or SSR request scope.

@@ -59,7 +59,7 @@ export function withLogging(opts: {
 
   return async (ctx, next) => {
     const start = performance.now();
-    const method = ((ctx.init as RequestInit).method ?? 'GET').toUpperCase();
+    const method = (ctx.init.method ?? 'GET').toUpperCase();
 
     try {
       const res = await next(ctx);
