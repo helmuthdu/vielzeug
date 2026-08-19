@@ -17,14 +17,6 @@ import { collectLocalPackageMap } from './local-packages.ts';
 const demoRoot = path.resolve(import.meta.dirname, '..');
 const localPackageMap = collectLocalPackageMap(demoRoot);
 
-if (Object.keys(localPackageMap).length === 0) {
-  console.error(
-    '[write-local-tsconfig] No sibling packages/ directory found (or no @vielzeug/* dependencies) — ' +
-      'nothing to map. Run this from inside a full vielzeug monorepo checkout.',
-  );
-  process.exit(1);
-}
-
 // Ambient global .d.ts files (e.g. refine's HTMLElementTagNameMap augmentation for its custom
 // elements) have no import/export of their own, so `paths` alone never pulls them into tsc's
 // program the way it does for the actual imported modules above — they need to be listed in

@@ -3,7 +3,7 @@ import { createWorker } from '@vielzeug/familiar';
 import type { Order } from './types';
 
 export async function exportOrdersAsCsv(orders: Order[]): Promise<void> {
-  const worker = createWorker(new URL('./worker-tasks.worker.ts', import.meta.url));
+  const worker = createWorker<Order[], string>(new URL('./worker-tasks.worker.ts', import.meta.url));
 
   try {
     const csv = await worker.run(orders);

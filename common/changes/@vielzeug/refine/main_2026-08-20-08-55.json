@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: registerProp reads existing PropMeta signal on reconnect instead of host property overwritten by defineFieldValue; restores ore-number-input value on cart/checkout",
+      "type": "patch",
+      "packageName": "@vielzeug/refine"
+    }
+  ],
+  "packageName": "@vielzeug/refine",
+  "email": "agent@vielzeug"
+}

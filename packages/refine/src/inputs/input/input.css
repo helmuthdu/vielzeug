@@ -8,6 +8,8 @@
     --_gap: var(--input-gap, var(--size-2));
     --_field-height: var(--input-height, var(--size-10));
     --_padding: var(--input-padding, var(--size-1-5) var(--size-3));
+    --_label-block-inset: var(--input-label-block-inset, var(--size-2));
+    --_label-inset: var(--input-label-inset, var(--size-3));
     --_radius: var(--input-radius, var(--rounded-lg));
     --_placeholder: var(--input-placeholder-color, var(--color-contrast-500));
     --_bg: var(--input-bg, var(--color-contrast-100));
@@ -63,14 +65,14 @@
 
   :host(:not([label-placement='outside'])) .label {
     position: absolute;
-    inset-block-start: var(--size-2);
-    inset-inline-start: var(--_padding-x, var(--size-3));
+    inset-block-start: var(--_label-block-inset);
+    inset-inline-start: var(--_label-inset);
     z-index: 1;
     pointer-events: none;
   }
 
   :host(:not([label-placement='outside'])) .input-wrapper:has(.label:not([hidden])) .field {
-    padding-block-start: calc(var(--size-2) + 1lh + 2px);
+    padding-block-start: calc(var(--_label-block-inset) + 1lh + 2px);
   }
 
   .input-row {
@@ -368,14 +370,14 @@
   }
 
   :host([variant='text']) .field {
+    background: transparent;
     border: none;
-    border-bottom: var(--border) solid var(--_border-color);
     border-radius: 0;
     box-shadow: none;
   }
 
   :host([variant='text']) .field:focus-within {
-    border-bottom: var(--border-2) solid var(--input-focus-border-color, var(--_theme-focus));
+    box-shadow: none;
   }
 
   /*

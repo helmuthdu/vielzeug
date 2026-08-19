@@ -1,23 +1,23 @@
 import '@vielzeug/refine/select';
+import '@vielzeug/refine/skeleton';
 import '@vielzeug/refine/checkbox-group';
 import '@vielzeug/refine/checkbox';
 import '@vielzeug/refine/chip';
 import '@vielzeug/refine/number-input';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/icon';
-import '@vielzeug/refine/navbar';
 
-import '../components/car-silhouette';
 import '../components/spec-tooltip';
 import '../components/share-build-dialog';
 import '../components/animated-price';
 import '../components/model-card';
 
 import { define, html, prop, when } from '@vielzeug/ore';
-import { computed, signal } from '@vielzeug/ripple';
+import { computed, effect, signal } from '@vielzeug/ripple';
 import { compareModelIds } from '../../core/cart-store';
 import { getModelBySlug, modelsSignal } from '../../core/catalog';
-import { formatPrice } from '../../core/currency';
+import { controlValue } from '../../core/control-value';
+import { currentCurrency, displayAmount, displayAmountToUsd, formatPrice } from '../../core/currency';
 import { addToCart, toggleCompare } from '../../core/history';
 import { t } from '../../core/i18n';
 import { computePriceBreakdown, estimateMonthlyPayment, resolveConfiguration } from '../../core/pricing';
@@ -61,13 +61,13 @@ define<ModelConfiguratorProps>('model-configurator', {
   setup(props) {
     const model = (): Model => props.model.value!;
 
-    const trimId = signal(props.model.value?.trims[0].id);
-    const colorId = signal(props.model.value?.colors[0].id);
-    const wheelId = signal(props.model.value?.wheels[0].id);
+    const trimId = signal(model().trims[0].id);
+    const colorId = signal(model().colors[0].id);
+    const wheelId = signal(model().wheels[0].id);
     const extraPackageIds = signal<string[]>([]);
 
     const trim = computed(() => model().trims.find((t) => t.id === trimId.value)!);
-    const color = computed(() => model().colors.find((c) => c.id === colorId.value)!);
+    const configurationStatus = signal('');
     const optionalPackages = computed(() =>
       model().packages.filter((p) => !trim.value.includedPackageIds.includes(p.id)),
     );
@@ -92,18 +92,37 @@ define<ModelConfiguratorProps>('model-configurator', {
       model().wheels.map((w) => ({ label: `${w.name} — ${formatPrice(w.priceDelta)}`, value: w.id })),
     );
 
-    // ── Finance calculator (PDP-local — see `checkout-payment`'s own financing step for the
-    // figures that actually get committed to an order) ──────────────────────────────────────
-    const financeDownPayment = signal(Math.round(Number.parseFloat(model().basePrice) * 0.1));
+    const financeDownPaymentUsd = signal((Number.parseFloat(model().basePrice) * 0.1).toFixed(2));
+    const financeDownPaymentEdited = signal(false);
     const financeTermMonths = signal(60);
+    const financeDownPaymentDisplay = computed(() => Number(displayAmount(financeDownPaymentUsd.value)));
+    const financeMaximumDisplay = computed(() => Number(displayAmount(breakdown.value.total)));
     const monthlyEstimate = computed(() =>
       estimateMonthlyPayment(
         breakdown.value.total,
-        financeDownPayment.value.toFixed(2),
+        financeDownPaymentUsd.value,
         FINANCE_DEFAULT_APR,
         financeTermMonths.value,
       ),
     );
+
+    effect(() => {
+      const total = Number.parseFloat(breakdown.value.total);
+      const downPayment = Number.parseFloat(financeDownPaymentUsd.value);
+
+      if (!financeDownPaymentEdited.value) {
+        financeDownPaymentUsd.value = (total * 0.1).toFixed(2);
+
+        return undefined;
+      }
+
+      if (downPayment <= total) return undefined;
+
+      financeDownPaymentUsd.value = total.toFixed(2);
+      configurationStatus.value = t('model.finance.downPaymentAdjusted');
+
+      return undefined;
+    });
 
     const relatedModels = computed(() =>
       modelsSignal.value
@@ -111,28 +130,47 @@ define<ModelConfiguratorProps>('model-configurator', {
         .slice(0, RELATED_MODEL_LIMIT),
     );
 
-    function onTrimChange(e: Event): void {
-      const nextTrimId = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value;
+    const announceConfigurationChange = (change: string): void => {
+      configurationStatus.value = t('model.totalUpdated', { change, total: formatPrice(breakdown.value.total) });
+    };
 
-      if (!nextTrimId) return;
+    function onTrimChange(event: Event): void {
+      const nextTrimId = controlValue(event);
+
+      if (!nextTrimId || !model().trims.some((trim) => trim.id === nextTrimId)) return;
 
       trimId.value = nextTrimId;
 
       const nextTrim = model().trims.find((t) => t.id === nextTrimId);
 
-      if (nextTrim) {
-        extraPackageIds.value = extraPackageIds.value.filter((id) => !nextTrim.includedPackageIds.includes(id));
-      }
+      if (!nextTrim) return;
+
+      const newlyIncluded = extraPackageIds.value.filter((id) => nextTrim.includedPackageIds.includes(id));
+
+      extraPackageIds.value = extraPackageIds.value.filter((id) => !nextTrim.includedPackageIds.includes(id));
+      announceConfigurationChange(
+        newlyIncluded.length
+          ? t('model.trimChangedWithPackages', { count: newlyIncluded.length, trim: nextTrim.name })
+          : t('model.trimChanged', { trim: nextTrim.name }),
+      );
     }
 
-    function onWheelChange(e: Event): void {
-      const next = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value;
+    function onWheelChange(event: Event): void {
+      const next = controlValue(event);
 
-      if (next) wheelId.value = next;
+      if (!next || !model().wheels.some((wheel) => wheel.id === next)) return;
+
+      wheelId.value = next;
+      announceConfigurationChange(
+        t('model.wheelsChanged', {
+          wheels: model().wheels.find((wheel) => wheel.id === next)?.name,
+        }),
+      );
     }
 
     function onPackagesChange(e: Event): void {
-      extraPackageIds.value = (e as CustomEvent<{ values: string[] }>).detail.values;
+      extraPackageIds.value = [...new Set((e as CustomEvent<{ values: string[] }>).detail.values)];
+      announceConfigurationChange(t('model.packagesChanged', { count: extraPackageIds.value.length }));
     }
 
     function onAddToCart(): void {
@@ -156,11 +194,8 @@ define<ModelConfiguratorProps>('model-configurator', {
            the hero photo is the reason a shopper is here, and the caption reads as part of that
            product shot instead of a second, competing headline below it. -->
       <div class="configurator__hero">
-        <car-silhouette
-          body-type=${() => model().bodyType}
-          color-hex=${() => color.value.hex}
-          color-name=${() => color.value.name}
-          hero-hue=${() => model().heroHue}></car-silhouette>
+        <ore-skeleton striped aria-hidden="true"></ore-skeleton>
+        <span class="configurator__preview-label">${() => t('model.paintPreview')}</span>
         <div class="configurator__intro">
           <h1>${() => model().name}</h1>
           <p class="configurator__tagline">${() => `${model().segment} — ${model().tagline}`}</p>
@@ -184,8 +219,8 @@ define<ModelConfiguratorProps>('model-configurator', {
            primitive's mobile collapse (a slot="mobile-menu" fallback would still hide the
            total/CTA behind a tap, not keep them visible), a real fixed-position mobile
            counterpart replaces it below 768px instead. -->
-      <ore-navbar class="configurator__sticky-bar" sticky label=${() => `${model().name} ${t('model.priceBreakdown')}`}>
-        <span slot="logo" class="configurator__sticky-name">${() => model().name}</span>
+      <section class="configurator__spec-bar" aria-label=${() => t('model.specs')}>
+        <strong class="configurator__spec-name">${() => model().name}</strong>
         <div class="configurator__specs">
           <div class="spec">
             <span class="spec__label">${() => t('model.topSpeed')}</span>
@@ -221,21 +256,7 @@ define<ModelConfiguratorProps>('model-configurator', {
             `,
           )}
         </div>
-        <span class="configurator__sticky-total">
-          <span class="configurator__sticky-total-label">${() => t('common.total')}</span>
-          <animated-price value-usd=${() => breakdown.value.total}></animated-price>
-        </span>
-        <ore-button
-          slot="end"
-          variant="solid"
-          color="primary"
-          size="sm"
-          rounded
-          aria-label=${() => t('model.addToCartFromSummary')}
-          @click=${onAddToCart}>
-          ${() => t('common.addToCart')}
-        </ore-button>
-      </ore-navbar>
+      </section>
 
       <!-- The mobile counterpart to .configurator__sticky-bar above — app.css shows this
            only below 768px via plain position: fixed, which pins to the real viewport
@@ -259,37 +280,86 @@ define<ModelConfiguratorProps>('model-configurator', {
         </ore-button>
       </div>
 
-      <section class="configurator__section">
-        <h2 id="paint-heading">${() => t('model.selectColor')}</h2>
-        <div class="swatches" role="radiogroup" aria-labelledby="paint-heading">
-          ${model().colors.map(
-            (c) => html`
-              <button
-                type="button"
-                class="swatch"
-                role="radio"
-                aria-checked=${() => (colorId.value === c.id ? 'true' : 'false')}
-                style=${`--swatch-color: ${c.hex}`}
-                title=${() => `${c.name} — ${formatPrice(c.priceDelta)}`}
-                aria-label=${() => `${c.name} — ${formatPrice(c.priceDelta)}`}
-                @click=${() => (colorId.value = c.id)}></button>
-            `,
-          )}
+      <section class="configurator__build-summary" aria-label=${() => t('model.yourBuild')}>
+        <div class="configurator__build-controls">
+          <fieldset class="configurator__build-field configurator__paint-field">
+            <legend></legend>
+            <span class="configurator__build-field-label">${() => t('model.selectColor')}</span>
+            <div class="swatches">
+              ${model().colors.map(
+                (c) => html`
+                <label class="swatch-control" aria-label=${() => `${c.name} — ${formatPrice(c.priceDelta)}`}>
+                  <input
+                    class="swatch-control__input"
+                    type="radio"
+                    name=${`paint-${model().id}`}
+                    value=${c.id}
+                    ?checked=${() => colorId.value === c.id}
+                    ref=${(input: HTMLInputElement | null) => {
+                      if (!input) return;
+
+                      queueMicrotask(() => {
+                        input.checked = colorId.value === c.id;
+                        input.value = c.id;
+                      });
+                    }}
+                    @change=${() => {
+                      colorId.value = c.id;
+                      announceConfigurationChange(
+                        t('model.selectedPaintWithPrice', {
+                          name: c.name,
+                          price: formatPrice(c.priceDelta),
+                        }),
+                      );
+                    }} />
+                  <span class="swatch" aria-hidden="true" style=${`--swatch-color: ${c.hex}`}></span>
+                </label>
+              `,
+              )}
+            </div>
+          </fieldset>
+          <div class="configurator__build-field">
+            <ore-select
+              size="sm"
+              label=${() => t('model.selectWheels')}
+              options=${wheelOptions}
+              value=${() => wheelId.value}
+              @change=${onWheelChange}></ore-select>
+          </div>
+          <div class="configurator__build-field">
+            <ore-select
+              size="sm"
+              label=${() => t('model.selectTrim')}
+              options=${trimOptions}
+              value=${() => trimId.value}
+              @change=${onTrimChange}></ore-select>
+          </div>
+          <span class="configurator__build-spacer" aria-hidden="true"></span>
+          <div class="configurator__build-action">
+            <span>
+              <span class="configurator__sticky-total-label">${() => t('common.total')}</span>
+              <animated-price value-usd=${() => breakdown.value.total}></animated-price>
+            </span>
+            <ore-button
+              variant="solid"
+              color="primary"
+              size="md"
+              rounded
+              aria-label=${() => t('model.addToCartFromSummary')}
+              @click=${onAddToCart}>
+              ${() => t('common.addToCart')}
+            </ore-button>
+          </div>
         </div>
-        <p class="configurator__helper">${() => `${color.value.name} — ${formatPrice(color.value.priceDelta)}`}</p>
+        <p class="configurator__status" role="status" aria-live="polite" aria-atomic="true">
+          ${() => configurationStatus.value}
+        </p>
       </section>
 
-      <section class="configurator__section">
-        <h2>${() => t('model.selectWheels')}</h2>
-        <ore-select options=${wheelOptions} value=${() => wheelId.value} @change=${onWheelChange}></ore-select>
-      </section>
-
-      <section class="configurator__section">
+      <section class="configurator__section" id="packages-section">
         <h2>
-          <spec-tooltip text=${() => t('model.selectTrimTooltip')}>${() => t('model.selectTrim')}</spec-tooltip>
+          <spec-tooltip text=${() => t('model.packagesTooltip')}>${() => t('model.packages')}</spec-tooltip>
         </h2>
-        <ore-select options=${trimOptions} value=${() => trimId.value} @change=${onTrimChange}></ore-select>
-        <p class="configurator__helper">${() => trim.value.description}</p>
         ${when(
           () => includedPackages.value.length > 0,
           () => html`
@@ -303,20 +373,18 @@ define<ModelConfiguratorProps>('model-configurator', {
             </div>
           `,
         )}
-      </section>
-
-      <section class="configurator__section">
-        <h2>
-          <spec-tooltip text=${() => t('model.packagesTooltip')}>${() => t('model.packages')}</spec-tooltip>
-        </h2>
         ${when(
           () => optionalPackages.value.length > 0,
           () => html`
             <p class="configurator__helper">${() => t('model.optionalPackages')}</p>
-            <ore-checkbox-group values=${() => extraPackageIds.value.join(',')} @change=${onPackagesChange}>
+            <ore-checkbox-group
+              label=${() => t('model.packages')}
+              values=${() => extraPackageIds.value.join(',')}
+              @change=${onPackagesChange}>
               ${optionalPackages.value.map(
                 (p) => html`
                   <ore-checkbox value=${p.id}>${p.name} — ${formatPrice(p.priceDelta)}</ore-checkbox>
+                  <p class="configurator__package-option">${p.description}</p>
                 `,
               )}
             </ore-checkbox-group>
@@ -325,13 +393,16 @@ define<ModelConfiguratorProps>('model-configurator', {
       </section>
 
       <section class="configurator__section">
-        <h2>${() => t('model.features.title')}</h2>
+        <h2>${() => t('model.standardWithBuild')}</h2>
         <div class="feature-grid">
           ${model().features.map(
             (key) => html`
               <div class="feature-card">
-                <ore-icon name=${FEATURE_ICON[key]} size="20" aria-hidden="true"></ore-icon>
-                <span>${() => t(`model.features.${key}`)}</span>
+                <ore-skeleton striped class="feature-card__media" aria-hidden="true"></ore-skeleton>
+                <span class="feature-card__label">
+                  <ore-icon name=${FEATURE_ICON[key]} size="20" aria-hidden="true"></ore-icon>
+                  <span>${() => t(`model.features.${key}`)}</span>
+                </span>
               </div>
             `,
           )}
@@ -344,29 +415,33 @@ define<ModelConfiguratorProps>('model-configurator', {
            matched pair, not a plain section next to a boxed one. Stacks back to Financing above
            Price breakdown on tablet/mobile via the same 900px breakpoint the rest of the page
            collapses at. -->
-      <div class="configurator__summary">
+      <div class="configurator__summary" aria-label=${() => t('model.reviewBuild')}>
+        <h2 class="configurator__review-heading">${() => t('model.reviewBuild')}</h2>
         <section class="configurator__finance">
           <h2>${() => t('model.finance.title')}</h2>
           <div class="finance-calculator">
             <ore-number-input
-              label=${() => t('model.finance.downPayment')}
+              label=${() => t('model.finance.downPayment', { currency: currentCurrency.value.code })}
               min="0"
               step="500"
-              max=${() => Number(breakdown.value.total)}
-              value=${() => financeDownPayment.value}
-              @input=${(e: Event) =>
-                (financeDownPayment.value =
-                  Number((e.currentTarget as HTMLElementTagNameMap['ore-number-input']).value) ||
-                  0)}></ore-number-input>
+              max=${() => financeMaximumDisplay.value}
+              value=${() => financeDownPaymentDisplay.value}
+              @input=${(event: Event) => {
+                const next = Math.max(0, Math.min(financeMaximumDisplay.value, Number(controlValue(event)) || 0));
+
+                financeDownPaymentEdited.value = true;
+                financeDownPaymentUsd.value = displayAmountToUsd(next.toFixed(2));
+              }}></ore-number-input>
             <ore-select
               label=${() => t('model.finance.term')}
               options=${FINANCE_TERM_OPTIONS.map((months) => ({ label: t('checkout.payment.termOption', { months }), value: String(months) }))}
               value=${() => String(financeTermMonths.value)}
-              @change=${(e: Event) =>
-                (financeTermMonths.value = Number(
-                  (e.currentTarget as HTMLElementTagNameMap['ore-select']).value,
-                ))}></ore-select>
-            <div class="finance-calculator__result">
+              @change=${(event: Event) => {
+                const next = Number(controlValue(event));
+
+                if (FINANCE_TERM_OPTIONS.includes(next)) financeTermMonths.value = next;
+              }}></ore-select>
+            <div class="finance-calculator__result" role="status" aria-live="polite" aria-atomic="true">
               <span>${() => t('model.finance.monthlyEstimate')}</span>
               <strong>
                 ${() => formatPrice(monthlyEstimate.value)}
@@ -394,11 +469,11 @@ define<ModelConfiguratorProps>('model-configurator', {
             <dd><animated-price value-usd=${() => breakdown.value.packages}></animated-price></dd>
             <dt>${() => t('common.subtotal')}</dt>
             <dd><animated-price value-usd=${() => breakdown.value.subtotal}></animated-price></dd>
-            <dt>${() => t('common.tax')}</dt>
+            <dt>${() => t('model.estimatedTax')}</dt>
             <dd><animated-price value-usd=${() => breakdown.value.tax}></animated-price></dd>
             <dt class="total">${() => t('common.total')}</dt>
             <dd class="total">
-              <animated-price aria-live="polite" value-usd=${() => breakdown.value.total}></animated-price>
+              <animated-price value-usd=${() => breakdown.value.total}></animated-price>
             </dd>
           </dl>
           <div class="configurator__actions">

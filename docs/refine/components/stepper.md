@@ -4,6 +4,8 @@ Displays progress through a sequence of logical, numbered steps. Renders a seman
 
 ## Usage
 
+<ComponentPreview>
+
 ```html
 <ore-stepper value="shipping">
   <ore-step value="cart">Cart</ore-step>
@@ -17,7 +19,11 @@ Displays progress through a sequence of logical, numbered steps. Renders a seman
 </script>
 ```
 
-By default the stepper is display-only — steps before the current `value` are marked completed, the matching step is marked current, and nothing is clickable. Set `clickable` to let users navigate between steps, and listen for `change`:
+</ComponentPreview>
+
+By default, the stepper is display-only — steps before the current `value` are marked completed, the matching step is marked current, and nothing is clickable. Set `clickable` to let users navigate between steps, and listen for `change`:
+
+<ComponentPreview>
 
 ```html
 <ore-stepper id="wizard" value="cart" clickable>
@@ -35,6 +41,8 @@ By default the stepper is display-only — steps before the current `value` are 
   });
 </script>
 ```
+
+</ComponentPreview>
 
 ## Linear Navigation
 

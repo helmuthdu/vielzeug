@@ -9,6 +9,7 @@ import { computed, signal } from '@vielzeug/ripple';
 import type { LogEntry } from '@vielzeug/rune';
 
 import { currentUser } from '../../core/auth';
+import { controlValue } from '../../core/control-value';
 import { currentCurrency, SUPPORTED_CURRENCIES, setCurrency } from '../../core/currency';
 import { currentLocale, setLocale, t } from '../../core/i18n';
 import { ringBuffer } from '../../core/logger';
@@ -36,12 +37,6 @@ const THEME_OPTIONS = computed<Array<{ label: string; value: ThemePreference }>>
 
 const USER_OPTIONS = seedUsers.map((user) => ({ label: `${user.name} (${user.role})`, value: user.id }));
 const CURRENCY_OPTIONS = SUPPORTED_CURRENCIES.map(({ code }) => ({ label: code, value: code }));
-
-type SelectElement = HTMLElement & { value: string };
-
-function selectValue(event: Event): string {
-  return (event.currentTarget as SelectElement).value;
-}
 
 function isLanguage(value: string): value is 'de' | 'en' {
   return value === 'de' || value === 'en';
@@ -103,9 +98,9 @@ define('settings-view', {
             options=${LANGUAGE_OPTIONS}
             value=${() => currentLocale.value}
             @change=${(e: Event) => {
-              const locale = selectValue(e);
+              const locale = controlValue(e);
 
-              if (isLanguage(locale)) setLocale(locale);
+              if (locale && isLanguage(locale)) setLocale(locale);
             }}></ore-select>
         </div>
 
@@ -119,9 +114,9 @@ define('settings-view', {
             options=${THEME_OPTIONS}
             value=${() => themePreference.value}
             @change=${(e: Event) => {
-              const preference = selectValue(e);
+              const preference = controlValue(e);
 
-              if (isThemePreference(preference)) setThemePreference(preference);
+              if (preference && isThemePreference(preference)) setThemePreference(preference);
             }}></ore-select>
         </div>
 
@@ -135,8 +130,11 @@ define('settings-view', {
             min="0"
             max="360"
             value=${() => accentHue.value}
-            @change=${(e: Event) =>
-              setAccentHue(Number((e.currentTarget as HTMLElementTagNameMap['ore-slider']).value))}></ore-slider>
+            @change=${(event: Event) => {
+              const hue = Number(controlValue(event));
+
+              if (Number.isFinite(hue)) setAccentHue(hue);
+            }}></ore-slider>
         </div>
 
         <div class="settings-view__row">
@@ -148,7 +146,7 @@ define('settings-view', {
             options=${CURRENCY_OPTIONS}
             value=${() => currentCurrency.value.code}
             @change=${(e: Event) => {
-              const selected = selectValue(e);
+              const selected = controlValue(e);
               const currency = SUPPORTED_CURRENCIES.find(({ code }) => code === selected);
 
               if (currency) setCurrency(currency);
@@ -165,7 +163,7 @@ define('settings-view', {
             options=${USER_OPTIONS}
             value=${() => currentUser.value.id}
             @change=${(e: Event) => {
-              const selected = selectValue(e);
+              const selected = controlValue(e);
               const user = seedUsers.find((u) => u.id === selected);
 
               if (user) currentUser.value = user;

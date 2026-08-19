@@ -1,4 +1,9 @@
 packages:
   - .
+  - ../../packages/*
+allowBuilds:
+  esbuild: true
+  playwright: true
+  rs-module-lexer: true
 minimumReleaseAgeExclude:
   - '@vielzeug/refine@2.1.0'

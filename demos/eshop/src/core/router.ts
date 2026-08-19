@@ -56,3 +56,5 @@ const routeBinding = toSignal(
 export const activeRoute = computed(() => routeBinding.value.matches.at(-1)?.name ?? null);
 
 export const activeRouteParams = computed<RouteParams>(() => routeBinding.value.matches.at(-1)?.params ?? {});
+
+export const activeRouteQuery = computed(() => routeBinding.value.location.query);

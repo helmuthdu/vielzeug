@@ -1,27 +1,27 @@
 # Vielzeug Motors
 
 A fictional luxury car eShop demo — browse the lineup, configure a build, compare models, check
-out through a multi-step flow, and manage orders as a customer, sales rep, or admin. Built the
-same way as `demos/kanban`: standalone Vite + TypeScript app, `@vielzeug/refine` components/theme
-for the UI, `@vielzeug/ore` for the handful of custom elements refine doesn't provide, and most
+out through a multi-step flow, and manage orders as a customer, sales rep, or admin. Built inside
+the Vielzeug monorepo with Vite + TypeScript, `@vielzeug/refine` components/theme for the UI,
+`@vielzeug/ore` for the handful of custom elements refine doesn't provide, and most
 other `@vielzeug/*` packages wired in for a real, non-decorative purpose (three were deliberately
 left out — see "Package map" below for why).
 
 "Vielzeug Motors" borrows the monorepo's own project name for the storefront brand — a fictional
 marque, not a real manufacturer, and a more honest showcase name than an invented one would be.
 Model names ("A200", "R350", "V500", "X300", "X600 AS", "AV400") and sub-brands ("AS" = Vielzeug
-Sport, the performance line; "Volt" = the EV line) are invented for this demo; the car artwork
-(`src/assets/car.svg`) is a single generic illustration, not a photo of any real vehicle — its
-body panels are authored with `fill="currentColor"` so `ui/components/car-silhouette.ts` can
-recolor it per paint selection with no per-path JS (see "Design direction" below).
+Sport, the performance line; "Volt" = the EV line) are invented for this demo. Product media uses
+`ore-skeleton` with its stripped `striped` prop as a deliberate design-mode placeholder.
 
 ## Running it
 
 ```bash
 pnpm install
-pnpm dev            # real npm packages
-pnpm dev:local       # VIELZEUG_LOCAL_DEV=1 — resolves @vielzeug/* to sibling packages/ source
+pnpm dev            # workspace package builds
+pnpm dev:local       # VIELZEUG_LOCAL_DEV=1 — resolves @vielzeug/* directly to sibling packages/ source
 pnpm build && pnpm preview
+pnpm build:local     # type-check and bundle against sibling package source
+pnpm test
 ```
 
 ## Design direction
@@ -31,33 +31,26 @@ real car-configurator reference this demo studied, Mercedes-Benz Store and BMW's
 is a bright, white-canvas retail site, not a dark stage; `dark`/`system` stay one click away in
 Settings). One typeface, Hanken Grotesk, carries UI, body, and headings alike — off the
 training-data-reflex font list on purpose, not refine's own Inter/Plus Jakarta defaults — with
-weight (300 on large headings) and `font-variant-numeric: tabular-nums` on prices doing the
-hierarchy work a second family would otherwise do; that's a deliberate choice, not an oversight,
-so don't "fix" it by adding a second font. Color is Committed, not Restrained: catalog cards and
-the configurator carry a per-model accent hue (`core/theme.ts#accentHueForModel` — cold cyan for
-the Volt/electric line, vermillion for AS/performance, steel-blue everywhere else), scoped to
-brand-register surfaces only; cart/checkout/orders/admin stay locked to one calm global accent on
+500-weight model names, 300-weight supporting copy, and `font-variant-numeric: tabular-nums` on
+prices doing the hierarchy work a second family would otherwise do. Color is Committed, not
+Restrained: catalog cards and
+the hero use each model's `heroHue` (`core/types.ts` — cold cyan for the Volt/electric line,
+vermillion for AS/performance, steel-blue elsewhere), scoped to brand-register surfaces only;
+cart/checkout/orders/admin stay locked to one calm global accent on
 purpose (product register — consistent and boring by design). The catalog breaks its own
 card-grid rhythm with one featured flagship hero (`ui/views/catalog.ts`, pinned to the V500 — the
-one model whose own catalog copy calls it "the Vielzeug flagship"). `ui/components/car-silhouette.ts`
-stages `assets/car.svg` like a product shot (radial stage glow, a faded mirrored ground
-reflection) instead of a flat icon, injecting the SVG once via `@vielzeug/ore`'s `unsafeHtml()`
-directive (the markup is a build-time-bundled asset, never user input) and recoloring it purely
-through the wrapping element's CSS `color`,
-which the SVG's body-panel paths pick up via `fill="currentColor"`. It never moves on its own —
-no autoplaying idle loop, matching the same restrained, static presentation the reference OEM
-sites use — only a brief opacity dip-and-restore in direct response to the shopper picking a new
-paint (skipped entirely under `prefers-reduced-motion`), so a color swap reads as "the paint just
-changed" instead of a silent snap-cut. `ui/components/animated-price.ts` tweens price changes
-instead of snapping, so the configurator's breakdown reads as a live calculation.
+one model whose own catalog copy calls it "the Vielzeug flagship"). Product-media slots use
+`ore-skeleton` with `striped` enabled until final imagery is supplied. `ui/components/animated-price.ts`
+tweens price changes instead of snapping, so the configurator's breakdown reads as a live
+calculation.
 
 
 ## Feature tour
 
 | Route | What it shows |
-
-
-| `/models/:slug` | Configurator — trim/paint/wheels/packages, live price breakdown, "Share build" |
+| --- | --- |
+| `/catalog` | Editorial lineup — flagship first, compact search/sort/refinement controls, URL-persisted shortlist state |
+| `/models/:slug` | Configurator — trim-first build flow, visible build summary, accessible paint/wheel/package controls, live pricing and financing |
 | `/cart` | Line items, quantity, promo code, order summary |
 | `/checkout/*` | Shipping → Payment → Review → Confirmation, guarded by a state machine |
 | `/orders` | Customer's own order history, cancel (ward-guarded) |

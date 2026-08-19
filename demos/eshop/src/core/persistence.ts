@@ -24,8 +24,8 @@ type PreferencesRow = {
 };
 
 const schema = {
-  cart: table<CartRow>('id'),
-  preferences: table<PreferencesRow>('id'),
+  cart: table<CartRow, 'id'>('id'),
+  preferences: table<PreferencesRow, 'id'>('id'),
 };
 
 const store: VaultStore<typeof schema> = createLocalStorage({ name: 'vielzeug-motors', schema });

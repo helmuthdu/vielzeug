@@ -1,10 +1,8 @@
 import '@vielzeug/refine/card';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/icon';
+import '@vielzeug/refine/skeleton';
 import '@vielzeug/refine/text';
-import '@vielzeug/refine/tooltip';
-
-import './car-silhouette';
 
 import { define, getHost, html, prop, useEmit, when } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
@@ -22,28 +20,9 @@ export type ModelCardElement = HTMLElement & { inCompare: boolean; model: Model 
 type ModelCardEvents = { 'toggle-compare': undefined; view: undefined };
 
 /**
- * `<model-card>` — light-DOM (`shadow: false`) so `styles/app.css` can target `.model-card`
- * descendant selectors directly, the same rationale as demos/kanban's `<task-card>`.
- *
- * `model` has no safe default (`prop.data<Model>()` — a placeholder `Model` would be worse than
- * just waiting): when this element is created *declaratively* inside `each()` (as it is in
- * `ui/views/catalog.ts`), ore connects/upgrades it — running `setup()` — before applying the
- * parent template's `model=` binding (see demos/kanban's board-column.ts comment on the same
- * hazard). Reading `props.model.value` unconditionally at the top of `setup()` — or via `bind()`,
- * which runs its effect immediately and unconditionally, unlike a template's own bindings —
- * threw here on that first, still-`undefined` pass, aborting `setup()` before it ever reached
- * `return html\`...\`` and leaving the whole card empty. Wrapping the entire body in `when()`
- * defers every `model()` read until the directive's own effect actually sees a defined value,
- * and re-renders once it lands, self-correcting exactly like board-column's prop reads do.
- *
- * `<ore-card>` owns 100% of the surface chrome (border/background/radius/shadow) through its
- * own `elevation` prop and default padding — `.model-card__surface` in app.css only contributes
- * layout (flex/height), never re-paints border/background itself. Painting both would stack two
- * mismatched-radius boxes with a redundant `backdrop-filter` between them for no visible gain.
- * `interactive` makes the whole card clickable (keyboard-operable too) and gets its hover/focus
- * treatment straight from the primitive; `ore-card`'s built-in nested-interactive-target
- * detection excludes clicks on either footer button, so "Add/remove compare" keeps working
- * independently of the card's own `@activate` → `view` navigation.
+ * `<model-card>` renders in light DOM so the catalog can own layout and responsive presentation.
+ * It waits for its JS-only `model` prop before reading model data because declarative bindings
+ * arrive after the custom element connects.
  */
 define<ModelCardProps>('model-card', {
   props: {
@@ -73,37 +52,81 @@ define<ModelCardProps>('model-card', {
           // doesn't cross-contaminate each other's preview color.
           const colorId = signal(model().colors[0].id);
           const color = computed(() => model().colors.find((c) => c.id === colorId.value) ?? model().colors[0]);
+          const paintSummary = computed(() => {
+            const selected = color.value;
+            const price = formatPrice(selected.priceDelta);
+
+            return selected.priceDelta === '0.00'
+              ? t('model.selectedPaint', { name: selected.name })
+              : t('model.selectedPaintWithPrice', { name: selected.name, price });
+          });
+
+          const renderSpecs = () => {
+            const current = model();
+            const specs =
+              current.powertrain === 'electric'
+                ? [
+                    { label: t('model.range'), value: `${current.rangeKm} km` },
+                    { label: t('model.zeroToHundred'), value: `${current.zeroToHundredSec}s` },
+                    { label: t('model.seats'), value: String(current.seats) },
+                  ]
+                : current.bodyType === 'suv'
+                  ? [
+                      { label: t('model.seats'), value: String(current.seats) },
+                      { label: t('model.zeroToHundred'), value: `${current.zeroToHundredSec}s` },
+                      { label: t('model.topSpeed'), value: `${current.topSpeedKph} km/h` },
+                    ]
+                  : [
+                      { label: t('model.zeroToHundred'), value: `${current.zeroToHundredSec}s` },
+                      { label: t('model.topSpeed'), value: `${current.topSpeedKph} km/h` },
+                      { label: t('model.seats'), value: String(current.seats) },
+                    ];
+
+            return specs.map(
+              (spec) => html`
+                <div class="spec">
+                  <ore-text as="span" size="xs" color="tertiary">${spec.label}</ore-text>
+                  <ore-text as="span" weight="bold">${spec.value}</ore-text>
+                </div>
+              `,
+            );
+          };
 
           return html`
-            <ore-card
-              interactive
-              elevation="1"
-              class="model-card__surface"
-              data-model-id=${() => model().id}
-              @activate=${() => emit('view')}>
-              <div slot="media" class="model-card__media">
-                <car-silhouette
-                  body-type=${() => model().bodyType}
-                  color-hex=${() => color.value.hex}
-                  color-name=${() => color.value.name}
-                  hero-hue=${() => model().heroHue}></car-silhouette>
-                <div class="model-card__swatches" role="radiogroup" aria-label=${() => t('model.selectColor')}>
-                  ${model().colors.map(
-                    (c) => html`
-                      <button
-                        type="button"
-                        class="swatch swatch--sm"
-                        role="radio"
-                        aria-checked=${() => (colorId.value === c.id ? 'true' : 'false')}
-                        style=${`--swatch-color: ${c.hex}`}
-                        title=${c.name}
-                        aria-label=${c.name}
-                        @click=${(event: Event) => {
-                          event.stopPropagation();
-                          colorId.value = c.id;
-                        }}></button>
-                    `,
-                  )}
+            <ore-card elevation="1" class="model-card__surface" data-model-id=${() => model().id}>
+              <div slot="media" class="model-card__media" style=${() => `--model-hue: ${model().heroHue}deg`}>
+                <ore-skeleton striped aria-hidden="true"></ore-skeleton>
+                <div style="position: absolute; bottom: var(--size-6); display: flex; justify-content: center; flex-direction: column; align-items: center;">
+                <fieldset class="model-card__paint-picker">
+                  <legend>${() => t('model.selectColor')}</legend>
+                  <div class="model-card__swatches">
+                    ${model().colors.map(
+                      (c) => html`
+                        <label class="swatch-control" aria-label=${c.name}>
+                          <input
+                            class="swatch-control__input"
+                            type="radio"
+                            name=${`paint-${model().id}`}
+                            value=${c.id}
+                            ?checked=${() => colorId.value === c.id}
+                            ref=${(input: HTMLInputElement | null) => {
+                              if (!input) return;
+
+                              queueMicrotask(() => {
+                                input.checked = colorId.value === c.id;
+                                input.value = c.id;
+                              });
+                            }}
+                            @change=${() => {
+                              colorId.value = c.id;
+                            }} />
+                          <span class="swatch swatch--sm" aria-hidden="true" style=${`--swatch-color: ${c.hex}`}></span>
+                        </label>
+                      `,
+                    )}
+                  </div>
+                </fieldset>
+                <p class="model-card__paint">${() => paintSummary.value}</p>
                 </div>
               </div>
               <div slot="header">
@@ -115,25 +138,7 @@ define<ModelCardProps>('model-card', {
                   ${() => model().tagline}
                 </ore-text>
               </div>
-              <div class="model-card__specs">
-                <div class="spec">
-                  <ore-text as="span" size="xs" color="tertiary">${() => t('model.zeroToHundred')}</ore-text>
-                  <ore-text as="span" weight="bold">${() => `${model().zeroToHundredSec}s`}</ore-text>
-                </div>
-                <div class="spec">
-                  <ore-text as="span" size="xs" color="tertiary">${() => t('model.topSpeed')}</ore-text>
-                  <ore-text as="span" weight="bold">${() => `${model().topSpeedKph} km/h`}</ore-text>
-                </div>
-                ${when(
-                  () => model().powertrain === 'electric',
-                  () => html`
-                    <div class="spec">
-                      <ore-text as="span" size="xs" color="tertiary">${() => t('model.range')}</ore-text>
-                      <ore-text as="span" weight="bold">${() => `${model().rangeKm} km`}</ore-text>
-                    </div>
-                  `,
-                )}
-              </div>
+              <div class="model-card__specs">${renderSpecs}</div>
               <div slot="footer" class="model-card__footer">
                 <ore-text as="span" size="xs" color="tertiary">${() => t('common.startingAt')}</ore-text>
                 <ore-text as="span" class="model-card__price" size="lg" weight="bold">
@@ -141,27 +146,20 @@ define<ModelCardProps>('model-card', {
                 </ore-text>
               </div>
               <div slot="actions" class="model-card__actions">
-                <ore-button
-                  class="model-card__view-btn"
-                  rounded
-                  variant="solid"
-                  color="primary"
-                  @click=${() => emit('view')}>
+                <ore-button class="model-card__view-btn" rounded variant="solid" color="secondary" @click=${() => emit('view')}>
                   ${() => t('common.viewDetails')}
                 </ore-button>
-                <ore-tooltip
-                  content="${() => (props.inCompare.value ? t('common.removeFromCompare') : t('common.addToCompare'))}"
-                  placement="top">
-                  <ore-button
-                    rounded
-                    icon-only
-                    variant=${() => (props.inCompare.value ? 'flat' : 'outline')}
-                    color=${() => (props.inCompare.value ? 'primary' : undefined)}
-                    aria-pressed=${() => String(props.inCompare.value)}
-                    @click=${() => emit('toggle-compare')}>
-                    <ore-icon name="git-compare" size="14" aria-hidden="true"></ore-icon>
-                  </ore-button>
-                </ore-tooltip>
+                <ore-button
+                  class="model-card__compare-btn"
+                  rounded
+                  icon-only
+                  variant=${() => (props.inCompare.value ? 'flat' : 'outline')}
+                  color=${() => (props.inCompare.value ? 'primary' : undefined)}
+                  aria-label=${() => (props.inCompare.value ? t('common.removeFromCompare') : t('common.addToCompare'))}
+                  aria-pressed=${() => String(props.inCompare.value)}
+                  @click=${() => emit('toggle-compare')}>
+                  <ore-icon name="git-compare" size="16" aria-hidden="true"></ore-icon>
+                </ore-button>
               </div>
             </ore-card>
           `;

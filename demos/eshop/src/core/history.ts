@@ -1,5 +1,6 @@
 import { cartItems, compareModelIds } from './cart-store';
 import { bus } from './events';
+import { t } from './i18n';
 import type { CartItem, Configuration } from './types';
 
 /**
@@ -54,11 +55,26 @@ export function removeFromCompare(modelId: string): void {
   bus.emit('compare:changed', { modelIds: compareModelIds.value });
 }
 
-/** Shared by every "Add/remove compare" button — the catalog grid, the catalog hero, and the
- * model detail page's related-models rail all toggle the same `compareModelIds` list. */
+/** Shared by every catalog and model-detail compare action. */
 export function toggleCompare(modelId: string): void {
-  if (compareModelIds.value.includes(modelId)) removeFromCompare(modelId);
-  else addToCompare(modelId);
+  if (compareModelIds.value.includes(modelId)) {
+    removeFromCompare(modelId);
+    bus.emit('toast:show', { message: t('compare.removed'), variant: 'info' });
+
+    return;
+  }
+
+  if (compareModelIds.value.length >= MAX_COMPARE) {
+    bus.emit('toast:show', { message: t('compare.limitReached'), variant: 'info' });
+
+    return;
+  }
+
+  addToCompare(modelId);
+  bus.emit('toast:show', {
+    message: t('compare.added', { count: compareModelIds.value.length }),
+    variant: 'success',
+  });
 }
 
 /** Reorders the compare tray after a drag — no-ops if the order didn't actually change. */

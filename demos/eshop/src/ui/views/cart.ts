@@ -4,8 +4,8 @@ import '@vielzeug/refine/icon';
 import '@vielzeug/refine/input';
 import '@vielzeug/refine/number-input';
 import '@vielzeug/refine/badge';
+import '@vielzeug/refine/skeleton';
 
-import '../components/car-silhouette';
 import '../components/animated-price';
 
 import { define, each, html, when } from '@vielzeug/ore';
@@ -13,6 +13,7 @@ import { signal } from '@vielzeug/ripple';
 import { s } from '@vielzeug/spell';
 
 import { cartLineBreakdowns, cartTotal } from '../../core/cart-store';
+import { controlValue } from '../../core/control-value';
 import { removeFromCart, setCartItemQuantity } from '../../core/history';
 import { t } from '../../core/i18n';
 import { resolveConfiguration } from '../../core/pricing';
@@ -60,11 +61,7 @@ define('cart-view', {
 
                 return html`
                   <div class="cart-line">
-                    <car-silhouette
-                      body-type=${() => l.value.model.bodyType}
-                      color-hex=${() => resolved().color.hex}
-                      color-name=${() => resolved().color.name}
-                      hero-hue=${() => l.value.model.heroHue}></car-silhouette>
+                    <ore-skeleton striped aria-hidden="true"></ore-skeleton>
                     <div class="cart-line__info">
                       <h3>${() => l.value.model.name}</h3>
                       <p class="cart-line__config">
@@ -76,11 +73,8 @@ define('cart-view', {
                         min="1"
                         max="5"
                         value=${() => l.value.item.quantity}
-                        @input=${(e: Event) =>
-                          setCartItemQuantity(
-                            l.value.item.id,
-                            Number((e.currentTarget as HTMLElementTagNameMap['ore-number-input']).value) || 1,
-                          )}></ore-number-input>
+                        @input=${(event: Event) =>
+                          setCartItemQuantity(l.value.item.id, Number(controlValue(event)) || 1)}></ore-number-input>
                     </div>
                     <div class="cart-line__price">
                       <strong><animated-price value-usd=${() => l.value.priceBreakdown.total}></animated-price></strong>
@@ -100,8 +94,7 @@ define('cart-view', {
               placeholder=${() => t('cart.promoPlaceholder')}
               value=${() => promoInput.value}
               error=${() => promoError.value}
-              @input=${(e: Event) =>
-                (promoInput.value = (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '')}></ore-input>
+              @input=${(event: Event) => (promoInput.value = controlValue(event) ?? '')}></ore-input>
             <ore-button rounded variant="bordered" @click=${applyPromo}>${() => t('cart.promoApply')}</ore-button>
             ${when(
               () => promoApplied.value,

@@ -7,7 +7,6 @@ import '@vielzeug/refine/icon';
 import '@vielzeug/refine/skeleton';
 
 import '../components/animated-price';
-import '../components/car-silhouette';
 import '../components/order-timeline';
 
 import { define, each, html, when } from '@vielzeug/ore';
@@ -180,24 +179,12 @@ define('orders-view', {
                 () => {
                   const order = currentOrder as Readable<Order>;
                   const spotlightItems = computed(() => order.value.items.map(describeSpotlightItem));
-                  const heroModel = computed(() => {
-                    const hero = spotlightItems.value[0];
-
-                    return hero ? modelMap.value.get(hero.item.modelId) : undefined;
-                  });
-                  const heroColor = computed(() =>
-                    heroModel.value?.colors.find((c) => c.id === spotlightItems.value[0]?.item.configuration.colorId),
-                  );
                   const pricing = computed(() => combineBreakdowns(order.value.items.map((i) => i.breakdown)));
 
                   return html`
                     <section class="order-spotlight">
                       <div class="order-spotlight__hero">
-                        <car-silhouette
-                          body-type=${() => heroModel.value?.bodyType ?? 'sedan'}
-                          color-hex=${() => heroColor.value?.hex ?? '#c7ccd1'}
-                          color-name=${() => heroColor.value?.name ?? ''}
-                          hero-hue=${() => heroModel.value?.heroHue ?? 220}></car-silhouette>
+                        <ore-skeleton striped aria-hidden="true"></ore-skeleton>
                         <div class="order-spotlight__intro">
                           <p class="order-spotlight__eyebrow">${() => t('orders.current.sectionEyebrow')}</p>
                           <h2 class="order-spotlight__headline">

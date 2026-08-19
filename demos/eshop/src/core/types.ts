@@ -11,7 +11,7 @@ export type User = {
 
 // ── Catalog ──────────────────────────────────────────────────────────────────
 
-export type BodyType = 'coupe' | 'sedan' | 'suv';
+export type BodyType = 'sedan' | 'suv';
 export type Powertrain = 'electric' | 'hybrid' | 'petrol';
 
 export type ColorOption = {
@@ -66,7 +66,7 @@ export type Model = {
   description: string;
   features: FeatureKey[];
   fuelEconomyLPer100Km: number | null;
-  /** Hue angle (deg) driving the abstract silhouette gradient in `ui/components/car-silhouette.ts`. */
+  /** Hue angle (deg) tinting catalog and card staging surfaces. */
   heroHue: number;
   id: string;
   name: string;

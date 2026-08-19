@@ -26,8 +26,7 @@ const getSourcePath = (entry: ExportConditions | string): string | undefined => 
  * behind both `vite.config.ts`'s dev-time module aliasing and `write-local-tsconfig.ts`'s `tsc`
  * `paths` generation, so the two can't drift out of sync as two hand-maintained copies.
  *
- * Returns an empty map if there's no sibling `packages/` directory (StackBlitz, or anyone who
- * copied just this demo's own folder) — callers fall back to the real npm dependencies.
+ * Requires the sibling `packages/` directory declared by this demo's workspace.
  *
  * @param demoRoot absolute path to this demo's own directory (e.g. `demos/eshop`)
  * @returns specifier (e.g. '@vielzeug/ore/testing') -> absolute source path
@@ -35,7 +34,9 @@ const getSourcePath = (entry: ExportConditions | string): string | undefined => 
 export function collectLocalPackageMap(demoRoot: string): Record<string, string> {
   const packagesDir = path.resolve(demoRoot, '../../packages');
 
-  if (!existsSync(packagesDir)) return {};
+  if (!existsSync(packagesDir)) {
+    throw new Error(`Expected Vielzeug packages directory at ${packagesDir}`);
+  }
 
   const pkg = JSON.parse(readFileSync(path.join(demoRoot, 'package.json'), 'utf8')) as {
     dependencies?: Record<string, string>;

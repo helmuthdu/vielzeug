@@ -119,6 +119,8 @@ const VALID_INPUT_TYPES = [
  * @cssprop --input-placeholder-color - Placeholder text color
  * @cssprop --input-radius - Border radius
  * @cssprop --input-padding - Inner padding (block inline)
+ * @cssprop --input-label-block-inset - Inset from the field block start for an inset label
+ * @cssprop --input-label-inset - Inset from the field inline start for an inset label
  * @cssprop --input-gap - Gap between prefix/suffix icons and input text
  * @cssprop --input-font-size - Font size
  * @cssprop --input-height - Field height

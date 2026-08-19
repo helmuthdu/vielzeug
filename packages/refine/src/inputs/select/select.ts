@@ -52,7 +52,7 @@ export type OreSelectEvents = {
   'open-change': OverlayOpenChangeDetail;
 };
 
-export type OreSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'text' | 'frost'>> & {
+export type OreSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'frost'>> & {
   /** Show loading state in dropdown */
   loading?: boolean;
   /** Allow selecting multiple options */
@@ -81,7 +81,7 @@ export type OreSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'text' 
  * @attr {string} error - Error message
  * @attr {boolean} success - Show an inline success check icon (suppressed while `error` is set)
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
- * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost'
+ * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text'
  * @attr {string} size - Component size: 'sm' | 'md' | 'lg'
  * @attr {string} rounded - Border radius: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full'
  * @attr {boolean} fullwidth - Expand to full width
@@ -142,7 +142,7 @@ define<OreSelectProps>(SELECT_TAG, {
     required: prop.bool(false),
     success: prop.bool(false),
     value: prop.string(),
-    variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
+    variant: prop.string<Exclude<VisualVariant, 'frost'>>(),
   },
   setup(props) {
     const el = getHost();

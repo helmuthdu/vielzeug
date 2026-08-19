@@ -19,11 +19,11 @@ import { cartItems, cartLineBreakdowns, cartTotal } from '../../core/cart-store'
 import { modelMap } from '../../core/catalog';
 import type { CheckoutStep } from '../../core/checkout-machine';
 import { checkoutMachine } from '../../core/checkout-machine';
+import { controlValue } from '../../core/control-value';
 import { formatPrice } from '../../core/currency';
 import { bus } from '../../core/events';
 import { estimateDeliveryDate, formatLongDate, formatPaymentMethod } from '../../core/format';
 import { t } from '../../core/i18n';
-import { logger } from '../../core/logger';
 import { attemptPlaceOrder } from '../../core/order-actions';
 import { applyTradeInCredit, resolveConfiguration } from '../../core/pricing';
 import type { RouteNames } from '../../core/router';
@@ -158,6 +158,10 @@ function checkoutStepper(current: CheckoutStep) {
 
 const DEALER_OPTIONS = DEALERS.map((d) => ({ label: `${d.name} — ${d.city}`, value: d.id }));
 
+function isDeliveryMethod(value: string): value is DeliveryMethod {
+  return value === 'delivery' || value === 'pickup';
+}
+
 define('checkout-shipping', {
   setup() {
     if (!ensureCartNotEmpty()) return html``;
@@ -167,13 +171,15 @@ define('checkout-shipping', {
     const dealerId = signal<string | null>(committedDelivery?.dealerId ?? null);
     const dealerError = signal('');
 
-    function onDeliveryMethodChange(e: Event): void {
-      deliveryMethod.value = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value as DeliveryMethod;
+    function onDeliveryMethodChange(event: Event): void {
+      const value = controlValue(event);
+
+      if (value && isDeliveryMethod(value)) deliveryMethod.value = value;
       dealerError.value = '';
     }
 
-    function onDealerChange(e: Event): void {
-      dealerId.value = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value || null;
+    function onDealerChange(event: Event): void {
+      dealerId.value = controlValue(event) || null;
       dealerError.value = '';
     }
 
@@ -181,7 +187,10 @@ define('checkout-shipping', {
       const validation = await shippingForm.validate();
 
       if (validation.status !== 'valid') {
-        errors.value = validation.status === 'invalid' ? (validation.errors ?? {}) : {};
+        errors.value =
+          validation.status === 'invalid' && validation.errors && typeof validation.errors !== 'string'
+            ? validation.errors
+            : {};
 
         return;
       }
@@ -200,10 +209,7 @@ define('checkout-shipping', {
         method: deliveryMethod.value,
       };
 
-      const sent = checkoutMachine.send({ type: 'NEXT' });
-
-      if (sent.status !== 'transitioned') logger.warn(`Unexpected checkout transition from shipping: ${sent.status}`);
-
+      checkoutMachine.send({ type: 'NEXT' });
       goto('checkoutPayment');
     }
 
@@ -213,7 +219,7 @@ define('checkout-shipping', {
         required
         value=${() => shippingForm.field(name).value}
         error=${() => errors.value[name] ?? ''}
-        @input=${(e: Event) => shippingForm.field(name).set((e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '')}
+        @input=${(event: Event) => shippingForm.field(name).set(controlValue(event) ?? '')}
         @blur=${() => shippingForm.field(name).touch()}></ore-input>
     `;
 
@@ -313,10 +319,7 @@ define('checkout-payment', {
           ? { description: tradeInDescription.value.trim(), estimatedValueUsd: tradeInValue.value.toFixed(2) }
           : null;
 
-      const sent = checkoutMachine.send({ type: 'NEXT' });
-
-      if (sent.status !== 'transitioned') logger.warn(`Unexpected checkout transition from payment: ${sent.status}`);
-
+      checkoutMachine.send({ type: 'NEXT' });
       goto('checkoutReview');
     }
 
@@ -341,26 +344,22 @@ define('checkout-payment', {
               step="500"
               max=${() => Number(displayTotal())}
               value=${() => downPayment.value}
-              @input=${(e: Event) =>
-                (downPayment.value =
-                  Number((e.currentTarget as HTMLElementTagNameMap['ore-number-input']).value) ||
-                  0)}></ore-number-input>
+              @input=${(event: Event) => (downPayment.value = Number(controlValue(event)) || 0)}></ore-number-input>
             <ore-select
               label=${() => t('checkout.payment.termLabel')}
               options=${TERM_MONTH_OPTIONS.map((months) => ({ label: t('checkout.payment.termOption', { months }), value: String(months) }))}
               value=${() => String(termMonths.value)}
-              @change=${(e: Event) =>
-                (termMonths.value = Number(
-                  (e.currentTarget as HTMLElementTagNameMap['ore-select']).value,
-                ))}></ore-select>
+              @change=${(event: Event) => {
+                const next = Number(controlValue(event));
+
+                if (TERM_MONTH_OPTIONS.includes(next)) termMonths.value = next;
+              }}></ore-select>
           </div>
           <ore-otp-input
             label=${() => t('checkout.payment.verificationCode')}
             length="6"
             value=${() => verificationCode.value}
-            @change=${(e: Event) =>
-              (verificationCode.value =
-                (e.currentTarget as HTMLElementTagNameMap['ore-otp-input']).value ?? '')}></ore-otp-input>
+            @change=${(event: Event) => (verificationCode.value = controlValue(event) ?? '')}></ore-otp-input>
           <p class="checkout-form__hint">${() => t('checkout.payment.verificationHint')}</p>
         `,
       )}
@@ -384,18 +383,13 @@ define('checkout-payment', {
               <ore-input
                 label=${() => t('checkout.tradeIn.descriptionLabel')}
                 value=${() => tradeInDescription.value}
-                @input=${(e: Event) =>
-                  (tradeInDescription.value =
-                    (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '')}></ore-input>
+                @input=${(event: Event) => (tradeInDescription.value = controlValue(event) ?? '')}></ore-input>
               <ore-number-input
                 label=${() => t('checkout.tradeIn.valueLabel')}
                 min="0"
                 step="500"
                 value=${() => tradeInValue.value}
-                @input=${(e: Event) =>
-                  (tradeInValue.value =
-                    Number((e.currentTarget as HTMLElementTagNameMap['ore-number-input']).value) ||
-                    0)}></ore-number-input>
+                @input=${(event: Event) => (tradeInValue.value = Number(controlValue(event)) || 0)}></ore-number-input>
             </div>
             <div class="checkout-tradein__photos">
               <ore-icon name="camera" size="18" aria-hidden="true"></ore-icon>
@@ -467,10 +461,7 @@ define('checkout-review', {
       lastPlacedOrder = placed;
       cartItems.value = [];
 
-      const sent = checkoutMachine.send({ orderId: placed.id, type: 'CONFIRM' });
-
-      if (sent.status !== 'transitioned') logger.warn(`Unexpected checkout transition from review: ${sent.status}`);
-
+      checkoutMachine.send({ orderId: placed.id, type: 'CONFIRM' });
       goto('checkoutConfirmation', { orderId: placed.id });
     }
 
@@ -492,7 +483,7 @@ define('checkout-review', {
         () => html`
           <div class="checkout-review__line">
             <span>${() => t('checkout.tradeIn.creditLabel')}</span>
-            <strong>−${() => formatPrice(committedTradeIn?.estimatedValueUsd)}</strong>
+            <strong>−${() => formatPrice(committedTradeIn!.estimatedValueUsd)}</strong>
           </div>
         `,
       )}
@@ -522,7 +513,7 @@ define('checkout-review', {
       ${when(
         () => committedPayment !== null,
         () => html`
-          <ore-chip size="sm" variant="flat">${() => formatPaymentMethod(committedPayment?.method)}</ore-chip>
+          <ore-chip size="sm" variant="flat">${() => formatPaymentMethod(committedPayment!.method)}</ore-chip>
         `,
       )}
       ${when(
@@ -538,7 +529,7 @@ define('checkout-review', {
                 ${() => t('checkout.review.financingTermValue', { months: committedPayment?.financing?.termMonths })}
               </dd>
               <dt>${() => t('checkout.review.financingDown')}</dt>
-              <dd>${() => formatPrice(committedPayment?.financing?.downPaymentAmount)}</dd>
+              <dd>${() => formatPrice(committedPayment!.financing!.downPaymentAmount)}</dd>
             </dl>
           </section>
         `,
@@ -602,7 +593,7 @@ define('checkout-confirmation', {
           </p>
           <p>
             ${() => t('confirmation.estimatedDelivery')}:
-            <strong>${() => formatLongDate(order?.estimatedDeliveryDate)}</strong>
+            <strong>${() => formatLongDate(order!.estimatedDeliveryDate)}</strong>
           </p>
           <p>
             ${() =>
@@ -615,7 +606,7 @@ define('checkout-confirmation', {
             () => html`
               <p>
                 ${() => t('checkout.tradeIn.creditLabel')}:
-                <strong>−${() => formatPrice(order?.tradeIn?.estimatedValueUsd)}</strong>
+                <strong>−${() => formatPrice(order!.tradeIn!.estimatedValueUsd)}</strong>
               </p>
             `,
           )}
@@ -630,7 +621,7 @@ define('checkout-confirmation', {
                   <dt>${() => t('checkout.review.financingTerm')}</dt>
                   <dd>${() => t('checkout.review.financingTermValue', { months: order?.financing?.termMonths })}</dd>
                   <dt>${() => t('checkout.review.financingDown')}</dt>
-                  <dd>${() => formatPrice(order?.financing?.downPaymentAmount)}</dd>
+                  <dd>${() => formatPrice(order!.financing!.downPaymentAmount)}</dd>
                 </dl>
               </section>
             `,

@@ -238,6 +238,16 @@ const registerProp = <T>(el: HTMLElement, propName: string, attrName: string, pr
 
   const { default: defaultValue, parse, reflect = false } = propDef;
   const s = signal<T>(defaultValue);
+
+  // On reconnection, the prop registry still holds the previous connection's
+  // PropMeta. Its signal carries the correct prop value (updated by
+  // attributeChangedCallback between connections). We must read from it rather
+  // than from `el[propName]`, because setup() may have overwritten the host
+  // property with a different getter/setter (e.g. `defineFieldValue()` in
+  // refine's form-field components redefines `el.value` to expose the internal
+  // field string). Reading that getter would yield the wrong value and lose
+  // the prop's actual state across reconnections.
+  const existingMeta = registry.get(attrName);
   const hasPreUpgradeProperty = Object.hasOwn(el as unknown as Record<string, unknown>, propName);
   const preUpgradeValue = hasPreUpgradeProperty ? (el as unknown as Record<string, unknown>)[propName] : undefined;
 
@@ -247,7 +257,9 @@ const registerProp = <T>(el: HTMLElement, propName: string, attrName: string, pr
     signal: s,
   };
 
-  if (hasPreUpgradeProperty) {
+  if (existingMeta) {
+    s.value = existingMeta.signal.peek() as T;
+  } else if (hasPreUpgradeProperty) {
     delete (el as unknown as Record<string, unknown>)[propName];
     s.value = coerceIncoming(preUpgradeValue, parse);
   } else if (el.hasAttribute(attrName)) {

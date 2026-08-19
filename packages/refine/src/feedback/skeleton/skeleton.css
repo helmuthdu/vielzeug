@@ -95,7 +95,7 @@
 
 @layer refine.striped {
   :host([striped]) .stack {
-    width: 99%;
+    width: calc(100% - 2px);
   }
 
   :host([striped]) .bone {

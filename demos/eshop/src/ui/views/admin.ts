@@ -11,6 +11,7 @@ import { createBarChart } from '@vielzeug/prism';
 import { computed, effect, signal } from '@vielzeug/ripple';
 import { canAccessAdmin } from '../../core/auth';
 import { getReportService } from '../../core/container';
+import { controlValue } from '../../core/control-value';
 import { formatPrice } from '../../core/currency';
 import { bus } from '../../core/events';
 import { formatOrderStatus, formatShortDate } from '../../core/format';
@@ -23,6 +24,16 @@ import type { Order, OrderStatus } from '../../core/types';
 import { exportOrdersAsCsv } from '../../core/worker-tasks';
 
 const STATUS_VALUES: OrderStatus[] = ['placed', 'processing', 'in-transit', 'delivered', 'cancelled'];
+
+function formatRevenueTick(value: Date | number | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+
+  return Number.isNaN(date.getTime()) ? String(value) : formatShortDate(date.toISOString());
+}
+
+function isOrderStatus(value: string): value is OrderStatus {
+  return STATUS_VALUES.some((status) => status === value);
+}
 
 define('admin-view', {
   setup() {
@@ -67,10 +78,10 @@ define('admin-view', {
           const report = service.generateSalesReport(allOrdersSignal.value);
 
           const config: BarChartConfig = {
-            ariaLabel: t('admin.revenue'),
+            a11y: { ariaLabel: t('admin.revenue') },
             series: [{ color: 'var(--color-primary)', data: report.revenueByDay, name: 'Revenue' }],
             tooltip: true,
-            xAxis: { grid: false, tickFormat: (v) => formatShortDate(new Date(v as number).toISOString()) },
+            xAxis: { grid: false, tickFormat: formatRevenueTick },
             yAxis: { grid: true },
           };
 
@@ -91,14 +102,14 @@ define('admin-view', {
       });
     });
 
-    const onSearch = (e: Event): void => {
-      source.setQuery({ search: (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '' });
+    const onSearch = (event: Event): void => {
+      source.setQuery({ search: controlValue(event) ?? '' });
     };
 
-    const onStatusChange = (order: Order, e: Event): void => {
-      const status = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value as OrderStatus;
+    const onStatusChange = (order: Order, event: Event): void => {
+      const status = controlValue(event);
 
-      if (status) void attemptUpdateOrderStatus(order, status);
+      if (status && isOrderStatus(status)) void attemptUpdateOrderStatus(order, status);
     };
 
     function toggleSelected(orderId: string): void {
@@ -159,10 +170,10 @@ define('admin-view', {
               label=${() => t('admin.bulkStatusLabel')}
               options=${statusOptions}
               value=${() => bulkStatus.value}
-              @change=${(e: Event) => {
-                const status = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value as OrderStatus;
+              @change=${(event: Event) => {
+                const status = controlValue(event);
 
-                if (status) bulkStatus.value = status;
+                if (status && isOrderStatus(status)) bulkStatus.value = status;
               }}></ore-select>
             <ore-button rounded size="sm" variant="solid" color="primary" @click=${() => void onApplyBulkStatus()}>
               ${() => t('admin.bulkApply', { count: selectedIds.value.size })}

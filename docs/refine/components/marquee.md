@@ -10,13 +10,13 @@ Use it for supplementary status or promotional content, not information users mu
 
 ```html
 <ore-marquee duration="24" pause-on-hover style="height:120px">
-  <div style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);width:200px">
+  <div style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);width:200px;padding:var(--size-4)">
     Free shipping on orders over €50
   </div>
-  <div style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);width:200px">
+  <div style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);width:200px;padding:var(--size-4)">
     New arrivals every Friday
   </div>
-  <div style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);width:200px">
+  <div style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-300);width:200px;padding:var(--size-4)">
     Members earn double points this week
   </div>
 </ore-marquee>
@@ -32,10 +32,10 @@ The ticker moves left by default. Set `direction="right"` for the reverse motion
 
 ```html
 <ore-marquee direction="right" duration="18" pause-on-hover style="height:120px">
-  <div style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);width:200px">
+  <div style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-100);width:200px;padding:var(--size-4)">
     Live: Design systems conference
   </div>
-  <div style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);width:200px">
+  <div style="display:flex;align-items:center;justify-content:center;background:var(--color-contrast-200);width:200px;padding:var(--size-4)">
     Next session starts in 10 minutes
   </div>
 </ore-marquee>

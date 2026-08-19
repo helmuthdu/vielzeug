@@ -15,6 +15,14 @@ export const STANDARD_COLORS: ColorOption[] = [
   { hex: '#8c1c25', id: 'crimson-red', metallic: true, name: 'Crimson Red', priceDelta: '1290.00' },
 ];
 
+function colorsStartingWith(defaultColorId: ColorOption['id']): ColorOption[] {
+  const defaultColor = STANDARD_COLORS.find((color) => color.id === defaultColorId);
+
+  if (!defaultColor) throw new Error(`Unknown default color: ${defaultColorId}`);
+
+  return [defaultColor, ...STANDARD_COLORS.filter((color) => color.id !== defaultColorId)];
+}
+
 export const STANDARD_WHEELS: WheelOption[] = [
   { id: 'wheel-18', name: '18" Aero', priceDelta: '0.00', sizeInches: 18 },
   { id: 'wheel-19', name: '19" Sport', priceDelta: '650.00', sizeInches: 19 },
@@ -76,7 +84,7 @@ export const models: Model[] = [
   {
     basePrice: '38900.00',
     bodyType: 'sedan',
-    colors: STANDARD_COLORS,
+    colors: colorsStartingWith('polar-white'),
     description:
       'The entry point into the Vielzeug lineup — a compact executive sedan built for the daily commute without compromising on the marque\u2019s signature ride quality.',
     features: ['adaptiveCruise', 'wirelessCharging', 'headUpDisplay'],
@@ -121,7 +129,7 @@ export const models: Model[] = [
   {
     basePrice: '58900.00',
     bodyType: 'sedan',
-    colors: STANDARD_COLORS,
+    colors: colorsStartingWith('crimson-red'),
     description:
       'A hybrid-assisted executive sedan striking the balance between effortless power and long-distance refinement.',
     features: ['adaptiveCruise', 'panoramicRoof', 'massageSeats', 'wirelessCharging'],
@@ -166,7 +174,7 @@ export const models: Model[] = [
   {
     basePrice: '94900.00',
     bodyType: 'sedan',
-    colors: STANDARD_COLORS,
+    colors: colorsStartingWith('obsidian-black'),
     description:
       'The Vielzeug flagship — a full-size sovereign sedan engineered for those in the back seat as much as those behind the wheel.',
     features: ['panoramicRoof', 'massageSeats', 'premiumAudio', 'matrixLed', 'headUpDisplay'],
@@ -204,7 +212,7 @@ export const models: Model[] = [
   {
     basePrice: '52900.00',
     bodyType: 'suv',
-    colors: STANDARD_COLORS,
+    colors: colorsStartingWith('sapphire-blue'),
     description:
       'A compact SUV that trades none of the sedan lineup\u2019s composure for its extra ride height and space.',
     features: ['adaptiveCruise', 'panoramicRoof', 'wirelessCharging'],
@@ -249,7 +257,7 @@ export const models: Model[] = [
   {
     basePrice: '89900.00',
     bodyType: 'suv',
-    colors: STANDARD_COLORS,
+    colors: colorsStartingWith('graphite-grey'),
     description:
       'The performance flagship of the SUV range, built by Vielzeug Sport — uncompromising power wrapped in everyday usability.',
     features: ['matrixLed', 'premiumAudio', 'adaptiveCruise', 'headUpDisplay'],
@@ -287,7 +295,7 @@ export const models: Model[] = [
   {
     basePrice: '71900.00',
     bodyType: 'sedan',
-    colors: STANDARD_COLORS,
+    colors: colorsStartingWith('glacier-silver'),
     description:
       'Vielzeug\u2019s all-electric sedan, part of the Volt line — silent power with a range built for real journeys.',
     features: ['matrixLed', 'premiumAudio', 'wirelessCharging', 'headUpDisplay'],

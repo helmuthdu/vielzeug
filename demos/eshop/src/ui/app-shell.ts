@@ -306,21 +306,23 @@ define('app-shell', {
     const scrollRef = ref<HTMLElement>();
     const viewRef = ref<HTMLElement>();
 
-    function renderView(): void {
+    const routeViewKey = (routeName: string | null, params: Record<string, unknown>): string => {
+      if (routeName === 'modelDetail') return `modelDetail:${String(params.slug ?? '')}`;
+      if (routeName === 'checkoutConfirmation') return `checkoutConfirmation:${String(params.orderId ?? '')}`;
+
+      return routeName ?? 'not-found';
+    };
+
+    function renderView(routeName: string | null, params: Record<string, unknown>): void {
       const view = viewRef.value;
 
       if (!view) return;
 
       view.replaceChildren();
 
-      const routeName = activeRoute.value;
-
       if (routeName === 'catalog') view.appendChild(createCatalogView());
-      else if (routeName === 'modelDetail') {
-        const slug = activeRouteParams.value.slug as string | undefined;
-
-        view.appendChild(createModelDetailView(slug ?? ''));
-      } else if (routeName === 'cart') view.appendChild(createCartView());
+      else if (routeName === 'modelDetail') view.appendChild(createModelDetailView(String(params.slug ?? '')));
+      else if (routeName === 'cart') view.appendChild(createCartView());
       else if (routeName?.startsWith('checkout')) view.appendChild(createCheckoutView(routeName));
       else if (routeName === 'orders') view.appendChild(createOrdersView());
       else if (routeName === 'admin') view.appendChild(createAdminView());
@@ -335,13 +337,20 @@ define('app-shell', {
       if (scroller) scroller.scrollTop = 0;
     }
 
-    // Re-runs once `viewRef` resolves and again on every route change — `activeRoute` /
-    // `activeRouteParams` are genuinely ripple-reactive (see core/router.ts), unlike
-    // `router.getSnapshot()` itself.
+    let renderedViewKey: string | null = null;
+
+    // Query-only navigation updates activeRouteParams with a new object. Rebuild only when the
+    // route or its render-defining path parameter changes so catalog inputs keep focus while
+    // syncing their search state to the URL.
     effect(() => {
-      void activeRoute.value;
-      void activeRouteParams.value;
-      renderView();
+      const routeName = activeRoute.value;
+      const params = activeRouteParams.value;
+      const key = routeViewKey(routeName, params);
+
+      if (!viewRef.value || key === renderedViewKey) return;
+
+      renderedViewKey = key;
+      renderView(routeName, params);
     });
 
     const currentYear = new Date().getFullYear();

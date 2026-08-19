@@ -22,7 +22,7 @@ export function resolveConfiguration(model: Model, configuration: Configuration)
 
   if (!trim || !color || !wheel) throw new Error(`Configuration references an unknown option for model "${model.id}".`);
 
-  const extraPackages = configuration.packageIds
+  const extraPackages = [...new Set(configuration.packageIds)]
     .filter((id) => !trim.includedPackageIds.includes(id))
     .map((id) => model.packages.find((item) => item.id === id))
     .filter((item): item is Model['packages'][number] => Boolean(item));
@@ -36,7 +36,10 @@ export function computePriceBreakdown(model: Model, configuration: Configuration
   const trimAmount = usd(trim.priceDelta);
   const colorAmount = usd(color.priceDelta);
   const wheelsAmount = usd(wheel.priceDelta);
-  const packagesAmount = sum(extraPackages.map((item) => usd(item.priceDelta)));
+  const packagesAmount = sum(
+    extraPackages.map((item) => usd(item.priceDelta)),
+    { currency: USD },
+  );
   const subtotal = sum([base, trimAmount, colorAmount, wheelsAmount, packagesAmount]);
   const tax = multiply(subtotal, TAX_RATE);
   const total = add(subtotal, tax);
@@ -70,7 +73,11 @@ export function scaleBreakdown(breakdown: PriceBreakdown, quantity: number): Pri
 }
 
 export function combineBreakdowns(breakdowns: PriceBreakdown[]): PriceBreakdown {
-  const pick = (key: keyof PriceBreakdown): Money<typeof USD> => sum(breakdowns.map((item) => usd(item[key])));
+  const pick = (key: keyof PriceBreakdown): Money<typeof USD> =>
+    sum(
+      breakdowns.map((item) => usd(item[key])),
+      { currency: USD },
+    );
 
   return {
     base: toDecimal(pick('base')),

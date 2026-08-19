@@ -44,10 +44,16 @@ export function setAccentHue(hue: number): void {
   accentHue.value = hue;
 }
 
-effect(() => applyTheme(themePreference.value));
+effect(() => {
+  applyTheme(themePreference.value);
+
+  return undefined;
+});
 
 effect(() => {
   document.documentElement.style.setProperty('--color-primary-hue', `${accentHue.value}deg`);
+
+  return undefined;
 });
 
 const colorSchemeQuery = globalThis.matchMedia?.(DARK_MODE_MEDIA_QUERY);

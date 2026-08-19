@@ -99,6 +99,16 @@ describe('ore-select', () => {
 
       expect(fixture.query('ore-input.trigger')?.getAttribute('error')).toBe('Selection required');
     });
+
+    it('passes text variant to ore-input', async () => {
+      fixture = await mount('ore-select', {
+        attrs: { variant: 'text' },
+        html: SELECT_OPTIONS,
+      });
+      await fixture.flush();
+
+      expect(fixture.query('ore-input.trigger')?.getAttribute('variant')).toBe('text');
+    });
   });
 
   // ─── Selection ───────────────────────────────────────────────────────────────
