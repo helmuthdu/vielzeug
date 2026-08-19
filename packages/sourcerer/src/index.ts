@@ -10,6 +10,7 @@ export type {
   CursorResult,
   CursorSource,
   CursorSourceConfig,
+  InfiniteLoadQuery,
   InfinitePagination,
   InfiniteQuery,
   InfiniteQueryPatch,

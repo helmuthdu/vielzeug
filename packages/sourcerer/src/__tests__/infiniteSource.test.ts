@@ -18,6 +18,63 @@ describe('createInfiniteSource', () => {
     });
   });
 
+  it('does not set pendingQuery during append fetches', async () => {
+    let resolveLoad!: (result: { data: string[]; total: number }) => void;
+    const source = createInfiniteSource({
+      autoStart: false,
+      initialQuery: { pageSize: 1 },
+      load: () =>
+        new Promise<{ data: string[]; total: number }>((finish) => {
+          resolveLoad = finish;
+        }),
+    });
+
+    const reloadPending = source.reload();
+    resolveLoad({ data: ['first'], total: 2 });
+    await reloadPending;
+
+    const appendPending = source.loadMore();
+
+    expect(source.snapshot.isFetching).toBe(true);
+    expect(source.snapshot.pendingQuery).toBeUndefined();
+    expect(source.snapshot.pagination).toMatchObject({ kind: 'infinite', loaded: 1 });
+
+    resolveLoad({ data: ['next'], total: 2 });
+    await appendPending;
+
+    expect(source.snapshot.data).toEqual(['first', 'next']);
+  });
+
+  it('sets pendingQuery only when replacing the query', async () => {
+    let resolve!: (result: { data: string[]; total: number }) => void;
+    const source = createInfiniteSource({
+      autoStart: false,
+      load: ({ query }) =>
+        query.search
+          ? new Promise<{ data: string[]; total: number }>((finish) => {
+              resolve = finish;
+            })
+          : Promise.resolve({ data: ['first'], total: 1 }),
+    });
+
+    await source.reload();
+
+    const pending = source.setQuery({ search: 'new' });
+
+    expect(source.snapshot).toMatchObject({
+      data: ['first'],
+      isFetching: true,
+      pendingQuery: { pageSize: 20, search: 'new' },
+      query: { pageSize: 20, search: '' },
+    });
+
+    resolve({ data: ['new'], total: 1 });
+    await pending;
+
+    expect(source.snapshot.pendingQuery).toBeUndefined();
+    expect(source.snapshot.data).toEqual(['new']);
+  });
+
   it('restarts accumulation when query changes', async () => {
     const source = createInfiniteSource({
       autoStart: false,

@@ -36,6 +36,7 @@ source.dispose();
 ### Pitfalls
 
 - Call `setQuery()` to replace the feed for a new search; it starts again at page 1.
+- `pendingQuery` is set only on `setQuery()`/`reload()` (query replace), not on `loadMore()` (append). Use `snapshot.isFetching` to detect an append in progress.
 - Keep rendering loaded `snapshot.data` while `pendingQuery` exists.
 - Use `snapshot.pagination.hasMore` only with an infinite source.
 

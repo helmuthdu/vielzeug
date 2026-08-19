@@ -12,7 +12,7 @@ description: Public API for @vielzeug/sourcerer.
 | `createLocalSource()` | In-memory search and pagination | Sync | Prepare filtering and ranking before `setData()` |
 | `createPageSource()` | Numbered async pages | Async | `query` remains loaded state while `pendingQuery` is active |
 | `createCursorSource()` | Cursor-based async pages | Async | `after` and `before` cannot coexist |
-| `createInfiniteSource()` | Appended async pages | Async | `loadMore()` does nothing while fetching or exhausted |
+| `createInfiniteSource()` | Appended async pages | Async | `loadMore()` does nothing while fetching or exhausted; `pendingQuery` set only on query replace, not append |
 | `SourceSnapshot` | Atomic loaded state plus pending request | Type | Read `pendingQuery` for newer in-flight state |
 
 ## Package Entry Point
@@ -281,7 +281,6 @@ type CursorSource<T, TCursor = string> = Source<T, CursorQuery<TCursor>, CursorP
 
 type InfinitePagination = Readonly<{
   hasMore: boolean;
-  isLoadingMore: boolean;
   kind: 'infinite';
   loaded: number;
   total: number;
@@ -289,11 +288,12 @@ type InfinitePagination = Readonly<{
 
 type InfiniteQuery = Readonly<{ pageSize: number; search: string }>;
 type InfiniteQueryPatch = Readonly<{ pageSize?: number; search?: string }>;
+type InfiniteLoadQuery = Readonly<{ page: number; pageSize: number; search: string }>;
 
 type InfiniteSourceConfig<T> = Readonly<{
   autoStart?: boolean;
   initialQuery?: InfiniteQueryPatch;
-  load(context: LoadContext<PageQuery>): Promise<PageResult<T>>;
+  load(context: LoadContext<InfiniteLoadQuery>): Promise<PageResult<T>>;
 }>;
 
 type InfiniteSource<T> = Source<T, InfiniteQuery, InfinitePagination> & {

@@ -19,6 +19,7 @@ exports:
     CursorSource,
     CursorSourceConfig,
     InfinitePagination,
+    InfiniteLoadQuery,
     InfiniteQuery,
     InfiniteQueryPatch,
     InfiniteSource,

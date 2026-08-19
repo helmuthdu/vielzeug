@@ -229,3 +229,32 @@ const source = createLocalSource(users, { match: toSearchMatcher(index) });
 - Keep caching, retries, polling, and optimistic writes in your transport layer.
 - Use `setData()` with prepared local collections; keep ranking and filtering explicit.
 - Debounce text inputs before updating remote source queries.
+
+## Gotchas
+
+### Navigation methods are no-ops while fetching
+
+`page.go()`, `page.next()`, `page.previous()`, `page.last()` (page and cursor sources) and `loadMore()` (infinite source) return a resolved promise and change nothing while a request is in flight. This prevents queued navigation from racing with abort logic. If a user clicks "next" during a fetch, the click is lost — debounce or disable navigation controls while `snapshot.isFetching` is true.
+
+### `pendingQuery` means a different query is in flight
+
+For page and cursor sources, `pendingQuery` is always set when a new query is loading. For infinite sources, `pendingQuery` is set only when `setQuery()` or `reload()` replaces the query — not during `loadMore()` append fetches. To detect an append in progress on an infinite source, read `snapshot.isFetching` with `pendingQuery` absent.
+
+### `sameQuery` uses reference equality
+
+`setQuery()` compares the new query against the current one using `Object.is` per field. For `filter` and `sort` (opaque `TFilter`/`TSort` types), a new object with the same content triggers a refetch. Memoize filter/sort objects in your application layer if you want to avoid redundant requests.
+
+### Clear optional query fields by passing `undefined` explicitly
+
+In `PageQueryPatch`, omitting `filter` preserves the current value; passing `filter: undefined` clears it. The same applies to `sort`. In `CursorQueryPatch`, omitting `after`/`before` preserves the current cursor; passing `after: undefined` or `before: undefined` clears it. This distinction is runtime-only — TypeScript's optional-field syntax does not distinguish "absent" from "explicitly `undefined`."
+
+```ts
+// Page source: keep current filter, change page:
+source.setQuery({ page: 2 });
+
+// Page source: clear filter, reset to page 1:
+source.setQuery({ filter: undefined });
+
+// Cursor source: clear after cursor:
+source.setQuery({ after: undefined });
+```

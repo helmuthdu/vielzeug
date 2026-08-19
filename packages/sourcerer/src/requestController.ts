@@ -47,5 +47,7 @@ export function createRequestController(): RequestController {
 export function toError(reason: unknown): Error {
   if (reason instanceof Error) return reason;
 
-  return new Error(typeof reason === 'string' && reason.length > 0 ? reason : 'Source request failed');
+  const message = typeof reason === 'string' && reason.length > 0 ? reason : 'Source request failed';
+
+  return new Error(message, { cause: reason });
 }

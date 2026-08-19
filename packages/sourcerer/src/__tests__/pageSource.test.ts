@@ -133,4 +133,15 @@ describe('createPageSource', () => {
 
     await expect(pending).resolves.toBeUndefined();
   });
+
+  it('preserves non-Error rejection cause on snapshot.error', async () => {
+    const source = createPageSource({
+      autoStart: false,
+      load: async () => Promise.reject('network down'),
+    });
+
+    await expect(source.reload()).rejects.toThrow('network down');
+    expect(source.snapshot.error?.message).toBe('network down');
+    expect(source.snapshot.error?.cause).toBe('network down');
+  });
 });

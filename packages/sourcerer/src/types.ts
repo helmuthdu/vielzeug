@@ -26,7 +26,6 @@ export type CursorPagination<TCursor = string> = Readonly<{
 
 export type InfinitePagination = Readonly<{
   hasMore: boolean;
-  isLoadingMore: boolean;
   kind: 'infinite';
   loaded: number;
   total: number;
@@ -166,6 +165,12 @@ export type InfiniteQueryPatch = Readonly<{
   search?: string;
 }>;
 
+export type InfiniteLoadQuery = Readonly<{
+  page: number;
+  pageSize: number;
+  search: string;
+}>;
+
 export type InfiniteSource<T> = Source<T, InfiniteQuery, InfinitePagination> & {
   loadMore(): Promise<void>;
   reload(): Promise<void>;
@@ -175,5 +180,5 @@ export type InfiniteSource<T> = Source<T, InfiniteQuery, InfinitePagination> & {
 export type InfiniteSourceConfig<T> = Readonly<{
   autoStart?: boolean;
   initialQuery?: InfiniteQueryPatch;
-  load(context: LoadContext<PageQuery>): Promise<PageResult<T>>;
+  load(context: LoadContext<InfiniteLoadQuery>): Promise<PageResult<T>>;
 }>;

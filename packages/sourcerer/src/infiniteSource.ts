@@ -9,9 +9,8 @@ import type {
   InfiniteSourceConfig,
 } from './types';
 
-const createPagination = (loaded: number, total: number, isLoadingMore: boolean): InfinitePagination => ({
+const createPagination = (loaded: number, total: number): InfinitePagination => ({
   hasMore: loaded < total,
-  isLoadingMore,
   kind: 'infinite',
   loaded,
   total,
@@ -31,7 +30,7 @@ export function createInfiniteSource<T>(config: InfiniteSourceConfig<T>): Infini
     data: [],
     error: null,
     isFetching: false,
-    pagination: createPagination(0, 0, false),
+    pagination: createPagination(0, 0),
     query: requestedQuery,
   });
 
@@ -40,13 +39,13 @@ export function createInfiniteSource<T>(config: InfiniteSourceConfig<T>): Infini
 
     return asyncSource.fetch({
       failure: (previous, error) => ({ ...previous, error, isFetching: false, pendingQuery: undefined }),
-      load: (signal) => config.load({ query: { ...query, page, pageSize: query.pageSize }, signal }),
+      load: (signal) => config.load({ query: { page, pageSize: query.pageSize, search: query.search }, signal }),
       pending: (previous) => ({
         ...previous,
         error: null,
         isFetching: true,
-        pagination: createPagination(previous.data.length, previous.pagination.total, append),
-        pendingQuery: query,
+        pagination: createPagination(previous.data.length, previous.pagination.total),
+        ...(append ? {} : { pendingQuery: query }),
       }),
       success: (result) => {
         const total = totalItems(result.total);
@@ -58,7 +57,7 @@ export function createInfiniteSource<T>(config: InfiniteSourceConfig<T>): Infini
           data,
           error: null,
           isFetching: false,
-          pagination: createPagination(data.length, total, false),
+          pagination: createPagination(data.length, total),
           query,
         };
       },
