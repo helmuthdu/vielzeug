@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ripple
 
-This log was last generated on Sun, 16 Aug 2026 09:15:39 GMT and should not be manually modified.
+This log was last generated on Wed, 19 Aug 2026 06:57:36 GMT and should not be manually modified.
+
+## 2.2.2
+Wed, 19 Aug 2026 06:57:36 GMT
+
+### Patches
+
+- fix: computed nodes recover from first-run derivation failures — collect() commits partial dependencies when observer.dependencies is empty so a later source change can trigger refresh; ComputedNode.get value tracks itself before refresh so a consumer that reads a failing computed still depends on it and re-runs when the computed recovers
 
 ## 2.2.1
 Sun, 16 Aug 2026 09:15:39 GMT

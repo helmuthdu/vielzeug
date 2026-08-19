@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/ripple",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Fine-grained reactive runtime — signals, derived values, effects, scopes, and optional state tools",
   "repository": {
     "type": "git",

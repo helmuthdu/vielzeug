@@ -4,6 +4,33 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `2.2.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.2.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `2.2.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `2.2.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.2`"
+          }
+        ]
+      },
+      "date": "Wed, 19 Aug 2026 06:57:36 GMT",
+      "tag": "@vielzeug/flux_v2.3.1",
+      "version": "2.3.1"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/herald\" to `2.1.0`"
           },
           {

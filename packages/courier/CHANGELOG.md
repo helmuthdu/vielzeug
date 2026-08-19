@@ -1,6 +1,16 @@
 # Change Log - @vielzeug/courier
 
-This log was last generated on Sun, 16 Aug 2026 09:15:39 GMT and should not be manually modified.
+This log was last generated on Wed, 19 Aug 2026 06:57:36 GMT and should not be manually modified.
+
+## 2.2.1
+Wed, 19 Aug 2026 06:57:36 GMT
+
+### Patches
+
+- fix: query cache cancelAll() now clears entry.promise and entry.controller so a subsequent fetch() starts a fresh request instead of returning the stale rejected promise from the cancelled in-flight fetch; fetchEntry success/rejection handlers guard with entry.promise === promise so a superseded in-flight fetch cannot clobber a newer fetch's cache state
+- fix: courier.dispose() no longer calls queries.clear() explicitly — transport.dispose() triggers the query cache disposal signal listener which sets the disposed flag then clears, avoiding a redundant double-clear and ensuring the disposed flag is set before clear runs
+- refactor: remove duplicate StreamRuntimeConfig type from stream.ts — open() is now generic over P, accepting StreamOptions<P> directly and eliminating all unsafe casts
+- refactor: remove unnecessary RequestInit cast in withLogging interceptor — ctx.init already includes method
 
 ## 2.2.0
 Sun, 16 Aug 2026 09:15:39 GMT

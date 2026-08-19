@@ -4,6 +4,18 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.2`"
+          }
+        ]
+      },
+      "date": "Wed, 19 Aug 2026 06:57:36 GMT",
+      "tag": "@vielzeug/scout_v2.2.1",
+      "version": "2.2.1"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.1`"
           }
         ],

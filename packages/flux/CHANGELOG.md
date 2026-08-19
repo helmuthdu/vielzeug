@@ -1,6 +1,11 @@
 # Change Log - @vielzeug/flux
 
-This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+This log was last generated on Wed, 19 Aug 2026 06:57:36 GMT and should not be manually modified.
+
+## 2.3.1
+Wed, 19 Aug 2026 06:57:36 GMT
+
+_Version update only_
 
 ## 2.3.0
 Mon, 17 Aug 2026 10:42:29 GMT

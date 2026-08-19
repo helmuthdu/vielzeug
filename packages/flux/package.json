@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/flux",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Minimal push streams with explicit ownership, buffering, and ecosystem adapters",
   "repository": {
     "type": "git",

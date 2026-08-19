@@ -2,6 +2,21 @@
   "entries": [
     {
       "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `^2.2.2`"
+          }
+        ]
+      },
+      "date": "Wed, 19 Aug 2026 06:57:36 GMT",
+      "tag": "@vielzeug/orbit_v2.1.1",
+      "version": "2.1.1"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

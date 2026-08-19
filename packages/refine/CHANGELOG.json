@@ -2,6 +2,24 @@
   "entries": [
     {
       "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/orbit\" to `2.1.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ore\" to `2.0.8`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.2`"
+          }
+        ]
+      },
+      "date": "Wed, 19 Aug 2026 06:57:36 GMT",
+      "tag": "@vielzeug/refine_v2.2.1",
+      "version": "2.2.1"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

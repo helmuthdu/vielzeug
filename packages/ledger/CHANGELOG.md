@@ -1,6 +1,11 @@
 # Change Log - @vielzeug/ledger
 
-This log was last generated on Sun, 16 Aug 2026 10:35:40 GMT and should not be manually modified.
+This log was last generated on Wed, 19 Aug 2026 06:57:36 GMT and should not be manually modified.
+
+## 2.2.1
+Wed, 19 Aug 2026 06:57:36 GMT
+
+_Version update only_
 
 ## 2.2.0
 Sun, 16 Aug 2026 10:35:40 GMT

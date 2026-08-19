@@ -2,6 +2,35 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: query cache cancelAll() now clears entry.promise and entry.controller so a subsequent fetch() starts a fresh request instead of returning the stale rejected promise from the cancelled in-flight fetch; fetchEntry success/rejection handlers guard with entry.promise === promise so a superseded in-flight fetch cannot clobber a newer fetch's cache state",
+            "commit": "0a06dd6bdf073367d7b93e1dd90fa33401eccfa6"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: courier.dispose() no longer calls queries.clear() explicitly — transport.dispose() triggers the query cache disposal signal listener which sets the disposed flag then clears, avoiding a redundant double-clear and ensuring the disposed flag is set before clear runs",
+            "commit": "0a06dd6bdf073367d7b93e1dd90fa33401eccfa6"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove duplicate StreamRuntimeConfig type from stream.ts — open() is now generic over P, accepting StreamOptions<P> directly and eliminating all unsafe casts",
+            "commit": "0a06dd6bdf073367d7b93e1dd90fa33401eccfa6"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove unnecessary RequestInit cast in withLogging interceptor — ctx.init already includes method",
+            "commit": "0a06dd6bdf073367d7b93e1dd90fa33401eccfa6"
+          }
+        ]
+      },
+      "date": "Wed, 19 Aug 2026 06:57:36 GMT",
+      "tag": "@vielzeug/courier_v2.2.1",
+      "version": "2.2.1"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.1.0`"

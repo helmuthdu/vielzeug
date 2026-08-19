@@ -5,6 +5,20 @@
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: computed nodes recover from first-run derivation failures — collect() commits partial dependencies when observer.dependencies is empty so a later source change can trigger refresh; ComputedNode.get value tracks itself before refresh so a consumer that reads a failing computed still depends on it and re-runs when the computed recovers",
+            "commit": "145ea47ac74ffe82712ee7d5f514c9e3a61261e2"
+          }
+        ]
+      },
+      "date": "Wed, 19 Aug 2026 06:57:36 GMT",
+      "tag": "@vielzeug/ripple_v2.2.2",
+      "version": "2.2.2"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "fix: recognize Signals, computed values, and Resources across duplicate Ripple module graphs",
             "commit": "78955f4a4594e38b4fe1fd58a5379d48f50c5bc7"
           }

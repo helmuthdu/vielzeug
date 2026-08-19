@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/sourcerer
 
-This log was last generated on Sat, 15 Aug 2026 10:39:54 GMT and should not be manually modified.
+This log was last generated on Wed, 19 Aug 2026 06:57:36 GMT and should not be manually modified.
+
+## 2.2.0
+Wed, 19 Aug 2026 06:57:36 GMT
+
+### Minor changes
+
+- fix: type InfiniteSourceConfig.load as LoadContext<InfiniteLoadQuery> instead of LoadContext<PageQuery> (load context no longer exposes phantom filter/sort fields); drop isLoadingMore from InfinitePagination (derive append state from isFetching + absent pendingQuery); stop setting pendingQuery during infinite append fetches (pendingQuery now consistently means a different query is in flight across all source types); preserve original rejection value via ErrorOptions.cause in toError non-Error branch; delete dead devOnly helper from _dev.ts
 
 ## 2.1.0
 Sat, 15 Aug 2026 10:39:54 GMT
