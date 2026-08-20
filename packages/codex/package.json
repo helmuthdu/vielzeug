@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/codex",
-  "version": "2.2.7",
+  "version": "2.2.8",
   "description": "MCP server that exposes the vielzeug ecosystem to AI assistants — run locally over stdio or remotely over HTTP",
   "repository": {
     "type": "git",

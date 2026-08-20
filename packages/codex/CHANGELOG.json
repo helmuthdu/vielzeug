@@ -6,6 +6,20 @@
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "chore(codex): refresh bundled docs data",
+            "commit": "e55d54c183142f5baf8fac9af7790d797370a71b"
+          }
+        ]
+      },
+      "date": "Thu, 20 Aug 2026 15:39:22 GMT",
+      "tag": "@vielzeug/codex_v2.2.8",
+      "version": "2.2.8"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore(codex): refresh bundled docs data",
             "commit": "bb6d2d5bdf1f7fa35c1195f11b1b904adbf353e7"
           }
         ]
