@@ -5,6 +5,20 @@
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: registerProp reads existing PropMeta signal on reconnect instead of host property overwritten by defineFieldValue; restores ore-number-input value on cart/checkout",
+            "commit": "bb6d2d5bdf1f7fa35c1195f11b1b904adbf353e7"
+          }
+        ]
+      },
+      "date": "Thu, 20 Aug 2026 10:12:48 GMT",
+      "tag": "@vielzeug/ore_v2.0.10",
+      "version": "2.0.10"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "fix: provide() now registers onCleanup to delete its key from the context registry on disconnect — prevents stale context keys leaking to descendants across reconnect and eliminates spurious 'key already provided' dev warnings when setup() runs again on the same element",
             "commit": "e3f64113f7cce794fd9ba9014b4e47c3d3b8c73b"
           }

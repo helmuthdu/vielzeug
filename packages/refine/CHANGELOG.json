@@ -4,6 +4,25 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/ore\" to `2.0.10`"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: registerProp reads existing PropMeta signal on reconnect instead of host property overwritten by defineFieldValue; restores ore-number-input value on cart/checkout",
+            "commit": "bb6d2d5bdf1f7fa35c1195f11b1b904adbf353e7"
+          }
+        ]
+      },
+      "date": "Thu, 20 Aug 2026 10:12:48 GMT",
+      "tag": "@vielzeug/refine_v2.2.3",
+      "version": "2.2.3"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/ore\" to `2.0.9`"
           }
         ]

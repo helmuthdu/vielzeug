@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Wed, 19 Aug 2026 09:25:42 GMT and should not be manually modified.
+This log was last generated on Thu, 20 Aug 2026 10:12:48 GMT and should not be manually modified.
+
+## 2.0.10
+Thu, 20 Aug 2026 10:12:48 GMT
+
+### Patches
+
+- fix: registerProp reads existing PropMeta signal on reconnect instead of host property overwritten by defineFieldValue; restores ore-number-input value on cart/checkout
 
 ## 2.0.9
 Wed, 19 Aug 2026 09:25:42 GMT
