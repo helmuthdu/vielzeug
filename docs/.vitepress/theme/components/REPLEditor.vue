@@ -215,7 +215,7 @@ import { executeReplCode } from './repl/execution/executeReplCode';
 import { persistedCode } from './repl/execution/persistedCode';
 import { loadMonaco } from './repl/execution/useMonaco';
 import { type OutputLine, useReplExecution } from './repl/execution/useReplExecution';
-import { LIBRARY_REGISTRY, TEMPORAL_POLYFILL_SOURCE, type LibraryEntry } from './repl/registry.generated';
+import { LIBRARY_REGISTRY, type LibraryEntry, TEMPORAL_POLYFILL_SOURCE } from './repl/registry.generated';
 
 // ============================================================================
 // Props

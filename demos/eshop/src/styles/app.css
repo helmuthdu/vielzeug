@@ -956,6 +956,31 @@ ore-grid-item:has(> model-card) {
   border: 0;
 }
 
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2);
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+/* The Paint picker is a required, primary configurator decision — at 28px (fine-pointer size)
+   it falls short of the 44px touch-target minimum for the coarse pointers (touch) that make up
+   most mobile traffic. `pointer: coarse` (not a viewport-width breakpoint): a touchscreen
+   laptop at desktop width has the same thumb/finger precision problem a phone does. */
+@media (pointer: coarse) {
+  .swatches {
+    gap: var(--size-3);
+  }
+
+  .swatch,
+  .swatch-control {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 .configurator__paint-field .swatches {
   flex-wrap: nowrap;
 }
@@ -997,15 +1022,6 @@ ore-grid-item:has(> model-card) {
   margin: var(--size-2) 0 0;
   font-size: var(--text-sm);
   color: var(--text-color-tertiary);
-}
-
-.swatches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--size-2);
-  padding: 0;
-  margin: 0;
-  border: 0;
 }
 
 .swatches legend {
@@ -1059,22 +1075,6 @@ ore-grid-item:has(> model-card) {
 .swatch--sm {
   width: 24px;
   height: 24px;
-}
-
-/* The Paint picker is a required, primary configurator decision — at 28px (fine-pointer size)
-   it falls short of the 44px touch-target minimum for the coarse pointers (touch) that make up
-   most mobile traffic. `pointer: coarse` (not a viewport-width breakpoint): a touchscreen
-   laptop at desktop width has the same thumb/finger precision problem a phone does. */
-@media (pointer: coarse) {
-  .swatches {
-    gap: var(--size-3);
-  }
-
-  .swatch,
-  .swatch-control {
-    width: 44px;
-    height: 44px;
-  }
 }
 
 .swatch-control__input:focus-visible + .swatch {
