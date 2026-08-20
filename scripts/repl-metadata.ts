@@ -10,6 +10,7 @@ export const DESCRIPTIONS: Record<string, string> = {
   flux: 'Composable reactive streams with a full operator library and ecosystem adapters.',
   forge: 'Form state management with reactive fields and async validation.',
   herald: 'Publish/Subscribe event bus with async support.',
+  illusionist: 'Typed, deterministic, locale-aware fake data generator with a seeded PRNG.',
   keymap: 'Headless keyboard shortcut manager with chord sequences, context guards, and disposable bindings.',
   ledger: 'Async undo/redo command stack with serialised queueing and Ripple reactive signals.',
   lingua: 'Internationalization library with TypeScript support.',

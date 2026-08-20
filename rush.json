@@ -37,6 +37,12 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/illusionist",
+      "projectFolder": "packages/illusionist",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/courier",
       "projectFolder": "packages/courier",
       "shouldPublish": true,

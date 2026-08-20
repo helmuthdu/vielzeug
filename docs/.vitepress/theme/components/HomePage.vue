@@ -107,6 +107,7 @@ const heroPackages = [
   { cmd: 'pnpm add @vielzeug/flux', id: 'flux', name: 'flux', tagline: 'Reactive streams & operators' },
   { cmd: 'pnpm add @vielzeug/forge', id: 'forge', name: 'forge', tagline: 'Form state & validation' },
   { cmd: 'pnpm add @vielzeug/herald', id: 'herald', name: 'herald', tagline: 'Typed event bus' },
+  { cmd: 'pnpm add @vielzeug/illusionist', id: 'illusionist', name: 'illusionist', tagline: 'Fake data generator' },
   { cmd: 'pnpm add @vielzeug/keymap', id: 'keymap', name: 'keymap', tagline: 'Keyboard shortcuts & chords' },
   { cmd: 'pnpm add @vielzeug/ledger', id: 'ledger', name: 'ledger', tagline: 'Async undo / redo history' },
   { cmd: 'pnpm add @vielzeug/lingua', id: 'lingua', name: 'lingua', tagline: 'i18n & pluralization' },

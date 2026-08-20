@@ -215,7 +215,7 @@ import { executeReplCode } from './repl/execution/executeReplCode';
 import { persistedCode } from './repl/execution/persistedCode';
 import { loadMonaco } from './repl/execution/useMonaco';
 import { type OutputLine, useReplExecution } from './repl/execution/useReplExecution';
-import { LIBRARY_REGISTRY, type LibraryEntry } from './repl/registry.generated';
+import { LIBRARY_REGISTRY, TEMPORAL_POLYFILL_SOURCE, type LibraryEntry } from './repl/registry.generated';
 
 // ============================================================================
 // Props
@@ -268,10 +268,19 @@ const librariesInLoadOrder = computed<LibraryEntry[]>(() =>
   ),
 );
 
-/** IIFE bundles to inline into the sandbox document, in dependency-first order. */
-const sandboxLibraries = computed<SandboxLibrary[]>(() =>
-  librariesInLoadOrder.value.map((entry) => ({ globalName: entry.globalName, iifeSource: entry.iifeSource })),
-);
+/** IIFE bundles to inline into the sandbox document, in dependency-first order.
+ *  Prepends the Temporal polyfill when tempo (or a dependent like illusionist) is in the
+ *  load order — tempo's IIFE expects a top-level `Temporal` global, which browsers don't
+ *  provide natively. */
+const sandboxLibraries = computed<SandboxLibrary[]>(() => {
+  const libs = librariesInLoadOrder.value.map((entry) => ({ globalName: entry.globalName, iifeSource: entry.iifeSource }));
+
+  if (libs.some((lib) => lib.globalName === 'Tempo') && TEMPORAL_POLYFILL_SOURCE) {
+    return [{ globalName: '__temporalPolyfill', iifeSource: TEMPORAL_POLYFILL_SOURCE }, ...libs];
+  }
+
+  return libs;
+});
 
 /** Monaco "extra lib" entries so the editor can resolve types for this library and its deps. */
 function extraLibsFor(entries: LibraryEntry[]): { content: string; filePath: string }[] {
@@ -312,7 +321,10 @@ function getInitialCode(): string {
 function resolveGlobalNameFor(entries: LibraryEntry[]): (lib: string) => string {
   const globalNames = Object.fromEntries(entries.map((entry) => [entry.id, entry.globalName]));
 
-  return (lib: string) => globalNames[lib] ?? lib;
+  // Subpath imports (e.g. `@vielzeug/illusionist/locales`) capture the full path
+  // as `lib`. Strip to the package name to find the matching IIFE global — the
+  // subpath's exports are properties of the same global (see IIFE entry setup).
+  return (lib: string) => globalNames[lib.split('/')[0]] ?? lib;
 }
 
 async function runCode(): Promise<void> {

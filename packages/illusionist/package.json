@@ -1,0 +1,155 @@
+{
+  "name": "@vielzeug/illusionist",
+  "version": "2.1.0",
+  "description": "Typed, deterministic, locale-aware fake data generator with seeded PRNG",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmuthdu/vielzeug",
+    "directory": "packages/illusionist"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./commerce": {
+      "types": "./dist/commerce/index.d.ts",
+      "import": "./dist/commerce/index.js",
+      "require": "./dist/commerce/index.cjs"
+    },
+    "./date": {
+      "types": "./dist/date/index.d.ts",
+      "import": "./dist/date/index.js",
+      "require": "./dist/date/index.cjs"
+    },
+    "./finance": {
+      "types": "./dist/finance/index.d.ts",
+      "import": "./dist/finance/index.js",
+      "require": "./dist/finance/index.cjs"
+    },
+    "./internet": {
+      "types": "./dist/internet/index.d.ts",
+      "import": "./dist/internet/index.js",
+      "require": "./dist/internet/index.cjs"
+    },
+    "./location": {
+      "types": "./dist/location/index.d.ts",
+      "import": "./dist/location/index.js",
+      "require": "./dist/location/index.cjs"
+    },
+    "./lorem": {
+      "types": "./dist/lorem/index.d.ts",
+      "import": "./dist/lorem/index.js",
+      "require": "./dist/lorem/index.cjs"
+    },
+    "./person": {
+      "types": "./dist/person/index.d.ts",
+      "import": "./dist/person/index.js",
+      "require": "./dist/person/index.cjs"
+    },
+    "./seed": {
+      "types": "./dist/seed/index.d.ts",
+      "import": "./dist/seed/index.js",
+      "require": "./dist/seed/index.cjs"
+    },
+    "./system": {
+      "types": "./dist/system/index.d.ts",
+      "import": "./dist/system/index.js",
+      "require": "./dist/system/index.cjs"
+    },
+    "./locales": {
+      "types": "./dist/locales/index.d.ts",
+      "import": "./dist/locales/index.js",
+      "require": "./dist/locales/index.cjs"
+    },
+    "./locales/de": {
+      "types": "./dist/locales/de.d.ts",
+      "import": "./dist/locales/de.js",
+      "require": "./dist/locales/de.cjs"
+    },
+    "./locales/en": {
+      "types": "./dist/locales/en.d.ts",
+      "import": "./dist/locales/en.js",
+      "require": "./dist/locales/en.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "commerce": [
+        "dist/commerce/index.d.ts"
+      ],
+      "date": [
+        "dist/date/index.d.ts"
+      ],
+      "finance": [
+        "dist/finance/index.d.ts"
+      ],
+      "internet": [
+        "dist/internet/index.d.ts"
+      ],
+      "location": [
+        "dist/location/index.d.ts"
+      ],
+      "lorem": [
+        "dist/lorem/index.d.ts"
+      ],
+      "person": [
+        "dist/person/index.d.ts"
+      ],
+      "seed": [
+        "dist/seed/index.d.ts"
+      ],
+      "system": [
+        "dist/system/index.d.ts"
+      ],
+      "locales": [
+        "dist/locales/index.d.ts"
+      ],
+      "locales/de": [
+        "dist/locales/de.d.ts"
+      ],
+      "locales/en": [
+        "dist/locales/en.d.ts"
+      ]
+    }
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "pnpm run verify:exports && vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "biome check --write src",
+    "lint": "biome ci src",
+    "prepublishOnly": "pnpm run build",
+    "preview": "vite preview",
+    "sync:exports": "node ./scripts/sync-exports.mjs",
+    "test": "pnpm run verify:exports && vitest",
+    "verify:exports": "node ./scripts/sync-exports.mjs --check"
+  },
+  "dependencies": {
+    "@vielzeug/arsenal": "workspace:*",
+    "@vielzeug/coins": "workspace:*",
+    "@vielzeug/tempo": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
+  }
+}

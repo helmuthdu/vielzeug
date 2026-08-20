@@ -8,6 +8,7 @@ import { familiarExamples } from './familiar';
 import { fluxExamples } from './flux';
 import { forgeExamples } from './forge';
 import { heraldExamples } from './herald';
+import { illusionistExamples } from './illusionist';
 import { keymapExamples } from './keymap';
 import { ledgerExamples } from './ledger';
 import { linguaExamples } from './lingua';
@@ -38,6 +39,7 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   flux: fluxExamples,
   forge: forgeExamples,
   herald: heraldExamples,
+  illusionist: illusionistExamples,
   keymap: keymapExamples,
   ledger: ledgerExamples,
   lingua: linguaExamples,

@@ -91,6 +91,14 @@
       "slug": "herald"
     },
     {
+      "category": "Data",
+      "dependencies": ["arsenal", "coins", "tempo"],
+      "description": "Typed, deterministic, locale-aware fake data generator with seeded PRNG",
+      "domOutput": false,
+      "name": "@vielzeug/illusionist",
+      "slug": "illusionist"
+    },
+    {
       "category": "Input",
       "description": "Headless keyboard shortcut manager with chord sequences",
       "domOutput": false,

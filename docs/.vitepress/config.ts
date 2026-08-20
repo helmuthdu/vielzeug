@@ -852,6 +852,30 @@ export default defineConfig({
           text: 'Examples',
         },
       ],
+      '/illusionist/': [
+        { link: '/illusionist/', text: 'Overview' },
+        {
+          items: [
+            { link: '/illusionist/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/illusionist/usage#seeded-determinism', text: 'Seeded Determinism' },
+            { link: '/illusionist/usage#locale-support', text: 'Locale Support' },
+            { link: '/illusionist/usage#category-overview', text: 'Category Overview' },
+            {
+              link: '/illusionist/usage#working-with-other-vielzeug-libraries',
+              text: 'Working with Other Vielzeug Libraries',
+            },
+            { link: '/illusionist/usage#best-practices', text: 'Best Practices' },
+          ],
+          link: '/illusionist/usage',
+          text: 'Usage Guide',
+        },
+        { link: '/illusionist/api', text: 'API Reference' },
+        {
+          items: [{ link: '/illusionist/examples/test-fixtures', text: 'Test Fixtures' }],
+          link: '/illusionist/examples',
+          text: 'Examples',
+        },
+      ],
       '/keymap/': [
         { link: '/keymap/', text: 'Overview' },
         { link: '/keymap/migration', text: 'Migration' },

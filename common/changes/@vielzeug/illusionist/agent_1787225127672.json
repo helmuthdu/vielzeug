@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: initial release — typed fake data generator with seeded PRNG, locale-aware person/internet/commerce/date/finance/location/lorem/system categories, explicit tree-shakeable en + de locale objects, createIllusion factory with disposal",
+      "packageName": "@vielzeug/illusionist",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/illusionist"
+}

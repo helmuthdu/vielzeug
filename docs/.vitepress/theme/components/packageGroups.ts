@@ -72,6 +72,7 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
       { id: 'assay', tagline: 'DOM testing primitives' },
       { id: 'codex', tagline: 'AI / MCP server' },
       { id: 'coins', tagline: 'Monetary arithmetic' },
+      { id: 'illusionist', tagline: 'Fake data generator' },
       { id: 'ledger', tagline: 'Async undo / redo history' },
       { id: 'lingua', tagline: 'i18n & pluralization' },
       { id: 'rune', tagline: 'Structured logging' },

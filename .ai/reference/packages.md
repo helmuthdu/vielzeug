@@ -18,6 +18,7 @@ Human-readable package catalogue derived from `.ai/data/packages.json`.
 | `@vielzeug/flux` | Streams | no | Minimal push streams with explicit ownership, buffering, and ecosystem adapters | — | — | `courier`, `herald`, `pulse`, `ripple` | — |
 | `@vielzeug/forge` | Forms | no | Typed form state, validation, submission | — | — | `spell`, `vault` | — |
 | `@vielzeug/herald` | Events | no | Typed event bus, pub/sub, async streams | — | — | — | — |
+| `@vielzeug/illusionist` | Data | no | Typed, deterministic, locale-aware fake data generator with seeded PRNG | `arsenal`, `coins`, `tempo` | — | — | — |
 | `@vielzeug/keymap` | Input | no | Headless keyboard shortcut manager with chord sequences | — | — | — | — |
 | `@vielzeug/ledger` | State | no | Serialized reversible command history with atomic reactive state and cancellation ownership | `ripple` | — | — | — |
 | `@vielzeug/lingua` | i18n | no | Typed i18n with pluralization and async loading | — | — | — | — |

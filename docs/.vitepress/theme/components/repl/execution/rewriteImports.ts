@@ -19,10 +19,10 @@
  * `@vielzeug/<name>` imports (see `.ai/tasks/repl.md`).
  */
 
-const NAMED_IMPORT = /import\s*\{([^}]*)\}\s*from\s*['"]@vielzeug\/([\w-]+)['"];?/g;
-const NAMESPACE_IMPORT = /import\s*\*\s*as\s+(\w+)\s*from\s*['"]@vielzeug\/([\w-]+)['"];?/g;
-const DEFAULT_IMPORT = /import\s+(\w+)\s*from\s*['"]@vielzeug\/([\w-]+)['"];?/g;
-const SIDE_EFFECT_IMPORT = /import\s*['"]@vielzeug\/([\w-]+)['"];?/g;
+const NAMED_IMPORT = /import\s*\{([^}]*)\}\s*from\s*['"]@vielzeug\/([\w-]+(?:\/[\w-]+)*)['"];?/g;
+const NAMESPACE_IMPORT = /import\s*\*\s*as\s+(\w+)\s*from\s*['"]@vielzeug\/([\w-]+(?:\/[\w-]+)*)['"];?/g;
+const DEFAULT_IMPORT = /import\s+(\w+)\s*from\s*['"]@vielzeug\/([\w-]+(?:\/[\w-]+)*)['"];?/g;
+const SIDE_EFFECT_IMPORT = /import\s*['"]@vielzeug\/([\w-]+(?:\/[\w-]+)*)['"];?/g;
 const ANY_REMAINING_IMPORT = /^\s*import\s.+from\s*['"][^'"]+['"];?\s*$/gm;
 
 function toBindingClause(specifiers: string): string {
