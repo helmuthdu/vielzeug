@@ -15,6 +15,30 @@ export type ScopeTouchController = Disposable;
 
 const PREVIEW_Z_INDEX = 2147483647;
 
+type TouchPoint = {
+  clientX: number;
+  clientY: number;
+};
+
+type PendingTouchSession = {
+  identifier: number;
+  source: HTMLElement;
+  start: TouchPoint;
+  state: 'pending';
+};
+
+type DraggingTouchSession = {
+  current: TouchPoint;
+  identifier: number;
+  lastTarget: Element | null;
+  preview: HTMLElement | null;
+  previewOrigin: TouchPoint | null;
+  source: HTMLElement;
+  state: 'dragging';
+};
+
+type TouchSession = { state: 'idle' } | DraggingTouchSession | PendingTouchSession;
+
 function makeDataTransfer(): DataTransfer {
   return {
     dropEffect: 'move',
@@ -56,45 +80,37 @@ export function createScopeTouchController(
 ): ScopeTouchController {
   const dt = makeDataTransfer();
   const dragStartDistancePx = 6;
-  let pendingDraggable: HTMLElement | null = null;
-  let pendingStartPoint: { clientX: number; clientY: number } | null = null;
-  let dragging: HTMLElement | null = null;
-  let lastTarget: Element | null = null;
-  let previewEl: HTMLElement | null = null;
-  let previewOrigin: { clientX: number; clientY: number } | null = null;
+  let session: TouchSession = { state: 'idle' };
 
-  function removePreview(): void {
-    previewEl?.remove();
-    previewEl = null;
-    previewOrigin = null;
+  function findTouch(touches: TouchList, identifier: number): Touch | undefined {
+    return Array.from(touches).find((touch) => touch.identifier === identifier);
   }
 
-  function elementBelow(clientX: number, clientY: number): Element | null {
-    const previousDraggingDisplay = dragging?.style.display ?? '';
-    const previousPreviewDisplay = previewEl?.style.display ?? '';
+  function resetSession(): void {
+    if (session.state === 'dragging') session.preview?.remove();
 
-    if (dragging) dragging.style.display = 'none';
-
-    if (previewEl) previewEl.style.display = 'none';
-
-    const below = document.elementFromPoint(clientX, clientY);
-
-    if (dragging) dragging.style.display = previousDraggingDisplay;
-
-    if (previewEl) previewEl.style.display = previousPreviewDisplay;
-
-    return below;
+    session = { state: 'idle' };
   }
 
-  const disposable = createDisposable(() => {
-    pendingDraggable = null;
-    pendingStartPoint = null;
-    dragging = null;
-    lastTarget = null;
-    removePreview();
-  });
+  function elementBelow(active: DraggingTouchSession, clientX: number, clientY: number): Element | null {
+    const previousSourceDisplay = active.source.style.display;
+    const previousPreviewDisplay = active.preview?.style.display ?? '';
 
-  function dispatch(element: Element, type: string, clientX: number, clientY: number, hasPreview = false): void {
+    active.source.style.display = 'none';
+    if (active.preview) active.preview.style.display = 'none';
+
+    try {
+      return document.elementFromPoint(clientX, clientY);
+    } finally {
+      active.source.style.display = previousSourceDisplay;
+
+      if (active.preview) active.preview.style.display = previousPreviewDisplay;
+    }
+  }
+
+  const disposable = createDisposable(resetSession);
+
+  function dispatch(element: Element, type: string, clientX: number, clientY: number, hasPreview = false): boolean {
     const event = new Event(type, { bubbles: true, cancelable: true });
 
     Object.defineProperty(event, '__dndTouch', { configurable: true, value: true });
@@ -103,10 +119,14 @@ export function createScopeTouchController(
     Object.defineProperty(event, 'clientY', { configurable: true, value: clientY });
     Object.defineProperty(event, 'dataTransfer', { configurable: true, value: dt });
     element.dispatchEvent(event);
+
+    return event.defaultPrevented;
   }
 
-  function renderPreview(source: HTMLElement, point: { clientX: number; clientY: number }): boolean {
-    if (options.preview === false) return false;
+  function renderPreview(source: HTMLElement): HTMLElement | null {
+    if (options.preview === false) return null;
+
+    let previewEl: HTMLElement | null;
 
     try {
       const preview = options.preview?.(source);
@@ -119,7 +139,7 @@ export function createScopeTouchController(
       previewEl = null;
     }
 
-    if (!previewEl) return false;
+    if (!previewEl) return null;
 
     previewEl.setAttribute('aria-hidden', 'true');
     previewEl.setAttribute('data-dnd-touch-preview', '');
@@ -132,15 +152,16 @@ export function createScopeTouchController(
     previewEl.style.position = 'fixed';
     previewEl.style.zIndex = String(PREVIEW_Z_INDEX);
     document.body.appendChild(previewEl);
-    previewOrigin = point;
 
-    return true;
+    return previewEl;
   }
 
   document.addEventListener(
     'touchstart',
     (event: TouchEvent) => {
-      const touch = event.touches[0];
+      if (session.state !== 'idle') return;
+
+      const touch = event.changedTouches[0];
 
       if (!touch) return;
 
@@ -149,8 +170,12 @@ export function createScopeTouchController(
 
       if (!draggable) return;
 
-      pendingDraggable = draggable;
-      pendingStartPoint = { clientX: touch.clientX, clientY: touch.clientY };
+      session = {
+        identifier: touch.identifier,
+        source: draggable,
+        start: { clientX: touch.clientX, clientY: touch.clientY },
+        state: 'pending',
+      };
     },
     { passive: false, signal: disposable.disposalSignal },
   );
@@ -158,76 +183,94 @@ export function createScopeTouchController(
   document.addEventListener(
     'touchmove',
     (event: TouchEvent) => {
-      const touch = event.touches[0];
+      if (session.state === 'idle') return;
+
+      const touch = findTouch(event.changedTouches, session.identifier);
 
       if (!touch) return;
 
-      if (!dragging) {
-        if (!pendingDraggable || !pendingStartPoint) return;
-
-        const distance = Math.hypot(
-          touch.clientX - pendingStartPoint.clientX,
-          touch.clientY - pendingStartPoint.clientY,
-        );
+      if (session.state === 'pending') {
+        const distance = Math.hypot(touch.clientX - session.start.clientX, touch.clientY - session.start.clientY);
 
         if (distance < dragStartDistancePx) return;
 
-        dragging = pendingDraggable;
-        lastTarget = pendingDraggable;
+        const point = { clientX: touch.clientX, clientY: touch.clientY };
+        const preview = renderPreview(session.source);
+        const active: DraggingTouchSession = {
+          current: point,
+          identifier: session.identifier,
+          lastTarget: session.source,
+          preview,
+          previewOrigin: preview ? point : null,
+          source: session.source,
+          state: 'dragging',
+        };
 
-        const hasPreview = renderPreview(dragging, touch);
+        session = active;
+        dispatch(active.source, 'dragstart', touch.clientX, touch.clientY, preview !== null);
 
-        dispatch(dragging, 'dragstart', touch.clientX, touch.clientY, hasPreview);
+        if (session !== active) return;
       }
 
-      if (previewEl && previewOrigin) {
-        const dx = touch.clientX - previewOrigin.clientX;
-        const dy = touch.clientY - previewOrigin.clientY;
+      session.current = { clientX: touch.clientX, clientY: touch.clientY };
 
-        previewEl.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      if (session.preview && session.previewOrigin) {
+        const dx = touch.clientX - session.previewOrigin.clientX;
+        const dy = touch.clientY - session.previewOrigin.clientY;
+
+        session.preview.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
       }
 
-      const below = elementBelow(touch.clientX, touch.clientY);
+      const below = elementBelow(session, touch.clientX, touch.clientY);
 
-      if (below && below !== lastTarget) {
-        if (lastTarget) dispatch(lastTarget, 'dragleave', touch.clientX, touch.clientY);
+      if (below && below !== session.lastTarget) {
+        if (session.lastTarget) dispatch(session.lastTarget, 'dragleave', touch.clientX, touch.clientY);
 
-        lastTarget = below;
+        session.lastTarget = below;
       }
 
       if (below) dispatch(below, 'dragover', touch.clientX, touch.clientY);
 
-      pendingDraggable = null;
-      pendingStartPoint = null;
       event.preventDefault();
     },
     { passive: false, signal: disposable.disposalSignal },
   );
 
   function finish(event: TouchEvent, cancelled: boolean): void {
-    if (!dragging) {
-      pendingDraggable = null;
-      pendingStartPoint = null;
+    if (session.state === 'idle') return;
+
+    const touch = findTouch(event.changedTouches, session.identifier);
+
+    if (!touch) {
+      const stillActive = findTouch(event.touches, session.identifier);
+
+      if (!cancelled || stillActive) return;
+    }
+
+    if (session.state === 'pending') {
+      resetSession();
 
       return;
     }
 
-    const touch = event.changedTouches[0];
+    const active = session;
+    const point = touch ?? active.current;
 
-    if (!touch) return;
+    try {
+      let dropAccepted = false;
 
-    if (!cancelled) {
-      const below = elementBelow(touch.clientX, touch.clientY);
+      if (!cancelled) {
+        const below = elementBelow(active, point.clientX, point.clientY);
 
-      if (below) dispatch(below, 'drop', touch.clientX, touch.clientY);
+        if (below) dropAccepted = dispatch(below, 'drop', point.clientX, point.clientY);
+      }
+
+      dt.dropEffect = dropAccepted ? 'move' : 'none';
+      dispatch(active.source, 'dragend', point.clientX, point.clientY, active.preview !== null);
+    } finally {
+      dt.dropEffect = 'move';
+      resetSession();
     }
-
-    dispatch(dragging, 'dragend', touch.clientX, touch.clientY, previewEl !== null);
-    pendingDraggable = null;
-    pendingStartPoint = null;
-    dragging = null;
-    lastTarget = null;
-    removePreview();
   }
 
   document.addEventListener('touchend', (event: TouchEvent) => finish(event, false), {

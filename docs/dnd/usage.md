@@ -408,6 +408,8 @@ using scope = createSortableScope({ touch: true });
 using sortable = createSortable({ element: listEl, getKey: (el) => el.dataset.id!, scope });
 ```
 
+The scope tracks the touch that initiated the drag by its identifier. Additional fingers cannot move, finish, or replace the active drag. If the initiating touch is cancelled, Dnd restores the original item order and removes the transient preview.
+
 ### Touch preview
 
 Touch uses an inert outline by default, avoiding cloned application DOM. Provide a preview factory or opt out when your item styling supplies its own feedback.

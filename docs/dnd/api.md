@@ -166,6 +166,8 @@ interface SortableTouchOptions {
 
 `preview` returns a template that Dnd clones before mounting it as a transient touch preview, so returning an element from the sortable item does not reparent or remove caller-owned DOM. Return `false` to disable the preview.
 
+Touch sorting tracks the initiating touch by identifier. Secondary touches are ignored, and cancellation of the initiating touch restores the pre-drag order without firing `onReorder`.
+
 ## `createDropZone()`
 
 ```ts

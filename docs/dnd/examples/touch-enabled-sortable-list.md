@@ -40,6 +40,8 @@ using sortable = createSortable({
 
 - `createSortable` applies `touch-action: none` to sortable items or handles automatically.
 - One touch-enabled scope can coordinate every connected list it owns.
+- The initiating finger owns the drag; secondary touches are ignored.
+- Cancelling the initiating touch restores the original order.
 - The default preview is an inert outline. Configure `touch.preview` when a custom preview is necessary.
 
 ### Related
