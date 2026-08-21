@@ -7,7 +7,10 @@ import type { Task } from './types';
 export function formatBudget(budget: Task['budget']): string | null {
   if (!budget) return null;
 
-  return formatMoney(money(budget.amount, currency(budget.currency)), { maximumFractionDigits: 0 });
+  return formatMoney(money(budget.amount, currency(budget.currency)), {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  });
 }
 
 /** Renders an ISO (`yyyy-MM-dd`) due date as e.g. `Jul 20`. */

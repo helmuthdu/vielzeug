@@ -143,7 +143,11 @@ define('app-shell', {
     // Re-runs once `mainRef` resolves (a signal write from the template's `ref=` binding) and
     // again on every subsequent route change — replaces the old "render once + separate
     // router.subscribe" pair with a single reactive effect.
-    effect(() => renderView(activeRoute.value));
+    effect(() => {
+      renderView(activeRoute.value);
+
+      return undefined;
+    });
 
     // The undo/redo history (core/history.ts's `ledger`) previously had no UI beyond
     // Settings' buttons — surfaced here too since it's the one piece of state every other

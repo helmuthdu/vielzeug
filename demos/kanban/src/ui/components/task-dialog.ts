@@ -10,6 +10,7 @@ import { computed, effect, signal } from '@vielzeug/ripple';
 import { s } from '@vielzeug/spell';
 import { currentUser } from '../../core/auth';
 import { boardSignal } from '../../core/board-store';
+import { controlValue } from '../../core/control-value';
 import { t } from '../../core/i18n';
 import {
   attemptCreateTask,
@@ -259,8 +260,7 @@ define('task-dialog', {
             ?disabled=${readOnly}
             value=${() => draft.value.title}
             error=${titleError}
-            @input=${(e: Event) =>
-              patchDraft({ title: (e.currentTarget as HTMLElementTagNameMap['ore-input']).value })}></ore-input>
+            @input=${(e: Event) => patchDraft({ title: controlValue(e) ?? '' })}></ore-input>
           <ore-textarea
             label=${() => t('taskDialog.description')}
             rows="3"
@@ -268,7 +268,7 @@ define('task-dialog', {
             value=${() => draft.value.description}
             @input=${(e: Event) =>
               patchDraft({
-                description: (e.currentTarget as HTMLElementTagNameMap['ore-textarea']).value,
+                description: controlValue(e) ?? '',
               })}></ore-textarea>
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:var(--size-4)">
             <ore-select
@@ -278,8 +278,7 @@ define('task-dialog', {
               value=${() => draft.value.status}
               @change=${(e: Event) =>
                 patchDraft({
-                  status: ((e.currentTarget as HTMLElementTagNameMap['ore-select']).value ||
-                    draft.value.status) as TaskStatus,
+                  status: (controlValue(e) || draft.value.status) as TaskStatus,
                 })}></ore-select>
             <ore-select
               label=${() => t('taskDialog.priority')}
@@ -288,8 +287,7 @@ define('task-dialog', {
               value=${() => draft.value.priority}
               @change=${(e: Event) =>
                 patchDraft({
-                  priority: ((e.currentTarget as HTMLElementTagNameMap['ore-select']).value ||
-                    draft.value.priority) as TaskPriority,
+                  priority: (controlValue(e) || draft.value.priority) as TaskPriority,
                 })}></ore-select>
           </div>
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:var(--size-4)">
@@ -300,7 +298,7 @@ define('task-dialog', {
               value=${() => draft.value.assigneeId}
               @change=${(e: Event) =>
                 patchDraft({
-                  assigneeId: (e.currentTarget as HTMLElementTagNameMap['ore-select']).value,
+                  assigneeId: controlValue(e) ?? '',
                 })}></ore-select>
             <ore-date-picker
               label=${() => t('taskDialog.dueDate')}
@@ -308,7 +306,7 @@ define('task-dialog', {
               value=${() => draft.value.dueDate}
               @change=${(e: Event) =>
                 patchDraft({
-                  dueDate: (e.currentTarget as HTMLElementTagNameMap['ore-date-picker']).value,
+                  dueDate: controlValue(e) ?? '',
                 })}></ore-date-picker>
           </div>
           <div style="display:grid;grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);gap:var(--size-4)">
@@ -320,7 +318,7 @@ define('task-dialog', {
               @input=${(e: Event) =>
                 patchDraft({
                   budgetAmount: (() => {
-                    const value = (e.currentTarget as HTMLElementTagNameMap['ore-number-input']).value;
+                    const value = controlValue(e);
                     const amount = Number(value);
 
                     return Number.isFinite(amount) ? amount : null;

@@ -26,7 +26,11 @@ export function setThemePreference(preference: ThemePreference): void {
   themePreference.value = preference;
 }
 
-effect(() => applyTheme(themePreference.value));
+effect(() => {
+  applyTheme(themePreference.value);
+
+  return undefined;
+});
 
 const colorSchemeQuery = globalThis.matchMedia?.(DARK_MODE_MEDIA_QUERY);
 

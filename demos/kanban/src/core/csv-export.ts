@@ -1,9 +1,10 @@
 import { createWorker } from '@vielzeug/familiar';
 
 import { boardSignal } from './board-store';
+import type { Task } from './types';
 
 export async function exportTasksAsCsv(): Promise<void> {
-  const worker = createWorker(new URL('./csv-export.worker.ts', import.meta.url));
+  const worker = createWorker<Task[], string>(new URL('./csv-export.worker.ts', import.meta.url));
 
   try {
     const csv = await worker.run(boardSignal.value.tasks);

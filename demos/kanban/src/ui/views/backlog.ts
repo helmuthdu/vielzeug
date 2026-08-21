@@ -9,6 +9,7 @@ import { toSearchMatcher } from '@vielzeug/scout';
 import { createVirtualScroller } from '@vielzeug/scroll';
 import { createLocalSource } from '@vielzeug/sourcerer';
 import { boardSignal } from '../../core/board-store';
+import { controlValue } from '../../core/control-value';
 import { formatDueDate } from '../../core/format';
 import { t } from '../../core/i18n';
 import { taskIndex } from '../../core/search-index';
@@ -196,26 +197,26 @@ define('backlog-view', {
       const boardSub = boardSignal.subscribe(refreshSourceData);
 
       onCleanup(() => {
-        boardSub.dispose();
+        boardSub();
         scroller.dispose();
         source.dispose();
       });
     });
 
     const onSearchInput = (e: Event): void => {
-      const query = (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '';
+      const query = controlValue(e) ?? '';
 
       source.setQuery({ search: query });
     };
 
     const onSearchChange = (e: Event): void => {
-      const query = (e.currentTarget as HTMLElementTagNameMap['ore-input']).value ?? '';
+      const query = controlValue(e) ?? '';
 
       source.setQuery({ search: query });
     };
 
     const onFilterChange = (e: Event): void => {
-      statusFilter = (e.currentTarget as HTMLElementTagNameMap['ore-select']).value as TaskStatus | '';
+      statusFilter = (controlValue(e) ?? '') as TaskStatus | '';
 
       const tasks = boardSignal.value.tasks;
       const filtered = statusFilter ? tasks.filter((t) => t.status === statusFilter) : tasks;

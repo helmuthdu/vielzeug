@@ -75,7 +75,7 @@ define('analytics-view', {
         }));
 
         const barConfig: BarChartConfig = {
-          ariaLabel: t('analytics.tasksPerColumn'),
+          a11y: { ariaLabel: t('analytics.tasksPerColumn') },
           series: [
             {
               color: 'var(--color-primary)',
@@ -98,7 +98,7 @@ define('analytics-view', {
         const velocityData = buildVelocitySeries();
 
         const lineConfig: LineChartConfig = {
-          ariaLabel: t('analytics.completionVelocity'),
+          a11y: { ariaLabel: t('analytics.completionVelocity') },
           series: [
             {
               color: 'var(--color-success)',
