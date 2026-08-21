@@ -1,6 +1,6 @@
 # @vielzeug/gesture
 
-Framework-neutral pointer gesture primitives.
+Framework-neutral one-axis pointer pan recognition.
 
 ## Install
 
@@ -11,19 +11,26 @@ pnpm add @vielzeug/gesture
 ## Quick Start
 
 ```ts
-import { createSwipeGesture } from '@vielzeug/gesture';
+import { createPanGesture } from '@vielzeug/gesture';
 
-const swipe = createSwipeGesture({
+const pan = createPanGesture(element, {
   axis: 'x',
-  onCommit: ({ distance }) => {
-    if (distance < 0) console.log('next');
-    else console.log('previous');
+  onMove: ({ distance }) => {
+    element.style.transform = `translateX(${distance}px)`;
+  },
+  onEnd: ({ distance, reason }) => {
+    element.style.transform = '';
+
+    if (reason === 'release' && Math.abs(distance) >= 48) {
+      dismiss();
+    }
   },
 });
 
-swipe.mount(element);
-
-swipe.dispose();
+pan.dispose();
 ```
+
+Pointer capture is enabled by default. Set `pointerCapture: false` for surfaces whose nested or
+newly revealed controls must retain native pointer-up targeting.
 
 [Full documentation](https://vielzeug.dev/gesture/)

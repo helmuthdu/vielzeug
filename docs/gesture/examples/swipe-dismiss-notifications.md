@@ -1,17 +1,17 @@
 ---
 title: 'Gesture Examples — Swipe-to-Dismiss Notifications'
-description: 'Implement swipe-to-dismiss behavior using createSwipeGesture.'
+description: 'Implement swipe-to-dismiss behavior using createPanGesture.'
 ---
 
 ## Swipe-to-Dismiss Notifications
 
 ### Problem
 
-You need to dismiss transient notifications by swiping horizontally, while preserving click access to inner actions (undo, retry, view details). The notification should track the finger with a live transform, fade as it moves, and either commit-dismiss past a threshold or spring back under it. Inner buttons must remain tappable mid-gesture — the swipe must not capture pointer events away from them.
+You need to dismiss transient notifications by swiping horizontally, while preserving click access to inner actions (undo, retry, view details). The notification should track the finger with a live transform, fade as it moves, and either dismiss past an application-defined threshold or spring back under it. Inner buttons must remain tappable mid-gesture — the pan must not capture pointer events away from them.
 
 ### Solution
 
-Disable pointer capture with `captureTarget: () => null` so child elements stay interactive. Drive the transform and opacity from `onMove`, reset on `onRelease`, and dismiss on `onCommit`. Use the Web Animations API for the commit animation so the gesture handle stays decoupled from rendering.
+Disable pointer capture with `pointerCapture: false` so child elements stay interactive, and reject starts on interactive descendants with `shouldStart`. Drive the transform and opacity from `onMove`, reset on `reason: 'cancel'`, and dismiss on `reason: 'release'` past threshold. Use the Web Animations API for the commit animation so the gesture handle stays decoupled from rendering.
 
 ```html
 <div class="toast-stack" id="toasts" role="region" aria-label="Notifications" aria-live="polite"></div>
@@ -67,10 +67,13 @@ Disable pointer capture with `captureTarget: () => null` so child elements stay 
 ```
 
 ```ts
-import { createSwipeGesture } from '@vielzeug/gesture';
+import { createPanGesture } from '@vielzeug/gesture';
 
 const stack = document.getElementById('toasts')!;
 const template = document.getElementById('toast-template')! as HTMLTemplateElement;
+
+const DISMISS_THRESHOLD = 96;
+const INTERACTIVE_SELECTOR = 'button, a, input, select, textarea';
 
 interface ToastOptions {
   message: string;
@@ -94,29 +97,39 @@ function showToast({ message, actionLabel, onAction }: ToastOptions): void {
 
   stack.appendChild(toast);
 
-  const swipe = createSwipeGesture({
+  const pan = createPanGesture(toast, {
     axis: 'x',
-    captureTarget: () => null, // Inner buttons stay clickable mid-gesture
-    threshold: 96,
+    pointerCapture: false, // Inner buttons stay clickable mid-gesture
+    shouldStart: (event) =>
+      !event.composedPath().some((node) => node instanceof Element && node.matches(INTERACTIVE_SELECTOR)),
     onMove: ({ distance }) => {
       toast.style.transform = `translateX(${distance}px)`;
       toast.style.opacity = String(Math.max(0, 1 - Math.abs(distance) / 200));
     },
-    onRelease: () => {
-      // Spring back if released below threshold
-      toast.style.transform = '';
-      toast.style.opacity = '';
+    onEnd: ({ distance, reason }) => {
+      // Cancel (disabled flip, pointercancel) always springs back.
+      if (reason !== 'release') {
+        toast.style.transform = '';
+        toast.style.opacity = '';
+        return;
+      }
+
+      if (Math.abs(distance) >= DISMISS_THRESHOLD) {
+        dismissToast(toast, distance);
+      } else {
+        // Spring back if released below threshold
+        toast.style.transform = '';
+        toast.style.opacity = '';
+      }
     },
-    onCommit: ({ distance }) => dismissToast(toast, distance),
   });
-  swipe.mount(toast);
 
   // Auto-dismiss after 6s
   const timer = setTimeout(() => dismissToast(toast, 0), 6000);
 
   function dismissToast(el: HTMLElement, distance: number): void {
     clearTimeout(timer);
-    swipe.dispose();
+    pan.dispose();
 
     const direction = distance < 0 ? -1 : 1;
     const anim = el.animate(
@@ -134,8 +147,9 @@ function showToast({ message, actionLabel, onAction }: ToastOptions): void {
 
 ### Pitfalls
 
-- **`captureTarget: () => null` is mandatory when children must stay clickable.** With default capture, the toast element steals all pointer events for the gesture's lifetime — the "Undo" button becomes unclickable until the gesture ends.
-- **Reset inline styles on `onRelease`, not just `onCommit`.** A sub-threshold release must spring back; if you only reset on commit, the toast stays translated and faded until the next gesture.
+- **`pointerCapture: false` is mandatory when children must stay clickable.** With default capture, the toast element steals all pointer events for the gesture's lifetime — the "Undo" button becomes unclickable until the gesture ends. Document-level tracking still keeps the pan active outside the target; disabling capture changes event targeting, not gesture tracking.
+- **Pair `pointerCapture: false` with `shouldStart`.** `shouldStart` protects controls under the initial pointer; `pointerCapture: false` additionally protects controls that appear beneath the pointer during a reveal interaction. Neither alone covers both cases.
+- **Reset inline styles on `reason: 'cancel'`, not just `reason: 'release'`.** A cancel path (disabled flip, `pointercancel`, `lostpointercapture`) must spring back; if you only reset on release, the toast stays translated and faded.
 - **Dispose the gesture when the toast leaves the DOM.** The handle holds listeners on a detached element; without `dispose()`, the `disposalSignal` never aborts and the listeners leak until GC.
 - **Clear the auto-dismiss timer on swipe commit.** Otherwise the animation finishes and the 6s timer fires `dismissToast` again on a detached element.
 - **Use `touch-action: pan-y` on the toast.** Without it, a horizontal swipe on a long toast stack can hijack the page's vertical scroll on touch devices.
@@ -145,5 +159,5 @@ function showToast({ message, actionLabel, onAction }: ToastOptions): void {
 
 - [Usage Guide](../usage.md)
 - [API Reference](../api.md)
-- [Carousel Swipe Navigation](./carousel-swipe-navigation.md)
+- [Carousel Pan Navigation](./carousel-swipe-navigation.md)
 - [Dnd](/dnd/)

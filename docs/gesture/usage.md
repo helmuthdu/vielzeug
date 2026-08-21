@@ -1,117 +1,156 @@
 ---
 title: Gesture — Usage Guide
-description: Integrate pointer swipe recognition with component state and lifecycle.
+description: Track one-axis pointer movement and apply application-specific completion rules.
 ---
 
 [[toc]]
 
 ## Basic Usage
 
-Create one swipe handle per interactive surface and mount it on that element.
+Create one pan handle for the element that owns the interaction.
 
 ```ts
-import { createSwipeGesture } from '@vielzeug/gesture';
+import { createPanGesture } from '@vielzeug/gesture';
 
-const swipe = createSwipeGesture({
+const pan = createPanGesture(row, {
   axis: 'x',
-  onCommit: ({ distance }) => {
-    if (distance > 0) archive();
-    else openDetails();
+  onMove: ({ distance }) => {
+    row.style.transform = `translateX(${distance}px)`;
+  },
+  onEnd: ({ distance, reason }) => {
+    row.style.transform = '';
+
+    if (reason === 'release' && Math.abs(distance) >= 64) archive();
   },
 });
-
-swipe.mount(row);
 ```
 
-## Commit Thresholds
+## Completion Rules
 
-Set an explicit threshold or a dynamic getter when layout changes at runtime.
+Gesture reports movement and terminal state but does not decide what constitutes a swipe. Apply thresholds and allowed directions in `onEnd`.
 
 ```ts
-const swipe = createSwipeGesture({
-  threshold: () => Math.max(40, panel.offsetWidth * 0.18),
+const pan = createPanGesture(panel, {
+  axis: 'x',
+  onEnd: ({ distance, reason }) => {
+    if (reason === 'release' && distance <= -80) {
+      openNext();
+    } else {
+      resetPanel();
+    }
+  },
 });
 ```
 
-## Custom Commit Rules
+## Direction Recognition
 
-Use `shouldCommit` when commitment should depend on more than absolute distance.
+The gesture remains pending during small movement. It activates only after movement favors the configured axis. Cross-axis movement ends the pending interaction without invoking callbacks.
+
+Use the corresponding `touch-action` value so the browser retains native scrolling on the other axis.
+
+```css
+.swipe-row {
+  touch-action: pan-y;
+}
+```
 
 ```ts
-const swipe = createSwipeGesture({
-  shouldCommit: ({ distance, threshold }) => distance < 0 && Math.abs(distance) >= threshold,
+const pan = createPanGesture(row, { axis: 'x', onMove });
+```
+
+## Pointer Capture
+
+Pointer capture is enabled by default. After axis intent is accepted, Gesture captures the pointer on the bound target while continuing to track movement through document-level listeners. This is the reliable default for ordinary drag surfaces.
+
+Disable capture when nested or newly revealed controls must retain native pointer-up and click targeting:
+
+```ts
+const pan = createPanGesture(row, {
+  axis: 'x',
+  pointerCapture: false,
+  onMove: renderReveal,
+  onEnd: settleReveal,
 });
 ```
 
-## Pointer Capture Control
+Document-level tracking still keeps the pan active outside the target. Disabling capture changes event targeting, not gesture tracking.
 
-Disable capture when child actions must remain clickable mid-gesture.
+## Interactive Descendants
+
+Use `shouldStart` when buttons, links, or form controls inside the surface must not start a pan.
 
 ```ts
-const swipe = createSwipeGesture({
-  captureTarget: () => null,
+const pan = createPanGesture(notification, {
+  axis: 'x',
+  pointerCapture: false,
+  shouldStart: (event) =>
+    !event
+      .composedPath()
+      .some((node) => node instanceof Element && node.matches('button, a, input, select, textarea')),
+  onMove,
+  onEnd,
 });
 ```
 
-## Disabled behavior
+`shouldStart` protects controls under the initial pointer. `pointerCapture: false` additionally protects controls that appear beneath the pointer during a reveal interaction.
 
-Choose how the gesture reacts when `disabled` flips true while a swipe is already active.
+## Disabled State
+
+A boolean disables the recognizer permanently. A getter supports state that changes while the handle is alive.
 
 ```ts
-const swipe = createSwipeGesture({
+const pan = createPanGesture(row, {
   disabled: () => isLocked,
-  disabledBehavior: 'cancel-active',
-  onCancel: () => resetStyles(),
+  onEnd: ({ reason }) => {
+    if (reason === 'cancel') resetRow();
+  },
 });
 ```
+
+When the getter becomes `true`, the next pointer event cancels an active pan.
 
 ## Lifecycle
 
-Dispose the handle when the owning UI scope unmounts.
+Dispose the target-bound handle when its owning UI scope unmounts.
 
 ```ts
-const swipe = createSwipeGesture({ onCommit });
+const pan = createPanGesture(element, { onEnd, onMove });
 
-onCleanup(() => swipe.dispose());
+onCleanup(() => pan.dispose());
 ```
+
+Use `cancel()` to stop a pending or active interaction without disposing the handle. An active interaction emits `onEnd` with `reason: 'cancel'`.
 
 ## Framework Integration
 
-Create the swipe handle once per interactive surface and dispose it on unmount. Pointer listeners live on the element that owns the gesture.
+Create the handle after the target element exists and dispose it on unmount.
 
 ::: code-group
 
 ```tsx [React]
 import { useEffect, useRef } from 'react';
-import { createSwipeGesture } from '@vielzeug/gesture';
+import { createPanGesture } from '@vielzeug/gesture';
 
-function SwipeRow({ onSwipeLeft, onSwipeRight }: {
-  onSwipeLeft: () => void;
-  onSwipeRight: () => void;
-}) {
+function SwipeRow({ onDismiss }: { onDismiss: () => void }) {
   const rowRef = useRef<HTMLDivElement>(null);
-  // Persist callbacks across renders so the gesture handle stays stable.
-  const handlersRef = useRef({ onSwipeLeft, onSwipeRight });
-  handlersRef.current = { onSwipeLeft, onSwipeRight };
 
   useEffect(() => {
     const row = rowRef.current;
     if (!row) return;
 
-    const swipe = createSwipeGesture({
+    const pan = createPanGesture(row, {
       axis: 'x',
-      onCommit: ({ distance }) => {
-        if (distance < 0) handlersRef.current.onSwipeLeft();
-        else handlersRef.current.onSwipeRight();
+      onMove: ({ distance }) => {
+        row.style.transform = `translateX(${distance}px)`;
+      },
+      onEnd: ({ distance, reason }) => {
+        row.style.transform = '';
+        if (reason === 'release' && Math.abs(distance) >= 64) onDismiss();
       },
     });
-    const unmountSwipe = swipe.mount(row);
 
-    return () => {
-      unmountSwipe();
-      swipe.dispose();
-    };
-  }, []);
+    return () => pan.dispose();
+  }, [onDismiss]);
 
   return <div ref={rowRef}>Swipe me</div>;
 }
@@ -120,31 +159,25 @@ function SwipeRow({ onSwipeLeft, onSwipeRight }: {
 ```vue [Vue 3]
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
-import { createSwipeGesture } from '@vielzeug/gesture';
+import { createPanGesture, type PanGesture } from '@vielzeug/gesture';
 
-const emit = defineEmits<{ swipeLeft: []; swipeRight: [] }>();
-
+const emit = defineEmits<{ dismiss: [] }>();
 const rowEl = ref<HTMLDivElement | null>(null);
-let swipe: ReturnType<typeof createSwipeGesture> | undefined;
+let pan: PanGesture | undefined;
 
 onMounted(() => {
-  if (!rowEl.value) return;
+  const row = rowEl.value;
+  if (!row) return;
 
-  swipe = createSwipeGesture({
+  pan = createPanGesture(row, {
     axis: 'x',
-    onCommit: ({ distance }) => {
-      if (distance < 0) emit('swipeLeft');
-      else emit('swipeRight');
+    onEnd: ({ distance, reason }) => {
+      if (reason === 'release' && Math.abs(distance) >= 64) emit('dismiss');
     },
   });
-  swipe.mount(rowEl.value);
 });
 
-onUnmounted(() => {
-  if (!swipe) return;
-
-  swipe.dispose();
-});
+onUnmounted(() => pan?.dispose());
 </script>
 
 <template>
@@ -155,29 +188,20 @@ onUnmounted(() => {
 ```svelte [Svelte]
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { createSwipeGesture } from '@vielzeug/gesture';
+  import { createPanGesture } from '@vielzeug/gesture';
 
-  let {
-    onswipeleft = () => {},
-    onswiperight = () => {},
-  }: { onswipeleft: () => void; onswiperight: () => void } = $props();
-
+  let { ondismiss = () => {} }: { ondismiss: () => void } = $props();
   let rowEl: HTMLDivElement;
 
   onMount(() => {
-    const swipe = createSwipeGesture({
+    const pan = createPanGesture(rowEl, {
       axis: 'x',
-      onCommit: ({ distance }) => {
-        if (distance < 0) onswipeleft();
-        else onswiperight();
+      onEnd: ({ distance, reason }) => {
+        if (reason === 'release' && Math.abs(distance) >= 64) ondismiss();
       },
     });
-    const unmountSwipe = swipe.mount(rowEl);
 
-    return () => {
-      unmountSwipe();
-      swipe.dispose();
-    };
+    return () => pan.dispose();
   });
 </script>
 
@@ -190,46 +214,33 @@ onUnmounted(() => {
 
 ### Gesture + Refine
 
-Refine's `ore-carousel`, `ore-drawer`, `ore-toast`, and `ore-list-item` use Gesture internally for swipe recognition. When building custom swipe-driven surfaces alongside Refine components, use `createSwipeGesture` for input and keep visual transitions in your own code.
+Refine uses Gesture internally for carousel, drawer, toast, and list-item pointer interactions. Custom surfaces can use the same pan lifecycle while keeping visual state local.
 
 ```ts
-import { createSwipeGesture } from '@vielzeug/gesture';
+import { createPanGesture } from '@vielzeug/gesture';
 
-// Custom swipe-to-reveal panel alongside ore-list
-const swipe = createSwipeGesture({
+const pan = createPanGesture(panel, {
   axis: 'x',
-  captureTarget: () => null,
   onMove: ({ distance }) => {
     panel.style.transform = `translateX(${distance}px)`;
   },
-  onCommit: ({ distance }) => {
-    if (Math.abs(distance) > 80) revealActions();
-    else resetPanel();
+  onEnd: ({ distance, reason }) => {
+    panel.style.transform = '';
+    if (reason === 'release' && Math.abs(distance) >= 80) revealActions();
   },
-  onRelease: () => resetPanel(),
 });
 ```
 
 ### Gesture + Dnd
 
-Gesture handles single-axis swipe recognition; Dnd handles multi-directional drag-and-drop with drop zones. Use them separately — a swipe-to-dismiss row and a sortable list are different interaction models.
-
-```ts
-import { createSwipeGesture } from '@vielzeug/gesture';
-import { createDropZone } from '@vielzeug/dnd';
-
-const swipe = createSwipeGesture({ axis: 'x', onCommit: dismissRow });
-const dropZone = createDropZone({ onDrop: handleReorder });
-
-swipe.mount(row);
-// Dnd manages its own pointer listeners on the drag handle
-```
+Gesture tracks a constrained pointer pan. Dnd owns draggable items, sortable lists, and drop targets. Keep them separate.
 
 ## Best Practices
 
-- **Scope** one swipe handle to one interaction surface.
-- **Choose** threshold values from measured component dimensions.
+- **Set** `touch-action` for the axis the browser should continue scrolling.
+- **Use** `shouldStart` to exclude nested interactive controls.
+- **Disable** pointer capture when nested or newly revealed controls must keep native release targeting.
+- **Apply** thresholds and direction rules in `onEnd`.
+- **Treat** `reason: 'cancel'` as a reset path, never a commit path.
 - **Keep** `onMove` rendering lightweight.
-- **Disable** capture for interactions containing nested actionable controls.
-- **Dispose** on unmount to prevent stale gesture state.
-- **Use** `shouldStart` for fast admission checks.
+- **Dispose** the handle when its target leaves the UI.

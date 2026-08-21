@@ -1,10 +1,10 @@
 ---
-title: Gesture — Pointer swipe primitives
-description: Framework-neutral pointer swipe recognition with lifecycle-owned handles.
+title: Gesture — Pointer pan primitives
+description: Framework-neutral one-axis pointer pan recognition with lifecycle-owned handles.
 package: gesture
 category: input
-keywords: [pointer, swipe, gesture, touch, drag]
-exports: [createSwipeGesture]
+keywords: [pointer, pan, swipe, gesture, touch, drag]
+exports: [createPanGesture]
 related: [refine, dnd, keymap]
 environments: [browser]
 ---
@@ -15,32 +15,35 @@ environments: [browser]
 
 ## Why Gesture?
 
-Pointer swipe behavior should be reusable without owning rendering or UI state. Gesture keeps recognition separate from animation, dismissal, reveal, and navigation logic.
+Pointer-driven interfaces need reliable movement tracking without coupling input recognition to rendering or product-specific thresholds.
 
 ```ts
 // Before
 element.addEventListener('pointermove', (event) => {
-  // local threshold and distance logic
+  // Coordinate tracking, pointer identity, direction locking, and cleanup
 });
 
 // After
-const swipe = createSwipeGesture({ onCommit: ({ distance }) => dismiss(distance) });
-swipe.mount(element);
+const pan = createPanGesture(element, {
+  axis: 'x',
+  onMove: ({ distance }) => render(distance),
+  onEnd: ({ distance, reason }) => finish(distance, reason),
+});
 ```
 
-| Feature | Ad-hoc per component | Gesture |
+| Feature | Ad-hoc pointer handling | Gesture |
 | --- | --- | --- |
 | Bundle size | n/a | <PackageInfo package="gesture" type="size" /> |
 | Zero dependencies | n/a | <ore-icon name="check" size="16"></ore-icon> |
-| Pointer identity guard | Manual | Built in |
-| Lifecycle cleanup | Manual listeners/state | `dispose()` + `disposalSignal` |
-| Progress normalization | Custom per component | `progress` in detail |
+| Axis intent recognition | Manual | Built in |
+| Pointer ownership | Manual | Tracked across the document |
+| Lifecycle cleanup | Manual | `dispose()` + `disposalSignal` |
 
 <div class="decision-callout">
 
-**Use Gesture when** multiple UI surfaces need consistent swipe recognition.
+**Use Gesture when** several UI surfaces need consistent one-axis pointer tracking while retaining their own completion rules.
 
-**Consider direct pointer handling when** behavior is one-off and does not need a reusable handle.
+**Consider direct pointer handling when** the interaction is isolated and does not need reusable lifecycle or direction-lock behavior.
 
 </div>
 
@@ -65,27 +68,32 @@ yarn add @vielzeug/gesture
 ## Quick Start
 
 ```ts
-import { createSwipeGesture } from '@vielzeug/gesture';
+import { createPanGesture } from '@vielzeug/gesture';
 
-const swipe = createSwipeGesture({
+const pan = createPanGesture(element, {
   axis: 'x',
-  onCommit: ({ distance }) => {
-    if (distance < 0) goNext();
-    else goPrevious();
+  onMove: ({ distance }) => {
+    element.style.transform = `translateX(${distance}px)`;
+  },
+  onEnd: ({ distance, reason }) => {
+    element.style.transform = '';
+
+    if (reason === 'release' && Math.abs(distance) >= 48) {
+      dismiss();
+    }
   },
 });
-
-swipe.mount(element);
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- `createSwipeGesture()` — one-axis pointer swipe recognition
-- `shouldStart` and `shouldCommit` — consumer-controlled admission and completion
-- `progress` and signed `distance` — normalized gesture metrics
-- Pointer capture policy — explicit target or disabled capture
+- `createPanGesture()` — one-axis pointer movement tracking
+- Direction locking — activates only when movement favors the configured axis
+- Configurable pointer capture — own the pointer by default or preserve native targeting
+- Consumer-owned policy — thresholds, snapping, and outcomes stay in application code
+- Stable completion — one `onEnd` callback for release and cancellation
 - Lifecycle ownership — `dispose()`, `disposed`, and `disposalSignal`
 
 </div>
@@ -104,8 +112,8 @@ swipe.mount(element);
 
 <div class="see-also">
 
-- [Refine](/refine/) — overlay and list components using swipe interactions.
-- [Dnd](/dnd/) — drag-and-drop behavior that remains separate from swipe recognition.
+- [Refine](/refine/) — components that use pan recognition for carousel, drawer, toast, and list interactions.
+- [Dnd](/dnd/) — drag-and-drop behavior with drop targets and reordering.
 - [Keymap](/keymap/) — keyboard interaction primitives for complementary input paths.
 
 </div>

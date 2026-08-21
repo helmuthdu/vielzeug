@@ -1,7 +1,7 @@
 {
   "changes": [
     {
-      "comment": "feat: add framework-neutral swipe gesture recognition primitive",
+      "comment": "feat: add framework-neutral pointer pan recognition primitive",
       "packageName": "@vielzeug/gesture",
       "type": "minor"
     }

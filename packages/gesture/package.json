@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/gesture",
-  "version": "2.0.0",
-  "description": "Framework-neutral pointer swipe recognition with lifecycle-owned handles",
+  "version": "1.0.0",
+  "description": "Framework-neutral one-axis pointer pan recognition with lifecycle-owned handles",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",

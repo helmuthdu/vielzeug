@@ -1,9 +1,9 @@
 export type {
-  MaybeGetter,
-  SwipeAxis,
-  SwipeDisabledBehavior,
-  SwipeGesture,
-  SwipeGestureDetail,
-  SwipeGestureOptions,
-} from './swipe-gesture';
-export { createSwipeGesture } from './swipe-gesture';
+  PanAxis,
+  PanEndReason,
+  PanGesture,
+  PanGestureDetail,
+  PanGestureEndDetail,
+  PanGestureOptions,
+} from './pan-gesture';
+export { createPanGesture } from './pan-gesture';
