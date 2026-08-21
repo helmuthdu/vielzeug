@@ -12,7 +12,7 @@ import {
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
-import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
+import { computed, type Readable, signal, untrack, watch } from '@vielzeug/ripple';
 import { createElementSize, createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
 
 import type { ElevationLevel, RoundedSize, ThemeColor, VisualVariant } from '../../types';
@@ -595,46 +595,57 @@ define<OreNavbarProps>(NAVBAR_TAG, {
       watch(
         props.breakpoint,
         (query) => {
-          mediaCleanup?.();
-          mediaCleanup = undefined;
+          // Untrack the callback body: the watch already tracks `props.breakpoint` via
+          // its internal `read()`. Without untrack, signals read inside (e.g.
+          // `mediaMatches` via `syncMobileMode()`) become dependencies of this watch
+          // effect. When the sentinel updates `mediaMatches` on a viewport change, the
+          // effect re-runs — `EffectNode.run()` disposes the previous scope (killing the
+          // mediaHandle and its MediaQueryList listener) but the callback is NOT invoked
+          // (source unchanged), so no new handle is created. The navbar is then deaf to
+          // further MQ changes and stays stuck in mobile mode after resizing back to
+          // desktop.
+          untrack(() => {
+            mediaCleanup?.();
+            mediaCleanup = undefined;
 
-          const mediaQuery = String(query ?? '').trim();
+            const mediaQuery = String(query ?? '').trim();
 
-          maxWidthPx.value = parseMaxWidthPx(mediaQuery);
-          mediaMatches.value = false;
+            maxWidthPx.value = parseMaxWidthPx(mediaQuery);
+            mediaMatches.value = false;
 
-          const width = readContainerWidth(el);
+            const width = readContainerWidth(el);
 
-          sizeMatches.value = width > 0 && maxWidthPx.value != null ? width <= maxWidthPx.value : false;
-          syncMobileMode();
+            sizeMatches.value = width > 0 && maxWidthPx.value != null ? width <= maxWidthPx.value : false;
+            syncMobileMode();
 
-          if (props['container-breakpoints'].value && maxWidthPx.value != null) {
-            return;
-          }
+            if (props['container-breakpoints'].value && maxWidthPx.value != null) {
+              return;
+            }
 
-          if (!mediaQuery) {
-            return;
-          }
+            if (!mediaQuery) {
+              return;
+            }
 
-          try {
-            const mediaHandle = createMediaQuery(mediaQuery);
-            const syncMedia = (state: typeof mediaHandle.value) => {
-              if (state) {
-                mediaMatches.value = state.matches;
-                syncMobileMode();
-              }
-            };
+            try {
+              const mediaHandle = createMediaQuery(mediaQuery);
+              const syncMedia = (state: typeof mediaHandle.value) => {
+                if (state) {
+                  mediaMatches.value = state.matches;
+                  syncMobileMode();
+                }
+              };
 
-            syncMedia(mediaHandle.value);
+              syncMedia(mediaHandle.value);
 
-            const mediaCleanupFn = watch(mediaHandle, syncMedia);
-            mediaCleanup = () => {
-              mediaCleanupFn.dispose();
-              mediaHandle.dispose();
-            };
-          } catch (error) {
-            if (!(error instanceof SentinelUnavailableError)) throw error;
-          }
+              const mediaCleanupFn = watch(mediaHandle, syncMedia);
+              mediaCleanup = () => {
+                mediaCleanupFn.dispose();
+                mediaHandle.dispose();
+              };
+            } catch (error) {
+              if (!(error instanceof SentinelUnavailableError)) throw error;
+            }
+          });
         },
         { immediate: true },
       );

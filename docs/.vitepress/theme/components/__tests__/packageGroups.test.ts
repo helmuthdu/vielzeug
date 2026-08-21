@@ -3,14 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { NAVBAR_COLUMNS, PACKAGE_GROUPS } from '../packageGroups';
 
 describe('PACKAGE_GROUPS', () => {
-  it('lists each of the 35 packages exactly once', () => {
+  it('lists each of the 36 packages exactly once', () => {
     const packageIds = PACKAGE_GROUPS.flatMap((group) => group.packages.map((pkg) => pkg.id));
 
-    expect(packageIds).toHaveLength(35);
-    expect(new Set(packageIds)).toHaveLength(35);
+    expect(packageIds).toHaveLength(36);
+    expect(new Set(packageIds)).toHaveLength(36);
     expect(packageIds).toContain('sandbox');
     expect(packageIds).toContain('focus');
     expect(packageIds).toContain('gesture');
+    expect(packageIds).toContain('sentinel');
   });
 });
 
