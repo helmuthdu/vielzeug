@@ -103,6 +103,12 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/sentinel",
+      "projectFolder": "packages/sentinel",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/arsenal",
       "projectFolder": "packages/arsenal",
       "shouldPublish": true,

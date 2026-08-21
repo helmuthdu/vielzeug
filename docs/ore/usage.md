@@ -1,6 +1,6 @@
 ---
 title: Ore — Usage Guide
-description: Practical Ore usage patterns for components, props, templates, slots, context, forms, observers, and tests.
+description: Practical Ore usage patterns for components, props, templates, slots, context, forms, Sentinel integration, and tests.
 ---
 
 [[toc]]
@@ -408,13 +408,13 @@ define('rating-input', {
 });
 ```
 
-## platform observers
+## Sentinel Observers
 
-Observer helpers from `@vielzeug/ore` require real DOM nodes, so call them inside `onMounted()`.
+Use `@vielzeug/sentinel` for reactive browser and DOM observations. Create element-dependent Sentinels inside `onMounted()` and dispose them with the component.
 
 ```ts
-import { effect } from '@vielzeug/ripple';
-import { define, html, intersectionObserver, mediaObserver, onMounted, ref, resizeObserver } from '@vielzeug/ore';
+import { define, html, onCleanup, onMounted, ref, watchEffect } from '@vielzeug/ore';
+import { createElementSize, SentinelUnavailableError } from '@vielzeug/sentinel';
 
 define('x-observed', {
   setup(_props) {
@@ -424,14 +424,17 @@ define('x-observed', {
       const element = boxRef.value;
       if (!element) return;
 
-      const size = resizeObserver(element);
-      const visible = intersectionObserver(element, { threshold: 0.5 });
-      const dark = mediaObserver('(prefers-color-scheme: dark)');
+      try {
+        const size = createElementSize(element);
 
-      // effect() auto-tracks every signal read inside — re-runs when any of the three change.
-      effect(() => {
-        console.log(size.value.width, visible.value?.isIntersecting, dark.value);
-      });
+        watchEffect(() => {
+          console.log(size.value?.width);
+        });
+
+        onCleanup(() => size.dispose());
+      } catch (error) {
+        if (!(error instanceof SentinelUnavailableError)) throw error;
+      }
     });
 
     return html`<div ref=${boxRef}>Observe me</div>`;

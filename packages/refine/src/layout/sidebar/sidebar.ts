@@ -5,14 +5,15 @@ import {
   getHost,
   html,
   inject,
+  onCleanup,
   onMounted,
   prop,
   provide,
-  resizeObserver,
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
+import { createElementSize, createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
 
 import '../../content/icon/icon';
 import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
@@ -409,23 +410,25 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
             return;
           }
 
-          if (typeof window.matchMedia !== 'function') {
-            return;
+          try {
+            const mediaHandle = createMediaQuery(mediaQuery);
+            const syncMedia = (state: typeof mediaHandle.value) => {
+              if (state) {
+                responsiveMediaMatches.value = state.matches;
+                applyResponsiveState();
+              }
+            };
+
+            syncMedia(mediaHandle.value);
+
+            const mediaCleanupFn = watch(mediaHandle, syncMedia);
+            mediaCleanup = () => {
+              mediaCleanupFn.dispose();
+              mediaHandle.dispose();
+            };
+          } catch (error) {
+            if (!(error instanceof SentinelUnavailableError)) throw error;
           }
-
-          const mql = window.matchMedia(mediaQuery);
-          const onChange = (event: MediaQueryListEvent) => {
-            responsiveMediaMatches.value = event.matches;
-            applyResponsiveState();
-          };
-
-          responsiveMediaMatches.value = mql.matches;
-          applyResponsiveState();
-          mql.addEventListener('change', onChange);
-
-          mediaCleanup = () => {
-            mql.removeEventListener('change', onChange);
-          };
         },
         { immediate: true },
       );
@@ -457,23 +460,25 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
             return;
           }
 
-          if (typeof window.matchMedia !== 'function') {
-            return;
+          try {
+            const mediaHandle = createMediaQuery(mediaQuery);
+            const syncMedia = (state: typeof mediaHandle.value) => {
+              if (state) {
+                bottomNavMediaMatches.value = state.matches;
+                applyResponsiveState();
+              }
+            };
+
+            syncMedia(mediaHandle.value);
+
+            const mediaCleanupFn = watch(mediaHandle, syncMedia);
+            bottomNavCleanup = () => {
+              mediaCleanupFn.dispose();
+              mediaHandle.dispose();
+            };
+          } catch (error) {
+            if (!(error instanceof SentinelUnavailableError)) throw error;
           }
-
-          const mql = window.matchMedia(mediaQuery);
-          const onChange = (event: MediaQueryListEvent) => {
-            bottomNavMediaMatches.value = event.matches;
-            applyResponsiveState();
-          };
-
-          bottomNavMediaMatches.value = mql.matches;
-          applyResponsiveState();
-
-          mql.addEventListener('change', onChange);
-          bottomNavCleanup = () => {
-            mql.removeEventListener('change', onChange);
-          };
         },
         { immediate: true },
       );
@@ -481,11 +486,21 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
       const stopResizeEffect =
         typeof ResizeObserver === 'function'
           ? (() => {
-              const hostSize = resizeObserver(el);
+              const hostSize = createElementSize(el);
+              onCleanup(() => hostSize.dispose());
+
               const wrapperEl = el.parentElement;
               const containerEl = resolveContainerElement(el);
-              const wrapperSize = wrapperEl ? resizeObserver(wrapperEl) : undefined;
-              const parentSize = containerEl && containerEl !== wrapperEl ? resizeObserver(containerEl) : undefined;
+              const wrapperSize = wrapperEl ? createElementSize(wrapperEl) : undefined;
+              const parentSize = containerEl && containerEl !== wrapperEl ? createElementSize(containerEl) : undefined;
+
+              if (wrapperSize) {
+                onCleanup(() => wrapperSize.dispose());
+              }
+              if (parentSize) {
+                onCleanup(() => parentSize.dispose());
+              }
+
               let rafId: number | undefined;
 
               const onResize = () => {
@@ -518,12 +533,12 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
 
               return watch(
                 computed(() => [
-                  hostSize.value.width,
-                  hostSize.value.height,
-                  wrapperSize?.value.width,
-                  wrapperSize?.value.height,
-                  parentSize?.value.width,
-                  parentSize?.value.height,
+                  hostSize.value?.width,
+                  hostSize.value?.height,
+                  wrapperSize?.value?.width,
+                  wrapperSize?.value?.height,
+                  parentSize?.value?.width,
+                  parentSize?.value?.height,
                 ]),
                 onResize,
               );

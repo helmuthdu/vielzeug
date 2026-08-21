@@ -125,13 +125,9 @@ define<OreRadioProps>(RADIO_TAG, {
       // may render horizontally or vertically via CSS) — RTL mirroring of Left/Right still
       // applies via `direction` since nav.ts's default keymap covers 'both' too.
       loop: true,
-      onNavigate: (_action, index, event) => {
-        const nextRadio = getRadioGroup()[index];
-
-        if (!nextRadio) return;
-
-        nextRadio.focus();
-        selectRadio(nextRadio, event);
+      onNavigate: ({ event, item }) => {
+        item.focus();
+        selectRadio(item, event);
       },
       orientation: 'both',
       signal: lifecycleSignal(onCleanup),

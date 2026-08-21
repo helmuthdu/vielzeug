@@ -1,4 +1,4 @@
-import { createSwipeGesture, type SwipeAxis } from '@vielzeug/gesture';
+import { createPanGesture, type PanAxis, type PanGesture, type PanGestureEndDetail } from '@vielzeug/gesture';
 import {
   createStableId,
   define,
@@ -25,7 +25,7 @@ type DrawerSize = 'sm' | 'lg' | 'full';
 type DrawerBackdrop = 'opaque' | 'blur' | 'transparent';
 type DrawerDragHandlePlacement = 'outside' | 'inset';
 type DrawerSwipeConfig = {
-  axis: SwipeAxis;
+  axis: PanAxis;
   closingDistance: (distance: number) => number;
   translate: (distance: number) => string;
 };
@@ -187,6 +187,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
     // Drag-to-close state
     const isSwipeClosing = signal(false);
+    let swipe: PanGesture | undefined;
     let swipeCloseTimer: ReturnType<typeof setTimeout> | undefined;
 
     const getHeaderText = () => props.label.value ?? props.title.value ?? '';
@@ -200,7 +201,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
     const getSwipeConfig = (): DrawerSwipeConfig => drawerSwipeConfig[getPlacement()];
 
-    const getSnapThreshold = (panel: HTMLElement, axis: SwipeAxis) => {
+    const getSnapThreshold = (panel: HTMLElement, axis: PanAxis) => {
       const panelSize = axis === 'x' ? panel.offsetWidth : panel.offsetHeight;
 
       return Math.min(96, Math.max(36, panelSize * 0.18));
@@ -284,17 +285,14 @@ define<OreDrawerProps>(DRAWER_TAG, {
       isSwipeClosing.value = false;
     };
 
-    // Same "snap back or commit close" decision whether the swipe was
-    // interrupted by the platform (onCancel) or simply released without an
-    // intervening move event crossing the threshold (onRelease).
-    const handleSwipeRelease = ({ distance, threshold }: { distance: number; threshold: number }): void => {
+    const handleSwipeEnd = ({ distance, reason }: PanGestureEndDetail): void => {
       const panel = panelRef.value;
 
       if (!panel) return;
 
-      // If the release event crosses the threshold (without an intervening
-      // move event), commit close instead of snapping back to rest first.
-      if (shouldCommitSwipeClose(distance, threshold)) {
+      const threshold = getSnapThreshold(panel, getSwipeConfig().axis);
+
+      if (reason === 'release' && shouldCommitSwipeClose(distance, threshold)) {
         startSwipeClose(panel, getSwipeConfig(), distance);
 
         return;
@@ -302,44 +300,6 @@ define<OreDrawerProps>(DRAWER_TAG, {
 
       resetPanelDragStyles(panel);
     };
-
-    const swipe = createSwipeGesture({
-      axis: () => getSwipeConfig().axis,
-      disabled: () => isSwipeClosing.value,
-      disabledBehavior: () => 'cancel-active',
-      onCancel: handleSwipeRelease,
-      onCommit: ({ distance }) => {
-        const panel = panelRef.value;
-
-        if (!panel) return;
-
-        startSwipeClose(panel, getSwipeConfig(), distance);
-      },
-      onMove: ({ distance, threshold }) => {
-        const panel = panelRef.value;
-
-        if (!panel) return;
-
-        const swipeConfig = getSwipeConfig();
-        const closingDistance = swipeConfig.closingDistance(distance);
-        const progress = Math.min(closingDistance / threshold, 1);
-
-        // Kill CSS transitions so the panel tracks the finger instantly.
-        panel.style.transition = 'none';
-        panel.style.transform = swipeConfig.translate(distance);
-        panel.style.opacity = String(1 - progress * 0.4);
-      },
-      onRelease: handleSwipeRelease,
-      shouldCommit: ({ distance, threshold }) => shouldCommitSwipeClose(distance, threshold),
-      threshold: () => {
-        const panel = panelRef.value;
-
-        if (!panel) return 48;
-
-        return getSnapThreshold(panel, getSwipeConfig().axis);
-      },
-    });
-    onCleanup(() => swipe.dispose());
 
     // ────────────────────────────────────────────────────────────────
     // Overlay State Management
@@ -425,7 +385,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
       const handleBackdropClick = (e: MouseEvent) => {
         if (props.persistent.value) return;
 
-        if (swipe.isActive() || isSwipeClosing.value) return;
+        if (swipe?.active || isSwipeClosing.value) return;
 
         if (e.target !== dialog) return; // Click inside panel
 
@@ -443,11 +403,30 @@ define<OreDrawerProps>(DRAWER_TAG, {
       const dragHandleEl = panel?.querySelector<HTMLElement>('[part="drag-handle"]');
 
       if (dragHandleEl) {
-        const unmountSwipe = swipe.mount(dragHandleEl);
-        onCleanup(unmountSwipe);
+        swipe = createPanGesture(dragHandleEl, {
+          axis: () => getSwipeConfig().axis,
+          disabled: () => isSwipeClosing.value,
+          onEnd: handleSwipeEnd,
+          onMove: ({ distance }) => {
+            const currentPanel = panelRef.value;
+
+            if (!currentPanel) return;
+
+            const swipeConfig = getSwipeConfig();
+            const threshold = getSnapThreshold(currentPanel, swipeConfig.axis);
+            const closingDistance = swipeConfig.closingDistance(distance);
+            const progress = Math.min(closingDistance / threshold, 1);
+
+            currentPanel.style.transition = 'none';
+            currentPanel.style.transform = swipeConfig.translate(distance);
+            currentPanel.style.opacity = String(1 - progress * 0.4);
+          },
+        });
       }
 
       return () => {
+        swipe?.dispose();
+        swipe = undefined;
         overlay.dispose();
       };
     });

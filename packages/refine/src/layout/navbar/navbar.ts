@@ -5,14 +5,15 @@ import {
   getHost,
   html,
   inject,
+  onCleanup,
   onMounted,
   prop,
   provide,
-  resizeObserver,
   useEmit,
   useSlots,
 } from '@vielzeug/ore';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
+import { createElementSize, createMediaQuery, SentinelUnavailableError } from '@vielzeug/sentinel';
 
 import type { ElevationLevel, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -615,25 +616,25 @@ define<OreNavbarProps>(NAVBAR_TAG, {
             return;
           }
 
-          if (typeof window.matchMedia !== 'function') {
-            return;
+          try {
+            const mediaHandle = createMediaQuery(mediaQuery);
+            const syncMedia = (state: typeof mediaHandle.value) => {
+              if (state) {
+                mediaMatches.value = state.matches;
+                syncMobileMode();
+              }
+            };
+
+            syncMedia(mediaHandle.value);
+
+            const mediaCleanupFn = watch(mediaHandle, syncMedia);
+            mediaCleanup = () => {
+              mediaCleanupFn.dispose();
+              mediaHandle.dispose();
+            };
+          } catch (error) {
+            if (!(error instanceof SentinelUnavailableError)) throw error;
           }
-
-          const mql = window.matchMedia(mediaQuery);
-          const syncMedia = (next: boolean) => {
-            mediaMatches.value = next;
-            syncMobileMode();
-          };
-          const onChange = (event: MediaQueryListEvent) => {
-            syncMedia(event.matches);
-          };
-
-          syncMedia(mql.matches);
-          mql.addEventListener('change', onChange);
-
-          mediaCleanup = () => {
-            mql.removeEventListener('change', onChange);
-          };
         },
         { immediate: true },
       );
@@ -641,20 +642,29 @@ define<OreNavbarProps>(NAVBAR_TAG, {
       const stopResizeEffect =
         typeof ResizeObserver === 'function'
           ? (() => {
-              const hostSize = resizeObserver(el);
+              const hostSize = createElementSize(el);
+              onCleanup(() => hostSize.dispose());
+
               const wrapperEl = el.parentElement;
               const containerEl = resolveContainerElement(el);
-              const wrapperSize = wrapperEl ? resizeObserver(wrapperEl) : undefined;
-              const parentSize = containerEl && containerEl !== wrapperEl ? resizeObserver(containerEl) : undefined;
+              const wrapperSize = wrapperEl ? createElementSize(wrapperEl) : undefined;
+              const parentSize = containerEl && containerEl !== wrapperEl ? createElementSize(containerEl) : undefined;
+
+              if (wrapperSize) {
+                onCleanup(() => wrapperSize.dispose());
+              }
+              if (parentSize) {
+                onCleanup(() => parentSize.dispose());
+              }
 
               return watch(
                 computed(() => [
-                  hostSize.value.width,
-                  hostSize.value.height,
-                  wrapperSize?.value.width,
-                  wrapperSize?.value.height,
-                  parentSize?.value.width,
-                  parentSize?.value.height,
+                  hostSize.value?.width,
+                  hostSize.value?.height,
+                  wrapperSize?.value?.width,
+                  wrapperSize?.value?.height,
+                  parentSize?.value?.width,
+                  parentSize?.value?.height,
                 ]),
                 () => {
                   const width = readContainerWidth(el);

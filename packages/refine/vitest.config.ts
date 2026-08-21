@@ -32,6 +32,7 @@ export default defineConfig({
       { find: /^@vielzeug\/orbit$/, replacement: path.resolve(__dirname, '../orbit/src/index.ts') },
       { find: /^@vielzeug\/ripple\/watch$/, replacement: path.resolve(__dirname, '../ripple/src/watch.ts') },
       { find: /^@vielzeug\/ripple$/, replacement: path.resolve(__dirname, '../ripple/src/index.ts') },
+      { find: /^@vielzeug\/sentinel$/, replacement: path.resolve(__dirname, '../sentinel/src/index.ts') },
       { find: /^@vielzeug\/arsenal$/, replacement: path.resolve(__dirname, '../arsenal/src/index.ts') },
       { find: /^@vielzeug\/scroll$/, replacement: path.resolve(__dirname, '../scroll/src/index.ts') },
       { find: /^@vielzeug\/scroll\/dom$/, replacement: path.resolve(__dirname, '../scroll/src/dom/index.ts') },

@@ -129,6 +129,7 @@ const heroPackages = [
   { cmd: 'pnpm add @vielzeug/sandbox', id: 'sandbox', name: 'sandbox', tagline: 'Sandboxed iframe runtime' },
   { cmd: 'pnpm add @vielzeug/scout', id: 'scout', name: 'scout', tagline: 'Trigram fuzzy search' },
   { cmd: 'pnpm add @vielzeug/scroll', id: 'scroll', name: 'scroll', tagline: 'Virtual lists' },
+  { cmd: 'pnpm add @vielzeug/sentinel', id: 'sentinel', name: 'sentinel', tagline: 'Reactive environment state' },
   { cmd: 'pnpm add @vielzeug/sourcerer', id: 'sourcerer', name: 'sourcerer', tagline: 'Reactive data sources' },
   { cmd: 'pnpm add @vielzeug/spell', id: 'spell', name: 'spell', tagline: 'Schema validation' },
   { cmd: 'pnpm add @vielzeug/tempo', id: 'tempo', name: 'tempo', tagline: 'Date & time' },

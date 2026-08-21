@@ -637,6 +637,7 @@
     "@vielzeug/orbit": "workspace:*",
     "@vielzeug/ore": "workspace:*",
     "@vielzeug/ripple": "workspace:*",
+    "@vielzeug/sentinel": "workspace:*",
     "@vielzeug/tempo": "workspace:*",
     "lucide": "^1.31.0"
   },

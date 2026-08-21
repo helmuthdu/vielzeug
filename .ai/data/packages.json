@@ -80,7 +80,7 @@
     },
     {
       "category": "Input",
-      "description": "Framework-neutral pointer swipe recognition with lifecycle-owned handles",
+      "description": "Framework-neutral one-axis pointer pan recognition with lifecycle-owned handles",
       "name": "@vielzeug/gesture",
       "slug": "gesture"
     },
@@ -153,7 +153,19 @@
     },
     {
       "category": "UI",
-      "dependencies": ["arsenal", "assay", "dnd", "focus", "gesture", "keymap", "orbit", "ore", "ripple", "tempo"],
+      "dependencies": [
+        "arsenal",
+        "assay",
+        "dnd",
+        "focus",
+        "gesture",
+        "keymap",
+        "orbit",
+        "ore",
+        "ripple",
+        "sentinel",
+        "tempo"
+      ],
       "description": "Accessible, themeable web components built on ore",
       "docsContract": "component-library",
       "name": "@vielzeug/refine",
@@ -190,6 +202,13 @@
       "description": "Virtual list engine for large datasets",
       "name": "@vielzeug/scroll",
       "slug": "scroll"
+    },
+    {
+      "category": "Environment",
+      "description": "Reactive observables for external browser environment state",
+      "name": "@vielzeug/sentinel",
+      "peerDependencies": ["ripple"],
+      "slug": "sentinel"
     },
     {
       "category": "Data",

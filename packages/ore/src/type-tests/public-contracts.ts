@@ -1,17 +1,6 @@
 import { signal } from '@vielzeug/ripple';
-
-import {
-  define,
-  html,
-  intersectionObserver,
-  live,
-  prop,
-  ref,
-  resizeObserver,
-  unsafeHtml,
-  useEmit,
-  useField,
-} from '../index';
+import * as ore from '../index';
+import { define, html, live, prop, ref, unsafeHtml, useEmit, useField } from '../index';
 
 const inputRef = ref<HTMLInputElement>();
 
@@ -35,10 +24,17 @@ define<{ count: number }>('ore-contracts', {
   },
 });
 
-const element = document.createElement('div');
+// @ts-expect-error Observer factories moved to @vielzeug/sentinel.
+const removedResizeObserver = ore.resizeObserver;
 
-resizeObserver(element);
-intersectionObserver(element);
+// @ts-expect-error Observer factories moved to @vielzeug/sentinel.
+const removedIntersectionObserver = ore.intersectionObserver;
+
+// @ts-expect-error Observer factories moved to @vielzeug/sentinel.
+const removedMediaObserver = ore.mediaObserver;
+
+// @ts-expect-error Mutation observation now uses the native MutationObserver API.
+const removedMutationObserver = ore.mutationObserver;
 
 // @ts-expect-error model() was removed in favor of explicit value and event bindings.
 const removedModel = import('../directives/model');
@@ -48,3 +44,7 @@ const removedFormContext = import('../forms/context');
 
 void removedModel;
 void removedFormContext;
+void removedMediaObserver;
+void removedMutationObserver;
+void removedResizeObserver;
+void removedIntersectionObserver;

@@ -87,23 +87,28 @@ describe('ore-sidebar', () => {
   });
 
   it('applies responsive collapse on media-query match', async () => {
-    let changeHandler: ((event: MediaQueryListEvent) => void) | undefined;
+    let changeHandler: (() => void) | undefined;
+    let mockMatchMedia: { matches: boolean };
     const originalMatchMedia = window.matchMedia;
 
-    window.matchMedia = vi.fn().mockImplementation(() => ({
-      addEventListener: (_: string, cb: (event: MediaQueryListEvent) => void) => {
-        changeHandler = cb;
-      },
-      matches: false,
-      removeEventListener: vi.fn(),
-    }));
+    window.matchMedia = vi.fn().mockImplementation(() => {
+      mockMatchMedia = {
+        addEventListener: (_: string, callback: () => void) => {
+          changeHandler = callback;
+        },
+        matches: false,
+        removeEventListener: vi.fn(),
+      } as MediaQueryList;
+      return mockMatchMedia;
+    });
 
     try {
       fixture = await mount('ore-sidebar', { attrs: { responsive: '(max-width: 768px)' } });
       await fixture.flush();
       expect(fixture.element.hasAttribute('data-collapsed')).toBe(false);
 
-      changeHandler?.({ matches: true } as MediaQueryListEvent);
+      mockMatchMedia.matches = true;
+      changeHandler?.();
       await fixture.flush();
       expect(fixture.element.hasAttribute('data-collapsed')).toBe(true);
     } finally {
@@ -112,16 +117,20 @@ describe('ore-sidebar', () => {
   });
 
   it('enters bottom-nav mode when bottom-nav-at query matches', async () => {
-    let changeHandler: ((event: MediaQueryListEvent) => void) | undefined;
+    let changeHandler: (() => void) | undefined;
+    let mockMatchMedia: { matches: boolean };
     const originalMatchMedia = window.matchMedia;
 
-    window.matchMedia = vi.fn().mockImplementation(() => ({
-      addEventListener: (_: string, cb: (event: MediaQueryListEvent) => void) => {
-        changeHandler = cb;
-      },
-      matches: true,
-      removeEventListener: vi.fn(),
-    }));
+    window.matchMedia = vi.fn().mockImplementation(() => {
+      mockMatchMedia = {
+        addEventListener: (_: string, callback: () => void) => {
+          changeHandler = callback;
+        },
+        matches: true,
+        removeEventListener: vi.fn(),
+      } as MediaQueryList;
+      return mockMatchMedia;
+    });
 
     try {
       fixture = await mount('ore-sidebar', { attrs: { 'bottom-nav-at': '(max-width: 768px)' } });
@@ -130,7 +139,8 @@ describe('ore-sidebar', () => {
       expect(fixture.element.hasAttribute('data-bottom-nav')).toBe(true);
       expect(fixture.element.hasAttribute('data-collapsed')).toBe(false);
 
-      changeHandler?.({ matches: false } as MediaQueryListEvent);
+      mockMatchMedia.matches = false;
+      changeHandler?.();
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('data-bottom-nav')).toBe(false);

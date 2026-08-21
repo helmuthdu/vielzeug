@@ -1,4 +1,4 @@
-import { captureFocus, type FocusRestoration } from '@vielzeug/focus';
+import { captureFocus, type FocusRestorer } from '@vielzeug/focus';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -51,7 +51,7 @@ export type FocusManager = {
  * 3. Restore focus when the overlay closes.
  */
 export function createFocusManager(options: FocusManagerOptions): FocusManager {
-  let returnFocus: FocusRestoration | null = null;
+  let restoreReturnFocus: FocusRestorer | null = null;
   let rafHandle: ReturnType<typeof requestAnimationFrame> | null = null;
   let disposed = false;
 
@@ -67,8 +67,7 @@ export function createFocusManager(options: FocusManagerOptions): FocusManager {
 
     disposed = true;
     cancelInitialFocus();
-    returnFocus?.dispose();
-    returnFocus = null;
+    restoreReturnFocus = null;
   };
 
   options.signal?.addEventListener('abort', dispose, { once: true });
@@ -104,8 +103,7 @@ export function createFocusManager(options: FocusManagerOptions): FocusManager {
     cancelInitialFocus,
 
     captureReturnFocus() {
-      returnFocus?.dispose();
-      returnFocus = captureFocus();
+      restoreReturnFocus = captureFocus();
     },
 
     dispose,
@@ -115,10 +113,9 @@ export function createFocusManager(options: FocusManagerOptions): FocusManager {
     },
 
     restoreFocus() {
-      if (options.getReturnFocus() !== false) returnFocus?.restore();
+      if (options.getReturnFocus() !== false) restoreReturnFocus?.();
 
-      returnFocus?.dispose();
-      returnFocus = null;
+      restoreReturnFocus = null;
     },
 
     [Symbol.dispose]: dispose,

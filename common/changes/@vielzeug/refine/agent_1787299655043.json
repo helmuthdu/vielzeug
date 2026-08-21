@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: initial release",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

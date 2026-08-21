@@ -235,15 +235,11 @@ define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
       getItems: getEnabledRadios,
       keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
       loop: true,
-      onNavigate: (_action, index, event) => {
-        const radio = getEnabledRadios()[index];
+      onNavigate: ({ event, item }) => {
+        item.focus();
 
-        if (!radio) return;
-
-        radio.focus();
-
-        if (radio.tagName === 'ORE-RADIO') {
-          selectRadio(radio.getAttribute('value') ?? '', event);
+        if (item.tagName === 'ORE-RADIO') {
+          selectRadio(item.getAttribute('value') ?? '', event);
         }
       },
       signal: lifecycleSignal(onCleanup),

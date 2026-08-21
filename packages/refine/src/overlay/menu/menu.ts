@@ -280,10 +280,8 @@ define<OreMenuProps>(MENU_TAG, {
       disabled: computed(() => !isOpenSignal.value),
       getItems: getItems,
       isItemDisabled: (item) => item.hasAttribute('disabled'),
-      onNavigate: (_action, index) => {
-        const nextItem = getItems()[index];
-
-        getItemFocusable(nextItem)?.focus();
+      onNavigate: ({ item }) => {
+        getItemFocusable(item)?.focus();
       },
       signal: abortSignal,
     });

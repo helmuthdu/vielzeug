@@ -102,7 +102,7 @@ define<OreAccordionProps>(ACCORDION_TAG, {
     const listControl = createListControl({
       getItems: () => getAccordionItems(),
       loop: true,
-      onNavigate: (_action, index) => {
+      onNavigate: ({ index }) => {
         const summaries = getSummaryElements();
 
         summaries[index]?.focus();

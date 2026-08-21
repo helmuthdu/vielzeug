@@ -144,6 +144,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
       getReference: () => fieldEl,
       getTrigger: () => inputEl,
       isDisabled: () => choice.disabled.value,
+      isItemDisabled: (option) => option.disabled,
       onClose: (reason) => {
         emit('open-change', { open: false, reason });
 
@@ -560,31 +561,6 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
 
     const stopObserving = observeLightDomOptions();
 
-    const handleShadowOptionPointerMove = (event: PointerEvent): void => {
-      const target = event.target;
-
-      if (!(target instanceof Element)) return;
-
-      const optionEl = target.closest<HTMLElement>('.option');
-
-      if (!optionEl) return;
-
-      const option = resolveOptionFromElement(optionEl);
-
-      if (!option || option.disabled) return;
-
-      const focusedIdx = filteredOptions.value.findIndex((candidate) => candidate.value === option.value);
-
-      if (focusedIdx >= 0) {
-        optionList.set(focusedIdx);
-      }
-    };
-    const shadowRoot = el.shadowRoot;
-
-    if (shadowRoot) {
-      shadowRoot.addEventListener('pointermove', handleShadowOptionPointerMove as EventListener);
-    }
-
     const createListboxListeners = (listEl: HTMLElement): (() => void) => {
       const handleActivate = (event: Event) => {
         const target = event.target;
@@ -610,7 +586,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
 
         const option = resolveOptionFromElement(optionEl);
 
-        if (!option) return;
+        if (!option || option.disabled) return;
 
         selectOption(option, event);
       };
@@ -764,7 +740,6 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     });
 
     onCleanup(() => {
-      shadowRoot?.removeEventListener('pointermove', handleShadowOptionPointerMove as EventListener);
       stopListboxListeners?.();
       stopListboxListeners = null;
       listboxListenersTarget = null;

@@ -68,7 +68,12 @@ export { createFocusManager, type FocusManager, type FocusManagerOptions } from 
 // ── DOM utilities ─────────────────────────────────────────────────────────────
 export { getChoiceLabel, getLightChildrenByTag } from './light-dom';
 // ── Navigation types ─────────────────────────────────────────────────────────
-export type { ListKeyAction, ListNavigationAction } from './nav';
+export type {
+  ListKeyAction,
+  ListNavigationAction,
+  ListNavigationChange,
+  ListNavigationTypeaheadOptions,
+} from './nav';
 // ── Number utilities ──────────────────────────────────────────────────────────
 export { toFiniteNumber, toFiniteNumberOr, toPositiveStep } from './numbers';
 // ── Ore adapter ───────────────────────────────────────────────────────────────

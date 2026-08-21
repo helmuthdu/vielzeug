@@ -6,7 +6,9 @@ import { courierExamples } from './courier';
 import { dndExamples } from './dnd';
 import { familiarExamples } from './familiar';
 import { fluxExamples } from './flux';
+import { focusExamples } from './focus';
 import { forgeExamples } from './forge';
+import { gestureExamples } from './gesture';
 import { heraldExamples } from './herald';
 import { illusionistExamples } from './illusionist';
 import { keymapExamples } from './keymap';
@@ -20,6 +22,7 @@ import { runeExamples } from './rune';
 import { sandboxExamples } from './sandbox';
 import { scoutExamples } from './scout';
 import { scrollExamples } from './scroll';
+import { sentinelExamples } from './sentinel';
 import { sourcererExamples } from './sourcerer';
 import { spellExamples } from './spell';
 import { tempoExamples } from './tempo';
@@ -37,7 +40,9 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   dnd: dndExamples,
   familiar: familiarExamples,
   flux: fluxExamples,
+  focus: focusExamples,
   forge: forgeExamples,
+  gesture: gestureExamples,
   herald: heraldExamples,
   illusionist: illusionistExamples,
   keymap: keymapExamples,
@@ -51,6 +56,7 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   sandbox: sandboxExamples,
   scout: scoutExamples,
   scroll: scrollExamples,
+  sentinel: sentinelExamples,
   sourcerer: sourcererExamples,
   spell: spellExamples,
   tempo: tempoExamples,

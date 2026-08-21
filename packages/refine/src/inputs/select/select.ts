@@ -208,6 +208,7 @@ define<OreSelectProps>(SELECT_TAG, {
       getReference: () => triggerEl,
       getTrigger: () => triggerEl,
       isDisabled: () => choice.disabled.value,
+      isItemDisabled: (option) => option.disabled,
       onClose: (reason) => {
         emit('open-change', { open: false, reason });
         choice.triggerValidation('blur');

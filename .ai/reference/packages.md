@@ -18,7 +18,7 @@ Human-readable package catalogue derived from `.ai/data/packages.json`.
 | `@vielzeug/flux` | Streams | Minimal push streams with explicit ownership, buffering, and ecosystem adapters | — | — | `courier`, `herald`, `pulse`, `ripple` |
 | `@vielzeug/focus` | Input | Framework-neutral list navigation and focus restoration primitives | — | — | — |
 | `@vielzeug/forge` | Forms | Typed form state, validation, submission | — | — | `spell`, `vault` |
-| `@vielzeug/gesture` | Input | Framework-neutral pointer swipe recognition with lifecycle-owned handles | — | — | — |
+| `@vielzeug/gesture` | Input | Framework-neutral one-axis pointer pan recognition with lifecycle-owned handles | — | — | — |
 | `@vielzeug/herald` | Events | Typed event bus, pub/sub, async streams | — | — | — |
 | `@vielzeug/illusionist` | Data | Typed, deterministic, locale-aware fake data generator with seeded PRNG | `arsenal`, `coins`, `tempo` | — | — |
 | `@vielzeug/keymap` | Input | Headless keyboard shortcut manager with chord sequences | — | — | — |
@@ -29,12 +29,13 @@ Human-readable package catalogue derived from `.ai/data/packages.json`.
 | `@vielzeug/ore` | UI | Functional web-component authoring on top of ripple | — | `ripple` | `assay` |
 | `@vielzeug/prism` | Charts | Reactive SVG charting library — line, bar, area, pie, sparkline | `orbit`, `ripple` | — | — |
 | `@vielzeug/pulse` | WebSockets | Typed WebSocket client with channels, rooms, presence, reconnect | `ripple` | — | — |
-| `@vielzeug/refine` | UI | Accessible, themeable web components built on ore | `arsenal`, `assay`, `dnd`, `focus`, `gesture`, `keymap`, `orbit`, `ore`, `ripple`, `tempo` | — | — |
+| `@vielzeug/refine` | UI | Accessible, themeable web components built on ore | `arsenal`, `assay`, `dnd`, `focus`, `gesture`, `keymap`, `orbit`, `ore`, `ripple`, `sentinel`, `tempo` | — | — |
 | `@vielzeug/ripple` | State | Reactive runtime primitives: signals, derived values, effects, scopes, watchers, and async resources | — | — | — |
 | `@vielzeug/rune` | Logging | Structured scoped logger with remote transport | — | — | — |
 | `@vielzeug/sandbox` | AI | Sandboxed iframe runtime with typed postMessage state bridge | — | — | — |
 | `@vielzeug/scout` | Utilities | Trigram fuzzy-search index with highlighting and reactive layer | `ripple` | — | — |
 | `@vielzeug/scroll` | UI | Virtual list engine for large datasets | `ripple` | — | — |
+| `@vielzeug/sentinel` | Environment | Reactive observables for external browser environment state | — | `ripple` | — |
 | `@vielzeug/sourcerer` | Data | Reactive data sources with pagination and search | — | — | — |
 | `@vielzeug/spell` | Validation | Zero-dep schema validation (Zod-like) | `arsenal` | — | — |
 | `@vielzeug/tempo` | Date/Time | Temporal-powered date utilities | — | — | — |

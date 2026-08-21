@@ -460,6 +460,9 @@ importers:
       '@vielzeug/ripple':
         specifier: workspace:*
         version: link:../ripple
+      '@vielzeug/sentinel':
+        specifier: workspace:*
+        version: link:../sentinel
       '@vielzeug/tempo':
         specifier: workspace:*
         version: link:../tempo
@@ -583,6 +586,27 @@ importers:
       '@types/node':
         specifier: ^26.2.0
         version: 26.2.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.2.1
+        version: 8.2.1(@types/node@26.2.0)
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.2.0)(jsdom@30.0.1)(vite@8.2.1(@types/node@26.2.0))
+
+  ../../packages/sentinel:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.62.1
+        version: 1.62.1
+      '@types/node':
+        specifier: ^26.2.0
+        version: 26.2.0
+      '@vielzeug/ripple':
+        specifier: workspace:*
+        version: link:../ripple
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

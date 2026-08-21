@@ -6,7 +6,7 @@ import { createListControl } from '../nav';
 describe('createListControl', () => {
   it('navigate(first/last) moves to the first/last enabled items', () => {
     const items = [{ disabled: true }, { disabled: false }, { disabled: false }];
-    const nav = createListControl({ getItems: () => items });
+    const nav = createListControl({ getItems: () => items, isItemDisabled: (item) => item.disabled });
 
     expect(nav.navigate('first')).toBe(1);
     expect(nav.navigate('last')).toBe(2);
@@ -14,7 +14,7 @@ describe('createListControl', () => {
 
   it('navigate(next/prev) skips disabled items', () => {
     const items = [{ disabled: false }, { disabled: true }, { disabled: false }];
-    const nav = createListControl({ getItems: () => items });
+    const nav = createListControl({ getItems: () => items, isItemDisabled: (item) => item.disabled });
 
     nav.set(0);
     expect(nav.navigate('next')).toBe(2);
@@ -43,7 +43,7 @@ describe('createListControl', () => {
 
   it('returns -1 when list has no enabled entries', () => {
     const items = [{ disabled: true }, { disabled: true }];
-    const nav = createListControl({ getItems: () => items });
+    const nav = createListControl({ getItems: () => items, isItemDisabled: (item) => item.disabled });
 
     expect(nav.navigate('first')).toBe(-1);
     expect(nav.navigate('last')).toBe(-1);
@@ -51,7 +51,7 @@ describe('createListControl', () => {
 
   it('returns -1 for all navigate actions on empty lists', () => {
     const items: Array<{ disabled: boolean }> = [];
-    const nav = createListControl({ getItems: () => items });
+    const nav = createListControl({ getItems: () => items, isItemDisabled: (item) => item.disabled });
 
     expect(nav.navigate('first')).toBe(-1);
     expect(nav.navigate('last')).toBe(-1);
@@ -82,7 +82,7 @@ describe('createListControl', () => {
 
   it('set returns -1 and clears focus when the target index is a disabled item', () => {
     const items = [{ disabled: false }, { disabled: true }, { disabled: false }];
-    const nav = createListControl({ getItems: () => items });
+    const nav = createListControl({ getItems: () => items, isItemDisabled: (item) => item.disabled });
 
     nav.set(0);
 
@@ -135,7 +135,7 @@ describe('createListControl', () => {
     const navigated: Array<{ action: string; index: number }> = [];
     const nav = createListControl({
       getItems: () => items,
-      onNavigate: (action, index) => navigated.push({ action, index }),
+      onNavigate: ({ action, index }) => navigated.push({ action, index }),
     });
 
     nav.set(0);
@@ -246,9 +246,9 @@ describe('createListControl typeahead', () => {
 
   function makeNav(items: LabelItem[], startIndex = -1) {
     const nav = createListControl({
-      getItemLabel: (item) => item.label,
       getItems: () => items,
       isItemDisabled: (item) => item.disabled,
+      typeahead: { getLabel: (item) => item.label },
     });
 
     if (startIndex >= 0) nav.set(startIndex);
@@ -296,15 +296,9 @@ describe('createListControl typeahead', () => {
     ];
     const { activeIndex, key } = makeNav(items, 0);
 
-    // Buffer resets between separate key sequences (reset after 500ms).
-    // Typing 'a' from index 0: starts search from index 1 → finds 'Avocado' at 1.
     key('a');
     expect(activeIndex()).toBe(1);
 
-    // Advance time to reset the buffer.
-    vi.advanceTimersByTime(500);
-
-    // Now typing 'a' again from index 1: search from 2 → wraps → finds 'Apple' at 0.
     key('a');
     expect(activeIndex()).toBe(0);
   });
@@ -371,7 +365,7 @@ describe('createListControl typeahead', () => {
     expect(activeIndex()).toBe(-1);
   });
 
-  it('returns false when getItemLabel is not provided', () => {
+  it('returns false when typeahead is not configured', () => {
     const nav = createListControl({
       getItems: () => [{ disabled: false }],
     });
@@ -398,15 +392,15 @@ describe('createListControl typeahead', () => {
   it('does not trigger typeahead when list is disabled', () => {
     const nav = createListControl({
       disabled: signal(true),
-      getItemLabel: (item: { label: string }) => item.label,
       getItems: () => [{ label: 'Apple' }],
+      typeahead: { getLabel: (item: { label: string }) => item.label },
     });
 
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'a' }));
     expect(nav.focusedIndex.value).toBe(-1);
   });
 
-  it('[Symbol.dispose]() resets the type buffer — subsequent keystrokes start a fresh search', () => {
+  it('[Symbol.dispose]() makes the control terminal', () => {
     const { activeIndex, nav } = makeNav([
       { disabled: false, label: 'Apple' },
       { disabled: false, label: 'Avocado' },
@@ -418,11 +412,9 @@ describe('createListControl typeahead', () => {
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'v' }));
     expect(activeIndex()).toBe(1);
 
-    // [Symbol.dispose]() resets the buffer without waiting for the 500 ms timeout.
     nav[Symbol.dispose]();
 
-    // Now type 'a' again — buffer is cleared so it's a fresh 'a' search from index 2 → wraps → 'Apple' at 0.
-    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'a' }));
-    expect(activeIndex()).toBe(0);
+    expect(nav.handleKeydown(new KeyboardEvent('keydown', { key: 'a' }))).toBe(false);
+    expect(activeIndex()).toBe(-1);
   });
 });

@@ -277,6 +277,21 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.2.0)(jsdom@30.0.1)(vite@8.2.1(@types/node@26.2.0))
 
+  ../../packages/focus:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.2.0
+        version: 26.2.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.2.1
+        version: 8.2.1(@types/node@26.2.0)
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.2.0)(jsdom@30.0.1)(vite@8.2.1(@types/node@26.2.0))
+
   ../../packages/forge:
     devDependencies:
       '@types/node':
@@ -298,7 +313,47 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.2.0)(jsdom@30.0.1)(vite@8.2.1(@types/node@26.2.0))
 
+  ../../packages/gesture:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.2.0
+        version: 26.2.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.2.1
+        version: 8.2.1(@types/node@26.2.0)
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.2.0)(jsdom@30.0.1)(vite@8.2.1(@types/node@26.2.0))
+
   ../../packages/herald:
+    devDependencies:
+      '@types/node':
+        specifier: ^26.2.0
+        version: 26.2.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.2.1
+        version: 8.2.1(@types/node@26.2.0)
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.2.0)(jsdom@30.0.1)(vite@8.2.1(@types/node@26.2.0))
+
+  ../../packages/illusionist:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
+      '@vielzeug/coins':
+        specifier: workspace:*
+        version: link:../coins
+      '@vielzeug/tempo':
+        specifier: workspace:*
+        version: link:../tempo
     devDependencies:
       '@types/node':
         specifier: ^26.2.0
@@ -480,6 +535,12 @@ importers:
       '@vielzeug/dnd':
         specifier: workspace:*
         version: link:../dnd
+      '@vielzeug/focus':
+        specifier: workspace:*
+        version: link:../focus
+      '@vielzeug/gesture':
+        specifier: workspace:*
+        version: link:../gesture
       '@vielzeug/keymap':
         specifier: workspace:*
         version: link:../keymap
@@ -492,6 +553,9 @@ importers:
       '@vielzeug/ripple':
         specifier: workspace:*
         version: link:../ripple
+      '@vielzeug/sentinel':
+        specifier: workspace:*
+        version: link:../sentinel
       '@vielzeug/tempo':
         specifier: workspace:*
         version: link:../tempo
@@ -615,6 +679,27 @@ importers:
       '@types/node':
         specifier: ^26.2.0
         version: 26.2.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.2.1
+        version: 8.2.1(@types/node@26.2.0)
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.2.0)(jsdom@30.0.1)(vite@8.2.1(@types/node@26.2.0))
+
+  ../../packages/sentinel:
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.62.1
+        version: 1.62.1
+      '@types/node':
+        specifier: ^26.2.0
+        version: 26.2.0
+      '@vielzeug/ripple':
+        specifier: workspace:*
+        version: link:../ripple
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

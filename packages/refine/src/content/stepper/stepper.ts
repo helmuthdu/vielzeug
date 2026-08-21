@@ -236,20 +236,17 @@ define<OreStepperProps>(STEPPER_TAG, {
       direction: () => elementDirection(el),
       getItems: getNavigableSteps,
       loop: false,
-      onNavigate: (_action, index) => {
-        const steps = getNavigableSteps();
-        const nextStep = steps[index];
-
+      onNavigate: ({ item }) => {
         // Select BEFORE focusing: changing `currentValue` re-renders each step's
         // control (the step's navigable/button node-slot depends on the current
         // index), which destroys the previously focused button. Ripple flushes
         // effects synchronously, so by the time focusStep() runs the replacement
         // button exists.
-        const value = nextStep?.getAttribute('value');
+        const value = item.getAttribute('value');
 
         if (value) setSelection(value, true);
 
-        focusStep(nextStep);
+        focusStep(item);
       },
       orientation: () => (props.orientation.value === 'vertical' ? 'vertical' : 'horizontal'),
       signal: lifecycleSignal(onCleanup),

@@ -830,6 +830,30 @@ describe('ore-select accessibility', () => {
       expect(target.value).toBe('banana');
     });
 
+    it('skips disabled options during keyboard navigation', async () => {
+      fixture = await mount('ore-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS_WITH_DISABLED,
+      });
+
+      const changeHandler = vi.fn();
+
+      fixture.element.addEventListener('change', changeHandler);
+
+      const trigger = fixture.query<HTMLElement>('ore-input.trigger')!;
+
+      fireKeyDown(trigger, { key: 'Enter' });
+      await fixture.flush();
+      fireKeyDown(trigger, { key: 'ArrowDown' });
+      await fixture.flush();
+      fireKeyDown(trigger, { key: 'Enter' });
+      await fixture.flush();
+
+      const target = (changeHandler.mock.calls[0]?.[0] as Event).target as HTMLElement & { value: string };
+
+      expect(target.value).toBe('cherry');
+    });
+
     it('selects focused option with Space when open', async () => {
       fixture = await mount('ore-select', {
         attrs: { label: 'Fruit' },

@@ -37,6 +37,7 @@ const LUCIDE_UMD = require.resolve('lucide/dist/umd/lucide.js');
 const IIFE_ENTRIES: Array<{ path: string; shim?: string }> = [
   { path: TEMPORAL_UMD, shim: 'if(typeof temporal!=="undefined"){window.Temporal=temporal;}' },
   { path: path.join(PKG, 'ripple/dist/ripple.iife.js') },
+  { path: path.join(PKG, 'sentinel/dist/sentinel.iife.js') },
   { path: path.join(PKG, 'arsenal/dist/arsenal.iife.js') },
   { path: path.join(PKG, 'focus/dist/focus.iife.js') },
   { path: path.join(PKG, 'gesture/dist/gesture.iife.js') },

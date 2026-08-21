@@ -1,4 +1,5 @@
-import { define, getHost, html, onMounted, prop, resizeObserver, watchEffect } from '@vielzeug/ore';
+import { define, getHost, html, onCleanup, onMounted, prop, watchEffect } from '@vielzeug/ore';
+import { createElementSize } from '@vielzeug/sentinel';
 
 import styles from './grid.css?inline';
 
@@ -255,12 +256,16 @@ define<OreGridProps>(GRID_TAG, {
 
     // Also, update on element resize (drives breakpoint switching)
     onMounted(() => {
-      const size = resizeObserver(el);
+      const size = createElementSize(el);
+
+      onCleanup(() => size.dispose());
 
       watch(() => {
-        void size.value;
-        updateCols();
-        updateAreas();
+        const dims = size.value;
+        if (dims) {
+          updateCols();
+          updateAreas();
+        }
       });
     });
 

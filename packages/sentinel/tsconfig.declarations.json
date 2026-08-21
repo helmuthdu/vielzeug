@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "declarationDir": "./dist",
+    "rootDir": "./src"
+  },
+  "exclude": ["node_modules", "src/**/*.test.ts", "src/**/__tests__/**"],
+  "extends": "../../tsconfig.declarations.json",
+  "include": ["src/**/*.ts", "src/**/*.d.ts"]
+}

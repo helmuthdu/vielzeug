@@ -2,7 +2,12 @@ import { restoreFocus } from '@vielzeug/focus';
 import { computed, type Readable, signal } from '@vielzeug/ripple';
 
 import { RefineConfigError } from '../errors';
-import { createListControl, type ListKeyAction, type ListNavigationAction } from './nav';
+import {
+  createListControl,
+  type ListNavigationAction,
+  type ListNavigationChange,
+  type ListNavigationTypeaheadOptions,
+} from './nav';
 import { createOutsidePointerDismissal, type DropdownCloseReason, type OverlayOpenReason } from './overlay';
 import { createDropdownPositioner, type DropdownPositionerOptions } from './positioner';
 
@@ -14,23 +19,23 @@ export type ListboxDropdownPlacementOptions = Omit<DropdownPositionerOptions, 'g
 export type ListboxDropdownOptions<T extends ListboxItem> = {
   getBoundary: () => HTMLElement | null;
   getFocusedOptionElement?: () => HTMLElement | null;
-  getItemLabel?: (item: T, index: number) => string;
-  getItems: () => T[];
+  getItems: () => readonly T[];
   getOptionId?: (index: number) => string;
   getPanel: () => HTMLElement | null;
   getReference: () => HTMLElement | null;
   getTrigger?: () => HTMLElement | null;
   isDisabled?: () => boolean;
   isItemDisabled?: (item: T, index: number) => boolean;
-  keys?: Partial<Record<ListNavigationAction, string[]>>;
+  keys?: Partial<Record<ListNavigationAction, readonly string[]>>;
   loop?: boolean;
   onClose?: (reason: DropdownCloseReason) => void;
-  onNavigate?: (action: ListKeyAction, index: number, event?: KeyboardEvent) => void;
+  onNavigate?: (change: ListNavigationChange<T>) => void;
   onOpen?: (reason: OverlayOpenReason) => void;
   orientation?: 'both' | 'horizontal' | 'vertical';
   positioning?: ListboxDropdownPlacementOptions;
   restoreFocus?: boolean | (() => boolean);
   signal: AbortSignal;
+  typeahead?: ListNavigationTypeaheadOptions<T>;
 };
 
 export type ListboxDropdown<T extends ListboxItem> = {
@@ -89,18 +94,17 @@ export const createListboxDropdown = <T extends ListboxItem>(
 
   const list = createListControl<T>({
     disabled: computed(() => !isOpen.value),
-    getItemLabel: options.getItemLabel,
     getItems: options.getItems,
     isItemDisabled: options.isItemDisabled,
     keys: options.keys,
     loop: options.loop ?? true,
-    onNavigate: (action, index, event) => {
+    onNavigate: (change) => {
       scrollFocusedIntoView();
-
-      if (index >= 0) options.onNavigate?.(action, index, event);
+      options.onNavigate?.(change);
     },
     orientation: options.orientation,
     signal: options.signal,
+    typeahead: options.typeahead,
   });
 
   const ariaActiveDescendant = computed<string | null>(() => {

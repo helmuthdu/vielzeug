@@ -1,11 +1,11 @@
 ---
 title: Ore — Web component authoring with signals
-description: Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, observers, and testing utilities.
+description: Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, and testing utilities.
 package: ore
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, refine, orbit]
-exports: [define, prop, html, css, ref, createContext, inject, injectStrict, provide, onMounted, onCleanup, onEvent, onElement, onFormReset, watchEffect, useEmit, useSlots, getHost, bind, each, when, classMap, styleMap, live, unsafeHtml, useField, intersectionObserver, mediaObserver, mutationObserver, resizeObserver, createId, createStableId, resetStableIdCounter, OreError, OreApiError, OreInternalError, OreLifecycleError, BindOptions]
+exports: [define, prop, html, css, ref, createContext, inject, injectStrict, provide, onMounted, onCleanup, onEvent, onElement, onFormReset, watchEffect, useEmit, useSlots, getHost, bind, each, when, classMap, styleMap, live, unsafeHtml, useField, createId, createStableId, resetStableIdCounter, OreError, OreApiError, OreInternalError, OreLifecycleError, BindOptions]
 environments: [browser]
 ---
 

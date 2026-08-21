@@ -231,19 +231,22 @@ test.describe('Swipe actions', () => {
     await page.waitForSelector('ore-list-item');
 
     await page.evaluate(() => {
-      const row = (
-        document.getElementById('item') as HTMLElement & { shadowRoot: ShadowRoot }
-      ).shadowRoot.querySelector('.row') as HTMLElement;
       const del = document.getElementById('del') as HTMLElement;
-
       (window as unknown as { __deleteClicked: boolean }).__deleteClicked = false;
       del.addEventListener('click', () => {
         (window as unknown as { __deleteClicked: boolean }).__deleteClicked = true;
       });
-
-      row.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 1 }));
-      row.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: -300, pointerId: 1 }));
     });
+
+    const row = page.locator('#item').locator('.row');
+    const box = await row.boundingBox();
+
+    expect(box).not.toBeNull();
+
+    await page.mouse.move(box!.x + box!.width - 10, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + 10, box!.y + box!.height / 2, { steps: 4 });
+    await page.mouse.up();
     await page.waitForTimeout(50);
 
     const { deleteClicked, revealedAttr } = await page.evaluate(() => ({
@@ -253,5 +256,23 @@ test.describe('Swipe actions', () => {
 
     expect(deleteClicked).toBe(true);
     expect(revealedAttr).toBeNull();
+  });
+
+  test('vertical movement does not activate a horizontal list-item pan', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-list style="width:300px"><ore-list-item id="item">Newsletter<button slot="actions-right">Delete</button></ore-list-item></ore-list>',
+    );
+
+    const row = page.locator('#item').locator('.row');
+    const box = await row.boundingBox();
+
+    expect(box).not.toBeNull();
+
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + 4);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + box!.width / 2 + 2, box!.y + box!.height + 80, { steps: 4 });
+    await page.mouse.up();
+
+    expect(await page.locator('#item').getAttribute('revealed')).toBeNull();
   });
 });

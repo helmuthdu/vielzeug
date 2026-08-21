@@ -144,29 +144,26 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
 
     const hasActions = (side: ListItemRevealSide): boolean => slots.has(actionSlot(side)).value;
 
-    const swipe = createRevealState(el, {
-      disabled: computed(() => props.disabled.value || Boolean(props.revealed.value)),
-      hasActions,
-      // Clicks the slot's own first element (the common case: a single action button) so its own
-      // click handler runs the real action — `confirm` covers slots without a clickable element.
-      onConfirm: (side) => {
-        const target = slots.elements(actionSlot(side)).value[0] as HTMLElement | undefined;
-
-        emit('confirm', { item: el, side });
-        target?.click();
-      },
-    });
-
     onMounted(() => {
       const row = el.shadowRoot?.querySelector<HTMLElement>('.row');
 
       if (!row) return;
 
-      const unmountSwipe = swipe.mount(row);
-      onCleanup(unmountSwipe);
-    });
+      const pan = createRevealState(el, row, {
+        disabled: computed(() => props.disabled.value || Boolean(props.revealed.value)),
+        hasActions,
+        // Clicks the slot's own first element (the common case: a single action button) so its own
+        // click handler runs the real action — `confirm` covers slots without a clickable element.
+        onConfirm: (side) => {
+          const target = slots.elements(actionSlot(side)).value[0] as HTMLElement | undefined;
 
-    onCleanup(() => swipe.dispose());
+          emit('confirm', { item: el, side });
+          target?.click();
+        },
+      });
+
+      onCleanup(() => pan.dispose());
+    });
 
     // Reflects the derived `selected` state as a plain boolean attribute — the styling/
     // `[selected]`-selector hook — the same way `prop.bool()`'s own reflection would, since it

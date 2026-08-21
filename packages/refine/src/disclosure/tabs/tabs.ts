@@ -168,14 +168,11 @@ define<OreTabsProps>(TABS_TAG, {
       direction: () => elementDirection(el),
       getItems: () => getEnabledTabs(),
       loop: true,
-      onNavigate: (_action, index) => {
-        const tabs = getEnabledTabs();
-        const nextTab = tabs[index];
-
-        focusTab(nextTab);
+      onNavigate: ({ item }) => {
+        focusTab(item);
 
         if (!isManualActivation()) {
-          const value = nextTab?.getAttribute('value');
+          const value = item.getAttribute('value');
 
           if (value) setSelection(value, true);
         }

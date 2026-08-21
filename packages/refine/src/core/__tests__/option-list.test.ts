@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RefineConfigError } from '../../errors';
 import { createListboxDropdown, type ListboxDropdownOptions } from '../option-list';
 
-type Item = { label: string; value: string };
+type Item = { disabled?: boolean; label: string; value: string };
 
 const ITEMS: Item[] = [
   { label: 'Apple', value: 'apple' },
@@ -339,6 +339,34 @@ describe('createListboxDropdown()', () => {
 
       expect(handled).toBe(true);
       expect(get().focusedIndex.value).toBe(1);
+    });
+
+    it('forwards disabled-item rules to navigation and direct selection', async () => {
+      const items: Item[] = [
+        { label: 'Apple', value: 'apple' },
+        { disabled: true, label: 'Banana', value: 'banana' },
+        { label: 'Cherry', value: 'cherry' },
+      ];
+      const { get, setup } = makeHandle({
+        getItems: () => items,
+        isItemDisabled: (item) => Boolean(item.disabled),
+      });
+
+      await mount(() => {
+        setup();
+
+        return html`
+          <div></div>
+        `;
+      }, {});
+
+      get().open();
+      get().set(0);
+      get().handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+
+      expect(get().focusedIndex.value).toBe(2);
+      expect(get().set(1)).toBe(-1);
+      expect(get().focusedIndex.value).toBe(-1);
     });
   });
 

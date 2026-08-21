@@ -130,10 +130,8 @@ define<OreOtpInputProps>(OTP_INPUT_TAG, {
       getItems: () => getInputs(),
       keys: { next: ['ArrowRight'], prev: ['ArrowLeft'] },
       loop: false,
-      onNavigate: (_action, index) => {
-        const inputs = getInputs();
-
-        inputs[index]?.focus();
+      onNavigate: ({ item }) => {
+        item.focus();
       },
       signal: lifecycleSignal(onCleanup),
     });

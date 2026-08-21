@@ -1,5 +1,7 @@
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
+const pointer = { bubbles: true, composed: true, isPrimary: true, pointerType: 'touch' } as const;
+
 describe('ore-list-item', () => {
   let fixture: Fixture<HTMLElement>;
 
@@ -104,6 +106,23 @@ describe('ore-list-item', () => {
   });
 
   describe('Swipe reveal', () => {
+    it('does not capture the pointer while revealing actions', async () => {
+      fixture = await mount('ore-list-item', {
+        html: 'Title<button slot="actions-right">Delete</button>',
+      });
+      await fixture.flush();
+
+      const row = fixture.query<HTMLElement>('.row')!;
+      const setPointerCapture = vi.fn();
+
+      Object.defineProperty(row, 'setPointerCapture', { configurable: true, value: setPointerCapture });
+
+      row.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: -100, pointerId: 1 }));
+
+      expect(setPointerCapture).not.toHaveBeenCalled();
+    });
+
     it('reveals the right action panel on a leftward swipe past the reveal threshold', async () => {
       fixture = await mount('ore-list-item', {
         html: 'Title<button slot="actions-right">Delete</button>',
@@ -112,9 +131,9 @@ describe('ore-list-item', () => {
 
       const row = fixture.query<HTMLElement>('.row')!;
 
-      row.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 1 }));
-      row.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: -100, pointerId: 1 }));
-      row.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: -100, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: -100, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: -100, pointerId: 1 }));
       await fixture.flush();
 
       expect(fixture.element.getAttribute('revealed')).toBe('right');
@@ -133,8 +152,8 @@ describe('ore-list-item', () => {
       fixture.element.querySelector<HTMLElement>('#del')?.addEventListener('click', onClick);
       fixture.element.addEventListener('confirm', onConfirm);
 
-      row.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 1 }));
-      row.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: -300, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: -300, pointerId: 1 }));
       await fixture.flush();
 
       expect(onConfirm).toHaveBeenCalledTimes(1);
@@ -150,8 +169,8 @@ describe('ore-list-item', () => {
 
       const row = fixture.query<HTMLElement>('.row')!;
 
-      row.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 1 }));
-      row.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: -300, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: -300, pointerId: 1 }));
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('revealed')).toBe(false);
@@ -163,9 +182,9 @@ describe('ore-list-item', () => {
 
       const row = fixture.query<HTMLElement>('.row')!;
 
-      row.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 1 }));
-      row.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: -100, pointerId: 1 }));
-      row.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: -100, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: -100, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: -100, pointerId: 1 }));
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('revealed')).toBe(false);
@@ -179,9 +198,9 @@ describe('ore-list-item', () => {
 
       const row = fixture.query<HTMLElement>('.row')!;
 
-      row.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 1 }));
-      row.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: -5, pointerId: 1 }));
-      row.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: -5, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: -5, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: -5, pointerId: 1 }));
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('revealed')).toBe(false);
@@ -229,9 +248,9 @@ describe('ore-list-item', () => {
 
       const row = fixture.query<HTMLElement>('.row')!;
 
-      row.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 1 }));
-      row.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: -100, pointerId: 1 }));
-      row.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: -100, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: -100, pointerId: 1 }));
+      row.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: -100, pointerId: 1 }));
       await fixture.flush();
 
       expect(fixture.element.hasAttribute('revealed')).toBe(false);

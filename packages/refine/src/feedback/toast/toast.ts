@@ -1,6 +1,6 @@
 import '../alert/alert';
 import { uuid } from '@vielzeug/arsenal/random';
-import { createSwipeGesture, type SwipeGesture } from '@vielzeug/gesture';
+import { createPanGesture, type PanGesture } from '@vielzeug/gesture';
 import { define, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
@@ -330,8 +330,7 @@ define<OreToastProps>(TOAST_TAG, {
     const hoverPaused = signal(false);
     const focusPaused = signal(false);
     const paused = computed(() => hoverPaused.value || focusPaused.value);
-    const swipeControls = new Map<string, SwipeGesture>();
-    const mountedSwipeControls = new Map<string, { element: HTMLElement; unmount: () => void }>();
+    const swipeControls = new Map<string, { element: HTMLElement; gesture: PanGesture }>();
     const exiting = new Map<string, () => void>();
     const swiping = new Set<string>();
     let pendingSyncFrame: number | undefined;
@@ -339,9 +338,7 @@ define<OreToastProps>(TOAST_TAG, {
     let unsubscribeEntries = () => {};
     let unsubscribeEvents = () => {};
 
-    const getInner = (wrapperOrEvent: HTMLElement | Event): HTMLElement | null => {
-      const wrapper = wrapperOrEvent instanceof Event ? (wrapperOrEvent.currentTarget as HTMLElement) : wrapperOrEvent;
-
+    const getInner = (wrapper: HTMLElement): HTMLElement | null => {
       return wrapper.querySelector<HTMLElement>('.toast-inner');
     };
 
@@ -355,24 +352,29 @@ define<OreToastProps>(TOAST_TAG, {
       store?.finalize(id);
     };
 
-    const createToastSwipe = (id: string): SwipeGesture => {
+    const createToastSwipe = (id: string, wrapper: HTMLElement): PanGesture => {
       const isDismissible = (): boolean => entries.value.find((entry) => entry.id === id)?.dismissible ?? true;
+      const reset = (): void => {
+        const inner = getInner(wrapper);
 
-      return createSwipeGesture({
-        axis: () => 'x',
-        captureTarget: () => null,
+        if (!inner) return;
+
+        inner.style.transition = '';
+        inner.style.transform = '';
+        inner.style.opacity = '';
+      };
+
+      return createPanGesture(wrapper, {
+        axis: 'x',
         disabled: () => !isDismissible(),
-        onCancel: ({ event }) => {
-          const inner = getInner(event);
+        onEnd: ({ distance, reason }) => {
+          if (reason !== 'release' || Math.abs(distance) < 48) {
+            reset();
 
-          if (!inner) return;
+            return;
+          }
 
-          inner.style.transition = '';
-          inner.style.transform = '';
-          inner.style.opacity = '';
-        },
-        onCommit: ({ distance, event }) => {
-          const inner = getInner(event);
+          const inner = getInner(wrapper);
 
           if (!inner || !store) return;
 
@@ -406,8 +408,8 @@ define<OreToastProps>(TOAST_TAG, {
           inner.addEventListener('transitionend', onTransitionEnd);
           store.scheduleFinalization(id, 300);
         },
-        onMove: ({ distance, event }) => {
-          const inner = getInner(event);
+        onMove: ({ distance }) => {
+          const inner = getInner(wrapper);
 
           if (!inner) return;
 
@@ -415,15 +417,11 @@ define<OreToastProps>(TOAST_TAG, {
           inner.style.transform = `translateX(${distance}px)`;
           inner.style.opacity = String(Math.max(0, 1 - Math.abs(distance) / 200));
         },
-        onRelease: ({ event }) => {
-          const inner = getInner(event);
-
-          if (!inner) return;
-
-          inner.style.transition = '';
-          inner.style.transform = '';
-          inner.style.opacity = '';
-        },
+        pointerCapture: false,
+        shouldStart: (event) =>
+          !event
+            .composedPath()
+            .some((node) => node instanceof Element && node.matches('button, a, input, select, textarea, ore-button')),
       });
     };
 
@@ -466,14 +464,7 @@ define<OreToastProps>(TOAST_TAG, {
 
       for (const [id, control] of swipeControls) {
         if (!currentIds.has(id)) {
-          const mounted = mountedSwipeControls.get(id);
-
-          if (mounted) {
-            mounted.unmount();
-            mountedSwipeControls.delete(id);
-          }
-
-          control.dispose();
+          control.gesture.dispose();
 
           swipeControls.delete(id);
           clearExitListener(id);
@@ -482,19 +473,12 @@ define<OreToastProps>(TOAST_TAG, {
       }
 
       for (const entry of entries.value) {
-        if (!swipeControls.has(entry.id)) swipeControls.set(entry.id, createToastSwipe(entry.id));
-
         const wrapper = containerRef.value?.querySelector<HTMLElement>(`[data-toast-id="${entry.id}"]`);
-        const mounted = mountedSwipeControls.get(entry.id);
+        const control = swipeControls.get(entry.id);
 
-        if (wrapper && (!mounted || mounted.element !== wrapper)) {
-          mounted?.unmount();
-
-          const control = swipeControls.get(entry.id);
-
-          if (control) {
-            mountedSwipeControls.set(entry.id, { element: wrapper, unmount: control.mount(wrapper) });
-          }
+        if (wrapper && control?.element !== wrapper) {
+          control?.gesture.dispose();
+          swipeControls.set(entry.id, { element: wrapper, gesture: createToastSwipe(entry.id, wrapper) });
         }
 
         if (entry.phase === 'exiting') beginExit(entry.id);
@@ -588,9 +572,8 @@ define<OreToastProps>(TOAST_TAG, {
 
       if (pendingSyncFrame !== undefined) cancelAnimationFrame(pendingSyncFrame);
 
-      for (const control of swipeControls.values()) control.dispose();
-      for (const mounted of mountedSwipeControls.values()) mounted.unmount();
-      mountedSwipeControls.clear();
+      for (const control of swipeControls.values()) control.gesture.dispose();
+      swipeControls.clear();
       for (const id of exiting.keys()) clearExitListener(id);
     });
 

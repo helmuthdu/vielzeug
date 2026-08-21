@@ -11,7 +11,7 @@ Functional web-component authoring primitives built on `ripple`. The foundation 
 
 ## Local Contracts
 
-- **Root-only runtime API** — browser runtime APIs (directives, `useField`, observers) are all exported from `.`. `./testing` is the only public sub-path. Keep `package.json` `exports` and `vite.config.ts`'s entry map aligned.
+- **Root-only runtime API** — browser runtime APIs (directives and `useField`) are exported from `.`. `./testing` is the only public sub-path. Keep `package.json` `exports` and `vite.config.ts`'s entry map aligned.
 - **IIFE build** — `vite.bundle.config.ts` bundles the root `src/index.ts` into `window.Ore`. Downstream IIFE consumers must import Ore only from `@vielzeug/ore`, so every lifecycle hook resolves through that single runtime.
 - `src/_dev.ts` is private — never re-exported from `index.ts` or any sub-path.
 - Prop definitions use the `prop.*` factory in `src/props.ts` (`prop.string|bool|number|oneOf|json|data`). `prop.data` is the JS-only escape hatch for objects, arrays, callbacks, and any non-serialisable value; `prop.json` is for attribute-serialisable data. `prop.fn` has been removed — use `prop.data<FnType>()` instead.

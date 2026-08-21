@@ -1,38 +1,41 @@
 ---
-title: 'Ore Examples — Observers in onMounted()'
-description: 'Observers in onMounted() example for @vielzeug/ore.'
+title: 'Ore Examples — Sentinels in onMounted()'
+description: Observe browser and element state within an Ore component lifecycle.
 ---
 
-## Observers in onMounted()
+## Sentinels in onMounted()
 
 ### Problem
 
-You need to observe element size, intersection, or media queries, but the observer helpers require real DOM nodes that don't exist during `setup()`.
+Element observation requires mounted DOM nodes, and its browser resources must be released when the component disconnects. Ore provides the lifecycle boundary while Sentinel provides the reactive observation.
 
 ### Solution
 
-Call observer helpers inside `onMounted()` after refs have resolved.
+Create Sentinels in `onMounted()`, consume them through `watchEffect()`, and dispose them through `onCleanup()`.
 
 ```ts
-import { define, html, onMounted, ref, watchEffect } from '@vielzeug/ore';
-import { mediaObserver, resizeObserver } from '@vielzeug/ore';
+import { define, html, onCleanup, onMounted, ref, watchEffect } from '@vielzeug/ore';
+import { createElementSize, SentinelUnavailableError } from '@vielzeug/sentinel';
 
 define('observed-panel', {
-  setup(_props) {
+  setup() {
     const panel = ref<HTMLDivElement>();
 
     onMounted(() => {
       const element = panel.value;
-
       if (!element) return;
 
-      const size = resizeObserver(element);
-      const dark = mediaObserver('(prefers-color-scheme: dark)');
+      try {
+        const size = createElementSize(element);
 
-      // watchEffect() is a component-scoped effect — auto-cleaned up on disconnect.
-      watchEffect(() => {
-        console.log('panel width', size.value.width, 'dark mode', dark.value);
-      });
+        watchEffect(() => {
+          console.log('panel width', size.value?.width);
+        });
+
+        onCleanup(() => size.dispose());
+      } catch (error) {
+        if (!(error instanceof SentinelUnavailableError)) throw error;
+      }
     });
 
     return html`<div ref=${panel}>Resize me</div>`;
@@ -42,11 +45,13 @@ define('observed-panel', {
 
 ### Pitfalls
 
-- Calling `resizeObserver()` or `intersectionObserver()` before the element exists (outside `onMounted()`) will receive a null ref and observe nothing.
-- `mediaObserver()` uses `window.matchMedia` internally — it fails silently in SSR environments without a DOM shim.
+- Create element-dependent Sentinels only after refs resolve.
+- Handle the initial `null` element-size value.
+- Dispose every Sentinel created by the component.
+- Catch `SentinelUnavailableError` when the required observer API may be unavailable.
 
 ### Related
 
-- [Ripple — Effects](/ripple/) for the reactive `effect()` used inside the observer callback
-- [Context provider and consumer](./context-provider-and-consumer.md)
-- [Counter component](./counter-component.md)
+- [Sentinel Usage](/sentinel/usage)
+- [Lifecycle Best Practices](../lifecycle-best-practices.md)
+- [Counter Component](./counter-component.md)

@@ -3,7 +3,7 @@
 
 # Vielzeug
 
-**35 independent, zero-dependency TypeScript packages for modern JavaScript**
+**36 independent, zero-dependency TypeScript packages for modern JavaScript**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](https://www.npmjs.com/org/vielzeug)
@@ -194,16 +194,16 @@ pnpm add @vielzeug/focus
 
 - `createListNavigation()` for roving-style keyboard navigation
 - Orientation and RTL-aware default key mappings
-- Optional typeahead with configurable delay
-- `captureFocus()` and `restoreFocus()` for explicit return-focus flows
+- Explicit disabled-item filtering and optional typeahead
+- One-shot `captureFocus()` and direct `restoreFocus()` helpers
 
 [📖 Documentation](https://vielzeug.dev/focus/) • [Examples](https://vielzeug.dev/focus/examples)
 
 ---
 
-### [@vielzeug/gesture](packages/gesture) – Pointer Gesture Primitives
+### [@vielzeug/gesture](packages/gesture) – Pointer Pan Primitives
 
-Framework-neutral swipe recognition with lifecycle-owned handles.
+Framework-neutral one-axis pointer pan recognition with lifecycle-owned handles.
 
 ```bash
 pnpm add @vielzeug/gesture
@@ -211,9 +211,9 @@ pnpm add @vielzeug/gesture
 
 **Key Features:**
 
-- `createSwipeGesture()` for one-axis swipe recognition
-- Configurable threshold, axis, and disabled behavior
-- Pointer identity and primary-pointer guards
+- `createPanGesture()` for one-axis pointer tracking
+- Direction locking before the gesture becomes active
+- Consumer-owned thresholds and completion policy
 - `dispose()` + `disposalSignal` lifecycle ownership
 
 [📖 Documentation](https://vielzeug.dev/gesture/) • [Examples](https://vielzeug.dev/gesture/examples)
@@ -592,6 +592,26 @@ pnpm add @vielzeug/scroll
 - Zero dependencies
 
 [📖 Documentation](https://vielzeug.dev/scroll/) • [Examples](https://vielzeug.dev/scroll/examples)
+
+---
+
+### [@vielzeug/sentinel](packages/sentinel) – Reactive Environment State
+
+Observe external browser environment state through Ripple reactive signals.
+
+```bash
+pnpm add @vielzeug/sentinel
+```
+
+**Key Features:**
+
+- Reactive viewport dimensions and DPR tracking
+- Network status and connection monitoring
+- Media query observation
+- Element resize and intersection tracking
+- Idempotent disposal with Ripple signal integration
+
+[📖 Documentation](https://vielzeug.dev/sentinel/) • [Examples](https://vielzeug.dev/sentinel/examples)
 
 ---
 

@@ -35,7 +35,7 @@ All browser-runtime symbols below are imported from `@vielzeug/ore`. Lifecycle/c
 
 | Import                    | Purpose                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| `@vielzeug/ore`           | All browser runtime APIs, including directives, fields, and observers |
+| `@vielzeug/ore`           | All browser runtime APIs, including directives, fields, and lifecycle helpers |
 | `@vielzeug/ore/testing`   | Ore-specific mounting, lifecycle, hook, cleanup, and form test support |
 | `@vielzeug/assay`         | Generic DOM events, scoped queries, and async waiting              |
 
@@ -335,15 +335,6 @@ useField({
   value,
 });
 ```
-
-## Observer APIs
-
-Import from `@vielzeug/ore`.
-
-- `resizeObserver(element)` — Returns `Readable<{ height: number; width: number }>`, initialised to `{ height: 0, width: 0 }`
-- `intersectionObserver(element, options?)` — Returns `Readable<IntersectionObserverEntry | null>`, initialised to `null`
-- `mutationObserver(element, options?)` — Returns `Readable<{ entries: MutationRecord[]; latest: MutationRecord | null }>`, initialised to `{ entries: [], latest: null }`
-- `mediaObserver(query)` — Returns `Readable<boolean>`, initialised to the query's current `matches` state
 
 ## Testing APIs
 

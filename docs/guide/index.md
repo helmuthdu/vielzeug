@@ -315,6 +315,7 @@ const api = await container.resolve(ApiToken);
 | **[Prism](/prism/)**             | Reactive SVG charts — line, bar, area, pie, and sparkline with signal-driven updates               |
 | **[Orbit](/orbit/)**             | Floating element positioning for tooltips, dropdowns, menus, and popovers                          |
 | **[Scroll](/scroll/)**           | Virtual list engine with variable-height rows, smooth scrolling, and zero layout thrash            |
+| **[Sentinel](/sentinel/)**       | Reactive observables for external environment state — viewport, network, media queries, element sizing |
 | **[Dnd](/dnd/)**                 | Framework-agnostic drag-and-drop with sortable lists, file-drop zones, and MIME filtering          |
 | **[Focus](/focus/)**             | Keyboard list navigation and focus restoration primitives for composite widgets                      |
 | **[Gesture](/gesture/)**         | Pointer swipe recognition primitives with lifecycle-owned handles                                    |

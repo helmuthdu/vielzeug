@@ -1,4 +1,4 @@
-import { createSwipeGesture } from '@vielzeug/gesture';
+import { createPanGesture } from '@vielzeug/gesture';
 import { bind, define, getHost, html, onCleanup, onMounted, prop, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
@@ -309,30 +309,10 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       }
     };
 
-    // ── Swipe ────────────────────────────────────────────────────────────────
-
-    const swipe = createSwipeGesture({
-      axis: () => (isHorizontal.value ? 'x' : 'y'),
-      onCommit: (detail) => {
-        if (detail.distance < 0) next();
-        else prev();
-      },
-      shouldStart: (event) => {
-        const path = event.composedPath();
-
-        return !path.some(
-          (node) =>
-            node instanceof HTMLElement &&
-            (node.tagName === 'BUTTON' || node.tagName === 'ORE-BUTTON' || node.tagName === 'ORE-PROGRESS'),
-        );
-      },
-      threshold: () => 48,
-    });
-
     const indicatorNav = createListControl<number>({
       getItems: () => Array.from({ length: slideCount.value }, (_, index) => index),
       loop: true,
-      onNavigate: (_action, index) => {
+      onNavigate: ({ index }) => {
         goTo(index);
         const dot = el.shadowRoot?.querySelector<HTMLElement>(`.indicator[data-index="${index}"]`);
 
@@ -373,7 +353,24 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     onMounted(() => {
-      const unmountSwipe = swipe.mount(el);
+      const pan = createPanGesture(el, {
+        axis: () => (isHorizontal.value ? 'x' : 'y'),
+        onEnd: ({ distance, reason }) => {
+          if (reason !== 'release' || Math.abs(distance) < 48) return;
+
+          if (distance < 0) next();
+          else prev();
+        },
+        shouldStart: (event) => {
+          const path = event.composedPath();
+
+          return !path.some(
+            (node) =>
+              node instanceof HTMLElement &&
+              (node.tagName === 'BUTTON' || node.tagName === 'ORE-BUTTON' || node.tagName === 'ORE-PROGRESS'),
+          );
+        },
+      });
       const shadowRoot = el.shadowRoot!;
       const slot = shadowRoot.querySelector<HTMLSlotElement>('slot')!;
 
@@ -392,9 +389,8 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       }
 
       return () => {
-        unmountSwipe();
+        pan.dispose();
         stopAutoplay();
-        swipe.dispose();
         slot.removeEventListener('slotchange', onSlotChange);
       };
     });

@@ -135,8 +135,8 @@ define<OreListProps>(LIST_TAG, {
     const listControl = createListControl<HTMLElement>({
       getItems,
       loop: true,
-      onNavigate: (_action, index) => {
-        getRow(getItems()[index])?.focus();
+      onNavigate: ({ item }) => {
+        getRow(item)?.focus();
       },
       signal: lifecycleSignal(onCleanup),
     });

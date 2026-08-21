@@ -203,6 +203,31 @@ describe('ore-carousel', () => {
     });
   });
 
+  describe('Pointer navigation', () => {
+    it('changes slide only after a qualifying pan is released', async () => {
+      fixture = await mount('ore-carousel', { html: slides });
+      await fixture.flush();
+
+      const pointer = {
+        bubbles: true,
+        composed: true,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: 'touch',
+      } as const;
+
+      fixture.element.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 100 }));
+      fixture.element.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 40 }));
+
+      expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 1');
+
+      fixture.element.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 40 }));
+      await fixture.flush();
+
+      expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 2');
+    });
+  });
+
   // ── Accessibility ────────────────────────────────────────────────────────────
 
   describe('Accessibility', () => {

@@ -2,6 +2,8 @@ import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 import type { DrawerElement } from './drawer';
 
+const pointer = { bubbles: true, composed: true, isPrimary: true, pointerType: 'touch' } as const;
+
 describe('ore-drawer', () => {
   let fixture: Fixture<HTMLElement>;
 
@@ -182,8 +184,9 @@ describe('ore-drawer', () => {
         get: () => 200,
       });
 
-      dragHandle?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 1 }));
-      dragHandle?.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 300, pointerId: 1 }));
+      dragHandle?.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 1 }));
+      dragHandle?.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 300, pointerId: 1 }));
+      dragHandle?.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 300, pointerId: 1 }));
       await fixture.flush();
 
       expect(panel?.style.transform).toBe('translateX(300px)');
@@ -204,15 +207,37 @@ describe('ore-drawer', () => {
         get: () => 200,
       });
 
-      dragHandle?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 7 }));
-      // Move stays below threshold so commit does not happen on pointermove.
-      dragHandle?.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 20, pointerId: 7 }));
-      // Release crosses threshold and should commit without snapping back.
-      dragHandle?.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 90, pointerId: 7 }));
+      dragHandle?.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 7 }));
+      dragHandle?.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 20, pointerId: 7 }));
+      dragHandle?.dispatchEvent(new PointerEvent('pointerup', { ...pointer, clientX: 90, pointerId: 7 }));
       await fixture.flush();
 
       expect(panel?.style.transform).toBe('translateX(200px)');
       expect(panel?.style.opacity).toBe('0.2');
+    });
+
+    it('snaps back instead of closing when the platform cancels a swipe', async () => {
+      fixture = await mount('ore-drawer', { attrs: { open: '' } });
+
+      const panel = fixture.query<HTMLElement>('.panel');
+      const dragHandle = fixture.query<HTMLElement>('.drag-handle');
+
+      expect(panel).toBeTruthy();
+      expect(dragHandle).toBeTruthy();
+
+      Object.defineProperty(panel!, 'offsetWidth', {
+        configurable: true,
+        get: () => 200,
+      });
+
+      dragHandle?.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 0, pointerId: 8 }));
+      dragHandle?.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 120, pointerId: 8 }));
+      dragHandle?.dispatchEvent(new PointerEvent('pointercancel', { ...pointer, clientX: 120, pointerId: 8 }));
+      await fixture.flush();
+
+      expect(panel?.style.transform).toBe('');
+      expect(panel?.style.opacity).toBe('');
+      expect(fixture.query('dialog[open]')).toBeTruthy();
     });
   });
 

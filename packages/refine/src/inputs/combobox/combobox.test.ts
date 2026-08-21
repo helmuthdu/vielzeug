@@ -379,6 +379,56 @@ describe('ore-combobox', () => {
 
       expect(onChange).toHaveBeenCalled();
     });
+
+    it('skips disabled options during keyboard navigation', async () => {
+      fixture = await mount('ore-combobox', {
+        attrs: { label: 'Country' },
+        html: `
+          <ore-combobox-option value="us">United States</ore-combobox-option>
+          <ore-combobox-option value="gb" disabled>United Kingdom</ore-combobox-option>
+          <ore-combobox-option value="de">Germany</ore-combobox-option>
+        `,
+      });
+
+      const onChange = vi.fn();
+
+      fixture.element.addEventListener('change', onChange);
+
+      const input = getInput()!;
+
+      input.focus();
+      fireKeyDown(input, { key: 'ArrowDown' });
+      fireKeyDown(input, { key: 'ArrowDown' });
+      fireKeyDown(input, { key: 'Enter' });
+
+      const target = (onChange.mock.calls[0]?.[0] as Event).target as HTMLElement & { value: string };
+
+      expect(target.value).toBe('de');
+    });
+
+    it('keeps keyboard focus when the pointer crosses a disabled option', async () => {
+      fixture = await mount('ore-combobox', {
+        attrs: { label: 'Country', value: 'us' },
+        html: `
+          <ore-combobox-option value="us">United States</ore-combobox-option>
+          <ore-combobox-option value="gb" disabled>United Kingdom</ore-combobox-option>
+          <ore-combobox-option value="de">Germany</ore-combobox-option>
+        `,
+      });
+
+      const input = getInput()!;
+
+      fireClick(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const options = fixture.queryAll<HTMLElement>('.option');
+
+      options[1]?.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, composed: true }));
+      await fixture.flush();
+
+      expect(fixture.query<HTMLElement>('.option[data-focused]')?.textContent).toContain('United States');
+    });
   });
 
   describe('Edge Cases', () => {

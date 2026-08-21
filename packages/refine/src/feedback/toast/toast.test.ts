@@ -132,7 +132,13 @@ describe('ore-toast', () => {
 
     const inner = wrapper.querySelector<HTMLElement>('.toast-inner')!;
 
-    const swipeEventInit = { bubbles: true, isPrimary: true, pointerId: 1, pointerType: 'touch' } as const;
+    const swipeEventInit = {
+      bubbles: true,
+      composed: true,
+      isPrimary: true,
+      pointerId: 1,
+      pointerType: 'touch',
+    } as const;
 
     wrapper.dispatchEvent(new PointerEvent('pointerdown', { ...swipeEventInit, clientX: 0 }));
     wrapper.dispatchEvent(new PointerEvent('pointermove', { ...swipeEventInit, clientX: 300 }));
@@ -143,6 +149,38 @@ describe('ore-toast', () => {
     expect(fixture.query(`[data-toast-id="${id}"]`)).toBeNull();
 
     window.matchMedia = originalMatchMedia;
+  });
+
+  it('does not start a swipe from an action button', async () => {
+    const onAction = vi.fn();
+    const id = service.add({
+      actions: [{ label: 'Undo', onClick: onAction }],
+      duration: 0,
+      message: 'Actionable',
+    });
+
+    await fixture.flush();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    const wrapper = fixture.query<HTMLElement>(`[data-toast-id="${id}"]`)!;
+    const inner = wrapper.querySelector<HTMLElement>('.toast-inner')!;
+    const action = wrapper.querySelector<HTMLElement>('ore-button')!;
+    const pointerInit = {
+      bubbles: true,
+      composed: true,
+      isPrimary: true,
+      pointerId: 2,
+      pointerType: 'touch',
+    } as const;
+
+    action.dispatchEvent(new PointerEvent('pointerdown', { ...pointerInit, clientX: 0 }));
+    action.dispatchEvent(new PointerEvent('pointermove', { ...pointerInit, clientX: 40 }));
+    action.dispatchEvent(new PointerEvent('pointerup', { ...pointerInit, clientX: 40 }));
+
+    expect(inner.style.transform).toBe('');
+
+    action.click();
+    expect(onAction).toHaveBeenCalledOnce();
   });
 
   it('passes axe checks', async () => {

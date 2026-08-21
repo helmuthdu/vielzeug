@@ -1,22 +1,16 @@
 import {
   createListNavigation,
+  type ListNavigationOptions as FocusListNavigationOptions,
   type ListKeyAction,
   type ListNavigation,
   type ListNavigationAction,
+  type ListNavigationChange,
+  type ListNavigationTypeaheadOptions,
 } from '@vielzeug/focus';
 import { type Readable, signal } from '@vielzeug/ripple';
 
-export type ListNavigationOptions<T> = {
-  direction?: 'ltr' | 'rtl' | (() => 'ltr' | 'rtl');
+export type ListNavigationOptions<T> = Omit<FocusListNavigationOptions<T>, 'disabled'> & {
   disabled?: Readable<boolean | undefined>;
-  getItemLabel?: (item: T, index: number) => string;
-  getItems: () => T[];
-  isItemDisabled?: (item: T, index: number) => boolean;
-  keys?: Partial<Record<ListNavigationAction, string[]>>;
-  loop?: boolean;
-  onNavigate?: (action: ListKeyAction, index: number, event?: KeyboardEvent) => void;
-  orientation?: 'both' | 'horizontal' | 'vertical' | (() => 'both' | 'horizontal' | 'vertical');
-  signal?: AbortSignal;
 };
 
 export type ListControl<T> = {
@@ -31,24 +25,24 @@ export type ListControl<T> = {
   set(index: number): number;
 };
 
-export type { ListKeyAction, ListNavigationAction };
+export type { ListKeyAction, ListNavigationAction, ListNavigationChange, ListNavigationTypeaheadOptions };
 
 export const createListControl = <T>(options: ListNavigationOptions<T>): ListControl<T> => {
   const focusedIndex = signal(-1);
+  let removeAbortListener: (() => void) | undefined;
   const navigation: ListNavigation<T> = createListNavigation<T>({
     direction: options.direction,
     disabled: () => Boolean(options.disabled?.value),
-    getItemLabel: options.getItemLabel,
     getItems: options.getItems,
     isItemDisabled: options.isItemDisabled,
     keys: options.keys,
     loop: options.loop,
-    onNavigate: (action, index, event) => {
-      focusedIndex.value = index;
-      options.onNavigate?.(action, index, event);
+    onNavigate: (change) => {
+      focusedIndex.value = change.index;
+      options.onNavigate?.(change);
     },
     orientation: options.orientation,
-    signal: options.signal,
+    typeahead: options.typeahead,
   });
 
   const syncIndex = (): void => {
@@ -84,8 +78,22 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
     return handled;
   };
 
+  const dispose = (): void => {
+    navigation.dispose();
+    syncIndex();
+    removeAbortListener?.();
+    removeAbortListener = undefined;
+  };
+
+  if (options.signal?.aborted) {
+    dispose();
+  } else if (options.signal) {
+    options.signal?.addEventListener('abort', dispose, { once: true });
+    removeAbortListener = () => options.signal?.removeEventListener('abort', dispose);
+  }
+
   return {
-    dispose: () => navigation.dispose(),
+    dispose,
     get disposed() {
       return navigation.disposed;
     },
@@ -95,6 +103,6 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
     navigate,
     reset,
     set,
-    [Symbol.dispose]: () => navigation.dispose(),
+    [Symbol.dispose]: dispose,
   };
 };
