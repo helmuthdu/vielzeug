@@ -146,7 +146,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  listEl.value?.removeEventListener('keydown', nav?.handleKeydown);
+  if (nav) listEl.value?.removeEventListener('keydown', nav.handleKeydown);
   nav?.dispose();
 });
 </script>
@@ -154,7 +154,7 @@ onUnmounted(() => {
 <template>
   <div ref="listEl" role="tablist">
     <button
-      v-for="(tab, i) in props.tabs"
+      v-for="(tab, i) in tabs"
       :key="tab.id"
       :ref="(el) => { tabEls[i] = el as HTMLButtonElement | null; }"
       role="tab"
@@ -170,7 +170,7 @@ onUnmounted(() => {
   import { onMount } from 'svelte';
   import { createListNavigation } from '@vielzeug/focus';
 
-  let { tabs } = $props<{ tabs: Array<{ id: string; label: string }> }>();
+  let { tabs }: { tabs: Array<{ id: string; label: string }> } = $props();
 
   let listEl: HTMLDivElement;
   let tabEls: HTMLButtonElement[] = [];

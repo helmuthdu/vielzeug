@@ -160,7 +160,7 @@ onUnmounted(() => {
   let {
     onswipeleft = () => {},
     onswiperight = () => {},
-  } = $props<{ onswipeleft: () => void; onswiperight: () => void }>();
+  }: { onswipeleft: () => void; onswiperight: () => void } = $props();
 
   let rowEl: HTMLDivElement;
 
