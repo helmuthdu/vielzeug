@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/forge
 
-This log was last generated on Tue, 18 Aug 2026 11:28:52 GMT and should not be manually modified.
+This log was last generated on Fri, 21 Aug 2026 16:02:58 GMT and should not be manually modified.
+
+## 2.2.1
+Fri, 21 Aug 2026 16:02:58 GMT
+
+### Patches
+
+- fix: use structural AnySchema type for customValidator, fix form field test typing
 
 ## 2.2.0
 Tue, 18 Aug 2026 11:28:52 GMT

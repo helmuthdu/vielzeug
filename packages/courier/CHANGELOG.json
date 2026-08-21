@@ -5,6 +5,25 @@
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: resolve TypeScript type errors in test files",
+            "commit": "30b02dbd2108dfa933b0a4401085bbb909b99716"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: add query cache delete and improve optimistic rollback guidance",
+            "commit": "7fb9d8b5576cad5faf417b8b3e7c9a4dcfa1a999"
+          }
+        ]
+      },
+      "date": "Fri, 21 Aug 2026 16:02:58 GMT",
+      "tag": "@vielzeug/courier_v2.2.2",
+      "version": "2.2.2"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "fix: query cache cancelAll() now clears entry.promise and entry.controller so a subsequent fetch() starts a fresh request instead of returning the stale rejected promise from the cancelled in-flight fetch; fetchEntry success/rejection handlers guard with entry.promise === promise so a superseded in-flight fetch cannot clobber a newer fetch's cache state",
             "commit": "0a06dd6bdf073367d7b93e1dd90fa33401eccfa6"
           },

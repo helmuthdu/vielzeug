@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/familiar
 
-This log was last generated on Sun, 16 Aug 2026 09:15:40 GMT and should not be manually modified.
+This log was last generated on Fri, 21 Aug 2026 16:02:58 GMT and should not be manually modified.
+
+## 2.0.2
+Fri, 21 Aug 2026 16:02:58 GMT
+
+### Patches
+
+- fix: resolve TypeScript type errors in test files
 
 ## 2.0.1
 Sun, 16 Aug 2026 09:15:40 GMT

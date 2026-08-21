@@ -2,6 +2,28 @@
   "entries": [
     {
       "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.3`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `^2.2.3`"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: widen MountOptions.container to accept ShadowRoot",
+            "commit": "30b02dbd2108dfa933b0a4401085bbb909b99716"
+          }
+        ]
+      },
+      "date": "Fri, 21 Aug 2026 16:02:58 GMT",
+      "tag": "@vielzeug/ore_v2.0.11",
+      "version": "2.0.11"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

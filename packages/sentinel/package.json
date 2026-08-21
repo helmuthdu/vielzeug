@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/sentinel",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Reactive observables for external browser environment state",
   "repository": {
     "type": "git",

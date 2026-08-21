@@ -1,6 +1,16 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Thu, 20 Aug 2026 10:12:48 GMT and should not be manually modified.
+This log was last generated on Fri, 21 Aug 2026 16:02:58 GMT and should not be manually modified.
+
+## 2.2.4
+Fri, 21 Aug 2026 16:02:58 GMT
+
+### Patches
+
+- fix: resolve TypeScript type errors in test files
+- refactor: extract focus and swipe primitives into dedicated packages
+- feat: initial release
+- fix: navbar stuck in mobile mode after resizing back to desktop — untrack breakpoint watch callback to prevent mediaMatches from becoming a dependency that triggers effect re-run and disposes the MediaQueryList listener
 
 ## 2.2.3
 Thu, 20 Aug 2026 10:12:48 GMT

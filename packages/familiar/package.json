@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/familiar",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Typed ES module Worker pools with queueing, streaming, and AbortSignal cancellation",
   "repository": {
     "type": "git",

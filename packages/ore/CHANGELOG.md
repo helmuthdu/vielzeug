@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Thu, 20 Aug 2026 10:12:48 GMT and should not be manually modified.
+This log was last generated on Fri, 21 Aug 2026 16:02:58 GMT and should not be manually modified.
+
+## 2.0.11
+Fri, 21 Aug 2026 16:02:58 GMT
+
+### Patches
+
+- fix: widen MountOptions.container to accept ShadowRoot
 
 ## 2.0.10
 Thu, 20 Aug 2026 10:12:48 GMT

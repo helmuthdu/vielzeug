@@ -4,6 +4,18 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.3`"
+          }
+        ]
+      },
+      "date": "Fri, 21 Aug 2026 16:02:58 GMT",
+      "tag": "@vielzeug/ledger_v2.2.2",
+      "version": "2.2.2"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.2`"
           }
         ]

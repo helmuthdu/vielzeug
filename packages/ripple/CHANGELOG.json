@@ -5,6 +5,20 @@
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: resolve TypeScript type errors in test files",
+            "commit": "30b02dbd2108dfa933b0a4401085bbb909b99716"
+          }
+        ]
+      },
+      "date": "Fri, 21 Aug 2026 16:02:58 GMT",
+      "tag": "@vielzeug/ripple_v2.2.3",
+      "version": "2.2.3"
+    },
+    {
+      "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "fix: computed nodes recover from first-run derivation failures — collect() commits partial dependencies when observer.dependencies is empty so a later source change can trigger refresh; ComputedNode.get value tracks itself before refresh so a consumer that reads a failing computed still depends on it and re-runs when the computed recovers",
             "commit": "145ea47ac74ffe82712ee7d5f514c9e3a61261e2"
           }

@@ -1,6 +1,14 @@
 # Change Log - @vielzeug/courier
 
-This log was last generated on Wed, 19 Aug 2026 06:57:36 GMT and should not be manually modified.
+This log was last generated on Fri, 21 Aug 2026 16:02:58 GMT and should not be manually modified.
+
+## 2.2.2
+Fri, 21 Aug 2026 16:02:58 GMT
+
+### Patches
+
+- fix: resolve TypeScript type errors in test files
+- feat: add query cache delete and improve optimistic rollback guidance
 
 ## 2.2.1
 Wed, 19 Aug 2026 06:57:36 GMT

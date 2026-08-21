@@ -1,4 +1,19 @@
 {
-  "entries": [],
+  "entries": [
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: add framework-neutral pointer pan recognition primitive",
+            "commit": "bf65e9289f5f75c1d4404ab63286eda3e51ee60b"
+          }
+        ]
+      },
+      "date": "Fri, 21 Aug 2026 16:02:58 GMT",
+      "tag": "@vielzeug/gesture_v1.1.0",
+      "version": "1.1.0"
+    }
+  ],
   "name": "@vielzeug/gesture"
 }

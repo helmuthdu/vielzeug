@@ -2,6 +2,25 @@
   "entries": [
     {
       "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/tempo\" to `2.1.1`"
+          }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: locale-aware internet names, Base58 bitcoin addresses, IBAN validation, BoundApi type, IIFE entry with locales",
+            "commit": "30b02dbd2108dfa933b0a4401085bbb909b99716"
+          }
+        ]
+      },
+      "date": "Fri, 21 Aug 2026 16:02:58 GMT",
+      "tag": "@vielzeug/illusionist_v2.3.0",
+      "version": "2.3.0"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

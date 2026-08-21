@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/vault
 
-This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+This log was last generated on Fri, 21 Aug 2026 16:02:58 GMT and should not be manually modified.
+
+## 2.3.1
+Fri, 21 Aug 2026 16:02:58 GMT
+
+### Patches
+
+- fix: simplify SchemaEntry type to prevent never inference in RecordOf/KeyOf
 
 ## 2.3.0
 Mon, 17 Aug 2026 10:42:29 GMT

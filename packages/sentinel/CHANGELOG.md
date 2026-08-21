@@ -1,11 +1,9 @@
-# Change Log - @vielzeug/gesture
+# Change Log - @vielzeug/sentinel
 
 This log was last generated on Fri, 21 Aug 2026 16:02:58 GMT and should not be manually modified.
 
-## 1.1.0
+## 2.0.1
 Fri, 21 Aug 2026 16:02:58 GMT
 
-### Minor changes
-
-- feat: add framework-neutral pointer pan recognition primitive
+_Initial release_
 

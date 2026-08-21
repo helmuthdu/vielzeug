@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/spell
 
-This log was last generated on Sun, 16 Aug 2026 09:15:40 GMT and should not be manually modified.
+This log was last generated on Fri, 21 Aug 2026 16:02:58 GMT and should not be manually modified.
+
+## 2.1.2
+Fri, 21 Aug 2026 16:02:58 GMT
+
+### Patches
+
+- fix: mark _parseFullAsync/_parseFullSync as internal, add safeParseAsync to SchemaSurface
 
 ## 2.1.1
 Sun, 16 Aug 2026 09:15:40 GMT

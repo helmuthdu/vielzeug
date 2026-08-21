@@ -4,6 +4,61 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/dnd\" to `2.0.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/focus\" to `2.1.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/gesture\" to `1.1.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/orbit\" to `2.1.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ore\" to `2.0.11`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.3`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/sentinel\" to `2.0.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/tempo\" to `2.1.1`"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: resolve TypeScript type errors in test files",
+            "commit": "30b02dbd2108dfa933b0a4401085bbb909b99716"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: extract focus and swipe primitives into dedicated packages",
+            "commit": "626913540f3f8dcd5d6c3c221c9df9bed4a33521"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: initial release",
+            "commit": "09aa1487008c79e99a2dea8443dac889a4d675e6"
+          },
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: navbar stuck in mobile mode after resizing back to desktop — untrack breakpoint watch callback to prevent mediaMatches from becoming a dependency that triggers effect re-run and disposes the MediaQueryList listener",
+            "commit": "2ee1436d2103c5f2e697f8768a06e708531ffa12"
+          }
+        ]
+      },
+      "date": "Fri, 21 Aug 2026 16:02:58 GMT",
+      "tag": "@vielzeug/refine_v2.2.4",
+      "version": "2.2.4"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/ore\" to `2.0.10`"
           }
         ],

@@ -4,6 +4,25 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.3`"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: resolve TypeScript type errors in test files",
+            "commit": "30b02dbd2108dfa933b0a4401085bbb909b99716"
+          }
+        ]
+      },
+      "date": "Fri, 21 Aug 2026 16:02:58 GMT",
+      "tag": "@vielzeug/pulse_v2.2.2",
+      "version": "2.2.2"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.2`"
           }
         ]

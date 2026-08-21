@@ -1,4 +1,19 @@
 {
-  "entries": [],
+  "entries": [
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: add framework-neutral list navigation and focus restoration primitives",
+            "commit": "626913540f3f8dcd5d6c3c221c9df9bed4a33521"
+          }
+        ]
+      },
+      "date": "Fri, 21 Aug 2026 16:02:58 GMT",
+      "tag": "@vielzeug/focus_v2.1.0",
+      "version": "2.1.0"
+    }
+  ],
   "name": "@vielzeug/focus"
 }

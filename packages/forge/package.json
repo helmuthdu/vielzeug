@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/forge",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Immutable typed form state with focused fields and explicit full-form validation",
   "repository": {
     "type": "git",

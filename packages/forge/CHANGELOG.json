@@ -2,6 +2,34 @@
   "entries": [
     {
       "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/spell\" to `2.1.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/vault\" to `2.3.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/spell\" to `2.1.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/vault\" to `2.3.1`"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: use structural AnySchema type for customValidator, fix form field test typing",
+            "commit": "30b02dbd2108dfa933b0a4401085bbb909b99716"
+          }
+        ]
+      },
+      "date": "Fri, 21 Aug 2026 16:02:58 GMT",
+      "tag": "@vielzeug/forge_v2.2.1",
+      "version": "2.2.1"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

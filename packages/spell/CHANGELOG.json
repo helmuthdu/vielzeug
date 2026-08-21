@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "fix: mark _parseFullAsync/_parseFullSync as internal, add safeParseAsync to SchemaSurface",
+            "commit": "30b02dbd2108dfa933b0a4401085bbb909b99716"
+          }
+        ]
+      },
+      "date": "Fri, 21 Aug 2026 16:02:58 GMT",
+      "tag": "@vielzeug/spell_v2.1.2",
+      "version": "2.1.2"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/arsenal\" to `2.1.0`"
