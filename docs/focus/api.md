@@ -9,9 +9,9 @@ description: API reference for @vielzeug/focus navigation and restoration primit
 
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
-| `createListNavigation()` | Build keyboard navigation for composite widgets | Sync | Requires item lookup callback |
-| `restoreFocus()` | Restore focus to a target or fallback | Sync | Returns `false` for disconnected targets |
-| `captureFocus()` | Capture active focus for later restoration | Sync | Dispose when no longer needed |
+| `createListNavigation()` | Build keyboard navigation for composite widgets | Sync | Disabled items require an explicit predicate |
+| `restoreFocus()` | Restore focus to a target or fallback | Sync | Returns `false` when neither target can receive focus |
+| `captureFocus()` | Capture active focus for one later restoration | Sync | The returned function is one-shot |
 
 ## Package Entry Point
 
@@ -27,35 +27,40 @@ description: API reference for @vielzeug/focus navigation and restoration primit
 function createListNavigation<T>(options: ListNavigationOptions<T>): ListNavigation<T>;
 ```
 
-Creates a reusable keyboard navigation controller.
+Creates a keyboard navigation controller with an internal active index.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `options` | `ListNavigationOptions<T>` | Items, key bindings, callbacks, and lifecycle options. |
+| `options` | `ListNavigationOptions<T>` | Item lookup, key mapping, navigation, typeahead, and lifecycle options. |
 
 **Returns:** `ListNavigation<T>`.
+
+**Example**
 
 ```ts
 import { createListNavigation } from '@vielzeug/focus';
 
 const nav = createListNavigation({
   getItems: () => rows,
-  onNavigate: (_action, index) => rows[index]?.focus(),
+  isItemDisabled: (item) => item.matches('[aria-disabled="true"]'),
+  onNavigate: ({ item }) => item.focus(),
 });
 ```
 
 | Member | Return | Contract |
 | --- | --- | --- |
-| `handleKeydown(event)` | `boolean` | Handles configured navigation keys and typeahead. |
-| `navigate(action)` | `number` | Programmatic next/prev/first/last navigation. |
-| `set(index)` | `number` | Programmatically sets current index when allowed. |
-| `reset()` | `void` | Clears current index to `-1`. |
-| `getIndex()` | `number` | Current navigation index. |
-| `getActiveItem()` | `T \| undefined` | Item at current index. |
-| `dispose()` | `void` | Aborts `disposalSignal` and clears typeahead timer. Idempotent. |
-| `disposed` | `boolean` | `true` after first `dispose()`. |
-| `disposalSignal` | `AbortSignal` | Aborts when the navigation handle is disposed. |
+| `handleKeydown(event)` | `boolean` | Handles configured navigation keys and optional typeahead. |
+| `navigate(action)` | `number` | Moves programmatically and returns the active index, or `-1`. |
+| `set(index)` | `number` | Sets the active index when usable, or resets it to `-1`. |
+| `reset()` | `void` | Clears the active index and typeahead sequence. |
+| `getIndex()` | `number` | Returns the current usable index, or `-1`. |
+| `getActiveItem()` | `T \| undefined` | Returns the item at the current usable index. |
+| `dispose()` | `void` | Permanently disables the controller and aborts `disposalSignal`. |
+| `disposed` | `boolean` | Indicates whether the controller is permanently disabled. |
+| `disposalSignal` | `AbortSignal` | Aborts when the controller is disposed. |
 | `[Symbol.dispose]()` | `void` | Calls `dispose()`. |
+
+---
 
 ### `restoreFocus()`
 
@@ -63,19 +68,24 @@ const nav = createListNavigation({
 function restoreFocus(target: FocusTarget, options?: RestoreFocusOptions): boolean;
 ```
 
-Attempts to focus `target` when it is connected, not disabled, and not inert. Falls back to `options.fallback` when the primary target cannot receive focus.
+Attempts to focus a connected target that is neither disabled nor inert.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `target` | `FocusTarget` | Element or getter returning the element to focus. |
-| `options` | `RestoreFocusOptions` | Optional fallback target and `preventScroll` flag. |
+| `target` | `FocusTarget` | Element or getter resolved when `restoreFocus()` is called. |
+| `options` | `RestoreFocusOptions` | Optional lazy fallback and `preventScroll` flag. |
 
 **Returns:** `boolean` — `true` when focus moved to the target or fallback.
+
+**Example**
 
 ```ts
 import { restoreFocus } from '@vielzeug/focus';
 
-restoreFocus(triggerEl, { fallback: () => document.body, preventScroll: true });
+restoreFocus(() => triggerElement, {
+  fallback: () => document.body,
+  preventScroll: true,
+});
 ```
 
 ---
@@ -83,36 +93,27 @@ restoreFocus(triggerEl, { fallback: () => document.body, preventScroll: true });
 ### `captureFocus()`
 
 ```ts
-function captureFocus(options?: CaptureFocusOptions): FocusRestoration;
+function captureFocus(options?: CaptureFocusOptions): FocusRestorer;
 ```
 
-Captures a focus target (default: the deepest active element, including inside shadow roots) and returns a restoration handle. Dispose the handle when the owning scope unmounts.
+Captures the deepest active element immediately and returns a one-shot restoration function.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `options` | `CaptureFocusOptions` | Optional `target`, `fallback`, `preventScroll`, and `signal`. |
+| `options` | `CaptureFocusOptions` | Optional lazy fallback, `preventScroll`, and cancellation signal. |
 
-**Returns:** `FocusRestoration`.
+**Returns:** `FocusRestorer`. Its first call attempts restoration; later calls return `false`.
+
+**Example**
 
 ```ts
 import { captureFocus } from '@vielzeug/focus';
 
-const restore = captureFocus();
+const restore = captureFocus({ fallback: () => document.body });
 
 dialog.showModal();
-dialog.addEventListener('close', () => {
-  restore.restore();
-  restore.dispose();
-}, { once: true });
+dialog.addEventListener('close', restore, { once: true });
 ```
-
-| `FocusRestoration` member | Return | Contract |
-| --- | --- | --- |
-| `restore()` | `boolean` | Restores focus to the captured target (or fallback). Returns `false` after `dispose()`. |
-| `dispose()` | `void` | Aborts `disposalSignal` and marks the handle disposed. Idempotent. |
-| `disposed` | `boolean` | `true` after first `dispose()`. |
-| `disposalSignal` | `AbortSignal` | Aborts when the handle is disposed. |
-| `[Symbol.dispose]()` | `void` | Calls `dispose()`. |
 
 ## Types
 
@@ -122,18 +123,29 @@ type MaybeGetter<T> = T | (() => T);
 type ListNavigationAction = 'first' | 'last' | 'next' | 'prev';
 type ListKeyAction = ListNavigationAction | 'typeahead';
 
+type ListNavigationChange<T> = {
+  action: ListKeyAction;
+  event?: KeyboardEvent;
+  index: number;
+  item: T;
+};
+
+type ListNavigationTypeaheadOptions<T> = {
+  delayMs?: number;
+  getLabel: (item: T, index: number) => string;
+};
+
 type ListNavigationOptions<T> = {
-  direction?: 'ltr' | 'rtl' | (() => 'ltr' | 'rtl');
+  direction?: MaybeGetter<'ltr' | 'rtl'>;
   disabled?: MaybeGetter<boolean | undefined>;
-  getItemLabel?: (item: T, index: number) => string;
-  getItems: () => T[];
+  getItems: () => readonly T[];
   isItemDisabled?: (item: T, index: number) => boolean;
-  keys?: Partial<Record<ListNavigationAction, string[]>>;
+  keys?: Partial<Record<ListNavigationAction, readonly string[]>>;
   loop?: boolean;
-  onNavigate?: (action: ListKeyAction, index: number, event?: KeyboardEvent) => void;
-  orientation?: 'both' | 'horizontal' | 'vertical' | (() => 'both' | 'horizontal' | 'vertical');
+  onNavigate?: (change: ListNavigationChange<T>) => void;
+  orientation?: MaybeGetter<'both' | 'horizontal' | 'vertical'>;
   signal?: AbortSignal;
-  typeaheadDelayMs?: number;
+  typeahead?: ListNavigationTypeaheadOptions<T>;
 };
 
 type ListNavigation<T> = {
@@ -158,20 +170,13 @@ type RestoreFocusOptions = {
 
 type CaptureFocusOptions = RestoreFocusOptions & {
   signal?: AbortSignal;
-  target?: FocusTarget;
 };
 
-type FocusRestoration = {
-  readonly disposalSignal: AbortSignal;
-  readonly disposed: boolean;
-  dispose(): void;
-  restore(): boolean;
-  [Symbol.dispose](): void;
-};
+type FocusRestorer = () => boolean;
 ```
 
-`typeaheadDelayMs` defaults to `500`. Non-finite or non-positive values are ignored and fall back to the default.
+`typeahead.delayMs` defaults to `500`. Non-finite or non-positive values use the default.
 
 ## Errors
 
-`@vielzeug/focus` does not export custom error classes in v1.
+`@vielzeug/focus` does not export custom error classes.

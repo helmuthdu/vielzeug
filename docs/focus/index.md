@@ -24,7 +24,7 @@ list.addEventListener('keydown', (event) => {
 });
 
 // After
-const nav = createListNavigation({ getItems, onNavigate: (_action, index) => rows[index]?.focus() });
+const nav = createListNavigation({ getItems, onNavigate: ({ item }) => item.focus() });
 list.addEventListener('keydown', nav.handleKeydown);
 ```
 
@@ -33,7 +33,7 @@ list.addEventListener('keydown', nav.handleKeydown);
 | Bundle size | n/a | <PackageInfo package="focus" type="size" /> |
 | Zero dependencies | n/a | <ore-icon name="check" size="16"></ore-icon> |
 | RTL mirroring | Manual | Built in |
-| Typeahead | Manual | Optional via `getItemLabel` |
+| Typeahead | Manual | Optional via `typeahead` |
 | Focus restoration | Manual capture | `captureFocus()` / `restoreFocus()` |
 
 <div class="decision-callout">
@@ -71,12 +71,12 @@ const restore = captureFocus();
 const nav = createListNavigation({
   getItems: () => items,
   loop: true,
-  onNavigate: (_action, index) => items[index]?.focus(),
+  onNavigate: ({ item }) => item.focus(),
 });
 
 container.addEventListener('keydown', nav.handleKeydown);
 
-restore.restore();
+restore();
 nav.dispose();
 ```
 

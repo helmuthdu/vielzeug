@@ -18,12 +18,12 @@ const restore = captureFocus();
 const listNavigation = createListNavigation({
   getItems: () => items,
   loop: true,
-  onNavigate: (_action, index) => items[index]?.focus(),
+  onNavigate: ({ item }) => item.focus(),
 });
 
 listElement.addEventListener('keydown', listNavigation.handleKeydown);
 
-restore.restore();
+restore();
 listNavigation.dispose();
 ```
 

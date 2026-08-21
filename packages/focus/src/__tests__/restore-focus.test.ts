@@ -1,4 +1,4 @@
-import { captureFocus, restoreFocus } from '../restore-focus';
+import { captureFocus, restoreFocus } from '../index';
 
 describe('restoreFocus', () => {
   it('restores focus to a connected target', () => {
@@ -12,13 +12,11 @@ describe('restoreFocus', () => {
     expect(document.activeElement).toBe(one);
   });
 
-  it('returns false when target is disconnected', () => {
-    const button = document.createElement('button');
-
-    expect(restoreFocus(button)).toBe(false);
+  it('returns false when the target is disconnected', () => {
+    expect(restoreFocus(document.createElement('button'))).toBe(false);
   });
 
-  it('uses fallback when primary target cannot be focused', () => {
+  it('uses the fallback when the primary target cannot be focused', () => {
     const disabled = document.createElement('button');
     const fallback = document.createElement('button');
 
@@ -29,7 +27,17 @@ describe('restoreFocus', () => {
     expect(document.activeElement).toBe(fallback);
   });
 
-  it('returns true for targets focused inside shadow DOM', () => {
+  it('uses the fallback when an eligible target does not accept focus', () => {
+    const target = document.createElement('div');
+    const fallback = document.createElement('button');
+
+    document.body.append(target, fallback);
+
+    expect(restoreFocus(target, { fallback })).toBe(true);
+    expect(document.activeElement).toBe(fallback);
+  });
+
+  it('restores focus inside shadow DOM', () => {
     const host = document.createElement('div');
     const shadow = host.attachShadow({ mode: 'open' });
     const button = document.createElement('button');
@@ -42,7 +50,7 @@ describe('restoreFocus', () => {
 });
 
 describe('captureFocus', () => {
-  it('captures current focus and restores it later', () => {
+  it('returns a one-shot callback that restores captured focus', () => {
     const trigger = document.createElement('button');
     const panel = document.createElement('button');
 
@@ -52,26 +60,12 @@ describe('captureFocus', () => {
     const restore = captureFocus();
 
     panel.focus();
-    expect(document.activeElement).toBe(panel);
-    expect(restore.restore()).toBe(true);
+    expect(restore()).toBe(true);
     expect(document.activeElement).toBe(trigger);
+    expect(restore()).toBe(false);
   });
 
-  it('returns false after dispose', () => {
-    const trigger = document.createElement('button');
-
-    document.body.append(trigger);
-    trigger.focus();
-
-    const restore = captureFocus();
-
-    restore.dispose();
-    expect(restore.restore()).toBe(false);
-    expect(restore.disposed).toBe(true);
-    expect(restore.disposalSignal.aborted).toBe(true);
-  });
-
-  it('captures deep active element by default', () => {
+  it('captures the deepest active element', () => {
     const host = document.createElement('div');
     const shadow = host.attachShadow({ mode: 'open' });
     const trigger = document.createElement('button');
@@ -84,6 +78,40 @@ describe('captureFocus', () => {
     const restore = captureFocus();
 
     panel.focus();
-    expect(restore.restore()).toBe(true);
+    expect(restore()).toBe(true);
+  });
+
+  it('uses a lazy fallback when the captured element disconnects', () => {
+    const trigger = document.createElement('button');
+    const fallback = document.createElement('button');
+
+    document.body.append(trigger, fallback);
+    trigger.focus();
+
+    const restore = captureFocus({ fallback: () => fallback });
+
+    trigger.remove();
+    expect(restore()).toBe(true);
+    expect(document.activeElement).toBe(fallback);
+  });
+
+  it('is cancelled when its signal aborts', () => {
+    const trigger = document.createElement('button');
+    const controller = new AbortController();
+
+    document.body.append(trigger);
+    trigger.focus();
+
+    const restore = captureFocus({ signal: controller.signal });
+
+    controller.abort();
+    expect(restore()).toBe(false);
+  });
+
+  it('starts cancelled when given an already-aborted signal', () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    expect(captureFocus({ signal: controller.signal })()).toBe(false);
   });
 });

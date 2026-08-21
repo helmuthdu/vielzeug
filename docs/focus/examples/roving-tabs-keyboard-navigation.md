@@ -30,18 +30,24 @@ const tabs = Array.from(tablist.querySelectorAll<HTMLButtonElement>('[role="tab"
 
 const nav = createListNavigation({
   getItems: () => tabs.filter((tab) => tab.getAttribute('aria-disabled') !== 'true'),
+  isItemDisabled: (tab) => tab.getAttribute('aria-disabled') === 'true',
   loop: true,
-  onNavigate: (_action, index) => {
+  onNavigate: ({ index, item }) => {
     // Roving tabindex: only the focused tab is in the tab order.
-    tabs.forEach((tab, i) => {
-      const isActive = tab === tabs[index];
+    tabs.forEach((tab) => {
+      const isActive = tab === item;
       tab.tabIndex = isActive ? 0 : -1;
       tab.setAttribute('aria-selected', String(isActive));
     });
-    tabs[index]?.focus();
+    item.focus();
+
+    // Keep the handle's index aligned with pointer-driven focus changes.
+    activeTabIndex = index;
   },
   orientation: 'horizontal',
 });
+
+let activeTabIndex = 0;
 
 tablist.addEventListener('keydown', (event) => {
   // Let Focus handle Arrow/Home/End; handle activation separately.
@@ -51,6 +57,14 @@ tablist.addEventListener('keydown', (event) => {
     return;
   }
   nav.handleKeydown(event);
+});
+
+// Keep the handle's index in sync when focus enters from a pointer click.
+tablist.addEventListener('click', (event) => {
+  const tab = (event.target as HTMLElement).closest('[role="tab"]') as HTMLButtonElement | null;
+  if (!tab) return;
+  const index = tabs.indexOf(tab);
+  if (index >= 0) nav.set(index);
 });
 
 function activateTab(tab: HTMLButtonElement): void {
@@ -63,7 +77,7 @@ function activateTab(tab: HTMLButtonElement): void {
 ### Pitfalls
 
 - **Roving tabindex is your responsibility.** Focus moves the active element but does not toggle `tabindex` — call `set(index)` from pointer click handlers so the next Tab keypress lands on the clicked tab, not the previously focused one.
-- **Filter disabled tabs in `getItems()`, not in `onNavigate`.** Returning a filtered list keeps index math consistent; skipping inside `onNavigate` desyncs the internal index from the visible focus.
+- **Filter disabled tabs in `getItems()`, not in `onNavigate`.** Returning a filtered list keeps index math consistent; skipping inside `onNavigate` desyncs the internal index from the visible focus. Pair it with `isItemDisabled` so the handle also skips disabled items during wrapping.
 - **Separate focus movement from activation.** Automatic activation (focus → activate) is simpler but hostile to screen-magnifier users who Arrow through tabs to read labels. Default to manual activation on Enter/Space.
 - **Use `set(index)` when focus enters from pointer.** Otherwise the next Arrow key moves from the last keyboard-focused tab, not the clicked one.
 

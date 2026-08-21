@@ -8,16 +8,9 @@ export type RestoreFocusOptions = {
 
 export type CaptureFocusOptions = RestoreFocusOptions & {
   signal?: AbortSignal;
-  target?: FocusTarget;
 };
 
-export type FocusRestoration = {
-  [Symbol.dispose](): void;
-  readonly disposalSignal: AbortSignal;
-  dispose(): void;
-  readonly disposed: boolean;
-  restore(): boolean;
-};
+export type FocusRestorer = () => boolean;
 
 const resolveTarget = (target: FocusTarget): FocusableElement | null | undefined => {
   return typeof target === 'function' ? target() : target;
@@ -62,8 +55,8 @@ const focusAndVerify = (target: FocusableElement, preventScroll: boolean | undef
 export const restoreFocus = (target: FocusTarget, options: RestoreFocusOptions = {}): boolean => {
   const next = resolveTarget(target);
 
-  if (next && canRestoreTo(next)) {
-    return focusAndVerify(next, options.preventScroll);
+  if (next && canRestoreTo(next) && focusAndVerify(next, options.preventScroll)) {
+    return true;
   }
 
   if (!options.fallback) return false;
@@ -75,39 +68,43 @@ export const restoreFocus = (target: FocusTarget, options: RestoreFocusOptions =
   return focusAndVerify(fallback, options.preventScroll);
 };
 
-export const captureFocus = (options: CaptureFocusOptions = {}): FocusRestoration => {
-  const captured = resolveTarget(options.target ?? (() => getDeepActiveElement(document) as FocusableElement | null));
-  const disposalController = new AbortController();
-  let disposed = false;
+export const captureFocus = (options: CaptureFocusOptions = {}): FocusRestorer => {
+  let captured = getDeepActiveElement(document) as FocusableElement | null;
+  let available = !options.signal?.aborted;
 
-  const dispose = (): void => {
-    if (disposed) return;
+  if (!available) captured = null;
 
-    disposed = true;
-    disposalController.abort();
+  const cancel = (): void => {
+    available = false;
+    captured = null;
   };
 
-  if (options.signal) {
-    options.signal.addEventListener('abort', dispose, { once: true });
+  if (!options.signal?.aborted) {
+    options.signal?.addEventListener('abort', cancel, { once: true });
   }
 
-  return {
-    get disposalSignal() {
-      return disposalController.signal;
-    },
-    dispose,
-    get disposed() {
-      return disposed;
-    },
-    restore() {
-      if (disposed) return false;
+  return () => {
+    if (!available) return false;
 
-      if (captured) return restoreFocus(captured, options);
+    available = false;
+    options.signal?.removeEventListener('abort', cancel);
 
-      if (options.fallback) return restoreFocus(options.fallback, options);
+    const target = captured;
+    captured = null;
 
-      return false;
-    },
-    [Symbol.dispose]: dispose,
+    if (target) {
+      return restoreFocus(target, {
+        fallback: options.fallback,
+        preventScroll: options.preventScroll,
+      });
+    }
+
+    if (options.fallback) {
+      return restoreFocus(options.fallback, {
+        preventScroll: options.preventScroll,
+      });
+    }
+
+    return false;
   };
 };

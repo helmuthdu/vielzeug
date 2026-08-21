@@ -15,7 +15,7 @@ import { createListNavigation } from '@vielzeug/focus';
 const nav = createListNavigation({
   getItems: () => items,
   loop: true,
-  onNavigate: (_action, index) => items[index]?.focus(),
+  onNavigate: ({ item }) => item.focus(),
 });
 
 list.addEventListener('keydown', nav.handleKeydown);
@@ -46,17 +46,19 @@ const nav = createListNavigation({
 
 ## Typeahead
 
-Enable character-based navigation with `getItemLabel`.
+Enable character-based navigation with the `typeahead` option.
 
 ```ts
 const nav = createListNavigation({
-  getItemLabel: (item) => item.textContent ?? '',
   getItems: () => menuItems,
-  typeaheadDelayMs: 300,
+  typeahead: {
+    delayMs: 300,
+    getLabel: (item) => item.textContent ?? '',
+  },
 });
 ```
 
-`typeaheadDelayMs` defaults to `500` and must be a positive finite number.
+`typeahead.delayMs` defaults to `500`. Repeated characters cycle matching items without waiting for the timeout.
 
 ## Focus Restoration
 
@@ -69,7 +71,7 @@ const restore = captureFocus();
 
 openDialog();
 closeDialog();
-restore.restore();
+restore();
 ```
 
 ## Framework Integration
@@ -93,7 +95,7 @@ function Tabs({ tabs }: { tabs: Array<{ id: string; label: string }> }) {
     const nav = createListNavigation({
       getItems: () => tabRefs.current.filter((el): el is HTMLButtonElement => el !== null),
       loop: true,
-      onNavigate: (_action, index) => tabRefs.current[index]?.focus(),
+      onNavigate: ({ item }) => item.focus(),
       orientation: 'horizontal',
     });
 
@@ -138,7 +140,7 @@ onMounted(() => {
   nav = createListNavigation({
     getItems: () => tabEls.value.filter((el): el is HTMLButtonElement => el !== null),
     loop: true,
-    onNavigate: (_action, index) => tabEls.value[index]?.focus(),
+    onNavigate: ({ item }) => item.focus(),
     orientation: 'horizontal',
   });
 
@@ -179,7 +181,7 @@ onUnmounted(() => {
     const nav = createListNavigation({
       getItems: () => tabEls,
       loop: true,
-      onNavigate: (_action, index) => tabEls[index]?.focus(),
+      onNavigate: ({ item }) => item.focus(),
       orientation: 'horizontal',
     });
 
@@ -213,9 +215,7 @@ import { createListNavigation } from '@vielzeug/focus';
 const tabNav = createListNavigation({
   getItems: () => Array.from(host.querySelectorAll('[role="tab"]')),
   loop: true,
-  onNavigate: (_action, index) => {
-    host.querySelectorAll('[role="tab"]')[index]?.focus();
-  },
+  onNavigate: ({ item }) => item.focus(),
   orientation: 'horizontal',
 });
 
@@ -230,7 +230,7 @@ Use Keymap for global shortcuts and Focus for composite-widget navigation. They 
 import { createKeymap } from '@vielzeug/keymap';
 import { createListNavigation } from '@vielzeug/focus';
 
-const nav = createListNavigation({ getItems: () => items, onNavigate: (_a, i) => items[i]?.focus() });
+const nav = createListNavigation({ getItems: () => items, onNavigate: ({ item }) => item.focus() });
 
 const map = createKeymap({
   'mod+k': () => openPalette(),
