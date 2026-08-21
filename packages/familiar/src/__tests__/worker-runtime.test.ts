@@ -16,11 +16,12 @@ class WorkerMock {
   onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
   readonly requests: unknown[] = [];
   terminated = false;
+  readonly url: URL | string;
+  readonly options: WorkerOptions;
 
-  constructor(
-    readonly url: URL | string,
-    readonly options: WorkerOptions,
-  ) {
+  constructor(url: URL | string, options: WorkerOptions) {
+    this.url = url;
+    this.options = options;
     WorkerMock.instances.push(this);
   }
 

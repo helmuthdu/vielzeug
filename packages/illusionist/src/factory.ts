@@ -12,15 +12,21 @@ import type { IllusionistContext, IllusionistLocale, IllusionistOptions } from '
 
 export type { IllusionistOptions } from './types';
 
+/** Strips the leading `IllusionistContext` parameter from a function type. */
+type Bound<F> = F extends (ctx: IllusionistContext, ...args: infer A) => infer R ? (...args: A) => R : F;
+
+/** Maps a module of `(ctx, ...args) => R` functions to `(...args) => R`. */
+type BoundApi<T> = { readonly [K in keyof T]: Bound<T[K]> };
+
 export type Illusionist = {
-  readonly person: typeof personApi;
-  readonly internet: typeof internetApi;
-  readonly commerce: typeof commerceApi;
-  readonly date: typeof dateApi;
-  readonly finance: typeof financeApi;
-  readonly location: typeof locationApi;
-  readonly lorem: typeof loremApi;
-  readonly system: typeof systemApi;
+  readonly person: BoundApi<typeof personApi>;
+  readonly internet: BoundApi<typeof internetApi>;
+  readonly commerce: BoundApi<typeof commerceApi>;
+  readonly date: BoundApi<typeof dateApi>;
+  readonly finance: BoundApi<typeof financeApi>;
+  readonly location: BoundApi<typeof locationApi>;
+  readonly lorem: BoundApi<typeof loremApi>;
+  readonly system: BoundApi<typeof systemApi>;
 
   /** The seed used to initialize this instance, or `undefined` for cryptographic randomness. */
   readonly seed: number | string | undefined;
@@ -41,12 +47,12 @@ export type Illusionist = {
  * ```ts
  * import { en } from '@vielzeug/illusionist/locales';
  *
- * const illusionist = createIllusion({ seed: 12345, locale: en });
+ * const illusion = createIllusion({ seed: 12345, locale: en });
  *
- * illusionist.person.fullName();    // deterministic — same seed → same result
- * illusionist.internet.email();
- * illusionist.commerce.price();
- * illusionist.dispose();            // [Symbol.dispose]() also works
+ * illusion.person.fullName();    // deterministic — same seed → same result
+ * illusion.internet.email();
+ * illusion.commerce.price();
+ * illusion.dispose();            // [Symbol.dispose]() also works
  * ```
  */
 export function createIllusion(options: IllusionistOptions): Illusionist {
@@ -57,7 +63,9 @@ export function createIllusion(options: IllusionistOptions): Illusionist {
 
   const ctx: IllusionistContext = { locale, source };
 
-  const bind = <T extends Record<string, (ctx: IllusionistContext, ...args: never[]) => unknown>>(api: T): T => {
+  const bind = <T extends Record<string, (ctx: IllusionistContext, ...args: never[]) => unknown>>(
+    api: T,
+  ): BoundApi<T> => {
     const bound = {} as Record<string, (...args: never[]) => unknown>;
 
     for (const [key, fn] of Object.entries(api)) {
@@ -66,7 +74,7 @@ export function createIllusion(options: IllusionistOptions): Illusionist {
       }
     }
 
-    return bound as T;
+    return bound as unknown as BoundApi<T>;
   };
 
   const dispose = (): void => {

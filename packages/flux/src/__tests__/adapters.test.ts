@@ -38,7 +38,9 @@ describe('ripple adapter', () => {
   it('disposes binding when source errors', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const binding = toSignal(
-      stream<number>((sink) => sink.error(new Error('offline'))),
+      stream<number>((sink) => {
+        sink.error(new Error('offline'));
+      }),
       { initial: 0 },
     );
 
@@ -52,7 +54,9 @@ describe('ripple adapter', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const onError = vi.fn();
     const binding = toSignal(
-      stream<number>((sink) => sink.error(new Error('offline'))),
+      stream<number>((sink) => {
+        sink.error(new Error('offline'));
+      }),
       { initial: 0, onError },
     );
 
@@ -68,7 +72,9 @@ describe('ripple adapter', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const onError = vi.fn();
     toSignal(
-      stream<number>((sink) => sink.error(new Error('offline'))),
+      stream<number>((sink) => {
+        sink.error(new Error('offline'));
+      }),
       { initial: 0, onError },
     );
 
@@ -94,7 +100,8 @@ describe('courier adapter', () => {
   it('reads snapshots and stream event payloads', async () => {
     let listener: (() => void) | undefined;
     const queryCache = {
-      getSnapshot: () => ({ data: 1, error: null, isFetching: false, status: 'success' as const, updatedAt: 0 }),
+      getSnapshot: <T>(_key: readonly unknown[]): T | null =>
+        ({ data: 1, error: null, isFetching: false, status: 'success' as const, updatedAt: 0 }) as unknown as T,
       subscribe(_key: readonly unknown[], callback: () => void) {
         listener = callback;
 

@@ -167,7 +167,7 @@ describe('layout animation', () => {
     vi.spyOn(first, 'getBoundingClientRect').mockReturnValue(createRect(0, 0));
     vi.spyOn(second, 'getBoundingClientRect').mockReturnValue(createRect(0, 20));
 
-    const transition = captureLayout([first, second], { getKey: (element) => element.dataset.id! });
+    const transition = captureLayout([first, second], { getKey: (element) => (element as HTMLElement).dataset.id! });
     const nextSecond = document.createElement('div');
     const nextFirst = document.createElement('div');
 
@@ -228,7 +228,7 @@ describe('layout animation', () => {
     document.body.append(captured);
     vi.spyOn(captured, 'getBoundingClientRect').mockReturnValue(createRect(0, 0));
 
-    const transition = captureLayout([captured], { getKey: (element) => element.dataset.id! });
+    const transition = captureLayout([captured], { getKey: (element) => (element as HTMLElement).dataset.id! });
 
     captured.replaceWith(replacement);
     vi.spyOn(replacement, 'getBoundingClientRect').mockReturnValue(createRect(0, 20));
@@ -247,9 +247,9 @@ describe('layout animation', () => {
     duplicate.dataset.id = 'task';
     document.body.append(duplicate);
 
-    expect(() => captureLayout([replacement, duplicate], { getKey: (element) => element.dataset.id! })).toThrow(
-      NecromancerConfigError,
-    );
+    expect(() =>
+      captureLayout([replacement, duplicate], { getKey: (element) => (element as HTMLElement).dataset.id! }),
+    ).toThrow(NecromancerConfigError);
   });
 
   it('rejects duplicate committed keys before consuming the transition', () => {
@@ -266,7 +266,7 @@ describe('layout animation', () => {
     vi.spyOn(first, 'getBoundingClientRect').mockReturnValue(createRect(0, 0));
     vi.spyOn(second, 'getBoundingClientRect').mockReturnValue(createRect(0, 20));
 
-    const transition = captureLayout([first, second], { getKey: (element) => element.dataset.id! });
+    const transition = captureLayout([first, second], { getKey: (element) => (element as HTMLElement).dataset.id! });
     const nextFirst = document.createElement('div');
     const nextSecond = document.createElement('div');
 

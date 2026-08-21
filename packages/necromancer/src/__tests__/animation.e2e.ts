@@ -120,7 +120,7 @@ test('reduces motion while preserving its requested keyframes', async ({ page })
     });
 
     const status = (await handle.result).status;
-    const frames = handle.animation.effect?.getKeyframes();
+    const frames = (handle.animation.effect as KeyframeEffect | undefined)?.getKeyframes();
 
     return {
       finalOpacity: getComputedStyle(element).opacity,
@@ -153,7 +153,7 @@ test('adds FLIP translation without replacing authored transforms or translate',
 
     handle.animation.pause();
 
-    const frames = handle.animation.effect?.getKeyframes();
+    const frames = (handle.animation.effect as KeyframeEffect | undefined)?.getKeyframes();
     const firstFrame = frames?.[0];
 
     group.dispose();
@@ -171,7 +171,7 @@ test('adds FLIP translation without replacing authored transforms or translate',
   expect(outcome.handleCount).toBe(1);
   expect(outcome.authoredTranslate).toBe('12px 6px');
   expect(outcome.transform).toBe('rotate(12deg)');
-  expect(Number.parseFloat(outcome.translate ?? '')).toBe(-40);
+  expect(Number.parseFloat(String(outcome.translate ?? ''))).toBe(-40);
 });
 
 test('adds FLIP scaling without replacing an authored scale', async ({ page }) => {
@@ -204,7 +204,7 @@ test('adds FLIP scaling without replacing an authored scale', async ({ page }) =
     handle.animation.pause();
 
     const startWidth = element.getBoundingClientRect().width;
-    const frames = handle.animation.effect?.getKeyframes();
+    const frames = (handle.animation.effect as KeyframeEffect | undefined)?.getKeyframes();
     const firstFrame = frames?.[0];
 
     handle.animation.finish();
@@ -259,13 +259,13 @@ test('matches replacement layout elements by key', async ({ page }) => {
 
     handle.animation.pause();
 
-    const firstFrame = handle.animation.effect?.getKeyframes()[0];
+    const firstFrame = (handle.animation.effect as KeyframeEffect | undefined)?.getKeyframes()[0];
 
     group.dispose();
 
     return {
       composite: firstFrame?.composite,
-      targetIsReplacement: handle.animation.effect?.target === replacement,
+      targetIsReplacement: (handle.animation.effect as KeyframeEffect | undefined)?.target === replacement,
       transform: replacement.style.transform,
       translate: firstFrame?.translate,
     };
@@ -274,5 +274,5 @@ test('matches replacement layout elements by key', async ({ page }) => {
   expect(outcome.composite).toBe('add');
   expect(outcome.targetIsReplacement).toBe(true);
   expect(outcome.transform).toBe('rotate(12deg)');
-  expect(Number.parseFloat(outcome.translate ?? '')).toBe(-40);
+  expect(Number.parseFloat(String(outcome.translate ?? ''))).toBe(-40);
 });

@@ -65,13 +65,13 @@ describe('computePosition', () => {
       reference: { height: 10, width: 20, x: 20, y: 30 },
     };
     let resetOnce = true;
-    const reset: Middleware = vi.fn(() => {
+    const reset = vi.fn(() => {
       if (!resetOnce) return;
 
       resetOnce = false;
 
       return { reset: { placement: 'top', rects: replacement, remeasure: false } };
-    });
+    }) as unknown as Middleware;
 
     const result = computePosition(reference, floating, { middleware: [reset] });
 

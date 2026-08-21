@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: simplify SchemaEntry type to prevent never inference in RecordOf/KeyOf",
+      "packageName": "@vielzeug/vault",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/vault"
+}

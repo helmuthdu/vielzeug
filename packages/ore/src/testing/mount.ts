@@ -48,7 +48,7 @@ export interface MountOptions {
   /** Extra component options when passing an inline setup function */
   componentOptions?: Omit<ComponentDefinition<Record<string, unknown>>, 'setup'>;
   /** Parent container (default: document.body) */
-  container?: HTMLElement;
+  container?: HTMLElement | ShadowRoot;
   /** Inner HTML for slot content */
   html?: string;
   /** Properties assigned directly onto the element */

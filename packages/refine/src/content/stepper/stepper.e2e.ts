@@ -436,8 +436,8 @@ test.describe('Layout', () => {
       const indicator = shippingStep.shadowRoot.querySelector('.indicator')?.getBoundingClientRect();
 
       return {
-        connectorCenter: connector.left + connector.width / 2,
-        indicatorCenter: indicator.left + indicator.width / 2,
+        connectorCenter: connector!.left + connector!.width / 2,
+        indicatorCenter: indicator!.left + indicator!.width / 2,
       };
     });
 
@@ -476,12 +476,12 @@ test.describe('Layout', () => {
       const shippingIndicator = shippingStep.shadowRoot.querySelector('.indicator')?.getBoundingClientRect();
 
       return {
-        cartIndicatorBottom: cartIndicator.bottom,
+        cartIndicatorBottom: cartIndicator!.bottom,
         gaps: {
-          betweenSegments: shippingLeading.top - cartTrailing.bottom,
-          trailingHeight: cartTrailing.height,
+          betweenSegments: shippingLeading!.top - cartTrailing!.bottom,
+          trailingHeight: cartTrailing!.height,
         },
-        shippingIndicatorTop: shippingIndicator.top,
+        shippingIndicatorTop: shippingIndicator!.top,
       };
     });
 

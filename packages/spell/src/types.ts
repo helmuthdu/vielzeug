@@ -267,8 +267,11 @@ export type SchemaMode = 'async' | 'sync';
 
 /** A structural schema surface accepted by composition helpers. */
 export type SchemaSurface<Output = unknown, Input = Output, Mode extends SchemaMode = SchemaMode> = {
+  /** @internal */
   _parseFullAsync(value: unknown, ctx?: ParseContext): Promise<{ data: unknown; issues: Issue[] }>;
+  /** @internal */
   _parseFullSync(value: unknown, ctx?: ParseContext): { data: unknown; issues: Issue[] };
+  safeParseAsync(value: unknown, ctx?: ParseContext): Promise<ParseResult<Output>>;
   definition(): SchemaDescriptor;
   isOptional: boolean;
   optional(): SchemaSurface<Output | undefined, Input | undefined, Mode>;

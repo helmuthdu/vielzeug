@@ -62,7 +62,9 @@ describe('core operators', () => {
     const completed = vi.fn();
 
     combineLatest(
-      stream((sink) => sink.complete()),
+      stream((sink) => {
+        sink.complete();
+      }),
       stream(() => {}),
     ).subscribe({ complete: completed, next: () => {} });
 
@@ -158,7 +160,9 @@ describe('core operators', () => {
     const error = vi.fn();
 
     pipe(
-      stream<number>((sink) => sink.error(new Error('retry'))),
+      stream<number>((sink) => {
+        sink.error(new Error('retry'));
+      }),
       retry({
         attempts: 1,
         delay: () => {

@@ -90,9 +90,9 @@ describe('animateEach', () => {
 
     expect(() => animateEach([element], [], { stagger: -1 })).toThrow(NecromancerConfigError);
     expect(() => animateEach([element], [], { stagger: Number.NaN })).toThrow(NecromancerConfigError);
-    expect(() => animateEach([element, element.cloneNode() as Element], [], { delay: '20ms', stagger: 10 })).toThrow(
-      NecromancerConfigError,
-    );
+    expect(() =>
+      animateEach([element, element.cloneNode() as Element], [], { delay: '20ms' as never, stagger: 10 }),
+    ).toThrow(NecromancerConfigError);
   });
 
   it('creates an empty group for an empty iterable', async () => {

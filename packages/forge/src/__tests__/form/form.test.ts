@@ -383,7 +383,9 @@ describe('form', () => {
 
     expect(() => form.field('items').field(5)).not.toThrow();
     expect(() => form.field('items').field(5).set('x')).toThrow(ForgeConfigError);
-    expect(() => form.field('name').field(0 as never)).toThrow(ForgeConfigError);
+    expect(() => (form.field('name') as unknown as { field: (index: number) => unknown }).field(0)).toThrow(
+      ForgeConfigError,
+    );
   });
 
   test('array item fields support per-item touch and subscribe', () => {

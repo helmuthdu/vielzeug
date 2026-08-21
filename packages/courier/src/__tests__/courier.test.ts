@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  type CourierHttpError,
   CourierSchemaValidationError,
   CourierTimeoutError,
   createCourier,
@@ -71,7 +70,7 @@ describe('Courier HTTP client', () => {
       ),
     });
 
-    await expect(httpCourier.get('/users/1')).rejects.toMatchObject<CourierHttpError>({
+    await expect(httpCourier.get('/users/1')).rejects.toMatchObject({
       data: { code: 'missing' },
       status: 404,
     });

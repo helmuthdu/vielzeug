@@ -474,7 +474,7 @@ describe('ore-datagrid', () => {
     it('emits selection-change with selected row keys and rows', async () => {
       fixture = await mountGrid({ selectionMode: 'single' });
 
-      let detail: { keys: string[]; rows: User[] } | null = null;
+      let detail!: { keys: string[]; rows: User[] } | null;
 
       fixture.element.addEventListener('selection-change', (e: Event) => {
         detail = (e as CustomEvent<{ keys: string[]; rows: User[] }>).detail;
@@ -676,7 +676,7 @@ describe('ore-datagrid', () => {
     it('emits page-change with new pageIndex', async () => {
       fixture = await mountGrid({ pageSize: 2 });
 
-      let pageDetail: { pageIndex: number } | null = null;
+      let pageDetail!: { pageIndex: number } | null;
 
       fixture.element.addEventListener('page-change', (e: Event) => {
         pageDetail = (e as CustomEvent<{ pageIndex: number }>).detail;
@@ -790,7 +790,7 @@ describe('ore-datagrid', () => {
       el.getRowKey = (r: User) => `user-${r.id}`;
       await Promise.resolve();
 
-      let detail: { keys: string[] } | null = null;
+      let detail!: { keys: string[] } | null;
 
       fixture.element.addEventListener('selection-change', (e: Event) => {
         detail = (e as CustomEvent<{ keys: string[] }>).detail;
@@ -943,7 +943,7 @@ describe('ore-datagrid', () => {
       el.pageSizeOptions = [2, 10];
       await Promise.resolve();
 
-      let detail: { pageIndex: number; pageSize: number } | null = null;
+      let detail!: { pageIndex: number; pageSize: number } | null;
 
       fixture.element.addEventListener('page-change', (e: Event) => {
         detail = (e as CustomEvent<{ pageIndex: number; pageSize: number }>).detail;
@@ -1653,7 +1653,7 @@ describe('ore-datagrid', () => {
     it('emits row-expand with expanded=true on first click', async () => {
       fixture = await mountExpandable();
 
-      let detail: { expanded: boolean; key: string } | null = null;
+      let detail!: { expanded: boolean; key: string } | null;
 
       fixture.element.addEventListener('row-expand', (e: Event) => {
         detail = (e as CustomEvent<{ expanded: boolean; key: string }>).detail;
@@ -1674,7 +1674,7 @@ describe('ore-datagrid', () => {
       fireClick(btn);
       await Promise.resolve();
 
-      let detail: { expanded: boolean; key: string } | null = null;
+      let detail!: { expanded: boolean; key: string } | null;
 
       fixture.element.addEventListener('row-expand', (e: Event) => {
         detail = (e as CustomEvent<{ expanded: boolean; key: string }>).detail;

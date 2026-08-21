@@ -38,6 +38,7 @@ describe('toSearchMatcher', () => {
       },
       reindex() {},
       remove() {},
+      revision: 0,
       search(query) {
         return query === 'alpha' ? [{ item, matches: [], score: 1 }] : [];
       },

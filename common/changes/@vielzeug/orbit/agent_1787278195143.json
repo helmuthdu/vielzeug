@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: resolve TypeScript type errors in test files",
+      "packageName": "@vielzeug/orbit",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/orbit"
+}

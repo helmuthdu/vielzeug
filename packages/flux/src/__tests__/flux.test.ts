@@ -84,7 +84,9 @@ describe('stream()', () => {
     Object.defineProperty(globalThis, 'reportError', { configurable: true, value: reportError });
 
     try {
-      stream<number>((sink) => sink.error(new Error('unhandled'))).subscribe(() => {});
+      stream<number>((sink) => {
+        sink.error(new Error('unhandled'));
+      }).subscribe(() => {});
 
       expect(reportError).toHaveBeenCalledWith(expect.objectContaining({ message: 'unhandled' }));
     } finally {

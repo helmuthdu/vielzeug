@@ -22,6 +22,7 @@ import {
   isSame,
   isValid,
   now,
+  type ParseAs,
   parse,
   parseDuration,
   recurrence,
@@ -40,8 +41,10 @@ describe('parse', () => {
     ['plainDate', '2026-03-21', '2026-03-21'],
     ['plainDateTime', '2026-03-21T10:15:30', '2026-03-21T10:15:30'],
     ['zonedDateTime', '2026-03-21T11:15:30+01:00[Europe/Berlin]', '2026-03-21T11:15:30+01:00[Europe/Berlin]'],
-  ] as const)('parses a %s explicitly', (as, input, expected) => {
-    expect(parse(input, { as }).toString()).toBe(expected);
+  ] as Array<[ParseAs, string, string]>)('parses a %s explicitly', (as, input, expected) => {
+    expect(
+      (parse as (input: string, options: { as: ParseAs }) => { toString(): string })(input, { as }).toString(),
+    ).toBe(expected);
   });
 
   it('rejects a mismatched ISO string', () => {
@@ -122,7 +125,7 @@ describe('expiry classification', () => {
     expect(() =>
       classifyExpiry({
         relativeTo: reference,
-        thresholds: { invalid: { months: 1 } },
+        thresholds: { invalid: { months: 1 } as never },
         value: reference,
       }),
     ).toThrow(TempoInvalidInputError);

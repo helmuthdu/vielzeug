@@ -5,9 +5,9 @@ import { customValidator } from '../spell';
 
 describe('Spell adapter', () => {
   test('maps nested and form errors without transforming form values', async () => {
-    const schema = s
-      .object({ profile: s.object({ email: s.string().email() }) })
-      .check((_value, context) => context.addIssue({ code: 'custom', message: 'Unavailable', path: [] }));
+    const schema = s.object({ profile: s.object({ email: s.string().email() }) }).check((_value, context) => {
+      context.addIssue({ code: 'custom', message: 'Unavailable', path: [] });
+    });
     const form = createForm({
       initialValues: { profile: { email: 'invalid' } },
       validate: customValidator(schema),
@@ -68,7 +68,12 @@ describe('Spell adapter', () => {
     const pending = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const schema = s.object({ email: s.string().checkAsync(async () => pending) });
+    const schema = s.object({
+      email: s.string().checkAsync(async () => {
+        await pending;
+        return true;
+      }),
+    });
     const form = createForm({ initialValues: { email: '' }, validate: customValidator(schema) });
     const controller = new AbortController();
     const validation = form.validate(controller.signal);

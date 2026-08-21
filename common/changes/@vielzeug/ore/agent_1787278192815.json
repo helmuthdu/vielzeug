@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: widen MountOptions.container to accept ShadowRoot",
+      "packageName": "@vielzeug/ore",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

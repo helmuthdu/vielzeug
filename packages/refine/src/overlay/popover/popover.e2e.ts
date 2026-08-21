@@ -34,14 +34,14 @@ test.describe('Interaction', () => {
       const trigger = document.querySelector('ore-button')?.getBoundingClientRect();
       const panel = popover.shadowRoot?.querySelector<HTMLElement>('.panel')?.getBoundingClientRect();
 
-      return { panel, trigger };
+      return { panel, trigger } as { panel: DOMRect; trigger: DOMRect };
     });
 
-    expect(positions.panel.top).toBeGreaterThanOrEqual(positions.trigger.bottom);
-    expect(Math.abs(positions.panel.top - positions.trigger.bottom - 8)).toBeLessThan(2);
+    expect(positions.panel!.top).toBeGreaterThanOrEqual(positions.trigger!.bottom);
+    expect(Math.abs(positions.panel!.top - positions.trigger!.bottom - 8)).toBeLessThan(2);
     expect(
       Math.abs(
-        positions.panel.left + positions.panel.width / 2 - (positions.trigger.left + positions.trigger.width / 2),
+        positions.panel!.left + positions.panel!.width / 2 - (positions.trigger!.left + positions.trigger!.width / 2),
       ),
     ).toBeLessThan(4);
   });

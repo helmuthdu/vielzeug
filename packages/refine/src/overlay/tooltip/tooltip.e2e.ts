@@ -21,14 +21,14 @@ test.describe('Interaction', () => {
       const trigger = document.querySelector('ore-button')?.getBoundingClientRect();
       const panel = tooltip.shadowRoot?.querySelector<HTMLElement>('.tooltip')?.getBoundingClientRect();
 
-      return { panel, trigger };
+      return { panel, trigger } as { panel: DOMRect; trigger: DOMRect };
     });
 
-    expect(positions.panel.bottom).toBeLessThanOrEqual(positions.trigger.top);
-    expect(Math.abs(positions.panel.bottom - positions.trigger.top + 8)).toBeLessThan(2);
+    expect(positions.panel!.bottom).toBeLessThanOrEqual(positions.trigger!.top);
+    expect(Math.abs(positions.panel!.bottom - positions.trigger!.top + 8)).toBeLessThan(2);
     expect(
       Math.abs(
-        positions.panel.left + positions.panel.width / 2 - (positions.trigger.left + positions.trigger.width / 2),
+        positions.panel!.left + positions.panel!.width / 2 - (positions.trigger!.left + positions.trigger!.width / 2),
       ),
     ).toBeLessThan(2);
   });

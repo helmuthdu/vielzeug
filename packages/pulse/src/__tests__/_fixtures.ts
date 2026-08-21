@@ -20,11 +20,12 @@ export class MockWebSocket {
   onopen: ((event: Event) => void) | null = null;
   readyState = MockWebSocket.CONNECTING;
   readonly sentMessages: string[] = [];
+  readonly url: string;
+  readonly protocols?: string | string[];
 
-  constructor(
-    readonly url: string,
-    readonly protocols?: string | string[],
-  ) {
+  constructor(url: string, protocols?: string | string[]) {
+    this.url = url;
+    this.protocols = protocols;
     MockWebSocket.instances.push(this);
   }
 

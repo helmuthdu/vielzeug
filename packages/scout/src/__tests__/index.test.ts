@@ -563,18 +563,18 @@ describe('configuration validation', () => {
     [{ fields: ['name'], limit: 1.5 }, 'limit'],
     [{ fields: ['name'], minQueryLength: 0 }, 'minQueryLength'],
     [{ fields: ['name'], minQueryLength: Number.POSITIVE_INFINITY }, 'minQueryLength'],
-  ])('rejects invalid index %s configuration', (options) => {
-    expect(() => createIndex([{ name: 'Alice' }], options)).toThrow(ScoutConfigurationError);
+  ] as Array<[Record<string, unknown>, string]>)('rejects invalid index %s configuration', (options) => {
+    expect(() => createIndex([{ name: 'Alice' }], options as never)).toThrow(ScoutConfigurationError);
   });
 
   test.each([
     [{ threshold: Number.NaN }, 'threshold'],
     [{ limit: -1 }, 'limit'],
     [{ minQueryLength: 0 }, 'minQueryLength'],
-  ])('rejects invalid per-search %s override', (options) => {
+  ] as Array<[Record<string, unknown>, string]>)('rejects invalid per-search %s override', (options) => {
     const index = createIndex([{ name: 'Alice' }], { fields: ['name'] });
 
-    expect(() => index.search('alice', options)).toThrow(ScoutConfigurationError);
+    expect(() => index.search('alice', options as never)).toThrow(ScoutConfigurationError);
   });
 });
 

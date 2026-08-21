@@ -1,4 +1,7 @@
 {
+  "compilerOptions": {
+    "types": ["vitest/globals", "vite/client", "node"]
+  },
   "exclude": ["node_modules"],
   "extends": "../../tsconfig.json",
   "include": ["src/**/*.d.ts", "src/**/*.ts"]

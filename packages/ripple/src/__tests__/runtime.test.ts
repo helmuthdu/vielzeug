@@ -48,7 +48,7 @@ describe('ripple graph', () => {
       },
     });
     const user = ripple.signal<{ name: string } | null>(null);
-    const name = ripple.computed(() => user.value.name);
+    const name = ripple.computed(() => user.value!.name);
     const values: string[] = [];
 
     expect(() => name.value).toThrow();

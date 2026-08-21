@@ -8,14 +8,12 @@ import { assertPositiveFinite } from './ttl';
 export type VaultKey = number | string;
 
 /** A typed table definition whose primary-key field must hold a portable Vault key. */
-export type SchemaEntry<T extends object, Key extends keyof T & string = keyof T & string> = T[Key] extends VaultKey
-  ? {
-      defaultTtl?: number;
-      /** IndexedDB creates these as `value.<field>` indexes; other stores filter in memory. */
-      indexes?: readonly (keyof T & string)[];
-      key: Key;
-    }
-  : never;
+export type SchemaEntry<T extends object, Key extends keyof T & string = keyof T & string> = {
+  defaultTtl?: number;
+  /** IndexedDB creates these as `value.<field>` indexes; other stores filter in memory. */
+  indexes?: readonly (keyof T & string)[];
+  key: Key;
+};
 
 export type AnySchema = Record<string, { defaultTtl?: number; indexes?: readonly string[]; key: string }>;
 
@@ -178,7 +176,7 @@ export interface IndexedDbVaultStore<S extends AnySchema> extends TransactionalV
 
 /** Define a typed table whose primary-key field holds a portable Vault key. */
 export function table<T extends object, Key extends keyof T & string = keyof T & string>(
-  key: Key & (T[Key] extends VaultKey ? unknown : never),
+  key: Key,
   options: { defaultTtl?: number; indexes?: readonly (keyof T & string)[] } = {},
 ): SchemaEntry<T, Key> {
   const { defaultTtl, indexes } = options;
