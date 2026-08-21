@@ -33,6 +33,7 @@ Jump to the packages most relevant to your work.
 | Real-time search UI (combobox, command palette) | [Scout](/scout/) → [Sourcerer](#sourcerer)                    |
 | App with undo/redo (editor, design tool)         | [Ledger](/ledger/) → [Ripple](#ripple)                        |
 | Global keyboard shortcuts or command palette    | [Keymap](/keymap/) → [Ledger](/ledger/)                       |
+| Test fixtures or mock data                       | [Illusionist](/illusionist/) → [Coins](/coins/) → [Tempo](/tempo/) |
 
 ## Core
 
@@ -352,6 +353,8 @@ const api = await container.resolve(ApiToken);
 | **Keymap + Ledger**         | Wire `ctrl+z` / `ctrl+shift+z` to `ledger.undo()` / `ledger.redo()` with no boilerplate                    |
 | **Keymap + Herald**         | Publish shortcut events to a bus instead of calling handlers directly — decouples keyboard from logic       |
 | **Ledger + Ripple**         | `canUndo`, `canRedo`, and `isProcessing` are Ripple `Computed` values — bind directly to UI templates       |
+| **Illusionist + Coins**     | `commerce.price()` and `finance.amount()` return coins `Money` — format, add, or allocate directly          |
+| **Illusionist + Tempo**     | `date.past()` / `future()` / `recent()` return tempo `Temporal.ZonedDateTime` — shift, compare, or format   |
 
 ## Philosophy
 

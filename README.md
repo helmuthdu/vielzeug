@@ -3,7 +3,7 @@
 
 # Vielzeug
 
-**32 independent, zero-dependency TypeScript packages for modern JavaScript**
+**33 independent, zero-dependency TypeScript packages for modern JavaScript**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](https://www.npmjs.com/org/vielzeug)
@@ -653,6 +653,26 @@ pnpm add -D @vielzeug/assay
 - Zero dependencies, no coupling to any UI framework — used by `@vielzeug/ore/testing` and Refine's internal test suite
 
 [📖 Documentation](https://vielzeug.dev/assay/) • [Examples](https://vielzeug.dev/assay/examples)
+
+---
+
+### [@vielzeug/illusionist](packages/illusionist) – Fake Data Generator
+
+Typed, deterministic, locale-aware fake data generator with a seeded PRNG — person, internet, commerce, date, finance, location, lorem, and system categories.
+
+```bash
+pnpm add @vielzeug/illusionist
+```
+
+**Key Features:**
+
+- `createIllusion({ seed, locale })` — deterministic output from a single seeded random source
+- Eight categories: `person`, `internet`, `commerce`, `date`, `finance`, `location`, `lorem`, `system`
+- Locale-aware (`en`, `de`) with custom locale support via `IllusionistLocale` type
+- Returns `Money` (coins) and `Temporal.ZonedDateTime` (tempo) for cross-package compatibility
+- `dispose()` / `using` cleanup; `system.uuid()` uses crypto (non-deterministic by design)
+
+[📖 Documentation](https://vielzeug.dev/illusionist/) • [Examples](https://vielzeug.dev/illusionist/examples)
 
 ---
 
