@@ -100,6 +100,7 @@ await courier.queries.fetch({
 | `get(key)` | `T \| undefined` | Returns successful cached data |
 | `getSnapshot(key)` | `AsyncState<T> \| null` | Returns snapshot by key |
 | `set(key, data, options?)` | `void` | Sets successful cache value |
+| `delete(key)` | `void` | Removes one cache entry and aborts its active fetch if present |
 | `invalidate(prefix, options?)` | `void` | Marks matching key prefixes stale; `options.refetch` triggers background refetch |
 | `keys()` | `QueryKey[]` | Lists known keys |
 | `subscribe(key, listener)` | `Unsubscribe` | Subscribes to one key |
@@ -196,6 +197,7 @@ type QueryKey = readonly [QueryKeyAtom, ...QueryKeyAtom[]];
 type QueryKeyAtom = string | number | boolean | null;
 type QueryCache = {
   clear(): void;
+  delete(key: QueryKey): void;
   fetch<T>(definition: QueryDefinition<T>, options?: { force?: boolean }): Promise<T>;
   get<T>(key: QueryKey): T | undefined;
   getSnapshot<T>(key: QueryKey): AsyncState<T> | null;

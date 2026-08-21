@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { CourierDisposedError, createCourier } from '../index';
+import { CourierAbortError, CourierDisposedError, createCourier } from '../index';
 
 describe('Courier query cache', () => {
   it('deduplicates explicit query fetches and serves fresh data', async () => {
@@ -67,6 +67,90 @@ describe('Courier query cache', () => {
     expect(listener).toHaveBeenCalledOnce();
     expect(courier.queries.getSnapshot(['users', 1])).toBeNull();
     expect(courier.queries.keys()).toEqual([]);
+  });
+
+  it('deletes one key and notifies that key subscribers', () => {
+    const courier = createCourier();
+    const key = ['users', 1] as const;
+    const listener = vi.fn();
+    const stop = courier.queries.subscribe(key, listener);
+
+    courier.queries.set(key, { id: 1 });
+    courier.queries.delete(key);
+    courier.queries.delete(key);
+    stop();
+
+    expect(listener).toHaveBeenCalledTimes(2);
+    expect(courier.queries.getSnapshot(key)).toBeNull();
+    expect(courier.queries.keys()).toEqual([]);
+  });
+
+  it('aborts in-flight work when deleting the active key', async () => {
+    const courier = createCourier();
+    const key = ['users', 1] as const;
+    let started!: () => void;
+    const startedPromise = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+
+    const request = courier.queries
+      .fetch({
+        fetch: ({ signal }) =>
+          new Promise<string>((_, reject) => {
+            started();
+            signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+          }),
+        key,
+      })
+      .catch((error) => error);
+
+    await startedPromise;
+    courier.queries.delete(key);
+
+    const result = await request;
+
+    expect(result).toBeInstanceOf(DOMException);
+    expect(courier.queries.getSnapshot(key)).toBeNull();
+    expect(courier.queries.keys()).toEqual([]);
+  });
+
+  it('allows a fresh fetch for the same key immediately after delete', async () => {
+    const key = ['users', 1] as const;
+    let first = true;
+    const fetch = vi.fn<typeof globalThis.fetch>((_, init) => {
+      if (first) {
+        first = false;
+        const signal = init?.signal;
+
+        return new Promise<Response>((_, reject) => {
+          if (signal?.aborted) {
+            reject(new DOMException('Aborted', 'AbortError'));
+            return;
+          }
+
+          signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true });
+        });
+      }
+
+      return Promise.resolve(
+        new Response(JSON.stringify({ id: 1 }), { headers: { 'content-type': 'application/json' } }),
+      );
+    });
+    const courier = createCourier({ fetch });
+    const definition = {
+      fetch: ({ signal }: { signal: AbortSignal }) =>
+        courier.get<{ id: number }>('/users/{id}', { params: { id: 1 }, signal }),
+      key,
+    };
+
+    const firstRequest = courier.queries.fetch(definition).catch((error) => error);
+
+    courier.queries.delete(key);
+
+    await expect(courier.queries.fetch(definition)).resolves.toEqual({ id: 1 });
+    await expect(firstRequest).resolves.toBeInstanceOf(CourierAbortError);
+    expect(courier.queries.getSnapshot<{ id: number }>(key)?.status).toBe('success');
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it('stores synchronous fetch failures as an error snapshot', async () => {

@@ -284,6 +284,10 @@ unsubscribe();
 
 `mutate()` executes in order: `request` → `onSuccess` → `invalidateKeys`. If `onSuccess` calls `queries.set()` for a key also in `invalidateKeys`, the seeded data is overwritten by the background refetch. This is correct — `invalidateKeys` means "refetch to confirm" — but the order matters when `onSuccess` seeds optimistic data that `invalidateKeys` then replaces.
 
+### Optimistic rollback should use `getSnapshot()`, not `get()`
+
+`queries.get()` only returns successful data and drops snapshot metadata (`status`, `error`, `updatedAt`). It also cannot distinguish a missing entry from a successful cached value of `undefined`. For optimistic rollback, capture `getSnapshot()` first so you can restore prior success data with `updatedAt`, or `delete(key)` when no previous success snapshot existed.
+
 ### `baseUrl` should not include query parameters
 
 `buildUrl` joins `baseUrl` and path with `/`. A base URL like `https://api.example.com?token=abc` produces broken URLs (`https://api.example.com?token=abc/users`). Pass query parameters per-request via `config.query` instead.

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add query cache delete and improve optimistic rollback guidance",
+      "packageName": "@vielzeug/courier",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/courier"
+}

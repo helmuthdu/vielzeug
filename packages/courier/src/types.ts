@@ -38,6 +38,7 @@ export type QueryDefinition<T> = {
 
 export type QueryCache = {
   clear(): void;
+  delete(key: QueryKey): void;
   fetch<T>(definition: QueryDefinition<T>, options?: { force?: boolean }): Promise<T>;
   get<T>(key: QueryKey): T | undefined;
   getSnapshot<T>(key: QueryKey): AsyncState<T> | null;

@@ -7,40 +7,48 @@ description: 'Update a Courier query cache before a write completes.'
 
 ### Problem
 
-A profile name should update immediately, then reconcile with the server whether the write succeeds or fails.
+A todo should disappear immediately, then reconcile with the server whether the delete succeeds or fails.
 
 ### Solution
 
-Save the previous cached value, seed the optimistic value, and restore it on failure.
+Capture the full snapshot, apply an operation-specific optimistic transform, and restore exactly what existed before on failure.
 
 ```ts
 import { createCourier } from '@vielzeug/courier';
 
-type User = { id: number; name: string };
+type Todo = { id: number; title: string };
 
 const courier = createCourier({ baseUrl: 'https://api.example.com' });
-const key = ['users', 1] as const;
-const previous = courier.queries.get<User>(key);
-const optimistic: User = { id: 1, name: 'Updated name' };
+const key = ['todos'] as const;
+const id = 7;
+const previous = courier.queries.getSnapshot<Todo[]>(key);
 
-courier.queries.set(key, optimistic);
+courier.queries.set(
+  key,
+  (previous?.status === 'success' ? previous.data : []).filter((todo) => todo.id !== id),
+);
 try {
   await courier.mutate({
-    request: ({ signal }) => courier.patch('/users/{id}', { body: optimistic, params: { id: 1 }, signal }),
+    invalidateKeys: [key],
+    request: ({ signal }) => courier.delete('/todos/{id}', { params: { id }, signal }),
   });
 } catch (error) {
-  if (previous) courier.queries.set(key, previous);
+  if (previous?.status === 'success') {
+    courier.queries.set(key, previous.data, { updatedAt: previous.updatedAt });
+  } else {
+    courier.queries.delete(key);
+  }
+
   throw error;
-} finally {
-  courier.queries.invalidate(key, { refetch: true });
 }
 ```
 
 ### Pitfalls
 
-- Define a conflict policy when concurrent writes update the same resource.
-- Only roll back a value that was actually present in the cache.
-- Invalidate after settlement so later reads reconcile server state.
+- Roll back from `getSnapshot()` instead of `get()` so status and timestamp metadata are preserved.
+- Use operation-specific rollback (patch/remove one record), not whole-list replacement for concurrent writes.
+- For concurrent writes on one key, serialize mutations or use conflict-aware merge/rebase rules.
+- Keep `invalidateKeys` on the mutation so settled state always reconciles with the server.
 
 ### Related
 

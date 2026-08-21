@@ -198,6 +198,22 @@ export function createQueryCache(options?: {
   return {
     cancelAll,
     clear,
+    delete(key: QueryKey): void {
+      const id = hash(key);
+      const entry = entries.get(id);
+
+      if (!entry) return;
+
+      // Prevent an aborted in-flight promise from writing a stale error snapshot
+      // after this entry has been explicitly removed.
+      entry.promise = undefined;
+      entry.controller?.abort();
+      entry.controller = undefined;
+
+      entries.delete(id);
+      notify(key);
+      scheduleGc();
+    },
     fetch<T>(definition: QueryDefinition<T>, fetchOptions?: { force?: boolean }): Promise<T> {
       const entry = entryFor(definition.key);
 
