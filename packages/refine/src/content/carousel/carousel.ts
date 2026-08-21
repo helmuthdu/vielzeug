@@ -1,11 +1,12 @@
-import { bind, define, getHost, html, onMounted, prop, useEmit } from '@vielzeug/ore';
+import { createSwipeGesture } from '@vielzeug/gesture';
+import { bind, define, getHost, html, onCleanup, onMounted, prop, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ThemeColor } from '../../types';
 
 import '../../content/icon/icon';
 import '../../feedback/progress/progress';
-import { announce, createSwipeControl } from '../../core';
+import { announce, createListControl, lifecycleSignal } from '../../core';
 import componentStyles from './carousel.css?inline';
 import './carousel-slide';
 
@@ -310,13 +311,35 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
 
     // ── Swipe ────────────────────────────────────────────────────────────────
 
-    const swipe = createSwipeControl({
+    const swipe = createSwipeGesture({
       axis: () => (isHorizontal.value ? 'x' : 'y'),
       onCommit: (detail) => {
         if (detail.distance < 0) next();
         else prev();
       },
+      shouldStart: (event) => {
+        const path = event.composedPath();
+
+        return !path.some(
+          (node) =>
+            node instanceof HTMLElement &&
+            (node.tagName === 'BUTTON' || node.tagName === 'ORE-BUTTON' || node.tagName === 'ORE-PROGRESS'),
+        );
+      },
       threshold: () => 48,
+    });
+
+    const indicatorNav = createListControl<number>({
+      getItems: () => Array.from({ length: slideCount.value }, (_, index) => index),
+      loop: true,
+      onNavigate: (_action, index) => {
+        goTo(index);
+        const dot = el.shadowRoot?.querySelector<HTMLElement>(`.indicator[data-index="${index}"]`);
+
+        dot?.focus();
+      },
+      orientation: () => (isHorizontal.value ? 'horizontal' : 'vertical'),
+      signal: lifecycleSignal(onCleanup),
     });
 
     // ── Host bindings ────────────────────────────────────────────────────────
@@ -338,31 +361,19 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
           if (props.autoplay.value) startAutoplay();
         },
         keydown: handleKeydown,
-        pointercancel: (e: PointerEvent) => swipe.handlePointerCancel(e),
-        pointerdown: (e: PointerEvent) => {
-          const path = e.composedPath();
-          const onButton = path.some(
-            (n) =>
-              n instanceof HTMLElement &&
-              (n.tagName === 'BUTTON' || n.tagName === 'ORE-BUTTON' || n.tagName === 'ORE-PROGRESS'),
-          );
-
-          if (!onButton) swipe.handlePointerDown(e);
-        },
         pointerenter: () => {
           stopAutoplay();
         },
         pointerleave: () => {
           if (props.autoplay.value) startAutoplay();
         },
-        pointermove: (e: PointerEvent) => swipe.handlePointerMove(e),
-        pointerup: (e: PointerEvent) => swipe.handlePointerUp(e),
       },
     });
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
     onMounted(() => {
+      const unmountSwipe = swipe.mount(el);
       const shadowRoot = el.shadowRoot!;
       const slot = shadowRoot.querySelector<HTMLSlotElement>('slot')!;
 
@@ -381,6 +392,7 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       }
 
       return () => {
+        unmountSwipe();
         stopAutoplay();
         swipe.dispose();
         slot.removeEventListener('slotchange', onSlotChange);
@@ -388,40 +400,6 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
     });
 
     // ── Template ─────────────────────────────────────────────────────────────
-
-    const focusIndicator = (index: number): void => {
-      const dot = el.shadowRoot?.querySelector<HTMLElement>(`.indicator[data-index="${index}"]`);
-
-      dot?.focus();
-    };
-
-    const handleIndicatorKeydown = (e: KeyboardEvent, i: number): void => {
-      const count = slideCount.value;
-      let target: number | undefined;
-
-      switch (e.key) {
-        case 'ArrowDown':
-        case 'ArrowRight':
-          target = (i + 1) % count;
-          break;
-        case 'ArrowLeft':
-        case 'ArrowUp':
-          target = (i - 1 + count) % count;
-          break;
-        case 'End':
-          target = count - 1;
-          break;
-        case 'Home':
-          target = 0;
-          break;
-        default:
-          return;
-      }
-
-      e.preventDefault();
-      goTo(target);
-      focusIndicator(target);
-    };
 
     const renderControls = () =>
       showControls.value
@@ -490,8 +468,19 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
                         aria-selected=${() => String(i === activeIndex.value)}
                         tabindex=${() => (i === activeIndex.value ? '0' : '-1')}
                         aria-label="${`Go to slide ${i + 1}`}"
+                        @focus=${() => indicatorNav.set(i)}
                         @click=${() => goTo(i)}
-                        @keydown=${(e: KeyboardEvent) => handleIndicatorKeydown(e, i)}>
+                        @keydown=${(e: KeyboardEvent) => {
+                          const target = e.currentTarget;
+
+                          if (target instanceof HTMLElement) {
+                            const index = Number(target.dataset.index);
+
+                            if (Number.isInteger(index)) indicatorNav.set(index);
+                          }
+
+                          indicatorNav.handleKeydown(e);
+                        }}>
                         <ore-progress
                           aria-hidden="true"
                           tabindex="-1"

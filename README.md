@@ -3,7 +3,7 @@
 
 # Vielzeug
 
-**33 independent, zero-dependency TypeScript packages for modern JavaScript**
+**35 independent, zero-dependency TypeScript packages for modern JavaScript**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](https://www.npmjs.com/org/vielzeug)
@@ -179,6 +179,44 @@ pnpm add @vielzeug/courier
 - Abortable SSE and HTTP streams (10 KB min / 3.4 KB gz)
 
 [📖 Documentation](https://vielzeug.dev/courier/) • [Examples](https://vielzeug.dev/courier/examples)
+
+---
+
+### [@vielzeug/focus](packages/focus) – Focus Management Primitives
+
+Framework-neutral list navigation and focus restoration primitives for accessible composite widgets.
+
+```bash
+pnpm add @vielzeug/focus
+```
+
+**Key Features:**
+
+- `createListNavigation()` for roving-style keyboard navigation
+- Orientation and RTL-aware default key mappings
+- Optional typeahead with configurable delay
+- `captureFocus()` and `restoreFocus()` for explicit return-focus flows
+
+[📖 Documentation](https://vielzeug.dev/focus/) • [Examples](https://vielzeug.dev/focus/examples)
+
+---
+
+### [@vielzeug/gesture](packages/gesture) – Pointer Gesture Primitives
+
+Framework-neutral swipe recognition with lifecycle-owned handles.
+
+```bash
+pnpm add @vielzeug/gesture
+```
+
+**Key Features:**
+
+- `createSwipeGesture()` for one-axis swipe recognition
+- Configurable threshold, axis, and disabled behavior
+- Pointer identity and primary-pointer guards
+- `dispose()` + `disposalSignal` lifecycle ownership
+
+[📖 Documentation](https://vielzeug.dev/gesture/) • [Examples](https://vielzeug.dev/gesture/examples)
 
 ---
 
@@ -775,8 +813,11 @@ vielzeug/
 │   ├── dnd/           # Drag-and-drop utilities
 │   ├── familiar/      # Web Worker pool
 │   ├── flux/          # Reactive streams & operators
+│   ├── focus/         # Focus navigation & restoration primitives
 │   ├── forge/         # Form state management
+│   ├── gesture/       # Pointer swipe gesture primitives
 │   ├── herald/        # Typed event bus
+│   ├── illusionist/   # Typed fake data generator
 │   ├── keymap/        # Keyboard shortcut manager
 │   ├── ledger/        # Undo/redo command history
 │   ├── lingua/        # Internationalization
@@ -831,7 +872,9 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/dnd`          | **9.7 KB**                   | **3.7 KB**     | 0            |
 | `@vielzeug/familiar`     | **11.3 KB**                  | **4.2 KB**     | 0            |
 | `@vielzeug/flux`         | **12.9 KB**                  | **3.6 KB**     | 1\*          |
+| `@vielzeug/focus`        | —                            | —              | 0            |
 | `@vielzeug/forge`        | **17.9 KB**                  | **5.6 KB**     | 0            |
+| `@vielzeug/gesture`      | —                            | —              | 0            |
 | `@vielzeug/herald`       | **6.0 KB**                   | **2.4 KB**     | 0            |
 | `@vielzeug/keymap`       | —                            | —              | 0            |
 | `@vielzeug/ledger`       | —                            | —              | 1\*          |
@@ -912,7 +955,7 @@ Each package is individually licensed under the MIT License. See the `LICENSE` f
 
 ### Why Vielzeug instead of [other library]?
 
-Most ecosystem libraries either solve one problem well but don't interoperate, or bundle many solutions behind a single install with coupling you can't opt out of. Vielzeug splits the difference: 32 focused packages with zero external runtime dependencies, each independently versioned and installable, but sharing consistent conventions — disposal via `Symbol.dispose`, structured error hierarchies, dev-only warnings compiled out in production, and ESM + CJS + type declarations on every release. You adopt exactly the pieces you need (`wayfinder` for routing, `forge` for forms, `courier` for HTTP) without pulling in a reactive core, component layer, or build toolchain you didn't ask for.
+Most ecosystem libraries either solve one problem well but don't interoperate, or bundle many solutions behind a single install with coupling you can't opt out of. Vielzeug splits the difference: 35 focused packages with zero external runtime dependencies, each independently versioned and installable, but sharing consistent conventions — disposal via `Symbol.dispose`, structured error hierarchies, dev-only warnings compiled out in production, and ESM + CJS + type declarations on every release. You adopt exactly the pieces you need (`wayfinder` for routing, `forge` for forms, `courier` for HTTP) without pulling in a reactive core, component layer, or build toolchain you didn't ask for.
 
 ### Can I use individual packages?
 

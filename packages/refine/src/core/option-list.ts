@@ -1,13 +1,9 @@
+import { restoreFocus } from '@vielzeug/focus';
 import { computed, type Readable, signal } from '@vielzeug/ripple';
 
 import { RefineConfigError } from '../errors';
 import { createListControl, type ListKeyAction, type ListNavigationAction } from './nav';
-import {
-  createOutsidePointerDismissal,
-  type DropdownCloseReason,
-  type OverlayOpenReason,
-  restoreTriggerFocus,
-} from './overlay';
+import { createOutsidePointerDismissal, type DropdownCloseReason, type OverlayOpenReason } from './overlay';
 import { createDropdownPositioner, type DropdownPositionerOptions } from './positioner';
 
 export type ListboxItem = object;
@@ -125,7 +121,7 @@ export const createListboxDropdown = <T extends ListboxItem>(
     stopPositioning?.();
     stopPositioning = null;
 
-    if (shouldRestore && shouldRestoreFocus() && options.getTrigger) restoreTriggerFocus(options.getTrigger);
+    if (shouldRestore && shouldRestoreFocus() && options.getTrigger) restoreFocus(options.getTrigger);
 
     options.onClose?.(reason);
   };

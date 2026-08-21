@@ -1,3 +1,4 @@
+import { createSwipeGesture, type SwipeAxis } from '@vielzeug/gesture';
 import {
   createStableId,
   define,
@@ -13,9 +14,7 @@ import {
 } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
 
-import type { OverlayOpenChangeDetail, SwipeAxis } from '../../core';
-
-import { createSwipeControl } from '../../core';
+import type { OverlayOpenChangeDetail } from '../../core';
 import '../../content/icon/icon';
 import { coarsePointerMixin, forcedColorsMixin, reducedMotionMixin } from '../../styles';
 import { useDialogControl } from '../shared/use-dialog';
@@ -304,9 +303,10 @@ define<OreDrawerProps>(DRAWER_TAG, {
       resetPanelDragStyles(panel);
     };
 
-    const swipe = createSwipeControl({
+    const swipe = createSwipeGesture({
       axis: () => getSwipeConfig().axis,
-      disabled: isSwipeClosing,
+      disabled: () => isSwipeClosing.value,
+      disabledBehavior: () => 'cancel-active',
       onCancel: handleSwipeRelease,
       onCommit: ({ distance }) => {
         const panel = panelRef.value;
@@ -339,6 +339,7 @@ define<OreDrawerProps>(DRAWER_TAG, {
         return getSnapThreshold(panel, getSwipeConfig().axis);
       },
     });
+    onCleanup(() => swipe.dispose());
 
     // ────────────────────────────────────────────────────────────────
     // Overlay State Management
@@ -442,10 +443,8 @@ define<OreDrawerProps>(DRAWER_TAG, {
       const dragHandleEl = panel?.querySelector<HTMLElement>('[part="drag-handle"]');
 
       if (dragHandleEl) {
-        onEvent(dragHandleEl, 'pointerdown', swipe.handlePointerDown);
-        onEvent(dragHandleEl, 'pointermove', swipe.handlePointerMove);
-        onEvent(dragHandleEl, 'pointerup', swipe.handlePointerUp);
-        onEvent(dragHandleEl, 'pointercancel', swipe.handlePointerCancel);
+        const unmountSwipe = swipe.mount(dragHandleEl);
+        onCleanup(unmountSwipe);
       }
 
       return () => {

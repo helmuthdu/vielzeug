@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add framework-neutral list navigation and focus restoration primitives",
+      "packageName": "@vielzeug/focus",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/focus"
+}

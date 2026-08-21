@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add framework-neutral swipe gesture recognition primitive",
+      "packageName": "@vielzeug/gesture",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/gesture"
+}

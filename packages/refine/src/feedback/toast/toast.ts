@@ -1,10 +1,9 @@
 import '../alert/alert';
 import { uuid } from '@vielzeug/arsenal/random';
+import { createSwipeGesture, type SwipeGesture } from '@vielzeug/gesture';
 import { define, getHost, html, onCleanup, onMounted, prop, ref, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
-import type { SwipeControl } from '../../core';
-import { createSwipeControl } from '../../core';
 import { reducedMotionMixin } from '../../styles';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import componentStyles from './toast.css?inline';
@@ -331,9 +330,11 @@ define<OreToastProps>(TOAST_TAG, {
     const hoverPaused = signal(false);
     const focusPaused = signal(false);
     const paused = computed(() => hoverPaused.value || focusPaused.value);
-    const swipeControls = new Map<string, SwipeControl>();
+    const swipeControls = new Map<string, SwipeGesture>();
+    const mountedSwipeControls = new Map<string, { element: HTMLElement; unmount: () => void }>();
     const exiting = new Map<string, () => void>();
     const swiping = new Set<string>();
+    let pendingSyncFrame: number | undefined;
     let store: ToastStore | null = null;
     let unsubscribeEntries = () => {};
     let unsubscribeEvents = () => {};
@@ -354,19 +355,13 @@ define<OreToastProps>(TOAST_TAG, {
       store?.finalize(id);
     };
 
-    const createToastSwipe = (id: string): SwipeControl => {
+    const createToastSwipe = (id: string): SwipeGesture => {
       const isDismissible = (): boolean => entries.value.find((entry) => entry.id === id)?.dismissible ?? true;
 
-      return createSwipeControl({
+      return createSwipeGesture({
         axis: () => 'x',
         captureTarget: () => null,
-        disabled: {
-          peek: () => !isDismissible(),
-          subscribe: (listener) => entries.subscribe(listener),
-          get value() {
-            return !isDismissible();
-          },
-        },
+        disabled: () => !isDismissible(),
         onCancel: ({ event }) => {
           const inner = getInner(event);
 
@@ -471,6 +466,13 @@ define<OreToastProps>(TOAST_TAG, {
 
       for (const [id, control] of swipeControls) {
         if (!currentIds.has(id)) {
+          const mounted = mountedSwipeControls.get(id);
+
+          if (mounted) {
+            mounted.unmount();
+            mountedSwipeControls.delete(id);
+          }
+
           control.dispose();
 
           swipeControls.delete(id);
@@ -482,11 +484,35 @@ define<OreToastProps>(TOAST_TAG, {
       for (const entry of entries.value) {
         if (!swipeControls.has(entry.id)) swipeControls.set(entry.id, createToastSwipe(entry.id));
 
+        const wrapper = containerRef.value?.querySelector<HTMLElement>(`[data-toast-id="${entry.id}"]`);
+        const mounted = mountedSwipeControls.get(entry.id);
+
+        if (wrapper && (!mounted || mounted.element !== wrapper)) {
+          mounted?.unmount();
+
+          const control = swipeControls.get(entry.id);
+
+          if (control) {
+            mountedSwipeControls.set(entry.id, { element: wrapper, unmount: control.mount(wrapper) });
+          }
+        }
+
         if (entry.phase === 'exiting') beginExit(entry.id);
       }
     };
 
-    watch(entries, syncControls);
+    const scheduleSyncControls = (): void => {
+      syncControls();
+
+      if (pendingSyncFrame !== undefined) cancelAnimationFrame(pendingSyncFrame);
+
+      pendingSyncFrame = requestAnimationFrame(() => {
+        pendingSyncFrame = undefined;
+        syncControls();
+      });
+    };
+
+    watch(entries, scheduleSyncControls);
     watch(paused, (isPaused) => {
       if (isPaused) store?.pauseTimers();
       else store?.resumeTimers();
@@ -514,11 +540,7 @@ define<OreToastProps>(TOAST_TAG, {
         <div
           class="toast-wrapper"
           data-toast-id=${entry.id}
-          part="toast-wrapper"
-          @pointerdown=${(event: PointerEvent) => swipeControls.get(entry.id)?.handlePointerDown(event)}
-          @pointermove=${(event: PointerEvent) => swipeControls.get(entry.id)?.handlePointerMove(event)}
-          @pointerup=${(event: PointerEvent) => swipeControls.get(entry.id)?.handlePointerUp(event)}
-          @pointercancel=${(event: PointerEvent) => swipeControls.get(entry.id)?.handlePointerCancel(event)}>
+          part="toast-wrapper">
           <div class="${() => `toast-inner${entry.phase !== 'active' ? ` ${entry.phase}` : ''}`}" part="toast-inner">
             <ore-alert
               color=${entry.color || (entry.urgency === 'assertive' ? 'error' : 'primary')}
@@ -564,7 +586,11 @@ define<OreToastProps>(TOAST_TAG, {
 
       hostBindings.delete(el);
 
+      if (pendingSyncFrame !== undefined) cancelAnimationFrame(pendingSyncFrame);
+
       for (const control of swipeControls.values()) control.dispose();
+      for (const mounted of mountedSwipeControls.values()) mounted.unmount();
+      mountedSwipeControls.clear();
       for (const id of exiting.keys()) clearExitListener(id);
     });
 

@@ -80,7 +80,7 @@ describe('createListControl', () => {
     expect(nav.focusedIndex.value).toBe(2);
   });
 
-  it('set returns -1 when the target index is a disabled item', () => {
+  it('set returns -1 and clears focus when the target index is a disabled item', () => {
     const items = [{ disabled: false }, { disabled: true }, { disabled: false }];
     const nav = createListControl({ getItems: () => items });
 
@@ -89,7 +89,7 @@ describe('createListControl', () => {
     const result = nav.set(1);
 
     expect(result).toBe(-1);
-    expect(nav.focusedIndex.value).toBe(0);
+    expect(nav.focusedIndex.value).toBe(-1);
   });
 
   it('supports custom isItemDisabled predicate', () => {

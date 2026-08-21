@@ -757,6 +757,42 @@ export default defineConfig({
           text: 'Examples',
         },
       ],
+      '/focus/': [
+        { link: '/focus/', text: 'Overview' },
+        {
+          items: [
+            { link: '/focus/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/focus/usage#orientation-and-direction', text: 'Orientation and Direction' },
+            { link: '/focus/usage#disabled-and-dynamic-items', text: 'Disabled and Dynamic Items' },
+            { link: '/focus/usage#typeahead', text: 'Typeahead' },
+            { link: '/focus/usage#focus-restoration', text: 'Focus Restoration' },
+            { link: '/focus/usage#framework-integration', text: 'Framework Integration' },
+            { link: '/focus/usage#working-with-other-vielzeug-libraries', text: 'Vielzeug Integration' },
+            { link: '/focus/usage#best-practices', text: 'Best Practices' },
+          ],
+          link: '/focus/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/focus/api#api-overview', text: 'Overview' },
+            { link: '/focus/api#package-entry-point', text: 'Entry Point' },
+            { link: '/focus/api#core-functions', text: 'Core Functions' },
+            { link: '/focus/api#types', text: 'Types' },
+            { link: '/focus/api#errors', text: 'Errors' },
+          ],
+          link: '/focus/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/focus/examples/roving-tabs-keyboard-navigation', text: 'Roving Tabs Keyboard Navigation' },
+            { link: '/focus/examples/dialog-return-focus-restoration', text: 'Dialog Return Focus Restoration' },
+          ],
+          link: '/focus/examples',
+          text: 'Examples',
+        },
+      ],
       '/forge/': [
         { link: '/forge/', text: 'Overview' },
         { link: '/forge/migration', text: 'Migration' },
@@ -799,6 +835,42 @@ export default defineConfig({
             { link: '/forge/examples/search-form-with-debounce', text: 'Search Form with Debounce' },
           ],
           link: '/forge/examples',
+          text: 'Examples',
+        },
+      ],
+      '/gesture/': [
+        { link: '/gesture/', text: 'Overview' },
+        {
+          items: [
+            { link: '/gesture/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/gesture/usage#commit-thresholds', text: 'Commit Thresholds' },
+            { link: '/gesture/usage#custom-commit-rules', text: 'Custom Commit Rules' },
+            { link: '/gesture/usage#pointer-capture-control', text: 'Pointer Capture Control' },
+            { link: '/gesture/usage#lifecycle', text: 'Lifecycle' },
+            { link: '/gesture/usage#framework-integration', text: 'Framework Integration' },
+            { link: '/gesture/usage#working-with-other-vielzeug-libraries', text: 'Vielzeug Integration' },
+            { link: '/gesture/usage#best-practices', text: 'Best Practices' },
+          ],
+          link: '/gesture/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/gesture/api#api-overview', text: 'Overview' },
+            { link: '/gesture/api#package-entry-point', text: 'Entry Point' },
+            { link: '/gesture/api#core-functions', text: 'Core Functions' },
+            { link: '/gesture/api#types', text: 'Types' },
+            { link: '/gesture/api#errors', text: 'Errors' },
+          ],
+          link: '/gesture/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/gesture/examples/carousel-swipe-navigation', text: 'Carousel Swipe Navigation' },
+            { link: '/gesture/examples/swipe-dismiss-notifications', text: 'Swipe-to-Dismiss Notifications' },
+          ],
+          link: '/gesture/examples',
           text: 'Examples',
         },
       ],

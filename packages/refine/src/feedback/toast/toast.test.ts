@@ -126,13 +126,17 @@ describe('ore-toast', () => {
     const id = service.add({ duration: 0, message: 'Swipe me' });
 
     await fixture.flush();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
     const wrapper = fixture.query<HTMLElement>(`[data-toast-id="${id}"]`)!;
 
     const inner = wrapper.querySelector<HTMLElement>('.toast-inner')!;
 
-    wrapper.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, pointerId: 1 }));
-    wrapper.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 300, pointerId: 1 }));
+    const swipeEventInit = { bubbles: true, isPrimary: true, pointerId: 1, pointerType: 'touch' } as const;
+
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { ...swipeEventInit, clientX: 0 }));
+    wrapper.dispatchEvent(new PointerEvent('pointermove', { ...swipeEventInit, clientX: 300 }));
+    wrapper.dispatchEvent(new PointerEvent('pointerup', { ...swipeEventInit, clientX: 300 }));
     inner.dispatchEvent(new TransitionEvent('transitionend', { bubbles: true, propertyName: 'transform' }));
     await fixture.flush();
 

@@ -66,11 +66,23 @@
       "slug": "flux"
     },
     {
+      "category": "Input",
+      "description": "Framework-neutral list navigation and focus restoration primitives",
+      "name": "@vielzeug/focus",
+      "slug": "focus"
+    },
+    {
       "category": "Forms",
       "description": "Typed form state, validation, submission",
       "name": "@vielzeug/forge",
       "optionalPeers": ["spell", "vault"],
       "slug": "forge"
+    },
+    {
+      "category": "Input",
+      "description": "Framework-neutral pointer swipe recognition with lifecycle-owned handles",
+      "name": "@vielzeug/gesture",
+      "slug": "gesture"
     },
     {
       "category": "Events",
@@ -141,7 +153,7 @@
     },
     {
       "category": "UI",
-      "dependencies": ["arsenal", "assay", "dnd", "keymap", "orbit", "ore", "ripple", "tempo"],
+      "dependencies": ["arsenal", "assay", "dnd", "focus", "gesture", "keymap", "orbit", "ore", "ripple", "tempo"],
       "description": "Accessible, themeable web components built on ore",
       "docsContract": "component-library",
       "name": "@vielzeug/refine",

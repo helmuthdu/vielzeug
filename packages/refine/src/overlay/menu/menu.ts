@@ -1,5 +1,5 @@
+import { restoreFocus } from '@vielzeug/focus';
 import type { Placement } from '@vielzeug/orbit';
-
 import {
   bind,
   createStableId,
@@ -23,7 +23,6 @@ import {
   lifecycleSignal,
   type OverlayOpenChangeDetail,
   type OverlayOpenReason,
-  restoreTriggerFocus,
 } from '../../core';
 import { disablableBundle, MENU_SIZE_PRESET, sizableBundle } from '../../shared';
 import { colorThemeMixin, forcedColorsMixin, sizeVariantMixin } from '../../styles';
@@ -297,7 +296,7 @@ define<OreMenuProps>(MENU_TAG, {
       stopPositioning?.();
       stopPositioning = null;
 
-      if (shouldRestoreFocus) restoreTriggerFocus(() => triggerEl);
+      if (shouldRestoreFocus) restoreFocus(() => triggerEl);
 
       emit('open-change', { open: false, reason });
     };

@@ -1,19 +1,14 @@
 <script lang="ts" setup >
 import { useRoute, withBase } from 'vitepress';
 
-import { PACKAGE_GROUPS } from './packageGroups';
+import { NAVBAR_COLUMNS, PACKAGE_GROUPS } from './packageGroups';
 
 defineProps<{ screenMenu?: boolean }>();
 
 const route = useRoute();
 const isCurrentPackage = (packageId: string): boolean =>
   route.path === `/${packageId}/` || route.path.startsWith(`/${packageId}/`);
-const MENU_COLUMNS = [
-  PACKAGE_GROUPS.slice(0, 2),
-  PACKAGE_GROUPS.slice(2, 3),
-  PACKAGE_GROUPS.slice(3, 5),
-  PACKAGE_GROUPS.slice(5),
-];
+const MENU_COLUMNS = NAVBAR_COLUMNS;
 </script>
 
 <template>

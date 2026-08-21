@@ -1,4 +1,16 @@
-import { bind, define, getHost, html, inject, onCleanup, prop, useEmit, useSlots, watchEffect } from '@vielzeug/ore';
+import {
+  bind,
+  define,
+  getHost,
+  html,
+  inject,
+  onCleanup,
+  onMounted,
+  prop,
+  useEmit,
+  useSlots,
+  watchEffect,
+} from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import { disablableBundle } from '../../shared';
@@ -145,6 +157,15 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
       },
     });
 
+    onMounted(() => {
+      const row = el.shadowRoot?.querySelector<HTMLElement>('.row');
+
+      if (!row) return;
+
+      const unmountSwipe = swipe.mount(row);
+      onCleanup(unmountSwipe);
+    });
+
     onCleanup(() => swipe.dispose());
 
     // Reflects the derived `selected` state as a plain boolean attribute — the styling/
@@ -231,11 +252,7 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
         part="row"
         tabindex="${() => (props.disabled.value ? '-1' : '0')}"
         @click="${handleActivate}"
-        @keydown="${handleRowKeydown}"
-        @pointercancel="${(e: PointerEvent) => swipe.handlePointerCancel(e)}"
-        @pointerdown="${(e: PointerEvent) => swipe.handlePointerDown(e)}"
-        @pointermove="${(e: PointerEvent) => swipe.handlePointerMove(e)}"
-        @pointerup="${(e: PointerEvent) => swipe.handlePointerUp(e)}">
+        @keydown="${handleRowKeydown}">
         <span class="leading" part="leading"><slot name="leading"></slot></span>
         <span class="content" part="content">
           <span class="title" part="title"><slot></slot></span>

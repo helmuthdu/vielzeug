@@ -33,6 +33,8 @@ Jump to the packages most relevant to your work.
 | Real-time search UI (combobox, command palette) | [Scout](/scout/) → [Sourcerer](#sourcerer)                    |
 | App with undo/redo (editor, design tool)         | [Ledger](/ledger/) → [Ripple](#ripple)                        |
 | Global keyboard shortcuts or command palette    | [Keymap](/keymap/) → [Ledger](/ledger/)                       |
+| Accessible overlays, menus, or list widgets     | [Focus](/focus/) → [Refine](#refine)                          |
+| Swipe interactions and touch-first UI            | [Gesture](/gesture/) → [Refine](#refine) → [Dnd](/dnd/)       |
 | Test fixtures or mock data                       | [Illusionist](/illusionist/) → [Coins](/coins/) → [Tempo](/tempo/) |
 
 ## Core
@@ -314,6 +316,8 @@ const api = await container.resolve(ApiToken);
 | **[Orbit](/orbit/)**             | Floating element positioning for tooltips, dropdowns, menus, and popovers                          |
 | **[Scroll](/scroll/)**           | Virtual list engine with variable-height rows, smooth scrolling, and zero layout thrash            |
 | **[Dnd](/dnd/)**                 | Framework-agnostic drag-and-drop with sortable lists, file-drop zones, and MIME filtering          |
+| **[Focus](/focus/)**             | Keyboard list navigation and focus restoration primitives for composite widgets                      |
+| **[Gesture](/gesture/)**         | Pointer swipe recognition primitives with lifecycle-owned handles                                    |
 | **[Scout](/scout/)**             | Trigram fuzzy search with per-field weights, reactive query state, and match highlighting          |
 | **[Sourcerer](/sourcerer/)**     | Typed data-source adapter for pagination, filtering, sorting, search, and infinite scroll          |
 | **[Pulse](/pulse/)**             | Typed WebSocket client with channel multiplexing, presence tracking, and auto-reconnect            |
@@ -341,6 +345,8 @@ const api = await container.resolve(ApiToken);
 | **Sourcerer + Wayfinder**   | Sync source query state (page, filters, sort) with the URL so links stay shareable                           |
 | **Scroll + Orbit**          | Render a virtualised list inside an Orbit-positioned dropdown for high-count comboboxes                      |
 | **Dnd + Scroll**            | Combine sortable drag handles with a virtual list for large reorderable datasets                             |
+| **Focus + Refine**          | Use Focus primitives for roving keyboard navigation and return-focus behavior in overlay/list components      |
+| **Gesture + Refine**        | Reuse one swipe gesture model across overlays and interactive content components                              |
 | **Clockwork + Ripple**      | Clockwork state and context are signals — bind them directly to effects or UI templates                      |
 | **Clockwork + Ward**        | Call Ward predicates inside Clockwork guards to block unauthorized transitions                               |
 | **Clockwork + Herald**      | Publish state-change events to decouple multiple machines from each other                                    |

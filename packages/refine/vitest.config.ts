@@ -27,6 +27,8 @@ export default defineConfig({
       { find: /^@vielzeug\/ore$/, replacement: path.resolve(__dirname, '../ore/src/index.ts') },
       { find: /^@vielzeug\/assay$/, replacement: path.resolve(__dirname, '../assay/src/index.ts') },
       { find: /^@vielzeug\/dnd$/, replacement: path.resolve(__dirname, '../dnd/src/index.ts') },
+      { find: /^@vielzeug\/focus$/, replacement: path.resolve(__dirname, '../focus/src/index.ts') },
+      { find: /^@vielzeug\/gesture$/, replacement: path.resolve(__dirname, '../gesture/src/index.ts') },
       { find: /^@vielzeug\/orbit$/, replacement: path.resolve(__dirname, '../orbit/src/index.ts') },
       { find: /^@vielzeug\/ripple\/watch$/, replacement: path.resolve(__dirname, '../ripple/src/watch.ts') },
       { find: /^@vielzeug\/ripple$/, replacement: path.resolve(__dirname, '../ripple/src/index.ts') },

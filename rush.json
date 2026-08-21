@@ -151,6 +151,18 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/focus",
+      "projectFolder": "packages/focus",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/gesture",
+      "projectFolder": "packages/gesture",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/codex",
       "projectFolder": "packages/codex",
       "shouldPublish": true,

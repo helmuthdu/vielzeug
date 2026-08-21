@@ -105,7 +105,9 @@ const heroPackages = [
   { cmd: 'pnpm add @vielzeug/dnd', id: 'dnd', name: 'dnd', tagline: 'Drag & drop' },
   { cmd: 'pnpm add @vielzeug/familiar', id: 'familiar', name: 'familiar', tagline: 'Web Worker pool' },
   { cmd: 'pnpm add @vielzeug/flux', id: 'flux', name: 'flux', tagline: 'Reactive streams & operators' },
+  { cmd: 'pnpm add @vielzeug/focus', id: 'focus', name: 'focus', tagline: 'Keyboard nav & focus restoration' },
   { cmd: 'pnpm add @vielzeug/forge', id: 'forge', name: 'forge', tagline: 'Form state & validation' },
+  { cmd: 'pnpm add @vielzeug/gesture', id: 'gesture', name: 'gesture', tagline: 'Swipe gesture recognition' },
   { cmd: 'pnpm add @vielzeug/herald', id: 'herald', name: 'herald', tagline: 'Typed event bus' },
   { cmd: 'pnpm add @vielzeug/illusionist', id: 'illusionist', name: 'illusionist', tagline: 'Fake data generator' },
   { cmd: 'pnpm add @vielzeug/keymap', id: 'keymap', name: 'keymap', tagline: 'Keyboard shortcuts & chords' },
@@ -163,10 +165,10 @@ const filteredCategories = computed(() => {
 });
 
 const coreEssentials = [
-  { category: 'Core Primitives', id: 'ripple', size: '1.2 kB', tagline: 'Signals, computed, and effects' },
-  { category: 'Forms & Validation', id: 'spell', size: '1.8 kB', tagline: 'Schema validation with fluent API' },
-  { category: 'Utilities', id: 'arsenal', size: '2.5 kB', tagline: '75+ zero-dependency utility functions' },
-  { category: 'Data Layer', id: 'courier', size: '2.0 kB', tagline: 'HTTP client & query cache / mutations' },
+  { category: 'Foundations', id: 'ripple', size: '1.2 kB', tagline: 'Signals, computed, and effects' },
+  { category: 'Forms & Domain Logic', id: 'spell', size: '1.8 kB', tagline: 'Schema validation with fluent API' },
+  { category: 'Foundations', id: 'arsenal', size: '2.5 kB', tagline: '75+ zero-dependency utility functions' },
+  { category: 'Data & Connectivity', id: 'courier', size: '2.0 kB', tagline: 'HTTP client & query cache / mutations' },
 ];
 
 function cycleHeroPkg() {

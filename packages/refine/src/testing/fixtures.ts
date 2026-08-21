@@ -38,6 +38,8 @@ const IIFE_ENTRIES: Array<{ path: string; shim?: string }> = [
   { path: TEMPORAL_UMD, shim: 'if(typeof temporal!=="undefined"){window.Temporal=temporal;}' },
   { path: path.join(PKG, 'ripple/dist/ripple.iife.js') },
   { path: path.join(PKG, 'arsenal/dist/arsenal.iife.js') },
+  { path: path.join(PKG, 'focus/dist/focus.iife.js') },
+  { path: path.join(PKG, 'gesture/dist/gesture.iife.js') },
   { path: path.join(PKG, 'keymap/dist/keymap.iife.js') },
   { path: path.join(PKG, 'ore/dist/ore.iife.js') },
   { path: path.join(PKG, 'orbit/dist/orbit.iife.js') },

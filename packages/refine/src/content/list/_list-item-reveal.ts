@@ -1,5 +1,5 @@
+import { createSwipeGesture, type SwipeGesture, type SwipeGestureDetail } from '@vielzeug/gesture';
 import type { Readable } from '@vielzeug/ripple';
-import { createSwipeControl, type SwipeControl, type SwipeControlDetail } from '../../core';
 import type { ListItemRevealSide } from './list-item';
 
 /** Drag distance (px) past which the action panel snaps fully open on release. */
@@ -20,7 +20,7 @@ export type RevealStateOptions = {
  * The swipe-reveal-confirm gesture behind `ore-list-item`'s `actions-left`/`actions-right` slots
  * — isolated here since it's the one genuinely tricky part of the component (three distance
  * thresholds, inline style/attribute choreography during an active drag). Deliberately *not* a
- * `core/` primitive: `createSwipeControl` itself already is one (shared with `ore-toast`),
+ * shared primitive: `createSwipeGesture` itself already is one (shared with `ore-toast`),
  * but this two-stage reveal/confirm layer on top of it has exactly one consumer today —
  * generalizing it further would be speculative, not reusable.
  *
@@ -30,8 +30,8 @@ export type RevealStateOptions = {
  * module setting the attribute is enough to drive both that watcher and `list.css`'s
  * `[revealed]` styling.
  */
-export function createRevealState(el: HTMLElement, options: RevealStateOptions): SwipeControl {
-  const resolveSide = (detail: SwipeControlDetail): ListItemRevealSide => (detail.distance < 0 ? 'right' : 'left');
+export function createRevealState(el: HTMLElement, options: RevealStateOptions): SwipeGesture {
+  const resolveSide = (detail: SwipeGestureDetail): ListItemRevealSide => (detail.distance < 0 ? 'right' : 'left');
 
   // Inline `--_swipe-x` override during an active drag lets the row (and both action panels,
   // which read the same variable) follow the pointer 1:1 with no transition lag. Clearing it
@@ -43,12 +43,13 @@ export function createRevealState(el: HTMLElement, options: RevealStateOptions):
     el.style.removeProperty('--_swipe-x');
   };
 
-  return createSwipeControl({
+  return createSwipeGesture({
     axis: () => 'x',
     // Do not capture the pointer — capture would steal clicks from action buttons revealed
     // mid-gesture (same reasoning as ore-toast's swipe-to-dismiss).
     captureTarget: () => null,
-    disabled: options.disabled,
+    disabled: () => options.disabled.value,
+    disabledBehavior: () => 'cancel-active',
     onCancel: resetInline,
     // `threshold`/`distance`/`progress` are all wired to CONFIRM_THRESHOLD (the outer, rarer
     // gesture) — onCommit only fires once the swipe has gone all the way through.

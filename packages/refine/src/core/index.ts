@@ -83,7 +83,6 @@ export {
   type OverlayOpenChangeDetail,
   type OverlayOpenDetail,
   type OverlayOpenReason,
-  restoreTriggerFocus,
 } from './overlay';
 // ── Ref callback ──────────────────────────────────────────────────────────────
 export { bindRefCallback, type RefCallback } from './ref-callback';
@@ -91,14 +90,6 @@ export { bindRefCallback, type RefCallback } from './ref-callback';
 export { createSliderControl, type SliderControl, type SliderControlOptions } from './slider';
 // ── Spinner ───────────────────────────────────────────────────────────────────
 export { createSpinnerControl, type SpinnerControl, type SpinnerControlOptions } from './spinner';
-// ── Swipe ─────────────────────────────────────────────────────────────────────
-export {
-  createSwipeControl,
-  type SwipeAxis,
-  type SwipeControl,
-  type SwipeControlDetail,
-  type SwipeControlOptions,
-} from './swipe';
 // ── Text field ────────────────────────────────────────────────────────────────
 export { createTextField, type TextFieldDetach, type TextFieldHandle, type TextFieldOptions } from './text-field';
 

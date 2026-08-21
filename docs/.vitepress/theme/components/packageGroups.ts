@@ -8,77 +8,98 @@ export type PackageGroup = {
 export const PACKAGE_GROUPS: PackageGroup[] = [
   {
     icon: 'atom',
-    id: 'core',
-    name: 'Core Primitives',
+    id: 'foundations',
+    name: 'Foundations',
     packages: [
+      { id: 'arsenal', tagline: '75+ utility functions' },
       { id: 'clockwork', tagline: 'Finite state machines' },
       { id: 'flux', tagline: 'Reactive streams & operators' },
+      { id: 'herald', tagline: 'Typed event bus' },
       { id: 'ripple', tagline: 'Signals, computed, effects' },
     ],
   },
   {
     icon: 'database',
     id: 'data',
-    name: 'Data Layer',
+    name: 'Data & Connectivity',
     packages: [
       { id: 'courier', tagline: 'HTTP client & caching' },
       { id: 'pulse', tagline: 'WebSocket client & presence' },
+      { id: 'scout', tagline: 'Trigram fuzzy search' },
       { id: 'sourcerer', tagline: 'Reactive data sources' },
       { id: 'vault', tagline: 'Browser storage' },
     ],
   },
   {
-    icon: 'layout',
-    id: 'ui',
-    name: 'UI Components',
-    packages: [
-      { id: 'ore', tagline: 'Web component primitives' },
-      { id: 'dnd', tagline: 'Drag & drop' },
-      { id: 'necromancer', tagline: 'Web Animations API primitives' },
-      { id: 'orbit', tagline: 'Floating positioning' },
-      { id: 'prism', tagline: 'SVG charts' },
-      { id: 'scroll', tagline: 'Virtual lists' },
-      { id: 'refine', tagline: 'Accessible components' },
-    ],
-  },
-  {
-    icon: 'check-square',
-    id: 'forms',
-    name: 'Forms & Validation',
-    packages: [
-      { id: 'forge', tagline: 'Form state & validation' },
-      { id: 'spell', tagline: 'Schema validation' },
-    ],
-  },
-  {
     icon: 'building-2',
-    id: 'infrastructure',
-    name: 'App Infrastructure',
+    id: 'runtime',
+    name: 'Runtime & Architecture',
     packages: [
       { id: 'conduit', tagline: 'Dependency injection' },
       { id: 'familiar', tagline: 'Web Worker pool' },
-      { id: 'herald', tagline: 'Typed event bus' },
-      { id: 'keymap', tagline: 'Keyboard shortcuts & chords' },
+      { id: 'ledger', tagline: 'Async undo / redo history' },
+      { id: 'sandbox', tagline: 'Sandboxed iframe runtime' },
       { id: 'ward', tagline: 'RBAC & permissions' },
       { id: 'wayfinder', tagline: 'Client-side routing' },
     ],
   },
   {
-    icon: 'wrench',
-    id: 'utilities',
-    name: 'Utilities & Tools',
+    icon: 'mouse-pointer-click',
+    id: 'interaction',
+    name: 'Interaction & UI',
     packages: [
-      { id: 'arsenal', tagline: '75+ utility functions' },
+      { id: 'dnd', tagline: 'Drag & drop' },
+      { id: 'focus', tagline: 'Keyboard nav & focus restoration' },
+      { id: 'gesture', tagline: 'Swipe gesture recognition' },
+      { id: 'keymap', tagline: 'Keyboard shortcuts & chords' },
+      { id: 'necromancer', tagline: 'Web Animations API primitives' },
+      { id: 'orbit', tagline: 'Floating positioning' },
+      { id: 'scroll', tagline: 'Virtual lists' },
+      { id: 'ore', tagline: 'Web component primitives' },
+      { id: 'prism', tagline: 'SVG charts' },
+      { id: 'refine', tagline: 'Accessible components' },
+    ],
+  },
+  {
+    icon: 'wrench',
+    id: 'devtools',
+    name: 'Developer Tools',
+    packages: [
       { id: 'assay', tagline: 'DOM testing primitives' },
       { id: 'codex', tagline: 'AI / MCP server' },
-      { id: 'coins', tagline: 'Monetary arithmetic' },
       { id: 'illusionist', tagline: 'Fake data generator' },
-      { id: 'ledger', tagline: 'Async undo / redo history' },
-      { id: 'lingua', tagline: 'i18n & pluralization' },
       { id: 'rune', tagline: 'Structured logging' },
-      { id: 'sandbox', tagline: 'Sandboxed iframe runtime' },
-      { id: 'scout', tagline: 'Trigram fuzzy search' },
+    ],
+  },
+  {
+    icon: 'check-square',
+    id: 'domain',
+    name: 'Forms & Domain Logic',
+    packages: [
+      { id: 'coins', tagline: 'Monetary arithmetic' },
+      { id: 'forge', tagline: 'Form state & validation' },
+      { id: 'lingua', tagline: 'i18n & pluralization' },
+      { id: 'spell', tagline: 'Schema validation' },
       { id: 'tempo', tagline: 'Date & time' },
     ],
   },
+];
+
+const packageGroupsById = new Map(PACKAGE_GROUPS.map((group) => [group.id, group] as const));
+
+const requirePackageGroup = (id: string): PackageGroup => {
+  const group = packageGroupsById.get(id);
+  if (!group) {
+    throw new Error(`Unknown package group: ${id}`);
+  }
+  return group;
+};
+
+// Explicit navbar column layout — keeps each column balanced as packages are added.
+// Columns render left-to-right; the menu's CSS grid places them in order.
+export const NAVBAR_COLUMNS: PackageGroup[][] = [
+  [requirePackageGroup('foundations'), requirePackageGroup('data')], // Foundations · Data & Connectivity
+  [requirePackageGroup('runtime'), requirePackageGroup('domain')], // Runtime & Architecture · Forms & Domain Logic
+  [requirePackageGroup('interaction')], // Interaction & UI
+  [requirePackageGroup('devtools')], // Developer Tools
 ];

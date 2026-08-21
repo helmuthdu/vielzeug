@@ -631,6 +631,8 @@
     "@vielzeug/arsenal": "workspace:*",
     "@vielzeug/assay": "workspace:*",
     "@vielzeug/dnd": "workspace:*",
+    "@vielzeug/focus": "workspace:*",
+    "@vielzeug/gesture": "workspace:*",
     "@vielzeug/keymap": "workspace:*",
     "@vielzeug/orbit": "workspace:*",
     "@vielzeug/ore": "workspace:*",

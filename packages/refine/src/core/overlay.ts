@@ -61,14 +61,3 @@ export const createOutsidePointerDismissal = (options: OutsidePointerDismissalOp
 
   return dispose;
 };
-
-/**
- * Restores focus to a dropdown/floating-panel trigger when the owning overlay closes.
- *
- * Named distinctly from `FocusManager.restoreFocus()` (`./focus.ts`) — that method restores a
- * captured dialog-opener element from internal state; this function takes the trigger directly,
- * for dropdown-style overlays (menu) that never captured one.
- */
-export const restoreTriggerFocus = (getTrigger: () => HTMLElement | null | undefined): void => {
-  getTrigger()?.focus();
-};
