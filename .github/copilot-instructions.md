@@ -1,71 +1,98 @@
-# GitHub Copilot — Workspace Instructions
+# GitHub Copilot Repository Instructions
 
-## Project
+These instructions apply repository-wide. Keep changes focused, preserve unrelated work, and
+complete implementation, tests, and affected documentation together.
 
-**Vielzeug** is a monorepo of independent, zero-dependency, tree-shakeable TypeScript packages published under the `@vielzeug/*` npm scope. Each package ships ESM + CJS (Vite library mode), targets ES2022, and has strict TypeScript throughout.
+## Repository
 
-## Canonical references — read before editing
+Vielzeug is a monorepo of independent TypeScript packages published as `@vielzeug/*`.
+Packages target ES2022, use strict TypeScript, and ship ESM and CJS builds through Vite.
 
-Package count, the dependency graph, and the catalogue change often enough that duplicating them here just goes stale. Treat these as the single source of truth instead:
+- Runtime: Node 22 (`.tool-versions`; Rush accepts the range declared in `rush.json`)
+- Package manager: pnpm 10.33.4
+- Monorepo orchestration: Rush
+- Tests: Vitest
+- Formatting and linting: Biome
+- Documentation: VitePress
 
-- **AI system entrypoint** — `.ai/README.md`
-- **Engineering conventions** (disposal, dev logging, error classes, file layout) — `.ai/core/conventions.md`
-- **Package catalogue & dependency graph** — `.ai/data/packages.json` and `.ai/reference/packages.md`
-- **Workspace toolchain & commands** — `.ai/core/workspace.md`
-- **Root agent contract** — `AGENTS.md` (indexes child `AGENTS.md` files per subtree)
-- **Contributor workflow** — `.github/contributing.md`
+## Start work
 
-## Quick commands
+When repository tools are available:
+
+1. Inspect the current worktree and preserve changes you did not make.
+2. Read the nearest `AGENTS.md` for the files being changed.
+3. Read the smallest matching playbook in `.ai/tasks/`:
+   - `build.md` for source, tests, tooling, CI, or behavior
+   - `review.md` for investigation, design, or review
+   - `document.md` for docs, README, recipes, or REPL examples
+   - `release.md` for change files, commits, pull requests, or release diagnostics
+4. Follow references listed in that task's `Load` section.
+
+Source code and package manifests override generated references or copied prose.
+
+## Repository layout
+
+| Path | Purpose |
+| --- | --- |
+| `packages/<name>/` | Independent published packages |
+| `docs/<name>/` | Package documentation and recipes |
+| `scripts/` | Workspace, generation, validation, and release tooling |
+| `.ai/` | Canonical AI policy, task playbooks, metadata, and references |
+| `common/` and `rush.json` | Rush workspace configuration |
+| `.github/workflows/` | CI and publishing workflows |
+
+Subtrees with additional rules contain their own `AGENTS.md`. Most packages intentionally rely
+only on `packages/AGENTS.md` and `.ai/core/conventions.md`.
+
+## Required engineering rules
+
+- Do not add dependencies, commit, push, publish, release, or perform irreversible operations
+  without explicit approval.
+- Keep package source strict TypeScript. Do not use `any` or add JavaScript files under `src/`.
+- Do not add external runtime dependencies unless explicitly approved. Workspace dependencies
+  use `workspace:*`.
+- Route public root exports through `packages/<name>/src/index.ts`.
+- Update source, tests, exports, types, docs, and examples together when public behavior changes.
+- Treat removed or renamed public APIs as breaking; do not add compatibility aliases or silent
+  fallbacks unless requested.
+- Follow the disposal, typed-error, diagnostics, and file-layout contracts in
+  `.ai/core/conventions.md`.
+- Use existing package scripts and shared tooling instead of introducing parallel commands or
+  hand-maintained generated data.
+- Never weaken or delete tests merely to make validation pass.
+
+## Setup and commands
+
+From a fresh checkout, install dependencies before building:
 
 ```bash
-pnpm setup   # rush install — install all dependencies
-pnpm build   # rush build — build all packages
-pnpm test    # vitest — run all tests
-pnpm lint    # Biome checks formatting, imports, and lint rules
-pnpm fix     # Biome applies safe formatting, import, and lint fixes
+pnpm setup
 ```
 
-Per-package: `cd packages/<name> && pnpm build|test|lint|fix`. Test path convention and per-package overrides are documented in `.ai/core/workspace.md` and `.ai/data/packages.json`.
+Use the narrowest command that covers the change:
 
-## Key conventions (summary — full detail in conventions.md)
-
-- Zero external runtime dependencies per package; `workspace:*` deps between packages are fine.
-- TypeScript strict mode everywhere — no `any`, no JS files in `src/`.
-- Biome organizes imports and applies safe fixes — run `pnpm fix`, don't hand-format.
-- Conventional commits: `feat(courier): add retry logic`.
-- All public exports go through `packages/<name>/src/index.ts`.
-
-## Tasks
-
-Canonical AI task definitions live in `.ai/tasks/`. Read the smallest task that fits the job:
-
-| Need                                           | Task file               |
-| ---------------------------------------------- | ----------------------- |
-| Change code, tests, tooling, or CI             | `.ai/tasks/build.md`    |
-| Investigate, audit, plan, or redesign          | `.ai/tasks/review.md`   |
-| Update docs, README, recipes, or REPL examples | `.ai/tasks/document.md` |
-| Prepare releases, commits, or pull requests    | `.ai/tasks/release.md`  |
-
-## AI integration (`codex`)
-
-The `codex` package is an MCP server exposing all Vielzeug docs/APIs to AI clients:
-
-```sh
-cd packages/codex && pnpm build     # build once
-node packages/codex/dist/index.js   # stdio (Claude Desktop, Copilot Chat)
-node packages/codex/dist/index.js --port 3100   # HTTP (remote agents)
+```bash
+pnpm vitest run packages/<name>/src/__tests__/
+pnpm --filter @vielzeug/<name> lint
+pnpm --filter @vielzeug/<name> build
+pnpm validate:docs -- --package=<name>
+pnpm validate:repl -- --package=<name>
+pnpm check:ai-data
 ```
 
-Available MCP tools: `list-packages`, `search-packages`, `list-docs-pages`, `get-docs`, `get-package-api`, `get-ai-context`, `list-components`, `get-component`. Prefer these over reading files one-by-one when looking up another package's API.
+Repository-wide commands are `pnpm build`, `pnpm test`, `pnpm lint`, and `pnpm fix`. Use
+`pnpm fix` for Biome formatting and import organization rather than hand-formatting.
 
-## Common import patterns
+For AI metadata changes, edit canonical `.ai/` sources, run `pnpm gen:ai-data`, then run
+`pnpm check:ai-data`. Do not hand-edit generated table blocks or local client adapters.
 
-```typescript
-import { computed, effect, signal } from '@vielzeug/ripple'; // reactive state
-import { createForm } from '@vielzeug/forge'; // forms
-import { s } from '@vielzeug/spell'; // validation
-import { createCourier } from '@vielzeug/courier'; // HTTP + caching
-import { table } from '@vielzeug/vault';
-import { createLocalStorage } from '@vielzeug/vault/local-storage'; // storage
-import { createContainer, token } from '@vielzeug/conduit'; // DI container
-```
+## Validation
+
+- Package source: focused tests, package lint, package build.
+- Public API: package validation plus affected docs and REPL validation.
+- Documentation: package docs validation, Codex build, docs build.
+- Tooling: focused script tests and a direct smoke command.
+- Cross-package changes: validate every affected dependent package.
+
+If the environment cannot run a required command, report the exact command and reason instead
+of claiming success.

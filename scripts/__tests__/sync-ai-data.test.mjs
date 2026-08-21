@@ -1,14 +1,21 @@
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
-  assertTaskReferencesExist,
+  assertTaskDocumentsExist,
   assertValidPackages,
   assertValidTasks,
+  collectAiReferenceSources,
   extractAiReferences,
   findDanglingAiReferences,
+  isAiReferenceSource,
   mergePackageData,
   patchPackagesReference,
   renderPackagesTable,
+  syncTaskAdapters,
   taskStubContent,
 } from '../sync-ai-data.mjs';
 
@@ -22,8 +29,8 @@ describe('assertValidTasks()', () => {
   it('accepts well-formed task metadata', () => {
     expect(() =>
       assertValidTasks([
-        { description: 'Review.', inputs: ['scope'], key: 'review', references: ['.ai/tasks/review.md'] },
-        { description: 'Build.', inputs: ['scope'], key: 'build', references: ['.ai/tasks/build.md'] },
+        { description: 'Review.', key: 'review' },
+        { description: 'Build.', key: 'build' },
       ]),
     ).not.toThrow();
   });
@@ -31,28 +38,26 @@ describe('assertValidTasks()', () => {
   it('rejects duplicate task keys', () => {
     expect(() =>
       assertValidTasks([
-        { description: 'Analyze.', inputs: [], key: 'analyze', references: ['a'] },
-        { description: 'Analyze.', inputs: [], key: 'analyze', references: ['b'] },
+        { description: 'Analyze.', key: 'analyze' },
+        { description: 'Analyze.', key: 'analyze' },
       ]),
     ).toThrow(/duplicate task key/);
   });
 
   it('rejects invalid task keys', () => {
-    expect(() => assertValidTasks([{ description: 'Bad.', inputs: [], key: 'Bad Key', references: ['a'] }])).toThrow(
-      /must match/,
-    );
+    expect(() => assertValidTasks([{ description: 'Bad.', key: 'Bad Key' }])).toThrow(/must match/);
   });
 
-  it('rejects tasks without references', () => {
-    expect(() => assertValidTasks([{ description: 'Analyze.', inputs: [], key: 'analyze', references: [] }])).toThrow(
-      /at least one string reference/,
+  it('rejects fields owned by canonical task documents', () => {
+    expect(() => assertValidTasks([{ description: 'Analyze.', inputs: ['scope'], key: 'analyze' }])).toThrow(
+      /unsupported fields: inputs/,
     );
   });
 });
 
-describe('assertTaskReferencesExist()', () => {
+describe('assertTaskDocumentsExist()', () => {
   it('rejects a missing canonical task document', () => {
-    expect(() => assertTaskReferencesExist([{ key: 'missing', references: [] }], '/does-not-exist')).toThrow(
+    expect(() => assertTaskDocumentsExist([{ key: 'missing' }], '/does-not-exist')).toThrow(
       /canonical task document/,
     );
   });
@@ -62,7 +67,7 @@ describe('assertValidPackages()', () => {
   it('rejects a package name that does not match its slug', () => {
     expect(() =>
       assertValidPackages([
-        { category: 'Utilities', description: 'Utility', domOutput: false, name: '@vielzeug/other', slug: 'tool' },
+        { category: 'Utilities', description: 'Utility', name: '@vielzeug/other', slug: 'tool' },
       ]),
     ).toThrow(/must use name/);
   });
@@ -74,7 +79,6 @@ describe('assertValidPackages()', () => {
           category: 'Utilities',
           description: 'Utility',
           docsContract: 'unsupported',
-          domOutput: false,
           name: '@vielzeug/tool',
           slug: 'tool',
         },
@@ -87,14 +91,17 @@ describe('taskStubContent()', () => {
   it('points adapter stubs at the new task doc path', () => {
     const content = taskStubContent({
       description: 'Update docs with source-backed rules.',
-      inputs: ['package'],
       key: 'document',
-      references: ['.ai/core/policy.md', '.ai/tasks/document.md'],
     });
     expect(content).toMatch(/# document/);
     expect(content).toMatch(/\.ai\/tasks\/document\.md/);
-    expect(content).toMatch(/## Inputs/);
-    expect(content).toMatch(/\.ai\/core\/policy\.md/);
+    expect(content).not.toMatch(/## Inputs|## Load/);
+  });
+
+  it('serializes a description containing a colon safely', () => {
+    expect(taskStubContent({ description: 'Review: architecture.', key: 'review' })).toMatch(
+      /description: "Review: architecture\."/,
+    );
   });
 });
 
@@ -106,7 +113,6 @@ describe('mergePackageData()', () => {
           slug: 'forge',
           category: 'Forms',
           description: 'Form state',
-          domOutput: false,
           name: '@vielzeug/forge',
           dependencies: [],
           optionalPeers: [],
@@ -120,7 +126,6 @@ describe('mergePackageData()', () => {
         slug: 'forge',
         category: 'Forms',
         description: 'Form state',
-        domOutput: false,
         name: '@vielzeug/forge',
         dependencies: ['arsenal', 'ripple'],
         peerDependencies: ['spell'],
@@ -142,7 +147,6 @@ describe('mergePackageData()', () => {
             slug: 'ghost',
             category: 'Utilities',
             description: 'old',
-            domOutput: false,
             name: '@vielzeug/ghost',
             dependencies: [],
             optionalPeers: [],
@@ -162,19 +166,17 @@ describe('renderPackagesTable() / patchPackagesReference()', () => {
         name: '@vielzeug/refine',
         category: 'UI',
         description: 'Components',
-        domOutput: true,
         dependencies: ['ore', 'ripple'],
         optionalPeers: [],
         peerDependencies: [],
-        testCommand: 'pnpm --filter @vielzeug/refine test',
       },
     ]);
 
     expect(table).toContain(
-      '| Package | Category | DOM | Description | Dependencies | Required peers | Optional peers | Test command |',
+      '| Package | Category | Description | Dependencies | Required peers | Optional peers |',
     );
     expect(table).toContain(
-      '| `@vielzeug/refine` | UI | yes | Components | `ore`, `ripple` | — | — | `pnpm --filter @vielzeug/refine test` |',
+      '| `@vielzeug/refine` | UI | Components | `ore`, `ripple` | — | — |',
     );
   });
 
@@ -192,7 +194,6 @@ describe('renderPackagesTable() / patchPackagesReference()', () => {
         name: '@vielzeug/spell',
         category: 'Validation',
         description: 'Schema validation',
-        domOutput: false,
         dependencies: ['arsenal'],
         optionalPeers: [],
         peerDependencies: [],
@@ -201,6 +202,67 @@ describe('renderPackagesTable() / patchPackagesReference()', () => {
 
     expect(patched).toMatch(/`@vielzeug\/spell`/);
     expect(patched).toMatch(/Schema validation/);
+  });
+});
+
+describe('collectAiReferenceSources()', () => {
+  it('includes canonical documents and every generated client entrypoint', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'ai-reference-sources-test-'));
+    try {
+      for (const file of [
+        '.ai/README.md',
+        '.github/copilot-instructions.md',
+        '.junie/AGENTS.md',
+        '.claude/commands/review.md',
+        '.devin/workflows/review.md',
+        'AGENTS.md',
+        'CLAUDE.md',
+      ]) {
+        const absPath = path.join(root, file);
+        mkdirSync(path.dirname(absPath), { recursive: true });
+        writeFileSync(absPath, '');
+      }
+
+      expect(collectAiReferenceSources(root)).toEqual([
+        '.ai/README.md',
+        '.claude/commands/review.md',
+        '.devin/workflows/review.md',
+        '.github/copilot-instructions.md',
+        '.junie/AGENTS.md',
+        'AGENTS.md',
+        'CLAUDE.md',
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('recognizes client entrypoints with Windows path separators', () => {
+    expect(isAiReferenceSource('.github\\copilot-instructions.md', false)).toBe(true);
+    expect(isAiReferenceSource('.junie\\AGENTS.md', false)).toBe(true);
+    expect(isAiReferenceSource('.claude\\commands\\review.md', false)).toBe(true);
+    expect(isAiReferenceSource('.devin\\workflows\\review.md', false)).toBe(true);
+  });
+});
+
+describe('syncTaskAdapters()', () => {
+  it('writes registered adapters and removes orphaned adapter files', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'ai-adapters-test-'));
+    try {
+      mkdirSync(path.join(root, '.claude/commands'), { recursive: true });
+      mkdirSync(path.join(root, '.devin/workflows'), { recursive: true });
+      writeFileSync(path.join(root, '.claude/commands/obsolete.md'), 'old');
+      writeFileSync(path.join(root, '.devin/workflows/obsolete.md'), 'old');
+
+      syncTaskAdapters([{ description: 'Review code.', key: 'review' }], { root });
+
+      expect(readFileSync(path.join(root, '.claude/commands/review.md'), 'utf8')).toMatch(/canonical procedure/);
+      expect(readFileSync(path.join(root, '.devin/workflows/review.md'), 'utf8')).toMatch(/canonical procedure/);
+      expect(() => readFileSync(path.join(root, '.claude/commands/obsolete.md'), 'utf8')).toThrow();
+      expect(() => readFileSync(path.join(root, '.devin/workflows/obsolete.md'), 'utf8')).toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

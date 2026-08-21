@@ -95,6 +95,32 @@ describe('syncFile() / syncPatchedFile() — filesystem behavior in an isolated 
     expect(stales[0]).toMatch(/tracked\.txt/);
   });
 
+  it('syncFile can enforce an existing ignored file while allowing it to be absent', () => {
+    root = makeTempRepo();
+    writeFileSync(path.join(root, '.gitignore'), 'ignored.txt\n');
+    execFileSync('git', ['add', '.gitignore'], { cwd: root });
+    writeFileSync(path.join(root, 'ignored.txt'), 'old');
+
+    const stales = [];
+    const existingResult = syncFile('ignored.txt', 'new', {
+      check: true,
+      checkExistingIgnored: true,
+      onStale: (message) => stales.push(message),
+      root,
+    });
+    rmSync(path.join(root, 'ignored.txt'));
+    const missingResult = syncFile('ignored.txt', 'new', {
+      check: true,
+      checkExistingIgnored: true,
+      onStale: (message) => stales.push(message),
+      root,
+    });
+
+    expect(existingResult).toBe('stale');
+    expect(missingResult).toBe('skipped');
+    expect(stales).toHaveLength(1);
+  });
+
   it('syncPatchedFile patches an existing file between markers', () => {
     root = makeTempRepo();
     writeFileSync(path.join(root, 'target.md'), 'a\nBEGIN\nold\nEND\nb\n');

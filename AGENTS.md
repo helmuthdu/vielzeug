@@ -12,7 +12,7 @@ DOX is adopted in a **tiered** fashion: a child `AGENTS.md` exists only where a 
 - **Engineering conventions** (disposal, logging, errors, file layout) — `.ai/core/conventions.md`.
 - **Package catalogue and dependency graph** — `.ai/data/packages.json` and `.ai/reference/packages.md`.
 - **Workspace toolchain, commands, versioning** — `.ai/core/workspace.md`.
-- **Task playbooks** (build / review / document / release) — `.ai/tasks/*.md`, with structured task metadata in `.ai/data/tasks.json`.
+- **Task playbooks** (build / review / document / release) — `.ai/tasks/*.md`, with the client-adapter registry in `.ai/data/tasks.json`.
 - **Contributor workflow** — `.github/contributing.md`.
 - **Additional contributor/tooling context** — `CLAUDE.md`.
 

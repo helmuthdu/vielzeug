@@ -2,7 +2,7 @@
  * Single real read of "what's in packages/*, and how does it depend on other @vielzeug/*
  * packages" — extracted after three independent implementations of the same
  * readdir-then-parse-each-package.json scan drifted into slightly different shapes
- * (vielzeug-packages.ts wanted names only, sync-catalogue.mjs wanted deps + optional peers,
+ * (vielzeug-packages.ts wanted names only, sync-ai-data.mjs wanted deps + optional peers,
  * worktree.mjs wanted deps + peers as a Map). One real filesystem read, three thin views over
  * it below — `readPackageManifests()` is the only function that touches the filesystem.
  *
@@ -30,7 +30,7 @@ function unscope(name) {
  * alphabetically by slug. A directory with no `package.json` (a half-scaffolded package) or
  * with unparseable JSON is skipped, not thrown on — this function is on the critical startup
  * path of `docs/.vitepress/config.ts` (every `pnpm docs:dev` / `docs:build`, via
- * vielzeug-packages.ts's alias builder) as well as `sync-catalogue.mjs` and `worktree.mjs`'s
+ * vielzeug-packages.ts's alias builder) as well as `sync-ai-data.mjs` and `worktree.mjs`'s
  * full-repo scans. In a repo where multiple agents edit different packages concurrently, one
  * contributor's mid-edit syntax error in an unrelated `package.json` must not be able to take
  * down everyone else's dev server or worktree tooling — so this warns loudly (never silently)

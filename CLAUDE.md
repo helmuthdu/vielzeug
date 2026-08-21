@@ -6,7 +6,7 @@ Claude entry rail. Canonical agent system lives in `.ai/`; avoid copying package
 
 1. Read `.ai/README.md`.
 2. Select smallest matching `.ai/tasks/*.md` playbook.
-3. Load task references from `.ai/data/tasks.json` and task's `Load first` section.
+3. Load references from the task's `Load` section.
 4. Follow relevant `AGENTS.md` chain before editing.
 
 ## Canonical ownership
@@ -33,8 +33,8 @@ pnpm validate:repl -- --package=<name>
 pnpm check:ai-data
 ```
 
-Per-package test overrides and focused validation commands live in `.ai/core/workspace.md` and `.ai/data/packages.json`.
+Focused validation commands live in `.ai/core/workspace.md`; package-specific behavior belongs in package scripts.
 
 ## Client-specific rule
 
-Use canonical sources above instead of repeating package counts, dependency graphs, conventions, or release guidance. Generated local task adapters live in `.claude/commands/`; regenerate with `pnpm gen:ai-data` after editing `.ai/data/tasks.json`.
+Use canonical sources above instead of repeating package counts, dependency graphs, conventions, or release guidance. Generated local task adapters live in `.claude/commands/`; regenerate with `pnpm gen:ai-data` after changing the task registry.

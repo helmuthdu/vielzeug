@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 // Syncs the structured AI metadata under .ai/data/ with the live package graph from
 // packages/*/package.json, then regenerates the human-readable package reference.
-// Also validates that every .ai/... path any AGENTS.md/CLAUDE.md/.ai/**/*.md file
-// cross-references still resolves to a real file — see "Reference integrity" below.
+// Also validates that every .ai/... path referenced by a canonical AI document or
+// client entrypoint resolves to a real file — see "Reference integrity" below.
 //
 // Why one script: the old split between "workflow docs" and "catalogue" created more
 // concepts than value. The current .ai architecture keeps curated facts in JSON and uses
 // one small sync pass to refresh the fields that are derivable from source.
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
@@ -49,38 +49,23 @@ export function assertValidTasks(tasks) {
     }
     seen.add(task.key);
 
-    for (const field of ['description', 'inputs']) {
-      if (field === 'description' && (typeof task[field] !== 'string' || task[field].trim() === '')) {
-        throw new Error(`.ai/data/tasks.json: task \"${task.key}\" must have a non-empty description`);
-      }
-      if (
-        field === 'inputs' &&
-        (!Array.isArray(task[field]) || task[field].some((input) => typeof input !== 'string'))
-      ) {
-        throw new Error(`.ai/data/tasks.json: task \"${task.key}\" inputs must be an array of strings`);
-      }
+    if (typeof task.description !== 'string' || task.description.trim() === '') {
+      throw new Error(`.ai/data/tasks.json: task \"${task.key}\" must have a non-empty description`);
     }
-
-    if (
-      !Array.isArray(task.references) ||
-      task.references.length === 0 ||
-      task.references.some((ref) => typeof ref !== 'string')
-    ) {
-      throw new Error(`.ai/data/tasks.json: task \"${task.key}\" must list at least one string reference`);
+    const unsupportedFields = Object.keys(task).filter((field) => field !== 'key' && field !== 'description');
+    if (unsupportedFields.length > 0) {
+      throw new Error(
+        `.ai/data/tasks.json: task \"${task.key}\" has unsupported fields: ${unsupportedFields.join(', ')}`,
+      );
     }
   }
 }
 
-export function assertTaskReferencesExist(tasks, root = ROOT) {
+export function assertTaskDocumentsExist(tasks, root = ROOT) {
   for (const task of tasks) {
     const canonicalTask = `.ai/tasks/${task.key}.md`;
     if (!existsSync(path.join(root, canonicalTask))) {
       throw new Error(`.ai/data/tasks.json: task \"${task.key}\" has no canonical task document (${canonicalTask})`);
-    }
-    for (const reference of task.references) {
-      if (!existsSync(path.join(root, reference))) {
-        throw new Error(`.ai/data/tasks.json: task \"${task.key}\" references missing file \"${reference}\"`);
-      }
     }
   }
 }
@@ -124,11 +109,6 @@ export function assertValidPackages(packages) {
       pkg.description.trim() === ''
     ) {
       throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" must have category and description`);
-    }
-    if (typeof pkg.domOutput !== 'boolean')
-      throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" domOutput must be boolean`);
-    if (pkg.testCommand !== undefined && typeof pkg.testCommand !== 'string') {
-      throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" testCommand must be a string`);
     }
     if (pkg.docsContract !== undefined && (!DOCS_CONTRACTS.has(pkg.docsContract) || typeof pkg.docsContract !== 'string')) {
       throw new Error(`.ai/data/packages.json: package \"${pkg.slug}\" has invalid docsContract`);
@@ -200,33 +180,20 @@ export function packagesFileContent(packages) {
 }
 
 export function renderPackagesTable(packages) {
-  const header = [
-    'Package',
-    'Category',
-    'DOM',
-    'Description',
-    'Dependencies',
-    'Required peers',
-    'Optional peers',
-    'Test command',
-  ];
+  const header = ['Package', 'Category', 'Description', 'Dependencies', 'Required peers', 'Optional peers'];
   const rows = packages.map((pkg) => [
     `\`${pkg.name}\``,
     pkg.category,
-    pkg.domOutput ? 'yes' : 'no',
     pkg.description,
     pkg.dependencies?.length > 0 ? pkg.dependencies.map((dep) => `\`${dep}\``).join(', ') : '—',
     pkg.peerDependencies?.length > 0 ? pkg.peerDependencies.map((dep) => `\`${dep}\``).join(', ') : '—',
     pkg.optionalPeers?.length > 0 ? pkg.optionalPeers.map((dep) => `\`${dep}\``).join(', ') : '—',
-    pkg.testCommand ? `\`${pkg.testCommand}\`` : '—',
   ]);
   const row = (cells) => `| ${cells.join(' | ')} |`;
   return [row(header), row(header.map(() => '---')), ...rows.map(row)].join('\n');
 }
 
 export function taskStubContent(task) {
-  const inputs = task.inputs?.length > 0 ? task.inputs.map((input) => `- \`${input}\``).join('\n') : '- None';
-  const references = task.references?.map((reference) => `- \`${reference}\``).join('\n') || '- None';
   const description = /[:#{}[\],&*!|>'"%@`\n]/.test(task.description)
     ? JSON.stringify(task.description)
     : task.description;
@@ -237,18 +204,39 @@ description: ${description}
 
 # ${task.key}
 
-## Inputs
-
-${inputs}
-
-## Load
-
-${references}
-
-## Procedure
-
-Read [\`.ai/tasks/${task.key}.md\`](../../.ai/tasks/${task.key}.md) before work. It is canonical.
+Read [\`.ai/tasks/${task.key}.md\`](../../.ai/tasks/${task.key}.md) and follow it as the canonical procedure.
 `;
+}
+
+const TASK_ADAPTER_DIRS = ['.claude/commands', '.devin/workflows'];
+
+export function syncTaskAdapters(tasks, { check = false, onStale, root = ROOT } = {}) {
+  const expectedFiles = new Set(tasks.map((task) => `${task.key}.md`));
+
+  for (const directory of TASK_ADAPTER_DIRS) {
+    for (const task of tasks) {
+      const relPath = `${directory}/${task.key}.md`;
+      syncFile(relPath, taskStubContent(task), {
+        check,
+        checkExistingIgnored: true,
+        onStale,
+        root,
+      });
+    }
+
+    const absDirectory = path.join(root, directory);
+    if (!existsSync(absDirectory)) continue;
+    for (const entry of readdirSync(absDirectory, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith('.md') || expectedFiles.has(entry.name)) continue;
+      const relPath = `${directory}/${entry.name}`;
+      if (check) {
+        onStale?.(`[STALE] ${relPath} has no task registry entry`);
+        continue;
+      }
+      unlinkSync(path.join(absDirectory, entry.name));
+      console.log(`[REMOVE] ${relPath}`);
+    }
+  }
 }
 
 export function patchPackagesReference(source, packages) {
@@ -261,21 +249,15 @@ export function patchPackagesReference(source, packages) {
 }
 
 // ---------------------------------------------------------------------------
-// Reference integrity: every AGENTS.md/CLAUDE.md file and everything under .ai/ is allowed
-// to cross-reference a `.ai/...` path (e.g. "see .ai/core/conventions.md"). Nothing enforced
-// that those paths still exist after a rename/removal — a lesson borrowed from a stricter
-// Claude-workflow toolkit that runs this exact check after every edit to its own instruction
-// files. A dangling `.ai/...` reference silently sends an agent to read a file that no longer
-// exists; treat it as a hard error in both `gen:ai-data` and `check:ai-data`, not just drift.
+// Reference integrity: canonical AI files and client entrypoints may cross-reference an
+// `.ai/...` path (e.g. "see .ai/core/conventions.md"). A dangling reference silently sends
+// an agent to a missing contract, so both generation and check mode treat it as a hard error.
 // ---------------------------------------------------------------------------
 
 const AI_REF_IGNORE_DIRS = new Set([
   '.agents',
-  '.claude',
-  '.devin',
   '.git',
   '.idea',
-  '.junie',
   '.rumdl_cache',
   '.vscode',
   '.worktrees',
@@ -286,25 +268,35 @@ const AI_REF_IGNORE_DIRS = new Set([
 ]);
 const AI_REF_PATTERN = /\.ai\/[A-Za-z0-9._/-]+\.(?:md|json)/g;
 
-/** Recursively collects every `AGENTS.md`, `CLAUDE.md`, and file under `.ai/` (repo-relative
- * paths) — the full set of files allowed to cross-reference a `.ai/...` path. Skips
- * vendor/generated/tool-config directories by name so this stays a bounded walk instead of a
- * full repo scan; `.ai/` itself is walked in full regardless of that ignore list. */
+export function isAiReferenceSource(relPath, insideAi) {
+  const normalizedPath = relPath.replaceAll('\\', '/');
+  return (
+    insideAi ||
+    path.posix.basename(normalizedPath) === 'AGENTS.md' ||
+    path.posix.basename(normalizedPath) === 'CLAUDE.md' ||
+    normalizedPath === '.github/copilot-instructions.md' ||
+    normalizedPath === '.junie/AGENTS.md' ||
+    normalizedPath.startsWith('.junie/rules/') ||
+    normalizedPath.startsWith('.claude/commands/') ||
+    normalizedPath.startsWith('.devin/workflows/')
+  );
+}
+
+/** Recursively collects canonical AI files and client entrypoints as repo-relative paths.
+ * Vendor and build directories stay excluded so reference validation remains bounded. */
 export function collectAiReferenceSources(root = ROOT) {
   const files = [];
   const walk = (dir, insideAi) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const abs = path.join(dir, entry.name);
       const nowInsideAi = insideAi || entry.name === '.ai';
-      const relPath = path.relative(root, abs);
+      const relPath = path.relative(root, abs).replaceAll('\\', '/');
       if (entry.isDirectory()) {
         if (!nowInsideAi && AI_REF_IGNORE_DIRS.has(entry.name)) continue;
         walk(abs, nowInsideAi);
         continue;
       }
-      if (nowInsideAi || entry.name === 'AGENTS.md' || entry.name === 'CLAUDE.md') {
-        files.push(path.relative(root, abs));
-      }
+      if (isAiReferenceSource(relPath, nowInsideAi)) files.push(relPath);
     }
   };
   walk(root, false);
@@ -339,7 +331,7 @@ export async function main({ check = false } = {}) {
   const mergedPackages = mergePackageData(curatedPackages, livePackages);
   const tasks = readAiTasks();
   assertValidTasks(tasks);
-  assertTaskReferencesExist(tasks);
+  assertTaskDocumentsExist(tasks);
 
   let stale = false;
   const onStale = (message) => {
@@ -353,11 +345,7 @@ export async function main({ check = false } = {}) {
   const packagesReference = readFileSync(packagesReferencePath, 'utf8');
   syncFile('.ai/reference/packages.md', patchPackagesReference(packagesReference, mergedPackages), { check, onStale });
 
-  for (const task of tasks) {
-    const content = taskStubContent(task);
-    syncFile(`.claude/commands/${task.key}.md`, content, { check, onStale });
-    syncFile(`.devin/workflows/${task.key}.md`, content, { check, onStale });
-  }
+  syncTaskAdapters(tasks, { check, onStale });
 
   const referenceSources = collectAiReferenceSources();
   const fileContents = Object.fromEntries(

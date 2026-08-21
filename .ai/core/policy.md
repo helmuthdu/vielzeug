@@ -40,11 +40,9 @@ Two depths apply across `build` and `review` work, orthogonal to _scope_ (which 
 - **`full`** (default) — the task doc's full depth applies: every listed check/pass runs, findings are ranked, and severity/impact gates are respected.
 - **`quick`** — collapse every check/pass into one combined pass over the same scope. Use this for a small, explicitly-named change (one function, one bug) where running the full depth would be wasted effort. Never use `quick` to skip a fix-before-proceeding gate (e.g. a confirmed security finding) — rigor controls how much is analyzed, not whether a found issue gets fixed.
 
-State which depth applied in one line at the top of the output (`Rigor: quick` / omit for the default `full`) so a reader doesn't have to infer it from what's missing.
-
 ## Structured markers
 
-Use bracketed markers for greppable task output instead of inventing a new prose shape per run:
+Use bracketed markers when status must remain explicit and greppable:
 
 - `[FINDING]` — a raw observation, not yet actioned.
 - `[FIXED]` — a finding resolved during the same pass; annotate inline (`... [FIXED]`) rather than deleting the original line.
@@ -52,17 +50,9 @@ Use bracketed markers for greppable task output instead of inventing a new prose
 - `[BLOCKED]` — needs explicit user confirmation before proceeding (see Escalate above); state what decision is needed.
 - `[VERIFY]` — a claim the agent could not directly confirm from source (e.g. runtime behavior only observable in a browser) — flag it instead of asserting it as fact.
 
-A task doc may define additional domain-specific markers (e.g. `[GAP]` for a test-coverage hole) when these five don't fit; keep the same `[WORD]` shape so output stays greppable.
-
-## Progress checkpoints
-
-For multi-step work that touches more than a couple of files (cross-package propagation or review across several modules), emit a short checkpoint after each major step instead of one wall of output at the end:
-
-```
-✅ CHECKPOINT: <step> complete — <2-4 bullets: what changed, what's next>
-```
-
-This lets a human interrupt or redirect mid-run instead of only being able to react after everything is already done. Skip this for single-file, single-step changes — it's a tool for staying legible during a long run, not a formatting requirement everywhere.
+A task doc may define an additional domain-specific marker when these do not fit. User-requested
+output formats take precedence over marker formatting except when a safety gate requires
+`[BLOCKED]`.
 
 ## Validation expectations
 

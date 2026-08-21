@@ -47,7 +47,7 @@ Standard test path:
 pnpm vitest run packages/<name>/src/__tests__/
 ```
 
-Package-specific test overrides live in `.ai/data/packages.json`.
+Package-specific test behavior belongs in each package's `test` script.
 
 ## Worktrees
 

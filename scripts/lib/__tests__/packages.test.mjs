@@ -31,7 +31,7 @@ describe('readPackageManifests()', () => {
   it('warns and skips (does not throw, does not silently vanish) a package.json that is not valid JSON', () => {
     // Not a throw: this scan runs on the VitePress dev-server startup path (via
     // vielzeug-packages.ts's alias builder) shared by every contributor, plus
-    // sync-catalogue.mjs's and worktree.mjs's full-repo scans — one contributor's mid-edit
+    // sync-ai-data.mjs's and worktree.mjs's full-repo scans — one contributor's mid-edit
     // syntax error in an unrelated package must not be able to take the whole scan down.
     root = mkdtempSync(path.join(tmpdir(), 'packages-test-'));
     makePackage(root, 'ore', { name: '@vielzeug/ore', version: '1.0.0' });

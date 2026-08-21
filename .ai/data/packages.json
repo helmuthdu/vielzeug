@@ -5,42 +5,36 @@
       "category": "Utilities",
       "description": "75+ tree-shakeable array/object/string/async helpers",
       "docsContract": "catalog",
-      "domOutput": false,
       "name": "@vielzeug/arsenal",
       "slug": "arsenal"
     },
     {
       "category": "Testing",
       "description": "Framework-agnostic DOM testing primitives — scoped queries, event dispatch, async waiting",
-      "domOutput": false,
       "name": "@vielzeug/assay",
       "slug": "assay"
     },
     {
       "category": "State",
       "description": "Framework-neutral finite state machines with pure transitions and actors",
-      "domOutput": false,
       "name": "@vielzeug/clockwork",
       "slug": "clockwork"
     },
     {
       "category": "AI",
       "description": "MCP server exposing all Vielzeug docs to AI clients",
-      "domOutput": false,
       "name": "@vielzeug/codex",
       "slug": "codex"
     },
     {
       "category": "Finance",
       "description": "Currency formatting and exchange utilities for monetary arithmetic",
-      "domOutput": false,
       "name": "@vielzeug/coins",
       "slug": "coins"
     },
     {
       "category": "DI",
       "description": "Typed dependency injection container",
-      "domOutput": false,
       "name": "@vielzeug/conduit",
       "slug": "conduit"
     },
@@ -48,14 +42,12 @@
       "category": "HTTP",
       "dependencies": ["arsenal"],
       "description": "Typed HTTP client with caching and mutations",
-      "domOutput": false,
       "name": "@vielzeug/courier",
       "slug": "courier"
     },
     {
       "category": "UI",
       "description": "Drag-and-drop — drop zones and sortable lists",
-      "domOutput": false,
       "name": "@vielzeug/dnd",
       "slug": "dnd"
     },
@@ -63,14 +55,12 @@
       "category": "Workers",
       "dependencies": ["arsenal"],
       "description": "Web Worker pool with tasks, timeouts, cancellation",
-      "domOutput": false,
       "name": "@vielzeug/familiar",
       "slug": "familiar"
     },
     {
       "category": "Streams",
       "description": "Minimal push streams with explicit ownership, buffering, and ecosystem adapters",
-      "domOutput": false,
       "name": "@vielzeug/flux",
       "optionalPeers": ["courier", "herald", "pulse", "ripple"],
       "slug": "flux"
@@ -78,7 +68,6 @@
     {
       "category": "Forms",
       "description": "Typed form state, validation, submission",
-      "domOutput": false,
       "name": "@vielzeug/forge",
       "optionalPeers": ["spell", "vault"],
       "slug": "forge"
@@ -86,7 +75,6 @@
     {
       "category": "Events",
       "description": "Typed event bus, pub/sub, async streams",
-      "domOutput": false,
       "name": "@vielzeug/herald",
       "slug": "herald"
     },
@@ -94,14 +82,12 @@
       "category": "Data",
       "dependencies": ["arsenal", "coins", "tempo"],
       "description": "Typed, deterministic, locale-aware fake data generator with seeded PRNG",
-      "domOutput": false,
       "name": "@vielzeug/illusionist",
       "slug": "illusionist"
     },
     {
       "category": "Input",
       "description": "Headless keyboard shortcut manager with chord sequences",
-      "domOutput": false,
       "name": "@vielzeug/keymap",
       "slug": "keymap"
     },
@@ -109,28 +95,24 @@
       "category": "State",
       "dependencies": ["ripple"],
       "description": "Serialized reversible command history with atomic reactive state and cancellation ownership",
-      "domOutput": false,
       "name": "@vielzeug/ledger",
       "slug": "ledger"
     },
     {
       "category": "i18n",
       "description": "Typed i18n with pluralization and async loading",
-      "domOutput": false,
       "name": "@vielzeug/lingua",
       "slug": "lingua"
     },
     {
       "category": "Animation",
       "description": "Lifecycle-owned Web Animations API primitives with native access, per-handle groups, and additive FLIP",
-      "domOutput": false,
       "name": "@vielzeug/necromancer",
       "slug": "necromancer"
     },
     {
       "category": "UI",
       "description": "Dependency-free floating UI positioning with lifecycle-owned geometry",
-      "domOutput": false,
       "name": "@vielzeug/orbit",
       "optionalPeers": ["ripple"],
       "slug": "orbit"
@@ -138,7 +120,6 @@
     {
       "category": "UI",
       "description": "Functional web-component authoring on top of ripple",
-      "domOutput": true,
       "name": "@vielzeug/ore",
       "optionalPeers": ["assay"],
       "peerDependencies": ["ripple"],
@@ -148,7 +129,6 @@
       "category": "Charts",
       "dependencies": ["orbit", "ripple"],
       "description": "Reactive SVG charting library — line, bar, area, pie, sparkline",
-      "domOutput": true,
       "name": "@vielzeug/prism",
       "slug": "prism"
     },
@@ -156,7 +136,6 @@
       "category": "WebSockets",
       "dependencies": ["ripple"],
       "description": "Typed WebSocket client with channels, rooms, presence, reconnect",
-      "domOutput": false,
       "name": "@vielzeug/pulse",
       "slug": "pulse"
     },
@@ -165,29 +144,24 @@
       "dependencies": ["arsenal", "assay", "dnd", "keymap", "orbit", "ore", "ripple", "tempo"],
       "description": "Accessible, themeable web components built on ore",
       "docsContract": "component-library",
-      "domOutput": true,
       "name": "@vielzeug/refine",
-      "slug": "refine",
-      "testCommand": "pnpm --filter @vielzeug/refine test"
+      "slug": "refine"
     },
     {
       "category": "State",
       "description": "Reactive runtime primitives: signals, derived values, effects, scopes, watchers, and async resources",
-      "domOutput": false,
       "name": "@vielzeug/ripple",
       "slug": "ripple"
     },
     {
       "category": "Logging",
       "description": "Structured scoped logger with remote transport",
-      "domOutput": false,
       "name": "@vielzeug/rune",
       "slug": "rune"
     },
     {
       "category": "AI",
       "description": "Sandboxed iframe runtime with typed postMessage state bridge",
-      "domOutput": false,
       "name": "@vielzeug/sandbox",
       "slug": "sandbox"
     },
@@ -195,7 +169,6 @@
       "category": "Utilities",
       "dependencies": ["ripple"],
       "description": "Trigram fuzzy-search index with highlighting and reactive layer",
-      "domOutput": false,
       "name": "@vielzeug/scout",
       "slug": "scout"
     },
@@ -203,14 +176,12 @@
       "category": "UI",
       "dependencies": ["ripple"],
       "description": "Virtual list engine for large datasets",
-      "domOutput": false,
       "name": "@vielzeug/scroll",
       "slug": "scroll"
     },
     {
       "category": "Data",
       "description": "Reactive data sources with pagination and search",
-      "domOutput": false,
       "name": "@vielzeug/sourcerer",
       "slug": "sourcerer"
     },
@@ -218,35 +189,30 @@
       "category": "Validation",
       "dependencies": ["arsenal"],
       "description": "Zero-dep schema validation (Zod-like)",
-      "domOutput": false,
       "name": "@vielzeug/spell",
       "slug": "spell"
     },
     {
       "category": "Date/Time",
       "description": "Temporal-powered date utilities",
-      "domOutput": false,
       "name": "@vielzeug/tempo",
       "slug": "tempo"
     },
     {
       "category": "Storage",
       "description": "Adapter-free typed storage core with focused browser and SQLite subpaths",
-      "domOutput": false,
       "name": "@vielzeug/vault",
       "slug": "vault"
     },
     {
       "category": "Auth",
       "description": "RBAC engine with wildcards and predicates",
-      "domOutput": false,
       "name": "@vielzeug/ward",
       "slug": "ward"
     },
     {
       "category": "Routing",
       "description": "Client-side router with middleware and guards",
-      "domOutput": false,
       "name": "@vielzeug/wayfinder",
       "slug": "wayfinder"
     }

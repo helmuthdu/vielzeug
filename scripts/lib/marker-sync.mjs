@@ -1,10 +1,7 @@
 /**
  * Generic "idempotently write or patch a generated file, with a --check mode for CI" primitive.
- * No knowledge of workflows, manifests, or the dependency graph lives here — this used to be
- * defined inside sync-workflow-docs.mjs and reverse-imported by sync-catalogue.mjs, a hidden
- * coupling between two unrelated codegen scripts that happened to need the same file-writing
- * behavior. Any future generator (a third one is only a matter of time) should import from
- * here, not from whichever existing script got there first.
+ * No knowledge of workflows, manifests, or the dependency graph lives here. Generators use
+ * this shared write/check behavior instead of implementing their own drift detection.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -60,16 +57,20 @@ export function replaceBetweenMarkers(source, beginMarker, endMarker, replacemen
 }
 
 /** Write `content` to `relPath` if it differs from what's on disk.
- * In `--check` mode, never writes: reports [STALE] for tracked files (fails
- * the run) or [SKIP] for gitignored ones (expected missing/differs, e.g. a
- * fresh checkout — not drift). */
-export function syncFile(relPath, content, { check, onStale, root = ROOT } = {}) {
+ * In `--check` mode, never writes. Tracked files are always enforced. Gitignored files
+ * normally skip drift checks, but `checkExistingIgnored` enforces files that already exist
+ * while still allowing a fresh checkout where local adapters have not been generated. */
+export function syncFile(
+  relPath,
+  content,
+  { check, checkExistingIgnored = false, onStale, root = ROOT } = {},
+) {
   const abs = path.join(root, relPath);
   const existing = readIfExists(abs);
   if (existing === content) return 'unchanged';
 
   if (check) {
-    if (isTracked(relPath, root)) {
+    if (isTracked(relPath, root) || (checkExistingIgnored && existing !== null)) {
       onStale?.(`[STALE] ${relPath} is out of sync`);
       return 'stale';
     }

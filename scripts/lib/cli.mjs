@@ -2,8 +2,8 @@
  * Shared primitives every CLI script in `scripts/` needs: "is this file being run directly",
  * "run a subprocess", and "split argv into positionals + flags". Extracted after these three
  * were independently copy-pasted (with subtly different bugs — e.g. flags that only accepted
- * `--x=y`, never `--x y`) across worktree.mjs, sync-catalogue.mjs, sync-workflow-docs.mjs, and
- * every scripts/release/*.mjs module. One implementation, one place to fix a bug in it.
+ * `--x=y`, never `--x y`) across worktree.mjs, sync-ai-data.mjs, and every
+ * scripts/release/*.mjs module. One implementation, one place to fix a bug in it.
  *
  * `cli.d.mts` next to this file is a hand-written type declaration for the `.ts` scripts that
  * import this module (currently just validate-repl.ts, for `isMain`/`parseArgs`) — tsc can't

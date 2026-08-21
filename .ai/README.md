@@ -20,11 +20,11 @@ Pick the smallest task that fits the job:
 | Update docs, README, recipes, or REPL examples | `.ai/tasks/document.md` |
 | Prepare releases, commits, or pull requests    | `.ai/tasks/release.md`  |
 
-Load references declared for that task in `.ai/data/tasks.json` and the task's `Load first` section. Generated local adapters render same list for one-hop task startup.
+Load references from the task's `Load` section. `.ai/data/tasks.json` is only the registry used to generate client adapters; it does not duplicate task procedure.
 
 Load `.ai/core/conventions.md` before editing package source. Follow relevant `AGENTS.md` chain before entering a subtree.
 
-`policy.md` defines cross-task conventions task docs build on instead of restating: **rigor** (`full`/`quick` depth, orthogonal to scope), **structured markers** (`[FINDING]`, `[FIXED]`, `[DEFERRED]`, `[BLOCKED]`, `[VERIFY]`), and **progress checkpoints** for multi-step work.
+`policy.md` defines cross-task conventions task docs build on instead of restating: **rigor** (`full`/`quick` depth, orthogonal to scope) and structured status markers.
 
 ## Design principles
 
@@ -37,7 +37,7 @@ Load `.ai/core/conventions.md` before editing package source. Follow relevant `A
 ## Canonical data
 
 - Package metadata and dependency graph — `.ai/data/packages.json`
-- Task metadata for local adapters — `.ai/data/tasks.json`
+- Task registry for local adapters — `.ai/data/tasks.json`
 
 Shared reference material:
 

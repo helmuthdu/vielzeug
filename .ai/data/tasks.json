@@ -3,46 +3,19 @@
   "tasks": [
     {
       "description": "Change package source, tests, tooling, CI, or public behavior.",
-      "inputs": ["scope", "goal", "migrationMode", "depth"],
-      "key": "build",
-      "references": [
-        ".ai/core/policy.md",
-        ".ai/core/workspace.md",
-        ".ai/core/conventions.md",
-        ".ai/data/packages.json",
-        ".ai/tasks/build.md"
-      ]
+      "key": "build"
     },
     {
       "description": "Investigate, audit, redesign, plan, or review code.",
-      "inputs": ["scope", "goal", "mode", "intent", "changedFiles", "checks", "depth"],
-      "key": "review",
-      "references": [
-        ".ai/core/policy.md",
-        ".ai/core/workspace.md",
-        ".ai/core/conventions.md",
-        ".ai/reference/security-checklist.md",
-        ".ai/tasks/review.md"
-      ]
+      "key": "review"
     },
     {
       "description": "Update package documentation, README content, recipes, or REPL examples.",
-      "inputs": ["package", "surfaces", "depth"],
-      "key": "document",
-      "references": [
-        ".ai/core/policy.md",
-        ".ai/core/workspace.md",
-        ".ai/data/packages.json",
-        ".ai/reference/docs-template.md",
-        "docs/AGENTS.md",
-        ".ai/tasks/document.md"
-      ]
+      "key": "document"
     },
     {
       "description": "Prepare delivery artifacts, change files, commits, pull requests, or release diagnostics.",
-      "inputs": ["scope", "goal"],
-      "key": "release",
-      "references": [".ai/core/policy.md", ".ai/core/workspace.md", ".github/AGENTS.md", ".ai/tasks/release.md"]
+      "key": "release"
     }
   ]
 }

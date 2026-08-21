@@ -26,7 +26,7 @@ Confirm package source and selected surfaces exist. Use `[BLOCKED]` for unknown 
 ## Flow
 
 1. Read package manifest, public entry points, package contracts, and selected docs surfaces.
-2. Classify package documentation profile from package metadata before applying page structure.
+2. Read the structural contract from package metadata, then identify any source-backed content adaptation before applying the template.
 3. Build complete export/entry-point inventory, following re-export barrels where needed.
 4. Run focused structural validation before editing.
 5. Update API reference first, then affected overview, usage, README, recipes, and REPL examples.

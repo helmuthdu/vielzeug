@@ -13,17 +13,20 @@ Apply to every page you edit:
 - No marketing language ("powerful", "blazing fast", "seamless"). Use factual comparison tables instead.
 - Code comments explain _why_, not _what_. One comment per meaningful block; never multi-line comment blocks.
 
-## Package archetypes
+## Content adaptations
 
-Not every package is a consumed library. Identify the archetype before applying the template. Check `package.json` (`bin`, `exports`, `engines`) and `src/cli.ts` before assuming the Library default, and check `packages/<name>/AGENTS.md` for declared exceptions.
+These adaptations affect examples and framing, not validator structure. Packages use the `standard`
+validator contract unless `.ai/data/packages.json` declares a durable information-architecture
+exception. Check `package.json` (`bin`, `exports`, `engines`), source entry points, and
+`packages/<name>/AGENTS.md` before assuming the Library default.
 
 | Archetype                    | Indicators                                                               | Adaptations                                                                                                                                                                                                                             |
 | ---------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Library** (default)        | `src/index.ts` exports functions/classes; imported by userland           | None — use the full template as written                                                                                                                                                                                                 |
 | **CLI / executable tool**    | `bin` field in `package.json`; primary interaction is a terminal command | Quick Start leads with the shell command, not TypeScript; `usage.md`'s Framework Integration becomes "Embedding in a `<Runtime>` Process" (programmatic use as secondary); comparison table compares invocation modes, not API surfaces |
-| **DOM-output / headless UI** | Renders DOM directly (`refine`, `prism`); no REPL examples by convention | No REPL examples or Monaco types; Framework Integration shows web-component HTML/JS usage, not React/Vue/Svelte unless the package ships adapters                                                                                       |
+| **DOM-output / headless UI** | Renders DOM directly (`ore`, `prism`, `refine`); no REPL examples by convention | No REPL examples or Monaco types; Framework Integration shows web-component HTML/JS usage, not React/Vue/Svelte unless the package ships adapters                                                                                       |
 
-## Validator contracts
+## Structural validator contracts
 
 `pnpm validate:docs` reads explicit structural contracts from each package's `docsContract` field in `.ai/data/packages.json`:
 
