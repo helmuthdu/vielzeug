@@ -109,6 +109,12 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
+      "packageName": "@vielzeug/postmaster",
+      "projectFolder": "packages/postmaster",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
       "packageName": "@vielzeug/arsenal",
       "projectFolder": "packages/arsenal",
       "shouldPublish": true,

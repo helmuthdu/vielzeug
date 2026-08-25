@@ -123,6 +123,7 @@ const heroPackages = [
   { cmd: 'pnpm add @vielzeug/ore', id: 'ore', name: 'ore', tagline: 'Web component primitives' },
   { cmd: 'pnpm add @vielzeug/prism', id: 'prism', name: 'prism', tagline: 'SVG charts' },
   { cmd: 'pnpm add @vielzeug/pulse', id: 'pulse', name: 'pulse', tagline: 'WebSocket client & presence' },
+  { cmd: 'pnpm add @vielzeug/postmaster', id: 'postmaster', name: 'postmaster', tagline: 'Durable job outbox' },
   { cmd: 'pnpm add @vielzeug/refine', id: 'refine', name: 'refine', tagline: 'Accessible components' },
   { cmd: 'pnpm add @vielzeug/ripple', id: 'ripple', name: 'ripple', tagline: 'Signals, computed, effects' },
   { cmd: 'pnpm add @vielzeug/rune', id: 'rune', name: 'rune', tagline: 'Structured logging' },

@@ -16,6 +16,7 @@ import { ledgerExamples } from './ledger';
 import { linguaExamples } from './lingua';
 import { necromancerExamples } from './necromancer';
 import { orbitExamples } from './orbit';
+import { postmasterExamples } from './postmaster';
 import { pulseExamples } from './pulse';
 import { rippleExamples } from './ripple';
 import { runeExamples } from './rune';
@@ -50,6 +51,7 @@ export const examples: Record<string, Record<string, ExampleModule>> = {
   lingua: linguaExamples,
   necromancer: necromancerExamples,
   orbit: orbitExamples,
+  postmaster: postmasterExamples,
   pulse: pulseExamples,
   ripple: rippleExamples,
   rune: runeExamples,

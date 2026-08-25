@@ -3,7 +3,7 @@
 
 # Vielzeug
 
-**36 independent, zero-dependency TypeScript packages for modern JavaScript**
+**37 independent, zero-dependency TypeScript packages for modern JavaScript**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](https://www.npmjs.com/org/vielzeug)
@@ -237,6 +237,28 @@ pnpm add @vielzeug/pulse @vielzeug/ripple
 - Typed error hierarchy: `ConnectionError`, `TimeoutError`, `DisposedError`, and more
 
 [📖 Documentation](https://vielzeug.dev/pulse/) • [Examples](https://vielzeug.dev/pulse/examples)
+
+---
+
+### [@vielzeug/postmaster](packages/postmaster) – Durable Job Outbox
+
+Typed durable job outbox with leased processing, retries, and dead-letter recovery for browser applications.
+
+```bash
+pnpm add @vielzeug/postmaster
+```
+
+**Key Features:**
+
+- Typed job registry with payload inference and validation
+- At-least-once delivery with mandatory idempotency keys
+- Leased cross-tab processing with heartbeat renewal and crash recovery
+- Explicit retry classification and exponential backoff
+- Dead-letter retention with manual retry and removal
+- IndexedDB persistence via `@vielzeug/vault`
+- Deterministic in-memory store for tests
+
+[📖 Documentation](https://vielzeug.dev/postmaster/) • [Examples](https://vielzeug.dev/postmaster/examples)
 
 ---
 

@@ -737,6 +737,13 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
    */
   const store = {
     ...adapter,
+    get disposalSignal(): AbortSignal {
+      return adapter.disposalSignal;
+    },
+    // Spread copies getters as static values; re-expose live disposal state.
+    get disposed(): boolean {
+      return adapter.disposed;
+    },
     iterate<K extends keyof S & string>(table: K): AsyncIterable<RecordOf<S, K>> {
       if (disposed) throw new VaultDisposedError(`"${name}" is disposed`);
 

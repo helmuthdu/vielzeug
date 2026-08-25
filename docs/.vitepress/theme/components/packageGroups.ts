@@ -24,6 +24,7 @@ export const PACKAGE_GROUPS: PackageGroup[] = [
     name: 'Data & Connectivity',
     packages: [
       { id: 'courier', tagline: 'HTTP client & caching' },
+      { id: 'postmaster', tagline: 'Durable job outbox' },
       { id: 'pulse', tagline: 'WebSocket client & presence' },
       { id: 'scout', tagline: 'Trigram fuzzy search' },
       { id: 'sourcerer', tagline: 'Reactive data sources' },

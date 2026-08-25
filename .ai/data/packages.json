@@ -138,6 +138,13 @@
       "slug": "ore"
     },
     {
+      "category": "Async",
+      "dependencies": ["arsenal", "vault"],
+      "description": "Typed durable job outbox with leased processing, retries, and dead-letter recovery",
+      "name": "@vielzeug/postmaster",
+      "slug": "postmaster"
+    },
+    {
       "category": "Charts",
       "dependencies": ["orbit", "ripple"],
       "description": "Reactive SVG charting library — line, bar, area, pie, sparkline",

@@ -1259,6 +1259,52 @@ export default defineConfig({
           text: 'Examples',
         },
       ],
+      '/postmaster/': [
+        { link: '/postmaster/', text: 'Overview' },
+        {
+          items: [
+            { link: '/postmaster/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/postmaster/usage#at-least-once-delivery-and-idempotency', text: 'Idempotency' },
+            { link: '/postmaster/usage#postmaster-jobs-vs-courier-mutations', text: 'Jobs vs Courier' },
+            { link: '/postmaster/usage#payload-and-version-migration', text: 'Migration' },
+            { link: '/postmaster/usage#retry-semantics', text: 'Retries' },
+            { link: '/postmaster/usage#dead-letter-recovery', text: 'Dead-Letter' },
+            { link: '/postmaster/usage#lifecycle-and-disposal', text: 'Lifecycle' },
+            { link: '/postmaster/usage#events', text: 'Events' },
+            { link: '/postmaster/usage#testing', text: 'Testing' },
+            { link: '/postmaster/usage#framework-integration', text: 'Framework Integration' },
+            {
+              link: '/postmaster/usage#working-with-other-vielzeug-libraries',
+              text: 'Vielzeug Integration',
+            },
+            { link: '/postmaster/usage#best-practices', text: 'Best Practices' },
+          ],
+          link: '/postmaster/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/postmaster/api#api-overview', text: 'Overview' },
+            { link: '/postmaster/api#package-entry-point', text: 'Entry Point' },
+            { link: '/postmaster/api#factories', text: 'Factories' },
+            { link: '/postmaster/api#postmaster-methods', text: 'Methods' },
+            { link: '/postmaster/api#types', text: 'Types' },
+            { link: '/postmaster/api#errors', text: 'Errors' },
+          ],
+          link: '/postmaster/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/postmaster/examples/queue-offline-courier-mutations', text: 'Offline Mutations' },
+            { link: '/postmaster/examples/resume-when-network-returns', text: 'Network Recovery' },
+            { link: '/postmaster/examples/recover-dead-letter-jobs', text: 'Dead-Letter Recovery' },
+            { link: '/postmaster/examples/service-worker-background-sync', text: 'Service Worker' },
+          ],
+          link: '/postmaster/examples',
+          text: 'Examples',
+        },
+      ],
       '/prism/': [
         { link: '/prism/', text: 'Overview' },
         { link: '/prism/migration', text: 'Migration' },

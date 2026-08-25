@@ -27,6 +27,7 @@ Human-readable package catalogue derived from `.ai/data/packages.json`.
 | `@vielzeug/necromancer` | Animation | Lifecycle-owned Web Animations API primitives with native access, per-handle groups, and additive FLIP | — | — | — |
 | `@vielzeug/orbit` | UI | Dependency-free floating UI positioning with lifecycle-owned geometry | — | — | `ripple` |
 | `@vielzeug/ore` | UI | Functional web-component authoring on top of ripple | — | `ripple` | `assay` |
+| `@vielzeug/postmaster` | Async | Typed durable job outbox with leased processing, retries, and dead-letter recovery | `arsenal`, `vault` | — | — |
 | `@vielzeug/prism` | Charts | Reactive SVG charting library — line, bar, area, pie, sparkline | `orbit`, `ripple` | — | — |
 | `@vielzeug/pulse` | WebSockets | Typed WebSocket client with channels, rooms, presence, reconnect | `ripple` | — | — |
 | `@vielzeug/refine` | UI | Accessible, themeable web components built on ore | `arsenal`, `assay`, `dnd`, `focus`, `gesture`, `keymap`, `orbit`, `ore`, `ripple`, `sentinel`, `tempo` | — | — |

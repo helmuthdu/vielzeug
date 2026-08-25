@@ -32,6 +32,7 @@ Jump to the packages most relevant to your work.
 | Just utility functions               | [Arsenal](#arsenal)                                                          |
 | Real-time search UI (combobox, command palette) | [Scout](/scout/) → [Sourcerer](#sourcerer)                    |
 | App with undo/redo (editor, design tool)         | [Ledger](/ledger/) → [Ripple](#ripple)                        |
+| Offline-first mutations that survive reloads     | [Postmaster](/postmaster/) → [Courier](#courier) → [Vault](#vault) |
 | Global keyboard shortcuts or command palette    | [Keymap](/keymap/) → [Ledger](/ledger/)                       |
 | Accessible overlays, menus, or list widgets     | [Focus](/focus/) → [Refine](#refine)                          |
 | Swipe interactions and touch-first UI            | [Gesture](/gesture/) → [Refine](#refine) → [Dnd](/dnd/)       |
@@ -328,6 +329,7 @@ const api = await container.resolve(ApiToken);
 | **[Ledger](/ledger/)**           | Async undo/redo command history with Ripple signals for reactive `canUndo`/`canRedo` state         |
 | **[Rune](/rune/)**               | Structured logging with scoped loggers, pluggable transports, and log levels                       |
 | **[Familiar](/familiar/)**       | Typed Web Worker pool with task queuing, streaming, and AbortSignal cancellation                   |
+| **[Postmaster](/postmaster/)**   | Typed durable job outbox with leased processing, retries, and dead-letter recovery                 |
 | **[Tempo](/tempo/)**             | Date and time utilities — timezone conversion, DST-safe arithmetic, and Intl formatting            |
 | **[Coins](/coins/)**             | Bigint-based monetary arithmetic with currency formatting and rounding policies                    |
 | **[Assay](/assay/)**             | Framework-agnostic DOM testing primitives — scoped queries, event dispatch, and async waiting      |
@@ -362,6 +364,7 @@ const api = await container.resolve(ApiToken);
 | **Ledger + Ripple**         | `canUndo`, `canRedo`, and `isProcessing` are Ripple `Computed` values — bind directly to UI templates       |
 | **Illusionist + Coins**     | `commerce.price()` and `finance.amount()` return coins `Money` — format, add, or allocate directly          |
 | **Illusionist + Tempo**     | `date.past()` / `future()` / `recent()` return tempo `Temporal.ZonedDateTime` — shift, compare, or format   |
+| **Postmaster + Courier**    | Wrap Courier mutations in Postmaster jobs so writes survive reloads and retry on network failure            |
 
 ## Philosophy
 
