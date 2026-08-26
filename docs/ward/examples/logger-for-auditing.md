@@ -1,9 +1,9 @@
 ---
-title: 'Ward Examples — Logger for Auditing'
-description: 'Capture explained Ward decisions with a policy logger.'
+title: 'Ward Examples — Auditing Decisions'
+description: 'Capture explained Ward decisions with tap() for audit pipelines.'
 ---
 
-## Logger for Auditing
+## Auditing Decisions
 
 ### Problem
 
@@ -11,19 +11,20 @@ Record authorization decisions for diagnostics or an audit pipeline without dupl
 
 ### Solution
 
-Provide a `logger` in `WardOptions`; Ward invokes it for explained decisions.
+Use `tap()` to observe decision events; route them to your audit store.
 
 ```ts
 import { createWard } from '@vielzeug/ward';
 
 const audit: string[] = [];
 
-const ward = createWard([{ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' }], {
-  logger: (ctx) => {
-    const who = ctx.principal === null ? 'anonymous' : ctx.principal.id;
-    const outcome = ctx.allowed ? 'allow' : ctx.reason;
-    audit.push(`${who}:${ctx.resource}:${ctx.action}:${outcome}`);
-  },
+const ward = createWard([{ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' }]);
+
+ward.tap((event) => {
+  if (event.type !== 'decision') return;
+  const who = event.principal === null ? 'anonymous' : event.principal.id;
+  const outcome = event.decision.allowed ? 'allow' : event.decision.reason;
+  audit.push(`${who}:${event.resource}:${event.action}:${outcome}`);
 });
 
 ward.explain({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts', action: 'read' });
@@ -32,8 +33,8 @@ ward.explain({ principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts', ac
 
 ### Pitfalls
 
-- Treat logger output as an event stream; send durable audit records to your own storage layer.
-- `trace()`, `allowedActions()`, and `rulesInScope()` are inspection APIs and do not invoke the logger.
+- Treat tap events as an event stream; send durable audit records to your own storage layer.
+- `trace()`, `allowedActions()`, and `rulesInScope()` are inspection APIs and do not fire decision events.
 
 ### Related
 

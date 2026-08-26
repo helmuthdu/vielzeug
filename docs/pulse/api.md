@@ -18,7 +18,7 @@ category: websockets
 | `PulseChannel` | Scoped channel namespace with independent disposal. | Sync methods, async `wait()` | Each call returns a new scope; ref-counted subscription. |
 | `RoomScope` | Ref-counted room membership with optional presence. | Sync methods, async `joined` | `joined` rejects on transport close or timeout. |
 | `PulseSchema` | Declares server/client events, channels, and rooms. | Type-only | Infer all named scope types from this schema. |
-| `PulseOptions` | Configuration: heartbeat, reconnect, transform, onError. | Type-only | `reconnect` and `heartbeat` default to `false`. |
+| `PulseOptions` | Configuration: heartbeat, reconnect, transform. | Type-only | `reconnect` and `heartbeat` default to `false`. |
 | `PulseError` | Base class for all Pulse errors. | Runtime | Check `instanceof` against subclasses. |
 
 ## Package Entry Point
@@ -81,7 +81,6 @@ Declare all protocol surfaces once at construction. Named scopes infer their typ
 ```ts
 type PulseOptions = {
   heartbeat?: boolean | HeartbeatOptions;
-  onError?: (error: PulseError) => void;
   protocols?: string | string[];
   reconnect?: boolean | ReconnectOptions;
   transform?: OutgoingTransform;
@@ -91,7 +90,6 @@ type PulseOptions = {
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `heartbeat` | `boolean \| HeartbeatOptions` | `false` | Ping/pong keep-alive. |
-| `onError` | `(error: PulseError) => void` | — | Receives typed transport and protocol errors. |
 | `protocols` | `string \| string[]` | — | Sub-protocols passed to the WebSocket constructor. |
 | `reconnect` | `boolean \| ReconnectOptions` | `false` | Auto-reconnect on unexpected close. |
 | `transform` | `OutgoingTransform` | — | Transform or filter outgoing application messages. |
@@ -181,6 +179,9 @@ type Pulse<S extends PulseSchema = PulseSchema> = {
   // Status
   readonly status: Readable<PulseStatus>;
 
+  // Tap
+  tap(handler: (event: PulseEvent) => void, options?: { signal?: AbortSignal }): () => void;
+
   [Symbol.dispose](): void;
 };
 ```
@@ -228,6 +229,42 @@ Reactive set of rooms the client is currently a confirmed member of.
 ### `status`
 
 Reactive connection status: `'connecting' | 'open' | 'reconnecting' | 'closed'`.
+
+### `tap(handler, options?)`
+
+Subscribes to lifecycle events emitted by the Pulse instance. The handler receives a discriminated-union `PulseEvent`. Returns an unsubscribe function.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `handler` | `(event: PulseEvent) => void` | Called for each lifecycle event. |
+| `options.signal` | `AbortSignal` | Optional signal to stop the subscription. |
+
+```ts
+const pulse = createPulse(url, { reconnect: true });
+pulse.tap((event) => {
+  if (event.type === 'error') console.error(event.error);
+  if (event.type === 'status-change') console.log('status:', event.status);
+});
+```
+
+---
+
+## `PulseEvent`
+
+```ts
+type PulseEvent =
+  | { type: 'status-change'; status: PulseStatus }
+  | { type: 'error'; error: PulseError }
+  | { type: 'dispose' };
+```
+
+A discriminated union of lifecycle events emitted by a `Pulse` instance. Inspect `event.type` to narrow the payload.
+
+| `type` | Payload | When |
+| --- | --- | --- |
+| `status-change` | `status: PulseStatus` | The connection status transitions. |
+| `error` | `error: PulseError` | A typed transport or protocol error occurs. |
+| `dispose` | — | The instance is disposed. |
 
 ---
 

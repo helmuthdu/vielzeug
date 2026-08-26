@@ -12,10 +12,10 @@ description: Complete API reference for @vielzeug/ward.
 | `createWard` | Creates immutable policy | Sync | Rules cannot be mutated after creation |
 | `allow` / `deny` / `ruleFor` | Builds policy rules | Sync | Priority wins before specificity |
 | `Ward.explain` | Returns one decision | Sync | Pass resource data for predicate rules |
-| `Ward.trace` | Inspects decision candidates | Sync | Does not invoke the logger |
+| `Ward.trace` | Inspects decision candidates | Sync | Does not fire a `decision` event |
 | `Ward.forUser` | Binds a principal | Sync | Rebind when identity or roles change |
 | `Ward.checkAll` | Batch permission checks | Sync | Pass resource data for predicate rules |
-| `Ward.allowedActions` | Filters known actions to allowed set | Sync | Does not invoke the logger |
+| `Ward.allowedActions` | Filters known actions to allowed set | Sync | Does not fire a `decision` event |
 | `Ward.rulesInScope` | Lists rules matching a principal/resource | Sync | Pass data to evaluate predicates |
 | `Ward.detectConflicts` | Detects duplicate/shadowed rules | Sync | O(n²) — use `maxConflicts` for large policies |
 | `predicate.owns` / `owns` | Ownership predicate on resource data | Sync | Skipped for anonymous principals |
@@ -27,7 +27,6 @@ description: Complete API reference for @vielzeug/ward.
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/ward` | Rules, factory, predicates, pattern helpers, errors, and public types |
-| `@vielzeug/ward/devtools` | `debugWard()` diagnostic factory |
 
 ## Core Factory
 
@@ -40,14 +39,13 @@ createWard<TAction extends string = string, TData = unknown>(
 ): Ward<TAction, TData>;
 ```
 
-Creates an immutable ward instance. `rules` accepts a flat mix of single rules and rule arrays — `allow()`/`deny()`/`ruleFor()` results can be passed directly without spread. Validates `logger`, `onConflict`, and `maxConflicts` options before compiling rules; invalid values throw `WardConfigError`.
+Creates an immutable ward instance. `rules` accepts a flat mix of single rules and rule arrays — `allow()`/`deny()`/`ruleFor()` results can be passed directly without spread. Validates `onConflict` and `maxConflicts` options before compiling rules; invalid values throw `WardConfigError`.
 
 **Parameters:**
 
 | Name | Type | Description |
 | --- | --- | --- |
 | `rules` | `readonly (WardRule \| readonly WardRule[])[]` | Rule list. Single rules and rule arrays can be mixed. |
-| `options.logger` | `(ctx: WardLoggerContext) => void` | Called for `explain()` and `checkAll()` decisions. |
 | `options.onConflict` | `(conflict: WardConflict) => void` | Called synchronously per conflict at creation time. |
 | `options.strict` | `boolean` | Throws `WardConfigError` on the first conflict. |
 | `options.maxConflicts` | `number` | Caps the number of conflicts returned by `detectConflicts()`. |
@@ -133,7 +131,7 @@ checkAll(
 ): WardDecisionResult<TAction, TData>[];
 ```
 
-Evaluates multiple resource/action pairs for one principal. Invokes the logger for each decision.
+Evaluates multiple resource/action pairs for one principal. Fires a `decision` event for each result via `tap()`.
 
 **Returns:** `WardDecisionResult[]` — each entry carries `action`, `resource`, and the decision.
 
@@ -156,7 +154,7 @@ explain(input: WardDecisionInput<TAction, TData>): WardDecision<TAction, TData>;
 }
 ```
 
-Returns one decision. Invokes the logger.
+Returns one decision. Fires a `decision` event via `tap()`.
 
 **Returns:** `WardDecision` — `{ allowed: true; rule }` or `{ allowed: false; reason: 'explicit-deny'; rule }` or `{ allowed: false; reason: 'no-matching-rule' }`.
 
@@ -168,7 +166,7 @@ Returns one decision. Invokes the logger.
 trace(input: WardDecisionInput<TAction, TData>): WardTrace<TAction, TData>;
 ```
 
-Same request shape as `explain()`. Returns winner + candidate list. Does not fire the logger.
+Same request shape as `explain()`. Returns winner + candidate list. Does not fire a `decision` event.
 
 **Returns:** `WardTrace` — `{ candidates: WardTraceCandidate[]; decision: WardDecision }`.
 
@@ -191,7 +189,7 @@ Input shape:
 }
 ```
 
-Filters the provided `knownActions` list to those the principal may perform. Does not invoke the logger.
+Filters the provided `knownActions` list to those the principal may perform. Does not fire a `decision` event.
 
 **Returns:** `TAction[]` — the subset of `knownActions` that `explain()` would allow.
 
@@ -347,17 +345,37 @@ Tests whether the `broad` pattern covers the `narrow` pattern. `'*'` covers ever
 
 ---
 
-## Devtools
+## Observability
 
-### `debugWard(rules, options?)`
-
-Sub-path import: `@vielzeug/ward/devtools`.
+### `tap(handler, options?)`
 
 ```ts
-import { debugWard } from '@vielzeug/ward/devtools';
+tap(
+  handler: (event: WardEvent<TAction, TData>) => void,
+  options?: { signal?: AbortSignal },
+): () => void;
 ```
 
-Diagnostic factory for development inspection.
+Subscribes a handler to ward events. Each `explain()` and `checkAll()` decision fires a `decision` event. `trace()` and `allowedActions()` do not fire events.
+
+Pass an `AbortSignal` to unsubscribe automatically; the returned function unsubscribes manually.
+
+**Returns:** `() => void` — call to unsubscribe the handler.
+
+**Example:**
+
+```ts
+const ward = createWard(rules);
+ward.tap((event) => console.debug(`ward:${event.type}`, event.decision));
+```
+
+With a logger from `@vielzeug/rune`:
+
+```ts
+import { createLogger } from '@vielzeug/rune';
+const log = createLogger({ name: 'ward' });
+ward.tap((event) => log.debug(event, 'ward:decision'));
+```
 
 ---
 
@@ -488,6 +506,7 @@ export type Ward<TAction extends string = string, TData = unknown> = {
   explain(input: WardDecisionInput<TAction, TData>): WardDecision<TAction, TData>;
   forUser(principal: UserPrincipal): BoundWard<TAction, TData>;
   rulesInScope(input: WardRulesInScopeInput<TData>): ReadonlyArray<Readonly<NormalizedWardRule<TAction, TData>>>;
+  tap(handler: (event: WardEvent<TAction, TData>) => void, options?: { signal?: AbortSignal }): () => void;
   trace(input: WardDecisionInput<TAction, TData>): WardTrace<TAction, TData>;
 };
 
@@ -499,7 +518,9 @@ export type BoundWard<TAction extends string = string, TData = unknown> = {
   trace(input: BoundWardDecisionInput<TAction, TData>): WardTrace<TAction, TData>;
 };
 
-export type WardLoggerContext<TAction extends string = string, TData = unknown> = WardDecision<TAction, TData> & {
+export type WardEvent<TAction extends string = string, TData = unknown> = {
+  type: 'decision';
+  decision: WardDecision<TAction, TData>;
   action: TAction;
   data?: TData;
   principal: Principal;
@@ -507,7 +528,6 @@ export type WardLoggerContext<TAction extends string = string, TData = unknown> 
 };
 
 export type WardOptions<TAction extends string = string, TData = unknown> = {
-  logger?: (context: WardLoggerContext<TAction, TData>) => void;
   maxConflicts?: number;
   onConflict?: (conflict: WardConflict<TAction, TData>) => void;
   strict?: boolean;
@@ -518,10 +538,10 @@ export type WardOptions<TAction extends string = string, TData = unknown> = {
 
 `Ward`, `BoundWard`, `WardDecision`, `WardDecisionResult`, `WardTrace`, `WardTraceCandidate`, `WardConflict`,
 `NormalizedWardRule`, `WardOptions`, `WardCheck`, `WardAllowedActionsInput`, `WardRulesInScopeInput`, `RuleContext`,
-`WardLoggerContext`, `WardPredicate`, and `ConflictKind` are exported from the root entry point.
+`WardEvent`, `WardPredicate`, and `ConflictKind` are exported from the root entry point.
 
 ## Errors
 
 - `WardError` is the base error class; use `WardError.is(value)` for narrowing.
-- `WardConfigError` reports malformed rules, invalid `createWard` options (`logger`, `onConflict`, `maxConflicts`), invalid principals, and strict conflict initialization.
+- `WardConfigError` reports malformed rules, invalid `createWard` options (`onConflict`, `maxConflicts`), invalid principals, and strict conflict initialization.
 - `WardPredicateError` reports a throwing synchronous predicate and includes its `ruleIndex` and cause.

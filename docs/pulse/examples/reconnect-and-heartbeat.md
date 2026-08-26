@@ -31,8 +31,11 @@ type Schema = {
 
 const pulse = createPulse<Schema>('wss://api.example.com/ws', {
   heartbeat: { interval: 20_000, timeout: 8_000 },
-  onError: console.error,
   reconnect: { delay: (attempt) => Math.min(500 * 2 ** attempt, 30_000), maxAttempts: 8 },
+});
+pulse.tap((event) => {
+  if (event.type === 'error') console.error(event.error);
+  if (event.type === 'status-change') console.log('status:', event.status);
 });
 const chat = pulse.channel('chat');
 const lobby = pulse.room('lobby');

@@ -1,4 +1,4 @@
-import { createPostmaster, defineJobs, PostmasterJobError } from '../index.ts';
+import { createPostmaster, defineJobs, PostmasterDisposedError, PostmasterJobError } from '../index.ts';
 import { createMemoryPostmasterStore } from '../testing.ts';
 
 const textValidator = (value: unknown) => String(value);
@@ -144,5 +144,147 @@ describe('Postmaster', () => {
     await flushing;
 
     await expect(store.list()).resolves.toMatchObject([{ attempts: 1, status: 'queued' }]);
+  });
+});
+
+describe('tap()', () => {
+  it('emits an enqueued event when a job is enqueued', async () => {
+    const handler = vi.fn();
+    const postmaster = createPostmaster({
+      clock: () => 100,
+      jobs: createJobs(async () => {}),
+      store: createMemoryPostmasterStore(),
+    });
+    postmaster.tap(handler);
+
+    const entry = await postmaster.enqueue('send', 'hello');
+
+    expect(handler).toHaveBeenCalledWith({ entry, type: 'enqueued' });
+    await postmaster.dispose();
+  });
+
+  it('emits started and completed events when a job runs', async () => {
+    const handler = vi.fn();
+    const postmaster = createPostmaster({
+      clock: () => 100,
+      jobs: createJobs(async () => {}),
+      store: createMemoryPostmasterStore(),
+    });
+    postmaster.tap(handler);
+
+    const entry = await postmaster.enqueue('send', 'hello');
+    await postmaster.flush();
+
+    expect(handler).toHaveBeenCalledWith({ entry: expect.objectContaining({ id: entry.id }), type: 'started' });
+    expect(handler).toHaveBeenCalledWith({ entry: expect.objectContaining({ id: entry.id }), type: 'completed' });
+    await postmaster.dispose();
+  });
+
+  it('emits a dead-lettered event when a job fails past max attempts', async () => {
+    const handler = vi.fn();
+    const execute = vi.fn().mockRejectedValue(new Error('boom'));
+    let now = 100;
+    const postmaster = createPostmaster({
+      clock: () => now,
+      jobs: defineJobs({
+        send: {
+          execute,
+          key: (payload: string) => payload,
+          retry: { delay: () => 50, maxAttempts: 2, shouldRetry: () => true },
+          validate: textValidator,
+          version: 1,
+        },
+      }),
+      store: createMemoryPostmasterStore(),
+    });
+    postmaster.tap(handler);
+
+    const entry = await postmaster.enqueue('send', 'hello');
+    await postmaster.flush();
+    now = 150;
+    await postmaster.flush();
+
+    expect(handler).toHaveBeenCalledWith({ entry: expect.objectContaining({ id: entry.id }), type: 'dead-lettered' });
+    await postmaster.dispose();
+  });
+
+  it('emits a dispose event on dispose', async () => {
+    const handler = vi.fn();
+    const postmaster = createPostmaster({
+      jobs: createJobs(async () => {}),
+      store: createMemoryPostmasterStore(),
+    });
+    postmaster.tap(handler);
+
+    await postmaster.dispose();
+
+    expect(handler).toHaveBeenCalledWith({ type: 'dispose' });
+  });
+
+  it('returns an unsubscribe function that stops events', async () => {
+    const handler = vi.fn();
+    const postmaster = createPostmaster({
+      clock: () => 100,
+      jobs: createJobs(async () => {}),
+      store: createMemoryPostmasterStore(),
+    });
+    const unsubscribe = postmaster.tap(handler);
+
+    unsubscribe();
+    await postmaster.enqueue('send', 'hello');
+
+    expect(handler).not.toHaveBeenCalled();
+    await postmaster.dispose();
+  });
+
+  it('auto-detaches when the tap signal aborts', async () => {
+    const handler = vi.fn();
+    const controller = new AbortController();
+    const postmaster = createPostmaster({
+      clock: () => 100,
+      jobs: createJobs(async () => {}),
+      store: createMemoryPostmasterStore(),
+    });
+    postmaster.tap(handler, { signal: controller.signal });
+
+    controller.abort();
+    await postmaster.enqueue('send', 'hello');
+
+    expect(handler).not.toHaveBeenCalled();
+    await postmaster.dispose();
+  });
+
+  it('swallows handler errors without affecting processing', async () => {
+    const handler = vi.fn(() => {
+      throw new Error('observer blew up');
+    });
+    const execute = vi.fn(async () => {});
+    const postmaster = createPostmaster({
+      clock: () => 100,
+      jobs: createJobs(execute),
+      store: createMemoryPostmasterStore(),
+    });
+    postmaster.tap(handler);
+
+    await postmaster.enqueue('send', 'hello');
+    await expect(postmaster.flush()).resolves.toEqual({
+      completed: 1,
+      deadLettered: 0,
+      processed: 1,
+      retryScheduled: 0,
+    });
+    expect(execute).toHaveBeenCalledWith('hello', expect.objectContaining({ attempt: 1 }));
+    await postmaster.dispose();
+  });
+
+  it('throws PostmasterDisposedError when tap is called after dispose', async () => {
+    const postmaster = createPostmaster({
+      jobs: createJobs(async () => {}),
+      store: createMemoryPostmasterStore(),
+    });
+
+    await postmaster.dispose();
+
+    expect(() => postmaster.tap(vi.fn())).toThrow(PostmasterDisposedError);
   });
 });

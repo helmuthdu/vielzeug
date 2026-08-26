@@ -150,7 +150,7 @@ await store.dispose();
 - `enqueue()` — Persist a job and wake the processor.
 - `flush()` — Process every available job until the queue is empty.
 - `retry()` / `remove()` — Recover or discard dead-letter jobs.
-- `subscribe()` — Typed events for enqueued, started, completed, retry-scheduled, dead-lettered, removed, lease-lost, and processor-error.
+- `tap()` — Typed runtime events for enqueued, started, completed, retry-scheduled, dead-lettered, removed, lease-lost, and processor-error.
 - `createIndexedDbPostmasterStore()` — Durable browser store backed by Vault IndexedDB.
 - `createMemoryPostmasterStore()` — Deterministic in-memory store for tests.
 

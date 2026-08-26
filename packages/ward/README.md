@@ -51,5 +51,9 @@ bound.explain({ resource: 'posts', action: 'update', data: { authorId: 'u2' } })
 2. `allowedActions()` takes `{ principal, resource, knownActions, data? }`.
 3. `rulesInScope()` takes `{ principal, resource, data? }`.
 4. `BoundWard` methods use object inputs without `principal`.
-5. `trace()` does not call the logger; `explain()` and `checkAll()` do.
+5. `trace()` does not fire a `decision` event; `explain()` and `checkAll()` do.
 6. Use `explain()` directly at request boundaries instead of middleware wrappers.
+7. Subscribe to decision events with `tap()` for logging and diagnostics:
+   ```ts
+   ward.tap((event) => console.debug(`ward:${event.type}`, event.decision));
+   ```

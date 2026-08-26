@@ -220,19 +220,17 @@ Without `onError`, an actor disposes silently. Return `'dispose'` explicitly whe
 
 ## Debugging
 
-Use opt-in snapshot logging during development. `debugActor()` observes committed snapshots only; it does not trace dispatched events or runtime errors.
+Use `actor.subscribe()` to observe committed snapshots during development. It observes snapshots only; it does not trace dispatched events or runtime errors.
 
 ```ts
-import { debugActor } from '@vielzeug/clockwork/devtools';
-
 const actor = machine.createActor();
-const stopDebugging = debugActor(actor);
+const stop = actor.subscribe((snapshot) => console.debug(snapshot));
 actor.send({ type: 'NEXT' });
-stopDebugging();
+stop();
 actor.dispose();
 ```
 
-For richer inspection, subscribe to snapshots and record them in application devtools. Clockwork intentionally has no internal trace buffer.
+For richer inspection, route snapshots to application devtools. Clockwork intentionally has no internal trace buffer.
 
 ## Flat state maps
 

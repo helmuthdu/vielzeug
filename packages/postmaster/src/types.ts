@@ -106,7 +106,8 @@ export type PostmasterEvent =
       readonly type: 'enqueued' | 'started' | 'completed' | 'retry-scheduled' | 'dead-lettered';
     }
   | { readonly id: string; readonly type: 'removed' | 'lease-lost' }
-  | { readonly error: Error; readonly type: 'processor-error' };
+  | { readonly error: Error; readonly type: 'processor-error' }
+  | { readonly type: 'dispose' };
 
 export interface FlushResult {
   readonly completed: number;
@@ -119,7 +120,6 @@ export interface CreatePostmasterOptions<J extends JobDefinitions> {
   readonly clock?: () => number;
   readonly jobs: J;
   readonly leaseDuration?: number;
-  readonly onError?: (error: Error) => void;
   readonly signal?: AbortSignal;
   readonly store: PostmasterStore;
 }
@@ -135,6 +135,6 @@ export interface Postmaster<J extends JobDefinitions> {
   retry(id: string): Promise<RetryResult>;
   start(): Promise<void>;
   stats(): Promise<PostmasterStats>;
-  subscribe(listener: (event: PostmasterEvent) => void): () => void;
+  tap(handler: (event: PostmasterEvent) => void, options?: { readonly signal?: AbortSignal }): () => void;
   [Symbol.asyncDispose](): Promise<void>;
 }

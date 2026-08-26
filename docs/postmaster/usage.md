@@ -191,10 +191,10 @@ Disposal aborts owned work, releases the active lease, and is idempotent. A cont
 
 ## Events
 
-Subscribe to typed events for observability.
+Tap runtime events for observability. Handler errors are swallowed — observability never affects processing.
 
 ```ts
-const unsubscribe = postmaster.subscribe((event) => {
+const unsubscribe = postmaster.tap((event) => {
   switch (event.type) {
     case 'enqueued':
       console.log('enqueued', event.entry.id);
@@ -212,7 +212,13 @@ const unsubscribe = postmaster.subscribe((event) => {
 });
 ```
 
-Listener failures do not corrupt processing. Route them to an optional `onError` callback; without it, Postmaster rethrows asynchronously.
+Pass an `AbortSignal` to auto-detach:
+
+```ts
+const controller = new AbortController();
+postmaster.tap(handler, { signal: controller.signal });
+controller.abort(); // stops tapping
+```
 
 ## Testing
 

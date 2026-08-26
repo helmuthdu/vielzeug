@@ -103,14 +103,42 @@ Use private `src/_dev.ts` for development-only validation. Never mix it with con
 | `error(msg, ...args)` | Recoverable internal error with context |
 | `devOnly(fn)`         | Multi-step development-only logic       |
 
-### Consumer devtools
+### Runtime observability — `tap()`
 
-Consumer observability lives only in `/devtools` and uses `console.debug`.
+Packages with runtime behavior (events, decisions, state transitions, background work) expose side-channel observation via a `tap()` method on the instance. This replaces per-package `debug<Noun>()` factories, `logger` options, and `onError` callbacks.
 
-- **MUST:** Name APIs `debug<Noun>`; never `attach*`, `enable*`, or `with*Debug`.
-- **SHOULD:** Use factory-wrap shape when consumers normally call `create<Noun>()`.
-- **SHOULD:** Use instance-attach shape when consumers already own a live instance; return `() => void`.
-- **MAY:** Use `installDevTools(hook)` only for a process-wide inspector hook.
+```ts
+interface Tappable<Events extends { readonly type: string }> {
+  tap(handler: (event: Events) => void, options?: { readonly signal?: AbortSignal }): () => void;
+}
+```
+
+- **MUST:** Name the method `tap()`. Never `trace()`, `observe()`, `onAny()`, or `subscribe()` for generic runtime observation.
+- **MUST:** Handler receives a single typed event object — a discriminated union with a `type` field. Never positional `(event, payload)` args.
+- **MUST:** Return an unsubscribe function (`() => void`).
+- **MUST:** Accept optional `{ signal?: AbortSignal }` — auto-detach when signal aborts.
+- **MUST:** Swallow handler errors — observability must not affect package behavior.
+- **MUST:** Zero overhead when no handlers registered (`if (tappers.size === 0) return` guard before emission).
+- **MUST:** Export the event union type from `src/index.ts` as `<Pkg>Event` (e.g. `HeraldEvent`, `WardEvent`).
+- **MUST NOT:** Provide a default logger. Consumer provides the handler.
+- **MUST NOT:** Add `tap()` to packages without runtime observability (pure functions, simple state).
+- **SHOULD:** Tie tapper lifetime to `disposalSignal` — clear all tappers on dispose.
+- **SHOULD:** Emit a `{ type: 'dispose' }` event before clearing tappers, so observers can clean up.
+- **SHOULD:** `tap()` after dispose returns a no-op unsubscribe. Packages with an explicit `DisposedError` class may throw instead for consistency with their other methods.
+
+Rune integration (no adapter needed — rune's `LogMethod` overload `(context: Bindings, message?: string)` matches `(event, label)`):
+
+```ts
+import { createLogger } from '@vielzeug/rune';
+
+const log = createLogger({ name: 'herald' });
+const bus = createBus<MyEvents>();
+
+bus.tap((event) => log.debug(event, `herald:${event.type}`));
+```
+
+Packages that implement `tap()`: herald, ward, postmaster, courier, pulse, scout.
+Packages that don't (no runtime observability gap): vault (has `observe()`), spell, arsenal, ore, refine, dnd, orbit (visual overlay only), scroll, keymap, lingua, tempo, flux, focus, gesture, necromancer, sourcerer, coins, assay, illusionist, familiar, conduit, ledger, sentinel, wayfinder (has `subscribe()`), clockwork (has `subscribe()`), prism, ripple.
 
 ## File layout
 
@@ -121,8 +149,7 @@ packages/<name>/src/
 ├── _dev.ts               internal diagnostics when needed
 ├── _*.ts                 private implementation as needed
 ├── errors.ts             public typed errors when needed
-├── types.ts              standalone public types when needed
-└── devtools.ts           optional `/devtools` surface
+└── types.ts              standalone public types when needed
 ```
 
 - **MUST:** Never re-export `_`-prefixed files from `index.ts`.

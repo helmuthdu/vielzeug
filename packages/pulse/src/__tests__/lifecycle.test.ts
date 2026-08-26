@@ -1,4 +1,5 @@
 import { PulseConnectionError, PulseDisposedError } from '../errors';
+import type { PulseEvent } from '../index';
 import { createPulse } from '../pulse';
 import { frames, MockWebSocket, openPulse } from './_fixtures';
 
@@ -102,9 +103,13 @@ describe('createPulse lifecycle', () => {
     pulse.dispose();
   });
 
-  it('reports terminal reconnect failure through onError', async () => {
-    const onError = vi.fn();
-    const { pulse, socket } = await openPulse({ onError, reconnect: { delay: 0, maxAttempts: 1 } });
+  it('reports terminal reconnect failure through tap error events', async () => {
+    const errors: PulseEvent[] = [];
+    const { pulse, socket } = await openPulse({ reconnect: { delay: 0, maxAttempts: 1 } });
+
+    pulse.tap((e) => {
+      if (e.type === 'error') errors.push(e);
+    });
 
     socket.drop();
     await vi.advanceTimersByTimeAsync(0);
@@ -112,7 +117,7 @@ describe('createPulse lifecycle', () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(pulse.status.value).toBe('closed');
-    expect(onError).toHaveBeenCalledWith(expect.any(PulseConnectionError));
+    expect(errors.some((e) => e.error instanceof PulseConnectionError)).toBe(true);
 
     pulse.dispose();
   });

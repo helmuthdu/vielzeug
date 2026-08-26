@@ -64,10 +64,10 @@ if (removed.status === 'removed') {
 
 #### With Event-Driven Recovery
 
-Subscribe to `dead-lettered` events to surface failures to the UI immediately.
+Tap `dead-lettered` events to surface failures to the UI immediately.
 
 ```ts
-const unsubscribe = postmaster.subscribe((event) => {
+const unsubscribe = postmaster.tap((event) => {
   if (event.type === 'dead-lettered') {
     showRecoveryPrompt(event.entry.id, event.entry.failure);
   }

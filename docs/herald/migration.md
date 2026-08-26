@@ -46,12 +46,13 @@ Use `createBus()` only when consumers need future event delivery rather than cur
 
 ## Replace `debugBehaviorBus()`
 
-Use a Ripple signal/store for state. Use `debugBus()` only for temporal event tracing.
+Use a Ripple signal/store for state. Use `tap()` for temporal event tracing.
 
 ```ts
-import { debugBus } from '@vielzeug/herald/devtools';
+import { createBus } from '@vielzeug/herald';
 
-const bus = debugBus<{ 'theme:changed': { theme: string } }>();
+const bus = createBus<{ 'theme:changed': { theme: string } }>();
+bus.tap((event) => console.debug(`herald:${event.type}`, event));
 bus.emit('theme:changed', { theme: 'dark' });
 ```
 

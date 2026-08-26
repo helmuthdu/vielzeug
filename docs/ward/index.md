@@ -96,6 +96,7 @@ else console.log(decision.reason);
 - `WILDCARD` and `ANONYMOUS` model broad or unauthenticated access explicitly.
 - `owns()` and `predicate` constrain rules with synchronous request data.
 - `explain()`, `trace()`, and `detectConflicts()` make policy decisions diagnosable.
+- `tap()` subscribes to decision events for logging and diagnostics.
 - `forUser()` creates a principal-bound view for repeated checks.
 - `checkAll()` evaluates multiple resource/action pairs in one call.
 

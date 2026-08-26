@@ -148,6 +148,42 @@ fields; it does not retain event IDs or reconnect.
 
 ---
 
+## Observability
+
+### `tap()`
+
+```ts
+tap(handler: (event: CourierEvent) => void, options?: { signal?: AbortSignal }): () => void;
+```
+
+Observe request lifecycle events without affecting courier behavior. Handler errors are swallowed. Returns an unsubscribe function.
+
+```ts
+type CourierEvent =
+  | { type: 'request-start'; method: string; url: string }
+  | { type: 'request-success'; method: string; url: string; status: number; duration: number }
+  | { type: 'request-error'; method: string; url: string; error: unknown }
+  | { type: 'dispose' };
+```
+
+**Example:**
+
+```ts
+const courier = createCourier({ baseUrl: '/api' });
+courier.tap((event) => {
+  if (event.type === 'request-error') console.error(event.method, event.url, event.error);
+  if (event.type === 'request-success') console.debug(event.method, event.url, event.duration);
+});
+```
+
+For structured logging, route tap events to rune:
+
+```ts
+import { createLogger } from '@vielzeug/rune';
+const log = createLogger({ name: 'courier' });
+courier.tap((event) => log.debug(event, `courier:${event.type}`));
+```
+
 ## Interceptors
 
 ### Interceptor helpers

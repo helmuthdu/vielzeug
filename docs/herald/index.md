@@ -96,12 +96,12 @@ bus.dispose();
 
 - `on()` / `once()` — typed subscriptions with explicit teardown
 - `onAny()` — cross-cutting event observation
+- `tap()` — observe bus activity for logging and diagnostics
 - `wait()` / `waitAny()` — one-shot async coordination
 - `events()` — bounded async event streams
 - `pipeEvents()` — compatible cross-bus forwarding
 - `AbortSignal` — cancellation and disposal ownership
 - `createTestBus()` — emitted-payload recording for tests
-- `debugBus()` — development logging from `/devtools`
 
 </div>
 

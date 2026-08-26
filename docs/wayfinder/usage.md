@@ -640,43 +640,50 @@ export function useRouter() {
 
 For full RouterView and RouterLink patterns, see [React Integration](./examples/react-integration.md), [Vue Integration](./examples/vue-integration.md), and [Svelte Integration](./examples/svelte-integration.md).
 
-## Debug Mode
+## Debug Logging
 
-Import `debugRouter` from the dedicated sub-path to create a router with navigation logging pre-enabled. The sub-path is tree-shaken from production bundles when not imported.
+`router.subscribe()` is the reactive subscription API — it receives every state change, including `loading`, `streaming`, and `error` transitions. Attach a listener that logs to `console.debug` to inspect navigation without any dedicated debug tooling.
 
 ```ts
-import { debugRouter } from '@vielzeug/wayfinder/devtools';
+import { createRouter } from '@vielzeug/wayfinder';
 
-const router = debugRouter({
-  routes: {
-    home: { path: '/' },
-    dashboard: { path: '/dashboard', data: () => fetchDashboard() },
-  },
+const router = createRouter({ routes });
+const stop = router.subscribe((state) => {
+  console.debug(`[wayfinder] ${state.status} ${state.location.pathname}`);
 });
 
 // Logged once the initial navigation completes:
-// [wayfinder:nav] idle      /         [home]
+// [wayfinder] idle /
 
 // On navigate({ name: 'dashboard' }):
-// [wayfinder:nav] loading   /dashboard
-// [wayfinder:nav] idle      /dashboard [dashboard]
+// [wayfinder] loading /dashboard
+// [wayfinder] idle /dashboard
 ```
 
-The router returned is identical to `createRouter()` — all methods (`navigate`, `subscribe`, `waitFor`, etc.) work the same way.
-
-Errors are logged with the error object appended:
+The returned function unsubscribes the listener — call it when the logger is no longer needed (e.g. on teardown):
 
 ```ts
-// [wayfinder:nav] error     /dashboard [dashboard]  Error: fetch failed
+stop();
 ```
 
-Use the `label` option when running multiple routers to distinguish their log output:
+Errors are surfaced on the state object, so you can log them explicitly:
 
 ```ts
-const main = debugRouter({ routes, label: 'main' });
-const modal = debugRouter({ routes: modalRoutes, label: 'modal' });
-// [wayfinder:main]  loading  /products
-// [wayfinder:modal] loading  /confirm
+router.subscribe((state) => {
+  if (state.status === 'error') {
+    console.error(`[wayfinder] ${state.location.pathname}`, state.error);
+  }
+});
+```
+
+Use a label when running multiple routers to distinguish their log output:
+
+```ts
+const main = createRouter({ routes });
+main.subscribe((state) => console.debug(`[wayfinder:main] ${state.status} ${state.location.pathname}`));
+
+const modal = createRouter({ routes: modalRoutes });
+modal.subscribe((state) => console.debug(`[wayfinder:modal] ${state.status} ${state.location.pathname}`));
 ```
 
 Debug logging has no effect on behavior and should not be enabled in production.

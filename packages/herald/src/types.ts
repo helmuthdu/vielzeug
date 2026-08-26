@@ -45,29 +45,21 @@ export type Middleware<T extends EventMap = EventMap> = (
 ) => void;
 
 /**
- * Custom logger injected via `BusOptions.logger`.
- * Both methods are optional — omit one to silence that level.
+ * Runtime events emitted by {@link Bus.tap}.
+ * Subscribe via `bus.tap(handler)` — handler errors are swallowed.
  */
-export type BusLogger = {
-  debug?: (msg: string) => void;
-  warn?: (msg: string) => void;
-};
+export type HeraldEvent<T extends EventMap = EventMap> =
+  | { readonly event: EventKey<T>; readonly listeners: number; readonly payload: unknown; readonly type: 'emit' }
+  | { readonly event: EventKey<T>; readonly type: 'subscribe' }
+  | { readonly event: EventKey<T>; readonly type: 'unsubscribe' }
+  | { readonly type: 'subscribe-any' }
+  | { readonly type: 'unsubscribe-any' }
+  | { readonly error: unknown; readonly event: EventKey<T>; readonly type: 'listener-error' }
+  | { readonly type: 'dispose' };
 
 export type BusOptions<T extends EventMap = EventMap> = {
   /**
-   * Custom logger for `debug` and `warn` output.
-   * Provide `logger.debug` to enable subscription/emission/disposal logging with `[herald:*]` prefixes.
-   * Omit to disable all debug output. Pass `{}` to silence warnings too.
-   *
-   * Prefer `debugBus()` from `@vielzeug/herald/devtools` over wiring this manually — it passes
-   * `console.debug` for you and is tree-shaken from production bundles.
-   *
-   * **Note:** Event key strings appear in log messages — do not encode sensitive data in event names.
-   */
-  logger?: BusLogger;
-  /**
    * Warn when a single event's active listener count exceeds this threshold.
-   * Output goes to `logger.warn` (default: `console.warn`).
    * Useful for detecting listener leaks during development. Default: no check.
    */
   maxListeners?: number;
@@ -78,11 +70,11 @@ export type BusOptions<T extends EventMap = EventMap> = {
   middleware?: readonly Middleware<T>[];
   /**
    * Optional display name for this bus instance.
-   * Appears in debug log prefixes and in `BusDisposedError` messages.
-   * Useful when running multiple buses concurrently to identify which bus produced a log or error.
+   * Appears in `BusDisposedError` messages.
+   * Useful when running multiple buses concurrently to identify which bus produced an error.
    *
-   * **Note:** The name is embedded in `BusDisposedError` messages and debug logs — avoid using
-   * sensitive or user-derived values that could leak via error trackers or log aggregators.
+   * **Note:** The name is embedded in `BusDisposedError` messages — avoid using
+   * sensitive or user-derived values that could leak via error trackers.
    */
   name?: string;
   /**
@@ -241,4 +233,12 @@ export type Bus<T extends EventMap> = {
    * These fire on every emission regardless of event key.
    */
   wildcardCount(): number;
+  /**
+   * Observe runtime events (emit, subscribe, unsubscribe, listener-error, dispose) without
+   * affecting bus behavior. Handler errors are swallowed. Returns an unsubscribe function.
+   *
+   * @example
+   * bus.tap((event) => console.debug(`herald:${event.type}`, event));
+   */
+  tap(handler: (event: HeraldEvent<T>) => void, options?: { signal?: AbortSignal }): Unsubscribe;
 };

@@ -51,7 +51,6 @@ actor.dispose();
 | `machine.createActor(options?)` | Create an owned runtime actor |
 | `Actor` | Runtime resource with a readonly snapshot, subscriptions, and disposal |
 | `ClockworkError` | Validation error with stable `code` |
-| `debugActor(actor, options?)` | Observe committed actor snapshots from `/devtools` |
 
 ## Async invokes and timers
 
@@ -84,23 +83,22 @@ const loader = defineMachine<{ data: string }, Event>()({
 });
 ```
 
-## Devtools
+## Observability
 
-`debugActor(actor, options?)` observes committed snapshots with `console.debug`. It does not modify actor behavior or trace dispatches and runtime errors.
+`actor.subscribe(listener)` observes committed snapshots. It does not modify actor behavior or trace dispatches and runtime errors.
 
 ```ts
 import { defineMachine } from '@vielzeug/clockwork';
-import { debugActor } from '@vielzeug/clockwork/devtools';
 
 const machine = defineMachine<Record<string, never>, { type: 'NEXT' }>()({
   initial: 'idle',
   states: { idle: { on: { NEXT: { target: 'idle' } } } },
 });
 const actor = machine.createActor();
-const stopDebugging = debugActor(actor);
+const stop = actor.subscribe((snapshot) => console.debug(snapshot.state));
 
 actor.send({ type: 'NEXT' });
-stopDebugging();
+stop();
 actor.dispose();
 ```
 

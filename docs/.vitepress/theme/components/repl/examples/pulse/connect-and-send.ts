@@ -4,7 +4,11 @@ export const connectAndSendExample = {
 // Typed WebSocket client: on(), once(), send(), wait()
 const pulse = createPulse('wss://api.example.com/ws', {
   reconnect: { maxAttempts: 5 },
-  onError: (error) => console.log('transport error:', error.message),
+})
+
+// Observe runtime events via tap()
+pulse.tap((event) => {
+  if (event.type === 'error') console.log('transport error:', event.error.message)
 })
 
 // Subscribe before connecting — listeners are synchronous

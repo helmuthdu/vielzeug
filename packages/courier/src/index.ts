@@ -1,4 +1,4 @@
-export { type Courier, type CourierOptions, createCourier } from './courier';
+export { type Courier, type CourierEvent, type CourierOptions, createCourier } from './courier';
 export {
   CourierAbortError,
   CourierDisposedError,

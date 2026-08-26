@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { debugActor } from '../devtools.js';
 import { type ClockworkError, defineMachine, type Machine, type MachineConfig } from '../index.js';
 
 const flush = async (): Promise<void> => {
@@ -520,21 +519,21 @@ describe('actors', () => {
   });
 });
 
-describe('debugActor', () => {
-  it('observes snapshots and cleanup detaches without wrapping the actor or changing its error policy', () => {
+describe('actor.subscribe', () => {
+  it('observes snapshots and cleanup detaches without changing the actor error policy', () => {
     type Event = { readonly type: 'GO' };
 
-    const logger = vi.fn();
+    const listener = vi.fn();
     const machine = defineMachine<Record<string, never>, Event>()({
       context: {},
       initial: 'idle',
       states: { idle: { on: { GO: { target: 'ready' } } }, ready: {} },
     });
     const actor = machine.createActor();
-    const stop = debugActor(actor, { logger });
+    const stop = actor.subscribe(listener);
 
     actor.send({ type: 'GO' });
-    expect(logger).toHaveBeenCalledWith({ context: {}, state: 'ready' });
+    expect(listener).toHaveBeenCalledWith({ context: {}, state: 'ready' });
     expect(actor.disposed).toBe(false);
 
     stop();

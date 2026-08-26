@@ -98,10 +98,22 @@ bus.dispose();
 
 ## Debugging
 
-```ts
-import { debugBus } from '@vielzeug/herald/devtools';
+`tap()` observes every bus activity as a `HeraldEvent` — use it for logging and diagnostics.
 
-const bus = debugBus<AppEvents>({ name: 'cart' });
+```ts
+import { createBus } from '@vielzeug/herald';
+
+const bus = createBus<AppEvents>();
+bus.tap((event) => console.debug(`herald:${event.type}`, event));
+```
+
+Integrate with the Rune logger:
+
+```ts
+import { createLogger } from '@vielzeug/rune';
+
+const log = createLogger({ name: 'herald' });
+bus.tap((event) => log.debug(event, `herald:${event.type}`));
 ```
 
 ## Working with Other Vielzeug Libraries

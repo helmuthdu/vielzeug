@@ -13,7 +13,6 @@ description: Reference for typed temporal event delivery, lifecycle ownership, a
 | `pipeEvents()` | Forward compatible source events | Sync | Payloads must be assignable to target event |
 | `combineSignals()` | Abort when any input aborts | Sync | Public composition has no manual teardown |
 | `createTestBus()` | Record dispatched test events | Sync | Available from `/testing` only |
-| `debugBus()` | Create console-debug instrumented bus | Sync | Available from `/devtools` only |
 
 ## Package Entry Point
 
@@ -21,7 +20,6 @@ description: Reference for typed temporal event delivery, lifecycle ownership, a
 | --- | --- |
 | `@vielzeug/herald` | Runtime bus, pipes, public types, and errors |
 | `@vielzeug/herald/testing` | `createTestBus()` and `TestBus` |
-| `@vielzeug/herald/devtools` | `debugBus()` |
 
 ## Core Functions
 
@@ -37,7 +35,7 @@ Creates a synchronous bus for future event delivery.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `options` | `BusOptions<T>` | Optional middleware, validation, error handling, logging, and listener threshold configuration. |
+| `options` | `BusOptions<T>` | Optional middleware, validation, error handling, and listener threshold configuration. |
 
 **Returns:** `Bus<T>`.
 
@@ -136,7 +134,6 @@ type EventKey<T extends EventMap> = Extract<keyof T, string>;
 
 ```ts
 type BusOptions<T extends EventMap = EventMap> = {
-  logger?: BusLogger;
   maxListeners?: number;
   middleware?: readonly Middleware<T>[];
   name?: string;
@@ -147,10 +144,9 @@ type BusOptions<T extends EventMap = EventMap> = {
 
 | Field | Description |
 | --- | --- |
-| `logger` | Optional debug and warning output. |
 | `maxListeners` | Warn when one event exceeds this active-listener count. |
 | `middleware` | Synchronous dispatch middleware. |
-| `name` | Display name in debug logs and disposal errors. |
+| `name` | Display name in disposal errors. |
 | `onError` | Handles listener and validation errors instead of rethrowing. |
 | `validatePayload` | Runs before middleware and listeners. |
 
@@ -171,6 +167,7 @@ type Bus<T extends EventMap> = {
   on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe;
   onAny(listener: (event: EventKey<T>, payload: unknown) => void, opts?: SubscribeOptions): Unsubscribe;
   once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: { signal?: AbortSignal }): Unsubscribe;
+  tap(handler: (event: HeraldEvent<T>) => void, options?: { signal?: AbortSignal }): Unsubscribe;
   wait<K extends EventKey<T>>(event: K, opts?: { signal?: AbortSignal }): Promise<T[K]>;
   waitAny<const K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
     events: K,
@@ -182,20 +179,39 @@ type Bus<T extends EventMap> = {
 
 `emit()` returns listener count or `0` after disposal, blocked middleware, or handled validation rejection.
 
----
-
-### `BusLogger`, `Listener`, `SubscribeOptions`, and `Unsubscribe`
+`tap()` receives every `emit`, `subscribe`, `unsubscribe`, `listener-error`, and `dispose` event as a `HeraldEvent`. It is the supported way to observe bus activity for logging and diagnostics. The returned `Unsubscribe` stops the tap; pass `{ signal }` to bind its lifetime to an `AbortSignal`.
 
 ```ts
-type BusLogger = {
-  debug?: (message: string) => void;
-  warn?: (message: string) => void;
-};
+import { createBus } from '@vielzeug/herald';
 
+const bus = createBus<AppEvents>();
+const stop = bus.tap((event) => console.debug(`herald:${event.type}`, event));
+```
+
+---
+
+### `Listener`, `SubscribeOptions`, and `Unsubscribe`
+
+```ts
 type Listener<T> = (payload: T) => void;
 type SubscribeOptions = { once?: boolean; signal?: AbortSignal };
 type Unsubscribe = () => void;
 ```
+
+---
+
+### `HeraldEvent`
+
+```ts
+type HeraldEvent<T extends EventMap = EventMap> =
+  | { type: 'emit'; event: EventKey<T>; payload: unknown; timestamp: number }
+  | { type: 'subscribe'; event: EventKey<T>; timestamp: number }
+  | { type: 'unsubscribe'; event: EventKey<T>; timestamp: number }
+  | { type: 'listener-error'; event: EventKey<T>; err: unknown; timestamp: number }
+  | { type: 'dispose'; timestamp: number };
+```
+
+Discriminated union delivered to `tap()` handlers. Narrow on `event.type` to access type-specific fields.
 
 ---
 
@@ -250,7 +266,7 @@ type PipeEntry<S extends EventMap, T extends EventMap> =
   | RenamedPipeEntry<S, T>;
 ```
 
-## Testing and Devtools
+## Testing
 
 ### `createTestBus()`
 
@@ -274,16 +290,6 @@ type TestBus<T extends EventMap> = Bus<T> & {
   reset(): void;
 };
 ```
-
-### `debugBus()`
-
-```ts
-function debugBus<T extends EventMap>(
-  options?: Omit<BusOptions<T>, 'logger'> & { logger?: { warn?: BusLogger['warn'] } },
-): Bus<T>;
-```
-
-Creates a bus with `console.debug` logging. Import from `@vielzeug/herald/devtools`.
 
 ## Errors
 

@@ -11,6 +11,7 @@ import type {
   ClientEvents,
   EventKey,
   Pulse,
+  PulseEvent,
   PulseOptions,
   PulseSchema,
   PulseStatus,
@@ -66,12 +67,25 @@ export function createPulse<S extends PulseSchema = PulseSchema>(url: string, op
   const status = signal<PulseStatus>('closed');
   const listeners = new ListenerMap();
   const channelReferences = new Map<string, number>();
+  const tappers = new Set<(event: PulseEvent) => void>();
 
   let disposed = false;
   let transportClosed = true;
+  let lastStatus: PulseStatus = 'closed';
+
+  function emitTap(event: PulseEvent): void {
+    if (tappers.size === 0) return;
+    for (const tapper of tappers) {
+      try {
+        tapper(event);
+      } catch {
+        // Observability must not affect pulse behavior.
+      }
+    }
+  }
 
   function report(error: PulseError): void {
-    options.onError?.(error);
+    emitTap({ error, type: 'error' });
   }
 
   function sendInternal(frame: string): void {
@@ -142,6 +156,10 @@ export function createPulse<S extends PulseSchema = PulseSchema>(url: string, op
     },
     onStatus(nextStatus) {
       status.value = nextStatus;
+      if (nextStatus !== lastStatus) {
+        lastStatus = nextStatus;
+        emitTap({ status: nextStatus, type: 'status-change' });
+      }
     },
   });
 
@@ -256,6 +274,8 @@ export function createPulse<S extends PulseSchema = PulseSchema>(url: string, op
       channelReferences.clear();
       rooms.dispose();
       listeners.clear();
+      emitTap({ type: 'dispose' });
+      tappers.clear();
       disposalCtrl.abort();
     },
 
@@ -303,6 +323,26 @@ export function createPulse<S extends PulseSchema = PulseSchema>(url: string, op
 
     get status() {
       return status;
+    },
+
+    tap(handler: (event: PulseEvent) => void, opts?: { signal?: AbortSignal }): Unsubscribe {
+      if (disposed) throw new PulseDisposedError();
+      tappers.add(handler);
+
+      if (opts?.signal) {
+        if (opts.signal.aborted) {
+          tappers.delete(handler);
+          return () => {};
+        }
+        const onAbort = () => tappers.delete(handler);
+        opts.signal.addEventListener('abort', onAbort, { once: true });
+        return () => {
+          tappers.delete(handler);
+          opts.signal?.removeEventListener('abort', onAbort);
+        };
+      }
+
+      return () => tappers.delete(handler);
     },
 
     [Symbol.dispose]() {

@@ -11,7 +11,7 @@ description: Practical examples and recipes for ward.
 - [Priority and Overrides](./examples/inheritance-and-overrides.md)
 - [Bound Guard in UI Layer](./examples/bound-guard-in-ui-layer.md)
 - [Rule Specificity](./examples/disabling-wildcard-fallback.md)
-- [Logger for Auditing](./examples/logger-for-auditing.md)
+- [Auditing Decisions](./examples/logger-for-auditing.md)
 - [Fresh Ward Per Test](./examples/snapshot-restore-for-test-isolation.md)
 - [Conflict Detection](./examples/conflict-detection.md)
 - [Trace a Decision](./examples/trace-decision.md)

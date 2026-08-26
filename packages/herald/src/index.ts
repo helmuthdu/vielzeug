@@ -3,12 +3,12 @@ export { BusDisposedError, HeraldConfigError, HeraldError } from './errors';
 export { pipeEvents } from './pipe';
 export type {
   Bus,
-  BusLogger,
   BusOptions,
   EmissionErrorContext,
   EventKey,
   EventMap,
   EventStream,
+  HeraldEvent,
   Listener,
   Middleware,
   PipeableKey,

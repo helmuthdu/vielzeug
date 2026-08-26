@@ -128,6 +128,7 @@ export type Ward<TAction extends string = string, TData = unknown> = {
   explain(input: WardDecisionInput<TAction, TData>): WardDecision<TAction, TData>;
   forUser(principal: UserPrincipal): BoundWard<TAction, TData>;
   rulesInScope(input: WardRulesInScopeInput<TData>): ReadonlyArray<Readonly<NormalizedWardRule<TAction, TData>>>;
+  tap(handler: (event: WardEvent<TAction, TData>) => void, options?: { signal?: AbortSignal }): () => void;
   trace(input: WardDecisionInput<TAction, TData>): WardTrace<TAction, TData>;
 };
 
@@ -139,15 +140,20 @@ export type BoundWard<TAction extends string = string, TData = unknown> = {
   trace(input: BoundWardDecisionInput<TAction, TData>): WardTrace<TAction, TData>;
 };
 
-export type WardLoggerContext<TAction extends string = string, TData = unknown> = WardDecision<TAction, TData> & {
-  action: TAction;
-  data?: TData;
-  principal: Principal;
-  resource: string;
+/**
+ * Runtime events emitted by {@link Ward.tap}.
+ * Subscribe via `ward.tap(handler)` — handler errors are swallowed.
+ */
+export type WardEvent<TAction extends string = string, TData = unknown> = {
+  readonly type: 'decision';
+  readonly decision: WardDecision<TAction, TData>;
+  readonly action: TAction;
+  readonly data?: TData;
+  readonly principal: Principal;
+  readonly resource: string;
 };
 
 export type WardOptions<TAction extends string = string, TData = unknown> = {
-  logger?: (context: WardLoggerContext<TAction, TData>) => void;
   maxConflicts?: number;
   onConflict?: (conflict: WardConflict<TAction, TData>) => void;
   strict?: boolean;

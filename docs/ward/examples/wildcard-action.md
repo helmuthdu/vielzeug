@@ -33,7 +33,7 @@ const actions = ward.allowedActions({
 ### Pitfalls
 
 - `allowedActions()` needs a caller-provided `knownActions` list; Ward does not infer an action universe.
-- This inspection API does not invoke the configured logger.
+- This inspection API does not fire a decision event via `tap()`.
 
 ### Related
 

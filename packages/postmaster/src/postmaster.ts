@@ -58,12 +58,12 @@ function assertLeaseDuration(value: number): void {
 }
 
 export function createPostmaster<J extends JobDefinitions>(options: CreatePostmasterOptions<J>): Postmaster<J> {
-  const { clock = Date.now, jobs, leaseDuration = 30_000, onError, signal, store } = options;
+  const { clock = Date.now, jobs, leaseDuration = 30_000, signal, store } = options;
   assertLeaseDuration(leaseDuration);
 
   const controller = new AbortController();
   const ownerId = crypto.randomUUID();
-  const listeners = new Set<(event: PostmasterEvent) => void>();
+  const tappers = new Set<(event: PostmasterEvent) => void>();
   let disposed = false;
   let started = false;
   let running: Promise<void> | undefined;
@@ -73,24 +73,19 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
 
   const error = (reason: unknown): void => {
     const value = reason instanceof Error ? reason : new Error(String(reason));
-    emit({ error: value, type: 'processor-error' });
-    if (onError) onError(value);
-    else
-      queueMicrotask(() => {
-        throw value;
-      });
+    emitTap({ error: value, type: 'processor-error' });
+    queueMicrotask(() => {
+      throw value;
+    });
   };
 
-  const emit = (event: PostmasterEvent): void => {
-    for (const listener of listeners) {
+  const emitTap = (event: PostmasterEvent): void => {
+    if (tappers.size === 0) return;
+    for (const tapper of tappers) {
       try {
-        listener(event);
-      } catch (reason) {
-        if (onError) onError(reason instanceof Error ? reason : new Error(String(reason)));
-        else
-          queueMicrotask(() => {
-            throw reason;
-          });
+        tapper(event);
+      } catch {
+        // Observability must not affect postmaster behavior.
       }
     }
   };
@@ -129,11 +124,11 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
     );
 
     if (!finalized) {
-      emit({ id: entry.id, type: 'lease-lost' });
+      emitTap({ id: entry.id, type: 'lease-lost' });
       return { completed: 0, deadLettered: 0, processed: true, retryScheduled: 0 };
     }
 
-    emit({ entry: toEntry({ ...entry, status: 'dead-letter' }), type: 'dead-lettered' });
+    emitTap({ entry: toEntry({ ...entry, status: 'dead-letter' }), type: 'dead-lettered' });
     return { completed: 0, deadLettered: 1, processed: true, retryScheduled: 0 };
   };
 
@@ -168,7 +163,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
           .then((renewed) => {
             if (!renewed) {
               taskController.abort();
-              emit({ id: entry.id, type: 'lease-lost' });
+              emitTap({ id: entry.id, type: 'lease-lost' });
             }
           })
           .catch(error);
@@ -176,7 +171,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
       Math.max(1_000, Math.floor(leaseDuration / 2)),
     );
 
-    emit({ entry: toEntry(entry), type: 'started' });
+    emitTap({ entry: toEntry(entry), type: 'started' });
 
     try {
       await job.execute(payload, {
@@ -193,11 +188,11 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
 
       const completed = await store.transact((tx) => completeJob(tx, { id: entry.id, now: clock(), ownerId }));
       if (!completed) {
-        emit({ id: entry.id, type: 'lease-lost' });
+        emitTap({ id: entry.id, type: 'lease-lost' });
         return { completed: 0, deadLettered: 0, processed: true, retryScheduled: 0 };
       }
 
-      emit({ entry: toEntry(entry), type: 'completed' });
+      emitTap({ entry: toEntry(entry), type: 'completed' });
       return { completed: 1, deadLettered: 0, processed: true, retryScheduled: 0 };
     } catch (reason) {
       if (taskSignal.aborted || isAbortError(reason)) {
@@ -225,10 +220,10 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
         rescheduleJob(tx, { availableAt, failure: failureFrom(reason, clock()), id: entry.id, now: clock(), ownerId }),
       );
       if (!rescheduled) {
-        emit({ id: entry.id, type: 'lease-lost' });
+        emitTap({ id: entry.id, type: 'lease-lost' });
         return { completed: 0, deadLettered: 0, processed: true, retryScheduled: 0 };
       }
-      emit({ entry: toEntry({ ...entry, availableAt, status: 'queued' }), type: 'retry-scheduled' });
+      emitTap({ entry: toEntry({ ...entry, availableAt, status: 'queued' }), type: 'retry-scheduled' });
       return { completed: 0, deadLettered: 0, processed: true, retryScheduled: 1 };
     } finally {
       clearInterval(heartbeat);
@@ -272,6 +267,8 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
   const dispose = async (): Promise<void> => {
     if (disposed) return;
     disposed = true;
+    emitTap({ type: 'dispose' });
+    tappers.clear();
     clearWakeTimer();
     signal?.removeEventListener('abort', externalAbort);
     unsubscribeStore();
@@ -317,7 +314,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
       };
       await store.transact((tx) => enqueueJob(tx, entry));
       const result = toEntry(entry);
-      emit({ entry: result, type: 'enqueued' });
+      emitTap({ entry: result, type: 'enqueued' });
       wake();
       return result;
     },
@@ -353,7 +350,7 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
     async remove(id: string): Promise<RemoveResult> {
       assertLive();
       const result = await store.transact((tx) => removeJob(tx, id));
-      if (result.status === 'removed') emit({ id, type: 'removed' });
+      if (result.status === 'removed') emitTap({ id, type: 'removed' });
       return result;
     },
     async retry(id: string): Promise<RetryResult> {
@@ -372,10 +369,24 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
       assertLive();
       return store.transact((tx) => tx.countByStatus());
     },
-    subscribe(listener: (event: PostmasterEvent) => void): () => void {
+    tap(handler: (event: PostmasterEvent) => void, opts?: { readonly signal?: AbortSignal }): () => void {
       assertLive();
-      listeners.add(listener);
-      return () => listeners.delete(listener);
+      tappers.add(handler);
+
+      if (opts?.signal) {
+        if (opts.signal.aborted) {
+          tappers.delete(handler);
+          return () => {};
+        }
+        const onAbort = () => tappers.delete(handler);
+        opts.signal.addEventListener('abort', onAbort, { once: true });
+        return () => {
+          tappers.delete(handler);
+          opts.signal?.removeEventListener('abort', onAbort);
+        };
+      }
+
+      return () => tappers.delete(handler);
     },
     async [Symbol.asyncDispose](): Promise<void> {
       await dispose();

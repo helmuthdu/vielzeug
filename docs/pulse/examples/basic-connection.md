@@ -22,8 +22,11 @@ type Schema = {
 };
 
 const pulse = createPulse<Schema>('wss://api.example.com/ws', {
-  onError: (error) => console.error(error),
   reconnect: true,
+});
+pulse.tap((event) => {
+  if (event.type === 'error') console.error(event.error);
+  if (event.type === 'status-change') console.log('status:', event.status);
 });
 
 const stop = pulse.on('chat:message', ({ text }) => console.log(text));

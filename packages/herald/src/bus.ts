@@ -8,6 +8,7 @@ import type {
   EventKey,
   EventMap,
   EventStream,
+  HeraldEvent,
   Listener,
   SubscribeOptions,
   Unsubscribe,
@@ -70,7 +71,12 @@ export function combineSignals(first: AbortSignal, ...rest: AbortSignal[]): Abor
 type Entry = { fn: Listener<unknown>; unsub: () => void };
 type WildcardEntry = { fn: (event: string, payload: unknown) => void; unsub: () => void };
 
-type RegisterEntryOpts = { offLog: string; onLog: string; onRemove?: () => void };
+type RegisterEntryOpts<T extends EventMap> = {
+  event?: EventKey<T>;
+  onLog: string;
+  onRemove?: () => void;
+  wildcard?: boolean;
+};
 
 // makeEventStream wraps an AsyncGenerator with AsyncDisposable.
 function makeEventStream<V>(gen: AsyncGenerator<V>, onDispose: () => Promise<void>): EventStream<V> {
@@ -97,21 +103,25 @@ export function createBusInternal<T extends EventMap = Record<string, unknown>>(
   // the same fn can appear in multiple entries with independent lifetimes.
   const listeners = new Map<string, Set<Entry>>();
   const wildcards = new Set<WildcardEntry>();
+  const tappers = new Set<(event: HeraldEvent<T>) => void>();
   const disposeController = new AbortController();
   const busName = options?.name;
   const maxListeners = options?.maxListeners;
-  const rawDebug = options?.logger?.debug;
-  const logDebug = rawDebug && busName ? (msg: string) => rawDebug(`${msg} (${busName})`) : rawDebug;
-  const hasLogger = options?.logger !== undefined;
-  const customLogWarn = options?.logger?.warn;
   const busTag = busName ? ` (${busName})` : '';
 
-  function doWarn(msg: string): void {
-    if (customLogWarn) {
-      customLogWarn(msg);
-    } else if (!hasLogger) {
-      _internalWarn(msg);
+  function emitTap(event: HeraldEvent<T>): void {
+    if (tappers.size === 0) return;
+    for (const tapper of tappers) {
+      try {
+        tapper(event);
+      } catch {
+        // Observability must not affect bus behavior.
+      }
     }
+  }
+
+  function doWarn(msg: string): void {
+    _internalWarn(msg);
   }
 
   function createSubscriptionScope(signal?: AbortSignal): SignalScope {
@@ -137,7 +147,7 @@ export function createBusInternal<T extends EventMap = Record<string, unknown>>(
     container: Set<E>,
     makeEntry: (unsub: () => void) => E,
     signal: AbortSignal,
-    { offLog, onLog, onRemove }: RegisterEntryOpts,
+    { event, onLog, onRemove, wildcard }: RegisterEntryOpts<T>,
   ): () => void {
     if (signal.aborted) return noop;
 
@@ -153,7 +163,8 @@ export function createBusInternal<T extends EventMap = Record<string, unknown>>(
       onRemove?.();
       signal.removeEventListener('abort', unsub);
 
-      logDebug?.(`[herald:sub] ${offLog} — ${container.size} listener(s) remaining`);
+      if (event !== undefined) emitTap({ event, type: 'unsubscribe' });
+      else if (wildcard) emitTap({ type: 'unsubscribe-any' });
     }
 
     // Function declaration is hoisted so `entry` can reference `unsub` directly.
@@ -162,7 +173,8 @@ export function createBusInternal<T extends EventMap = Record<string, unknown>>(
     container.add(entry);
     signal.addEventListener('abort', unsub, { once: true });
 
-    logDebug?.(`[herald:sub] ${onLog} — ${container.size} listener(s)`);
+    if (event !== undefined) emitTap({ event, type: 'subscribe' });
+    else if (wildcard) emitTap({ type: 'subscribe-any' });
 
     if (maxListeners !== undefined && container.size > maxListeners) {
       doWarn(
@@ -191,7 +203,7 @@ export function createBusInternal<T extends EventMap = Record<string, unknown>>(
     const capturedSet = set;
 
     return registerEntry(capturedSet, (unsub) => ({ fn: listener as Listener<unknown>, unsub }), signal, {
-      offLog: `off("${event}")`,
+      event,
       onLog: `on("${event}")`,
       onRemove: () => {
         if (capturedSet.size === 0) listeners.delete(event);
@@ -210,7 +222,7 @@ export function createBusInternal<T extends EventMap = Record<string, unknown>>(
       wildcards,
       (unsub) => ({ fn: listener as (event: string, payload: unknown) => void, unsub }),
       signal,
-      { offLog: 'onAny off', onLog: 'onAny', onRemove },
+      { onLog: 'onAny', onRemove, wildcard: true },
     );
   }
 
@@ -387,8 +399,6 @@ export function createBusInternal<T extends EventMap = Record<string, unknown>>(
     options?._onDispatch?.(event, payload);
 
     let count = 0;
-    // Only the first unforwarded error is kept — every listener still runs (see callSafe's
-    // doc comment) — then it's rethrown once the whole broadcast (specific + wildcard) is done.
     let firstError: { err: unknown } | undefined;
     const set = listeners.get(event);
 
@@ -396,7 +406,10 @@ export function createBusInternal<T extends EventMap = Record<string, unknown>>(
       for (const entry of [...set]) {
         const result = callSafe(() => entry.fn(payload), event, payload, timestamp);
 
-        if (result.threw && !firstError) firstError = { err: result.err };
+        if (result.threw) {
+          if (!firstError) firstError = { err: result.err };
+          emitTap({ error: result.err, event, type: 'listener-error' });
+        }
 
         count++;
       }
@@ -406,11 +419,16 @@ export function createBusInternal<T extends EventMap = Record<string, unknown>>(
       for (const entry of [...wildcards]) {
         const result = callSafe(() => entry.fn(event, payload), event, payload, timestamp);
 
-        if (result.threw && !firstError) firstError = { err: result.err };
+        if (result.threw) {
+          if (!firstError) firstError = { err: result.err };
+          emitTap({ error: result.err, event, type: 'listener-error' });
+        }
 
         count++;
       }
     }
+
+    emitTap({ event, listeners: count, payload, type: 'emit' });
 
     if (firstError) throw firstError.err;
 
@@ -438,15 +456,6 @@ export function createBusInternal<T extends EventMap = Record<string, unknown>>(
 
         throw err;
       }
-    }
-
-    if (logDebug) {
-      const specific = listeners.get(event)?.size ?? 0;
-      const wild = wildcards.size;
-
-      logDebug(
-        `[herald:emit] emit("${event}") — ${specific + wild} listener(s) (${specific} specific, ${wild} wildcard)`,
-      );
     }
 
     const middleware = options?.middleware;
@@ -497,6 +506,26 @@ export function createBusInternal<T extends EventMap = Record<string, unknown>>(
 
   function eventNames(): EventKey<T>[] {
     return [...listeners.keys()] as EventKey<T>[];
+  }
+
+  function tap(handler: (event: HeraldEvent<T>) => void, opts?: { signal?: AbortSignal }): () => void {
+    if (disposeController.signal.aborted) return noop;
+
+    const scope = createSubscriptionScope(opts?.signal);
+
+    if (scope.signal.aborted) return noop;
+
+    tappers.add(handler);
+
+    const onAbort = () => tappers.delete(handler);
+
+    scope.signal.addEventListener('abort', onAbort, { once: true });
+
+    return () => {
+      tappers.delete(handler);
+      scope.signal.removeEventListener('abort', onAbort);
+      scope.dispose();
+    };
   }
 
   function waitAny<K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
@@ -554,15 +583,13 @@ export function createBusInternal<T extends EventMap = Record<string, unknown>>(
   function dispose(): void {
     if (disposeController.signal.aborted) return;
 
-    logDebug?.('[herald:lifecycle] dispose()');
-
+    // Emit dispose first — tappers are cleared by the abort cascade below,
+    // so the event must fire before abort triggers their auto-cleanup.
+    emitTap({ type: 'dispose' });
     disposeController.abort(new BusDisposedError(busName));
-    // disposeController.abort() fires all unsub handlers synchronously, which
-    // removes every entry and deletes empty keys. By here both maps are already
-    // empty. clear() is a cheap defensive measure against any future code path
-    // that bypasses the signal (e.g. a direct listeners.set() before a guard).
     listeners.clear();
     wildcards.clear();
+    tappers.clear();
   }
 
   return {
@@ -581,6 +608,7 @@ export function createBusInternal<T extends EventMap = Record<string, unknown>>(
     onAny,
     once,
     [Symbol.dispose]: dispose,
+    tap,
     wait,
     waitAny,
     wildcardCount,

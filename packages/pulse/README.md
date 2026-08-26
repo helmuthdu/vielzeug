@@ -29,7 +29,10 @@ type Schema = {
 
 const pulse = createPulse<Schema>('wss://api.example.com/ws', {
   reconnect: true,
-  onError: (error) => console.error(error),
+});
+pulse.tap((event) => {
+  if (event.type === 'error') console.error(event.error);
+  if (event.type === 'status-change') console.log('status:', event.status);
 });
 
 const chat = pulse.channel('chat');
@@ -55,7 +58,7 @@ pulse.dispose();
 - Reconnect restores channels, room memberships, and the last successfully published local presence state.
 - `send()` throws `PulseConnectionError` while disconnected; Pulse never silently drops or buffers application messages.
 - `room()` returns a `RoomScope` with a `joined` promise. When the room definition includes `presence`, the scope also exposes reactive presence state, `updatePresence()`, and `onJoin()`/`onLeave()` handlers.
-- `onError` receives typed transport and protocol errors.
+- Call `tap()` to observe lifecycle events; Pulse reports transport and protocol errors there rather than throwing asynchronously.
 
 ## Migration
 

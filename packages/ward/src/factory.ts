@@ -19,7 +19,7 @@ import type {
   WardDecision,
   WardDecisionInput,
   WardDecisionResult,
-  WardLoggerContext,
+  WardEvent,
   WardOptions,
   WardRule,
   WardRulesInScopeInput,
@@ -93,10 +93,6 @@ export function createWard<TAction extends string = string, TData = unknown>(
   rules: readonly (WardRule<TAction, TData> | readonly WardRule<TAction, TData>[])[] = [],
   options: WardOptions<TAction, TData> = {},
 ): Ward<TAction, TData> {
-  if (options.logger !== undefined && typeof options.logger !== 'function') {
-    throw new WardConfigError('logger must be a function.');
-  }
-
   if (options.maxConflicts !== undefined) {
     if (!Number.isFinite(options.maxConflicts) || options.maxConflicts < 0) {
       throw new WardConfigError('maxConflicts must be a finite non-negative number.');
@@ -107,7 +103,8 @@ export function createWard<TAction extends string = string, TData = unknown>(
     throw new WardConfigError('onConflict must be a function.');
   }
 
-  const { logger, maxConflicts = Infinity } = options;
+  const { maxConflicts = Infinity } = options;
+  const tappers = new Set<(event: WardEvent<TAction, TData>) => void>();
   const flat: WardRule<TAction, TData>[] = [];
 
   for (const entry of rules) {
@@ -127,24 +124,15 @@ export function createWard<TAction extends string = string, TData = unknown>(
   // Core decision + logging
   // -------------------------------------------------------------------------
 
-  function fireLogger(
-    principal: Principal,
-    resource: string,
-    action: TAction,
-    data: TData | undefined,
-    decision: WardDecision<TAction, TData>,
-  ): void {
-    if (!logger) return;
-
-    const ctx = {
-      ...decision,
-      action,
-      data,
-      principal,
-      resource,
-    } as WardLoggerContext<TAction, TData>;
-
-    logger(ctx);
+  function emitTap(event: WardEvent<TAction, TData>): void {
+    if (tappers.size === 0) return;
+    for (const tapper of tappers) {
+      try {
+        tapper(event);
+      } catch {
+        // Observability must not affect ward behavior.
+      }
+    }
   }
 
   function evaluateAndLog(
@@ -156,7 +144,7 @@ export function createWard<TAction extends string = string, TData = unknown>(
     const winner = pickWinner(entries, principal, resource, action, data);
     const decision = toDecision(winner);
 
-    fireLogger(principal, resource, action, data, decision);
+    emitTap({ action, data, decision, principal, resource, type: 'decision' });
 
     return decision;
   }
@@ -299,5 +287,24 @@ export function createWard<TAction extends string = string, TData = unknown>(
     }
   }
 
-  return { allowedActions, checkAll, detectConflicts, explain, forUser, rulesInScope, trace };
+  function tap(handler: (event: WardEvent<TAction, TData>) => void, opts?: { signal?: AbortSignal }): () => void {
+    tappers.add(handler);
+
+    const onAbort = () => tappers.delete(handler);
+
+    if (opts?.signal) {
+      if (opts.signal.aborted) {
+        tappers.delete(handler);
+        return () => {};
+      }
+      opts.signal.addEventListener('abort', onAbort, { once: true });
+    }
+
+    return () => {
+      tappers.delete(handler);
+      opts?.signal?.removeEventListener('abort', onAbort);
+    };
+  }
+
+  return { allowedActions, checkAll, detectConflicts, explain, forUser, rulesInScope, tap, trace };
 }

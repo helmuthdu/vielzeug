@@ -11,7 +11,7 @@ Fast fuzzy-search. Builds a trigram inverted index at construction — O(candida
 - **Framework adapters** — `toSearchMatcher()` for sourcerer, `toFilterPredicate()` for filter pipelines
 - **Corpus reconciliation** — `setItems()` reconciles reference-based additions, removals, reindexes, and order in one notification
 - **Unsegmented-script helper** — `segmentWords()` pre-splits CJK/Thai text into words via `Intl.Segmenter`
-- **Devtools** — `@vielzeug/scout/devtools`'s `debugSearch()` logs query/results transitions
+- **Event subscription** — `search.tap()` observes `query`/`isSearching`/`results`/`dispose` transitions
 
 ## Install
 

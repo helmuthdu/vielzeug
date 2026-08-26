@@ -11,6 +11,7 @@ export type {
   FieldDef,
   FieldMatch,
   HighlightPart,
+  ScoutEvent,
   ScoutIndexOptions,
   SearchConstraints,
   SearchResult,

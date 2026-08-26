@@ -76,7 +76,6 @@ const decision = ward.explain({ principal, resource: 'posts', action: 'read' });
 
 Ward 2 validates `createWard` options at construction time:
 
-- `logger` must be a function or `undefined`.
 - `onConflict` must be a function or `undefined`.
 - `maxConflicts` must be a finite non-negative number.
 

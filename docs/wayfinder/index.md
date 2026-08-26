@@ -5,7 +5,7 @@ package: wayfinder
 category: routing
 keywords: [router, client-side, middleware, guards, navigation, history, spa, typed-routes]
 related: [ripple, ward, herald]
-exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo, WayfinderError, WayfinderApiError, WayfinderDisposedError, WayfinderRedirectLoopError, WayfinderRouteError, debugRouter]
+exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo, WayfinderError, WayfinderApiError, WayfinderDisposedError, WayfinderRedirectLoopError, WayfinderRouteError]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -128,7 +128,7 @@ router.dispose();
 - `match()` / `load()` — Inspect routes synchronously or load route data without navigation.
 - `preload()` — Warms route data for a later matching navigation.
 - `createMemoryHistory()` — Runs routers in tests and non-browser environments.
-- `debugRouter()` — Logs navigation state from `@vielzeug/wayfinder/devtools`.
+- `subscribe()` — Reactive subscription to navigation state changes.
 
 </div>
 

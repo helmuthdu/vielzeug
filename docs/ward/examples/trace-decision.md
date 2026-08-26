@@ -11,7 +11,7 @@ Diagnose why a policy allowed or denied a request when several rules appear rele
 
 ### Solution
 
-Use `trace()` to inspect the decision and every candidate rule without invoking the policy logger.
+Use `trace()` to inspect the decision and every candidate rule without firing a decision event.
 
 ```ts
 import { createWard } from '@vielzeug/ward';
@@ -38,7 +38,7 @@ console.log(decision.allowed ? 'allow' : decision.reason);
 ### Pitfalls
 
 - Candidate order is diagnostic output, not a replacement for understanding precedence.
-- `trace()` does not call the configured logger.
+- `trace()` does not fire a decision event via `tap()`.
 
 ### Related
 

@@ -4,7 +4,10 @@ export const reconnectExample = {
 // Channels, rooms, and local presence state are restored on reconnect.
 const pulse = createPulse('wss://api.example.com/ws', {
   reconnect: { delay: 500, maxAttempts: 3 },
-  onError: (error) => console.log('transport error:', error.message),
+})
+
+pulse.tap((event) => {
+  if (event.type === 'error') console.log('transport error:', event.error.message)
 })
 
 // Channel is tracked: re-subscribed automatically after every reconnect

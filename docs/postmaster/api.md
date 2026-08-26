@@ -78,7 +78,6 @@ Returns a Postmaster processor that claims, executes, retries, and dead-letters 
 | `options.leaseDuration` | `number` | Lease duration in ms (default 30000, minimum 1000) |
 | `options.clock` | `() => number` | Deterministic clock for tests (default `Date.now`) |
 | `options.signal` | `AbortSignal` | External signal that disposes the processor |
-| `options.onError` | `(error: Error) => void` | Listener error callback |
 
 **Returns:** `Postmaster<J>`.
 
@@ -218,13 +217,13 @@ Deletes a queued or dead-letter job. Returns a discriminated result: `removed`, 
 
 ---
 
-### `subscribe()`
+### `tap()`
 
 ```ts
-subscribe(listener: (event: PostmasterEvent) => void): () => void;
+tap(handler: (event: PostmasterEvent) => void, options?: { signal?: AbortSignal }): () => void;
 ```
 
-Subscribes to typed events. Returns an unsubscribe function. Listener failures route to `onError` or rethrow asynchronously.
+Observe runtime events (enqueued, started, completed, retry-scheduled, dead-lettered, removed, lease-lost, processor-error, dispose). Handler errors are swallowed — observability never affects processing. Returns an unsubscribe function. Pass `{ signal }` to auto-detach on abort.
 
 ---
 
@@ -375,7 +374,8 @@ The store exposes transactional primitives. The processor owns all ownership and
 type PostmasterEvent =
   | { readonly type: 'enqueued' | 'started' | 'completed' | 'retry-scheduled' | 'dead-lettered'; readonly entry: PostmasterEntry }
   | { readonly type: 'removed' | 'lease-lost'; readonly id: string }
-  | { readonly type: 'processor-error'; readonly error: Error };
+  | { readonly type: 'processor-error'; readonly error: Error }
+  | { readonly type: 'dispose' };
 ```
 
 ---

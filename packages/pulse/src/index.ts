@@ -20,6 +20,7 @@ export type {
   PresenceRoomScope,
   Pulse,
   PulseChannel,
+  PulseEvent,
   PulseOptions,
   PulseSchema,
   PulseStatus,

@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/wayfinder",
   "version": "2.1.0",
-  "description": "Typed client-side router — guards, middleware, history management, and nested routes",
+  "description": "Typed client-side router \u2014 guards, middleware, history management, and nested routes",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -22,18 +22,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
-    },
-    "./devtools": {
-      "import": "./dist/devtools.js",
-      "require": "./dist/devtools.cjs",
-      "types": "./dist/devtools.d.ts"
-    }
-  },
-  "typesVersions": {
-    "*": {
-      "devtools": [
-        "dist/devtools.d.ts"
-      ]
     }
   },
   "publishConfig": {

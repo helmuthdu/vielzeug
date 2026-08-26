@@ -388,3 +388,143 @@ describe('createReactiveSearch', () => {
     search.dispose();
   });
 });
+
+describe('tap()', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test('emits query-change event when search.query.value changes', () => {
+    const search = makeSearch(100);
+    const handler = vi.fn();
+
+    search.tap(handler);
+    search.query.value = 'alice';
+
+    expect(handler).toHaveBeenCalledWith({ query: 'alice', type: 'query-change' });
+    search.dispose();
+  });
+
+  test('emits searching-change event when isSearching transitions (requires debounce > 0)', () => {
+    const search = makeSearch(100);
+    const handler = vi.fn();
+
+    search.tap(handler);
+
+    // isSearching goes false -> true
+    search.query.value = 'alice';
+    expect(handler).toHaveBeenCalledWith({ isSearching: true, type: 'searching-change' });
+
+    // isSearching goes true -> false after debounce fires
+    vi.advanceTimersByTime(100);
+    expect(handler).toHaveBeenCalledWith({ isSearching: false, type: 'searching-change' });
+
+    search.dispose();
+  });
+
+  test('emits results-change event when results update', () => {
+    const search = makeSearch(100);
+    const handler = vi.fn();
+
+    search.tap(handler);
+    handler.mockClear();
+
+    search.query.value = 'alice';
+    vi.advanceTimersByTime(100);
+
+    const resultsChange = handler.mock.calls.find((call) => call[0].type === 'results-change');
+    expect(resultsChange).toBeDefined();
+    expect(resultsChange![0].results.length).toBeGreaterThan(0);
+    expect(resultsChange![0].results[0].item.name).toBe('Alice');
+
+    search.dispose();
+  });
+
+  test('emits dispose event on search.dispose()', () => {
+    const search = makeSearch(0);
+    const handler = vi.fn();
+
+    search.tap(handler);
+    handler.mockClear();
+
+    search.dispose();
+
+    expect(handler).toHaveBeenCalledWith({ type: 'dispose' });
+  });
+
+  test('returns an unsubscribe function that stops events', () => {
+    const search = makeSearch(100);
+    const handler = vi.fn();
+
+    const unsubscribe = search.tap(handler);
+    search.query.value = 'alice';
+
+    expect(handler).toHaveBeenCalled();
+    handler.mockClear();
+
+    unsubscribe();
+
+    search.query.value = 'bob';
+    vi.advanceTimersByTime(100);
+
+    expect(handler).not.toHaveBeenCalled();
+    search.dispose();
+  });
+
+  test('auto-detaches on signal abort', () => {
+    const search = makeSearch(100);
+    const handler = vi.fn();
+    const ac = new AbortController();
+
+    search.tap(handler, { signal: ac.signal });
+    search.query.value = 'alice';
+
+    expect(handler).toHaveBeenCalled();
+    handler.mockClear();
+
+    ac.abort();
+
+    search.query.value = 'bob';
+    vi.advanceTimersByTime(100);
+
+    expect(handler).not.toHaveBeenCalled();
+    search.dispose();
+  });
+
+  test('swallows handler errors (handler throwing does not affect search)', () => {
+    const search = makeSearch(100);
+    const handler = vi.fn(() => {
+      throw new Error('boom');
+    });
+
+    expect(() => search.tap(handler)).not.toThrow();
+
+    // Query change should not throw despite handler error.
+    expect(() => {
+      search.query.value = 'alice';
+    }).not.toThrow();
+
+    // Search still works.
+    vi.advanceTimersByTime(100);
+    expect(search.results.value[0].item.name).toBe('Alice');
+
+    search.dispose();
+  });
+
+  test('returns a no-op unsubscribe when called after dispose', () => {
+    const search = makeSearch(0);
+
+    search.dispose();
+
+    const handler = vi.fn();
+    const unsubscribe = search.tap(handler);
+
+    expect(typeof unsubscribe).toBe('function');
+    expect(() => unsubscribe()).not.toThrow();
+    expect(handler).not.toHaveBeenCalled();
+  });
+});

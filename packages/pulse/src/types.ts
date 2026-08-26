@@ -106,8 +106,6 @@ export type PulseOptions = {
    * `true` uses defaults. `false` disables. Default: `false`.
    */
   heartbeat?: boolean | HeartbeatOptions;
-  /** Receives typed transport and protocol failures. */
-  onError?: (error: PulseError) => void;
   /** Sub-protocols to pass to the WebSocket constructor. */
   protocols?: string | string[];
   /**
@@ -118,6 +116,15 @@ export type PulseOptions = {
   /** Transform or filter application messages before serialization. */
   transform?: OutgoingTransform;
 };
+
+/**
+ * Runtime events emitted by {@link Pulse.tap}.
+ * Subscribe via `pulse.tap(handler)` — handler errors are swallowed.
+ */
+export type PulseEvent =
+  | { readonly status: PulseStatus; readonly type: 'status-change' }
+  | { readonly error: PulseError; readonly type: 'error' }
+  | { readonly type: 'dispose' };
 
 // ─── Channel scope ─────────────────────────────────────────────────────────────
 
@@ -278,6 +285,11 @@ export type Pulse<S extends PulseSchema = PulseSchema> = {
   send<K extends EventKey<ClientEvents<S>>>(event: K, payload: ClientEvents<S>[K]): void;
   /** Reactive connection status. */
   readonly status: Readable<PulseStatus>;
+  /**
+   * Observe runtime events (status-change, error, dispose) without affecting
+   * pulse behavior. Handler errors are swallowed. Returns an unsubscribe function.
+   */
+  tap(handler: (event: PulseEvent) => void, options?: { readonly signal?: AbortSignal }): Unsubscribe;
   /**
    * Resolve on the next emission of the given server event.
    * Rejects when `opts.signal` aborts or the instance is disposed.

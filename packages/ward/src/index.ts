@@ -20,7 +20,7 @@ export type {
   WardDecision,
   WardDecisionInput,
   WardDecisionResult,
-  WardLoggerContext,
+  WardEvent,
   WardOptions,
   WardPredicate,
   WardRule,

@@ -46,7 +46,11 @@ type Schema = {
 const pulse = createPulse<Schema>('wss://api.example.com/ws', {
   reconnect: { delay: 1_000, maxAttempts: 5 },
   heartbeat: { interval: 30_000, timeout: 5_000 },
-  onError: (error) => console.error(error),
+});
+
+pulse.tap((event) => {
+  if (event.type === 'error') console.error(event.error);
+  if (event.type === 'status-change') console.log('status:', event.status);
 });
 
 try {
@@ -218,13 +222,17 @@ Disposal is idempotent. It closes the connection, rejects pending room joins, cl
 
 ```ts
 const pulse = createPulse<Schema>('wss://api.example.com/ws', {
-  onError: (error) => {
-    if (error instanceof PulseConnectionError) {
-      console.error('Connection error:', error);
-    } else if (error instanceof PulseProtocolError) {
-      console.error('Protocol error:', error);
+  reconnect: true,
+});
+
+pulse.tap((event) => {
+  if (event.type === 'error') {
+    if (event.error instanceof PulseConnectionError) {
+      console.error('Connection error:', event.error);
+    } else if (event.error instanceof PulseProtocolError) {
+      console.error('Protocol error:', event.error);
     }
-  },
+  }
 });
 ```
 
@@ -243,7 +251,7 @@ const pulse = createPulse<Schema>('wss://api.example.com/ws', {
 - Define the full schema at `createPulse()` so named scopes are type-safe without per-call generics.
 - Use `using` declarations for channel and room scopes so disposal is automatic at block exit.
 - Always call `dispose()` when done — it closes the connection, rejects pending joins, and clears listeners.
-- Provide an `onError` handler; Pulse reports transport and protocol errors there rather than throwing asynchronously.
+- Call `tap()` to observe lifecycle events; Pulse reports transport and protocol errors there rather than throwing asynchronously.
 - Read `pulse.rooms` for post-reconnect membership; `joined` rejects on transport close.
 - Set a `timeout` on room scopes when the server may never confirm membership.
 - Keep `transform` synchronous; resolve async policy decisions before calling `send()`.

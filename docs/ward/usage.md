@@ -70,7 +70,7 @@ const actions = ward.allowedActions({
 });
 ```
 
-It does not fire the logger.
+It does not fire a `decision` event.
 
 ## Rule Introspection
 
@@ -97,7 +97,34 @@ trace.candidates.forEach((c) => {
 });
 ```
 
-`trace()` does not fire the logger.
+`trace()` does not fire a `decision` event.
+
+## Observing Decisions
+
+`tap()` subscribes a handler to ward events. Each `explain()` and `checkAll()` decision fires a `decision` event; `trace()` and `allowedActions()` do not.
+
+```ts
+const ward = createWard(rules);
+ward.tap((event) => console.debug(`ward:${event.type}`, event.decision));
+```
+
+Pass an `AbortSignal` to unsubscribe automatically, or call the returned function to unsubscribe manually:
+
+```ts
+const controller = new AbortController();
+const unsubscribe = ward.tap((event) => console.debug(event), { signal: controller.signal });
+
+// later
+unsubscribe(); // or controller.abort();
+```
+
+For structured logging, forward events to a `@vielzeug/rune` logger:
+
+```ts
+import { createLogger } from '@vielzeug/rune';
+const log = createLogger({ name: 'ward' });
+ward.tap((event) => log.debug(event, 'ward:decision'));
+```
 
 ## Predicate Helpers
 

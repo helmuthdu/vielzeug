@@ -28,10 +28,9 @@ description: Complete API reference for Wayfinder.
 
 ## Package Entry Points
 
-| Import                         | Purpose                                      |
-| ------------------------------ | -------------------------------------------- |
-| `@vielzeug/wayfinder`          | Main exports and types                       |
-| `@vielzeug/wayfinder/devtools` | `debugRouter` — navigation logger (dev only) |
+| Import                | Purpose                |
+| --------------------- | ---------------------- |
+| `@vielzeug/wayfinder` | Main exports and types |
 
 ## `createRouter(options)`
 
@@ -839,44 +838,6 @@ Thrown on middleware misuse — currently only when a middleware function calls 
 | `/docs/*`                      | `/docs/guide/intro` | Wildcard suffix without a named capture     |
 | `/files/:rest*`                | `/files/a/b/c`      | Wildcard suffix captured as one named param |
 | `*`                            | anything            | Global catch-all                            |
-
-## `debugRouter(options)` <Badge type="tip" text="@vielzeug/wayfinder/devtools" />
-
-```ts
-import { debugRouter } from '@vielzeug/wayfinder/devtools';
-
-const router = debugRouter({ routes });
-// [wayfinder:nav] idle      /         [home]    ← logged when initial navigation settles
-// [wayfinder:nav] loading   /dashboard
-// [wayfinder:nav] idle      /dashboard [dashboard.index]
-```
-
-Wraps `createRouter()` and attaches a `subscribe` listener that logs every navigation state change to `console.debug`. Returns the same `Router` instance — all methods are identical to `createRouter()`. The first logged entry appears when the initial navigation completes (not synchronously at construction).
-
-Import from the dedicated sub-path so the `console.debug` reference is tree-shaken from production bundles when not imported.
-
-### `DebugRouterOptions`
-
-Extends `RouterOptions` with one additional field:
-
-| Option  | Type     | Default | Description                                                                                                      |
-| ------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
-| `label` | `string` | `'nav'` | Label used in log prefixes. Produces `[wayfinder:<label>]`. Useful when running multiple routers simultaneously. |
-
-```ts
-// Multi-router setup — distinguish logs by label:
-const main = debugRouter({ routes, label: 'main' });
-const modal = debugRouter({ routes: modalRoutes, label: 'modal' });
-// [wayfinder:main]  idle  /dashboard
-// [wayfinder:modal] loading  /confirm
-```
-
-| Log format                                              | When                                   |
-| ------------------------------------------------------- | -------------------------------------- |
-| `[wayfinder:nav] idle      /path  [routeName]`          | Navigation settled                     |
-| `[wayfinder:nav] loading   /path`                       | Data loaders in flight                 |
-| `[wayfinder:nav] streaming /path  [routeName]`          | Streaming loader emitting partial data |
-| `[wayfinder:nav] error     /path  [routeName]  <Error>` | Navigation error                       |
 
 ## Design Notes
 

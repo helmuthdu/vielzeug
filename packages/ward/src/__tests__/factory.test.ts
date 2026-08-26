@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-import type { BoundWard, Principal, Ward, WardLoggerContext, WardPredicate } from '../index';
+import type { BoundWard, Principal, Ward, WardEvent, WardPredicate } from '../index';
 
 import { ANONYMOUS, allow, createWard, deny, owns, WardConfigError, WardPredicateError, WILDCARD } from '../index';
 
@@ -727,96 +727,92 @@ describe('ward: bound view', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Logger behavior
+// tap() behavior
 // ---------------------------------------------------------------------------
 
-describe('ward: logger behavior', () => {
-  it('logs allow decisions with the authored winning rule', () => {
-    const calls: WardLoggerContext[] = [];
+describe('ward: tap() behavior', () => {
+  it('emits decision events for explain()', () => {
+    const events: WardEvent[] = [];
 
-    const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }], {
-      logger: (context) => calls.push(context),
-    });
+    const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
 
+    permit.tap((e) => events.push(e));
     explainDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read', { trace: 'x' } as any);
 
-    expect(calls[0].allowed).toBe(true);
-    expect(calls[0].action).toBe('read');
-
-    if (calls[0].allowed) {
-      expect(calls[0].rule.role).toEqual(['viewer']);
-    }
-
-    expect(calls[0].data).toEqual({ trace: 'x' });
+    expect(events).toHaveLength(1);
+    expect(events[0].type).toBe('decision');
+    expect(events[0].action).toBe('read');
+    expect(events[0].decision.allowed).toBe(true);
+    expect(events[0].data).toEqual({ trace: 'x' });
   });
 
-  it('logger context distinguishes allow, explicit-deny, and no-matching-rule', () => {
-    const calls: WardLoggerContext[] = [];
+  it('emits one decision per action for checkAll', () => {
+    const events: WardEvent[] = [];
 
-    const permit = createWard(
-      [
-        { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
-        { action: 'update', effect: 'deny', resource: 'posts', role: ['viewer'] },
-      ],
-      { logger: (ctx) => calls.push(ctx) },
-    );
+    const permit = createWard<'read' | 'update' | 'delete'>([
+      { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
+      { action: 'update', effect: 'deny', resource: 'posts', role: ['viewer'] },
+    ]);
 
-    const principal = { id: 'u1', roles: ['viewer'] };
-
-    explainDecision(permit, principal, 'posts', 'read'); // allow
-    explainDecision(permit, principal, 'posts', 'update'); // explicit-deny
-    explainDecision(permit, principal, 'posts', 'delete' as any); // no-matching-rule
-
-    expect(calls[0].allowed).toBe(true);
-    expect(calls[1].allowed).toBe(false);
-    expect(calls[2].allowed).toBe(false);
-    // explicit-deny includes the rule, no-matching-rule does not
-    expect('rule' in calls[1]).toBe(true);
-    expect('rule' in calls[2]).toBe(false);
-  });
-
-  it('logs one decision per action for checkAll', () => {
-    const calls: WardLoggerContext[] = [];
-
-    const permit = createWard<'read' | 'update' | 'delete'>(
-      [
-        { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
-        { action: 'update', effect: 'deny', resource: 'posts', role: ['viewer'] },
-      ],
-      {
-        logger: (context) => calls.push(context),
-      },
-    );
-
-    const principal = { id: 'u1', roles: ['viewer'] };
-
-    permit.checkAll(principal, [
+    permit.tap((e) => events.push(e));
+    permit.checkAll({ id: 'u1', roles: ['viewer'] }, [
       { action: 'read', resource: 'posts' },
       { action: 'update', resource: 'posts' },
       { action: 'delete', resource: 'posts' },
     ]);
 
-    expect(calls).toHaveLength(3);
-    expect(calls.map((call) => call.action)).toEqual(['read', 'update', 'delete']);
+    expect(events).toHaveLength(3);
+    expect(events.map((e) => e.action)).toEqual(['read', 'update', 'delete']);
   });
 
-  it('does not log introspection and enumeration helpers', () => {
-    const calls: WardLoggerContext[] = [];
+  it('does not emit for introspection and enumeration helpers', () => {
+    const events: WardEvent[] = [];
 
-    const permit = createWard<'read' | 'delete'>(
-      [
-        { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
-        { action: WILDCARD, effect: 'allow', resource: 'posts', role: ['admin'] },
-      ],
-      {
-        logger: (context) => calls.push(context),
-      },
-    );
+    const permit = createWard<'read' | 'delete'>([
+      { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
+      { action: WILDCARD, effect: 'allow', resource: 'posts', role: ['admin'] },
+    ]);
 
+    permit.tap((e) => events.push(e));
     allowedActionsDecision(permit, { id: 'u1', roles: ['admin'] }, 'posts', ['read', 'delete']);
     rulesInScopeDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts');
 
-    expect(calls).toEqual([]);
+    expect(events).toEqual([]);
+  });
+
+  it('returns unsubscribe that stops events', () => {
+    const events: WardEvent[] = [];
+
+    const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
+    const stop = permit.tap((e) => events.push(e));
+
+    stop();
+    explainDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+
+    expect(events).toHaveLength(0);
+  });
+
+  it('auto-detaches on signal abort', () => {
+    const events: WardEvent[] = [];
+    const controller = new AbortController();
+
+    const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
+    permit.tap((e) => events.push(e), { signal: controller.signal });
+
+    controller.abort();
+    explainDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+
+    expect(events).toHaveLength(0);
+  });
+
+  it('swallows handler errors', () => {
+    const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
+
+    permit.tap(() => {
+      throw new Error('tap handler error');
+    });
+
+    expect(() => explainDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read')).not.toThrow();
   });
 });
 
@@ -1431,28 +1427,26 @@ describe('ward: trace', () => {
     expect(trace.candidates).toHaveLength(1);
   });
 
-  it('does not fire the logger (trace is a side-channel-free inspection tool)', () => {
-    const calls: WardLoggerContext[] = [];
+  it('does not emit tap events (trace is a side-channel-free inspection tool)', () => {
+    const events: WardEvent[] = [];
 
-    const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }], {
-      logger: (ctx) => calls.push(ctx),
-    });
+    const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }]);
 
+    permit.tap((e) => events.push(e));
     traceDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
-    expect(calls).toHaveLength(0);
+    expect(events).toHaveLength(0);
   });
 
-  it('does not fire the logger when trace finds no candidates', () => {
-    const calls: WardLoggerContext[] = [];
+  it('does not emit tap events when trace finds no candidates', () => {
+    const events: WardEvent[] = [];
 
-    const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }], {
-      logger: (ctx) => calls.push(ctx),
-    });
+    const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }]);
 
+    permit.tap((e) => events.push(e));
     traceDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', 'read');
 
-    expect(calls).toHaveLength(0);
+    expect(events).toHaveLength(0);
   });
 
   it('candidate index matches rule position in the input array', () => {
@@ -1890,19 +1884,17 @@ describe('ward: forUser snapshot isolation', () => {
   });
 });
 
-describe('ward: checkAll logs all actions', () => {
-  it('logs a decision for every action in checkAll (no short-circuit)', () => {
-    const calls: string[] = [];
+describe('ward: checkAll emits tap for all actions', () => {
+  it('emits a decision for every action in checkAll (no short-circuit)', () => {
+    const actions: string[] = [];
 
-    const permit = createWard<'read' | 'update' | 'delete'>(
-      [
-        { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
-        { action: 'update', effect: 'deny', resource: 'posts', role: ['viewer'] },
-        { action: 'delete', effect: 'allow', resource: 'posts', role: ['viewer'] },
-      ],
-      { logger: (ctx) => calls.push(ctx.action) },
-    );
+    const permit = createWard<'read' | 'update' | 'delete'>([
+      { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
+      { action: 'update', effect: 'deny', resource: 'posts', role: ['viewer'] },
+      { action: 'delete', effect: 'allow', resource: 'posts', role: ['viewer'] },
+    ]);
 
+    permit.tap((e) => actions.push(e.action));
     const results = permit.checkAll({ id: 'u1', roles: ['viewer'] }, [
       { action: 'read', resource: 'posts' },
       { action: 'update', resource: 'posts' },
@@ -1910,7 +1902,7 @@ describe('ward: checkAll logs all actions', () => {
     ]);
 
     expect(results.map((r) => r.allowed)).toEqual([true, false, true]);
-    expect(calls).toEqual(['read', 'update', 'delete']);
+    expect(actions).toEqual(['read', 'update', 'delete']);
   });
 });
 
@@ -1974,10 +1966,6 @@ describe('ward: detectConflicts — strict and onConflict options', () => {
 });
 
 describe('ward: createWard options validation', () => {
-  it('rejects non-function logger', () => {
-    expect(() => createWard([], { logger: 'bad' as never })).toThrow(WardConfigError);
-  });
-
   it('rejects non-function onConflict', () => {
     expect(() => createWard([], { onConflict: true as never })).toThrow(WardConfigError);
   });
@@ -1995,7 +1983,7 @@ describe('ward: createWard options validation', () => {
   });
 
   it('accepts valid options', () => {
-    expect(() => createWard([], { logger: () => {}, maxConflicts: 50, onConflict: () => {} })).not.toThrow();
+    expect(() => createWard([], { maxConflicts: 50, onConflict: () => {} })).not.toThrow();
   });
 });
 

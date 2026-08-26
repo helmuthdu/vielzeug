@@ -1,3 +1,4 @@
+import type { HeraldEvent } from '../index';
 import { BusDisposedError, combineSignals, createBus, HeraldConfigError, HeraldError } from '../index';
 import { pipeEvents } from '../pipe';
 
@@ -916,59 +917,101 @@ describe('createBus - disposalSignal', () => {
   });
 });
 
-describe('createBus - debug mode', () => {
-  it('logs on() and off() to console.debug', () => {
-    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
-    const bus = createBus<TestEvents>({ logger: { debug: console.debug } });
-
-    const unsub = bus.on('count', vi.fn());
-
-    expect(spy).toHaveBeenCalledWith(expect.stringContaining('[herald:sub] on("count")'));
-
-    unsub();
-
-    expect(spy).toHaveBeenCalledWith(expect.stringContaining('[herald:sub] off("count")'));
-
-    bus.dispose();
-    spy.mockRestore();
-  });
-
-  it('logs emit() to console.debug', () => {
-    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
-    const bus = createBus<TestEvents>({ logger: { debug: console.debug } });
-
-    bus.emit('count', 42);
-
-    expect(spy).toHaveBeenCalledWith(expect.stringContaining('[herald:emit] emit("count")'));
-
-    bus.dispose();
-    spy.mockRestore();
-  });
-
-  it('logs dispose() to console.debug', () => {
-    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
-    const bus = createBus<TestEvents>({ logger: { debug: console.debug } });
-
-    bus.dispose();
-
-    expect(spy).toHaveBeenCalledWith(expect.stringContaining('[herald:lifecycle] dispose()'));
-
-    spy.mockRestore();
-  });
-
-  it('does not log anything when debug is not set', () => {
-    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+describe('createBus - tap()', () => {
+  it('emits subscribe and unsubscribe events', () => {
+    const events: HeraldEvent<TestEvents>[] = [];
     const bus = createBus<TestEvents>();
 
+    bus.tap((e) => events.push(e));
     const unsub = bus.on('count', vi.fn());
 
+    expect(events).toContainEqual({ event: 'count', type: 'subscribe' });
+
     unsub();
-    bus.emit('count', 1);
+
+    expect(events).toContainEqual({ event: 'count', type: 'unsubscribe' });
+    bus.dispose();
+  });
+
+  it('emits emit events with listener count and payload', () => {
+    const events: HeraldEvent<TestEvents>[] = [];
+    const bus = createBus<TestEvents>();
+
+    bus.tap((e) => events.push(e));
+    bus.on('count', vi.fn());
+    bus.emit('count', 42);
+
+    const emitEvent = events.find((e) => e.type === 'emit');
+
+    expect(emitEvent).toEqual({ event: 'count', listeners: 1, payload: 42, type: 'emit' });
+    bus.dispose();
+  });
+
+  it('emits dispose event', () => {
+    const events: HeraldEvent<TestEvents>[] = [];
+    const bus = createBus<TestEvents>();
+
+    bus.tap((e) => events.push(e));
     bus.dispose();
 
-    expect(spy).not.toHaveBeenCalled();
+    expect(events).toContainEqual({ type: 'dispose' });
+  });
 
-    spy.mockRestore();
+  it('emits listener-error events when a listener throws', () => {
+    const events: HeraldEvent<TestEvents>[] = [];
+    const bus = createBus<TestEvents>();
+
+    bus.tap((e) => events.push(e));
+    bus.on('count', () => {
+      throw new Error('boom');
+    });
+
+    expect(() => bus.emit('count', 1)).toThrow('boom');
+
+    const errorEvent = events.find((e) => e.type === 'listener-error');
+
+    expect(errorEvent).toBeDefined();
+    expect(errorEvent?.type === 'listener-error' && errorEvent.event).toBe('count');
+    bus.dispose();
+  });
+
+  it('returns unsubscribe that stops events', () => {
+    const events: HeraldEvent<TestEvents>[] = [];
+    const bus = createBus<TestEvents>();
+
+    const stop = bus.tap((e) => events.push(e));
+
+    stop();
+    bus.on('count', vi.fn());
+    bus.emit('count', 1);
+
+    expect(events).toHaveLength(0);
+    bus.dispose();
+  });
+
+  it('auto-detaches on signal abort', () => {
+    const events: HeraldEvent<TestEvents>[] = [];
+    const bus = createBus<TestEvents>();
+    const controller = new AbortController();
+
+    bus.tap((e) => events.push(e), { signal: controller.signal });
+    controller.abort();
+    bus.on('count', vi.fn());
+    bus.emit('count', 1);
+
+    expect(events).toHaveLength(0);
+    bus.dispose();
+  });
+
+  it('swallows handler errors', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.tap(() => {
+      throw new Error('tap handler error');
+    });
+
+    expect(() => bus.emit('count', 1)).not.toThrow();
+    bus.dispose();
   });
 });
 
@@ -1460,20 +1503,10 @@ describe('createBus - name option', () => {
     await expect(pending).rejects.toThrow('Bus is disposed');
   });
 
-  it('debug log messages are suffixed with the bus name', () => {
-    const logs: string[] = [];
-    const bus = createBus<TestEvents>({ logger: { debug: (m) => logs.push(m) }, name: 'auth' });
-
-    bus.emit('count', 1);
-
-    expect(logs[0]).toContain('(auth)');
-
-    bus.dispose();
-  });
-
   it('warn messages include the bus name', () => {
     const warns: string[] = [];
-    const bus = createBus<TestEvents>({ logger: { warn: (m) => warns.push(m) }, maxListeners: 1, name: 'auth' });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation((m: string) => warns.push(m));
+    const bus = createBus<TestEvents>({ maxListeners: 1, name: 'auth' });
 
     bus.on('count', vi.fn());
     bus.on('count', vi.fn());
@@ -1482,6 +1515,7 @@ describe('createBus - name option', () => {
     expect(warns[0]).toContain('(auth)');
 
     bus.dispose();
+    warnSpy.mockRestore();
   });
 });
 
@@ -1613,55 +1647,19 @@ describe('createBus - waitAny() edge cases', () => {
   });
 });
 
-describe('createBus - logger option', () => {
-  it('routes debug output through logger.debug', () => {
-    const logDebug = vi.fn();
-    const bus = createBus<TestEvents>({ logger: { debug: logDebug } });
-
-    bus.emit('count', 1);
-
-    expect(logDebug).toHaveBeenCalled();
-    expect(logDebug.mock.calls[0][0]).toContain('[herald:emit]');
-
-    bus.dispose();
-  });
-
-  it('routes warn output through logger.warn when maxListeners is exceeded', () => {
-    const logWarn = vi.fn();
-    const bus = createBus<TestEvents>({ logger: { warn: logWarn }, maxListeners: 1 });
+describe('createBus - maxListeners warning', () => {
+  it('warns via console.warn when maxListeners is exceeded', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const bus = createBus<TestEvents>({ maxListeners: 1 });
 
     bus.on('count', vi.fn());
     bus.on('count', vi.fn());
 
-    expect(logWarn).toHaveBeenCalledOnce();
-    expect(logWarn.mock.calls[0][0]).toContain('on("count")');
+    expect(warnSpy).toHaveBeenCalledOnce();
+    expect(warnSpy.mock.calls[0][0]).toContain('on("count")');
 
     bus.dispose();
-  });
-
-  it('suppresses debug output when logger.debug is not provided', () => {
-    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
-    const bus = createBus<TestEvents>({ logger: {} });
-
-    bus.emit('count', 1);
-
-    expect(spy).not.toHaveBeenCalled();
-
-    bus.dispose();
-    spy.mockRestore();
-  });
-
-  it('suppresses warn output when logger.warn is not provided', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const bus = createBus<TestEvents>({ logger: {}, maxListeners: 1 });
-
-    bus.on('count', vi.fn());
-    bus.on('count', vi.fn());
-
-    expect(spy).not.toHaveBeenCalled();
-
-    bus.dispose();
-    spy.mockRestore();
+    warnSpy.mockRestore();
   });
 });
 

@@ -82,24 +82,26 @@ search.dispose();
 }
 ```
 
-#### With debug logging (optional)
+#### With event observation (optional)
 
 ```ts
-import { debugSearch } from '@vielzeug/scout/devtools';
-
-const stopDebugging = debugSearch(search);
+const stop = search.tap((event) => {
+  if (event.type === 'query-change') console.debug('query ->', event.query);
+  if (event.type === 'searching-change') console.debug('isSearching ->', event.isSearching);
+  if (event.type === 'results-change') console.debug('results ->', event.results.length, 'item(s)');
+});
 
 search.query.value = 'br';
-// [scout:search] query -> "br"
-// [scout:search] isSearching -> true
-// [scout:search] isSearching -> false
-// [scout:search] results -> 2 item(s)
+// query -> "br"
+// isSearching -> true
+// isSearching -> false
+// results -> 2 item(s)
 
-stopDebugging();
+stop();
 ```
 
-::: warning Development only
-`debugSearch()` logs the literal search query via `console.debug` — avoid enabling it in production if queries may contain PII.
+::: warning PII
+`tap()` emits the literal search query string — avoid logging it in production if queries may contain PII.
 :::
 
 ### Pitfalls

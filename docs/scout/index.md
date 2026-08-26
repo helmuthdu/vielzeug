@@ -12,7 +12,7 @@ exports:
     ScoutConfigurationError,
     ScoutDisposedError,
     ScoutError,
-    debugSearch,
+    ScoutEvent,
     findMatchRanges,
     highlight,
     highlightField,
@@ -119,7 +119,7 @@ console.log(results[0]?.item.name); // Ada Lovelace
 - Incremental updates — `add()` / `remove()` / `reindex()` patch individual items in O(field_length)
 - `onMutate()` — Subscribe to index mutations; powers `createSearch()`'s reactivity and bulk reconciliation
 - `segmentWords()` — Split unsegmented-script text (CJK, Thai, ...) into words via native `Intl.Segmenter`
-- Debug logging via `debugSearch()` (`@vielzeug/scout/devtools`) — logs query/results transitions, tree-shaken from production bundles
+- Event subscription via `search.tap()` — observe `query`/`isSearching`/`results`/`dispose` transitions; returns an unsubscribe function
 
 </div>
 

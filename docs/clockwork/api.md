@@ -13,7 +13,7 @@ description: Reference for Clockwork machine definitions, actors, devtools, and 
 | `Machine.transition()` | Resolve a pure next snapshot | Sync | Does not run effects, invokes, or timers |
 | `Machine.createActor()` | Create a runtime owner | Sync | Fresh and restored actors have different entry behavior |
 | `Actor.send()` | Dispatch an event | Sync | Returns `void`; re-entrant events queue internally |
-| `debugActor()` | Observe committed snapshots | Sync | Observes only; it does not trace sends or errors |
+| `Actor.subscribe()` | Observe committed snapshots | Sync | Observes only; it does not trace sends or errors |
 | `ClockworkError` | Report definition and snapshot validation failures | Sync | Use `code`, not message text |
 
 ## Package Entry Points
@@ -21,7 +21,6 @@ description: Reference for Clockwork machine definitions, actors, devtools, and 
 | Import | Purpose |
 | --- | --- |
 | `@vielzeug/clockwork` | Machine compiler, actor runtime, errors, and types |
-| `@vielzeug/clockwork/devtools` | Opt-in snapshot observation through `debugActor()` |
 
 ## Core Functions
 
@@ -55,24 +54,18 @@ Throws `ClockworkError` when a definition has an invalid context, initial state,
 
 ---
 
-### `debugActor()`
+### `Actor.subscribe()`
 
 ```ts
-function debugActor<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
-  actor: Actor<State, Context, Event>,
-  options?: DebugActorOptions<State, Context>,
-): () => void;
+subscribe(listener: (snapshot: ActorSnapshot<State, Context>) => void): () => void;
 ```
 
-Subscribes to committed actor snapshots and logs each one with `console.debug` by default. It does not modify actor behavior and does not observe dispatched events or runtime errors.
-
-**Returns:** An unsubscribe cleanup function.
+Subscribes to committed actor snapshots. Returns an unsubscribe function. The listener receives the current snapshot immediately on subscribe, then on every committed transition. It does not observe dispatched events or runtime errors.
 
 **Example:**
 
 ```ts
 import { defineMachine } from '@vielzeug/clockwork';
-import { debugActor } from '@vielzeug/clockwork/devtools';
 
 const machine = defineMachine<Record<string, never>, { type: 'NEXT' }>()({
   initial: 'idle',
@@ -80,9 +73,9 @@ const machine = defineMachine<Record<string, never>, { type: 'NEXT' }>()({
 });
 
 const actor = machine.createActor();
-const stopDebugging = debugActor(actor);
+const stop = actor.subscribe((snapshot) => console.debug(snapshot));
 actor.send({ type: 'NEXT' });
-stopDebugging();
+stop();
 actor.dispose();
 ```
 
@@ -404,16 +397,6 @@ type Machine<State extends string, Context extends Record<string, unknown>, Even
 ```
 
 A compiled, reusable machine. Its transition lookup is map-based, so unknown or poison event names such as `__proto__` are safely ignored when no transition exists.
-
-### `DebugActorOptions<State, Context>`
-
-```ts
-type DebugActorOptions<State extends string, Context extends Record<string, unknown>> = {
-  readonly logger?: (snapshot: MachineSnapshot<State, Context>) => void;
-};
-```
-
-Optional logger for `debugActor()`. Logger failures are ignored so observation cannot affect the actor's error policy.
 
 ## Errors
 

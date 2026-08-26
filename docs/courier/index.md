@@ -115,6 +115,7 @@ try {
 - **`queries.fetch()`** — key-based cached reads, subscriptions, invalidation with refetch, and automatic garbage collection.
 - **`mutate()`** — direct write operation with `invalidateKeys` for one-step cache refetch, without hidden retries or a second state store.
 - **`events()` / `read()`** — abortable SSE, text, and NDJSON iteration with normalized request errors.
+- **`tap()`** — runtime observability for request lifecycle events (start, success, error).
 - **`withBearerAuth()` / `withRequestId()` / `withLogging()`** — composable transport policies.
 
 </div>

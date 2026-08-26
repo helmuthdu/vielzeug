@@ -5,7 +5,11 @@ export const lifecycleExample = {
 const pulse = createPulse('wss://api.example.com/ws', {
   reconnect: { delay: 1_000, maxAttempts: 3 },
   heartbeat: { interval: 30_000, timeout: 5_000 },
-  onError: (error) => console.log('Pulse error:', error.message),
+})
+
+// Observe runtime events via tap()
+pulse.tap((event) => {
+  if (event.type === 'error') console.log('Pulse error:', event.error.message)
 })
 
 // Construction is closed. connect() makes the transport available.

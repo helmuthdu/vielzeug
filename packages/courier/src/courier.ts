@@ -18,6 +18,18 @@ export type CourierOptions = TransportOptions & {
   query?: { gcTime?: number; staleTime?: number };
 };
 
+export type CourierEvent =
+  | { readonly method: string; readonly type: 'request-start'; readonly url: string }
+  | {
+      readonly duration: number;
+      readonly method: string;
+      readonly status: number;
+      readonly type: 'request-success';
+      readonly url: string;
+    }
+  | { readonly error: unknown; readonly method: string; readonly type: 'request-error'; readonly url: string }
+  | { readonly type: 'dispose' };
+
 export type Courier = ReturnType<typeof createCourier>;
 
 /** One application client owns transport, queries, mutations, and streams. */
@@ -28,6 +40,39 @@ export function createCourier(options: CourierOptions = {}) {
   const queries: QueryCache = queryCache;
   const streams = createStreams(transport);
   const mutations = new Set<AbortController>();
+  const tappers = new Set<(event: CourierEvent) => void>();
+
+  function emitTap(event: CourierEvent): void {
+    if (tappers.size === 0) return;
+    for (const tapper of tappers) {
+      try {
+        tapper(event);
+      } catch {
+        // Observability must not affect courier behavior.
+      }
+    }
+  }
+
+  function tap(handler: (event: CourierEvent) => void, opts?: { signal?: AbortSignal }): () => void {
+    if (transport.disposed) return () => {};
+
+    tappers.add(handler);
+
+    if (opts?.signal) {
+      if (opts.signal.aborted) {
+        tappers.delete(handler);
+        return () => {};
+      }
+      const onAbort = () => tappers.delete(handler);
+      opts.signal.addEventListener('abort', onAbort, { once: true });
+      return () => {
+        tappers.delete(handler);
+        opts.signal?.removeEventListener('abort', onAbort);
+      };
+    }
+
+    return () => tappers.delete(handler);
+  }
 
   async function execute<T>(
     headers: Record<string, string>,
@@ -36,7 +81,7 @@ export function createCourier(options: CourierOptions = {}) {
     m: string,
     responseType: HttpRequestConfig['responseType'],
     schema?: { parse(data: unknown): T },
-  ): Promise<T> {
+  ): Promise<{ result: T; status: number }> {
     const signal = init.signal as AbortSignal | undefined;
     let res: Response;
 
@@ -76,13 +121,13 @@ export function createCourier(options: CourierOptions = {}) {
 
     if (schema) {
       try {
-        return schema.parse(raw);
+        return { result: schema.parse(raw), status: res.status };
       } catch (err) {
         throw new CourierSchemaValidationError(err, raw);
       }
     }
 
-    return raw as T;
+    return { result: raw as T, status: res.status };
   }
 
   async function request<T, P extends string = string>(
@@ -126,7 +171,9 @@ export function createCourier(options: CourierOptions = {}) {
     );
 
     try {
-      return await execute<T>(
+      emitTap({ method: m, type: 'request-start', url: full });
+      const start = performance.now();
+      const { result, status } = await execute<T>(
         initHeaders as Record<string, string>,
         restInit,
         full,
@@ -134,6 +181,11 @@ export function createCourier(options: CourierOptions = {}) {
         responseType,
         schema as { parse(data: unknown): T } | undefined,
       );
+      emitTap({ duration: performance.now() - start, method: m, status, type: 'request-success', url: full });
+      return result;
+    } catch (err) {
+      emitTap({ error: err, method: m, type: 'request-error', url: full });
+      throw err;
     } finally {
       untrack();
     }
@@ -174,6 +226,8 @@ export function createCourier(options: CourierOptions = {}) {
       return transport.disposalSignal;
     },
     dispose() {
+      emitTap({ type: 'dispose' });
+      tappers.clear();
       for (const controller of mutations) controller.abort();
       mutations.clear();
       transport.dispose();
@@ -191,6 +245,7 @@ export function createCourier(options: CourierOptions = {}) {
     queries,
     read: streams.read,
     setHeaders: transport.setHeaders,
+    tap,
     [Symbol.dispose]() {
       this.dispose();
     },

@@ -319,26 +319,30 @@ const parts = highlight(result.item.name, nameMatch?.ranges ?? []);
 
 ## Debug Logging
 
-Import `debugSearch` from the dedicated `/devtools` sub-path to log a `SearchState`'s `query` → `isSearching` → `results` transitions to `console.debug`. The sub-path is tree-shaken from production bundles when not imported.
-
-::: warning Development only
-`debugSearch()` logs the full, literal search query string — if your queries may carry PII (names, emails, medical/financial terms typed by end users), don't enable this in production.
-:::
+`search.tap()` subscribes a handler to `ScoutEvent` transitions emitted by a `SearchState` — `query` changes, `isSearching` transitions, `results` changes, and `dispose`. It returns an unsubscribe function. Pass `{ signal }` to tie the subscription to an external `AbortSignal` (or to `search.disposalSignal`, which aborts when `dispose()` is called).
 
 ```ts
-import { debugSearch } from '@vielzeug/scout/devtools';
+import { createIndex, createSearch } from '@vielzeug/scout';
 
 const search = createSearch(index, { debounce: 150 });
-const stopDebugging = debugSearch(search);
+const unsubscribe = search.tap((event) => {
+  if (event.type === 'query-change') console.debug('query:', event.query);
+  if (event.type === 'searching-change') console.debug('isSearching:', event.isSearching);
+  if (event.type === 'results-change') console.debug('results:', event.results.length);
+});
 
 search.query.value = 'alice';
-// [scout:search] query -> "alice"
-// [scout:search] isSearching -> true
-// [scout:search] isSearching -> false
-// [scout:search] results -> 1 item(s)
+// query: alice
+// isSearching: true
+// isSearching: false
+// results: 1
 
-stopDebugging();
+unsubscribe();
 ```
+
+::: warning Development logging
+`query-change` events carry the full, literal search query string — if your queries may carry PII (names, emails, medical/financial terms typed by end users), don't log them in production.
+:::
 
 ## Framework Integration
 

@@ -1,4 +1,5 @@
 import { PulseConnectionError, PulseProtocolError, PulseTimeoutError } from '../errors';
+import type { PulseEvent } from '../index';
 import { frames, MockWebSocket, openPulse } from './_fixtures';
 
 describe('createPulse messaging', () => {
@@ -70,15 +71,19 @@ describe('createPulse messaging', () => {
     pulse.dispose();
   });
 
-  it('reports malformed and server error frames through onError', async () => {
-    const onError = vi.fn();
-    const { pulse, socket } = await openPulse({ onError });
+  it('reports malformed and server error frames through tap error events', async () => {
+    const errors: PulseEvent[] = [];
+    const { pulse, socket } = await openPulse({});
+
+    pulse.tap((e) => {
+      if (e.type === 'error') errors.push(e);
+    });
 
     socket.onmessage?.({ data: 'not-json' } as MessageEvent);
     socket.receive({ code: 'forbidden', message: 'No access', type: 'error' });
 
-    expect(onError).toHaveBeenCalledTimes(2);
-    expect(onError).toHaveBeenCalledWith(expect.any(PulseProtocolError));
+    expect(errors).toHaveLength(2);
+    expect(errors[0].error).toBeInstanceOf(PulseProtocolError);
 
     pulse.dispose();
   });

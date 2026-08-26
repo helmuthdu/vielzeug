@@ -193,3 +193,115 @@ describe('Courier mutations', () => {
     await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
   });
 });
+
+describe('tap()', () => {
+  it('emits request-start and request-success events on a successful request', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async () => new Response(JSON.stringify({ ok: true }), { headers: { 'content-type': 'application/json' } }),
+    );
+    const courier = createCourier({ fetch });
+    const handler = vi.fn();
+
+    courier.tap(handler);
+
+    await courier.get('/health');
+
+    const start = handler.mock.calls.find(([{ type }]) => type === 'request-start')?.[0];
+    const success = handler.mock.calls.find(([{ type }]) => type === 'request-success')?.[0];
+
+    expect(start).toEqual({ method: 'GET', type: 'request-start', url: 'health' });
+    expect(success).toMatchObject({ method: 'GET', status: 200, type: 'request-success', url: 'health' });
+    expect(typeof success?.duration).toBe('number');
+  });
+
+  it('emits request-start and request-error events on a failed request', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async () =>
+        new Response(JSON.stringify({ code: 'missing' }), {
+          headers: { 'content-type': 'application/json' },
+          status: 404,
+        }),
+    );
+    const courier = createCourier({ fetch });
+    const handler = vi.fn();
+
+    courier.tap(handler);
+
+    await expect(courier.get('/users/1')).rejects.toMatchObject({ status: 404 });
+
+    const start = handler.mock.calls.find(([{ type }]) => type === 'request-start')?.[0];
+    const error = handler.mock.calls.find(([{ type }]) => type === 'request-error')?.[0];
+
+    expect(start).toEqual({ method: 'GET', type: 'request-start', url: 'users/1' });
+    expect(error).toMatchObject({ method: 'GET', type: 'request-error', url: 'users/1' });
+    expect(error?.error).toBeInstanceOf(Error);
+  });
+
+  it('emits a dispose event on dispose', () => {
+    const courier = createCourier();
+    const handler = vi.fn();
+
+    courier.tap(handler);
+    courier.dispose();
+
+    expect(handler).toHaveBeenCalledWith({ type: 'dispose' });
+  });
+
+  it('returns an unsubscribe function that stops events', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async () => new Response(JSON.stringify({ ok: true }), { headers: { 'content-type': 'application/json' } }),
+    );
+    const courier = createCourier({ fetch });
+    const handler = vi.fn();
+
+    const unsubscribe = courier.tap(handler);
+
+    unsubscribe();
+
+    await courier.get('/health');
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('auto-detaches on signal abort', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async () => new Response(JSON.stringify({ ok: true }), { headers: { 'content-type': 'application/json' } }),
+    );
+    const courier = createCourier({ fetch });
+    const handler = vi.fn();
+    const controller = new AbortController();
+
+    courier.tap(handler, { signal: controller.signal });
+    controller.abort();
+
+    await courier.get('/health');
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('swallows handler errors without affecting the request', async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async () => new Response(JSON.stringify({ ok: true }), { headers: { 'content-type': 'application/json' } }),
+    );
+    const courier = createCourier({ fetch });
+    const boom = vi.fn(() => {
+      throw new Error('handler blew up');
+    });
+
+    courier.tap(boom);
+
+    await expect(courier.get('/health')).resolves.toEqual({ ok: true });
+    expect(boom).toHaveBeenCalled();
+  });
+
+  it('returns a no-op unsubscribe when called after dispose', () => {
+    const courier = createCourier();
+    const handler = vi.fn();
+
+    courier.dispose();
+
+    const unsubscribe = courier.tap(handler);
+    expect(typeof unsubscribe).toBe('function');
+    expect(() => unsubscribe()).not.toThrow();
+  });
+});

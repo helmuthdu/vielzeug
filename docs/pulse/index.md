@@ -29,6 +29,7 @@ exports:
     PulseAbortError,
     PulseDisposedError,
     PulseProtocolError,
+    PulseEvent,
   ]
 environments: [browser, node]
 ---
@@ -119,7 +120,10 @@ type Schema = {
 
 const pulse = createPulse<Schema>('wss://api.example.com/ws', {
   reconnect: true,
-  onError: (error) => console.error(error),
+});
+pulse.tap((event) => {
+  if (event.type === 'error') console.error(event.error);
+  if (event.type === 'status-change') console.log('status:', event.status);
 });
 const chat = pulse.channel('chat');
 const lobby = pulse.room('lobby');
@@ -145,7 +149,7 @@ pulse.dispose();
 - **`room()`** — named, schema-bound ref-counted room scopes with optional reactive presence. The first scope sends `join`; the last disposal sends `leave`.
 - **`reconnect`** — ordered restoration of channel subscriptions, room memberships, and local presence state.
 - **`transform`** — one synchronous transform or filter for application messages.
-- **`onError`** — typed connection and protocol errors.
+- **`tap()`** — subscribe to lifecycle events (status changes, errors, disposal) via a typed `PulseEvent` stream.
 - **`heartbeat`** — ping/pong liveness detection that uses the same reconnect controller.
 - **`status` and `rooms`** — ripple readables for transport and confirmed membership state.
 
