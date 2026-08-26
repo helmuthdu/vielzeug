@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/ripple",
   "version": "2.2.3",
-  "description": "Fine-grained reactive runtime \u2014 signals, derived values, effects, scopes, and optional state tools",
+  "description": "Fine-grained reactive runtime — signals, derived values, effects, scopes, and optional state tools",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -24,6 +24,7 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "sideEffects": false,
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
@@ -43,6 +44,5 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
-  },
-  "sideEffects": false
+  }
 }

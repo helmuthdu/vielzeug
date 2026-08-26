@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/tempo",
   "version": "2.1.1",
-  "description": "Date and time utilities \u2014 timezone conversion, DST-safe arithmetic, and Intl formatting",
+  "description": "Date and time utilities — timezone conversion, DST-safe arithmetic, and Intl formatting",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -24,6 +24,7 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "sideEffects": false,
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
@@ -46,6 +47,5 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
-  },
-  "sideEffects": false
+  }
 }

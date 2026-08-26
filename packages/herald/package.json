@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/herald",
   "version": "2.1.0",
-  "description": "Typed event bus \u2014 pub/sub with namespaces, wildcards, and once-listeners",
+  "description": "Typed event bus — pub/sub with namespaces, wildcards, and once-listeners",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -36,6 +36,7 @@
       ]
     }
   },
+  "sideEffects": false,
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
@@ -56,6 +57,5 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
-  },
-  "sideEffects": false
+  }
 }

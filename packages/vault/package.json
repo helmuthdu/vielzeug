@@ -68,6 +68,7 @@
       ]
     }
   },
+  "sideEffects": false,
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
@@ -90,6 +91,5 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
-  },
-  "sideEffects": false
+  }
 }

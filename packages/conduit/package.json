@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/conduit",
   "version": "2.0.1",
-  "description": "Lightweight dependency injection container \u2014 singletons, transient instances, factories, and named scopes",
+  "description": "Lightweight dependency injection container — singletons, transient instances, factories, and named scopes",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -24,6 +24,7 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "sideEffects": false,
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
@@ -43,6 +44,5 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
-  },
-  "sideEffects": false
+  }
 }
