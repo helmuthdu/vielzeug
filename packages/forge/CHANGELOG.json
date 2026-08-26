@@ -4,6 +4,34 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/spell\" to `2.2.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/vault\" to `2.4.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/spell\" to `2.2.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/vault\" to `2.4.0`"
+          }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: remove static is() type guard from base error class; add sideEffects: false for tree-shaking.",
+            "commit": "30bcc469fae1fc7194a66855f9e17f558afae9da"
+          }
+        ]
+      },
+      "date": "Wed, 26 Aug 2026 17:29:55 GMT",
+      "tag": "@vielzeug/forge_v2.3.0",
+      "version": "2.3.0"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/spell\" to `2.1.2`"
           },
           {

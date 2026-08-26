@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: remove static is() type guard from base error class; add sideEffects: false for tree-shaking.",
+            "commit": "30bcc469fae1fc7194a66855f9e17f558afae9da"
+          }
+        ]
+      },
+      "date": "Wed, 26 Aug 2026 17:29:55 GMT",
+      "tag": "@vielzeug/lingua_v2.4.0",
+      "version": "2.4.0"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "feat: add catalogKeys(source) runtime utility that enumerates every message key as a dotted path — accepts a TranslationStore (reads current locale catalog) or a raw catalog object; traverses nested grouping objects and explicit plural messages, returning ReadonlyArray<TextKey<C>> so consumers can derive key arrays without maintaining stale parallel lists; calling on a nested subtree returns group-scoped keys without filtering",
             "commit": "b6b17571d22c09b6223b37bc2eeb48f13e1e38c1"
           },

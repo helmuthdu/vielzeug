@@ -4,6 +4,21 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/orbit\" to `2.1.3`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.4`"
+          }
+        ]
+      },
+      "date": "Wed, 26 Aug 2026 17:29:55 GMT",
+      "tag": "@vielzeug/prism_v2.2.4",
+      "version": "2.2.4"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/orbit\" to `2.1.2`"
           },
           {

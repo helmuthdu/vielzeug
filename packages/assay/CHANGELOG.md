@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/assay
 
-This log was last generated on Sun, 16 Aug 2026 09:15:39 GMT and should not be manually modified.
+This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+
+## 2.1.1
+Wed, 26 Aug 2026 17:29:55 GMT
+
+### Patches
+
+- chore: add sideEffects: false for tree-shaking.
 
 ## 2.1.0
 Sun, 16 Aug 2026 09:15:39 GMT

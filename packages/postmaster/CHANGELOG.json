@@ -1,0 +1,38 @@
+{
+  "entries": [
+    {
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/vault\" to `2.4.0`"
+          }
+        ],
+        "major": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: initial release.",
+            "commit": "4d547591d22327142731389f45fd183122579b02"
+          }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: replace debug factories, logger options, and onError callbacks with unified tap() observability pattern.",
+            "commit": "3805cf96a53c5576a1f39f167d67bcb2e3ccd1a2"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: add sideEffects: false for tree-shaking.",
+            "commit": "30bcc469fae1fc7194a66855f9e17f558afae9da"
+          }
+        ]
+      },
+      "date": "Wed, 26 Aug 2026 17:29:55 GMT",
+      "tag": "@vielzeug/postmaster_v2.0.0",
+      "version": "2.0.0"
+    }
+  ],
+  "name": "@vielzeug/postmaster"
+}

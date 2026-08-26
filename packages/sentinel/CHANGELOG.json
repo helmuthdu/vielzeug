@@ -4,6 +4,28 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.4`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `^2.2.4`"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: add sideEffects: false for tree-shaking.",
+            "commit": "30bcc469fae1fc7194a66855f9e17f558afae9da"
+          }
+        ]
+      },
+      "date": "Wed, 26 Aug 2026 17:29:55 GMT",
+      "tag": "@vielzeug/sentinel_v2.0.2",
+      "version": "2.0.2"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.3`"
           },
           {

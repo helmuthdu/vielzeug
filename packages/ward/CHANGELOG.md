@@ -1,6 +1,14 @@
 # Change Log - @vielzeug/ward
 
-This log was last generated on Mon, 17 Aug 2026 10:42:29 GMT and should not be manually modified.
+This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+
+## 2.2.0
+Wed, 26 Aug 2026 17:29:55 GMT
+
+### Minor changes
+
+- feat: remove static is() type guard from base error class; add sideEffects: false for tree-shaking.
+- feat: replace debug factories, logger options, and onError callbacks with unified tap() observability pattern.
 
 ## 2.1.0
 Mon, 17 Aug 2026 10:42:29 GMT

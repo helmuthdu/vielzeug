@@ -2,6 +2,27 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: streamlined logging and removed redundant methods.",
+            "commit": "88b47c1a2596dfcb9d1ef7d442de2595c229aba8"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "chore: add sideEffects: false for tree-shaking.",
+            "commit": "30bcc469fae1fc7194a66855f9e17f558afae9da"
+          }
+        ]
+      },
+      "date": "Wed, 26 Aug 2026 17:29:55 GMT",
+      "tag": "@vielzeug/vault_v2.4.0",
+      "version": "2.4.0"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

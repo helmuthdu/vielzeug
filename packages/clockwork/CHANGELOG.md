@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/clockwork
 
-This log was last generated on Sun, 16 Aug 2026 09:15:39 GMT and should not be manually modified.
+This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+
+## 2.2.0
+Wed, 26 Aug 2026 17:29:55 GMT
+
+### Minor changes
+
+- feat: replace debug factories, logger options, and onError callbacks with unified tap() observability pattern.
+
+### Patches
+
+- chore: add sideEffects: false for tree-shaking.
 
 ## 2.1.0
 Sun, 16 Aug 2026 09:15:39 GMT

@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Fri, 21 Aug 2026 16:02:58 GMT and should not be manually modified.
+This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+
+## 2.3.0
+Wed, 26 Aug 2026 17:29:55 GMT
+
+### Minor changes
+
+- Refresh bundled docs for postmaster API redesign: collapsed store contract, renamed idempotencyKey to key, validate accepts Spell/Zod schemas, dropped pause/resume, simplified retry policy, collapsed error hierarchy, added Service Worker background-sync recipe.
+
+### Patches
+
+- chore: add sideEffects: false for tree-shaking.
 
 ## 2.2.9
 Fri, 21 Aug 2026 16:02:58 GMT

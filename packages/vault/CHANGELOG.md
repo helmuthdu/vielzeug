@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/vault
 
-This log was last generated on Fri, 21 Aug 2026 16:02:58 GMT and should not be manually modified.
+This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+
+## 2.4.0
+Wed, 26 Aug 2026 17:29:55 GMT
+
+### Minor changes
+
+- refactor: streamlined logging and removed redundant methods.
+
+### Patches
+
+- chore: add sideEffects: false for tree-shaking.
 
 ## 2.3.1
 Fri, 21 Aug 2026 16:02:58 GMT

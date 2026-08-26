@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/flux
 
-This log was last generated on Fri, 21 Aug 2026 16:02:58 GMT and should not be manually modified.
+This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+
+## 2.3.3
+Wed, 26 Aug 2026 17:29:55 GMT
+
+### Patches
+
+- chore: add sideEffects: false for tree-shaking.
 
 ## 2.3.2
 Fri, 21 Aug 2026 16:02:58 GMT

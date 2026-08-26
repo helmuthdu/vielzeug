@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/spell",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "description": "Schema-first validation and parsing — runtime type checking, coercion, and custom refinements",
   "repository": {
     "type": "git",
