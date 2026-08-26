@@ -76,7 +76,7 @@ describe('SQLiteVaultStore', () => {
     );
   });
 
-  test('pushes down primary-key equality, range, and prefix queries', async () => {
+  test('queries filter by primary-key equality in memory', async () => {
     const store = createStore();
 
     await store.putAll('users', [
@@ -89,11 +89,12 @@ describe('SQLiteVaultStore', () => {
     ]);
 
     await expect(store.query('users').equals('id', 2).toArray()).resolves.toEqual([{ id: 2, name: 'two' }]);
-    await expect(store.query('users').between('id', 1, 2).toArray()).resolves.toEqual([
-      { id: 1, name: 'one' },
-      { id: 2, name: 'two' },
-    ]);
-    await expect(store.query('users').startsWith('id', 'alp').toArray()).resolves.toEqual([
+    await expect(
+      store
+        .query('users')
+        .filter((u) => typeof u.id === 'string' && u.id.startsWith('alp'))
+        .toArray(),
+    ).resolves.toEqual([
       { id: 'alpine', name: 'Alpine' },
       { id: 'alpha', name: 'Alpha' },
     ]);
@@ -244,5 +245,44 @@ describe('SQLiteVaultStore', () => {
       .run('app', 'users', 'n:1', 'number', 1, null, '{invalid', null);
 
     await expect(store.get('users', 1)).rejects.toBeInstanceOf(VaultError);
+  });
+
+  test('putAll inside batch() commits atomically without nested-transaction error', async () => {
+    const store = createStore();
+
+    await store.batch(['users'], async (tx) => {
+      await tx.putAll('users', [
+        { id: 1, name: 'Ada' },
+        { id: 2, name: 'Grace' },
+      ]);
+    });
+
+    await expect(store.getAll('users')).resolves.toEqual([
+      { id: 1, name: 'Ada' },
+      { id: 2, name: 'Grace' },
+    ]);
+  });
+
+  test('accepts records with shared subtree references (DAG, not circular)', async () => {
+    const itemSchema = { items: table<{ id: number; a: { x: number }; b: { x: number } }>('id') };
+    const store = createSQLite({ database: createDatabase(), name: 'dag', schema: itemSchema });
+    const shared = { x: 1 };
+
+    await store.put('items', { a: shared, b: shared, id: 1 });
+    await expect(store.get('items', 1)).resolves.toEqual({ a: { x: 1 }, b: { x: 1 }, id: 1 });
+  });
+
+  test('deleteMany chunks correctly for >996 keys', async () => {
+    const bigSchema = { items: table<{ id: number }>('id') };
+    const store = createSQLite({ database: createDatabase(), name: 'big', schema: bigSchema });
+    const items = Array.from({ length: 1000 }, (_, i) => ({ id: i }));
+
+    await store.putAll('items', items);
+    const deleted = await store.deleteMany(
+      'items',
+      items.map((i) => i.id),
+    );
+
+    expect(deleted).toBe(1000);
   });
 });

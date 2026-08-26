@@ -28,7 +28,7 @@ function createWebStorageAdapter<S extends AnySchema>(
     storageLabel: string;
   },
 ): VaultStore<S> {
-  const { getStorage, logger, name, onMetrics, onQuotaExceeded, schema, storageLabel, validators } = options;
+  const { getStorage, name, onQuotaExceeded, schema, storageLabel, validators } = options;
 
   let resolvedStorage: Storage;
 
@@ -251,17 +251,6 @@ function createWebStorageAdapter<S extends AnySchema>(
       return keys;
     },
 
-    async getRawCount<K extends keyof S & string>(table: K): Promise<number> {
-      const prefix = getPrefix(table);
-      let count = 0;
-
-      for (const key of ownedKeys) {
-        if (key.startsWith(prefix)) count += 1;
-      }
-
-      return count;
-    },
-
     async has<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean> {
       const storageKey = encodeStorageKey(name, table, key);
       const value = parseEntry<RecordOf<S, K>>(storageKey);
@@ -324,7 +313,6 @@ function createWebStorageAdapter<S extends AnySchema>(
   };
 
   return buildAdapterOps(schema, core, {
-    logger,
     onCrossTabMessage(notify) {
       if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') {
         return undefined;
@@ -361,7 +349,6 @@ function createWebStorageAdapter<S extends AnySchema>(
 
       return () => window.removeEventListener('storage', listener);
     },
-    onMetrics,
     schema,
     validators,
   });

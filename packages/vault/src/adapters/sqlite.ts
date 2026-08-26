@@ -11,7 +11,6 @@ import { isExpired } from '../ttl';
 import type {
   AnySchema,
   BaseAdapterOptions,
-  IterableVaultStore,
   KeyOf,
   RecordOf,
   TransactionalVaultStore,
@@ -57,7 +56,7 @@ export type SQLiteVaultOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
 };
 
 /** SQLite provides atomic batches and lazy keyset-paginated iteration. */
-export interface SQLiteVaultStore<S extends AnySchema> extends TransactionalVaultStore<S>, IterableVaultStore<S> {}
+export type SQLiteVaultStore<S extends AnySchema> = TransactionalVaultStore<S>;
 
 type ConnectionState = {
   batchActive: boolean;
@@ -181,8 +180,9 @@ function assertJsonValue(value: unknown, seen: Set<object>, path: string): void 
     throw new VaultError(`SQLite serialization failed at ${path}: expected a JSON-compatible value`);
   }
 
-  if (seen.has(value))
+  if (seen.has(value as object)) {
     throw new VaultError(`SQLite serialization failed at ${path}: circular references are not supported`);
+  }
 
   if (Array.isArray(value)) {
     seen.add(value);
@@ -202,7 +202,7 @@ function assertJsonValue(value: unknown, seen: Set<object>, path: string): void 
     throw new VaultError(`SQLite serialization failed at ${path}: expected a plain object`);
   }
 
-  seen.add(value);
+  seen.add(value as object);
 
   for (const [key, nested] of Object.entries(value)) {
     assertJsonValue(nested, seen, `${path}.${key}`);
@@ -331,6 +331,7 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
   database: SQLiteDatabase,
   name: string,
   schema: S,
+  inTransaction = false,
 ): StorageBackend<S, K> {
   const getRecord = <T extends K>(table: T, key: KeyOf<S, T>): RecordOf<S, T> | undefined => {
     const columns = toKeyColumns(key);
@@ -364,22 +365,38 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
       return count;
     },
     async delete(table, key) {
-      const live = getRecord(table, key) !== undefined;
       const columns = toKeyColumns(key);
+      const result = run(
+        database,
+        `DELETE FROM ${RECORDS_TABLE}
+         WHERE namespace = ? AND table_name = ? AND key_tag = ?
+           AND (expires_at IS NULL OR expires_at > ?)`,
+        [name, table, columns.encoded, Date.now()],
+      ) as { changes?: number } | undefined;
 
-      run(database, `DELETE FROM ${RECORDS_TABLE} WHERE namespace = ? AND table_name = ? AND key_tag = ?`, [
-        name,
-        table,
-        columns.encoded,
-      ]);
-
-      return live;
+      return (result?.changes ?? 0) > 0;
     },
     async deleteMany(table, keys) {
-      let deleted = 0;
+      if (keys.length === 0) return 0;
 
-      for (const key of keys) {
-        if (await core.delete(table, key)) deleted += 1;
+      let deleted = 0;
+      // 3 fixed params: namespace, table_name, expires_at check.
+      const SQLITE_PARAM_LIMIT = 999;
+      const MAX_KEYS_PER_CHUNK = SQLITE_PARAM_LIMIT - 3;
+      const encodedKeys = keys.map((k) => toKeyColumns(k).encoded);
+
+      for (let i = 0; i < encodedKeys.length; i += MAX_KEYS_PER_CHUNK) {
+        const chunk = encodedKeys.slice(i, i + MAX_KEYS_PER_CHUNK);
+        const placeholders = chunk.map(() => '?').join(', ');
+        const result = run(
+          database,
+          `DELETE FROM ${RECORDS_TABLE}
+           WHERE namespace = ? AND table_name = ? AND key_tag IN (${placeholders})
+             AND (expires_at IS NULL OR expires_at > ?)`,
+          [name, table, ...chunk, Date.now()],
+        ) as { changes?: number } | undefined;
+
+        deleted += result?.changes ?? 0;
       }
 
       return deleted;
@@ -393,53 +410,8 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
     async getAllKeys(table) {
       return (await core.getAll(table)).map((record) => getRecordKey(schema, table, record));
     },
-    async getByKeyRange(table, range) {
-      if (range.type === 'eq')
-        return getAllLive<RecordOf<S, typeof table>>(database, name, table, ' AND key_tag = ?', [
-          toKeyColumns(range.value as KeyOf<S, typeof table>).encoded,
-        ]);
-
-      if (range.type === 'between') {
-        if (
-          typeof range.lower !== typeof range.upper ||
-          (typeof range.lower !== 'number' && typeof range.lower !== 'string')
-        ) {
-          return getAllLive<RecordOf<S, typeof table>>(database, name, table);
-        }
-
-        const column = typeof range.lower === 'number' ? 'key_number' : 'key_string';
-
-        return getAllLive<RecordOf<S, typeof table>>(
-          database,
-          name,
-          table,
-          ` AND key_kind = ? AND ${column} >= ? AND ${column} <= ?`,
-          [typeof range.lower === 'number' ? 'number' : 'string', range.lower, range.upper as string | number],
-        );
-      }
-
-      return getAllLive<RecordOf<S, typeof table>>(
-        database,
-        name,
-        table,
-        ' AND key_kind = ? AND substr(key_string, 1, length(?)) = ?',
-        ['string', range.prefix, range.prefix],
-      );
-    },
     async getMany(table, keys) {
       return keys.map((key) => getRecord(table, key));
-    },
-    async getRawCount(table) {
-      const row = get(
-        database,
-        `SELECT COUNT(*) AS count FROM ${RECORDS_TABLE} WHERE namespace = ? AND table_name = ?`,
-        [name, table],
-      );
-      const count = row?.count;
-
-      if (typeof count !== 'number') throw new VaultError('SQLite storage returned an invalid count');
-
-      return count;
     },
     async has(table, key) {
       return getRecord(table, key) !== undefined;
@@ -454,11 +426,27 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
       return results;
     },
     async pruneExpiredInTable(table) {
-      const before = await core.getRawCount!(table);
+      const beforeRow = get(
+        database,
+        `SELECT COUNT(*) AS count FROM ${RECORDS_TABLE} WHERE namespace = ? AND table_name = ?`,
+        [name, table],
+      );
+      const before = beforeRow?.count;
+
+      if (typeof before !== 'number') throw new VaultError('SQLite storage returned an invalid count');
 
       deleteExpired(database, name, table);
 
-      return before - (await core.getRawCount!(table));
+      const afterRow = get(
+        database,
+        `SELECT COUNT(*) AS count FROM ${RECORDS_TABLE} WHERE namespace = ? AND table_name = ?`,
+        [name, table],
+      );
+      const after = afterRow?.count;
+
+      if (typeof after !== 'number') throw new VaultError('SQLite storage returned an invalid count');
+
+      return before - after;
     },
     async put(table, value, ttl) {
       const key = getRecordKey(schema, table, value);
@@ -480,8 +468,56 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
       );
     },
     async putAll(table, values, ttl) {
-      for (const value of values) {
-        await core.put(table, value, ttl);
+      if (values.length === 0) return;
+
+      const expiresAt = ttl === undefined ? null : Date.now() + ttl;
+      const encodedJsonValues = values.map((v) => encodeJson(v));
+      const columnsList = values.map((v) => toKeyColumns(getRecordKey(schema, table, v)));
+
+      const writeAll = () => {
+        for (let i = 0; i < values.length; i++) {
+          const columns = columnsList[i];
+          run(
+            database,
+            `INSERT INTO ${RECORDS_TABLE}
+              (namespace, table_name, key_tag, key_kind, key_number, key_string, value_json, expires_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT(namespace, table_name, key_tag) DO UPDATE SET
+               key_kind = excluded.key_kind,
+               key_number = excluded.key_number,
+               key_string = excluded.key_string,
+               value_json = excluded.value_json,
+               expires_at = excluded.expires_at`,
+            [
+              name,
+              table,
+              columns.encoded,
+              columns.kind,
+              columns.number,
+              columns.string,
+              encodedJsonValues[i],
+              expiresAt,
+            ],
+          );
+        }
+      };
+
+      if (inTransaction) {
+        writeAll();
+        return;
+      }
+
+      database.exec('BEGIN');
+      try {
+        writeAll();
+        database.exec('COMMIT');
+      } catch (error) {
+        try {
+          database.exec('ROLLBACK');
+        } catch (rollbackError) {
+          throw new VaultError('SQLite putAll rollback failed', { cause: rollbackError });
+        }
+        throw error;
       }
     },
   };
@@ -494,7 +530,7 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
  * `closeOnDispose` is explicitly enabled.
  */
 export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>): SQLiteVaultStore<S> {
-  const { closeOnDispose = false, database, logger, name, onMetrics, schema, validators } = options;
+  const { closeOnDispose = false, database, name, schema, validators } = options;
 
   assertName(name);
 
@@ -530,7 +566,6 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
 
   let batch: BatchImpl<S> | undefined;
   const adapter = buildAdapterOps(schema, guardedCore, {
-    logger,
     onCrossTabMessage(notify) {
       const listener: ConnectionListener = (eventName, table) => {
         if (eventName === name && Object.hasOwn(schema, table)) notify(table as keyof S & string);
@@ -545,7 +580,6 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
         if (ownListener === listener) ownListener = undefined;
       };
     },
-    onMetrics,
     onMutation(table) {
       for (const listener of state.listeners) {
         if (listener !== ownListener) listener(name, table);
@@ -566,7 +600,7 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
           await namespaceReady;
 
           const dirtyTables = new Set<keyof S & string>();
-          const txCore = createDirectCore<S, keyof S & string>(database, name, schema);
+          const txCore = createDirectCore<S, keyof S & string>(database, name, schema, true);
           const tx = buildTxContext(
             schema,
             txCore,

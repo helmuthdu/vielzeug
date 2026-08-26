@@ -11,7 +11,7 @@ You need to filter, sort, and paginate records from a table, and you need both a
 
 ### Solution
 
-Use `db.query(table)` to build a lazy pipeline. Chain filter operators (`filter`, `equals`, `between`, `startsWith`) and presentation operators (`orderBy`, `limit`, `offset`). Call `toArray()`, `first()`, `count()`, or `delete()` as the terminal step.
+Use `db.query(table)` to build a lazy pipeline. Chain filter operators (`filter`, `equals`) and presentation operators (`orderBy`, `limit`, `offset`). Call `toArray()`, `first()`, `count()`, or `delete()` as the terminal step.
 
 `count()` ignores `limit`, `offset`, and `orderBy` — it always returns the full filtered-set size. Use it for "page X of N" UIs without a second query.
 
@@ -59,8 +59,11 @@ const expensive = await db
   .filter((p) => p.price > 50)
   .toArray();
 
-// Case-insensitive prefix match
-const mice = await db.query('products').startsWith('name', 'mou', { ignoreCase: true }).toArray();
+// Custom prefix match via filter()
+const mice = await db
+  .query('products')
+  .filter((p) => p.name.toLowerCase().startsWith('mou'))
+  .toArray();
 
 // Delete via query — returns count of deleted records
 const deleted = await db
@@ -75,9 +78,9 @@ const deleted = await db
 
 - Query pipelines are lazy — calling `.limit(10)` does not execute anything. Only the terminal call (`toArray()`, `count()`, `first()`, `delete()`) triggers execution.
 - `count()` ignores `limit`, `offset`, and `orderBy`. It always returns the full filtered-set size — use it directly for paginated total-count queries.
-- `count()` still applies all filter operators (`filter`, `equals`, `between`, `startsWith`). A bare `db.query('products').count()` returns all live records.
-- `between(field, lower, upper)` is inclusive on both ends. For exclusive ranges, use `.filter()` with a custom predicate.
-- Memory and Web Storage queries always scan the full table. IndexedDB can push an initial `equals()`, `between()`, or case-sensitive `startsWith()` filter to a primary key or declared secondary index. SQLite provides the same push-down for primary keys; other SQLite fields filter in memory. For large tables, prefer `iterate()` on IndexedDB or SQLite instead of materializing every record.
+- `count()` still applies all filter operators (`filter`, `equals`). A bare `db.query('products').count()` returns all live records.
+- For range or prefix queries, use `.filter()` with a custom predicate. `equals()` is the only built-in field-level filter.
+- Queries scan the full table in memory. For large tables, prefer `iterate()` on IndexedDB or SQLite instead of materializing every record.
 
 ### Related
 

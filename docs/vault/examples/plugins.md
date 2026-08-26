@@ -1,37 +1,17 @@
 ---
-title: 'Vault Examples — Plugins and Error Handling'
-description: 'Logger, validators, metrics, migration, and error handling patterns for @vielzeug/vault.'
+title: 'Vault Examples — Validators and Error Handling'
+description: 'Validators, migration, and error handling patterns for @vielzeug/vault.'
 ---
 
-## Plugins and Error Handling
+## Validators and Error Handling
 
 ### Problem
 
-You need to integrate storage with your app's existing logging, validation, and observability infrastructure. You also need predictable error handling for quota errors, disposed adapters, and IndexedDB migration failures.
+You need to validate records before they reach storage and handle quota, disposal, scope, and migration errors predictably.
 
 ### Solution
 
-All Vault factories accept `logger`, `validators`, and `onMetrics` at construction time. The Web Storage factories also accept `onQuotaExceeded`. Each plugin uses a structural interface, so you can pass the real library object directly.
-
-#### Logger
-
-Pass any object with an `error(...)` method. Observer notification errors are routed to `logger.error`. A `@vielzeug/rune` Logger satisfies the interface directly.
-
-```ts
-import { createLogger } from '@vielzeug/rune';
-import { table } from '@vielzeug/vault';
-import { createIndexedDB } from '@vielzeug/vault/indexeddb';
-
-type User = { id: number; name: string };
-const schema = { users: table<User>('id') };
-
-const db = createIndexedDB({
-  name: 'app',
-  schema,
-  version: 1,
-  logger: createLogger('vault'),
-});
-```
+All Vault factories accept `validators` at construction time. The Web Storage factories also accept `onQuotaExceeded`. Each plugin uses a structural interface, so you can pass the real library object directly.
 
 #### Validators
 
@@ -58,25 +38,6 @@ const db = createMemory({
 
 // throws a spell validation error — nothing is written to storage
 await db.put('users', { id: 1, name: 'Alice', age: -5 });
-```
-
-#### Metrics
-
-`onMetrics` is called after every completed operation with table name, operation name, and duration.
-
-```ts
-import { table } from '@vielzeug/vault';
-import { createMemory } from '@vielzeug/vault/memory';
-
-type User = { id: number; name: string };
-const schema = { users: table<User>('id') };
-
-const db = createMemory({
-  schema,
-  onMetrics: (event) => {
-    console.log(`[${event.table}] ${event.operation} — ${event.duration}ms`);
-  },
-});
 ```
 
 #### Quota exceeded hook (LocalStorage / SessionStorage)
@@ -155,7 +116,6 @@ try {
 
 ### Pitfalls
 
-- `onMetrics` is called **after** the operation completes. A validator error thrown before the write never reaches `onMetrics`.
 - Validators receive the raw value passed to `put` — they run before TTL wrapping and before any storage write. A thrown parse error leaves storage unchanged.
 - The `migrate` callback on IndexedDB runs synchronously inside `onupgradeneeded`. Do not call `await` or open a second transaction inside it — IDB will throw. Errors thrown from `migrate` surface as `VaultMigrationError` on the first operation.
 - `onQuotaExceeded` returning `'ignore'` silently drops the write without throwing. The adapter continues operating normally. Returning `'throw'` (or not providing the hook) rethrows the original `VaultQuotaError`.
@@ -163,6 +123,5 @@ try {
 ### Related
 
 - [Reactive Tables](./reactive.md)
-- [Rune](/rune/)
 - [Spell](/spell/)
 - [API Reference — Plugin Types](/vault/api.md#types)

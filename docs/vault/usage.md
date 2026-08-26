@@ -64,29 +64,27 @@ console.log(updated);
 Build a query from a table, then finish it with a terminal method. `count()` ignores pagination, which makes it suitable for page controls.
 
 ```ts
-const query = store.query('preferences').startsWith('id', 'theme');
+const query = store.query('preferences').filter((p) => p.id.startsWith('theme'));
 const preferences = await query.orderBy('id').limit(10).toArray();
 const total = await query.count();
 
 console.log({ preferences, total });
 ```
 
-Memory and Web Storage queries scan the table. IndexedDB can use declared secondary indexes, while SQLite pushes primary-key equality, range, and case-sensitive prefix filters to the database.
+Queries scan the table in memory. Use `equals()` for exact field matches and `filter()` for custom predicates. For large tables, prefer `iterate()` on IndexedDB or SQLite instead of materializing every record.
 
 ## Use TTL and Pruning
 
-Use `ttl.*` helpers for expiring rows. Schedule pruning when stale rows can accumulate without reads.
+Use `ttl.*` helpers for expiring rows. Call `pruneExpired()` to reclaim storage from stale rows that accumulate without reads.
 
 ```ts
-import { scheduleExpiredPrune, ttl } from '@vielzeug/vault';
+import { ttl } from '@vielzeug/vault';
 
 await store.put('preferences', { id: 'temporary', theme: 'dark' }, ttl.hours(1));
-const stopPrune = scheduleExpiredPrune(store, {
-  interval: ttl.hours(6),
-  signal: store.disposalSignal,
-});
 
-stopPrune();
+// Reclaim expired rows on a schedule owned by the application.
+const pruneInterval = setInterval(() => store.pruneExpired(), ttl.hours(6));
+store.disposalSignal.addEventListener('abort', () => clearInterval(pruneInterval));
 ```
 
 ## Observe a Table
@@ -231,5 +229,5 @@ Use Forge’s Vault helpers for explicit form-draft persistence. Keep Ripple sig
 - Use IndexedDB or SQLite for atomic work.
 - Keep external asynchronous work outside `batch()` callbacks.
 - Use `ttl.*` instead of raw durations.
-- Keep SQLite scans and writes off latency-sensitive event loops, and dispose stores with their owner.
+- Keep SQLite scans and writes off latency-sensitive event loops.
 - Dispose stores when their owner ends.

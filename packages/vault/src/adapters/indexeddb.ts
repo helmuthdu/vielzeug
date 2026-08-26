@@ -10,11 +10,17 @@ import {
 } from '../adapter-core';
 import { VaultDisposedError, VaultError, VaultMigrationError } from '../errors';
 import { encodeVaultKey, getRecordKey } from '../internal';
-import type { NativeRange } from '../query';
 import { isExpired, parseStored, type StoredRecord } from '../ttl';
-import type { AnySchema, BaseAdapterOptions, IndexedDbVaultStore, KeyOf, RecordOf, TransactionContext } from '../types';
+import type {
+  AnySchema,
+  BaseAdapterOptions,
+  KeyOf,
+  RecordOf,
+  TransactionalVaultStore,
+  TransactionContext,
+} from '../types';
 
-export type { IndexedDbVaultStore };
+export type { TransactionalVaultStore as IndexedDbVaultStore };
 
 /** IndexedDB-only migration context supplied to `MigrationFn` during `onupgradeneeded`. */
 export type MigrationContext = {
@@ -152,31 +158,6 @@ async function getAllFromStore<T extends object>(
   decode: (raw: unknown) => T | undefined,
 ): Promise<T[]> {
   const rawRecords = await idbReq<unknown[]>(store.getAll());
-  const records: T[] = [];
-
-  for (const raw of rawRecords) {
-    const value = decode(raw);
-
-    if (value !== undefined) records.push(value);
-  }
-
-  return records;
-}
-
-async function getAllFromStoreByIndex<T extends object>(
-  store: IDBObjectStore,
-  indexName: string,
-  range: NativeRange,
-  decode: (raw: unknown) => T | undefined,
-): Promise<T[]> {
-  const index = store.index(indexName);
-  const idbRange =
-    range.type === 'eq'
-      ? IDBKeyRange.only(range.value as IDBValidKey)
-      : range.type === 'between'
-        ? IDBKeyRange.bound(range.lower as IDBValidKey, range.upper as IDBValidKey)
-        : IDBKeyRange.bound(range.prefix, `${range.prefix}\uffff`);
-  const rawRecords = await idbReq<unknown[]>(index.getAll(idbRange));
   const records: T[] = [];
 
   for (const raw of rawRecords) {
@@ -415,8 +396,6 @@ function buildIdbBatchCore<S extends AnySchema, K extends keyof S & string>(
     deleteMany: (table, keys) => storeDeleteMany<RecordOf<S, K>>(storeOf(table), keys.map(encodeVaultKey), decode),
     get: (table, key) => storeGet<RecordOf<S, typeof table>>(storeOf(table), encodeVaultKey(key), decode),
     getAll: (table) => getAllFromStore<RecordOf<S, typeof table>>(storeOf(table), decode),
-    getByIndexRange: (table, field, range) =>
-      getAllFromStoreByIndex<RecordOf<S, typeof table>>(storeOf(table), field, range, decode),
     getMany: (table, keys) =>
       Promise.all(keys.map((key) => storeGet<RecordOf<S, typeof table>>(storeOf(table), encodeVaultKey(key), decode))),
     has: (table, key) => storeHas<RecordOf<S, typeof table>>(storeOf(table), encodeVaultKey(key), decode),
@@ -439,8 +418,8 @@ type IndexedDbOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
   version?: number;
 };
 
-export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S>): IndexedDbVaultStore<S> {
-  const { logger, migrate, name, onMetrics, schema, validators, version = 1 } = options;
+export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S>): TransactionalVaultStore<S> {
+  const { migrate, name, schema, validators, version = 1 } = options;
 
   if (!Number.isInteger(version) || version < 1) {
     throw new VaultError(`createIndexedDB: version must be a positive integer, got ${String(version)}`);
@@ -458,10 +437,6 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
   };
 
   const channel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(`vault:${name}`) : undefined;
-
-  if (!channel && logger) {
-    logger.error(`[vault] BroadcastChannel unavailable — cross-tab sync disabled for "${name}"`);
-  }
 
   let db: IDBDatabase | null = null;
   let connectPromise: Promise<void> | null = null;
@@ -634,17 +609,12 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         return records.map((r) => (r as Record<string, unknown>)[keyField] as KeyOf<S, typeof table>);
       }),
 
-    getByIndexRange: (table, field, range) =>
-      withStore(table, 'readonly', (s) => getAllFromStoreByIndex<RecordOf<S, typeof table>>(s, field, range, decode)),
-
     getMany: (table, keys) =>
       keys.length === 0
         ? Promise.resolve([])
         : withStore(table, 'readonly', (s) =>
             Promise.all(keys.map((key) => storeGet<RecordOf<S, typeof table>>(s, encodeVaultKey(key), decode))),
           ),
-
-    getRawCount: (table) => withStore(table, 'readonly', (s) => idbReq(s.count())),
 
     has: (table, key) =>
       withStore(table, 'readonly', (s) => storeHas<RecordOf<S, typeof table>>(s, encodeVaultKey(key), decode)),
@@ -703,7 +673,6 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
 
   let batch: BatchImpl<S> | undefined;
   const adapter = buildAdapterOps(schema, core, {
-    logger,
     onCrossTabMessage(notify) {
       if (!channel) {
         return undefined;
@@ -721,7 +690,6 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
         channel.onmessage = null;
       };
     },
-    onMetrics,
     onMutation: publish,
     onTransactions: (deps) => {
       batch = (tables, fn) => idbBatch(tables, fn, deps.notifyMutation, deps.validate);

@@ -13,9 +13,10 @@ description: Reference for Vault schemas, adapter entry points, storage capabili
 | `createLocalStorage()` / `createSessionStorage()` | Web Storage-backed portable stores | Async API | Available only where the corresponding Web API exists |
 | `createIndexedDB()` | Browser transactions and cursor iteration | Async API | Import from `/indexeddb` |
 | `createSQLite()` | Driver-neutral SQLite store | Async API over a synchronous driver | Import from `/sqlite` |
+| `defineMigration()` | Declarative IndexedDB schema upgrade | Sync | Import from `/indexeddb` |
 | `table()` | Typed record schema | Sync | The key field must be a string or finite number |
 | `ttl` | Valid expiration durations | Sync | Durations must be positive |
-| `scheduleExpiredPrune()` | Periodic TTL cleanup | Sync setup, async work | Pass `disposalSignal` to auto-cancel |
+| `isExpired()` | Check an expiration timestamp | Sync | Returns `false` when no expiry is set |
 
 ## Package Entry Points
 
@@ -102,23 +103,20 @@ if (isExpired(record.expiresAt)) console.log('expired');
 
 ## Factories
 
-All factory options accept `schema`, plus optional `validators`, `logger`, and `onMetrics`. The root entry does not export any factory.
+All factory options accept `schema` and optional `validators`. The root entry does not export any factory.
 
 ### `createMemory()`
 
 ```ts
-function createMemory<S extends AnySchema>(options: {
-  name?: string;
-  schema: S;
-} & BaseAdapterOptions<S>): VaultStore<S>;
+function createMemory<S extends AnySchema>(options: BaseAdapterOptions<S>): VaultStore<S>;
 ```
 
-Creates an in-memory portable store. A `name` enables same-origin `BroadcastChannel` observation between memory stores when the platform provides it.
+Creates an in-memory portable store.
 
 | Parameter | Description |
 | --- | --- |
 | `schema` | Tables created by `table()` |
-| `name` | Optional shared memory-store namespace |
+| `validators` | Optional per-table validators with a `parse(value): T` method |
 
 **Returns:** `VaultStore<S>`.
 
@@ -134,20 +132,20 @@ const store = createMemory({ schema: { users: table<{ id: number; name: string }
 ### `createLocalStorage()`
 
 ```ts
-function createLocalStorage<S extends AnySchema>(options: {
+function createLocalStorage<S extends AnySchema>(options: BaseAdapterOptions<S> & {
   name: string;
   onQuotaExceeded?: (table: keyof S, error: VaultQuotaError) => 'ignore' | 'throw';
-  schema: S;
-} & BaseAdapterOptions<S>): VaultStore<S>;
+}): VaultStore<S>;
 ```
 
 Creates a namespaced `localStorage` store.
 
 | Parameter | Description |
 | --- | --- |
+| `schema` | Tables created by `table()` |
+| `validators` | Optional per-table validators |
 | `name` | Required storage namespace |
 | `onQuotaExceeded` | Handles a Web Storage quota error; returning `'ignore'` drops that write |
-| `schema` | Tables created by `table()` |
 
 **Returns:** `VaultStore<S>`.
 
@@ -163,11 +161,10 @@ const store = createLocalStorage({ name: 'app', schema: { settings: table<{ id: 
 ### `createSessionStorage()`
 
 ```ts
-function createSessionStorage<S extends AnySchema>(options: {
+function createSessionStorage<S extends AnySchema>(options: BaseAdapterOptions<S> & {
   name: string;
   onQuotaExceeded?: (table: keyof S, error: VaultQuotaError) => 'ignore' | 'throw';
-  schema: S;
-} & BaseAdapterOptions<S>): VaultStore<S>;
+}): VaultStore<S>;
 ```
 
 Creates a namespaced `sessionStorage` store. Its options and return type match `createLocalStorage()`.
@@ -186,24 +183,24 @@ const store = createSessionStorage({ name: 'checkout', schema: { cart: table<{ i
 ### `createIndexedDB()`
 
 ```ts
-function createIndexedDB<S extends AnySchema>(options: {
+function createIndexedDB<S extends AnySchema>(options: BaseAdapterOptions<S> & {
   migrate?: MigrationFn;
   name: string;
-  schema: S;
   version?: number;
-} & BaseAdapterOptions<S>): IndexedDbVaultStore<S>;
+}): TransactionalVaultStore<S>;
 ```
 
 Creates an IndexedDB store with atomic batches, lazy cursor iteration, and optional schema migrations.
 
 | Parameter | Description |
 | --- | --- |
-| `name` | Required database name |
 | `schema` | Tables and IndexedDB secondary indexes |
+| `validators` | Optional per-table validators |
+| `name` | Required database name |
 | `version` | Positive schema version; defaults to `1` |
 | `migrate` | Synchronous upgrade callback for version changes |
 
-**Returns:** `IndexedDbVaultStore<S>`.
+**Returns:** `TransactionalVaultStore<S>`.
 
 ```ts
 import { table } from '@vielzeug/vault';
@@ -217,19 +214,20 @@ const store = createIndexedDB({ name: 'app', schema: { users: table<{ id: number
 ### `createSQLite()`
 
 ```ts
-function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>): SQLiteVaultStore<S>;
+function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>): TransactionalVaultStore<S>;
 ```
 
 Creates a namespaced SQLite store with atomic batches and keyset-paginated iteration. It accepts an application-provided positional-parameter driver and never opens or imports a runtime driver.
 
 | Parameter | Description |
 | --- | --- |
+| `schema` | Tables created by `table()` |
+| `validators` | Optional per-table validators |
 | `database` | Caller-provided `SQLiteDatabase` connection |
 | `name` | Namespace within the connection |
-| `schema`, `validators`, `logger`, `onMetrics` | Shared factory options |
 | `closeOnDispose` | Closes the connection during disposal; defaults to `false` |
 
-**Returns:** `SQLiteVaultStore<S>`.
+**Returns:** `TransactionalVaultStore<S>`.
 
 ```ts
 import { DatabaseSync } from 'node:sqlite';
@@ -256,11 +254,9 @@ interface VaultStore<S extends AnySchema> {
   count<K extends keyof S & string>(table: K): Promise<number>;
   delete<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean>;
   deleteMany<K extends keyof S & string>(table: K, keys: KeyOf<S, K>[]): Promise<number>;
-  entries<K extends keyof S & string>(table: K): Promise<Array<[KeyOf<S, K>, RecordOf<S, K>]>>;
   get<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
   getAll<K extends keyof S & string>(table: K): Promise<RecordOf<S, K>[]>;
   getMany<K extends keyof S & string>(table: K, keys: KeyOf<S, K>[]): Promise<Array<RecordOf<S, K> | undefined>>;
-  getOrDefault<K extends keyof S & string>(table: K, key: KeyOf<S, K>, defaultFn: () => RecordOf<S, K>, ttl?: number): Promise<RecordOf<S, K>>;
   has<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean>;
   isEmpty<K extends keyof S & string>(table: K): Promise<boolean>;
   keys<K extends keyof S & string>(table: K, filter?: (record: RecordOf<S, K>) => boolean): Promise<KeyOf<S, K>[]>;
@@ -270,7 +266,6 @@ interface VaultStore<S extends AnySchema> {
   update<K extends keyof S & string>(table: K, key: KeyOf<S, K>, changes: Partial<RecordOf<S, K>>, ttl?: number): Promise<RecordOf<S, K> | undefined>;
   upsert<K extends keyof S & string>(table: K, key: KeyOf<S, K>, fn: (existing: RecordOf<S, K> | undefined) => RecordOf<S, K>, ttl?: number): Promise<RecordOf<S, K>>;
   pruneExpired(): Promise<Record<keyof S & string, number>>;
-  debug(): Promise<DebugInfo<S>>;
   observe<K extends keyof S & string>(table: K, listener: Observer<RecordOf<S, K>>, options?: { immediate?: boolean; signal?: AbortSignal }): Unsubscribe;
   dispose(): Promise<void>;
   readonly disposed: boolean;
@@ -283,7 +278,7 @@ The portable store API is returned by every factory. `observe()` emits the curre
 
 ---
 
-### `batch()`
+### `batch()` and `iterate()`
 
 ```ts
 interface TransactionalVaultStore<S extends AnySchema> extends VaultStore<S> {
@@ -291,10 +286,11 @@ interface TransactionalVaultStore<S extends AnySchema> extends VaultStore<S> {
     tables: readonly K[],
     fn: (tx: TransactionContext<S, K>) => Promise<R>,
   ): Promise<R>;
+  iterate<K extends keyof S & string>(table: K): AsyncIterable<RecordOf<S, K>>;
 }
 ```
 
-Runs a scoped atomic callback. `IndexedDbVaultStore` and `SQLiteVaultStore` provide it.
+`batch()` runs a scoped atomic callback. `iterate()` lazily yields table records — IndexedDB uses a cursor, SQLite uses keyset pagination. Both are provided by `createIndexedDB()` and `createSQLite()`.
 
 | Parameter | Description |
 | --- | --- |
@@ -307,80 +303,32 @@ Runs a scoped atomic callback. `IndexedDbVaultStore` and `SQLiteVaultStore` prov
 await store.batch(['users'], async (tx) => {
   await tx.put('users', { id: 1, name: 'Ada' });
 });
-```
 
----
-
-### `iterate()`
-
-```ts
-interface IterableVaultStore<S extends AnySchema> extends VaultStore<S> {
-  iterate<K extends keyof S & string>(table: K): AsyncIterable<RecordOf<S, K>>;
-}
-```
-
-Lazily yields table records. `IndexedDbVaultStore` uses a cursor; `SQLiteVaultStore` uses keyset pagination.
-
-**Returns:** An `AsyncIterable` of records.
-
-```ts
 for await (const user of store.iterate('users')) console.log(user);
 ```
 
-## Queries, Pruning, and Migrations
+## Queries and Migrations
 
 ### `QueryBuilder`
 
 ```ts
-interface QueryBuilder<T extends object, N extends T = T> {
-  between(field: string, lower: number | string, upper: number | string): QueryBuilder<T, N>;
+interface QueryBuilder<T extends object> {
   count(): Promise<number>;
   delete(): Promise<number>;
-  equals<K extends keyof T & string, V extends T[K]>(field: K, value: V): QueryBuilder<T & Record<K, V>>;
-  exists(): Promise<boolean>;
-  filter(fn: (value: N, index: number, array: N[]) => boolean): QueryBuilder<T, N>;
-  first(): Promise<N | undefined>;
-  limit(n: number): QueryBuilder<T, N>;
-  offset(n: number): QueryBuilder<T, N>;
-  orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T, N>;
-  startsWith(field: keyof T, prefix: string, options?: { ignoreCase?: boolean }): QueryBuilder<T, N>;
-  toArray(): Promise<N[]>;
+  equals<K extends keyof T & string, V extends T[K]>(field: K, value: V): QueryBuilder<T>;
+  filter(fn: (value: T, index: number, array: T[]) => boolean): QueryBuilder<T>;
+  first(): Promise<T | undefined>;
+  limit(n: number): QueryBuilder<T>;
+  offset(n: number): QueryBuilder<T>;
+  orderBy<K extends keyof T>(field: K, direction?: 'asc' | 'desc'): QueryBuilder<T>;
+  toArray(): Promise<T[]>;
 }
 ```
 
 Builds a lazy table query. `count()` ignores `limit()`, `offset()`, and `orderBy()` — it always returns the full filtered-set size.
 
 ```ts
-const page = await store.query('users').startsWith('name', 'A').orderBy('name').limit(20).toArray();
-```
-
----
-
-### `scheduleExpiredPrune()`
-
-```ts
-function scheduleExpiredPrune<S extends AnySchema>(
-  adapter: Pick<VaultStore<S>, 'pruneExpired'>,
-  options: {
-    interval: number;
-    onError?: (error: unknown) => void;
-    signal?: AbortSignal;
-  },
-): () => void;
-```
-
-Schedules `pruneExpired()` at a finite, positive interval. Pass `signal: store.disposalSignal` to auto-cancel when the store is torn down.
-
-**Returns:** A stop function.
-
-```ts
-import { scheduleExpiredPrune, ttl } from '@vielzeug/vault';
-
-const stop = scheduleExpiredPrune(store, {
-  interval: ttl.hours(1),
-  signal: store.disposalSignal,
-});
-stop();
+const page = await store.query('users').equals('role', 'admin').orderBy('name').limit(20).toArray();
 ```
 
 ---
@@ -426,14 +374,8 @@ type KeyOf<S extends AnySchema, K extends keyof S> =
 
 ```ts
 type BaseAdapterOptions<S extends AnySchema> = {
-  logger?: VaultLogger;
-  onMetrics?: (event: MetricsEvent) => void;
   schema: S;
   validators?: TableValidators<S>;
-};
-
-type VaultLogger = {
-  error(message: string, context?: Error | Record<string, unknown>): void;
 };
 
 type RecordValidator<T> = {
@@ -443,23 +385,9 @@ type RecordValidator<T> = {
 type TableValidators<S extends AnySchema> = {
   [K in keyof S]?: RecordValidator<RecordOf<S, K>>;
 };
-
-type MetricsEvent = {
-  duration: number;
-  operation: 'batch' | 'clear' | 'count' | 'delete' | 'deleteMany' | 'entries' | 'get' | 'getAll' |
-    'getMany' | 'getOrDefault' | 'has' | 'isEmpty' | 'keys' | 'put' | 'putAll' | 'query' |
-    'queryDelete' | 'update' | 'upsert';
-  table: string;
-};
-
-type DebugStats = { expiredCount: number; recordCount: number };
-type DebugInfo<S extends AnySchema> = { tables: Array<{ name: keyof S & string } & DebugStats> };
 ```
 
 ```ts
-interface IndexedDbVaultStore<S extends AnySchema>
-  extends TransactionalVaultStore<S>, IterableVaultStore<S> {}
-
 type MigrationContext = {
   db: IDBDatabase;
   newVersion: number | null;
@@ -499,12 +427,49 @@ type SQLiteVaultOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
   database: SQLiteDatabase;
   name: string;
 };
+```
 
-interface SQLiteVaultStore<S extends AnySchema>
-  extends TransactionalVaultStore<S>, IterableVaultStore<S> {}
+```ts
+interface TransactionalVaultStore<S extends AnySchema> extends VaultStore<S> {
+  batch<K extends keyof S & string, R>(
+    tables: readonly K[],
+    fn: (tx: TransactionContext<S, K>) => Promise<R>,
+  ): Promise<R>;
+  iterate<K extends keyof S & string>(table: K): AsyncIterable<RecordOf<S, K>>;
+}
+```
+
+Import `TransactionalVaultStore` from `@vielzeug/vault`.
+
+```ts
+interface TransactionContext<S extends AnySchema, K extends keyof S & string = keyof S & string> {
+  clear<T extends K>(table: T): Promise<void>;
+  count<T extends K>(table: T): Promise<number>;
+  delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+  deleteMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<number>;
+  get<T extends K>(table: T, key: KeyOf<S, T>): Promise<RecordOf<S, T> | undefined>;
+  getAll<T extends K>(table: T): Promise<RecordOf<S, T>[]>;
+  getMany<T extends K>(table: T, keys: KeyOf<S, T>[]): Promise<Array<RecordOf<S, T> | undefined>>;
+  has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+  isEmpty<T extends K>(table: T): Promise<boolean>;
+  keys<T extends K>(table: T, filter?: (record: RecordOf<S, T>) => boolean): Promise<KeyOf<S, T>[]>;
+  put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: number): Promise<void>;
+  putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: number): Promise<void>;
+  query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
+  update<T extends K>(table: T, key: KeyOf<S, T>, changes: Partial<RecordOf<S, T>>, ttl?: number): Promise<RecordOf<S, T> | undefined>;
+  upsert<T extends K>(table: T, key: KeyOf<S, T>, fn: (existing: RecordOf<S, T> | undefined) => RecordOf<S, T>, ttl?: number): Promise<RecordOf<S, T>>;
+}
 ```
 
 `TransactionContext` has the same CRUD, query, and TTL methods as `VaultStore`, narrowed to the tables declared in `batch()`. Import it from `@vielzeug/vault/indexeddb` or `@vielzeug/vault/sqlite`.
+
+```ts
+// Adapter-specific type aliases — both resolve to TransactionalVaultStore.
+type SQLiteVaultStore<S extends AnySchema> = TransactionalVaultStore<S>;
+type IndexedDbVaultStore<S extends AnySchema> = TransactionalVaultStore<S>;
+```
+
+`SQLiteVaultStore` is exported from `@vielzeug/vault/sqlite`. `IndexedDbVaultStore` is exported from `@vielzeug/vault/indexeddb`.
 
 ## Errors
 
@@ -512,7 +477,7 @@ interface SQLiteVaultStore<S extends AnySchema>
 | --- | --- |
 | `VaultError` | Any Vault-originated validation, serialization, storage, or query error |
 | `VaultDisposedError` | An operation after the store or observer hub is disposed |
-| `VaultScopeError` | An IndexedDB transaction accesses a table outside its declared batch scope |
+| `VaultScopeError` | A `batch()` callback accesses a table outside its declared scope |
 | `VaultQuotaError` | A LocalStorage or SessionStorage write exceeds the browser quota |
 | `VaultMigrationError` | An IndexedDB migration callback throws |
 

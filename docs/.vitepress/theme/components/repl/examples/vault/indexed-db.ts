@@ -6,7 +6,7 @@ const schema = {
   logs: table('id'),
 }
 
-// createIndexedDB returns IndexedDbVaultStore with transactions and cursor iteration
+// createIndexedDB returns TransactionalVaultStore with transactions and cursor iteration
 const db = createIndexedDB({
   name: 'app-logs',
   schema,
@@ -26,7 +26,7 @@ await db.batch(['logs'], async (tx) => {
   await tx.deleteMany('logs', [1, 2]) // remove old entries in the same transaction
 })
 
-// iterate() — cursor-based streaming, only on IndexedDbVaultStore
+// iterate() — cursor-based streaming, only on TransactionalVaultStore
 // the full table is never loaded into memory at once
 const messages = []
 for await (const entry of db.iterate('logs')) {
@@ -38,10 +38,9 @@ const errors = await db.query('logs').equals('level', 'error').toArray()
 console.log('Errors:', errors.map((e) => e.message))
 console.log('Total logs:', await db.query('logs').count())
 
-const info = await db.debug()
-for (const t of info.tables) {
-  console.log(t.name + ':', t.recordCount, 'live,', t.expiredCount, 'expired')
-}
+// pruneExpired() reclaims storage from TTL-expired records that haven't been read
+const pruned = await db.pruneExpired()
+console.log('Pruned:', pruned)
 
 await db.dispose()`,
   name: 'IndexedDB — Atomic Batch & iterate()',

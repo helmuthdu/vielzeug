@@ -1,18 +1,15 @@
 export const pruneScheduleExample = {
-  code: `import { scheduleExpiredPrune, table, ttl } from '@vielzeug/vault'
+  code: `import { table, ttl } from '@vielzeug/vault'
 import { createMemory } from '@vielzeug/vault/memory'
 
-// scheduleExpiredPrune runs pruneExpired() on an interval.
-// Pass disposalSignal to auto-cancel when the store is torn down.
+// pruneExpired() sweeps all tables and removes expired records.
+// Schedule it with setInterval and cancel on disposalSignal.
 
 const schema = { sessions: table('token') }
 const db = createMemory({ schema })
 
-const stop = scheduleExpiredPrune(db, {
-  interval: ttl.minutes(15),
-  signal: db.disposalSignal,
-  onError: (err) => console.error('[vault] prune failed:', err),
-})
+const pruneInterval = setInterval(() => db.pruneExpired(), ttl.minutes(15))
+db.disposalSignal.addEventListener('abort', () => clearInterval(pruneInterval))
 
 // Write a session that expires in 1 ms
 await db.put('sessions', { token: 'abc', user: 1 }, ttl.ms(1))
@@ -26,8 +23,6 @@ const pruned = await db.pruneExpired()
 console.log('pruned:', pruned.sessions) // 1 (the expired session)
 console.log('after prune:', await db.count('sessions')) // 1
 
-// stop() before dispose, or rely on disposalSignal auto-cancel
-stop()
 await db.dispose()`,
-  name: 'TTL — scheduleExpiredPrune with disposalSignal',
+  name: 'TTL — pruneExpired with disposalSignal',
 };

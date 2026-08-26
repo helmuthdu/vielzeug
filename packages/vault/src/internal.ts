@@ -1,4 +1,3 @@
-import { error as logError } from './_dev';
 import { VaultDisposedError, VaultError } from './errors';
 import type { AnySchema, KeyOf, RecordOf, VaultKey } from './types';
 
@@ -54,15 +53,9 @@ export function decodeStorageTableFromKey(dbName: string, storageKey: string | n
 /** `observe()` is Vault's single reactivity primitive: a snapshot now, then on mutations. */
 export function createObserverHub<S extends AnySchema>(
   getAll: <K extends keyof S & string>(table: K) => Promise<RecordOf<S, K>[]>,
-  onError?: (error: unknown) => void,
 ) {
   const observers = new Map<string, Set<ObserverListener<unknown>>>();
   let disposed = false;
-
-  const reportObserverError = (error: unknown): void => {
-    if (onError) onError(error);
-    else logError('observer notification failed', error);
-  };
 
   const notify = <K extends keyof S & string>(table: K): void => {
     if (disposed) return;
@@ -82,12 +75,14 @@ export function createObserverHub<S extends AnySchema>(
         for (const listener of current) {
           try {
             listener(records as unknown[]);
-          } catch (error) {
-            reportObserverError(error);
+          } catch {
+            /* observer listener errors are intentionally swallowed */
           }
         }
       })
-      .catch(reportObserverError);
+      .catch(() => {
+        /* observer source errors are intentionally swallowed */
+      });
   };
 
   const observe = <K extends keyof S & string>(

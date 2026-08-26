@@ -5,7 +5,7 @@ package: vault
 category: Storage
 keywords: [storage, indexeddb, localstorage, sessionstorage, sqlite, ttl, browser, node, deno]
 related: [courier, forge, ripple]
-exports: [table, ttl, scheduleExpiredPrune, isExpired, createMemory, createLocalStorage, createSessionStorage, createIndexedDB, createSQLite]
+exports: [table, ttl, isExpired, createMemory, createLocalStorage, createSessionStorage, createIndexedDB, createSQLite, defineMigration]
 environments: [browser, node, deno]
 ---
 
@@ -91,10 +91,10 @@ try {
 - `/memory`, `/local-storage`, and `/session-storage` return portable `VaultStore` instances without loading other adapters.
 - `observe()` emits current and changed table snapshots.
 - `ttl` creates validated expiration durations.
-- `/indexeddb` returns `IndexedDbVaultStore` with `batch()` and `iterate()`.
+- `/indexeddb` returns `TransactionalVaultStore` with `batch()` and `iterate()`.
 - `createSQLite()` is an opt-in, driver-neutral subpath for Node, Bun, and Deno SQLite drivers.
 - `/indexeddb` also exports `defineMigration()` for schema upgrades.
-- `scheduleExpiredPrune()` removes stale TTL entries on an owned schedule.
+- `pruneExpired()` removes stale TTL entries on demand.
 
 </div>
 

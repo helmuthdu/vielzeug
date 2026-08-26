@@ -5,15 +5,20 @@ import { createLocalStorage } from '@vielzeug/vault/local-storage'
 const db = createLocalStorage({ name: 'cache-demo', schema: { cache: table('id') } })
 
 async function getOrComputeConfig() {
-  return db.getOrDefault('cache', 'config', () => ({
+  const existing = await db.get('cache', 'config')
+  if (existing) return existing
+
+  const record = {
     id: 'config',
     data: 'computed value',
     fetchedAt: Date.now(),
-  }), ttl.minutes(5))
+  }
+  await db.put('cache', record, ttl.minutes(5))
+  return record
 }
 
 const first = await getOrComputeConfig()
 const second = await getOrComputeConfig()
 console.log('Same cached record:', first.fetchedAt === second.fetchedAt)`,
-  name: 'Cache-First with getOrDefault',
+  name: 'Cache-First with get + put',
 };

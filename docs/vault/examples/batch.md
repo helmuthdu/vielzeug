@@ -1,6 +1,6 @@
 ---
 title: Vault Examples — IndexedDB Transactions
-description: Atomically change one or more tables with IndexedDbVaultStore.batch().
+description: Atomically change one or more tables with TransactionalVaultStore.batch().
 ---
 
 ## Atomic batch

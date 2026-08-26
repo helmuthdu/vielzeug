@@ -34,8 +34,11 @@ console.log('Page:', page.map((p) => p.name))
 console.log('Total matching:', total)
 console.log('Page 1 of', Math.ceil(total / pageSize))
 
-// startsWith with case-insensitive flag
-const mice = await db.query('products').startsWith('name', 'm', { ignoreCase: true }).toArray()
+// prefix match via filter()
+const mice = await db
+  .query('products')
+  .filter((p) => p.name.toLowerCase().startsWith('m'))
+  .toArray()
 console.log('Starts with m:', mice.map((p) => p.name))
 
 // predicate delete
