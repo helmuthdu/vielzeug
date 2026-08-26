@@ -154,7 +154,7 @@ interface Container {
 
 ## Errors
 
-- `ConduitError` — base class; `ConduitError.is(error)` narrows package errors.
+- `ConduitError` — base class; use `instanceof ConduitError` to narrow package errors.
 - `ConduitProviderNotFoundError` — dependency has no registration.
 - `ConduitCircularDependencyError` — static factory tuple graph contains a cycle.
 - `ConduitDuplicateRegistrationError` — token registered twice in one container.

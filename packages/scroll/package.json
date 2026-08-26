@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/scroll",
   "version": "2.1.2",
-  "description": "Virtual list engine — variable-height rows, smooth scrolling, and zero-layout-thrash rendering",
+  "description": "Virtual list engine \u2014 variable-height rows, smooth scrolling, and zero-layout-thrash rendering",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -45,5 +45,6 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
-  }
+  },
+  "sideEffects": false
 }

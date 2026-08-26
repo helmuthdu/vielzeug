@@ -28,21 +28,3 @@ describe('ScrollRangeError — subclass', () => {
     expect(new ScrollRangeError('out of range')).toBeInstanceOf(ScrollError);
   });
 });
-
-describe('ScrollError.is()', () => {
-  it('returns true for ScrollError and every subclass', () => {
-    expect(ScrollError.is(new ScrollConfigurationError('invalid option'))).toBe(true);
-    expect(ScrollError.is(new ScrollError('boom'))).toBe(true);
-    expect(ScrollError.is(new ScrollRangeError('out of range'))).toBe(true);
-  });
-
-  it('returns false for a plain Error', () => {
-    expect(ScrollError.is(new Error('plain'))).toBe(false);
-  });
-
-  it('returns false for non-error values', () => {
-    expect(ScrollError.is(undefined)).toBe(false);
-    expect(ScrollError.is('boom')).toBe(false);
-    expect(ScrollError.is({ message: 'boom' })).toBe(false);
-  });
-});

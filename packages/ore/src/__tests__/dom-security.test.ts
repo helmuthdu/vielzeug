@@ -275,18 +275,6 @@ describe('OreError', () => {
     expect(err.cause).toBe(cause);
   });
 
-  it('OreError.is() returns true for OreError instances', () => {
-    const err = new OreError('msg', { cause: new Error('x'), component: 'c', phase: 'setup' });
-
-    expect(OreError.is(err)).toBe(true);
-  });
-
-  it('OreError.is() returns false for plain errors', () => {
-    expect(OreError.is(new Error('plain'))).toBe(false);
-    expect(OreError.is(null)).toBe(false);
-    expect(OreError.is('string')).toBe(false);
-  });
-
   it('has .name === "OreLifecycleError"', () => {
     const err = new OreError('msg', { cause: new Error('x'), component: 'c', phase: 'setup' });
 

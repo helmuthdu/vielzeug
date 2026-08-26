@@ -148,7 +148,7 @@ if (!result.success) {
 
 ## Errors
 
-- `SpellError` — base class. Use `SpellError.is(error)` for cross-boundary narrowing.
+- `SpellError` — base class. Use `instanceof SpellError` for cross-boundary narrowing.
 - `SpellValidationError` — validation failure with `issues`, `bestMatch()`, `messagesAt()`, `flatten()`, and `flattenFirst()`.
 - `SpellDefinitionError` — schema cannot create portable definition.
 

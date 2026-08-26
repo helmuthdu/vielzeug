@@ -12,7 +12,7 @@ description: API reference for @vielzeug/necromancer animation ownership, groups
 | `animate()` | Animate one element | Sync | Defaults to a visible `180ms` duration |
 | `animateEach()` | Animate a unique element group | Sync | Non-zero `stagger` needs numeric `delay` |
 | `captureLayout()` | Capture positions and create a one-shot FLIP transition | Sync | Capture before changing layout |
-| `NecromancerError` | Base package error | Sync | Use `NecromancerError.is()` to narrow unknown errors |
+| `NecromancerError` | Base package error | Sync | Use `instanceof NecromancerError` to narrow unknown errors |
 
 ## Package Entry Point
 

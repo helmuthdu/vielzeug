@@ -5,10 +5,6 @@ export function tokenName(token: Token<unknown>): string {
 }
 
 export class ConduitError extends Error {
-  static is(error: unknown): error is ConduitError {
-    return error instanceof ConduitError;
-  }
-
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
     this.name = new.target.name;

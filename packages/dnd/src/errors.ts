@@ -5,10 +5,6 @@ export class DndError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is DndError {
-    return err instanceof DndError;
-  }
 }
 
 /** Thrown when a sortable action is called with an invalid scope not created by `createSortableScope()`. */

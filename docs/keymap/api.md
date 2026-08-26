@@ -391,5 +391,5 @@ const map = createKeymap(
 
 | Error | Trigger | Notable properties |
 | --- | --- | --- |
-| `KeymapError` | Lifecycle operation after disposal | `KeymapError.is(error)` narrows Keymap errors. |
+| `KeymapError` | Lifecycle operation after disposal | Use `instanceof KeymapError` to narrow Keymap errors. |
 | `KeymapParseError` | Strict shortcut parser receives invalid input | Extends `KeymapError`. |

@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/ward",
   "version": "2.1.0",
-  "description": "Role-based access control — typed permissions, wildcard patterns, and composable predicates",
+  "description": "Role-based access control \u2014 typed permissions, wildcard patterns, and composable predicates",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -43,5 +43,6 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
-  }
+  },
+  "sideEffects": false
 }

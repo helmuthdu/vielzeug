@@ -5,10 +5,6 @@ export class RefineError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is RefineError {
-    return err instanceof RefineError;
-  }
 }
 
 /** Thrown when a refine component receives an invalid or unsupported configuration. */

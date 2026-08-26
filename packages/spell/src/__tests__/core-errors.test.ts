@@ -1,4 +1,4 @@
-import { diagnostics, type ParseResult, SpellError, SpellValidationError, s } from '../index';
+import { diagnostics, type ParseResult, SpellValidationError, s } from '../index';
 
 const { createParseContext, prependIssuePath } = diagnostics;
 
@@ -45,13 +45,6 @@ describe('SpellValidationError', () => {
     expect(result).toMatchObject({ success: false });
 
     if (!result.success) expect(result.error.bestMatch()?.[0]?.path).toEqual(['value']);
-  });
-
-  it('keeps subtype narrowing on the base error type only', () => {
-    const error = new SpellValidationError([{ code: 'custom', message: 'Invalid', path: [] }]);
-
-    expect(SpellError.is(error)).toBe(true);
-    expect(SpellError.is(new Error('plain'))).toBe(false);
   });
 });
 

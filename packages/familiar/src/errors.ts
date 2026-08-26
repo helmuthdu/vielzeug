@@ -5,10 +5,6 @@ export class FamiliarError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is FamiliarError {
-    return err instanceof FamiliarError;
-  }
 }
 
 /** Thrown when invalid options are passed to a Familiar pool factory. */

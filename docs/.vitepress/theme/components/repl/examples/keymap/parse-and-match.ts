@@ -26,11 +26,11 @@ for (const [shortcut, modKey] of shortcuts) {
 }
 
 // parseShortcut() throws KeymapParseError for ambiguous or invalid steps.
-// Catch it with instanceof KeymapError (or KeymapError.is()) to handle any keymap error.
+// Catch it with instanceof KeymapError to handle any keymap error.
 try {
   parseShortcut('ctrl+k+j', 'ctrl') // two non-modifier keys in one step — ambiguous
 } catch (err) {
-  console.log('Caught:', KeymapError.is(err), err instanceof KeymapParseError, err.message)
+  console.log('Caught:', err instanceof KeymapError, err instanceof KeymapParseError, err.message)
 }`,
   name: 'Parse & Match',
 };

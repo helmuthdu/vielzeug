@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore: add sideEffects: false for tree-shaking.",
+      "packageName": "@vielzeug/tempo",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tempo"
+}

@@ -323,7 +323,7 @@ type StreamHandler<TInput, TChunk> = (input: TInput) => AsyncIterable<TChunk> | 
 
 | Error | Trigger | Notable property |
 | --- | --- | --- |
-| `FamiliarError` | Base class for all Familiar errors | `FamiliarError.is(error)` |
+| `FamiliarError` | Base class for all Familiar errors | Use `instanceof FamiliarError` to narrow |
 | `FamiliarInvalidOptionsError` | Invalid factory or test options | — |
 | `FamiliarQueueFullError` | Queue limit reached with `onFull: 'reject'` | `maxQueue` |
 | `FamiliarTaskError` | Worker handler throws or payload cannot clone | `cause` |

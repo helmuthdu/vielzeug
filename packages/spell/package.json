@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/spell",
   "version": "2.1.2",
-  "description": "Schema-first validation and parsing — runtime type checking, coercion, and custom refinements",
+  "description": "Schema-first validation and parsing \u2014 runtime type checking, coercion, and custom refinements",
   "repository": {
     "type": "git",
     "url": "https://github.com/helmuthdu/vielzeug",
@@ -67,5 +67,6 @@
     "typescript": "^6.0.3",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
-  }
+  },
+  "sideEffects": false
 }

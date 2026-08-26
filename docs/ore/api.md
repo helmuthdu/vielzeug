@@ -574,7 +574,6 @@ type OreErrorPhase = 'each-reconcile' | 'form-reset' | 'mounted' | 'setup';
 ## Errors
 
 `OreError` is the base class for every Ore error class — `err instanceof OreError` catches all of them.
-`OreError.is(err)` is the equivalent static type-guard.
 
 - **`OreApiError`** — thrown when the `ore` API itself is misused: calling `define()` with a duplicate tag, calling a lifecycle hook (`inject`, `onMounted`, `onCleanup`, `onEvent`, …) outside of `setup()`, or passing an invalid prop definition to `define()`.
 - **`OreInternalError`** — thrown when an Ore invariant fails, indicating a package bug rather than invalid application code.

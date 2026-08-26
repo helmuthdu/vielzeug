@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { animate, NecromancerError, NecromancerUnsupportedError } from '../index';
+import { animate, NecromancerUnsupportedError } from '../index';
 import { installFakeAnimations } from '../testing';
 
 describe('animate', () => {
@@ -218,7 +218,6 @@ describe('animate', () => {
     Object.defineProperty(element, 'animate', { configurable: true, value: undefined });
 
     expect(() => animate(element, [])).toThrow(NecromancerUnsupportedError);
-    expect(NecromancerError.is(new NecromancerUnsupportedError('missing'))).toBe(true);
   });
 
   it('supports explicit resource disposal', async () => {

@@ -16,7 +16,7 @@ description: Complete API reference for Dnd.
 | `DropZoneOptions.accept`   | Filter file types before processing          | Sync           | Mismatch between MIME and extension can reject files unexpectedly |
 | `DropZoneOptions.maxFiles` | Cap accepted files per drop                  | Sync           | Excess accepted files become rejected; `onDropRejected` is called |
 | `matchesAccept()`          | Test a single `File` against an accept list  | Sync           | Extension patterns are case-insensitive; empty list accepts all   |
-| `DndError`                 | Base class for Dnd errors                    | Sync           | Use `DndError.is()` to narrow unknown errors                      |
+| `DndError`                 | Base class for Dnd errors                    | Sync           | Use `instanceof DndError` to narrow unknown errors                |
 
 ## Package Entry Point
 
@@ -491,5 +491,5 @@ const next = applyReorder(items, orderedIds, (item) => item.id);
 
 | Error | Trigger | Notable property |
 | --- | --- | --- |
-| `DndError` | Base class for package errors | `DndError.is(error)` |
+| `DndError` | Base class for package errors | Use `instanceof DndError` to narrow |
 | `DndScopeError` | A sortable receives a scope not created by `createSortableScope()` | — |

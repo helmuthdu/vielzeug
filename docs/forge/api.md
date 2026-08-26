@@ -334,7 +334,7 @@ type FormDraftCodec<TValues extends Record<string, unknown>, S extends AnySchema
 
 | Error | Trigger | Notable properties |
 | --- | --- | --- |
-| `ForgeError` | Base Forge error | `ForgeError.is(error)` narrows unknown values. |
+| `ForgeError` | Base Forge error | Use `instanceof ForgeError` to narrow unknown values. |
 | `ForgeConfigError` | Unsafe key or unsupported form value | Extends `ForgeError`. |
 | `ForgeDisposedError` | Operation or subscription after disposal | Message names the attempted operation. |
 | `ForgeSubmitError` | Concurrent `submit()` call | Extends `ForgeError`. |

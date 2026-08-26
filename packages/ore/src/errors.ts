@@ -24,10 +24,6 @@ export class OreError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is OreError {
-    return err instanceof OreError;
-  }
 }
 
 /** Thrown when Ore API is called incorrectly (e.g. outside setup, duplicate define, invalid prop). */

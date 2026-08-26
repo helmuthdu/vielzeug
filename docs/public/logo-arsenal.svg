@@ -8,9 +8,9 @@
    version="1.1"
    viewBox="0 0 64 64"
    width="64"
+   xmlns="http://www.w3.org/2000/svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
   <defs
      id="defs2" />
@@ -35,8 +35,8 @@
      showgrid="false" />
   <g
      id="g1"
-     transform="rotate(30,6.9361025,46.470651)"
-     style="stroke-width:3;stroke-dasharray:none">
+     style="stroke-width:3;stroke-dasharray:none"
+     transform="rotate(30,6.9361025,46.470651)">
     <ellipse
        cx="-32.936699"
        cy="-21.406748"

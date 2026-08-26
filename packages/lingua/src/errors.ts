@@ -4,10 +4,6 @@ export class LinguaError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(error: unknown): error is LinguaError {
-    return error instanceof LinguaError;
-  }
 }
 
 export class LinguaDisposedError extends LinguaError {

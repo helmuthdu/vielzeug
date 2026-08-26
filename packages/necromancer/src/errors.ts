@@ -5,11 +5,6 @@ export class NecromancerError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  /** Narrows an unknown error to any Necromancer-originated error. */
-  static is(error: unknown): error is NecromancerError {
-    return error instanceof NecromancerError;
-  }
 }
 
 /** Thrown when a Necromancer-owned option is invalid. */

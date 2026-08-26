@@ -5,10 +5,6 @@ export class WardError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is WardError {
-    return err instanceof WardError;
-  }
 }
 
 /** Thrown when a rule definition or principal is malformed. */

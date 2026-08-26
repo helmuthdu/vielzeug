@@ -30,20 +30,6 @@ describe('OreLifecycleError', () => {
     expect(err.cause).toBe(cause);
     expect(err.name).toBe('OreLifecycleError');
   });
-
-  describe('OreError.is()', () => {
-    it('recognizes Ore errors only', () => {
-      const err = new OreLifecycleError('msg', {
-        cause: new Error('cause'),
-        component: 'x',
-        phase: 'setup',
-      });
-
-      expect(OreError.is(err)).toBe(true);
-      expect(OreError.is(new Error('plain'))).toBe(false);
-      expect(OreError.is(null)).toBe(false);
-    });
-  });
 });
 
 describe('invariant()', () => {

@@ -25,26 +25,6 @@ describe('KeymapError', () => {
     expect(err.cause).toBe(cause);
   });
 
-  describe('is()', () => {
-    it('returns true for a KeymapError instance', () => {
-      expect(KeymapError.is(new KeymapError('x'))).toBe(true);
-    });
-
-    it('returns true for a KeymapParseError instance (subclass)', () => {
-      expect(KeymapError.is(new KeymapParseError('x'))).toBe(true);
-    });
-
-    it('returns false for a plain Error', () => {
-      expect(KeymapError.is(new Error('x'))).toBe(false);
-    });
-
-    it('returns false for non-error values', () => {
-      expect(KeymapError.is('not an error')).toBe(false);
-      expect(KeymapError.is(null)).toBe(false);
-      expect(KeymapError.is(undefined)).toBe(false);
-    });
-  });
-
   describe('real throw sites surface KeymapParseError instances', () => {
     it('parseShortcut() throws a KeymapParseError for an invalid step', () => {
       expect(() => parseShortcut('ctrl')).toThrow(KeymapParseError);

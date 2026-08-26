@@ -5,10 +5,6 @@ export class ScrollError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is ScrollError {
-    return err instanceof ScrollError;
-  }
 }
 
 /** Thrown when a virtualizer receives an invalid static configuration. */

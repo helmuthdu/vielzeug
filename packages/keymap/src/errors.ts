@@ -5,10 +5,6 @@ export class KeymapError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is KeymapError {
-    return err instanceof KeymapError;
-  }
 }
 
 /** Thrown when a shortcut string cannot be parsed — ambiguous or invalid key step. */

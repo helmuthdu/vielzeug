@@ -5,10 +5,6 @@ export class ForgeError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
-
-  static is(err: unknown): err is ForgeError {
-    return err instanceof ForgeError;
-  }
 }
 
 /** Thrown when any method is called on a disposed form. */

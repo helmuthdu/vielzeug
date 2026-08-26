@@ -17,7 +17,7 @@ description: Complete API reference for @vielzeug/lingua.
 | `createFormatter()` | Format Intl values from `/format` | Sync | Import from subpath |
 | `validateCatalog()` | Check explicit plural forms from `/validate` | Sync | Import from subpath |
 | `compareCatalogs()` | Compare key parity across locales from `/validate` | Sync | First locale is the base; import from subpath |
-| `LinguaError` | Base class for Lingua errors | Sync | Use `LinguaError.is()` for broad narrowing |
+| `LinguaError` | Base class for Lingua errors | Sync | Use `instanceof LinguaError` for broad narrowing |
 
 ## Package Entry Point
 

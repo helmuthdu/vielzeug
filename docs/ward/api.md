@@ -542,6 +542,6 @@ export type WardOptions<TAction extends string = string, TData = unknown> = {
 
 ## Errors
 
-- `WardError` is the base error class; use `WardError.is(value)` for narrowing.
+- `WardError` is the base error class; use `instanceof WardError` for narrowing.
 - `WardConfigError` reports malformed rules, invalid `createWard` options (`onConflict`, `maxConflicts`), invalid principals, and strict conflict initialization.
 - `WardPredicateError` reports a throwing synchronous predicate and includes its `ruleIndex` and cause.

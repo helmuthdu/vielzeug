@@ -1096,7 +1096,7 @@ interface GridVirtualizer {
 
 | Class | Thrown when | Notable properties |
 | --- | --- | --- |
-| `ScrollError` | Base class for every Scroll error. | `ScrollError.is(error)` narrows errors from this package. |
+| `ScrollError` | Base class for every Scroll error. | Use `instanceof ScrollError` to narrow unknown errors narrows errors from this package. |
 | `ScrollConfigurationError` | A constructor or `update()` receives invalid static configuration. | Extends `ScrollError`; malformed JavaScript values also use this class. |
 | `ScrollRangeError` | A DOM virtual-list render detects that a caller mutated its items array without calling `setItems()` again. | Extends `ScrollError`; message includes stale index and current item count. |
 

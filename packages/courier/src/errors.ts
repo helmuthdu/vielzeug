@@ -112,7 +112,7 @@ export class CourierSchemaValidationError extends CourierError {
 /** Thrown when a method is called on a disposed client instance. */
 export class CourierDisposedError extends CourierError {
   constructor(clientName: string) {
-    super(`[courier] ${clientName} disposed`);
+    super(`${clientName} disposed`);
   }
 }
 
