@@ -3,6 +3,8 @@ import type { PulseEvent } from '../index';
 import { createPulse } from '../pulse';
 import { frames, MockWebSocket, openPulse } from './_fixtures';
 
+type PulseErrorEvent = Extract<PulseEvent, { type: 'error' }>;
+
 describe('createPulse lifecycle', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -104,7 +106,7 @@ describe('createPulse lifecycle', () => {
   });
 
   it('reports terminal reconnect failure through tap error events', async () => {
-    const errors: PulseEvent[] = [];
+    const errors: PulseErrorEvent[] = [];
     const { pulse, socket } = await openPulse({ reconnect: { delay: 0, maxAttempts: 1 } });
 
     pulse.tap((e) => {

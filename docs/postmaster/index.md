@@ -147,7 +147,7 @@ await store.dispose();
 
 - `defineJobs()` — Typed job registry with payload inference and validation.
 - `createPostmaster()` — Processor with leased claims, heartbeat renewal, and crash recovery.
-- `enqueue()` — Persist a job and wake the processor.
+- `enqueue()` — Persist a job and wake the processor, with optional delayed eligibility via `availableAt`.
 - `flush()` — Process every available job until the queue is empty.
 - `retry()` / `remove()` — Recover or discard dead-letter jobs.
 - `tap()` — Typed runtime events for enqueued, started, completed, retry-scheduled, dead-lettered, removed, lease-lost, and processor-error.

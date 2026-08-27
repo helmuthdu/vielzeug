@@ -150,10 +150,28 @@ await store.dispose();
 ### `enqueue()`
 
 ```ts
-enqueue<K extends keyof J & string>(name: K, payload: InferJobPayload<J[K]>): Promise<PostmasterEntry>;
+enqueue<K extends keyof J & string>(
+  name: K,
+  payload: InferJobPayload<J[K]>,
+  options?: EnqueueOptions,
+): Promise<PostmasterEntry>;
 ```
 
-Validates the payload (if `validate` is defined), derives the key, persists the job, and wakes the processor. Throws `PostmasterError` for an empty key or non-JSON-serializable payload.
+Validates the payload (if `validate` is defined), derives the key, persists the job, and wakes the processor. Throws `PostmasterError` for an empty key, non-JSON-serializable payload, or invalid `availableAt`.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `name` | `K` | Registered job name |
+| `payload` | `InferJobPayload<J[K]>` | Job payload (validated if `validate` is defined) |
+| `options.availableAt` | `number` | Earliest epoch timestamp (ms) the job may be claimed. Defaults to the Postmaster clock. Must be a finite non-negative safe integer. |
+
+**Delayed eligibility.** The job persists immediately but cannot be claimed before `availableAt`. Postmaster does not guarantee execution at that time — only that the job will not be claimed earlier. A live processor (`start()` or `flush()`) is required for execution. Past timestamps remain immediately eligible.
+
+**Example**
+
+```ts
+await postmaster.enqueue('sendDigest', { userId }, { availableAt: Date.now() + 60_000 });
+```
 
 ---
 
@@ -237,6 +255,18 @@ dispose(): Promise<void>;
 Aborts owned work, releases all active leases, and tears down subscriptions. Idempotent. Does not dispose the borrowed store.
 
 ## Types
+
+### `EnqueueOptions`
+
+```ts
+interface EnqueueOptions {
+  readonly availableAt?: number;
+}
+```
+
+Options for `enqueue()`. `availableAt` is the earliest epoch timestamp (ms) at which the job may be claimed. Defaults to the Postmaster clock at enqueue time. Past timestamps remain immediately eligible. Postmaster does not guarantee execution at the requested time — only that the job will not be claimed before it. A live processor is required for execution.
+
+---
 
 ### `JobDefinition<T>`
 

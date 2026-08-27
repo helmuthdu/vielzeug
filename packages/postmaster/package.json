@@ -65,6 +65,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "@vielzeug/courier": "workspace:*",
     "fake-indexeddb": "^6.2.5",
     "typescript": "^6.0.3",
     "vite": "^8.2.1",

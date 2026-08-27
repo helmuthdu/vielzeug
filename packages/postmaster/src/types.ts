@@ -124,11 +124,28 @@ export interface CreatePostmasterOptions<J extends JobDefinitions> {
   readonly store: PostmasterStore;
 }
 
+/**
+ * Options for {@link Postmaster.enqueue}.
+ *
+ * `availableAt` is the earliest epoch timestamp (ms) at which the job may be
+ * claimed. Defaults to the Postmaster clock at enqueue time. Past timestamps
+ * remain immediately eligible. Postmaster does not guarantee execution at the
+ * requested time — only that the job will not be claimed before it. A live
+ * processor (`start()` or `flush()`) is required for execution.
+ */
+export interface EnqueueOptions {
+  readonly availableAt?: number;
+}
+
 export interface Postmaster<J extends JobDefinitions> {
   readonly disposalSignal: AbortSignal;
   dispose(): Promise<void>;
   readonly disposed: boolean;
-  enqueue<K extends keyof J & string>(name: K, payload: InferJobPayload<J[K]>): Promise<PostmasterEntry>;
+  enqueue<K extends keyof J & string>(
+    name: K,
+    payload: InferJobPayload<J[K]>,
+    options?: EnqueueOptions,
+  ): Promise<PostmasterEntry>;
   flush(options?: { signal?: AbortSignal }): Promise<FlushResult>;
   list(filter?: EntryFilter): Promise<PostmasterEntry[]>;
   remove(id: string): Promise<RemoveResult>;

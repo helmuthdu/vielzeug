@@ -16,7 +16,7 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2022",
-    "types": ["vitest/globals", "vite/client"],
+    "types": ["node", "vitest/globals", "vite/client"],
     "useDefineForClassFields": true,
     "verbatimModuleSyntax": true
   }

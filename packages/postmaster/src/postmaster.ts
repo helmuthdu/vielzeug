@@ -15,6 +15,7 @@ import {
 } from './store-ops.ts';
 import type {
   CreatePostmasterOptions,
+  EnqueueOptions,
   EntryFilter,
   FlushResult,
   InferJobPayload,
@@ -55,6 +56,14 @@ function assertLeaseDuration(value: number): void {
   if (!Number.isInteger(value) || value < 1_000) {
     throw new PostmasterError('leaseDuration must be a positive integer of at least 1000ms');
   }
+}
+
+function assertAvailableAt(value: number | undefined, defaultValue: number): number {
+  if (value === undefined) return defaultValue;
+  if (!Number.isFinite(value) || value < 0 || !Number.isSafeInteger(value)) {
+    throw new PostmasterError('availableAt must be a finite non-negative safe integer');
+  }
+  return value;
 }
 
 export function createPostmaster<J extends JobDefinitions>(options: CreatePostmasterOptions<J>): Postmaster<J> {
@@ -290,19 +299,24 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
     get disposed() {
       return disposed;
     },
-    async enqueue<K extends keyof J & string>(name: K, payload: InferJobPayload<J[K]>): Promise<PostmasterEntry> {
+    async enqueue<K extends keyof J & string>(
+      name: K,
+      payload: InferJobPayload<J[K]>,
+      options?: EnqueueOptions,
+    ): Promise<PostmasterEntry> {
       assertLive();
       const job = jobs[name];
       if (!job) throw new PostmasterJobError(`no job definition is registered for "${name}"`);
+      const now = clock();
+      const availableAt = assertAvailableAt(options?.availableAt, now);
       const parsed = runValidate(job.validate, payload);
       const key = job.key(parsed);
       if (typeof key !== 'string' || key.length === 0) {
         throw new PostmasterError(`job "${name}" returned an empty key`);
       }
-      const now = clock();
       const entry: StoredJob = {
         attempts: 0,
-        availableAt: now,
+        availableAt,
         createdAt: now,
         id: crypto.randomUUID(),
         key,

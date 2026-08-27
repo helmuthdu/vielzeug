@@ -2,6 +2,8 @@ import { PulseConnectionError, PulseProtocolError, PulseTimeoutError } from '../
 import type { PulseEvent } from '../index';
 import { frames, MockWebSocket, openPulse } from './_fixtures';
 
+type PulseErrorEvent = Extract<PulseEvent, { type: 'error' }>;
+
 describe('createPulse messaging', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -72,7 +74,7 @@ describe('createPulse messaging', () => {
   });
 
   it('reports malformed and server error frames through tap error events', async () => {
-    const errors: PulseEvent[] = [];
+    const errors: PulseErrorEvent[] = [];
     const { pulse, socket } = await openPulse({});
 
     pulse.tap((e) => {

@@ -3,6 +3,7 @@ export { PostmasterDisposedError, PostmasterError, PostmasterJobError } from './
 export { createPostmaster } from './postmaster.ts';
 export type {
   CreatePostmasterOptions,
+  EnqueueOptions,
   EntryFilter,
   EntryStatus,
   FlushResult,

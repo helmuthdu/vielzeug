@@ -156,6 +156,16 @@ const jobs = defineJobs({
 - Delay must be finite and non-negative.
 - Lifecycle aborts caused by disposal are not classified as job failures.
 
+## Delayed eligibility
+
+`enqueue()` accepts an optional `availableAt` timestamp. The job persists immediately but cannot be claimed before that time. Use this for scheduled writes, cooldowns, or any work that must survive a reload but should not run yet.
+
+```ts
+await postmaster.enqueue('sendDigest', { userId }, { availableAt: Date.now() + 60_000 });
+```
+
+Postmaster does not guarantee execution at `availableAt` — only that the job will not be claimed earlier. A live processor (`start()` or `flush()`) is required for execution. In a browser, a closed page or suspended service worker will run the job when the processor next becomes active. Past timestamps remain immediately eligible. The same mechanism already backs retry delays, so delayed eligibility reuses the existing claim, wake, and persistence paths.
+
 ## Dead-letter recovery
 
 Jobs that exhaust retries or hit a terminal failure move to dead-letter. Inspect, retry, or remove them.

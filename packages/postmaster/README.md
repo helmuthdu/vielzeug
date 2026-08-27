@@ -45,6 +45,11 @@ const postmaster = createPostmaster({ jobs, store });
 await postmaster.enqueue('createTodo', { id: crypto.randomUUID(), title: 'Buy milk' });
 await postmaster.start();
 
+// Delayed eligibility — the job persists now but cannot be claimed until `availableAt`:
+await postmaster.enqueue('createTodo', { id: crypto.randomUUID(), title: 'Buy milk' }, {
+  availableAt: Date.now() + 60_000,
+});
+
 // On page unload:
 await postmaster.dispose();
 await store.dispose();
@@ -53,6 +58,14 @@ await store.dispose();
 ## At-least-once delivery
 
 Postmaster provides at-least-once delivery. Every job must derive a stable idempotency key, and handlers must send or otherwise enforce that key. Never assume exactly-once execution.
+
+## Delayed eligibility
+
+`enqueue()` accepts an optional `availableAt` timestamp. The job persists immediately but cannot be claimed before that time. Postmaster does not guarantee execution at `availableAt` — only that the job will not be claimed earlier. A live processor (`start()` or `flush()`) is required for execution; in a browser, a closed page or suspended service worker will run the job when the processor next becomes active. Past timestamps remain immediately eligible.
+
+```ts
+await postmaster.enqueue('sendDigest', { userId }, { availableAt: Date.now() + 60_000 });
+```
 
 ## Entry points
 

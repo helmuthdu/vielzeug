@@ -1268,6 +1268,7 @@ export default defineConfig({
             { link: '/postmaster/usage#postmaster-jobs-vs-courier-mutations', text: 'Jobs vs Courier' },
             { link: '/postmaster/usage#payload-and-version-migration', text: 'Migration' },
             { link: '/postmaster/usage#retry-semantics', text: 'Retries' },
+            { link: '/postmaster/usage#delayed-eligibility', text: 'Delayed Eligibility' },
             { link: '/postmaster/usage#dead-letter-recovery', text: 'Dead-Letter' },
             { link: '/postmaster/usage#lifecycle-and-disposal', text: 'Lifecycle' },
             { link: '/postmaster/usage#events', text: 'Events' },
@@ -1298,6 +1299,7 @@ export default defineConfig({
           items: [
             { link: '/postmaster/examples/queue-offline-courier-mutations', text: 'Offline Mutations' },
             { link: '/postmaster/examples/resume-when-network-returns', text: 'Network Recovery' },
+            { link: '/postmaster/examples/delayed-eligibility', text: 'Delayed Eligibility' },
             { link: '/postmaster/examples/recover-dead-letter-jobs', text: 'Dead-Letter Recovery' },
             { link: '/postmaster/examples/service-worker-background-sync', text: 'Service Worker' },
           ],

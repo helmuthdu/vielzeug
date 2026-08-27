@@ -1,13 +1,20 @@
-import { createPostmaster, defineJobs, PostmasterDisposedError, PostmasterJobError } from '../index.ts';
+import {
+  createPostmaster,
+  defineJobs,
+  type JobContext,
+  PostmasterDisposedError,
+  PostmasterError,
+  PostmasterJobError,
+} from '../index.ts';
 import { createMemoryPostmasterStore } from '../testing.ts';
 
 const textValidator = (value: unknown) => String(value);
 
-function createJobs(execute: (payload: string, context: { attempt: number }) => Promise<void>) {
+function createJobs(execute: (payload: string, context: JobContext) => Promise<void>) {
   return defineJobs({
     send: {
-      execute,
-      key: (payload) => `send:${payload}`,
+      execute: execute as (payload: unknown, context: JobContext) => Promise<void>,
+      key: (payload: unknown) => `send:${payload}`,
       validate: textValidator,
       version: 1,
     },
@@ -38,7 +45,7 @@ describe('Postmaster', () => {
   it('reschedules only explicitly classified failures', async () => {
     let now = 100;
     const execute = vi
-      .fn<(_: string, context: { attempt: number }) => Promise<void>>()
+      .fn<(payload: unknown, context: JobContext) => Promise<void>>()
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce(undefined);
     const postmaster = createPostmaster({
@@ -46,7 +53,7 @@ describe('Postmaster', () => {
       jobs: defineJobs({
         send: {
           execute,
-          key: (payload: string) => payload,
+          key: (payload: unknown) => String(payload),
           retry: { delay: () => 50, maxAttempts: 2, shouldRetry: () => true },
           validate: textValidator,
           version: 1,
@@ -189,7 +196,7 @@ describe('tap()', () => {
       jobs: defineJobs({
         send: {
           execute,
-          key: (payload: string) => payload,
+          key: (payload: unknown) => String(payload),
           retry: { delay: () => 50, maxAttempts: 2, shouldRetry: () => true },
           validate: textValidator,
           version: 1,
@@ -286,5 +293,168 @@ describe('tap()', () => {
     await postmaster.dispose();
 
     expect(() => postmaster.tap(vi.fn())).toThrow(PostmasterDisposedError);
+  });
+});
+
+describe('delayed enqueue', () => {
+  it('persists a future availableAt and skips it during flush', async () => {
+    const execute = vi.fn(async () => {});
+    const now = 100;
+    const postmaster = createPostmaster({
+      clock: () => now,
+      jobs: createJobs(execute),
+      store: createMemoryPostmasterStore(),
+    });
+
+    const entry = await postmaster.enqueue('send', 'hello', { availableAt: 500 });
+
+    expect(entry).toMatchObject({ availableAt: 500, status: 'queued' });
+    await expect(postmaster.flush()).resolves.toEqual({
+      completed: 0,
+      deadLettered: 0,
+      processed: 0,
+      retryScheduled: 0,
+    });
+    expect(execute).not.toHaveBeenCalled();
+    await postmaster.dispose();
+  });
+
+  it('executes the job once the clock reaches availableAt', async () => {
+    const execute = vi.fn(async () => {});
+    let now = 100;
+    const postmaster = createPostmaster({
+      clock: () => now,
+      jobs: createJobs(execute),
+      store: createMemoryPostmasterStore(),
+    });
+
+    await postmaster.enqueue('send', 'hello', { availableAt: 500 });
+    await expect(postmaster.flush()).resolves.toMatchObject({ processed: 0 });
+
+    now = 500;
+    await expect(postmaster.flush()).resolves.toEqual({
+      completed: 1,
+      deadLettered: 0,
+      processed: 1,
+      retryScheduled: 0,
+    });
+    await postmaster.dispose();
+  });
+
+  it('processes a past availableAt immediately', async () => {
+    const execute = vi.fn(async () => {});
+    const postmaster = createPostmaster({
+      clock: () => 1000,
+      jobs: createJobs(execute),
+      store: createMemoryPostmasterStore(),
+    });
+
+    await postmaster.enqueue('send', 'hello', { availableAt: 0 });
+    await expect(postmaster.flush()).resolves.toEqual({
+      completed: 1,
+      deadLettered: 0,
+      processed: 1,
+      retryScheduled: 0,
+    });
+    await postmaster.dispose();
+  });
+
+  it('defaults availableAt to the current clock when omitted', async () => {
+    const execute = vi.fn(async () => {});
+    const postmaster = createPostmaster({
+      clock: () => 200,
+      jobs: createJobs(execute),
+      store: createMemoryPostmasterStore(),
+    });
+
+    const entry = await postmaster.enqueue('send', 'hello');
+    expect(entry.availableAt).toBe(200);
+    expect(entry.availableAt).toBe(entry.createdAt);
+    await postmaster.dispose();
+  });
+
+  it('rejects invalid availableAt values before persistence', async () => {
+    const postmaster = createPostmaster({
+      clock: () => 100,
+      jobs: createJobs(async () => {}),
+      store: createMemoryPostmasterStore(),
+    });
+
+    await expect(postmaster.enqueue('send', 'hello', { availableAt: -1 })).rejects.toThrow(PostmasterError);
+    await expect(postmaster.enqueue('send', 'hello', { availableAt: Number.NaN })).rejects.toThrow(PostmasterError);
+    await expect(postmaster.enqueue('send', 'hello', { availableAt: 1.5 })).rejects.toThrow(PostmasterError);
+    await expect(postmaster.enqueue('send', 'hello', { availableAt: Number.POSITIVE_INFINITY })).rejects.toThrow(
+      PostmasterError,
+    );
+    await expect(postmaster.list()).resolves.toEqual([]);
+    await postmaster.dispose();
+  });
+
+  it('emits an enqueued event with the scheduled availableAt', async () => {
+    const handler = vi.fn();
+    const postmaster = createPostmaster({
+      clock: () => 100,
+      jobs: createJobs(async () => {}),
+      store: createMemoryPostmasterStore(),
+    });
+    postmaster.tap(handler);
+
+    const entry = await postmaster.enqueue('send', 'hello', { availableAt: 300 });
+
+    expect(handler).toHaveBeenCalledWith({ entry, type: 'enqueued' });
+    expect(entry.availableAt).toBe(300);
+    await postmaster.dispose();
+  });
+
+  it('retains a delayed job across processor recreation', async () => {
+    const execute = vi.fn(async () => {});
+    let now = 100;
+    const store = createMemoryPostmasterStore();
+    const first = createPostmaster({ clock: () => now, jobs: createJobs(execute), store });
+
+    await first.enqueue('send', 'hello', { availableAt: 500 });
+    await first.dispose();
+
+    now = 500;
+    const second = createPostmaster({ clock: () => now, jobs: createJobs(execute), store });
+    await expect(second.flush()).resolves.toEqual({
+      completed: 1,
+      deadLettered: 0,
+      processed: 1,
+      retryScheduled: 0,
+    });
+    await second.dispose();
+  });
+
+  it('wakes the started processor when a delayed job becomes eligible', async () => {
+    vi.useFakeTimers();
+    try {
+      const execute = vi.fn(async () => {});
+      let now = 100;
+      const postmaster = createPostmaster({
+        clock: () => now,
+        jobs: createJobs(execute),
+        store: createMemoryPostmasterStore(),
+      });
+
+      await postmaster.enqueue('send', 'hello', { availableAt: 500 });
+      await postmaster.start();
+
+      // Let the pump settle: processNext finds nothing claimable, then schedule() arms the wake timer.
+      for (let i = 0; i < 10; i++) {
+        await vi.advanceTimersByTimeAsync(0);
+      }
+
+      now = 500;
+      await vi.advanceTimersByTimeAsync(400);
+      for (let i = 0; i < 10; i++) {
+        await vi.advanceTimersByTimeAsync(0);
+      }
+
+      expect(execute).toHaveBeenCalledTimes(1);
+      await postmaster.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

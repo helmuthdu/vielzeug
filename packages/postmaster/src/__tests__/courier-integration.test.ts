@@ -12,7 +12,7 @@ const objectValidator = (value: unknown) => {
 describe('Postmaster ecosystem integration', () => {
   it('delivers a Courier mutation and invalidates the query cache', async () => {
     const fetchMock = vi.fn(
-      async () =>
+      async (_input: unknown, _init?: RequestInit) =>
         new Response(JSON.stringify({ ok: true }), { headers: { 'content-type': 'application/json' }, status: 200 }),
     );
     const courier = createCourier({ baseUrl: 'https://api.example.com', fetch: fetchMock as unknown as typeof fetch });
@@ -32,7 +32,7 @@ describe('Postmaster ecosystem integration', () => {
               }),
           });
         },
-        key: (payload) => payload.id,
+        key: (payload: unknown) => (payload as { id: string }).id,
         retry: { maxAttempts: 3, shouldRetry: (error) => error instanceof CourierNetworkError },
         validate: objectValidator,
         version: 1,
@@ -46,8 +46,8 @@ describe('Postmaster ecosystem integration', () => {
     await expect(postmaster.flush()).resolves.toMatchObject({ completed: 1, processed: 1 });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [, init] = fetchMock.mock.calls[0];
-    expect((init as RequestInit).headers).toMatchObject({ 'idempotency-key': 'todo-1' });
+    const init = fetchMock.mock.calls[0]?.[1];
+    expect(init?.headers).toMatchObject({ 'idempotency-key': 'todo-1' });
     expect(courier.queries.getSnapshot(['todos'])?.updatedAt).toBe(0);
 
     await courier.dispose();
@@ -79,7 +79,7 @@ describe('Postmaster ecosystem integration', () => {
               }),
           });
         },
-        key: (payload) => payload.id,
+        key: (payload: unknown) => (payload as { id: string }).id,
         retry: { delay: () => 1000, maxAttempts: 3, shouldRetry: (error) => error instanceof CourierNetworkError },
         validate: objectValidator,
         version: 1,
