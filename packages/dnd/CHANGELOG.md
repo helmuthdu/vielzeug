@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/dnd
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Fri, 28 Aug 2026 07:44:01 GMT and should not be manually modified.
+
+## 2.2.0
+Fri, 28 Aug 2026 07:44:01 GMT
+
+### Minor changes
+
+- Add onInteraction callback and SortableInteractionEvent type for structured accessibility events (pickup/move/drop/cancel). Enables consumer-side screen-reader announcements.
 
 ## 2.1.0
 Wed, 26 Aug 2026 17:29:55 GMT

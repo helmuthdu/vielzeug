@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Add EnqueueOptions.availableAt for delayed job eligibility",
+            "commit": "d58a131537bb2727d9995181b68d8a0f7e61536c"
+          }
+        ]
+      },
+      "date": "Fri, 28 Aug 2026 07:44:01 GMT",
+      "tag": "@vielzeug/postmaster_v2.1.0",
+      "version": "2.1.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/vault\" to `2.4.0`"

@@ -4,6 +4,31 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/assay\" to `2.2.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/dnd\" to `2.2.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ore\" to `2.1.1`"
+          }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Harden internal announcer: accept ownerDocument via AnnounceOptions.document for correct iframe accessibility tree routing. Fix documentation to describe latest-value replacement (debounce) instead of queueing. Remove unsubstantiated 50ms delay claim. All call sites (carousel, typing-indicator, chat-message, command-palette, file-input, file-input-upload, alert) now pass getHost().ownerDocument.",
+            "commit": "9abb303fadc44686e323e435b53be27dc6b54ab0"
+          }
+        ]
+      },
+      "date": "Fri, 28 Aug 2026 07:44:01 GMT",
+      "tag": "@vielzeug/refine_v2.3.0",
+      "version": "2.3.0"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/assay\" to `2.1.1`"
           },
           {

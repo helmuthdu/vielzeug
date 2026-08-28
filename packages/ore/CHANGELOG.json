@@ -4,6 +4,21 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/assay\" to `2.2.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/assay\" to `^2.2.0`"
+          }
+        ]
+      },
+      "date": "Fri, 28 Aug 2026 07:44:01 GMT",
+      "tag": "@vielzeug/ore_v2.1.1",
+      "version": "2.1.1"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/assay\" to `2.1.1`"
           },
           {

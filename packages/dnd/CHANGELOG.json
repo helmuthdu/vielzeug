@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Add onInteraction callback and SortableInteractionEvent type for structured accessibility events (pickup/move/drop/cancel). Enables consumer-side screen-reader announcements.",
+            "commit": "9abb303fadc44686e323e435b53be27dc6b54ab0"
+          }
+        ]
+      },
+      "date": "Fri, 28 Aug 2026 07:44:01 GMT",
+      "tag": "@vielzeug/dnd_v2.2.0",
+      "version": "2.2.0"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "feat: remove static is() type guard from base error class; add sideEffects: false for tree-shaking.",
             "commit": "30bcc469fae1fc7194a66855f9e17f558afae9da"
           }

@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "Fix duplicate ARIA announcements when both tooltip and crosshair are active. Tooltip now owns the live region; crosshair stays silent when tooltip is present. Use container.ownerDocument instead of global document for tooltip element creation.",
+            "commit": "9abb303fadc44686e323e435b53be27dc6b54ab0"
+          }
+        ]
+      },
+      "date": "Fri, 28 Aug 2026 07:44:01 GMT",
+      "tag": "@vielzeug/prism_v2.2.5",
+      "version": "2.2.5"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/orbit\" to `2.1.3`"

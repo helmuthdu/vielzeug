@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/prism
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Fri, 28 Aug 2026 07:44:01 GMT and should not be manually modified.
+
+## 2.2.5
+Fri, 28 Aug 2026 07:44:01 GMT
+
+### Patches
+
+- Fix duplicate ARIA announcements when both tooltip and crosshair are active. Tooltip now owns the live region; crosshair stays silent when tooltip is present. Use container.ownerDocument instead of global document for tooltip element creation.
 
 ## 2.2.4
 Wed, 26 Aug 2026 17:29:55 GMT

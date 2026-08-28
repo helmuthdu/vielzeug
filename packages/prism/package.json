@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/prism",
-  "version": "2.2.4",
+  "version": "2.2.5",
   "description": "Reactive SVG charts — line, bar, area, pie, and sparkline with signal-driven updates",
   "keywords": [
     "chart",

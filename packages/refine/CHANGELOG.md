@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Fri, 28 Aug 2026 07:44:01 GMT and should not be manually modified.
+
+## 2.3.0
+Fri, 28 Aug 2026 07:44:01 GMT
+
+### Minor changes
+
+- Harden internal announcer: accept ownerDocument via AnnounceOptions.document for correct iframe accessibility tree routing. Fix documentation to describe latest-value replacement (debounce) instead of queueing. Remove unsubstantiated 50ms delay claim. All call sites (carousel, typing-indicator, chat-message, command-palette, file-input, file-input-upload, alert) now pass getHost().ownerDocument.
 
 ## 2.2.5
 Wed, 26 Aug 2026 17:29:55 GMT
