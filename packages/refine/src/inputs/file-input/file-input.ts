@@ -3,6 +3,7 @@ import {
   bind,
   createStableId,
   define,
+  getHost,
   html,
   onCleanup,
   onElement,
@@ -187,6 +188,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     upload: prop.data<FileUploadFn>(),
   },
   setup(props) {
+    const el = getHost();
     const emit = useEmit<OreFileInputEvents>();
 
     // ============================================
@@ -207,6 +209,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     const queue = createFileQueue({
       accept: props.accept,
       disabled: isDisabled,
+      document: el.ownerDocument,
       maxFiles: maxFilesLimit,
       maxSize: maxSizeLimit,
       multiple: computed(() => Boolean(props.multiple.value)),

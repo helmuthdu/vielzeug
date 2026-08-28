@@ -15,7 +15,7 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
     container.style.position = 'relative';
   }
 
-  const el = document.createElement('div');
+  const el = container.ownerDocument.createElement('div');
 
   el.className = 'prism-tooltip';
   el.style.position = 'absolute';

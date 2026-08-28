@@ -71,6 +71,33 @@ export interface SortableMoveEvent {
   readonly targetIds: string[];
 }
 
+/**
+ * Structured accessibility/observability event for sortable interactions.
+ *
+ * Drag: `pickup` on dragstart, `drop` on commit, `cancel` on cancel.
+ * Keyboard: `move` on each successful arrow/Home/End reorder (direct-commit model).
+ *
+ * Wire a consumer-side announcer to provide screen-reader feedback:
+ * ```ts
+ * createSortable({
+ *   onInteraction(event) {
+ *     announce(formatSortableEvent(event));
+ *   },
+ * });
+ * ```
+ */
+export type SortableInteractionEvent =
+  | { readonly index: number; readonly itemId: string; readonly total: number; readonly type: 'pickup' }
+  | {
+      readonly index: number;
+      readonly itemId: string;
+      readonly previousIndex: number;
+      readonly total: number;
+      readonly type: 'move';
+    }
+  | { readonly index: number; readonly itemId: string; readonly total: number; readonly type: 'drop' }
+  | { readonly index: number; readonly itemId: string; readonly total: number; readonly type: 'cancel' };
+
 export interface SortableScopeOptions {
   /**
    * Called exactly once for every successful cross-container move.
@@ -148,6 +175,11 @@ export interface SortableOptions {
   /** Called when the user starts dragging an item. */
   onDragStart?: (id: string, event: DragEvent) => void;
   /**
+   * Structured accessibility event for pickup/move/drop/cancel — wire to a consumer-side
+   * announcer for screen-reader feedback. See {@link SortableInteractionEvent}.
+   */
+  onInteraction?: (event: SortableInteractionEvent) => void;
+  /**
    * Called with a {@link ReorderEvent} after a successful reorder, only when the order changed.
    *
    * @example
@@ -215,6 +247,7 @@ interface ContainerHandle {
   notifyBeforeReorder: (from: string[], to: string[]) => void;
   notifyDragEnd: (id: string, event: DragEvent) => void;
   notifyDragStart: (id: string, event: DragEvent) => void;
+  notifyInteraction: (event: SortableInteractionEvent) => void;
   resolveTouchTarget: (target: Element) => HTMLElement | null;
 }
 
@@ -361,6 +394,12 @@ function cancelSession(scopeState: SortableScopeState, event: DragEvent): void {
   scopeState.active = null;
 
   session.source.notifyDragEnd(session.draggedId, event);
+  session.source.notifyInteraction({
+    index: session.source.getOrderedIds().indexOf(session.draggedId),
+    itemId: session.draggedId,
+    total: session.source.getOrderedIds().length,
+    type: 'cancel',
+  });
 }
 
 function commitSession(scopeState: SortableScopeState, event: DragEvent): void {
@@ -412,6 +451,14 @@ function commitSession(scopeState: SortableScopeState, event: DragEvent): void {
         target: targetHandle.element,
         targetIds: targetChange.after,
       });
+
+      const dropIndex = targetChange.after.indexOf(session.draggedId);
+      const dropTotal = targetChange.after.length;
+
+      // Emit from both source and target so a consumer wiring onInteraction on
+      // either container receives the drop event.
+      session.source.notifyInteraction({ index: dropIndex, itemId: session.draggedId, total: dropTotal, type: 'drop' });
+      targetHandle.notifyInteraction({ index: dropIndex, itemId: session.draggedId, total: dropTotal, type: 'drop' });
     }
 
     return;
@@ -420,6 +467,20 @@ function commitSession(scopeState: SortableScopeState, event: DragEvent): void {
   for (const { after, handle } of changes) {
     handle.commitReorder(after);
   }
+
+  // Same-container — emit drop even when the order didn't change (user picked up
+  // and dropped at the same position). The interaction completed; silence would
+  // leave screen-reader users without confirmation.
+  const sourceChange = changes.find((change) => change.handle === session.source);
+  const finalOrder = sourceChange ? sourceChange.after : session.source.getOrderedIds();
+  const finalIndex = finalOrder.indexOf(session.draggedId);
+
+  session.source.notifyInteraction({
+    index: finalIndex,
+    itemId: session.draggedId,
+    total: finalOrder.length,
+    type: 'drop',
+  });
 }
 
 function finishSession(scopeState: SortableScopeState, event: DragEvent, forceCancel: boolean): void {
@@ -802,6 +863,7 @@ export function createSortable(options: SortableOptions): Sortable {
     notifyBeforeReorder: (from, to) => options.onBeforeReorder?.(from, to),
     notifyDragEnd: (id, event) => options.onDragEnd?.(id, event),
     notifyDragStart: (id, event) => options.onDragStart?.(id, event),
+    notifyInteraction: (event) => options.onInteraction?.(event),
     resolveTouchTarget: (target) => {
       if (resolveDisabled(options.disabled) || !element.contains(target)) return null;
 
@@ -877,6 +939,12 @@ export function createSortable(options: SortableOptions): Sortable {
     }
 
     handle_.notifyDragStart(session.draggedId, e);
+    handle_.notifyInteraction({
+      index: handle_.getOrderedIds().indexOf(activeId),
+      itemId: activeId,
+      total: handle_.getOrderedIds().length,
+      type: 'pickup',
+    });
   };
 
   const handleDragOver = (e: DragEvent): void => {
@@ -949,6 +1017,8 @@ export function createSortable(options: SortableOptions): Sortable {
     if (!item || !element.contains(item)) return;
 
     const prevOrder = getOrderedIds();
+    const activeId = getKey(item);
+    const prevIndex = prevOrder.indexOf(activeId);
     const newOrder = applyKeyboardReorder(item, element, getItems, getOrderedIds, e.key, axis);
 
     // null means unrecognized key or boundary — let the browser handle it (e.g. page scroll)
@@ -957,6 +1027,13 @@ export function createSortable(options: SortableOptions): Sortable {
     e.preventDefault();
     handle_.notifyBeforeReorder(prevOrder, newOrder);
     handle_.commitReorder(newOrder);
+    handle_.notifyInteraction({
+      index: newOrder.indexOf(activeId),
+      itemId: activeId,
+      previousIndex: prevIndex,
+      total: newOrder.length,
+      type: 'move',
+    });
   };
 
   markItems();

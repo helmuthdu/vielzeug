@@ -1,4 +1,4 @@
-import { define, html, onEvent, onMounted, prop, ref, useEmit, useSlots } from '@vielzeug/ore';
+import { define, getHost, html, onEvent, onMounted, prop, ref, useEmit, useSlots } from '@vielzeug/ore';
 import { computed, watch } from '@vielzeug/ripple';
 
 import { announce } from '../../core';
@@ -108,6 +108,7 @@ define<OreChatMessageProps>(CHAT_MESSAGE_TAG, {
     timestamp: prop.string(),
   },
   setup(props) {
+    const el = getHost();
     const emit = useEmit<OreChatMessageEvents>();
     const slots = useSlots();
 
@@ -141,7 +142,10 @@ define<OreChatMessageProps>(CHAT_MESSAGE_TAG, {
       () => (props.status.value === 'error' ? (props.error.value ?? '') : null),
       (errorText) => {
         if (errorText !== null) {
-          announce(`Message failed to send${errorText ? `: ${errorText}` : ''}`, { politeness: 'assertive' });
+          announce(`Message failed to send${errorText ? `: ${errorText}` : ''}`, {
+            document: el.ownerDocument,
+            politeness: 'assertive',
+          });
         }
       },
     );

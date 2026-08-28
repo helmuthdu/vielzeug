@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, getHost, html, prop } from '@vielzeug/ore';
 import { watch } from '@vielzeug/ripple';
 import { announce } from '../../core';
 import { sizableBundle, themableBundle } from '../../shared';
@@ -25,8 +25,8 @@ export type OreTypingIndicatorProps = {
  * announced through the shared singleton live region (`core/announcer.ts`) rather than a
  * static `aria-live` element in the template. A live region populated in the same paint as
  * its own insertion is unreliable across browsers/screen readers; routing through the shared
- * announcer (pre-existing region, clear-then-set) is the same pattern already used for other
- * transient status messages across this package.
+ * announcer (pre-existing region, clear-then-set, document-scoped) is the same pattern
+ * already used for other transient status messages across this package.
  *
  * @element ore-typing-indicator
  *
@@ -54,9 +54,11 @@ define<OreTypingIndicatorProps>(TYPING_INDICATOR_TAG, {
     label: prop.string('Typing…'),
   },
   setup(props) {
+    const el = getHost();
+
     watch(
       () => props.label.value,
-      (label) => announce(label ?? ''),
+      (label) => announce(label ?? '', { document: el.ownerDocument }),
       { immediate: true },
     );
 

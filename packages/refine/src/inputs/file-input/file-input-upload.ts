@@ -73,6 +73,8 @@ export type FileUploadFn = (
 export type FileQueueOptions = {
   accept: Readable<string | undefined>;
   disabled: Readable<boolean>;
+  /** Document whose `<body>` hosts the announcer live region. Defaults to the global `document`. */
+  document?: Document;
   maxFiles: Readable<number>;
   maxSize: Readable<number>;
   multiple: Readable<boolean>;
@@ -183,7 +185,7 @@ export function createFileQueue(options: FileQueueOptions): FileQueue {
         if (controller.signal.aborted) return;
 
         patchState(file, { loaded: file.size, speedBps: 0, status: 'success' });
-        announce(`${file.name} uploaded successfully.`);
+        announce(`${file.name} uploaded successfully.`, { document: options.document });
         options.onUploadSuccess(file);
       })
       .catch((error: unknown) => {
@@ -192,7 +194,10 @@ export function createFileQueue(options: FileQueueOptions): FileQueue {
         const message = error instanceof Error ? error.message : String(error);
 
         patchState(file, { error: message, speedBps: 0, status: 'error' });
-        announce(`${file.name} failed to upload: ${message}`, { politeness: 'assertive' });
+        announce(`${file.name} failed to upload: ${message}`, {
+          document: options.document,
+          politeness: 'assertive',
+        });
         options.onUploadError(file, error);
       });
   }

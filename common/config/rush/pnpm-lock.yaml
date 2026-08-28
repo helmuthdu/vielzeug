@@ -402,6 +402,9 @@ importers:
       '@types/node':
         specifier: ^26.2.0
         version: 26.2.0
+      '@vielzeug/courier':
+        specifier: workspace:*
+        version: link:../courier
       fake-indexeddb:
         specifier: ^6.2.5
         version: 6.2.5

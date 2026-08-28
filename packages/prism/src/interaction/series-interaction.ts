@@ -100,13 +100,11 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
     const crosshairX = opts.crosshair?.snap === false ? pos.x : (nearest?.point.x ?? pos.x);
     const crosshairY = opts.crosshair?.snap === false ? pos.y : (nearest?.point.y ?? pos.y);
 
-    opts.crosshair?.show(
-      crosshairX,
-      crosshairY,
-      area.width,
-      area.height,
-      series && nearest ? `${series.name}: ${nearest.datum.value}` : undefined,
-    );
+    // When a tooltip is present it already carries role="status" + aria-live="polite",
+    // so the crosshair's own live region must stay silent to avoid double-announcing.
+    const announceText = !opts.tooltip && series && nearest ? `${series.name}: ${nearest.datum.value}` : undefined;
+
+    opts.crosshair?.show(crosshairX, crosshairY, area.width, area.height, announceText);
 
     if (nearest && series) {
       opts.tooltip?.show(nearest.point.x + dims.margin.left, nearest.point.y + dims.margin.top, nearest.datum, series);
@@ -162,13 +160,10 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
 
       if (!candidate || !series) return;
 
-      opts.crosshair?.show(
-        candidate.point.x,
-        candidate.point.y,
-        opts.dims().width,
-        opts.dims().height,
-        `${series.name}: ${candidate.datum.value}`,
-      );
+      // Same dedup as onMouseMove — tooltip announces when present.
+      const announceText = !opts.tooltip ? `${series.name}: ${candidate.datum.value}` : undefined;
+
+      opts.crosshair?.show(candidate.point.x, candidate.point.y, opts.dims().width, opts.dims().height, announceText);
       opts.tooltip?.show(
         candidate.point.x + opts.dims().margin.left,
         candidate.point.y + opts.dims().margin.top,

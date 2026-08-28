@@ -215,7 +215,9 @@ define<OreCarouselProps>(CAROUSEL_TAG, {
       emit('change', { index: next });
 
       if (announce_) {
-        announce(slides[next]?.getAttribute('aria-label') ?? `Slide ${next + 1} of ${count}`);
+        announce(slides[next]?.getAttribute('aria-label') ?? `Slide ${next + 1} of ${count}`, {
+          document: el.ownerDocument,
+        });
       }
     };
 

@@ -1515,3 +1515,194 @@ describe('dragover position resolution', () => {
     sortable.dispose();
   });
 });
+
+// ─── onInteraction: structured accessibility events ──────────────────────────
+
+describe('onInteraction', () => {
+  it('emits pickup on dragstart', () => {
+    const {
+      element,
+      items: [first],
+    } = makeList('a', 'b');
+    const onInteraction = vi.fn();
+    const sortable = createSortable({ element, getKey, onInteraction });
+
+    startDrag(first);
+
+    expect(onInteraction).toHaveBeenCalledWith(
+      expect.objectContaining({ index: 0, itemId: 'a', total: 2, type: 'pickup' }),
+    );
+
+    endDrag(first);
+    sortable.dispose();
+  });
+
+  it('emits drop on successful drag commit (same container)', () => {
+    const {
+      element,
+      items: [first, second],
+    } = makeList('a', 'b');
+    const onInteraction = vi.fn();
+    const sortable = createSortable({ element, getKey, onInteraction });
+
+    Object.defineProperty(second, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ bottom: 60, height: 30, left: 0, right: 100, top: 30, width: 100 }),
+    });
+
+    startDrag(first);
+    second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
+    endDrag(first);
+
+    const dropEvent = onInteraction.mock.calls.find((call) => call[0].type === 'drop');
+
+    expect(dropEvent).toBeDefined();
+    expect(dropEvent![0]).toEqual(expect.objectContaining({ index: 1, itemId: 'a', total: 2, type: 'drop' }));
+
+    sortable.dispose();
+  });
+
+  it('emits cancel on drag cancel', () => {
+    const {
+      element,
+      items: [first],
+    } = makeList('a', 'b');
+    const onInteraction = vi.fn();
+    const sortable = createSortable({ element, getKey, onInteraction });
+
+    startDrag(first);
+    // Cancel: dragend with dropEffect 'none' and no valid drop target
+    endDrag(first, 'none');
+
+    const cancelEvent = onInteraction.mock.calls.find((call) => call[0].type === 'cancel');
+
+    expect(cancelEvent).toBeDefined();
+    expect(cancelEvent![0]).toEqual(expect.objectContaining({ index: 0, itemId: 'a', total: 2, type: 'cancel' }));
+
+    sortable.dispose();
+  });
+
+  it('emits move on keyboard reorder', () => {
+    const {
+      element,
+      items: [, second],
+    } = makeList('a', 'b', 'c');
+    const onInteraction = vi.fn();
+    const sortable = createSortable({ element, getKey, onInteraction });
+
+    second.dispatchEvent(makeKeyEvent('ArrowDown'));
+
+    const moveEvent = onInteraction.mock.calls.find((call) => call[0].type === 'move');
+
+    expect(moveEvent).toBeDefined();
+    expect(moveEvent![0]).toEqual(
+      expect.objectContaining({ index: 2, itemId: 'b', previousIndex: 1, total: 3, type: 'move' }),
+    );
+
+    sortable.dispose();
+  });
+
+  it('does not emit move when keyboard key is at boundary', () => {
+    const {
+      element,
+      items: [first],
+    } = makeList('a', 'b');
+    const onInteraction = vi.fn();
+    const sortable = createSortable({ element, getKey, onInteraction });
+
+    first.dispatchEvent(makeKeyEvent('ArrowUp'));
+
+    const moveEvent = onInteraction.mock.calls.find((call) => call[0].type === 'move');
+
+    expect(moveEvent).toBeUndefined();
+
+    sortable.dispose();
+  });
+
+  it('emits drop with target index/total on cross-container move', () => {
+    const scope = createSortableScope();
+    const {
+      element: leftEl,
+      items: [l1],
+    } = makeList('l1', 'l2');
+    const { element: rightEl } = makeList('r1');
+    const onInteraction = vi.fn();
+
+    Object.defineProperty(rightEl, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ bottom: 60, height: 30, left: 0, right: 100, top: 30, width: 100 }),
+    });
+
+    const left = createSortable({ element: leftEl, getKey, onInteraction, scope });
+    createSortable({ element: rightEl, getKey, scope });
+
+    startDrag(l1);
+    rightEl.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
+    endDrag(l1);
+
+    const dropEvent = onInteraction.mock.calls.find((call) => call[0].type === 'drop');
+
+    expect(dropEvent).toBeDefined();
+    expect(dropEvent![0]).toEqual(expect.objectContaining({ index: 1, itemId: 'l1', total: 2, type: 'drop' }));
+
+    left.dispose();
+    scope.dispose();
+  });
+
+  it('emits drop from both source and target onInteraction for cross-container move', () => {
+    const scope = createSortableScope();
+    const {
+      element: leftEl,
+      items: [l1],
+    } = makeList('l1', 'l2');
+    const { element: rightEl } = makeList('r1');
+    const sourceInteraction = vi.fn();
+    const targetInteraction = vi.fn();
+
+    Object.defineProperty(rightEl, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({ bottom: 60, height: 30, left: 0, right: 100, top: 30, width: 100 }),
+    });
+
+    const left = createSortable({ element: leftEl, getKey, onInteraction: sourceInteraction, scope });
+    const right = createSortable({ element: rightEl, getKey, onInteraction: targetInteraction, scope });
+
+    startDrag(l1);
+    rightEl.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
+    endDrag(l1);
+
+    const sourceDrop = sourceInteraction.mock.calls.find((call) => call[0].type === 'drop');
+    const targetDrop = targetInteraction.mock.calls.find((call) => call[0].type === 'drop');
+
+    expect(sourceDrop).toBeDefined();
+    expect(targetDrop).toBeDefined();
+    expect(targetDrop![0]).toEqual(expect.objectContaining({ index: 1, itemId: 'l1', total: 2, type: 'drop' }));
+
+    left.dispose();
+    right.dispose();
+    scope.dispose();
+  });
+
+  it('emits drop even when item is dropped at the same position (no reorder)', () => {
+    const {
+      element,
+      items: [first],
+    } = makeList('a', 'b');
+    const onInteraction = vi.fn();
+    const sortable = createSortable({ element, getKey, onInteraction });
+
+    // Drag and drop at the same position — no dragover on a different item,
+    // so the order doesn't change.
+    startDrag(first);
+    endDrag(first);
+
+    const dropEvent = onInteraction.mock.calls.find((call) => call[0].type === 'drop');
+    const cancelEvent = onInteraction.mock.calls.find((call) => call[0].type === 'cancel');
+
+    expect(dropEvent).toBeDefined();
+    expect(dropEvent![0]).toEqual(expect.objectContaining({ index: 0, itemId: 'a', total: 2, type: 'drop' }));
+    expect(cancelEvent).toBeUndefined();
+
+    sortable.dispose();
+  });
+});

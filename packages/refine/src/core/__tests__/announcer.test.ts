@@ -4,8 +4,8 @@ import { announce } from '../announcer';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const getRegion = (politeness: 'assertive' | 'polite'): HTMLElement | null =>
-  document.querySelector(`[data-block-announcer="${politeness}"]`);
+const getRegion = (politeness: 'assertive' | 'polite', doc: Document = document): HTMLElement | null =>
+  doc.querySelector(`[data-block-announcer="${politeness}"]`);
 
 // ── Suite ─────────────────────────────────────────────────────────────────────
 
@@ -61,8 +61,8 @@ describe('announce()', () => {
     });
   });
 
-  describe('clear-then-set pattern', () => {
-    it('clears the region immediately and sets message after 50 ms', () => {
+  describe('latest-value replacement (debounce)', () => {
+    it('clears the region immediately and sets message after a short delay', () => {
       announce('Hello');
 
       const region = getRegion('polite')!;
@@ -70,7 +70,7 @@ describe('announce()', () => {
       // Immediately: region is cleared (empty).
       expect(region.textContent).toBe('');
 
-      // After 50 ms delay: message is set.
+      // After delay: message is set.
       vi.advanceTimersByTime(50);
       expect(region.textContent).toBe('Hello');
     });
@@ -93,7 +93,7 @@ describe('announce()', () => {
       expect(getRegion('polite')).toBeNull();
     });
 
-    it('debounces rapid consecutive calls — only last message appears', () => {
+    it('rapid consecutive calls — only last message survives', () => {
       announce('first');
       vi.advanceTimersByTime(20);
       announce('second');
@@ -128,6 +128,49 @@ describe('announce()', () => {
       vi.advanceTimersByTime(50);
 
       expect(getRegion('polite')?.textContent).toBe('repeat');
+    });
+  });
+
+  describe('document-scoped regions', () => {
+    it('creates regions in the specified document, not the global one', () => {
+      const iframe = document.createElement('iframe');
+
+      document.body.appendChild(iframe);
+
+      const iframeDoc = iframe.contentDocument!;
+
+      announce('iframe message', { document: iframeDoc });
+
+      vi.advanceTimersByTime(50);
+
+      expect(iframeDoc.querySelector('[data-block-announcer="polite"]')).not.toBeNull();
+      expect(getRegion('polite')).toBeNull();
+
+      iframe.remove();
+    });
+
+    it('default uses the global document', () => {
+      announce('global message');
+
+      expect(getRegion('polite')).not.toBeNull();
+    });
+
+    it('separate documents maintain independent regions', () => {
+      const iframe = document.createElement('iframe');
+
+      document.body.appendChild(iframe);
+
+      const iframeDoc = iframe.contentDocument!;
+
+      announce('global', { politeness: 'polite' });
+      announce('iframe', { document: iframeDoc, politeness: 'polite' });
+
+      vi.advanceTimersByTime(50);
+
+      expect(getRegion('polite')?.textContent).toBe('global');
+      expect(iframeDoc.querySelector('[data-block-announcer="polite"]')?.textContent).toBe('iframe');
+
+      iframe.remove();
     });
   });
 

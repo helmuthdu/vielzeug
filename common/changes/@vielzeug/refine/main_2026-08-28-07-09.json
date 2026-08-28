@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Harden internal announcer: accept ownerDocument via AnnounceOptions.document for correct iframe accessibility tree routing. Fix documentation to describe latest-value replacement (debounce) instead of queueing. Remove unsubstantiated 50ms delay claim. All call sites (carousel, typing-indicator, chat-message, command-palette, file-input, file-input-upload, alert) now pass getHost().ownerDocument.",
+      "type": "minor",
+      "packageName": "@vielzeug/refine"
+    }
+  ],
+  "packageName": "@vielzeug/refine",
+  "email": "agent@vielzeug"
+}

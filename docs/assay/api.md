@@ -11,6 +11,7 @@ description: API reference for @vielzeug/assay queries, event dispatch, and asyn
 | -------------------------------------------- | ------------------------------------------- | -------------- | ------------------------------------------------ |
 | `within`                                     | Creates scoped query API                    | Sync           | Required `get*` methods throw `AssayQueryError`  |
 | `queryInShadow` / `queryPart` / `getSlotted` | Crosses custom-element boundaries           | Sync           | Open shadow roots are required                   |
+| `queryLiveRegion` / `waitForLiveRegion`      | ARIA live-region queries and waits          | Sync/Async     | jsdom cannot prove AT speech — manual AT tests still required |
 | `fire*` / `dispatch`                         | Dispatches platform event instances         | Sync           | Does not reproduce browser default behavior      |
 | `waitUntil` / `retry` / `waitForEvent`       | Waits for conditions, assertions, or events | Async          | Use a signal or timeout for bounded waits        |
 | `delay` / `nextTick`                         | Schedules timers or microtasks              | Async          | Prefer `nextTick()` for microtask-scheduled work |
@@ -111,6 +112,56 @@ await nextTick();
 
 `waitUntil`, `retry`, and `waitForEvent` reject with `AssayTimeoutError` when their timeout expires. A supplied abort
 signal rejects with its reason and removes timers and event listeners.
+
+## Live Regions
+
+Helpers for querying and waiting on ARIA live regions — the visually-hidden elements
+that screen readers use to announce dynamic status changes.
+
+::: warning jsdom limitation
+These helpers assert DOM structure and text content only. jsdom has no accessibility
+tree and cannot prove a screen reader actually spoke the message. Manual AT testing
+across the supported browser/screen-reader matrix remains required for production
+sign-off.
+:::
+
+### `queryLiveRegion(options?)`
+
+Returns the first live region matching `politeness` (default `'polite'`) and optional
+`role` within `root` (default `document.body`). Returns `null` when none exists.
+
+Matches both explicit `aria-live` attributes and implicit roles per the WAI-ARIA
+spec: `role="status"` → `polite`, `role="alert"` → `assertive`. Explicit `aria-live`
+takes precedence over the implicit value.
+
+| Option        | Type                    | Default       | Description                          |
+| ------------- | ----------------------- | ------------- | ------------------------------------ |
+| `politeness`  | `'polite' \| 'assertive' \| 'off'` | `'polite'` | `aria-live` value (or implicit role) to match |
+| `role`        | `string`                | —             | `role` attribute to match (e.g. `'status'`, `'alert'`) |
+| `root`        | `ParentNode`            | `document.body` | Scope the query                    |
+| `document`    | `Document`              | global `document` | Document to search                |
+
+### `queryAllLiveRegions(options?)`
+
+Returns all live regions matching the criteria — useful for asserting no duplicate
+regions were created.
+
+### `waitForLiveRegion(text, options?)`
+
+Retries until a matching live region exists and its `textContent` includes `text`.
+Handles the clear-then-set announce pattern (region briefly empty before the message
+is written). Throws `AssayTimeoutError` on timeout.
+
+```ts
+import { waitForLiveRegion } from '@vielzeug/assay';
+
+await waitForLiveRegion('3 results found');
+await waitForLiveRegion('Session expired', { politeness: 'assertive' });
+```
+
+### `waitForLiveRegionCleared(options?)`
+
+Retries until a matching live region exists and its `textContent` is empty.
 
 ## Types
 

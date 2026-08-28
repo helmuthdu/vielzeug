@@ -243,7 +243,9 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
 
       const count = filteredItems.value.length;
 
-      announce(count === 0 ? props['empty-text'].value! : `${count} result${count === 1 ? '' : 's'} found`);
+      announce(count === 0 ? props['empty-text'].value! : `${count} result${count === 1 ? '' : 's'} found`, {
+        document: el.ownerDocument,
+      });
     }
 
     function handleKeydown(e: KeyboardEvent): void {
