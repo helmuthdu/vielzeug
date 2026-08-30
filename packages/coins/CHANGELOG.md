@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/coins
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+
+## 2.2.0
+Sun, 30 Aug 2026 13:16:08 GMT
+
+### Minor changes
+
+- refactor: remove global custom currency registry. Replace defineCurrency() with currency({ code, minorUnit }). Remove withMinor() — use money(amount, currency, { unit: 'minor' }). Remove resolveBuiltinCurrency — parseMoneyJSON defaults to currency(). isMoney/isCurrency/isExchangeRate now use WeakSet canonical identity (rejects forged frozen objects). Add isExchangeRate type guard. Add INVALID_RANGE and INVALID_EXCHANGE_RATE error codes. Fix divide() floor/ceil rounding with negative divisors. Add assertMoney to toJSON. Add roundDivision exhaustiveness default.
 
 ## 2.1.1
 Wed, 26 Aug 2026 17:29:55 GMT

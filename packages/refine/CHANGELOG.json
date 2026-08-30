@@ -4,6 +4,30 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/orbit\" to `2.1.4`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ore\" to `2.2.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.3.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/sentinel\" to `2.0.3`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/tempo\" to `2.2.0`"
+          }
+        ]
+      },
+      "date": "Sun, 30 Aug 2026 13:16:08 GMT",
+      "tag": "@vielzeug/refine_v2.3.1",
+      "version": "2.3.1"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/assay\" to `2.2.0`"
           },
           {

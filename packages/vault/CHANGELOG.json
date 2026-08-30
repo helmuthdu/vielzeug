@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: table() now enforces VaultKey at compile time — key field type must extend number | string. Remove IndexedDbVaultStore and SQLiteVaultStore type aliases — use TransactionalVaultStore from the root entry.",
+            "commit": "ed9b4f6e9f42f15d0feb9d824027a799442cc279"
+          }
+        ]
+      },
+      "date": "Sun, 30 Aug 2026 13:16:08 GMT",
+      "tag": "@vielzeug/vault_v2.5.0",
+      "version": "2.5.0"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "refactor: streamlined logging and removed redundant methods.",
             "commit": "88b47c1a2596dfcb9d1ef7d442de2595c229aba8"
           }

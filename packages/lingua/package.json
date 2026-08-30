@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/lingua",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "Explicit typed localization with pluralization, lazy locale catalogs, and SSR hydration",
   "repository": {
     "type": "git",

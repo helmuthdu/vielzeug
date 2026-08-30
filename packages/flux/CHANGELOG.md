@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/flux
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+
+## 2.4.0
+Sun, 30 Aug 2026 13:16:08 GMT
+
+### Minor changes
+
+- refactor: add FluxEmptyError and FluxCapacityError. first()/last() reject empty with FluxEmptyError. mergeMap/concatMap accept concurrency+capacity options. Positional duration args for interval/debounce/timeout. Remove IntervalOptions, DebounceOptions, TimeoutOptions exports. fromQuery imports public Courier types. toSignal uses reportUnhandledError. Channel hardened against replay after disposal.
 
 ## 2.3.3
 Wed, 26 Aug 2026 17:29:55 GMT

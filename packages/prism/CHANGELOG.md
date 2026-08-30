@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/prism
 
-This log was last generated on Fri, 28 Aug 2026 07:44:01 GMT and should not be manually modified.
+This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+
+## 2.2.6
+Sun, 30 Aug 2026 13:16:08 GMT
+
+### Patches
+
+- refactor: replace isReactive with resolveMaybeSignal across charts. Add core/resolve module for MaybeSignal resolution.
 
 ## 2.2.5
 Fri, 28 Aug 2026 07:44:01 GMT

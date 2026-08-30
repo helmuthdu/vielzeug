@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/illusionist
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+
+## 2.3.2
+Sun, 30 Aug 2026 13:16:08 GMT
+
+### Patches
+
+- refactor: extract nextFloat helper, remove dead _dev.ts, simplify pick/string helpers
 
 ## 2.3.1
 Wed, 26 Aug 2026 17:29:55 GMT

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/postmaster
 
-This log was last generated on Fri, 28 Aug 2026 07:44:01 GMT and should not be manually modified.
+This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+
+## 2.2.0
+Sun, 30 Aug 2026 13:16:08 GMT
+
+### Minor changes
+
+- refactor: extract normalize to _store-utils. Add PostmasterJobError. Remove mergeSignals helper.
 
 ## 2.1.0
 Fri, 28 Aug 2026 07:44:01 GMT

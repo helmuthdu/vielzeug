@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove StringSchema.nonempty() alias (use nonEmpty()). sAny returns Schema<unknown> instead of Schema<any>. sInstanceof constructor uses never[] args. Remove redundant schemas/pipe.ts re-export. Refactor: move inline import('../core') type refs to top-level imports in all schemas. Add this: Schema<..., 'sync'> constraint to is() and assert() so async schemas are rejected at compile time. Use defineOwnProperty helper consistently in record.ts and object.ts.",
+            "commit": "ed9b4f6e9f42f15d0feb9d824027a799442cc279"
+          }
+        ]
+      },
+      "date": "Sun, 30 Aug 2026 13:16:08 GMT",
+      "tag": "@vielzeug/spell_v2.3.0",
+      "version": "2.3.0"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "feat: remove static is() type guard from base error class; add sideEffects: false for tree-shaking.",
             "commit": "30bcc469fae1fc7194a66855f9e17f558afae9da"
           }

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ripple
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+
+## 2.3.0
+Sun, 30 Aug 2026 13:16:08 GMT
+
+### Minor changes
+
+- refactor: Ripple extends Disposable. Add disposalSignal and [Symbol.dispose] to Ripple interface. Remove redundant disposed flag in resource (use stop.disposed). Document computed peek behavior.
 
 ## 2.2.4
 Wed, 26 Aug 2026 17:29:55 GMT

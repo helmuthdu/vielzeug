@@ -5,6 +5,20 @@
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove combineSignals, createSignalScope, createBusInternal from public API. Simplify bus internals.",
+            "commit": "ed9b4f6e9f42f15d0feb9d824027a799442cc279"
+          }
+        ]
+      },
+      "date": "Sun, 30 Aug 2026 13:16:08 GMT",
+      "tag": "@vielzeug/herald_v2.3.0",
+      "version": "2.3.0"
+    },
+    {
+      "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
             "comment": "feat: replace debug factories, logger options, and onError callbacks with unified tap() observability pattern.",
             "commit": "3805cf96a53c5576a1f39f167d67bcb2e3ccd1a2"
           }

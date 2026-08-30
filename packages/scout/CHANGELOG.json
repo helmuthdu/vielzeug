@@ -4,6 +4,25 @@
       "comments": {
         "dependency": [
           {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.3.0`"
+          }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: remove SearchState.tap() and ScoutEvent type (use ripple signal subscriptions + disposalSignal instead). Fix createReactiveSearch Object.create hack. Remove defaultStringify array warning.",
+            "commit": "ed9b4f6e9f42f15d0feb9d824027a799442cc279"
+          }
+        ]
+      },
+      "date": "Sun, 30 Aug 2026 13:16:08 GMT",
+      "tag": "@vielzeug/scout_v2.4.0",
+      "version": "2.4.0"
+    },
+    {
+      "comments": {
+        "dependency": [
+          {
             "comment": "Updating dependency \"@vielzeug/ripple\" to `2.2.4`"
           }
         ],

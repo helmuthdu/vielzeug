@@ -2,6 +2,28 @@
   "entries": [
     {
       "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/orbit\" to `2.1.4`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `2.3.0`"
+          }
+        ],
+        "patch": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: replace isReactive with resolveMaybeSignal across charts. Add core/resolve module for MaybeSignal resolution.",
+            "commit": "ed9b4f6e9f42f15d0feb9d824027a799442cc279"
+          }
+        ]
+      },
+      "date": "Sun, 30 Aug 2026 13:16:08 GMT",
+      "tag": "@vielzeug/prism_v2.2.6",
+      "version": "2.2.6"
+    },
+    {
+      "comments": {
         "patch": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

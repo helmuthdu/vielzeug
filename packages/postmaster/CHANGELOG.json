@@ -2,6 +2,28 @@
   "entries": [
     {
       "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/vault\" to `2.5.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `2.3.1`"
+          }
+        ],
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "refactor: extract normalize to _store-utils. Add PostmasterJobError. Remove mergeSignals helper.",
+            "commit": "ed9b4f6e9f42f15d0feb9d824027a799442cc279"
+          }
+        ]
+      },
+      "date": "Sun, 30 Aug 2026 13:16:08 GMT",
+      "tag": "@vielzeug/postmaster_v2.2.0",
+      "version": "2.2.0"
+    },
+    {
+      "comments": {
         "minor": [
           {
             "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",

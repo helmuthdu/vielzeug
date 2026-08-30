@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/lingua
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+
+## 2.4.1
+Sun, 30 Aug 2026 13:16:08 GMT
+
+### Patches
+
+- refactor: remove unused devOnly helper from _dev.ts
 
 ## 2.4.0
 Wed, 26 Aug 2026 17:29:55 GMT

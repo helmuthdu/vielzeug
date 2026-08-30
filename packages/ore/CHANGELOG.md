@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Fri, 28 Aug 2026 07:44:01 GMT and should not be manually modified.
+This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+
+## 2.2.0
+Sun, 30 Aug 2026 13:16:08 GMT
+
+### Minor changes
+
+- refactor: remove redundant PropDef/HostBindFn re-exports from define.ts (already exported from source modules). Move OreTimeoutError from errors.ts to testing/flush.ts (testing-only error). Inline unsafeHtml function case to remove recursive call.
 
 ## 2.1.1
 Fri, 28 Aug 2026 07:44:01 GMT

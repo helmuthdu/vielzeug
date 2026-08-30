@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/conduit",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Lightweight dependency injection container — singletons, transient instances, factories, and named scopes",
   "repository": {
     "type": "git",

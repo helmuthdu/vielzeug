@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/spell
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+
+## 2.3.0
+Sun, 30 Aug 2026 13:16:08 GMT
+
+### Minor changes
+
+- refactor: remove StringSchema.nonempty() alias (use nonEmpty()). sAny returns Schema<unknown> instead of Schema<any>. sInstanceof constructor uses never[] args. Remove redundant schemas/pipe.ts re-export. Refactor: move inline import('../core') type refs to top-level imports in all schemas. Add this: Schema<..., 'sync'> constraint to is() and assert() so async schemas are rejected at compile time. Use defineOwnProperty helper consistently in record.ts and object.ts.
 
 ## 2.2.0
 Wed, 26 Aug 2026 17:29:55 GMT

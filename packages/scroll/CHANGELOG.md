@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/scroll
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+
+## 2.3.0
+Sun, 30 Aug 2026 13:16:08 GMT
+
+### Minor changes
+
+- refactor: rename signalFactory option to toSignal across createVirtualizer, createDomVirtualList, createGridVirtualizer, createGroupedVirtualizer. Rename destroyed flag to disposed.
 
 ## 2.2.0
 Wed, 26 Aug 2026 17:29:55 GMT

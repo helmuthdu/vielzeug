@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/scout
 
-This log was last generated on Wed, 26 Aug 2026 17:29:55 GMT and should not be manually modified.
+This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+
+## 2.4.0
+Sun, 30 Aug 2026 13:16:08 GMT
+
+### Minor changes
+
+- refactor: remove SearchState.tap() and ScoutEvent type (use ripple signal subscriptions + disposalSignal instead). Fix createReactiveSearch Object.create hack. Remove defaultStringify array warning.
 
 ## 2.3.0
 Wed, 26 Aug 2026 17:29:55 GMT
