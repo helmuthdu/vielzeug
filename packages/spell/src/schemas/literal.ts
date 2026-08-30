@@ -1,10 +1,10 @@
-import type { SchemaDescriptor } from '../core';
+import type { CheckContext, SchemaDescriptor, SchemaMode, SchemaWalker, ValidateResult } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 
 export class LiteralSchema<
   T extends string | number | boolean | null | undefined,
-  Mode extends import('../core').SchemaMode = 'sync',
+  Mode extends SchemaMode = 'sync',
 > extends Schema<T, T, Mode> {
   readonly value: T;
 
@@ -14,7 +14,7 @@ export class LiteralSchema<
 
   override checkAsync(
     this: LiteralSchema<T, 'sync'>,
-    fn: (value: T, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+    fn: (value: T, ctx: CheckContext) => Promise<ValidateResult>,
   ): LiteralSchema<T, 'async'> {
     return this._addCheck(fn, true) as unknown as LiteralSchema<T, 'async'>;
   }
@@ -39,7 +39,7 @@ export class LiteralSchema<
     return { ...this._describeBase(), kind: 'literal', value: this.value };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     if (visitor.literal) return visitor.literal(this);
 
     return super._walk(visitor);

@@ -1,12 +1,17 @@
-import type { ParseContext, ParseValue, SchemaDescriptor, SchemaState } from '../core';
+import type {
+  CheckContext,
+  ParseContext,
+  ParseValue,
+  SchemaDescriptor,
+  SchemaMode,
+  SchemaState,
+  SchemaWalker,
+  ValidateResult,
+} from '../core';
 
 import { _makeCtx, Schema, SpellValidationError } from '../core';
 
-export class LazySchema<T, Input = T, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
-  T,
-  Input,
-  Mode
-> {
+export class LazySchema<T, Input = T, Mode extends SchemaMode = 'sync'> extends Schema<T, Input, Mode> {
   private readonly _getter: () => Schema<T, Input, Mode>;
   private _resolved?: Schema<T, Input, Mode>;
 
@@ -16,7 +21,7 @@ export class LazySchema<T, Input = T, Mode extends import('../core').SchemaMode 
 
   override checkAsync(
     this: LazySchema<T, Input, 'sync'>,
-    fn: (value: T, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+    fn: (value: T, ctx: CheckContext) => Promise<ValidateResult>,
   ): LazySchema<T, Input, 'async'> {
     return this._addCheck(fn, true) as unknown as LazySchema<T, Input, 'async'>;
   }
@@ -64,7 +69,7 @@ export class LazySchema<T, Input = T, Mode extends import('../core').SchemaMode 
     return { ...this._describeBase(), kind: 'lazy' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     if (visitor.lazy) return visitor.lazy(this);
 
     return super._walk(visitor);

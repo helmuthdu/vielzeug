@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createLedger,
   LedgerCancelledError,
+  LedgerConfigurationError,
   LedgerDisposedError,
   LedgerError,
   LedgerExecutionError,
@@ -68,7 +69,7 @@ describe('createLedger', () => {
   });
 
   it.each([-1, 1.5, Infinity, NaN])('rejects invalid maxHistory: %s', (maxHistory) => {
-    expect(() => createLedger({ maxHistory })).toThrow(RangeError);
+    expect(() => createLedger({ maxHistory })).toThrow(LedgerConfigurationError);
   });
 
   it('serializes submitted operations', async () => {

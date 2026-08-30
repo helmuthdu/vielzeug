@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: remove combineSignals from public API. Use deriveAbortController instead.",
+      "packageName": "@vielzeug/pulse",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/pulse"
+}

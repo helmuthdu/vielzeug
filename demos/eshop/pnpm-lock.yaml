@@ -483,6 +483,34 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.2.0)(jsdom@30.0.1)(vite@8.2.1(@types/node@26.2.0))
 
+  ../../packages/postmaster:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
+      '@vielzeug/vault':
+        specifier: workspace:*
+        version: link:../vault
+    devDependencies:
+      '@types/node':
+        specifier: ^26.2.0
+        version: 26.2.0
+      '@vielzeug/courier':
+        specifier: workspace:*
+        version: link:../courier
+      fake-indexeddb:
+        specifier: ^6.2.5
+        version: 6.2.5
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.2.1
+        version: 8.2.1(@types/node@26.2.0)
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@26.2.0)(jsdom@30.0.1)(vite@8.2.1(@types/node@26.2.0))
+
   ../../packages/prism:
     dependencies:
       '@vielzeug/orbit':

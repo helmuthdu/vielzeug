@@ -1,7 +1,7 @@
 import type { Readable } from '@vielzeug/ripple';
 
 import { signal } from '@vielzeug/ripple';
-import { error } from '../_dev';
+import { reportUnhandledError } from '../_subscription';
 import { stream } from '../core';
 import type { Stream, Subscription } from '../types';
 
@@ -52,10 +52,10 @@ export function toSignal<T>(source: Stream<T>, options: ToSignalOptions<T>): Sig
           try {
             options.onError(reason);
           } catch (callbackError) {
-            error('toSignal onError callback threw', callbackError);
+            reportUnhandledError(callbackError);
           }
         } else {
-          error('toSignal source error', reason);
+          reportUnhandledError(reason);
         }
         dispose();
       },

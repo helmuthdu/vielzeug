@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: remove redundant PropDef/HostBindFn re-exports from define.ts (already exported from source modules). Move OreTimeoutError from errors.ts to testing/flush.ts (testing-only error). Inline unsafeHtml function case to remove recursive call.",
+      "packageName": "@vielzeug/ore",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ore"
+}

@@ -10,7 +10,7 @@ import {
   type TransportOptions,
   validateTimeout,
 } from './transport';
-import type { MutationOptions, QueryCache } from './types';
+import type { MutationOptions } from './types';
 import type { HttpRequestConfig, Params } from './url';
 import { buildUrl } from './url';
 
@@ -37,7 +37,6 @@ export function createCourier(options: CourierOptions = {}) {
   const { query: queryOptions, ...transportOptions } = options;
   const transport = createTransportCore(transportOptions);
   const queryCache = createQueryCache({ ...queryOptions, signal: transport.disposalSignal });
-  const queries: QueryCache = queryCache;
   const streams = createStreams(transport);
   const mutations = new Set<AbortController>();
   const tappers = new Set<(event: CourierEvent) => void>();
@@ -161,7 +160,7 @@ export function createCourier(options: CourierOptions = {}) {
 
     const requestAc = new AbortController();
     const untrack = transport.track(requestAc);
-    const signal = buildTimeoutSignal(cfgTimeout ?? transport.getTimeout(), anySignal(extSignal, requestAc.signal));
+    const signal = buildTimeoutSignal(cfgTimeout ?? transport.timeout, anySignal(extSignal, requestAc.signal));
     const { headers: initHeaders, ...restInit } = buildRequestInit(
       m,
       transport.mergeHeaders(headers),
@@ -203,10 +202,10 @@ export function createCourier(options: CourierOptions = {}) {
     try {
       const data = await options.request({ signal });
 
-      await options.onSuccess?.(data, queries);
+      await options.onSuccess?.(data, queryCache);
 
       for (const key of options.invalidateKeys ?? []) {
-        queries.invalidate(key, { refetch: true });
+        queryCache.invalidate(key, { refetch: true });
       }
 
       return data;
@@ -242,7 +241,7 @@ export function createCourier(options: CourierOptions = {}) {
     patch: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('PATCH', url, cfg),
     post: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('POST', url, cfg),
     put: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('PUT', url, cfg),
-    queries,
+    queries: queryCache,
     read: streams.read,
     setHeaders: transport.setHeaders,
     tap,

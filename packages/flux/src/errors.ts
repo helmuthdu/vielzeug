@@ -15,3 +15,21 @@ export class FluxTimeoutError extends FluxError {
     this.ms = ms;
   }
 }
+
+/** Thrown by `first()` and `last()` when the source completes without emitting any value. */
+export class FluxEmptyError extends FluxError {
+  constructor(message = 'Stream completed without emitting any value') {
+    super(message);
+  }
+}
+
+/** Thrown when a bounded buffer (`mergeMap`, `concatMap`, `toArray`, async iteration) overflows. */
+export class FluxCapacityError extends FluxError {
+  /** The configured capacity that was exceeded. */
+  readonly capacity: number;
+
+  constructor(capacity: number, message: string) {
+    super(message);
+    this.capacity = capacity;
+  }
+}

@@ -1,5 +1,6 @@
 import { warn } from './_dev';
 import { createAsyncSource } from './asyncSource';
+import { SourcererConfigurationError } from './errors';
 import { positiveInteger, sameQuery, totalItems } from './pagination';
 import type { CursorPagination, CursorQuery, CursorQueryPatch, CursorSource, CursorSourceConfig } from './types';
 
@@ -21,7 +22,7 @@ const normalizeQuery = <TCursor>(
   patch: CursorQueryPatch<TCursor> = {},
 ): CursorQuery<TCursor> => {
   if (patch.after !== undefined && patch.before !== undefined) {
-    throw new RangeError('Cursor query cannot include both after and before');
+    throw new SourcererConfigurationError('Cursor query cannot include both after and before');
   }
 
   const resetsCursor = patch.pageSize !== undefined || patch.search !== undefined;
@@ -52,9 +53,8 @@ export function createCursorSource<T, TCursor = string>(
 
   const fetch = (query: CursorQuery<TCursor>): Promise<void> =>
     asyncSource.fetch({
-      failure: (previous, error) => ({ ...previous, error, isFetching: false, pendingQuery: undefined }),
       load: (signal) => config.load({ query, signal }),
-      pending: (previous) => ({ ...previous, error: null, isFetching: true, pendingQuery: query }),
+      query,
       success: (result) => ({
         data: result.data,
         error: null,

@@ -1,15 +1,15 @@
-import type { SchemaDescriptor } from '../core';
+import type { CheckContext, SchemaDescriptor, SchemaMode, SchemaWalker, ValidateResult } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 
-export class NeverSchema<Mode extends import('../core').SchemaMode = 'sync'> extends Schema<never, never, Mode> {
+export class NeverSchema<Mode extends SchemaMode = 'sync'> extends Schema<never, never, Mode> {
   protected override get _kind(): string {
     return 'never';
   }
 
   override checkAsync(
     this: NeverSchema<'sync'>,
-    fn: (value: never, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+    fn: (value: never, ctx: CheckContext) => Promise<ValidateResult>,
   ): NeverSchema<'async'> {
     return this._addCheck(fn, true) as unknown as NeverSchema<'async'>;
   }
@@ -22,7 +22,7 @@ export class NeverSchema<Mode extends import('../core').SchemaMode = 'sync'> ext
     return { ...this._describeBase(), kind: 'never' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     if (visitor.never) return visitor.never(this);
 
     return super._walk(visitor);

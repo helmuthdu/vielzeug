@@ -3,6 +3,37 @@ title: Vault Migration
 description: Move Vault adapter imports to focused entry points and update capability-specific storage code.
 ---
 
+# Vault 2.5 Migration
+
+Vault 2.5 tightens `table()` type safety and removes dead type aliases. No stored data formats change.
+
+## `table()` now enforces `VaultKey` at compile time
+
+The `key` parameter of `table()` now requires its field type to extend `VaultKey` (`number | string`). Previously, invalid key types like `boolean` compiled but failed at runtime.
+
+```ts
+// Before — compiled but threw at runtime
+const bad = table<{ id: boolean }>('id');
+
+// After — compile-time error: Type 'boolean' is not assignable to 'never'
+const bad = table<{ id: boolean }>('id');
+```
+
+If you have existing schemas with key fields typed as `number | string`, they continue to work unchanged.
+
+## `IndexedDbVaultStore` and `SQLiteVaultStore` aliases removed
+
+These type aliases were thin wrappers over `TransactionalVaultStore`. The migration guide for 2.3.1 already announced their removal; the source now matches. Use `TransactionalVaultStore` from `@vielzeug/vault` instead.
+
+```ts
+// Before
+import type { IndexedDbVaultStore } from '@vielzeug/vault/indexeddb';
+import type { SQLiteVaultStore } from '@vielzeug/vault/sqlite';
+
+// After
+import type { TransactionalVaultStore } from '@vielzeug/vault';
+```
+
 # Vault 2.3.1 Migration
 
 Vault 2.3.1 removes the metrics/debug surface, query push-down helpers, and memory-adapter cross-tab broadcast to shrink the core surface. None of these changes affect stored data formats.

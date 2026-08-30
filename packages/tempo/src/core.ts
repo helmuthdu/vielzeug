@@ -1,7 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { toZoned } from './_convert';
 import { CALENDAR_UNITS, inferSharedTimeZone, inferTimeZone, validateTimeZone } from './_tz';
-import { fail } from './errors';
+import { fail, TempoInvalidInputError } from './errors';
 import type { CalendarUnit, DifferenceInput, ParseAs, ShiftOptions, TimeInput } from './types';
 
 /** Parse intentionally requires an explicit result kind: time strings are ambiguous at system boundaries. */
@@ -18,8 +18,8 @@ export function parse(input: string, options: { as: ParseAs }): TimeInput {
     if (options.as === 'plainDateTime') return Temporal.PlainDateTime.from(input);
 
     return Temporal.PlainDate.from(input);
-  } catch {
-    fail(`Invalid ${options.as} ISO 8601 string: "${input}".`);
+  } catch (error) {
+    fail(`Invalid ${options.as} ISO 8601 string: "${input}".`, TempoInvalidInputError, { cause: error });
   }
 }
 

@@ -18,3 +18,6 @@ export class LedgerExecutionError extends LedgerError {}
 
 /** Thrown when a command's `revert()` function throws during an undo operation. The original error is available via `.cause`. */
 export class LedgerRollbackError extends LedgerError {}
+
+/** Thrown when the ledger is constructed with invalid options. */
+export class LedgerConfigurationError extends LedgerError {}

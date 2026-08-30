@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add RuneError and RuneConfigError error classes.",
+      "packageName": "@vielzeug/rune",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/rune"
+}

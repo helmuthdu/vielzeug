@@ -1,11 +1,6 @@
-import type { Readable, Ripple } from '@vielzeug/ripple';
+import type { Disposable, Readable, Ripple } from '@vielzeug/ripple';
 
-export interface Sentinel<T> extends Readable<T> {
-  readonly disposalSignal: AbortSignal;
-  dispose(): void;
-  readonly disposed: boolean;
-  [Symbol.dispose](): void;
-}
+export interface Sentinel<T> extends Readable<T>, Disposable {}
 
 export interface SentinelOptions {
   readonly runtime?: Pick<Ripple, 'signal'>;

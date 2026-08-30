@@ -1,4 +1,5 @@
 import { float } from '../_helpers/float';
+import { nextFloat } from '../_helpers/next-float';
 import { pick } from '../_helpers/string';
 import type { IllusionistContext, LocationLocaleData } from '../types';
 
@@ -32,7 +33,7 @@ export function streetAddress(ctx: IllusionistContext): string {
 export function zipCode(ctx: IllusionistContext): string {
   const pattern = data(ctx).zipPattern;
 
-  return pattern.replace(/#/g, () => String(Math.floor((ctx.source.next() ?? 0) * 10)));
+  return pattern.replace(/#/g, () => String(Math.floor(nextFloat(ctx.source) * 10)));
 }
 
 /** Picks a random state/region from the locale dataset. */

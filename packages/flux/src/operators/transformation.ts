@@ -2,9 +2,13 @@ import { link } from '../_link';
 import { assertPositiveInteger } from '../_numeric';
 import { tryCall } from '../_safe';
 import { stream } from '../core';
+import { FluxCapacityError } from '../errors';
 import type { Operator, Stream, Subscription } from '../types';
 
-export type ConcatMapOptions = {
+export type FlattenOptions = {
+  /** Maximum concurrently active inner subscriptions. Use `Infinity` for unbounded concurrency. */
+  concurrency: number;
+  /** Maximum queued outer values waiting for an inner subscription slot. Required when `concurrency` is finite. */
   capacity: number;
 };
 
@@ -118,17 +122,61 @@ export function switchMap<A, B>(project: (value: A) => Stream<B>): Operator<A, B
     });
 }
 
-export function mergeMap<A, B>(project: (value: A) => Stream<B>): Operator<A, B> {
+function flatten<A, B>(project: (value: A) => Stream<B>, options: FlattenOptions): Operator<A, B> {
+  const unbounded = options.concurrency === Infinity;
+
+  if (!unbounded) {
+    assertPositiveInteger(options.concurrency, 'mergeMap concurrency');
+    assertPositiveInteger(options.capacity, 'mergeMap capacity');
+  }
+
   return (source) =>
     stream((sink, signal) => {
-      let outerComplete = false;
+      const queue: A[] = [];
       const inners = new Set<Subscription>();
+      let outerComplete = false;
+      const outerRef: { current?: Subscription } = {};
 
       const finish = (): void => {
-        if (outerComplete && inners.size === 0) sink.complete();
+        if (outerComplete && inners.size === 0 && queue.length === 0) sink.complete();
       };
 
-      const outer = link(
+      const startInner = (value: A): void => {
+        tryCall(() => {
+          const innerRef: { current?: Subscription } = {};
+
+          innerRef.current = link(
+            project(value),
+            {
+              complete() {
+                if (innerRef.current) inners.delete(innerRef.current);
+
+                drain();
+              },
+              error: sink.error,
+              next: sink.next,
+            },
+            signal,
+          );
+
+          if (!innerRef.current.closed) inners.add(innerRef.current);
+          else drain();
+        }, sink.error);
+      };
+
+      const drain = (): void => {
+        if (signal.aborted) return;
+
+        while (queue.length > 0 && (unbounded || inners.size < options.concurrency)) {
+          const value = queue.shift()!;
+
+          startInner(value);
+        }
+
+        finish();
+      };
+
+      outerRef.current = link(
         source,
         {
           complete() {
@@ -137,94 +185,15 @@ export function mergeMap<A, B>(project: (value: A) => Stream<B>): Operator<A, B>
           },
           error: sink.error,
           next(value) {
-            tryCall(() => {
-              const innerRef: { current?: Subscription } = {};
-
-              innerRef.current = link(
-                project(value),
-                {
-                  complete() {
-                    if (innerRef.current) inners.delete(innerRef.current);
-
-                    finish();
-                  },
-                  error: sink.error,
-                  next: sink.next,
-                },
-                signal,
-              );
-
-              if (!innerRef.current.closed) inners.add(innerRef.current);
-            }, sink.error);
-          },
-        },
-        signal,
-      );
-
-      return () => {
-        outer.unsubscribe();
-        for (const inner of inners) inner.unsubscribe();
-      };
-    });
-}
-
-export function concatMap<A, B>(project: (value: A) => Stream<B>, options: ConcatMapOptions): Operator<A, B> {
-  assertPositiveInteger(options.capacity, 'concatMap capacity');
-
-  return (source) =>
-    stream((sink, signal) => {
-      const queue: A[] = [];
-      let outerComplete = false;
-      let inner: Subscription | undefined;
-      const outerRef: { current?: Subscription } = {};
-
-      const next = (): void => {
-        if (inner || queue.length === 0) {
-          if (outerComplete && !inner && queue.length === 0) sink.complete();
-
-          return;
-        }
-
-        const value = queue.shift()!;
-
-        tryCall(() => {
-          const subscription = link(
-            project(value),
-            {
-              complete() {
-                inner = undefined;
-                next();
-              },
-              error: sink.error,
-              next: sink.next,
-            },
-            signal,
-          );
-
-          inner = subscription.closed ? undefined : subscription;
-
-          if (!inner) next();
-        }, sink.error);
-      };
-
-      outerRef.current = link(
-        source,
-        {
-          complete() {
-            outerComplete = true;
-            next();
-          },
-          error: sink.error,
-          next(value) {
-            if (queue.length === options.capacity) {
+            if (!unbounded && queue.length >= options.capacity) {
               outerRef.current?.unsubscribe();
-              sink.error(new RangeError('concatMap buffer capacity exceeded'));
+              sink.error(new FluxCapacityError(options.capacity, 'mergeMap buffer capacity exceeded'));
 
               return;
             }
 
             queue.push(value);
-            next();
+            drain();
           },
         },
         signal,
@@ -232,8 +201,19 @@ export function concatMap<A, B>(project: (value: A) => Stream<B>, options: Conca
 
       return () => {
         outerRef.current?.unsubscribe();
-        inner?.unsubscribe();
+        for (const inner of inners) inner.unsubscribe();
         queue.length = 0;
       };
     });
+}
+
+export function mergeMap<A, B>(project: (value: A) => Stream<B>, options: FlattenOptions): Operator<A, B> {
+  return flatten(project, options);
+}
+
+export function concatMap<A, B>(
+  project: (value: A) => Stream<B>,
+  options: Omit<FlattenOptions, 'concurrency'>,
+): Operator<A, B> {
+  return flatten(project, { capacity: options.capacity, concurrency: 1 });
 }

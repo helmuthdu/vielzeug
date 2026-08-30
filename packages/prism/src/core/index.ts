@@ -3,4 +3,5 @@ export { createChartBase } from './chart-base';
 export type { ChartEventHandlers, RadialScaffoldContext, ScaffoldContext, ScaffoldGroups } from './chart-scaffold';
 export { createChartScaffold, createRadialScaffold } from './chart-scaffold';
 export { chartArea, resolveMargin } from './layout';
+export { resolveMaybeSignal } from './resolve';
 export { observeResize } from './responsive';

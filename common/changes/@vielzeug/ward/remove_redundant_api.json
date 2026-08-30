@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: remove ruleFor (use allow/deny), top-level owns (use predicate.owns), and WardEvent.type field (single-variant). Internal CompiledRule type replaced by NormalizedWardRule.",
+      "packageName": "@vielzeug/ward",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ward"
+}

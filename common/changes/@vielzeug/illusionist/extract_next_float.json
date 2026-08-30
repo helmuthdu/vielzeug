@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: extract nextFloat helper, remove dead _dev.ts, simplify pick/string helpers",
+      "packageName": "@vielzeug/illusionist",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/illusionist"
+}

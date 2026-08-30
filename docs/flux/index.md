@@ -77,7 +77,7 @@ yarn add @vielzeug/flux
 import { toArray, interval, map, pipe, take } from '@vielzeug/flux';
 
 const firstThree = pipe(
-  interval({ every: 100 }),
+  interval(100),
   map((value) => value * 2),
   take(3),
 );

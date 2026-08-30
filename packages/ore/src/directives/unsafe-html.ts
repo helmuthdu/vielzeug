@@ -27,13 +27,8 @@ const parseHtml = (html: string, parent: ParentNode, insertBefore: Node): Node[]
  * When reactive, the DOM is updated in-place whenever the value changes.
  */
 export function unsafeHtml(value: (() => string) | string | Signal<string> | Readable<string>): DirectiveResult {
-  if (typeof value === 'function') {
-    const c = computed(value);
-
-    return createDirectiveResult((anchor, registerCleanup) => {
-      unsafeHtml(c).mount(anchor, registerCleanup);
-    });
-  }
+  const isFn = typeof value === 'function';
+  const src: Readable<string> | null = isFn ? computed(value as () => string) : isReactive(value) ? value : null;
 
   return createDirectiveResult((anchor, registerCleanup) => {
     const parent = anchor.parentNode;
@@ -44,9 +39,8 @@ export function unsafeHtml(value: (() => string) | string | Signal<string> | Rea
 
     parent.insertBefore(endMarker, anchor.nextSibling);
 
-    if (isReactive(value)) {
+    if (src) {
       const slot = createReplaceableSlot();
-      const src = value as Readable<string>;
 
       const stop = rawEffect(() => {
         slot.clear();
@@ -59,7 +53,7 @@ export function unsafeHtml(value: (() => string) | string | Signal<string> | Rea
         endMarker.remove();
       });
     } else {
-      parseHtml(value, parent, endMarker);
+      parseHtml(value as string, parent, endMarker);
 
       registerCleanup(() => endMarker.remove());
     }

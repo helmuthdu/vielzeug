@@ -61,9 +61,9 @@ Built-in definitions: `USD`, `EUR`, `GBP`, `JPY`, `KRW`, `BHD`, `KWD`.
 Define a business currency explicitly when required:
 
 ```ts
-import { defineCurrency, money } from '@vielzeug/coins';
+import { currency, money } from '@vielzeug/coins';
 
-const POINTS = defineCurrency({ code: 'PTS', minorUnit: 0 });
+const POINTS = currency({ code: 'PTS', minorUnit: 0 });
 const balance = money('250', POINTS);
 ```
 

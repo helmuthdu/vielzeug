@@ -22,13 +22,13 @@ import { VariantSchema } from './schemas/variant';
 
 /* -------------------- Internal factory functions -------------------- */
 
-const sAny = (): Schema<any> => new Schema();
+const sAny = (): Schema<unknown> => new Schema();
 const sArray = <T extends AnySchema>(schema: T): ArraySchema<T> => new ArraySchema(schema);
 const sBigint = (): BigIntSchema => new BigIntSchema();
 const sBoolean = (): BooleanSchema => new BooleanSchema();
 const sDate = (): DateSchema => new DateSchema();
 const sEnum = <const T extends EnumValues>(values: T): EnumSchema<T> => new EnumSchema(values);
-const sInstanceof = <T>(cls: new (...args: any[]) => T): InstanceOfSchema<T> => new InstanceOfSchema(cls);
+const sInstanceof = <T>(cls: new (...args: never[]) => T): InstanceOfSchema<T> => new InstanceOfSchema(cls);
 const sIntersect = <T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(
   ...items: T
 ): IntersectSchema<NormalizeItems<T> & readonly AnySchema[]> =>

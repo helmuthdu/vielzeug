@@ -85,7 +85,7 @@ describe('core operators', () => {
       await toArray(
         pipe(
           of(1, 2),
-          mergeMap((value) => of(value * 10)),
+          mergeMap((value) => of(value * 10), { capacity: 2, concurrency: 2 }),
         ),
         { maxItems: 2 },
       ),
@@ -99,6 +99,24 @@ describe('core operators', () => {
         { maxItems: 2 },
       ),
     ).toEqual([10, 20]);
+  });
+
+  it('errors when mergeMap exceeds explicit capacity', async () => {
+    const queued = createChannel<number>();
+    const inner = createChannel<number>();
+    const result = toArray(
+      pipe(
+        queued.stream,
+        mergeMap(() => inner.stream, { capacity: 1, concurrency: 1 }),
+      ),
+      { maxItems: 10 },
+    );
+
+    queued.send(1);
+    queued.send(2);
+    queued.send(3);
+
+    await expect(result).rejects.toThrow('mergeMap buffer capacity exceeded');
   });
 
   it('errors when concatMap exceeds explicit capacity', async () => {
@@ -116,7 +134,7 @@ describe('core operators', () => {
     queued.send(2);
     queued.send(3);
 
-    await expect(result).rejects.toThrow('concatMap buffer capacity exceeded');
+    await expect(result).rejects.toThrow('mergeMap buffer capacity exceeded');
   });
 
   it('retries source failures with options object', async () => {
@@ -219,6 +237,16 @@ describe('core operators', () => {
     expect(await last(of(1, 2, 3))).toBe(3);
   });
 
+  it('rejects terminal consumers when source completes empty', async () => {
+    await expect(first(of())).rejects.toThrow('Stream completed without emitting any value');
+    await expect(last(of())).rejects.toThrow('Stream completed without emitting any value');
+  });
+
+  it('resolves terminal consumers with defaultValue when source completes empty', async () => {
+    expect(await first(of(), { defaultValue: 'fallback' })).toBe('fallback');
+    expect(await last(of(), { defaultValue: 'fallback' })).toBe('fallback');
+  });
+
   it('cancels value consumers on an external AbortSignal', async () => {
     const controller = new AbortController();
     const pending = first(
@@ -242,7 +270,7 @@ describe('core operators', () => {
     const timedOut = first(
       pipe(
         stream(() => {}),
-        timeout({ after: 500 }),
+        timeout(500),
       ),
     );
 
@@ -251,10 +279,10 @@ describe('core operators', () => {
     await vi.advanceTimersByTimeAsync(500);
     await timeoutExpectation;
 
-    const debounced = toArray(pipe(of(1), debounce({ for: 100 })), { maxItems: 1 });
+    const debounced = toArray(pipe(of(1), debounce(100)), { maxItems: 1 });
 
     await vi.advanceTimersByTimeAsync(100);
     expect(await debounced).toEqual([1]);
-    expect(() => interval({ every: -1 })).toThrow(RangeError);
+    expect(() => interval(-1)).toThrow(RangeError);
   });
 });

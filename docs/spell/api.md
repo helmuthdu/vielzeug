@@ -65,7 +65,7 @@ schema.is(value);                       // value is Output
 schema.assert(value, label?);           // assertion
 ```
 
-`parse()` and `safeParse()` are available on synchronous schemas. Calling `checkAsync()` returns an async-only schema, where TypeScript exposes only `parseAsync()` and `safeParseAsync()`. That async-only mode propagates through compositional schemas when a child is asynchronous.
+`parse()`, `safeParse()`, `is()`, and `assert()` are available on synchronous schemas. Calling `checkAsync()` returns an async-only schema, where TypeScript exposes only `parseAsync()` and `safeParseAsync()`. That async-only mode propagates through compositional schemas when a child is asynchronous.
 
 ## Custom Checks
 

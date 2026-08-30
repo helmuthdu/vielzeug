@@ -21,7 +21,6 @@ const audit: string[] = [];
 const ward = createWard([{ role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' }]);
 
 ward.tap((event) => {
-  if (event.type !== 'decision') return;
   const who = event.principal === null ? 'anonymous' : event.principal.id;
   const outcome = event.decision.allowed ? 'allow' : event.decision.reason;
   audit.push(`${who}:${event.resource}:${event.action}:${outcome}`);

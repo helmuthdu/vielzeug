@@ -7,7 +7,7 @@ type User = { id: number | string; name: string };
 
 const schema = { users: table<User>('id') };
 
-describe('IndexedDbVaultStore', () => {
+describe('IndexedDB TransactionalVaultStore', () => {
   test('provides atomic batch transactions and cursor iteration', async () => {
     const db = createIndexedDB({ name: `vault-test-${crypto.randomUUID()}`, schema });
 

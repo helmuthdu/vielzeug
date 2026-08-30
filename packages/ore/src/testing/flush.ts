@@ -2,8 +2,11 @@
  * Reactive update flushing utilities for test environments.
  */
 
-import { OreTimeoutError } from '../errors';
+import { OreError } from '../errors';
 import { hasPendingWork } from '../runtime';
+
+/** Thrown by `flush()` when pending component work doesn't settle within the timeout. */
+export class OreTimeoutError extends OreError {}
 
 // Defensive cap against a genuine bug (e.g. an onMounted callback that always registers
 // another onMounted, looping forever) — not a "how much is normally enough" guess like the

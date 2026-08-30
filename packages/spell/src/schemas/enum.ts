@@ -1,4 +1,4 @@
-import type { SchemaDescriptor, ValidateFn } from '../core';
+import type { CheckContext, SchemaDescriptor, SchemaMode, SchemaWalker, ValidateFn, ValidateResult } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 
@@ -21,7 +21,7 @@ function buildEnumValidator(values: readonly unknown[]): ValidateFn {
         ];
 }
 
-export class EnumSchema<T extends EnumValues, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
+export class EnumSchema<T extends EnumValues, Mode extends SchemaMode = 'sync'> extends Schema<
   EnumType<T>,
   EnumType<T>,
   Mode
@@ -34,7 +34,7 @@ export class EnumSchema<T extends EnumValues, Mode extends import('../core').Sch
 
   override checkAsync(
     this: EnumSchema<T, 'sync'>,
-    fn: (value: EnumType<T>, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+    fn: (value: EnumType<T>, ctx: CheckContext) => Promise<ValidateResult>,
   ): EnumSchema<T, 'async'> {
     return this._addCheck(fn, true) as unknown as EnumSchema<T, 'async'>;
   }
@@ -48,7 +48,7 @@ export class EnumSchema<T extends EnumValues, Mode extends import('../core').Sch
     return { ...this._describeBase(), kind: 'enum', values: this.values };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     if (visitor.enum) return visitor.enum(this);
 
     return super._walk(visitor);

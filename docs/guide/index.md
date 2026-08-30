@@ -263,7 +263,7 @@ const subject = createChannel<string>();
 pipe(
   subject.stream,
   filter((query) => query.length > 1),
-  debounce({ for: 300 }),
+  debounce(300),
   map((query) => query.toLowerCase().trim()),
 ).subscribe(console.log);
 

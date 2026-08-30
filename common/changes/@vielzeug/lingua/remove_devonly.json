@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: remove unused devOnly helper from _dev.ts",
+      "packageName": "@vielzeug/lingua",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/lingua"
+}

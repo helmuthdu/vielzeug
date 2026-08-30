@@ -123,7 +123,7 @@ const virt = createVirtualizer(scrollEl, {
 | `onScrollingChange` | `(isScrolling: boolean) => void`             | —                | Called when scroll activity starts or stops; replace through `update()`. |
 | `overscan`          | `number \| { start?: number; end?: number }` | `3`              | Extra items outside the viewport; number = symmetric on both sides                         |
 | `scrollEndDelay`    | `number`                                     | `150`            | Debounce delay (ms) used to detect scroll end when native `scrollend` is unavailable       |
-| `signal`            | `(init: VirtualizerState) => Signal<VirtualizerState>` | —        | Optional signal factory to expose state as a reactive Signal                              |
+| `toSignal`     | `(init: VirtualizerState) => Signal<VirtualizerState>` | —        | Optional signal factory to expose state as a reactive Signal                              |
 | `sticky`            | `(index: number) => boolean`                 | —                | Mark an item as a sticky header (pinned at viewport top)                                   |
 
 Callbacks and `scrollEndDelay` can be replaced through `update()`; `horizontal` and `initialOffset` remain construction-only.
@@ -303,7 +303,7 @@ ctrl.dispose();
 | `keyboardScroll`   | `boolean`                                     | `false`  | Enable keyboard navigation (Arrow/Page/Home/End keys)      |
 | `measurementCache` | `MeasurementCache`                            | —        | External measurement cache                                 |
 | `overscan`         | `number \| { start?: number; end?: number }`  | `3`      | Extra items outside the viewport; number = symmetric       |
-| `signal`           | `(init: VirtualizerState) => Signal<VirtualizerState>` | — | Optional signal factory to expose state as a reactive Signal |
+| `toSignal`    | `(init: VirtualizerState) => Signal<VirtualizerState>` | — | Optional signal factory to expose state as a reactive Signal |
 | `sticky`           | `(index: number, item: T) => boolean`         | —        | Mark items as sticky headers                               |
 | `clear`            | `(listEl: HTMLElement) => void`               | —        | Custom teardown for listEl; defaults to `textContent = ''` |
 | `stickToBottom`    | `boolean \| StickToBottomOptions`                       | —        | Auto-scroll to the end after `setItems()` whenever the list was already at (or near) the end — the chat "stick to bottom on new message" pattern |
@@ -478,7 +478,7 @@ virt.dispose();
 | `measurementCache`   | `MeasurementCache`                                                 | —        | External measurement cache                                              |
 | `overscan`           | `number \| { start?: number; end?: number }`                       | `3`      | Overscan on each side (number = symmetric)                              |
 | `scrollEndDelay`     | `number`                                                           | `150`    | Debounce delay (ms) for scroll-end detection                            |
-| `signal`             | `(init: GroupVirtualizerState<T>) => Signal<GroupVirtualizerState<T>>` | —   | Optional signal factory to expose state as a reactive Signal            |
+| `toSignal`      | `(init: GroupVirtualizerState<T>) => Signal<GroupVirtualizerState<T>>` | —   | Optional signal factory to expose state as a reactive Signal            |
 
 ### `GroupSection<T>`
 
@@ -620,7 +620,7 @@ grid.dispose();
 | `onRangeChange`       | `(range: GridRangeChangeEvent) => void` | —                      | Zero-allocation range callback         |
 | `rowMeasurementCache` | `Map<number, number>`                   | —                      | External row measurement cache         |
 | `colMeasurementCache` | `Map<number, number>`                   | —                      | External column measurement cache      |
-| `signal`              | `(init: GridVirtualizerState) => Signal<GridVirtualizerState>` | —    | Optional signal factory to expose state as a reactive Signal |
+| `toSignal`       | `(init: GridVirtualizerState) => Signal<GridVirtualizerState>` | —    | Optional signal factory to expose state as a reactive Signal |
 
 ### `GridVirtualizerState`
 
@@ -830,7 +830,7 @@ interface VirtualizerOptions {
   onScrollingChange?: (isScrolling: boolean) => void;
   overscan?: Overscan;
   scrollEndDelay?: number;
-  signal?: (init: VirtualizerState) => Signal<VirtualizerState>;
+  toSignal?: (init: VirtualizerState) => Signal<VirtualizerState>;
   sticky?: (index: number) => boolean;
 }
 ```
@@ -890,7 +890,7 @@ type DomVirtualListOptions<T> = {
   scrollElement: HTMLElement | Window;
   stickToBottom?: boolean | StickToBottomOptions;
   sticky?: (index: number, item: T) => boolean;
-  signal?: (init: VirtualizerState) => Signal<VirtualizerState>;
+  toSignal?: (init: VirtualizerState) => Signal<VirtualizerState>;
 };
 ```
 
@@ -970,7 +970,7 @@ interface GroupVirtualizerOptions<T> {
   overscan?: Overscan;
   scrollEndDelay?: number;
   sections: Array<GroupSection<T>>;
-  signal?: (init: GroupVirtualizerState<T>) => Signal<GroupVirtualizerState<T>>;
+  toSignal?: (init: GroupVirtualizerState<T>) => Signal<GroupVirtualizerState<T>>;
 }
 ```
 
@@ -1059,7 +1059,7 @@ interface GridVirtualizerOptions {
   rowCount: number;
   rowGap?: number;
   rowMeasurementCache?: Map<number, number>;
-  signal?: (init: GridVirtualizerState) => Signal<GridVirtualizerState>;
+  toSignal?: (init: GridVirtualizerState) => Signal<GridVirtualizerState>;
 }
 ```
 

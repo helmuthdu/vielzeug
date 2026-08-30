@@ -1,4 +1,16 @@
-import type { AnySchema, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import type {
+  AnySchema,
+  CheckContext,
+  InferSchemaMode,
+  Issue,
+  MergeSchemaModes,
+  ParseContext,
+  ParseValue,
+  SchemaDescriptor,
+  SchemaMode,
+  SchemaWalker,
+  ValidateResult,
+} from '../core';
 
 import { _makeCtx, ErrorCode, Schema, SpellValidationError } from '../core';
 import { SpellError } from '../errors';
@@ -16,9 +28,7 @@ type InferVariantMap<K extends string, M extends VariantMap> = {
 export class VariantSchema<
   K extends string,
   M extends VariantMap,
-  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
-    import('../core').InferSchemaMode<M[keyof M]>
-  >,
+  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<M[keyof M]>>,
 > extends Schema<InferVariantMap<K, M>, unknown, Mode> {
   private readonly _map: Map<string, VariantMap[string]>;
   private readonly _discriminator: K;
@@ -29,10 +39,7 @@ export class VariantSchema<
 
   override checkAsync(
     this: VariantSchema<K, M, 'sync'>,
-    fn: (
-      value: InferVariantMap<K, M>,
-      ctx: import('../core').CheckContext,
-    ) => Promise<import('../core').ValidateResult>,
+    fn: (value: InferVariantMap<K, M>, ctx: CheckContext) => Promise<ValidateResult>,
   ): VariantSchema<K, M, 'async'> {
     return this._addCheck(fn, true) as unknown as VariantSchema<K, M, 'async'>;
   }
@@ -156,7 +163,7 @@ export class VariantSchema<
     return { ...this._describeBase(), branches, discriminator: this._discriminator, kind: 'variant' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     const branches = objectFromEntries([...this._map.entries()].map(([k, s]) => [k, s.walk(visitor)]));
 
     if (visitor.variant) return visitor.variant(this, branches);

@@ -5,6 +5,39 @@ description: Migrate Scout index configuration and corpus updates to Scout.
 
 [[toc]]
 
+## Scout 2.4 Changes
+
+Scout 2.4 removes the `tap()` observability layer from `SearchState` — it duplicated `@vielzeug/ripple` signal subscriptions that were already available via `search.query.subscribe()`, `search.isSearching.subscribe()`, and `search.results.subscribe()`.
+
+Removed exports:
+
+- `SearchState.tap()` method
+- `ScoutEvent` type
+
+### Replace `tap()` with signal subscriptions
+
+```ts
+// Before
+const stop = search.tap((event) => {
+  if (event.type === 'query-change') console.debug('query:', event.query);
+  if (event.type === 'results-change') console.debug('results:', event.results.length);
+});
+
+// After
+const stopQuery = search.query.subscribe(() => console.debug('query:', search.query.peek()));
+const stopResults = search.results.subscribe(() => console.debug('results:', search.results.peek().length));
+```
+
+### Replace `dispose` event with `disposalSignal`
+
+```ts
+// Before
+search.tap((event) => { if (event.type === 'dispose') cleanup(); });
+
+// After
+search.disposalSignal.addEventListener('abort', () => cleanup());
+```
+
 ## Scout 2 Changes
 
 Scout 2 adds `setItems()` for refreshed corpora, validates numeric search configuration, and replaces `ScoutIndexError` with `ScoutConfigurationError`, removes the unused `ScoutError.is()` type guard and exposes `revision` as a readonly property on the `ScoutIndex` interface.

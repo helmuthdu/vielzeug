@@ -17,11 +17,11 @@ Removed exports:
 Added options:
 - `keyboardScroll?: boolean` — Enable keyboard navigation (Arrow/Page/Home/End keys)
 - `autoMeasure?: boolean` — Automatically measure visible items via ResizeObserver
-- `signal?: (init: State) => Signal<State>` — Provide reactive signal support across all factories
+- `toSignal?: (init: State) => Signal<State>` — Provide reactive signal support across all factories
 
 ## Migrate from Reactive Wrappers to Signal Option
 
-Scroll 1's `createReactiveVirtualizer()` and `createReactiveGroupedVirtualizer()` are removed. Use the new `signal` option on any factory instead.
+Scroll 1's `createReactiveVirtualizer()` and `createReactiveGroupedVirtualizer()` are removed. Use the new `toSignal` option on any factory instead.
 
 ```ts
 // Scroll 1
@@ -41,7 +41,7 @@ import { signal, effect } from '@vielzeug/ripple';
 const stateSignal = signal({ items: [], stickyItems: [], totalSize: 0 });
 const virt = createVirtualizer(scrollEl, {
   count: 1000,
-  signal: () => stateSignal,
+  toSignal: () => stateSignal,
 });
 effect(() => {
   const { items, totalSize } = stateSignal.value;
@@ -57,7 +57,7 @@ const virt = createDomVirtualList({
   items,
   scrollElement,
   listElement,
-  signal: () => signal({ items: [], stickyItems: [], totalSize: 0 }),
+  toSignal: () => signal({ items: [], stickyItems: [], totalSize: 0 }),
 });
 ```
 

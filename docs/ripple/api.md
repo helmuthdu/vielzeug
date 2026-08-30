@@ -108,7 +108,7 @@ cart.update((state) => ({ ...state, items: state.items + 1 }));
 function computed<T>(derive: () => T, options?: ComputedOptions<T>): Readable<T>;
 ```
 
-Creates a lazy read-only value from reactive reads in `derive`.
+Creates a lazy read-only value from reactive reads in `derive`. `peek()` on a computed may trigger a fresh derivation if dependencies have changed since the last read — unlike `signal.peek()`, it is not guaranteed to be side-effect-free. A disposed computed returns its last cached value from `peek()` without recomputing.
 
 **Returns:** `Readable<T>`.
 
@@ -299,12 +299,10 @@ interface Scope extends Disposable { run<T>(fn: () => T): T }
 
 interface Resource<T> extends Readable<AsyncState<T>>, Disposable { reload(): void }
 
-interface Ripple {
+interface Ripple extends Disposable {
   batch<T>(fn: () => T): T;
   computed<T>(derive: () => T, options?: ComputedOptions<T>): Readable<T>;
   createScope(name?: string): Scope;
-  dispose(): void;
-  readonly disposed: boolean;
   effect(callback: () => Cleanup | undefined, options?: EffectOptions): EffectHandle;
   resource<Source, Value>(source: () => Source, loader: (source: Source, context: { readonly signal: AbortSignal }) => Promise<Value>, options?: ResourceOptions): Resource<Value>;
   signal<T>(initial: T, options?: SignalOptions<T>): Signal<T>;

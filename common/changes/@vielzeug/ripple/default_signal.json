@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: Ripple extends Disposable. Add disposalSignal and [Symbol.dispose] to Ripple interface. Remove redundant disposed flag in resource (use stop.disposed). Document computed peek behavior.",
+      "packageName": "@vielzeug/ripple",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

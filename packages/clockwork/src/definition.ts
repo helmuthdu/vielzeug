@@ -4,7 +4,6 @@ import type { After, Effect, Invoke, MachineConfig, MachineEvent, Transition } f
 
 export type CompiledAfter<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
   readonly definition: After<State, Context, Event>;
-  readonly id: number;
 };
 
 export type CompiledState<State extends string, Context extends Record<string, unknown>, Event extends MachineEvent> = {
@@ -109,7 +108,6 @@ const compileTransitions = <State extends string, Context extends Record<string,
 const compileAfter = <State extends string, Context extends Record<string, unknown>, Event extends MachineEvent>(
   input: unknown,
   states: ReadonlyMap<State, unknown>,
-  id: number,
   index: number,
   state: State,
 ): CompiledAfter<State, Context, Event> => {
@@ -145,7 +143,6 @@ const compileAfter = <State extends string, Context extends Record<string, unkno
       reduce: after.reduce as After<State, Context, Event>['reduce'],
       target: validateTarget(states, after.target, details),
     },
-    id,
   };
 };
 
@@ -200,7 +197,6 @@ export const compileDefinition = <
   }
 
   const states = new Map<State, CompiledState<State, Context, Event>>();
-  let afterId = 0;
 
   for (const [state, rawNodeValue] of rawStateEntries) {
     const rawNode = isRecord(rawNodeValue)
@@ -227,7 +223,7 @@ export const compileDefinition = <
       rawNode.after === undefined
         ? []
         : array(rawNode.after, `state "${state}" after must be an array`, { state }).map((entry, index) =>
-            compileAfter<State, Context, Event>(entry, rawStateMap, afterId++, index, state),
+            compileAfter<State, Context, Event>(entry, rawStateMap, index, state),
           );
 
     states.set(state, {

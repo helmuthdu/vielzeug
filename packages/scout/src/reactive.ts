@@ -1,7 +1,7 @@
 import { batch, computed, signal } from '@vielzeug/ripple';
 import { ScoutConfigurationError, ScoutDisposedError } from './errors';
 import { createIndex, type ScoutIndex } from './scout-index';
-import type { CreateSearchOptions, ScoutEvent, ScoutIndexOptions, SearchResult, SearchState } from './types';
+import type { CreateSearchOptions, ScoutIndexOptions, SearchResult, SearchState } from './types';
 
 /**
  * Combined index + reactive search state returned by `createReactiveSearch()`.
@@ -117,57 +117,14 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
 
   let isDisposed = false;
   const ac = new AbortController();
-  const tappers = new Set<(event: ScoutEvent<T>) => void>();
-
-  function emitTap(event: ScoutEvent<T>): void {
-    if (tappers.size === 0) return;
-    for (const tapper of tappers) {
-      try {
-        tapper(event);
-      } catch {
-        // Observability must not affect search behavior.
-      }
-    }
-  }
-
-  const tapQuerySub = query.subscribe(() => emitTap({ query: query.peek(), type: 'query-change' }));
-  const tapSearchingSub = isSearching.subscribe(() =>
-    emitTap({ isSearching: isSearching.peek(), type: 'searching-change' }),
-  );
-  const tapResultsSub = results.subscribe(() => emitTap({ results: results.peek(), type: 'results-change' }));
 
   function dispose(): void {
     if (isDisposed) return;
     isDisposed = true;
-    emitTap({ type: 'dispose' });
-    tappers.clear();
     ac.abort();
     cancelTimer();
     subscription();
     unsubscribeMutations();
-    tapQuerySub();
-    tapSearchingSub();
-    tapResultsSub();
-  }
-
-  function tap(handler: (event: ScoutEvent<T>) => void, opts?: { signal?: AbortSignal }): () => void {
-    if (isDisposed) return () => {};
-    tappers.add(handler);
-
-    if (opts?.signal) {
-      if (opts.signal.aborted) {
-        tappers.delete(handler);
-        return () => {};
-      }
-      const onAbort = () => tappers.delete(handler);
-      opts.signal.addEventListener('abort', onAbort, { once: true });
-      return () => {
-        tappers.delete(handler);
-        opts.signal?.removeEventListener('abort', onAbort);
-      };
-    }
-
-    return () => tappers.delete(handler);
   }
 
   return {
@@ -182,7 +139,6 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
     isSearching,
     query,
     results,
-    tap,
     [Symbol.dispose](): void {
       dispose();
     },
@@ -227,5 +183,21 @@ export function createReactiveSearch<T>(
   });
   const state = createSearch(index, { debounce: options.debounce });
 
-  return Object.assign(Object.create(state), { index }) as ReactiveSearch<T>;
+  return {
+    clear: state.clear,
+    get disposalSignal() {
+      return state.disposalSignal;
+    },
+    dispose: state.dispose,
+    get disposed() {
+      return state.disposed;
+    },
+    index,
+    isSearching: state.isSearching,
+    query: state.query,
+    results: state.results,
+    [Symbol.dispose]() {
+      state[Symbol.dispose]();
+    },
+  };
 }

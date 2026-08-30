@@ -11,11 +11,11 @@ pnpm add @vielzeug/ward
 ## Quick Start
 
 ```ts
-import { ANONYMOUS, WILDCARD, allow, createWard, deny, owns } from '@vielzeug/ward';
+import { ANONYMOUS, WILDCARD, allow, createWard, deny, predicate } from '@vielzeug/ward';
 
 const ward = createWard<'read' | 'update', { authorId: string }>([
   allow([ANONYMOUS, 'viewer'], 'posts', ['read']),
-  allow('editor', 'posts', ['update'], { when: owns('authorId') }),
+  allow('editor', 'posts', ['update'], { when: predicate.owns('authorId') }),
   deny('blocked', WILDCARD, [WILDCARD], { priority: 100 }),
 ]);
 
@@ -55,5 +55,5 @@ bound.explain({ resource: 'posts', action: 'update', data: { authorId: 'u2' } })
 6. Use `explain()` directly at request boundaries instead of middleware wrappers.
 7. Subscribe to decision events with `tap()` for logging and diagnostics:
    ```ts
-   ward.tap((event) => console.debug(`ward:${event.type}`, event.decision));
+   ward.tap((event) => console.debug('ward:decision', event.decision));
    ```

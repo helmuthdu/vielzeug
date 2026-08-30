@@ -144,7 +144,7 @@ export function createWard<TAction extends string = string, TData = unknown>(
     const winner = pickWinner(entries, principal, resource, action, data);
     const decision = toDecision(winner);
 
-    emitTap({ action, data, decision, principal, resource, type: 'decision' });
+    emitTap({ action, data, decision, principal, resource });
 
     return decision;
   }

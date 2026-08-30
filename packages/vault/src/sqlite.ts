@@ -3,7 +3,6 @@ export type {
   SQLiteParameter,
   SQLiteStatement,
   SQLiteVaultOptions,
-  SQLiteVaultStore,
   TransactionContext,
 } from './adapters/sqlite';
 export { createSQLite } from './adapters/sqlite';

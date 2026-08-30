@@ -51,9 +51,8 @@ export function createPageSource<T, TFilter = unknown, TSort = unknown>(
 
   const fetch = (query: PageQuery<TFilter, TSort>): Promise<void> =>
     asyncSource.fetch({
-      failure: (previous, error) => ({ ...previous, error, isFetching: false, pendingQuery: undefined }),
       load: (signal) => config.load({ query, signal }),
-      pending: (previous) => ({ ...previous, error: null, isFetching: true, pendingQuery: query }),
+      query,
       success: (result) => {
         const total = totalItems(result.total);
         const pagination = createPagePagination(query.page, query.pageSize, total);

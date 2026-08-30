@@ -1,10 +1,10 @@
-import type { SchemaDescriptor } from '../core';
+import type { CheckContext, SchemaDescriptor, SchemaMode, SchemaWalker, ValidateResult } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 
-export class InstanceOfSchema<T, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<T, T, Mode> {
+export class InstanceOfSchema<T, Mode extends SchemaMode = 'sync'> extends Schema<T, T, Mode> {
   readonly cls: new (
-    ...args: any[]
+    ...args: never[]
   ) => T;
 
   protected override get _kind(): string {
@@ -13,12 +13,12 @@ export class InstanceOfSchema<T, Mode extends import('../core').SchemaMode = 'sy
 
   override checkAsync(
     this: InstanceOfSchema<T, 'sync'>,
-    fn: (value: T, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+    fn: (value: T, ctx: CheckContext) => Promise<ValidateResult>,
   ): InstanceOfSchema<T, 'async'> {
     return this._addCheck(fn, true) as unknown as InstanceOfSchema<T, 'async'>;
   }
 
-  constructor(cls: new (...args: any[]) => T) {
+  constructor(cls: new (...args: never[]) => T) {
     super((value, ctx) =>
       value instanceof cls
         ? null
@@ -37,7 +37,7 @@ export class InstanceOfSchema<T, Mode extends import('../core').SchemaMode = 'sy
     return { ...this._describeBase(), className: this.cls.name, kind: 'instanceof' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     if (visitor.instanceof) return visitor.instanceof(this);
 
     return super._walk(visitor);

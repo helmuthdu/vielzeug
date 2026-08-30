@@ -1,4 +1,4 @@
-export { combineSignals, createBus } from './bus';
+export { createBus } from './bus';
 export { BusDisposedError, HeraldConfigError, HeraldError } from './errors';
 export { pipeEvents } from './pipe';
 export type {

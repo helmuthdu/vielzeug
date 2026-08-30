@@ -1,13 +1,16 @@
+import { SourcererConfigurationError } from './errors';
 import type { PagePagination } from './types';
 
 export function positiveInteger(value: number, name: string): number {
-  if (!Number.isInteger(value) || value < 1) throw new RangeError(`${name} must be a positive integer`);
+  if (!Number.isInteger(value) || value < 1)
+    throw new SourcererConfigurationError(`${name} must be a positive integer`);
 
   return value;
 }
 
 export function totalItems(value: number): number {
-  if (!Number.isInteger(value) || value < 0) throw new RangeError('Source loader total must be a non-negative integer');
+  if (!Number.isInteger(value) || value < 0)
+    throw new SourcererConfigurationError('Source loader total must be a non-negative integer');
 
   return value;
 }

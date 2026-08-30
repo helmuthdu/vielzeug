@@ -1,13 +1,25 @@
-import type { AnySchema, InferOutput, Issue, MessageFn, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import type {
+  AnySchema,
+  CheckContext,
+  InferOutput,
+  InferSchemaMode,
+  Issue,
+  MergeSchemaModes,
+  MessageFn,
+  ParseContext,
+  ParseValue,
+  SchemaDescriptor,
+  SchemaMode,
+  SchemaWalker,
+  ValidateResult,
+} from '../core';
 
 import { _makeCtx, ErrorCode, fail, prependIssuePath, resolveMessage, Schema, SpellValidationError } from '../core';
 
 export class MapSchema<
   K extends AnySchema,
   V extends AnySchema,
-  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
-    import('../core').InferSchemaMode<K | V>
-  >,
+  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<K | V>>,
 > extends Schema<Map<InferOutput<K>, InferOutput<V>>, unknown, Mode> {
   readonly keySchema: K;
   readonly valueSchema: V;
@@ -18,10 +30,7 @@ export class MapSchema<
 
   override checkAsync(
     this: MapSchema<K, V, 'sync'>,
-    fn: (
-      value: Map<InferOutput<K>, InferOutput<V>>,
-      ctx: import('../core').CheckContext,
-    ) => Promise<import('../core').ValidateResult>,
+    fn: (value: Map<InferOutput<K>, InferOutput<V>>, ctx: CheckContext) => Promise<ValidateResult>,
   ): MapSchema<K, V, 'async'> {
     return this._addCheck(fn, true) as unknown as MapSchema<K, V, 'async'>;
   }
@@ -163,7 +172,7 @@ export class MapSchema<
     };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     const key = this.keySchema.walk(visitor);
     const value = this.valueSchema.walk(visitor);
 

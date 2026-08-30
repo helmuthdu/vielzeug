@@ -37,6 +37,8 @@ exports:
     PageSourceConfig,
     Source,
     SourceSnapshot,
+    SourcererError,
+    SourcererConfigurationError,
   ]
 environments: [browser, node, ssr, deno]
 ---

@@ -21,7 +21,7 @@ import { effect, signal } from '@vielzeug/ripple';
 const query = signal('');
 const normalized = pipe(
   fromSignal(query),
-  debounce({ for: 300 }),
+  debounce(300),
   map((value) => value.trim().toLowerCase()),
 );
 const result = toSignal(normalized, { initial: '' });

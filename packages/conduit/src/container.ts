@@ -8,7 +8,7 @@ import {
 } from './errors.js';
 import type { Container, FactoryOptions, InferTokens, Lifetime, ScopeToken, Token, ValueOptions } from './types.js';
 
-type Disposer = (value: never) => Promise<void> | void;
+type Disposer = (value: unknown) => Promise<void> | void;
 
 type ValueRegistration<T> = Readonly<{
   dispose?: Disposer;
@@ -30,7 +30,7 @@ type CacheEntry = { promise?: Promise<unknown>; value?: unknown };
 type Lifecycle = 'active' | 'disposed' | 'disposing';
 
 class ContainerImpl implements Container {
-  #cache = new Map<FactoryRegistration<any>, CacheEntry>();
+  #cache = new Map<FactoryRegistration<unknown>, CacheEntry>();
   #children = new Set<ContainerImpl>();
   #cleanupFailures: unknown[] = [];
   #disposalController = new AbortController();
@@ -39,7 +39,7 @@ class ContainerImpl implements Container {
   #disposePromise?: Promise<void>;
   #owned: OwnedResource[] = [];
   #parent?: ContainerImpl;
-  #registry = new Map<Token<any>, Registration<any>>();
+  #registry = new Map<Token<unknown>, Registration<unknown>>();
   #scope?: ScopeToken;
   readonly name: string;
 
@@ -72,7 +72,7 @@ class ContainerImpl implements Container {
 
     this.#registry.set(token, registration);
 
-    if (options.dispose) this.#owned.push({ dispose: options.dispose, value });
+    if (options.dispose) this.#owned.push({ dispose: options.dispose as Disposer, value });
 
     return this;
   }
@@ -157,7 +157,7 @@ class ContainerImpl implements Container {
       if (!resource.dispose) continue;
 
       try {
-        await resource.dispose(resource.value as never);
+        await resource.dispose(resource.value);
       } catch (error) {
         failures.push(error);
       }
@@ -295,7 +295,7 @@ class ContainerImpl implements Container {
       if (owner.#lifecycle !== 'active') {
         if (registration.dispose) {
           try {
-            await registration.dispose(value as never);
+            await registration.dispose(value);
           } catch (error) {
             owner.#cleanupFailures.push(error);
           }

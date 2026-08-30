@@ -1,22 +1,14 @@
-const unsafeKeys = new Set(['__proto__', 'constructor', 'prototype']);
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
-
-  const prototype = Object.getPrototypeOf(value);
-
-  return prototype === Object.prototype || prototype === null;
-}
+import { isRecord, isUnsafeKey } from './core/path';
 
 function flatten(obj: Record<string, unknown>, prefix: string): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(obj)) {
-    if (unsafeKeys.has(key)) continue;
+    if (isUnsafeKey(key)) continue;
 
     const fullKey = prefix ? `${prefix}.${key}` : key;
 
-    if (isPlainObject(value)) {
+    if (isRecord(value)) {
       Object.assign(result, flatten(value, fullKey));
     } else {
       result[fullKey] = value;

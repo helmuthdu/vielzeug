@@ -1,8 +1,10 @@
+import { decimal, roundDivision } from './_decimal';
 import { isCurrency } from './currency';
-import { decimal, roundDivision } from './decimal';
 import { CoinsError, CurrencyMismatchError } from './errors';
-import { isMoney, withMinor } from './money';
+import { assertMoney, createMoney } from './money';
 import type { Currency, ExchangeRate, Money, RoundingMode } from './types';
+
+const canonicalRates = new WeakSet<object>();
 
 export function exchangeRate<From extends Currency, To extends Currency>({
   from,
@@ -20,7 +22,15 @@ export function exchangeRate<From extends Currency, To extends Currency>({
 
   if (parsed.numerator < 0n) throw new CoinsError('INVALID_DECIMAL', 'Exchange rates cannot be negative');
 
-  return Object.freeze({ from, to, value: parsed });
+  const rate = Object.freeze({ from, to, value: parsed }) as ExchangeRate<From, To>;
+
+  canonicalRates.add(rate);
+
+  return rate;
+}
+
+export function isExchangeRate(value: unknown): value is ExchangeRate {
+  return typeof value === 'object' && value !== null && canonicalRates.has(value);
 }
 
 export function exchange<From extends Currency, To extends Currency>(
@@ -28,31 +38,16 @@ export function exchange<From extends Currency, To extends Currency>(
   rate: ExchangeRate<From, To>,
   options: { rounding?: RoundingMode } = {},
 ): Money<To> {
-  if (!isMoney(value) || !isValidRate(rate))
-    throw new CoinsError('INVALID_MONEY', 'Exchange requires canonical money and rate values');
+  assertMoney(value);
+
+  if (!isExchangeRate(rate)) {
+    throw new CoinsError('INVALID_EXCHANGE_RATE', 'Exchange requires a canonical exchange rate');
+  }
 
   if (value.currency !== rate.from) throw new CurrencyMismatchError(value.currency.code, rate.from.code);
 
   const numerator = value.amount * rate.value.numerator * 10n ** BigInt(rate.to.minorUnit);
   const denominator = rate.value.denominator * 10n ** BigInt(rate.from.minorUnit);
 
-  return withMinor(roundDivision(numerator, denominator, options.rounding ?? 'halfAwayFromZero'), rate.to);
-}
-
-function isValidRate(value: unknown): value is ExchangeRate {
-  if (typeof value !== 'object' || value === null || !Object.isFrozen(value)) return false;
-
-  const rate = value as Partial<ExchangeRate>;
-
-  return (
-    isCurrency(rate.from) &&
-    isCurrency(rate.to) &&
-    typeof rate.value === 'object' &&
-    rate.value !== null &&
-    Object.isFrozen(rate.value) &&
-    typeof rate.value.numerator === 'bigint' &&
-    rate.value.numerator >= 0n &&
-    typeof rate.value.denominator === 'bigint' &&
-    rate.value.denominator > 0n
-  );
+  return createMoney(roundDivision(numerator, denominator, options.rounding ?? 'halfAwayFromZero'), rate.to);
 }

@@ -3,10 +3,12 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 
 import * as core from '../index';
+import * as idb from '../indexeddb';
 import { createIndexedDB, defineMigration } from '../indexeddb';
 import { createLocalStorage } from '../local-storage';
 import { createMemory } from '../memory';
 import { createSessionStorage } from '../session-storage';
+import * as sqlite from '../sqlite';
 import { createSQLite } from '../sqlite';
 
 type PackageManifest = {
@@ -33,6 +35,18 @@ describe('adapter entry points', () => {
     expect(createSessionStorage).toBeTypeOf('function');
     expect(createSQLite).toBeTypeOf('function');
     expect(defineMigration).toBeTypeOf('function');
+  });
+
+  test('does not export removed type aliases from adapter entry points', () => {
+    // Type-only exports are invisible to the `in` operator, so verify at the type level.
+    // @ts-expect-error — IndexedDbVaultStore was removed
+    type _NoIdbAlias = typeof idb extends { IndexedDbVaultStore: infer _ } ? true : false;
+    // @ts-expect-error — SQLiteVaultStore was removed
+    type _NoSqliteAlias = typeof sqlite extends { SQLiteVaultStore: infer _ } ? true : false;
+
+    // Runtime check for value exports (factories are real runtime values)
+    expect('createIndexedDB' in idb).toBe(true);
+    expect('createSQLite' in sqlite).toBe(true);
   });
 
   test('declares only focused adapter subpaths in the package export map', async () => {

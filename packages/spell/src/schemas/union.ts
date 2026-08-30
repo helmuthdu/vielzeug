@@ -1,12 +1,23 @@
-import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import type {
+  AnySchema,
+  CheckContext,
+  InferOutput,
+  InferSchemaMode,
+  Issue,
+  MergeSchemaModes,
+  ParseContext,
+  ParseValue,
+  SchemaDescriptor,
+  SchemaMode,
+  SchemaWalker,
+  ValidateResult,
+} from '../core';
 
 import { _makeCtx, ErrorCode, Schema, SpellValidationError } from '../core';
 
 export class UnionSchema<
   T extends readonly AnySchema[],
-  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
-    import('../core').InferSchemaMode<T[number]>
-  >,
+  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T[number]>>,
 > extends Schema<InferOutput<T[number]>, unknown, Mode> {
   readonly schemas: T;
 
@@ -16,10 +27,7 @@ export class UnionSchema<
 
   override checkAsync(
     this: UnionSchema<T, 'sync'>,
-    fn: (
-      value: InferOutput<T[number]>,
-      ctx: import('../core').CheckContext,
-    ) => Promise<import('../core').ValidateResult>,
+    fn: (value: InferOutput<T[number]>, ctx: CheckContext) => Promise<ValidateResult>,
   ): UnionSchema<T, 'async'> {
     return this._addCheck(fn, true) as unknown as UnionSchema<T, 'async'>;
   }
@@ -96,7 +104,7 @@ export class UnionSchema<
     return { ...this._describeBase(), branches: this.schemas.map((s) => s.definition()), kind: 'union' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     const branches = this.schemas.map((s) => s.walk(visitor));
 
     if (visitor.union) return visitor.union(this, branches);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { decimal } from '../decimal';
+import { decimal } from '../_decimal';
 
 describe('decimal', () => {
   it('normalizes and bounds exact decimals', () => {

@@ -89,9 +89,6 @@ export function reportRuntimeError(error: OreLifecycleError, target: EventTarget
 
 // ─── Error message constants ─────────────────────────────────────────────────
 
-/** Thrown by `flush()` in the testing sub-path when pending component work doesn't settle within the timeout. */
-export class OreTimeoutError extends OreError {}
-
 export const ORE_ERRORS = {
   asyncSetupUnsupported: 'setup() must return an HTMLResult or null; use reactive state for asynchronous work',
   defineDuplicate: (tag: string): string => `define('${tag}') called twice — custom element already registered`,

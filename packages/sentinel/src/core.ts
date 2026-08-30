@@ -23,8 +23,8 @@ class SentinelHandle<T> implements Sentinel<T> {
   private externalAbortListener: (() => void) | undefined;
 
   constructor(options: CreateSentinelOptions<T>, setup: (update: (value: T) => void) => () => void) {
-    const signalFactory = options.runtime?.signal ?? createSignal;
-    this.state = signalFactory(options.initialValue);
+    const toSignal = options.runtime?.signal ?? createSignal;
+    this.state = toSignal(options.initialValue);
     this.disposalSignal = this.abortController.signal;
 
     if (options.signal?.aborted) {
@@ -44,11 +44,6 @@ class SentinelHandle<T> implements Sentinel<T> {
     }
 
     if (!options.signal) return;
-
-    if (options.signal.aborted) {
-      this.dispose();
-      return;
-    }
 
     this.externalSignal = options.signal;
     this.externalAbortListener = () => this.dispose();

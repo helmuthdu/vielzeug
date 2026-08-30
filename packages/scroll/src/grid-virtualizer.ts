@@ -73,7 +73,7 @@ export interface GridVirtualizerOptions {
   /** External measurement cache for rows. Share across instances for scroll restoration. */
   rowMeasurementCache?: Map<number, number>;
   /** Optional signal factory for reactive state. */
-  signal?: (init: GridVirtualizerState) => Signal<GridVirtualizerState>;
+  toSignal?: (init: GridVirtualizerState) => Signal<GridVirtualizerState>;
 }
 
 /**
@@ -157,9 +157,9 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
 
   // Optional signal for reactive state
   let stateSignal: Signal<GridVirtualizerState> | null = null;
-  if (options.signal) {
+  if (options.toSignal) {
     const initialState: GridVirtualizerState = { cols: [], rows: [], totalHeight: 0, totalWidth: 0 };
-    stateSignal = options.signal(initialState);
+    stateSignal = options.toSignal(initialState);
   }
 
   // Helper to emit state to both callback and signal

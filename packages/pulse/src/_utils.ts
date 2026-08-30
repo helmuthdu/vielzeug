@@ -1,40 +1,4 @@
 /**
- * Returns a signal that aborts as soon as any of the provided signals abort.
- * With a single argument, returns it directly (no allocation).
- * Cleanup listeners are registered to prevent leaks.
- *
- * @internal
- */
-export function combineSignals(first: AbortSignal, ...rest: AbortSignal[]): AbortSignal {
-  if (rest.length === 0) return first;
-
-  return rest.reduce(mergeTwo, first);
-}
-
-function mergeTwo(a: AbortSignal, b: AbortSignal): AbortSignal {
-  if (a.aborted) return a;
-
-  if (b.aborted) return b;
-
-  const ctrl = new AbortController();
-  const onA = (): void => ctrl.abort(a.reason);
-  const onB = (): void => ctrl.abort(b.reason);
-
-  a.addEventListener('abort', onA, { once: true });
-  b.addEventListener('abort', onB, { once: true });
-  ctrl.signal.addEventListener(
-    'abort',
-    () => {
-      a.removeEventListener('abort', onA);
-      b.removeEventListener('abort', onB);
-    },
-    { once: true },
-  );
-
-  return ctrl.signal;
-}
-
-/**
  * Create a child `AbortController` that aborts as soon as `parent` does.
  * Handles the case where `parent` is already aborted at call time — a plain
  * `addEventListener('abort', ...)` would miss that, since the event already fired.

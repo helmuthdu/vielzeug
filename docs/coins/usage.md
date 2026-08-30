@@ -27,12 +27,12 @@ const cents = money(1999n, USD, { unit: 'minor' });
 
 ## Define Currencies
 
-Use built-in currency definitions for supported ISO currencies. Define a currency explicitly when your domain has a distinct scale.
+Use built-in currency definitions for supported ISO currencies. Construct a custom currency explicitly when your domain has a distinct scale.
 
 ```ts
-import { EUR, USD, defineCurrency, money } from '@vielzeug/coins';
+import { EUR, USD, currency, money } from '@vielzeug/coins';
 
-const rewards = defineCurrency({ code: 'PTS', minorUnit: 0 });
+const rewards = currency({ code: 'PTS', minorUnit: 0 });
 
 money('10.00', USD);
 money('10.00', EUR);

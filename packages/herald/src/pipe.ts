@@ -1,4 +1,3 @@
-import { createSignalScope } from './bus';
 import { HeraldConfigError } from './errors';
 import type { Bus, EventKey, EventMap, PipeableKey, PipeEntry, Unsubscribe } from './types';
 
@@ -29,7 +28,11 @@ export function pipeEvents<S extends EventMap, T extends EventMap>(
 ): Unsubscribe {
   if (entries.length === 0) throw new HeraldConfigError('pipeEvents() requires at least one entry');
 
-  const scope = createSignalScope(source.disposalSignal, target.disposalSignal, opts?.signal);
+  const signals: AbortSignal[] = [source.disposalSignal, target.disposalSignal];
+
+  if (opts?.signal) signals.push(opts.signal);
+
+  const signal = AbortSignal.any(signals);
 
   // Cast needed: emit's conditional rest args (void vs payload) cannot be resolved in a generic
   // context. At runtime, passing undefined for void events is safe — the bus ignores it.
@@ -40,17 +43,16 @@ export function pipeEvents<S extends EventMap, T extends EventMap>(
       const key = entry as PipeableKey<S, T>;
 
       return source.on(key as EventKey<S>, (payload) => emitTarget(key as unknown as EventKey<T>, payload), {
-        signal: scope.signal,
+        signal,
       });
     }
 
     const { from, to } = entry as { from: EventKey<S>; to: EventKey<T> };
 
-    return source.on(from, (payload) => emitTarget(to, payload), { signal: scope.signal });
+    return source.on(from, (payload) => emitTarget(to, payload), { signal });
   });
 
   return () => {
     for (const unsub of unsubs) unsub();
-    scope.dispose();
   };
 }

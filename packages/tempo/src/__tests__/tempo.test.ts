@@ -29,6 +29,7 @@ import {
   shift,
   startOf,
   TempoInvalidInputError,
+  TempoInvalidTzError,
   TempoMissingTzError,
   Temporal,
   timeDiff,
@@ -49,6 +50,17 @@ describe('parse', () => {
 
   it('rejects a mismatched ISO string', () => {
     expect(() => parse('2026-03-21', { as: 'instant' })).toThrow(TempoInvalidInputError);
+  });
+
+  it('preserves the original Temporal error as cause', () => {
+    expect.assertions(2);
+
+    try {
+      parse('not-a-date', { as: 'instant' });
+    } catch (err) {
+      expect(err).toBeInstanceOf(TempoInvalidInputError);
+      expect((err as Error).cause).toBeInstanceOf(Error);
+    }
   });
 });
 
@@ -76,6 +88,17 @@ describe('time zone resolution', () => {
 
     expect(inTimeZone(instant, 'Europe/Berlin').toString()).toBe('2026-03-21T11:00:00+01:00[Europe/Berlin]');
     expect(now({ timeZone: 'UTC' }).timeZoneId).toBe('UTC');
+  });
+
+  it('preserves the original error as cause for invalid timezone', () => {
+    expect.assertions(2);
+
+    try {
+      now({ timeZone: 'Not/A_Real_Zone' });
+    } catch (err) {
+      expect(err).toBeInstanceOf(TempoInvalidTzError);
+      expect((err as Error).cause).toBeInstanceOf(Error);
+    }
   });
 });
 
@@ -307,6 +330,17 @@ describe('parseDuration / formatDuration', () => {
 
   it('rejects invalid duration input', () => {
     expect(() => parseDuration('invalid')).toThrow(TempoInvalidInputError);
+  });
+
+  it('preserves the original Temporal error as cause for parseDuration', () => {
+    expect.assertions(2);
+
+    try {
+      parseDuration('invalid');
+    } catch (err) {
+      expect(err).toBeInstanceOf(TempoInvalidInputError);
+      expect((err as Error).cause).toBeInstanceOf(Error);
+    }
   });
 
   it('formats a duration with fallback when Intl.DurationFormat is unavailable', () => {

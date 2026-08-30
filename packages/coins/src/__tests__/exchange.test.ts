@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { BHD, EUR, exchange, exchangeRate, JPY, money, toDecimal, USD } from '../index';
+import { BHD, CoinsError, EUR, exchange, exchangeRate, isExchangeRate, JPY, money, toDecimal, USD } from '../index';
 
 describe('exchange', () => {
   it('converts equal-scale currencies exactly', () => {
@@ -34,7 +34,23 @@ describe('exchange', () => {
     const rate = exchangeRate({ from: USD, to: EUR, value: '1' });
 
     expect(() => exchange(money('1', EUR), rate as never)).toThrow(/Currency mismatch/);
-    expect(() => exchange(money('1', USD), { ...rate } as never)).toThrow(/canonical/);
     expect(() => exchangeRate({ from: USD, to: EUR, value: '-1' })).toThrow(/negative/);
+
+    try {
+      exchange(money('1', USD), Object.freeze({ ...rate }) as never);
+      throw new Error('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(CoinsError);
+      expect((error as CoinsError).code).toBe('INVALID_EXCHANGE_RATE');
+    }
+  });
+
+  it('isExchangeRate identifies canonical rates and rejects forgeries', () => {
+    const rate = exchangeRate({ from: USD, to: EUR, value: '0.9234' });
+
+    expect(isExchangeRate(rate)).toBe(true);
+    expect(isExchangeRate(Object.freeze({ ...rate }))).toBe(false);
+    expect(isExchangeRate(null)).toBe(false);
+    expect(isExchangeRate({})).toBe(false);
   });
 });

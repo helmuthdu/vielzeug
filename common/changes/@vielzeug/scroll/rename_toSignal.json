@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: rename signalFactory option to toSignal across createVirtualizer, createDomVirtualList, createGridVirtualizer, createGroupedVirtualizer. Rename destroyed flag to disposed.",
+      "packageName": "@vielzeug/scroll",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/scroll"
+}

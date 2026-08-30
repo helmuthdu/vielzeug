@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   allocate,
+  CoinsError,
   clamp,
   currency,
-  defineCurrency,
   EUR,
+  isCurrency,
   money,
   parseMoneyJSON,
   sum,
@@ -21,12 +22,21 @@ describe('currency definitions', () => {
     expect(() => currency('FAKE')).toThrow(/Unsupported currency/);
   });
 
-  it('registers one deterministic custom definition', () => {
-    const points = defineCurrency({ code: 'PTS', minorUnit: 0 });
+  it('constructs immutable custom currencies from definitions', () => {
+    const points = currency({ code: 'PTS', minorUnit: 0 });
 
     expect(toDecimal(money('10', points))).toBe('10');
-    expect(defineCurrency({ code: 'PTS', minorUnit: 0 })).toBe(points);
-    expect(() => defineCurrency({ code: 'PTS', minorUnit: 2 })).toThrow(/already has/);
+    expect(Object.isFrozen(points)).toBe(true);
+    expect(currency({ code: 'PTS', minorUnit: 0 })).not.toBe(points);
+    expect(() => currency({ code: 'lower', minorUnit: 0 })).toThrow(/uppercase/);
+  });
+
+  it('isCurrency identifies canonical currencies and rejects forgeries', () => {
+    expect(isCurrency(USD)).toBe(true);
+    expect(isCurrency(currency({ code: 'PTS', minorUnit: 0 }))).toBe(true);
+    expect(isCurrency(Object.freeze({ code: 'USD', minorUnit: 2 }))).toBe(false);
+    expect(isCurrency(null)).toBe(false);
+    expect(isCurrency({})).toBe(false);
   });
 });
 
@@ -58,8 +68,14 @@ describe('aggregation', () => {
     expect(toDecimal(clamp(money('12', USD), { max: money('10', USD), min: money('0', USD) }))).toBe('10.00');
   });
 
-  it('rejects clamp min exceeding max with INVALID_MONEY', () => {
-    expect(() => clamp(money('5', USD), { max: money('0', USD), min: money('10', USD) })).toThrow(/exceed/);
+  it('rejects clamp min exceeding max with INVALID_RANGE', () => {
+    try {
+      clamp(money('5', USD), { max: money('0', USD), min: money('10', USD) });
+      throw new Error('should have thrown');
+    } catch (error) {
+      expect(error).toBeInstanceOf(CoinsError);
+      expect((error as CoinsError).code).toBe('INVALID_RANGE');
+    }
   });
 
   it('rejects mixed-currency aggregates', () => {
@@ -86,7 +102,7 @@ describe('serialization', () => {
   });
 
   it('restores custom currency only through explicit resolver', () => {
-    const tokens = defineCurrency({ code: 'TOK', minorUnit: 2 });
+    const tokens = currency({ code: 'TOK', minorUnit: 2 });
     const encoded = toJSON(money('1.00', tokens));
 
     expect(() => parseMoneyJSON(encoded)).toThrow();

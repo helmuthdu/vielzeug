@@ -100,16 +100,16 @@ export function password(ctx: IllusionistContext, opts: PasswordOptions = {}): s
   // Guarantee at least one char from each pool, then fill the rest randomly.
   const chars: string[] = [];
   for (const pool of pools) {
-    chars.push(pool[Math.floor(ctx.source.next() * pool.length)] ?? upper[0]!);
+    chars.push(pick(pool.split(''), ctx.source)!);
   }
   const all = upper + lower + digits + SPECIAL_CHARS;
   while (chars.length < length) {
-    chars.push(all[Math.floor(ctx.source.next() * all.length)] ?? 'a');
+    chars.push(pick(all.split(''), ctx.source)!);
   }
 
   // Shuffle via Fisher-Yates using ctx.source.
   for (let i = chars.length - 1; i > 0; i--) {
-    const j = Math.floor(ctx.source.next() * (i + 1));
+    const j = int(0, i, ctx.source);
     [chars[i], chars[j]] = [chars[j]!, chars[i]!];
   }
 

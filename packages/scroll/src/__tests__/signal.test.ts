@@ -23,7 +23,7 @@ describe('createVirtualizer with signal option', () => {
     const v = createVirtualizer(el, {
       count: 5,
       estimateSize: 20,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(stateSignal.value.totalSize).toBe(100);
@@ -37,7 +37,7 @@ describe('createVirtualizer with signal option', () => {
     const v = createVirtualizer(el, {
       count: 5,
       estimateSize: 20,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(stateSignal.value.totalSize).toBe(100);
@@ -53,7 +53,7 @@ describe('createVirtualizer with signal option', () => {
       count: 5,
       estimateSize: 20,
       overscan: { end: 0, start: 0 },
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(stateSignal.value.items[0]?.size).toBe(20);
@@ -72,7 +72,7 @@ describe('createVirtualizer with signal option', () => {
       count: 5,
       estimateSize: 20,
       onChange,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(onChange).toHaveBeenCalled();
@@ -88,7 +88,7 @@ describe('createVirtualizer with signal option', () => {
     const v = createVirtualizer(el, {
       count: 5,
       estimateSize: 20,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     // Subscribe to changes
@@ -108,7 +108,7 @@ describe('createVirtualizer with signal option', () => {
     const v = createVirtualizer(el, {
       count: 5,
       estimateSize: 20,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(v.count).toBe(5);
@@ -123,7 +123,7 @@ describe('createVirtualizer with signal option', () => {
     const v = createVirtualizer(el, {
       count: 5,
       estimateSize: 20,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(v.totalSize).toBe(100);
@@ -139,7 +139,7 @@ describe('createVirtualizer with signal option', () => {
       count: 5,
       estimateSize: 20,
       overscan: { end: 0, start: 0 },
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     const initialCount = v.items.length;
@@ -157,7 +157,7 @@ describe('createVirtualizer with signal option', () => {
     const v = createVirtualizer(el, {
       count: 50,
       estimateSize: 20,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(v.scrollOffset).toBe(0);
@@ -172,7 +172,7 @@ describe('createVirtualizer with signal option', () => {
     const v = createVirtualizer(el, {
       count: 50,
       estimateSize: 20,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     v.scrollToIndex(10, { align: 'start' });
@@ -187,7 +187,7 @@ describe('createVirtualizer with signal option', () => {
       count: 5,
       estimateSize: 20,
       overscan: { end: 0, start: 0 },
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     v.measureBatch([{ index: 0, size: 50 }]);
@@ -202,7 +202,7 @@ describe('createVirtualizer with signal option', () => {
     const v = createVirtualizer(el, {
       count: 5,
       estimateSize: 20,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
     const before = stateSignal.value;
 
@@ -218,7 +218,7 @@ describe('createVirtualizer with signal option', () => {
     const v = createVirtualizer(el, {
       count: 5,
       estimateSize: 20,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(() => {
@@ -233,7 +233,7 @@ describe('createVirtualizer with signal option', () => {
     const v = createVirtualizer(el, {
       count: 5,
       estimateSize: 20,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(() => v[Symbol.dispose]()).not.toThrow();
@@ -245,7 +245,7 @@ describe('createVirtualizer with signal option', () => {
     const v = createVirtualizer(el, {
       count: 5,
       estimateSize: 20,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(v.disposed).toBe(false);
@@ -258,7 +258,7 @@ describe('createVirtualizer with signal option', () => {
     const v = createVirtualizer(el, {
       count: 5,
       estimateSize: 20,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     v.dispose();
@@ -271,7 +271,7 @@ describe('createVirtualizer with signal option', () => {
     const v = createVirtualizer(el, {
       count: 5,
       estimateSize: 20,
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     v.dispose();
@@ -302,7 +302,7 @@ describe('createGroupedVirtualizer with signal option', () => {
     const v = createGroupedVirtualizer(el, {
       estimateItemSize: 30,
       sections: makeSections(),
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(stateSignal.value.items.length).toBeGreaterThan(0);
@@ -321,7 +321,7 @@ describe('createGroupedVirtualizer with signal option', () => {
     const v = createGroupedVirtualizer(el, {
       estimateItemSize: 30,
       sections: makeSections(),
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     const before = stateSignal.value.totalSize;
@@ -343,7 +343,7 @@ describe('createGroupedVirtualizer with signal option', () => {
     const v = createGroupedVirtualizer(el, {
       estimateItemSize: 30,
       sections: makeSections(),
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     v.update([{ items: ['a', 'b', 'c', 'd'], label: 'Big Group' }], { onChange });
@@ -366,7 +366,7 @@ describe('createGroupedVirtualizer with signal option', () => {
     const v = createGroupedVirtualizer(el, {
       estimateItemSize: 30,
       sections: makeSections(),
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     stateSignal.subscribe(() => {
@@ -390,7 +390,7 @@ describe('createGroupedVirtualizer with signal option', () => {
     const v = createGroupedVirtualizer(el, {
       estimateItemSize: 30,
       sections: makeSections(),
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(stateSignal.value.headers.length).toBe(2);
@@ -408,7 +408,7 @@ describe('createGroupedVirtualizer with signal option', () => {
     const v = createGroupedVirtualizer(el, {
       estimateItemSize: 30,
       sections: makeSections(),
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(v.count).toBeGreaterThan(0);
@@ -428,7 +428,7 @@ describe('createGroupedVirtualizer with signal option', () => {
     const v = createGroupedVirtualizer(el, {
       estimateItemSize: 30,
       sections: makeSections(),
-      signal: () => stateSignal,
+      toSignal: () => stateSignal,
     });
 
     expect(() => {

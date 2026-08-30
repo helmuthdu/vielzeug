@@ -1,45 +1,10 @@
+import type { AsyncState, QueryCache, QueryDefinition } from '@vielzeug/courier';
 import { stream } from '../core';
 import type { Stream } from '../types';
 
-type QueryCache = {
-  getSnapshot<T>(key: readonly unknown[]): T | null;
-  subscribe(key: readonly unknown[], onStoreChange: () => void): () => void;
-};
-
-type QueryDefinition = {
-  fetch: (...args: never[]) => Promise<unknown>;
-  key: readonly unknown[];
-};
-
-type QuerySnapshot<T> =
-  | {
-      readonly data: undefined;
-      readonly error: null;
-      readonly isFetching: boolean;
-      readonly status: 'loading';
-      readonly updatedAt: undefined;
-    }
-  | {
-      readonly data: T;
-      readonly error: null;
-      readonly isFetching: boolean;
-      readonly status: 'success';
-      readonly updatedAt: number;
-    }
-  | {
-      readonly data: T | undefined;
-      readonly error: Error;
-      readonly isFetching: false;
-      readonly status: 'error';
-      readonly updatedAt: number;
-    };
-
-export function fromQuery<T extends QueryDefinition>(
-  cache: QueryCache,
-  definition: T,
-): Stream<QuerySnapshot<Awaited<ReturnType<T['fetch']>>> | null> {
+export function fromQuery<T>(cache: QueryCache, definition: QueryDefinition<T>): Stream<AsyncState<T> | null> {
   return stream((sink) => {
-    const snapshot = () => cache.getSnapshot<QuerySnapshot<Awaited<ReturnType<T['fetch']>>>>(definition.key);
+    const snapshot = () => cache.getSnapshot<T>(definition.key);
 
     sink.next(snapshot());
 

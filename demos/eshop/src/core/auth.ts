@@ -1,6 +1,6 @@
 import { signal } from '@vielzeug/ripple';
 import type { Principal } from '@vielzeug/ward';
-import { allow, createWard, owns } from '@vielzeug/ward';
+import { allow, createWard, predicate } from '@vielzeug/ward';
 import { seedUsers } from './seed-data';
 import type { Order, User } from './types';
 
@@ -17,7 +17,7 @@ export const ward = createWard<OrderAction, Order>([
   // customer: can always place a new order (there's no `data` to own yet at that point), but
   // may only read/cancel orders they themselves placed.
   allow('customer', 'order', ['create']),
-  allow<OrderAction, Order>('customer', 'order', ['read', 'cancel'], { when: owns('userId') }),
+  allow<OrderAction, Order>('customer', 'order', ['read', 'cancel'], { when: predicate.owns('userId') }),
 ]);
 
 /** Starts as the seed customer — Settings lets you switch roles to see ward's effect live. */
@@ -31,7 +31,7 @@ export function getPrincipal(user: User): Principal {
  * General "can view the admin/all-orders area" gate, reused by the navbar's Admin link, the
  * command palette, and the `/admin` route guard. Reuses the same `order`/`read` ward rules
  * above with no `data` — admin/sales have no `when` guard so they're allowed unconditionally;
- * customer's `owns('userId')` guard can't match without a concrete order, so it falls through
+ * customer's `predicate.owns('userId')` guard can't match without a concrete order, so it falls through
  * to "no-matching-rule" and correctly resolves to `false`.
  */
 export function canAccessAdmin(): boolean {

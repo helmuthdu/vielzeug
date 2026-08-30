@@ -1,19 +1,21 @@
-import { resolveBuiltinCurrency } from './currency';
+import { currency } from './currency';
 import { CoinsError } from './errors';
-import { money } from './money';
+import { assertMoney, money } from './money';
 import type { Currency, Money, MoneyJSON } from './types';
 
 const INTEGER = /^(?:0|-[1-9]\d*|[1-9]\d*)$/;
 const KEYS = ['amount', 'currency', 'unit'] as const;
 
 export function toJSON(value: Money): MoneyJSON {
+  assertMoney(value);
+
   return { amount: value.amount.toString(), currency: value.currency.code, unit: 'minor' };
 }
 
 export function parseMoneyJSON(value: unknown, options: { currency?: (code: string) => Currency } = {}): Money {
   try {
     const payload = readPayload(value);
-    const resolveCurrency = options.currency ?? resolveBuiltinCurrency;
+    const resolveCurrency = options.currency ?? currency;
 
     return money(BigInt(payload.amount), resolveCurrency(payload.currency), { unit: 'minor' });
   } catch (error) {
@@ -42,13 +44,13 @@ function readPayload(value: unknown): MoneyJSON {
   }
 
   const amount = descriptors.amount?.value;
-  const currency = descriptors.currency?.value;
+  const currencyCode = descriptors.currency?.value;
   const unit = descriptors.unit?.value;
 
   if (typeof amount !== 'string' || !INTEGER.test(amount))
     throw new TypeError('Money JSON amount must be a canonical integer string');
 
-  if (typeof currency !== 'string' || unit !== 'minor') throw new TypeError('Money JSON currency/unit are invalid');
+  if (typeof currencyCode !== 'string' || unit !== 'minor') throw new TypeError('Money JSON currency/unit are invalid');
 
-  return { amount, currency, unit };
+  return { amount, currency: currencyCode, unit };
 }

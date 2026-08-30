@@ -2,7 +2,7 @@ import { vi } from 'vitest';
 
 import type { BoundWard, Principal, Ward, WardEvent, WardPredicate } from '../index';
 
-import { ANONYMOUS, allow, createWard, deny, owns, WardConfigError, WardPredicateError, WILDCARD } from '../index';
+import { ANONYMOUS, allow, createWard, deny, predicate, WardConfigError, WardPredicateError, WILDCARD } from '../index';
 
 const can = <TAction extends string, TData>(
   ward: Ward<TAction, TData>,
@@ -374,14 +374,14 @@ describe('ward: predicates and ABAC behavior', () => {
     );
   });
 
-  it('supports owns helper for ownership checks', () => {
+  it('supports predicate.owns helper for ownership checks', () => {
     const permit = createWard<'update', { authorId: string }>([
       {
         action: 'update',
         effect: 'allow',
         resource: 'posts',
         role: ['editor'],
-        when: owns('authorId'),
+        when: predicate.owns('authorId'),
       },
     ]);
 
@@ -529,7 +529,7 @@ describe('ward: allowedActions', () => {
 
   it('respects data-dependent rules when data is passed', () => {
     const permit = createWard<'update', { authorId: string }>([
-      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
+      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: predicate.owns('authorId') },
     ]);
 
     expect(
@@ -740,7 +740,6 @@ describe('ward: tap() behavior', () => {
     explainDecision(permit, { id: 'u1', roles: ['viewer'] }, 'posts', 'read', { trace: 'x' } as any);
 
     expect(events).toHaveLength(1);
-    expect(events[0].type).toBe('decision');
     expect(events[0].action).toBe('read');
     expect(events[0].decision.allowed).toBe(true);
     expect(events[0].data).toEqual({ trace: 'x' });
@@ -1690,7 +1689,7 @@ describe('ward: BoundWard checkAll with predicate data', () => {
   it('checkAll on BoundWard evaluates data-gated rules', () => {
     const permit = createWard<'read' | 'update', { authorId: string }>([
       { action: 'read', effect: 'allow', resource: 'posts', role: ['editor'] },
-      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
+      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: predicate.owns('authorId') },
     ]);
 
     const bound = permit.forUser({ id: 'u1', roles: ['editor'] });
@@ -1732,7 +1731,7 @@ describe('ward: allowedActions', () => {
   it('includes predicate-gated actions when data satisfies the predicate', () => {
     const permit = createWard<'read' | 'update', { authorId: string }>([
       { action: 'read', effect: 'allow', resource: 'posts', role: ['editor'] },
-      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
+      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: predicate.owns('authorId') },
     ]);
 
     const allowed = allowedActionsDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update'], {
@@ -1746,7 +1745,7 @@ describe('ward: allowedActions', () => {
   it('excludes predicate-gated actions when predicate fails', () => {
     const permit = createWard<'read' | 'update', { authorId: string }>([
       { action: 'read', effect: 'allow', resource: 'posts', role: ['editor'] },
-      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
+      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: predicate.owns('authorId') },
     ]);
 
     const allowed = allowedActionsDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update'], {
@@ -1764,7 +1763,7 @@ describe('ward: allowedActions', () => {
 describe('ward: rulesInScope predicate interaction', () => {
   it('includes predicate-gated rules when data is omitted (skipPredicate)', () => {
     const permit = createWard<'update', { authorId: string }>([
-      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
+      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: predicate.owns('authorId') },
     ]);
 
     const rules = rulesInScopeDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts');
@@ -1774,7 +1773,7 @@ describe('ward: rulesInScope predicate interaction', () => {
 
   it('evaluates predicates when data is provided — excludes non-matching', () => {
     const permit = createWard<'update', { authorId: string }>([
-      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
+      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: predicate.owns('authorId') },
     ]);
 
     const match = rulesInScopeDecision(permit, { id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u1' });
@@ -1991,7 +1990,9 @@ describe('ward: anonymous predicate warning', () => {
   it('warns when an ANONYMOUS-only rule has a when predicate', () => {
     const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ANONYMOUS, when: owns('authorId') }]);
+    createWard([
+      { action: 'read', effect: 'allow', resource: 'posts', role: ANONYMOUS, when: predicate.owns('authorId') },
+    ]);
 
     expect(spy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/ward]'));
     expect(spy).toHaveBeenCalledWith(expect.stringContaining(ANONYMOUS));
@@ -2002,7 +2003,13 @@ describe('ward: anonymous predicate warning', () => {
     const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     createWard([
-      { action: 'read', effect: 'allow', resource: 'posts', role: [ANONYMOUS, 'viewer'], when: owns('authorId') },
+      {
+        action: 'read',
+        effect: 'allow',
+        resource: 'posts',
+        role: [ANONYMOUS, 'viewer'],
+        when: predicate.owns('authorId'),
+      },
     ]);
 
     expect(spy).not.toHaveBeenCalled();

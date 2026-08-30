@@ -5,13 +5,57 @@ description: Migrate Ward middleware guards and configuration validation to Ward
 
 [[toc]]
 
+## Ward 2.2 Changes
+
+Ward 2.2 removes redundant API surface and speculative type fields.
+
+Removed exports:
+
+- `ruleFor` — use `allow()` or `deny()` directly
+- `owns` (top-level) — use `predicate.owns()`
+- `WardEvent.type` field — single-variant, no longer needed
+
+### Replace `ruleFor` with `allow`/`deny`
+
+```ts
+// Before
+ruleFor('allow', 'viewer', 'posts', ['read'])
+ruleFor('deny', 'blocked', 'posts', ['read', 'update'])
+
+// After
+allow('viewer', 'posts', ['read'])
+deny('blocked', 'posts', ['read', 'update'])
+```
+
+### Replace top-level `owns` with `predicate.owns`
+
+```ts
+// Before
+allow('editor', 'posts:*', ['update'], { when: owns('authorId') })
+
+// After
+allow('editor', 'posts:*', ['update'], { when: predicate.owns('authorId') })
+```
+
+### Drop `WardEvent.type` checks
+
+The `type: 'decision'` field was removed from `WardEvent`. Tap handlers no longer need to discriminate by type.
+
+```ts
+// Before
+ward.tap((event) => console.debug(`ward:${event.type}`, event.decision));
+
+// After
+ward.tap((event) => console.debug('ward:decision', event.decision));
+```
+
 ## Ward 2.1 Changes
 
 Ward 2.1 accepts `allow()`/`deny()` results without spread and returns `NormalizedWardRule` from decision APIs.
 
 ### Drop Spread Ceremony
 
-`createWard` now accepts a flat mix of single rules and rule arrays. `allow()`/`deny()`/`ruleFor()` results can be passed directly — no `...` spread needed. Existing spread code still works.
+`createWard` now accepts a flat mix of single rules and rule arrays. `allow()`/`deny()` results can be passed directly — no `...` spread needed. Existing spread code still works.
 
 ```ts
 // Before

@@ -4,6 +4,7 @@ import { ReactiveRuntime } from './runtime';
 import type {
   Cleanup,
   ComputedOptions,
+  Disposable,
   EffectHandle,
   EffectOptions,
   Readable,
@@ -13,12 +14,10 @@ import type {
   SignalOptions,
 } from './types';
 
-export interface Ripple {
+export interface Ripple extends Disposable {
   batch<T>(fn: () => T): T;
   computed<T>(derive: () => T, options?: ComputedOptions<T>): Readable<T>;
   createScope(name?: string): Scope;
-  dispose(): void;
-  readonly disposed: boolean;
   effect(callback: () => Cleanup | undefined, options?: EffectOptions): EffectHandle;
   resource<Source, Value>(
     source: () => Source,
@@ -43,6 +42,9 @@ export const createRipple = (options?: RippleOptions): Ripple => {
     batch: runtime.batch,
     computed: runtime.computed,
     createScope: runtime.createScope,
+    get disposalSignal() {
+      return runtime.disposalSignal;
+    },
     dispose: () => runtime.dispose(),
     get disposed() {
       return runtime.disposed;
@@ -52,6 +54,7 @@ export const createRipple = (options?: RippleOptions): Ripple => {
     signal: runtime.signal,
     untrack: runtime.untrack,
     watch: createWatch(runtime),
+    [Symbol.dispose]: () => runtime.dispose(),
   };
 };
 

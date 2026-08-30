@@ -308,3 +308,10 @@ type InfiniteSource<T> = Source<T, InfiniteQuery, InfinitePagination> & {
 ```ts
 type AnyPagination = CursorPagination<unknown> | InfinitePagination | PagePagination;
 ```
+
+## Errors
+
+| Error | Trigger | Notable properties |
+| --- | --- | --- |
+| `SourcererError` | Base class for all sourcerer-originated errors | `instanceof SourcererError` narrows all Sourcerer errors |
+| `SourcererConfigurationError` | A source is configured or queried with invalid arguments | — |

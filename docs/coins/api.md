@@ -10,8 +10,7 @@ description: Exact money, currency definitions, exchange, formatting, serializat
 | Symbol | Purpose | Execution | Common gotcha |
 | --- | --- | --- | --- |
 | `money` | Construct validated money | Sync | Bigint requires `{ unit: 'minor' }` |
-| `currency` | Resolve supported definition | Sync | Unknown codes throw |
-| `defineCurrency` | Define an explicit scale | Sync | Code must be three uppercase letters |
+| `currency` | Resolve built-in or construct custom | Sync | Unknown codes throw |
 | `add` / `subtract` | Combine matching currencies | Sync | Mismatches throw |
 | `multiply` / `divide` | Exact decimal scaling | Sync | Use decimal strings |
 | `sum` | Aggregate with inferred currency | Sync | Empty iterable requires `{ currency }` |
@@ -29,21 +28,19 @@ description: Exact money, currency definitions, exchange, formatting, serializat
 
 ## Construction
 
-### `currency(code)`
+### `currency(code)` / `currency({ code, minorUnit })`
 
 ```ts
-function currency(code: string): Currency;
+function currency<C extends string>(code: C): Currency<C>;
+function currency<C extends string>(definition: { code: C; minorUnit: number }): Currency<C>;
 ```
 
-Resolves a registered currency definition by ISO code. Throws `InvalidCurrencyError` for unknown codes. Built-in definitions: `USD`, `EUR`, `GBP`, `JPY`, `KRW`, `BHD`, `KWD`.
-
-### `defineCurrency({ code, minorUnit })`
+Resolves a built-in currency by ISO code, or constructs an immutable custom currency from a definition. Built-in definitions: `USD`, `EUR`, `GBP`, `JPY`, `KRW`, `BHD`, `KWD`. Custom currencies are local values — no global registry. Code must be three uppercase letters; `minorUnit` must be an integer from 0 to 6.
 
 ```ts
-function defineCurrency<C extends string>({ code, minorUnit }: { code: C; minorUnit: number }): Currency<C>;
+currency('USD');
+currency({ code: 'PTS', minorUnit: 0 });
 ```
-
-Defines an explicit scale for a custom currency. Code must be three uppercase letters; `minorUnit` must be an integer from 0 to 6. Built-in definitions are immutable and separate from custom definitions.
 
 ### `isCurrency(value)`
 
@@ -51,13 +48,12 @@ Defines an explicit scale for a custom currency. Code must be three uppercase le
 function isCurrency(value: unknown): value is Currency;
 ```
 
-Type guard for registered currency definitions.
+Type guard for canonical currency values (built-in or constructed via `currency()`).
 
 ### `money(amount, currency, options?)`
 
 ```ts
-function money<C extends Currency>(amount: string, currency: C): Money<C>;
-function money<C extends Currency>(amount: string, currency: C, options: { rounding: RoundingMode }): Money<C>;
+function money<C extends Currency>(amount: string, currency: C, options?: { rounding?: RoundingMode }): Money<C>;
 function money<C extends Currency>(amount: bigint, currency: C, options: { unit: 'minor' }): Money<C>;
 ```
 
@@ -74,7 +70,7 @@ Decimal strings that exceed the currency's precision require a `rounding` mode. 
 function parseMoney(value: unknown): Money;
 ```
 
-Validates an unknown value as canonical money. Requires a plain data object with a bigint `amount` and a registered currency.
+Validates a plain data object and returns canonical money. Requires a bigint `amount` and a canonical currency. Use for untrusted input; use `isMoney()` for trusted values.
 
 ### `isMoney(value)`
 
@@ -82,7 +78,7 @@ Validates an unknown value as canonical money. Requires a plain data object with
 function isMoney(value: unknown): value is Money;
 ```
 
-Type guard for canonical Coins money values.
+Type guard for canonical Coins money values. Checks identity against the internal canonical set — forged frozen objects do not pass.
 
 ## Arithmetic
 
@@ -142,6 +138,14 @@ function exchange<From extends Currency, To extends Currency>(
 const rate = exchangeRate({ from: USD, to: EUR, value: '0.9234' });
 exchange(money('100.00', USD), rate);
 ```
+
+### `isExchangeRate(value)`
+
+```ts
+function isExchangeRate(value: unknown): value is ExchangeRate;
+```
+
+Type guard for canonical exchange rates created by `exchangeRate()`. Checks identity against the internal canonical set — forged frozen objects do not pass.
 
 ## Formatting
 
@@ -223,7 +227,9 @@ type CoinsErrorCode =
   | 'INVALID_ALLOCATION'
   | 'INVALID_CURRENCY'
   | 'INVALID_DECIMAL'
+  | 'INVALID_EXCHANGE_RATE'
   | 'INVALID_MONEY'
+  | 'INVALID_RANGE'
   | 'INVALID_ROUNDING';
 ```
 

@@ -3,10 +3,6 @@ import { defaultScheduler } from '../_scheduler';
 import { stream } from '../core';
 import type { Stream } from '../types';
 
-export type IntervalOptions = {
-  every: number;
-};
-
 export type TimerOptions = {
   delay: number;
   interval?: number;
@@ -105,13 +101,13 @@ export function fromEvent<T = Event>(
   });
 }
 
-export function interval(options: IntervalOptions): Stream<number> {
-  assertDuration(options.every, 'Interval duration');
+export function interval(every: number): Stream<number> {
+  assertDuration(every, 'Interval duration');
 
   return stream((sink) => {
     let index = 0;
 
-    return defaultScheduler.repeat(() => sink.next(index++), options.every);
+    return defaultScheduler.repeat(() => sink.next(index++), every);
   });
 }
 

@@ -53,6 +53,8 @@ export function roundDivision(numerator: bigint, denominator: bigint, mode: Roun
       }
       case 'towardZero':
         return false;
+      default:
+        throw new CoinsError('INVALID_ROUNDING', `Unknown rounding mode: ${mode satisfies never}`);
     }
   })();
 

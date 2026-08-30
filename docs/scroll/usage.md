@@ -594,7 +594,7 @@ const virt = createVirtualizer(scrollEl, {
 
 ## Reactive Integration
 
-Expose virtualizer state to a reactive `Signal` from `@vielzeug/ripple` using the `signal` option. This works on all factories and pairs with your existing `onChange` callback.
+Expose virtualizer state to a reactive `Signal` from `@vielzeug/ripple` using the `toSignal` option. This works on all factories and pairs with your existing `onChange` callback.
 
 ```ts
 import { createVirtualizer } from '@vielzeug/scroll';
@@ -606,7 +606,7 @@ const scrollState = signal({ items: [], stickyItems: [], totalSize: 0 });
 const virt = createVirtualizer(scrollEl, {
   count: 1000,
   estimateSize: 36,
-  signal: () => scrollState, // Return the signal on each init
+  toSignal: () => scrollState, // Return the signal on each init
   onChange: render, // Both signal and callback get the state
 });
 
@@ -618,7 +618,7 @@ effect(() => {
 ```
 
 **Why a signal factory instead of a direct signal?**
-The `signal` option receives a factory function so that if your component mounts/unmounts and recreates the virtualizer, the signal is also recreated with a fresh initial state. If you want to share state across multiple virtualizers or preserve it across disposal, create the signal in outer scope and return it from the factory:
+The `toSignal` option receives a factory function so that if your component mounts/unmounts and recreates the virtualizer, the signal is also recreated with a fresh initial state. If you want to share state across multiple virtualizers or preserve it across disposal, create the signal in outer scope and return it from the factory:
 
 ```ts
 // Shared signal across remounts
@@ -627,7 +627,7 @@ const scrollState = signal({ items: [], stickyItems: [], totalSize: 0 });
 function createList() {
   return createVirtualizer(scrollEl, {
     count: 1000,
-    signal: () => scrollState, // Always return the same instance
+    toSignal: () => scrollState, // Always return the same instance
   });
 }
 ```

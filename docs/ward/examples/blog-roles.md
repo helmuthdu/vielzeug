@@ -14,13 +14,13 @@ Model read, create, update, and delete permissions for a blog without scattering
 Define immutable role rules once, then ask Ward for an explained decision at each authorization boundary.
 
 ```ts
-import { ANONYMOUS, createWard, owns } from '@vielzeug/ward';
+import { ANONYMOUS, createWard, predicate } from '@vielzeug/ward';
 
 const ward = createWard<'read' | 'create' | 'update' | 'delete', { authorId: string }>([
   { role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' },
   { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
   { role: 'editor', resource: 'posts', action: 'create', effect: 'allow' },
-  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow', when: owns('authorId') },
+  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow', when: predicate.owns('authorId') },
   { role: 'admin', resource: 'posts', action: 'delete', effect: 'allow' },
 ]);
 
@@ -41,7 +41,7 @@ ward.explain({
 
 ### Pitfalls
 
-- Pass resource data for ownership predicates; omitted data cannot satisfy `owns()`.
+- Pass resource data for ownership predicates; omitted data cannot satisfy `predicate.owns()`.
 - Model default-deny explicitly by adding only allowed rules.
 
 ### Related

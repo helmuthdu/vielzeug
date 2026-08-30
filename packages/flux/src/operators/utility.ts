@@ -3,6 +3,7 @@ import { assertNonNegativeInteger } from '../_numeric';
 import { tryCall } from '../_safe';
 import { defaultScheduler } from '../_scheduler';
 import { stream } from '../core';
+import { FluxCapacityError, FluxEmptyError } from '../errors';
 import type { Operator, Stream, Subscription } from '../types';
 
 export type RetryOptions = {
@@ -17,6 +18,8 @@ export type ToArrayOptions = {
 
 export type ValueOptions = {
   signal?: AbortSignal;
+  /** Resolved when the source completes empty instead of rejecting with `FluxEmptyError`. */
+  defaultValue?: unknown;
 };
 
 function abortError(): DOMException {
@@ -102,6 +105,12 @@ export function first<T>(source: Stream<T>, options?: ValueOptions): Promise<T> 
     link(
       source,
       {
+        complete() {
+          options?.signal?.removeEventListener('abort', abort);
+
+          if ('defaultValue' in (options ?? {})) resolve(options!.defaultValue as T);
+          else reject(new FluxEmptyError());
+        },
         error(reason) {
           options?.signal?.removeEventListener('abort', abort);
           reject(reason);
@@ -117,10 +126,13 @@ export function first<T>(source: Stream<T>, options?: ValueOptions): Promise<T> 
   });
 }
 
-export function last<T>(source: Stream<T>, options?: ValueOptions): Promise<T | undefined> {
-  return new Promise<T | undefined>((resolve, reject) => {
-    const abort = (): void => reject(abortError());
-    let latest: T | undefined;
+export function last<T>(source: Stream<T>, options?: ValueOptions): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const controller = new AbortController();
+    const abort = (): void => {
+      controller.abort();
+      reject(abortError());
+    };
 
     if (options?.signal?.aborted) {
       abort();
@@ -128,23 +140,30 @@ export function last<T>(source: Stream<T>, options?: ValueOptions): Promise<T | 
       return;
     }
 
+    let emitted = false;
+    let latest: T | undefined;
+
     options?.signal?.addEventListener('abort', abort, { once: true });
     link(
       source,
       {
         complete() {
           options?.signal?.removeEventListener('abort', abort);
-          resolve(latest);
+
+          if (emitted) resolve(latest as T);
+          else if ('defaultValue' in (options ?? {})) resolve(options!.defaultValue as T);
+          else reject(new FluxEmptyError());
         },
         error(reason) {
           options?.signal?.removeEventListener('abort', abort);
           reject(reason);
         },
         next(value) {
+          emitted = true;
           latest = value;
         },
       },
-      options?.signal ?? new AbortController().signal,
+      controller.signal,
     );
   });
 }
@@ -182,7 +201,7 @@ export function toArray<T>(source: Stream<T>, options: ToArrayOptions): Promise<
           if (values.length === options.maxItems) {
             options.signal?.removeEventListener('abort', abort);
             controller.abort();
-            reject(new RangeError('toArray maxItems exceeded'));
+            reject(new FluxCapacityError(options.maxItems, 'toArray maxItems exceeded'));
 
             return;
           }

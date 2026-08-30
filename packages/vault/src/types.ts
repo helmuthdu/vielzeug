@@ -139,5 +139,5 @@ export function table<T extends object, Key extends keyof T & string = keyof T &
     }
   }
 
-  return { defaultTtl, indexes, key } as unknown as SchemaEntry<T, Key>;
+  return { defaultTtl, indexes, key };
 }

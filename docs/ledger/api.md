@@ -157,10 +157,13 @@ interface LedgerState<TMeta = undefined> {
 ```ts
 interface LedgerOptions {
   maxHistory?: number;
+  runtime?: Pick<Ripple, 'signal'>;
 }
 ```
 
 `maxHistory` defaults to `100`, accepts non-negative safe integers, and uses `0` for no retained history.
+
+`runtime` accepts a `Pick<Ripple, 'signal'>` so the ledger can source its reactive state signal from an external `Ripple` runtime. When omitted, the ledger uses an internal default signal factory.
 
 ### `LedgerCallOptions`
 
@@ -180,4 +183,5 @@ An already-aborted signal rejects before user code starts. Active commands recei
 | `LedgerDisposedError` | Operation submitted to sealed ledger | Queued work rejects without starting |
 | `LedgerExecutionError` | `apply()` fails | Original failure in `.cause` |
 | `LedgerRollbackError` | `revert()` fails | Entry remains in undo history |
+| `LedgerConfigurationError` | Ledger constructed with invalid options (e.g. negative `maxHistory`) | — |
 | `LedgerError` | Base class | `instanceof LedgerError` narrows all Ledger errors |

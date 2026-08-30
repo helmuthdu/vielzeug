@@ -36,22 +36,6 @@ type MutableFlushResult = { -readonly [K in keyof FlushResult]: FlushResult[K] }
 
 const emptyResult = (): FlushResult => ({ completed: 0, deadLettered: 0, processed: 0, retryScheduled: 0 });
 
-function mergeSignals(signals: readonly (AbortSignal | undefined)[]): AbortSignal {
-  const controller = new AbortController();
-  const active = signals.filter((signal): signal is AbortSignal => signal !== undefined);
-  const abort = (): void => controller.abort();
-
-  for (const signal of active) {
-    if (signal.aborted) {
-      abort();
-      break;
-    }
-    signal.addEventListener('abort', abort, { once: true });
-  }
-
-  return controller.signal;
-}
-
 function assertLeaseDuration(value: number): void {
   if (!Number.isInteger(value) || value < 1_000) {
     throw new PostmasterError('leaseDuration must be a positive integer of at least 1000ms');
@@ -83,9 +67,6 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
   const error = (reason: unknown): void => {
     const value = reason instanceof Error ? reason : new Error(String(reason));
     emitTap({ error: value, type: 'processor-error' });
-    queueMicrotask(() => {
-      throw value;
-    });
   };
 
   const emitTap = (event: PostmasterEvent): void => {
@@ -162,7 +143,9 @@ export function createPostmaster<J extends JobDefinitions>(options: CreatePostma
     }
 
     const taskController = new AbortController();
-    const taskSignal = mergeSignals([controller.signal, externalSignal, taskController.signal]);
+    const taskSignal = AbortSignal.any(
+      [controller.signal, externalSignal, taskController.signal].filter((s): s is AbortSignal => s !== undefined),
+    );
     const heartbeat = setInterval(
       () => {
         void store

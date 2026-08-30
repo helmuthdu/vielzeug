@@ -1,6 +1,6 @@
 export type { ComponentDefinition } from './component-types';
 export { createContext, type InjectionKey, inject, injectStrict, provide } from './context';
-export { define, prop } from './define';
+export { define } from './define';
 // Near-universal template directives — used in most non-trivial components (lists,
 // conditionals, and class/style maps. Kept in the main entry alongside
 // `html`/`define` rather than a separate sub-path: tree-shaking already means an unused export
@@ -24,6 +24,7 @@ export {
   type ReflectConfig,
 } from './host-bind';
 export type { InferProps, PropDef, PropInputDefs, PropsDef } from './props';
+export { prop } from './props';
 // Lifecycle hooks — plain functions, called during setup() or a composable it invokes.
 export {
   getHost,

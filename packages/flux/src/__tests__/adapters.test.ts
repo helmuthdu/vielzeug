@@ -36,50 +36,54 @@ describe('ripple adapter', () => {
   });
 
   it('disposes binding when source errors', () => {
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const binding = toSignal(
-      stream<number>((sink) => {
-        sink.error(new Error('offline'));
-      }),
-      { initial: 0 },
-    );
+    const original = (globalThis as { reportError?: (reason: unknown) => void }).reportError;
+    const reportError = vi.fn();
 
-    expect(binding.value).toBe(0);
-    expect(binding.disposed).toBe(true);
-    expect(binding.disposalSignal.aborted).toBe(true);
-    error.mockRestore();
+    Object.defineProperty(globalThis, 'reportError', { configurable: true, value: reportError });
+
+    try {
+      const binding = toSignal(
+        stream<number>((sink) => {
+          sink.error(new Error('offline'));
+        }),
+        { initial: 0 },
+      );
+
+      expect(binding.value).toBe(0);
+      expect(binding.disposed).toBe(true);
+      expect(binding.disposalSignal.aborted).toBe(true);
+      expect(reportError).toHaveBeenCalledWith(expect.objectContaining({ message: 'offline' }));
+    } finally {
+      if (original) Object.defineProperty(globalThis, 'reportError', { configurable: true, value: original });
+      else Reflect.deleteProperty(globalThis, 'reportError');
+    }
   });
 
   it('calls onError when source errors, then disposes', () => {
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const onError = vi.fn();
-    const binding = toSignal(
-      stream<number>((sink) => {
-        sink.error(new Error('offline'));
-      }),
-      { initial: 0, onError },
-    );
+    const reportError = vi.fn();
+    const original = (globalThis as { reportError?: (reason: unknown) => void }).reportError;
 
-    expect(onError).toHaveBeenCalledOnce();
-    expect(onError.mock.calls[0][0]).toBeInstanceOf(Error);
-    expect((onError.mock.calls[0][0] as Error).message).toBe('offline');
-    expect(binding.disposed).toBe(true);
-    expect(binding.disposalSignal.aborted).toBe(true);
-    error.mockRestore();
-  });
+    Object.defineProperty(globalThis, 'reportError', { configurable: true, value: reportError });
 
-  it('does not log to console.error when onError is provided', () => {
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const onError = vi.fn();
-    toSignal(
-      stream<number>((sink) => {
-        sink.error(new Error('offline'));
-      }),
-      { initial: 0, onError },
-    );
+    try {
+      const onError = vi.fn();
+      const binding = toSignal(
+        stream<number>((sink) => {
+          sink.error(new Error('offline'));
+        }),
+        { initial: 0, onError },
+      );
 
-    expect(error).not.toHaveBeenCalled();
-    error.mockRestore();
+      expect(onError).toHaveBeenCalledOnce();
+      expect(onError.mock.calls[0][0]).toBeInstanceOf(Error);
+      expect((onError.mock.calls[0][0] as Error).message).toBe('offline');
+      expect(binding.disposed).toBe(true);
+      expect(binding.disposalSignal.aborted).toBe(true);
+      expect(reportError).not.toHaveBeenCalled();
+    } finally {
+      if (original) Object.defineProperty(globalThis, 'reportError', { configurable: true, value: original });
+      else Reflect.deleteProperty(globalThis, 'reportError');
+    }
   });
 
   it('disposes binding when external signal aborts', () => {
@@ -109,8 +113,11 @@ describe('courier adapter', () => {
           listener = undefined;
         };
       },
-    };
-    const query = { fetch: async () => 1, key: ['query'] as const };
+    } as unknown as import('@vielzeug/courier').QueryCache;
+    const query = {
+      fetch: async () => 1,
+      key: ['query'] as const,
+    } as unknown as import('@vielzeug/courier').QueryDefinition<number>;
     const values: Array<number | null | undefined> = [];
     const subscription = fromQuery(queryCache, query).subscribe((value) => values.push(value?.data));
 

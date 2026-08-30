@@ -1,10 +1,24 @@
-import type { AnySchema, InferOutput, Issue, MessageFn, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import type {
+  AnySchema,
+  CheckContext,
+  InferOutput,
+  InferSchemaMode,
+  Issue,
+  MergeSchemaModes,
+  MessageFn,
+  ParseContext,
+  ParseValue,
+  SchemaDescriptor,
+  SchemaMode,
+  SchemaWalker,
+  ValidateResult,
+} from '../core';
 
 import { _makeCtx, ErrorCode, fail, prependIssuePath, resolveMessage, Schema, SpellValidationError } from '../core';
 
 export class SetSchema<
   T extends AnySchema,
-  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<import('../core').InferSchemaMode<T>>,
+  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T>>,
 > extends Schema<Set<InferOutput<T>>, unknown, Mode> {
   readonly itemSchema: T;
 
@@ -14,7 +28,7 @@ export class SetSchema<
 
   override checkAsync(
     this: SetSchema<T, 'sync'>,
-    fn: (value: Set<InferOutput<T>>, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+    fn: (value: Set<InferOutput<T>>, ctx: CheckContext) => Promise<ValidateResult>,
   ): SetSchema<T, 'async'> {
     return this._addCheck(fn, true) as unknown as SetSchema<T, 'async'>;
   }
@@ -143,7 +157,7 @@ export class SetSchema<
     return { ...this._describeBase(), items: this.itemSchema.definition(), kind: 'set' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     const item = this.itemSchema.walk(visitor);
 
     if (visitor.set) return visitor.set(this, item);

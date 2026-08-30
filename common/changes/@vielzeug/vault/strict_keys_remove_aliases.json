@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: table() now enforces VaultKey at compile time — key field type must extend number | string. Remove IndexedDbVaultStore and SQLiteVaultStore type aliases — use TransactionalVaultStore from the root entry.",
+      "packageName": "@vielzeug/vault",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/vault"
+}

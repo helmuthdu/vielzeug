@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  abs,
   add,
   CoinsError,
   compare,
   divide,
   EUR,
+  isMoney,
   JPY,
   money,
   multiply,
+  negate,
   parseMoney,
   round,
   subtract,
@@ -40,6 +43,26 @@ describe('money', () => {
     expect(toDecimal(divide(money('-0.05', USD), '2', { rounding: 'ceil' }))).toBe('-0.02');
   });
 
+  it('applies floor and ceil correctly with negative divisors', () => {
+    expect(toDecimal(divide(money('1', USD), '-3', { rounding: 'floor' }))).toBe('-0.34');
+    expect(toDecimal(divide(money('1', USD), '-3', { rounding: 'ceil' }))).toBe('-0.33');
+    expect(toDecimal(divide(money('-1', USD), '-3', { rounding: 'floor' }))).toBe('0.33');
+    expect(toDecimal(divide(money('-1', USD), '-3', { rounding: 'ceil' }))).toBe('0.34');
+  });
+
+  it('rejects division by zero', () => {
+    expect(() => divide(money('1', USD), '0')).toThrow(/divide money by zero/);
+  });
+
+  it('abs and negate preserve currency and reject forgeries', () => {
+    expect(toDecimal(abs(money('-5.00', USD)))).toBe('5.00');
+    expect(toDecimal(abs(money('5.00', USD)))).toBe('5.00');
+    expect(toDecimal(negate(money('5.00', USD)))).toBe('-5.00');
+    expect(toDecimal(negate(money('-5.00', USD)))).toBe('5.00');
+    expect(() => abs(Object.freeze({ amount: 100n, currency: USD }) as never)).toThrow(/canonical/);
+    expect(() => negate(Object.freeze({ amount: 100n, currency: USD }) as never)).toThrow(/canonical/);
+  });
+
   it('uses named rounding policy', () => {
     const value = money('1.55', USD);
 
@@ -50,13 +73,15 @@ describe('money', () => {
   it('compares canonical matching currencies and rejects forged values', () => {
     expect(compare(money('1', USD), money('2', USD))).toBe(-1);
     expect(() => compare(money('1', USD), money('1', EUR) as never)).toThrow(/Currency mismatch/);
-    expect(() => add(money('1', USD), { amount: 100n, currency: USD } as never)).toThrow(/canonical/);
+    expect(() => add(money('1', USD), Object.freeze({ amount: 100n, currency: USD }) as never)).toThrow(/canonical/);
   });
 
   it('canonicalizes parsed values and rejects accessors', () => {
     const parsed = parseMoney({ amount: 1n, currency: USD });
 
     expect(Object.isFrozen(parsed)).toBe(true);
+    expect(isMoney(parsed)).toBe(true);
+    expect(isMoney(Object.freeze({ amount: 1n, currency: USD }))).toBe(false);
     expect(() => parseMoney(Object.defineProperty({ currency: USD }, 'amount', { get: () => 1n }))).toThrow(/data/);
     expect(new CoinsError('INVALID_MONEY', 'bad') instanceof CoinsError).toBe(true);
   });

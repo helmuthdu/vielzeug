@@ -1,14 +1,5 @@
+import { normalize } from '../_store-utils.ts';
 import type { EntryFilter, PostmasterStats, PostmasterStore, StoredJob, StoreTx } from '../types.ts';
-
-function normalize(entry: StoredJob): StoredJob {
-  const { failure, leaseExpiresAt, ownerId, ...rest } = entry;
-  return {
-    ...rest,
-    ...(failure !== undefined ? { failure } : {}),
-    ...(leaseExpiresAt !== undefined ? { leaseExpiresAt } : {}),
-    ...(ownerId !== undefined ? { ownerId } : {}),
-  };
-}
 
 export function createMemoryPostmasterStore(entries: readonly StoredJob[] = []): PostmasterStore {
   const records = new Map(entries.map((entry) => [entry.id, normalize(entry)]));

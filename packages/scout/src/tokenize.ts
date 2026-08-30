@@ -1,5 +1,3 @@
-import { warn } from './_dev';
-
 /**
  * Normalizes a string for indexing or querying.
  * Lowercases, replaces punctuation (except apostrophes) with spaces,
@@ -17,6 +15,7 @@ export function tokenize(text: string): string {
 /**
  * Converts an unknown field value to an indexable string.
  * Returns an empty string for `null`, `undefined`, objects, or symbols.
+ * Arrays are joined with a space after filtering to string/number/boolean elements.
  * @internal
  */
 export function defaultStringify(value: unknown): string {
@@ -27,11 +26,6 @@ export function defaultStringify(value: unknown): string {
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
 
   if (Array.isArray(value)) {
-    warn(
-      'defaultStringify: received an array value — provide a custom `stringify` on the FieldDef to control array indexing.\n' +
-        'Falling back to joining string/number/boolean elements with a space.',
-    );
-
     return value.filter((v) => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean').join(' ');
   }
 

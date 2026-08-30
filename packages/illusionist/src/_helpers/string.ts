@@ -1,9 +1,10 @@
 import type { RandomSource } from '@vielzeug/arsenal/random';
-import { draw } from '@vielzeug/arsenal/random';
 
-/** Picks a random element from an array. Returns `undefined` for empty arrays. */
+import { nextFloat } from './next-float';
+
+/** Picks a random element from a readonly array. Returns `undefined` for empty arrays. */
 export function pick<T>(array: readonly T[], source?: RandomSource): T | undefined {
-  return draw([...array], source);
+  return array.length === 0 ? undefined : array[Math.floor(nextFloat(source) * array.length)];
 }
 
 /** Generates a string of random digits with a fixed length. */
@@ -11,7 +12,7 @@ export function numericString(length: number, source?: RandomSource): string {
   let result = '';
 
   for (let i = 0; i < length; i++) {
-    result += Math.floor((source?.next() ?? crypto.getRandomValues(new Uint32Array(1))[0]! / 0x100000000) * 10);
+    result += Math.floor(nextFloat(source) * 10);
   }
 
   return result;
@@ -23,9 +24,7 @@ export function hexString(length: number, source?: RandomSource): string {
   let result = '';
 
   for (let i = 0; i < length; i++) {
-    const idx = Math.floor((source?.next() ?? crypto.getRandomValues(new Uint32Array(1))[0]! / 0x100000000) * 16);
-
-    result += chars[idx];
+    result += chars[Math.floor(nextFloat(source) * 16)];
   }
 
   return result;
@@ -37,11 +36,7 @@ export function alphanumeric(length: number, source?: RandomSource): string {
   let result = '';
 
   for (let i = 0; i < length; i++) {
-    const idx = Math.floor(
-      (source?.next() ?? crypto.getRandomValues(new Uint32Array(1))[0]! / 0x100000000) * chars.length,
-    );
-
-    result += chars[idx];
+    result += chars[Math.floor(nextFloat(source) * chars.length)];
   }
 
   return result;
@@ -53,11 +48,7 @@ export function base58String(length: number, source?: RandomSource): string {
   let result = '';
 
   for (let i = 0; i < length; i++) {
-    const idx = Math.floor(
-      (source?.next() ?? crypto.getRandomValues(new Uint32Array(1))[0]! / 0x100000000) * chars.length,
-    );
-
-    result += chars[idx];
+    result += chars[Math.floor(nextFloat(source) * chars.length)];
   }
 
   return result;

@@ -82,26 +82,24 @@ search.dispose();
 }
 ```
 
-#### With event observation (optional)
+#### With signal observation (optional)
 
 ```ts
-const stop = search.tap((event) => {
-  if (event.type === 'query-change') console.debug('query ->', event.query);
-  if (event.type === 'searching-change') console.debug('isSearching ->', event.isSearching);
-  if (event.type === 'results-change') console.debug('results ->', event.results.length, 'item(s)');
-});
+const stopQuery = search.query.subscribe(() => console.debug('query ->', search.query.peek()));
+const stopResults = search.results.subscribe(() =>
+  console.debug('results ->', search.results.peek().length, 'item(s)'),
+);
 
 search.query.value = 'br';
 // query -> "br"
-// isSearching -> true
-// isSearching -> false
 // results -> 2 item(s)
 
-stop();
+stopQuery();
+stopResults();
 ```
 
 ::: warning PII
-`tap()` emits the literal search query string — avoid logging it in production if queries may contain PII.
+`query` carries the literal search query string — avoid logging it in production if queries may contain PII.
 :::
 
 ### Pitfalls

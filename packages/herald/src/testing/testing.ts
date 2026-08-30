@@ -1,5 +1,5 @@
 import type { Bus, BusOptions, EventKey, EventMap } from '..';
-import { createBusInternal } from '../bus';
+import { createBus } from '../bus';
 
 // Property names that must never be used as a bracket-assignment key on a plain object literal —
 // `obj[key] = value` for `key === '__proto__'` invokes `Object.prototype`'s `__proto__` accessor
@@ -23,7 +23,7 @@ export type TestBus<T extends EventMap> = Bus<T> & {
 
 export function createTestBus<T extends EventMap = Record<string, unknown>>(options?: BusOptions<T>): TestBus<T> {
   const records = new Map<string, unknown[]>();
-  const bus = createBusInternal<T>({
+  const bus = createBus<T>({
     ...options,
     _onDispatch: (event: EventKey<T>, payload: unknown) => {
       const list = records.get(event);

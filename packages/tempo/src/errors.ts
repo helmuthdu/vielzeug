@@ -21,8 +21,8 @@ export class TempoUnsupportedInputError extends TempoError {}
 
 // ─── Error helpers ────────────────────────────────────────────────────────────
 
-type TempoErrorCtor = new (message: string) => TempoError;
+type TempoErrorCtor = new (message: string, opts?: ErrorOptions) => TempoError;
 
-export function fail(message: string, Class: TempoErrorCtor = TempoInvalidInputError): never {
-  throw new Class(message);
+export function fail(message: string, Class: TempoErrorCtor = TempoInvalidInputError, opts?: ErrorOptions): never {
+  throw new Class(message, opts);
 }

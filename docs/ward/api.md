@@ -10,7 +10,7 @@ description: Complete API reference for @vielzeug/ward.
 | Symbol | Purpose | Execution mode | Common gotcha |
 | --- | --- | --- | --- |
 | `createWard` | Creates immutable policy | Sync | Rules cannot be mutated after creation |
-| `allow` / `deny` / `ruleFor` | Builds policy rules | Sync | Priority wins before specificity |
+| `allow` / `deny` | Builds policy rules | Sync | Priority wins before specificity |
 | `Ward.explain` | Returns one decision | Sync | Pass resource data for predicate rules |
 | `Ward.trace` | Inspects decision candidates | Sync | Does not fire a `decision` event |
 | `Ward.forUser` | Binds a principal | Sync | Rebind when identity or roles change |
@@ -18,7 +18,7 @@ description: Complete API reference for @vielzeug/ward.
 | `Ward.allowedActions` | Filters known actions to allowed set | Sync | Does not fire a `decision` event |
 | `Ward.rulesInScope` | Lists rules matching a principal/resource | Sync | Pass data to evaluate predicates |
 | `Ward.detectConflicts` | Detects duplicate/shadowed rules | Sync | O(n²) — use `maxConflicts` for large policies |
-| `predicate.owns` / `owns` | Ownership predicate on resource data | Sync | Skipped for anonymous principals |
+| `predicate.owns` | Ownership predicate on resource data | Sync | Skipped for anonymous principals |
 | `predicate.and` / `or` / `not` | Combine predicates | Sync | All inputs must be synchronous |
 | `matchesPattern` / `patternCovers` | Test resource pattern coverage | Sync | `'*'` is the only wildcard |
 
@@ -39,7 +39,7 @@ createWard<TAction extends string = string, TData = unknown>(
 ): Ward<TAction, TData>;
 ```
 
-Creates an immutable ward instance. `rules` accepts a flat mix of single rules and rule arrays — `allow()`/`deny()`/`ruleFor()` results can be passed directly without spread. Validates `onConflict` and `maxConflicts` options before compiling rules; invalid values throw `WardConfigError`.
+Creates an immutable ward instance. `rules` accepts a flat mix of single rules and rule arrays — `allow()`/`deny()` results can be passed directly without spread. Validates `onConflict` and `maxConflicts` options before compiling rules; invalid values throw `WardConfigError`.
 
 **Parameters:**
 
@@ -97,24 +97,6 @@ deny<TAction extends string = string, TData = unknown>(
 ```
 
 Creates one `WardRule` per action with `effect: 'deny'`. Reads naturally: "deny blocked from reading posts".
-
-**Returns:** `WardRule[]` — one rule per action.
-
----
-
-### `ruleFor(effect, role, resource, actions, options?)`
-
-```ts
-ruleFor<TAction extends string = string, TData = unknown>(
-  effect: 'allow' | 'deny',
-  role: string | readonly string[],
-  resource: string | typeof WILDCARD,
-  actions: readonly (TAction | typeof WILDCARD)[],
-  options?: { priority?: number; when?: WardPredicate<TData> },
-): WardRule<TAction, TData>[];
-```
-
-Low-level factory. Prefer `allow()` or `deny()` for ergonomic rule authoring.
 
 **Returns:** `WardRule[]` — one rule per action.
 
@@ -309,16 +291,6 @@ Inverts the given predicate.
 
 ---
 
-### `owns(attributeKey)` (alias)
-
-```ts
-owns<TData = unknown>(
-  attributeKey: [keyof TData] extends [never] ? string : keyof TData & string,
-): WardPredicate<TData>;
-```
-
-Top-level re-export of `predicate.owns`.
-
 Predicates run synchronously. Returning a Promise throws `WardPredicateError`.
 
 ---
@@ -366,7 +338,7 @@ Pass an `AbortSignal` to unsubscribe automatically; the returned function unsubs
 
 ```ts
 const ward = createWard(rules);
-ward.tap((event) => console.debug(`ward:${event.type}`, event.decision));
+ward.tap((event) => console.debug('ward:decision', event.decision));
 ```
 
 With a logger from `@vielzeug/rune`:
@@ -519,7 +491,6 @@ export type BoundWard<TAction extends string = string, TData = unknown> = {
 };
 
 export type WardEvent<TAction extends string = string, TData = unknown> = {
-  type: 'decision';
   decision: WardDecision<TAction, TData>;
   action: TAction;
   data?: TData;

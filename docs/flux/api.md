@@ -15,7 +15,7 @@ description: Complete reference for @vielzeug/flux streams, operators, channels,
 | `fromEvent()` | Adapt event target | Async | Unsubscribe removes listener |
 | `interval()` / `timer()` | Create timed values | Async | Use `take()` or unsubscribe for intervals |
 | `map()` / `filter()` / `scan()` | Transform values | Sync | Callback throws terminate stream |
-| `switchMap()` / `mergeMap()` / `concatMap()` | Flatten streams | Mixed | `concatMap()` queue is bounded |
+| `switchMap()` / `mergeMap()` / `concatMap()` | Flatten streams | Mixed | `mergeMap()` concurrency and queue are bounded; `concatMap()` queue is bounded |
 | `take()` / `takeUntil()` | Stop values | Mixed | Notifier emission completes output |
 | `debounce()` / `timeout()` / `retry()` | Control time and failures | Async | `timeout()` measures inactivity |
 | `merge()` / `concat()` / `combineLatest()` | Combine streams | Mixed | `combineLatest()` waits for every source |
@@ -142,12 +142,12 @@ fromEvent<MouseEvent>(document, 'click').subscribe(console.log);
 ### `interval()`
 
 ```ts
-interval(options: IntervalOptions): Stream<number>
+interval(every: number): Stream<number>
 ```
 
 Emits incrementing values starting at zero.
 
-| Option | Type | Description |
+| Parameter | Type | Description |
 | --- | --- | --- |
 | `every` | `number` | Non-negative interval duration in milliseconds |
 
@@ -211,20 +211,25 @@ Cancels previous inner stream when source emits.
 ### `mergeMap()`
 
 ```ts
-mergeMap<A, B>(project: (value: A) => Stream<B>): Operator<A, B>
+mergeMap<A, B>(project: (value: A) => Stream<B>, options: FlattenOptions): Operator<A, B>
 ```
 
-Runs every inner stream concurrently.
+Runs inner streams with bounded concurrency and queue capacity. Exceeding capacity errors output with `FluxCapacityError`.
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `concurrency` | `number \| Infinity` | Maximum concurrently active inner subscriptions |
+| `capacity` | `number` | Positive maximum queued source values (required when `concurrency` is finite) |
 
 ---
 
 ### `concatMap()`
 
 ```ts
-concatMap<A, B>(project: (value: A) => Stream<B>, options: ConcatMapOptions): Operator<A, B>
+concatMap<A, B>(project: (value: A) => Stream<B>, options: { capacity: number }): Operator<A, B>
 ```
 
-Runs inner streams in order. Exceeding capacity errors output.
+Runs inner streams in order (`concurrency: 1`). Exceeding capacity errors output with `FluxCapacityError`.
 
 | Option | Type | Description |
 | --- | --- | --- |
@@ -255,28 +260,28 @@ Completes when notifier aborts or emits.
 ### `debounce()`
 
 ```ts
-debounce<T>(options: DebounceOptions): Operator<T, T>
+debounce<T>(duration: number): Operator<T, T>
 ```
 
 Emits latest value after configured silence. Pending value flushes on source completion.
 
-| Option | Type | Description |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `for` | `number` | Non-negative silence duration in milliseconds |
+| `duration` | `number` | Non-negative silence duration in milliseconds |
 
 ---
 
 ### `timeout()`
 
 ```ts
-timeout<T>(options: TimeoutOptions): Operator<T, T>
+timeout<T>(duration: number): Operator<T, T>
 ```
 
 Errors with `FluxTimeoutError` when source is silent too long.
 
-| Option | Type | Description |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `after` | `number` | Non-negative inactivity duration in milliseconds |
+| `duration` | `number` | Non-negative inactivity duration in milliseconds |
 
 ---
 
@@ -346,17 +351,17 @@ Collects finite output. Rejects on source error, abort, or `maxItems` overflow.
 first<T>(source: Stream<T>, options?: ValueOptions): Promise<T>
 ```
 
-Resolves first value and cancels source. Rejects on source error or abort.
+Resolves first value and cancels source. Rejects on source error, abort, or empty completion (`FluxEmptyError`); pass `defaultValue` to resolve instead.
 
 ---
 
 ### `last()`
 
 ```ts
-last<T>(source: Stream<T>, options?: ValueOptions): Promise<T | undefined>
+last<T>(source: Stream<T>, options?: ValueOptions): Promise<T>
 ```
 
-Resolves last value on completion, or `undefined` when source completes empty.
+Resolves last value on completion. Rejects on source error, abort, or empty completion (`FluxEmptyError`); pass `defaultValue` to resolve instead.
 
 ## Async Conversion
 
@@ -400,7 +405,7 @@ fromSignal<T>(source: Readable<T>): Stream<T>
 toSignal<T>(source: Stream<T>, options: ToSignalOptions<T>): SignalBinding<T>
 ```
 
-`fromSignal()` emits current value first. `toSignal()` preserves final value then disposes binding when source completes, errors, or supplied signal aborts. On source error, `toSignal()` calls `options.onError` if provided (otherwise logs via `console.error` in dev — in production the log is stripped and the error is silently swallowed), then disposes — the signal freezes at its last value. Pass `onError` to surface source errors in production builds.
+`fromSignal()` emits current value first. `toSignal()` preserves final value then disposes binding when source completes, errors, or supplied signal aborts. On source error, `toSignal()` calls `options.onError` if provided (otherwise reports the error through the platform's unhandled-error channel — same path as a stream with no `error` observer), then disposes — the signal freezes at its last value. Pass `onError` to handle source errors explicitly.
 
 ### `@vielzeug/flux/courier`
 
@@ -461,14 +466,11 @@ interface Stream<T> {
 
 type OverflowPolicy = 'drop-newest' | 'drop-oldest' | 'error';
 type AsyncIterableOptions = { capacity: number; overflow: OverflowPolicy; signal?: AbortSignal };
-type IntervalOptions = { every: number };
 type TimerOptions = { delay: number; interval?: number };
-type DebounceOptions = { for: number };
-type TimeoutOptions = { after: number };
-type ConcatMapOptions = { capacity: number };
+type FlattenOptions = { concurrency: number; capacity: number };
 type RetryOptions = { attempts: number; delay?: number | ((attempt: number) => number) };
 type ToArrayOptions = { maxItems: number; signal?: AbortSignal };
-type ValueOptions = { signal?: AbortSignal };
+type ValueOptions = { signal?: AbortSignal; defaultValue?: unknown };
 type ChannelOptions<T> = { initial?: T; replay?: number };
 type Channel<T> = {
   [Symbol.dispose](): void;
@@ -498,3 +500,11 @@ Base Flux error. Use `instanceof FluxError` to narrow unknown values.
 ### `FluxTimeoutError`
 
 Raised by `timeout()`. `ms` contains configured inactivity duration.
+
+### `FluxEmptyError`
+
+Raised by `first()` and `last()` when the source completes without emitting any value.
+
+### `FluxCapacityError`
+
+Raised when a bounded buffer (`mergeMap`, `concatMap`, `toArray`, async iteration) overflows. `capacity` contains the configured limit.

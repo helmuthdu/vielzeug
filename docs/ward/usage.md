@@ -17,7 +17,7 @@ const ward = createWard([
 ]);
 ```
 
-`allow()`, `deny()`, and `ruleFor()` return `WardRule[]` (one rule per action). Pass them directly to `createWard` — no spread needed. Rules are immutable after creation. Create a new ward to update policy.
+`allow()` and `deny()` return `WardRule[]` (one rule per action). Pass them directly to `createWard` — no spread needed. Rules are immutable after creation. Create a new ward to update policy.
 
 ## Explain a Decision
 
@@ -105,7 +105,7 @@ trace.candidates.forEach((c) => {
 
 ```ts
 const ward = createWard(rules);
-ward.tap((event) => console.debug(`ward:${event.type}`, event.decision));
+ward.tap((event) => console.debug('ward:decision', event.decision));
 ```
 
 Pass an `AbortSignal` to unsubscribe automatically, or call the returned function to unsubscribe manually:
@@ -129,9 +129,9 @@ ward.tap((event) => log.debug(event, 'ward:decision'));
 ## Predicate Helpers
 
 ```ts
-import { owns, predicate } from '@vielzeug/ward';
+import { predicate } from '@vielzeug/ward';
 
-const isOwner = owns('authorId');
+const isOwner = predicate.owns('authorId');
 const canEdit = predicate.and(isOwner, ({ principal }) => principal.id !== '');
 ```
 

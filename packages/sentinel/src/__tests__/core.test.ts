@@ -90,4 +90,17 @@ describe('Sentinel lifecycle', () => {
       }),
     ).toThrow('setup failed');
   });
+
+  it('disposes via external signal with an isolated runtime', () => {
+    const ripple = createRipple();
+    const controller = new AbortController();
+    const cleanup = vi.fn();
+    const sentinel = createSentinel({ initialValue: 1, runtime: ripple, signal: controller.signal }, () => cleanup);
+
+    controller.abort();
+
+    expect(cleanup).toHaveBeenCalledOnce();
+    expect(sentinel.disposed).toBe(true);
+    ripple.dispose();
+  });
 });

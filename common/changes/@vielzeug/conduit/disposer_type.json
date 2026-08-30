@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: widen Disposer value type from never to unknown for correct cleanup semantics.",
+      "packageName": "@vielzeug/conduit",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/conduit"
+}

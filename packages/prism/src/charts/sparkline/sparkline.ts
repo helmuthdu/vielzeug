@@ -1,8 +1,9 @@
-import { createScope, effect, isReactive } from '@vielzeug/ripple';
+import { createScope, effect } from '@vielzeug/ripple';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
 import { createChartBase } from '../../core/chart-base';
+import { resolveMaybeSignal } from '../../core/resolve';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import type { Point } from '../../svg/path';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
@@ -158,6 +159,7 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
   const curve = config.curve ?? 'linear';
   const strokeWidth = config.strokeWidth ?? 1.5;
   const fillOpacity = config.fillOpacity ?? 0.2;
+  const dataSignal = resolveMaybeSignal(config.data);
 
   const base = createChartBase(container, {
     ...(config.a11y ? { a11y: config.a11y } : { ariaHidden: true }),
@@ -176,7 +178,7 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
 
   function renderAll(): void {
     const { height: h, width: w } = base.dimensions.value;
-    const data = isReactive(config.data) ? config.data.value : config.data;
+    const data = dataSignal.value;
 
     while (innerGroup.firstChild) innerGroup.removeChild(innerGroup.firstChild);
 
@@ -285,40 +287,47 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
 
   const scope = createScope();
 
-  scope.run(() => {
-    effect(
-      () => {
-        renderAll();
-      },
-      { scheduler: 'microtask' },
-    );
-  });
-
   let isDisposed = false;
 
-  return {
-    get disposalSignal(): AbortSignal {
-      return ac.signal;
-    },
+  try {
+    scope.run(() => {
+      effect(
+        () => {
+          renderAll();
+        },
+        { scheduler: 'microtask' },
+      );
+    });
 
-    dispose() {
-      if (isDisposed) return;
+    return {
+      get disposalSignal(): AbortSignal {
+        return ac.signal;
+      },
 
-      isDisposed = true;
-      ac.abort();
-      cleanupInteraction?.();
-      scope.dispose();
-      base.dispose();
-    },
+      dispose() {
+        if (isDisposed) return;
 
-    get disposed(): boolean {
-      return isDisposed;
-    },
+        isDisposed = true;
+        ac.abort();
+        cleanupInteraction?.();
+        scope.dispose();
+        base.dispose();
+      },
 
-    el: svg,
+      get disposed(): boolean {
+        return isDisposed;
+      },
 
-    [Symbol.dispose]() {
-      this.dispose();
-    },
-  };
+      el: svg,
+
+      [Symbol.dispose]() {
+        this.dispose();
+      },
+    };
+  } catch (error) {
+    ac.abort();
+    scope.dispose();
+    base.dispose();
+    throw error;
+  }
 }

@@ -82,7 +82,7 @@ export interface GroupVirtualizerOptions<T> {
   scrollEndDelay?: number;
   sections: Array<GroupSection<T>>;
   /** Optional signal factory for reactive state. */
-  signal?: (init: GroupVirtualizerState<T>) => Signal<GroupVirtualizerState<T>>;
+  toSignal?: (init: GroupVirtualizerState<T>) => Signal<GroupVirtualizerState<T>>;
 }
 
 export interface GroupVirtualizer<T> {
@@ -204,7 +204,7 @@ export function createGroupedVirtualizer<T>(
     return globalIndex;
   }
 
-  let destroyed = false;
+  let disposed = false;
   let lastItems: Array<GroupVirtualItem<T>> = [];
   let onChange = options.onChange;
   let onScrollEnd = options.onScrollEnd;
@@ -212,9 +212,9 @@ export function createGroupedVirtualizer<T>(
 
   // Optional signal for reactive state
   let stateSignal: Signal<GroupVirtualizerState<T>> | null = null;
-  if (options.signal) {
+  if (options.toSignal) {
     const initialState: GroupVirtualizerState<T> = { headers: [], items: [], stickyHeader: null, totalSize: 0 };
-    stateSignal = options.signal(initialState);
+    stateSignal = options.toSignal(initialState);
   }
 
   // Helper to emit state to both callback and signal
@@ -275,9 +275,9 @@ export function createGroupedVirtualizer<T>(
   const ac = new AbortController();
 
   function _dispose(): void {
-    if (destroyed) return;
+    if (disposed) return;
 
-    destroyed = true;
+    disposed = true;
     ac.abort();
     virtualizer.dispose();
   }
@@ -311,10 +311,10 @@ export function createGroupedVirtualizer<T>(
     },
     dispose: _dispose,
     get disposed() {
-      return destroyed;
+      return disposed;
     },
     invalidate() {
-      if (destroyed) return;
+      if (disposed) return;
 
       virtualizer.invalidate();
     },
@@ -325,22 +325,22 @@ export function createGroupedVirtualizer<T>(
       return lastItems;
     },
     measure(index: number, size: number) {
-      if (destroyed) return;
+      if (disposed) return;
 
       virtualizer.measure(index, size);
     },
     measureBatch(entries: Array<{ index: number; size: number }>) {
-      if (destroyed) return;
+      if (disposed) return;
 
       virtualizer.measureBatch(entries);
     },
     measureEl(index: number, el: HTMLElement) {
-      if (destroyed) return () => {};
+      if (disposed) return () => {};
 
       return virtualizer.measureEl(index, el);
     },
     refresh() {
-      if (destroyed) return;
+      if (disposed) return;
 
       virtualizer.refresh();
     },
@@ -348,17 +348,17 @@ export function createGroupedVirtualizer<T>(
       return virtualizer.scrollOffset;
     },
     scrollToBottom(opts?: { behavior?: ScrollBehavior }) {
-      if (destroyed) return;
+      if (disposed) return;
 
       virtualizer.scrollToBottom(opts);
     },
     scrollToIndex(index: number, opts?: ScrollToIndexOptions) {
-      if (destroyed) return;
+      if (disposed) return;
 
       virtualizer.scrollToIndex(index, opts);
     },
     scrollToItem(sectionIndex, itemIndex, opts = {}) {
-      if (destroyed) return;
+      if (disposed) return;
 
       const globalIndex = flatIndexOf(sectionIndex, itemIndex);
 
@@ -367,12 +367,12 @@ export function createGroupedVirtualizer<T>(
       virtualizer.scrollToIndex(globalIndex, opts);
     },
     scrollToOffset(offset: number, opts?: { behavior?: ScrollBehavior }) {
-      if (destroyed) return;
+      if (disposed) return;
 
       virtualizer.scrollToOffset(offset, opts);
     },
     scrollToSection(sectionIndex, opts = {}) {
-      if (destroyed) return;
+      if (disposed) return;
 
       const globalIndex = flatIndexOf(sectionIndex);
 
@@ -381,7 +381,7 @@ export function createGroupedVirtualizer<T>(
       virtualizer.scrollToIndex(globalIndex, opts);
     },
     scrollToTop(opts?: { behavior?: ScrollBehavior }) {
-      if (destroyed) return;
+      if (disposed) return;
 
       virtualizer.scrollToTop(opts);
     },
@@ -399,7 +399,7 @@ export function createGroupedVirtualizer<T>(
      * data refresh. `refresh()` rebuilds offsets while preserving the cache.
      */
     update(nextSections, opts?: GroupVirtualizerUpdateOptions<T>) {
-      if (destroyed) return;
+      if (disposed) return;
 
       if (opts) {
         if (typeof opts.estimateHeaderSize === 'number')

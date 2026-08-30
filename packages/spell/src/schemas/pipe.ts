@@ -1,1 +1,0 @@
-export { PipeSchema } from '../core';

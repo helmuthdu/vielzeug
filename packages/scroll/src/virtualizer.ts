@@ -44,7 +44,11 @@ export interface VirtualizerState {
 }
 
 export interface VirtualizerOptions {
-  /** Auto-attach ResizeObserver to visible items. */
+  /**
+   * Auto-attach ResizeObserver to visible items.
+   * Elements must have a `data-vz-key` attribute set to the item key
+   * so the virtualizer can locate and measure them after render.
+   */
   autoMeasure?: boolean;
   count: number;
   estimateSize?: number | ((index: number) => number);
@@ -68,9 +72,9 @@ export interface VirtualizerOptions {
    * event is unavailable. Defaults to 150.
    */
   scrollEndDelay?: number;
-  /** Optional signal factory for reactive state. */
-  signal?: (init: VirtualizerState) => Signal<VirtualizerState>;
   sticky?: (index: number) => boolean;
+  /** Optional signal factory for reactive state. */
+  toSignal?: (init: VirtualizerState) => Signal<VirtualizerState>;
 }
 
 /**
@@ -81,6 +85,11 @@ export interface VirtualizerOptions {
  * `initialOffset` (one-time bootstrap value).
  */
 export interface VirtualizerUpdateOptions {
+  /**
+   * Auto-attach ResizeObserver to visible items.
+   * Elements must have a `data-vz-key` attribute set to the item key
+   * so the virtualizer can locate and measure them after render.
+   */
   autoMeasure?: boolean;
   count?: number;
   estimateSize?: number | ((index: number) => number);
@@ -173,9 +182,9 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
   // Optional signal for reactive state
   let stateSignal: Signal<VirtualizerState> | null = null;
-  if (options.signal) {
+  if (options.toSignal) {
     const initialState: VirtualizerState = { items: [], stickyItems: [], totalSize: 0 };
-    stateSignal = options.signal(initialState);
+    stateSignal = options.toSignal(initialState);
   }
 
   // Helper to emit state to both callback and signal
@@ -229,7 +238,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   let scrollOffset = 0;
   let viewportSize = 0;
   let prevScrollOffset = -1; // for sticky dedup
-  let destroyed = false;
+  let disposed = false;
   let isScrolling = false;
 
   // ─── Scroll clamping ─────────────────────────────────────────────────────────
@@ -244,7 +253,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   // ─── Compute and emit ─────────────────────────────────────────────────────────
 
   function computeVisible(): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     if (count === 0 || viewportSize <= 0) {
       if (ax.prevStart !== -1 || ax.prevTotalSize !== ax.totalSize) {
@@ -295,7 +304,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     if (autoMeasureEnabled && items.length > 0) {
       // Queue microtask to allow DOM to render first
       queueMicrotask(() => {
-        if (destroyed || target instanceof Window) return;
+        if (disposed || target instanceof Window) return;
 
         for (const item of items) {
           const key = getItemKey(item.index);
@@ -362,7 +371,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   }
 
   function measureBatch(entries: Array<{ index: number; size: number }>): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     let changed = false;
 
@@ -388,7 +397,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
   /** Attach a ResizeObserver to `el`. Returns a disconnect function. */
   function measureEl(index: number, el: HTMLElement): () => void {
-    if (destroyed) return () => {};
+    if (disposed) return () => {};
 
     return observeResize(ac.signal, el, (entry) => {
       measure(index, horizontal ? entry.contentRect.width : entry.contentRect.height);
@@ -502,7 +511,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   // ─── Public API ───────────────────────────────────────────────────────────────
 
   function invalidate(): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     measuredByKey.clear();
     ax.rebuild(true);
@@ -511,14 +520,14 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
   /** Full O(n) offset rebuild followed by re-emit. Also used internally for data-only re-emit when sizes unchanged. */
   function refresh(): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     ax.rebuild(true);
     computeVisible();
   }
 
   function prepend(additionalCount: number): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     const n = toNonNegativeInt(additionalCount);
 
@@ -539,13 +548,13 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   }
 
   function update(next: VirtualizerUpdateOptions): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     applyOptions(next);
   }
 
   function scrollToIndex(index: number, opts: ScrollToIndexOptions = {}): void {
-    if (destroyed || count <= 0) return;
+    if (disposed || count <= 0) return;
 
     const safeIndex = Number.isFinite(index) ? Math.floor(index) : 0;
     const clampedIndex = Math.max(0, Math.min(safeIndex, count - 1));
@@ -588,7 +597,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   }
 
   function scrollToOffset(offset: number, opts: { behavior?: ScrollBehavior } = {}): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     domAxis.writeOffset(clampScrollOffset(offset), opts.behavior ?? 'auto');
   }
@@ -608,9 +617,9 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   const ac = new AbortController();
 
   function _dispose(): void {
-    if (destroyed) return;
+    if (disposed) return;
 
-    destroyed = true;
+    disposed = true;
     ac.abort();
 
     if (scrollEndTimer !== null) {
@@ -645,7 +654,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
   if (keyboardScrollEnabled) {
     const handleKeyDown = (e: Event): void => {
-      if (destroyed) return;
+      if (disposed) return;
       if (!(e instanceof KeyboardEvent)) return;
       if (count === 0) return;
 
@@ -726,7 +735,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     },
     dispose: _dispose,
     get disposed() {
-      return destroyed;
+      return disposed;
     },
     invalidate,
     isAtEnd,

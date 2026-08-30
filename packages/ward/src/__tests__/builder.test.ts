@@ -1,26 +1,38 @@
-import { allow, createWard, deny, owns, predicate, ruleFor, WILDCARD } from '../index';
+import { allow, createWard, deny, predicate, WILDCARD } from '../index';
 
 // ---------------------------------------------------------------------------
-// ruleFor factory
+// allow / deny factories
 // ---------------------------------------------------------------------------
 
-describe('ward: ruleFor factory', () => {
-  it('allow produces correct WardRule', () => {
-    const rules = ruleFor('allow', 'viewer', 'posts', ['read']);
+describe('ward: allow factory', () => {
+  it('produces WardRules with effect: allow', () => {
+    const rules = allow('editor', 'posts', ['read', 'update']);
 
-    expect(rules).toHaveLength(1);
-    expect(rules[0]).toEqual({ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' });
+    expect(rules).toHaveLength(2);
+    expect(rules.every((r) => r.effect === 'allow')).toBe(true);
   });
 
-  it('deny produces correct WardRule', () => {
-    const rules = ruleFor('deny', 'blocked', 'posts', ['read']);
+  it('attaches when and priority options', () => {
+    const pred = () => true;
+    const rules = allow('editor', 'posts', ['update'], { priority: 5, when: pred });
 
-    expect(rules).toHaveLength(1);
-    expect(rules[0]).toEqual({ action: 'read', effect: 'deny', resource: 'posts', role: 'blocked' });
+    expect(rules[0].priority).toBe(5);
+    expect(rules[0].when).toBe(pred);
+  });
+
+  it('works correctly inside createWard', () => {
+    const ward = createWard([allow('viewer', 'posts', ['read']), deny('viewer', 'posts', ['delete'])]);
+
+    expect(
+      ward.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts' }).allowed,
+    ).toBe(true);
+    expect(
+      ward.explain({ action: 'delete', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts' }).allowed,
+    ).toBe(false);
   });
 
   it('multiple actions produce one rule per action', () => {
-    const rules = ruleFor<'read' | 'update'>('allow', 'editor', 'posts', ['read', 'update']);
+    const rules = allow<'read' | 'update'>('editor', 'posts', ['read', 'update']);
 
     expect(rules).toHaveLength(2);
     expect(rules.map((r) => r.action)).toEqual(['read', 'update']);
@@ -28,8 +40,8 @@ describe('ward: ruleFor factory', () => {
   });
 
   it('when option attaches a predicate to all produced rules', () => {
-    const rules = ruleFor<'update', { authorId: string }>('allow', 'editor', 'posts', ['update'], {
-      when: owns('authorId'),
+    const rules = allow<'update', { authorId: string }>('editor', 'posts', ['update'], {
+      when: predicate.owns('authorId'),
     });
 
     expect(rules).toHaveLength(1);
@@ -37,22 +49,22 @@ describe('ward: ruleFor factory', () => {
   });
 
   it('multi-role rule via array', () => {
-    const rules = ruleFor('allow', ['viewer', 'editor'], 'posts', ['read']);
+    const rules = allow(['viewer', 'editor'], 'posts', ['read']);
 
     expect(rules[0].role).toEqual(['viewer', 'editor']);
   });
 
   it('WILDCARD can be used as resource or action', () => {
-    const rules = ruleFor('allow', WILDCARD, WILDCARD, [WILDCARD]);
+    const rules = allow(WILDCARD, WILDCARD, [WILDCARD]);
 
     expect(rules[0]).toEqual({ action: WILDCARD, effect: 'allow', resource: WILDCARD, role: WILDCARD });
   });
 
-  it('ruleFor rules work correctly inside createWard', () => {
+  it('rules work correctly inside createWard with predicates', () => {
     const ward = createWard<'read' | 'update', { authorId: string }>([
-      ...ruleFor<'read' | 'update', { authorId: string }>('allow', 'viewer', 'posts', ['read']),
-      ...ruleFor<'read' | 'update', { authorId: string }>('allow', 'editor', 'posts', ['read', 'update'], {
-        when: owns('authorId'),
+      allow<'read' | 'update', { authorId: string }>('viewer', 'posts', ['read']),
+      allow<'read' | 'update', { authorId: string }>('editor', 'posts', ['read', 'update'], {
+        when: predicate.owns('authorId'),
       }),
     ]);
 
@@ -81,14 +93,14 @@ describe('ward: ruleFor factory', () => {
   });
 
   it('priority option sets the priority field on all produced rules', () => {
-    const rules = ruleFor('allow', 'viewer', 'posts', ['read'], { priority: 5 });
+    const rules = allow('viewer', 'posts', ['read'], { priority: 5 });
 
     expect(rules).toHaveLength(1);
     expect(rules[0].priority).toBe(5);
   });
 
   it('priority applies to all actions when multiple are specified', () => {
-    const rules = ruleFor<'read' | 'update'>('allow', 'editor', 'posts', ['read', 'update'], { priority: 3 });
+    const rules = allow<'read' | 'update'>('editor', 'posts', ['read', 'update'], { priority: 3 });
 
     expect(rules).toHaveLength(2);
     expect(rules.every((r) => r.priority === 3)).toBe(true);
@@ -96,42 +108,10 @@ describe('ward: ruleFor factory', () => {
 
   it('priority and when can be combined', () => {
     const pred = () => true;
-    const rules = ruleFor('allow', 'viewer', 'posts', ['read'], { priority: 10, when: pred });
+    const rules = allow('viewer', 'posts', ['read'], { priority: 10, when: pred });
 
     expect(rules[0].priority).toBe(10);
     expect(rules[0].when).toBe(pred);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// allow / deny factories
-// ---------------------------------------------------------------------------
-
-describe('ward: allow factory', () => {
-  it('produces WardRules with effect: allow', () => {
-    const rules = allow('editor', 'posts', ['read', 'update']);
-
-    expect(rules).toHaveLength(2);
-    expect(rules.every((r) => r.effect === 'allow')).toBe(true);
-  });
-
-  it('attaches when and priority options', () => {
-    const pred = () => true;
-    const rules = allow('editor', 'posts', ['update'], { priority: 5, when: pred });
-
-    expect(rules[0].priority).toBe(5);
-    expect(rules[0].when).toBe(pred);
-  });
-
-  it('works correctly inside createWard', () => {
-    const ward = createWard([...allow('viewer', 'posts', ['read']), ...deny('viewer', 'posts', ['delete'])]);
-
-    expect(
-      ward.explain({ action: 'read', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts' }).allowed,
-    ).toBe(true);
-    expect(
-      ward.explain({ action: 'delete', principal: { id: 'u1', roles: ['viewer'] }, resource: 'posts' }).allowed,
-    ).toBe(false);
   });
 });
 
@@ -245,48 +225,5 @@ describe('predicate.not', () => {
     const ctx = { data: undefined, principal: { id: 'u1', roles: [] } };
 
     expect(inverted(ctx)).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// owns (top-level re-export)
-// ---------------------------------------------------------------------------
-
-describe('owns', () => {
-  it('returns true when data[attributeKey] === principal.id', () => {
-    const pred = owns<{ authorId: string }>('authorId');
-
-    expect(pred({ data: { authorId: 'u1' }, principal: { id: 'u1', roles: ['editor'] } })).toBe(true);
-  });
-
-  it('returns false when data[attributeKey] !== principal.id', () => {
-    const pred = owns<{ authorId: string }>('authorId');
-
-    expect(pred({ data: { authorId: 'u2' }, principal: { id: 'u1', roles: ['editor'] } })).toBe(false);
-  });
-
-  it('returns false when data is undefined', () => {
-    const pred = owns<{ authorId: string }>('authorId');
-
-    expect(pred({ data: undefined, principal: { id: 'u1', roles: ['editor'] } })).toBe(false);
-  });
-
-  it('returns false when data is not an object', () => {
-    const pred = owns('authorId') as (ctx: { data: unknown; principal: { id: string; roles: string[] } }) => boolean;
-
-    expect(pred({ data: 'hello', principal: { id: 'u1', roles: [] } })).toBe(false);
-  });
-
-  it('returns false when the attribute is inherited (not own property)', () => {
-    const pred = owns<{ toString: string }>('toString');
-    const data = Object.create({ toString: 'u1' }) as { toString: string };
-
-    expect(pred({ data, principal: { id: 'u1', roles: ['editor'] } })).toBe(false);
-  });
-
-  it('returns false when data key is present but value is undefined', () => {
-    const pred = owns<{ authorId: string | undefined }>('authorId');
-
-    expect(pred({ data: { authorId: undefined }, principal: { id: 'u1', roles: ['editor'] } })).toBe(false);
   });
 });

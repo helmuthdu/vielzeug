@@ -684,3 +684,10 @@ type Logger = {
 | `maxDepth`    | `number`    | `20`           | Finite non-negative integer nesting depth. Fields deeper than this are not redacted — a dev-only warning is emitted when hit. **Security:** the warning is suppressed in production; ensure sensitive fields are not nested beyond this limit. |
 | `replacement` | `string`    | `'[REDACTED]'` | Replacement value                                                                                                                                                                                                                             |
 | `transport`   | `Transport` | —              | Required. Downstream transport                                                                                                                                                                                                                |
+
+## Errors
+
+| Error | Trigger | Notable properties |
+| --- | --- | --- |
+| `RuneError` | Base class for all rune-originated errors | `instanceof RuneError` narrows all Rune errors |
+| `RuneConfigError` | Logger or transport configured with invalid options | — |

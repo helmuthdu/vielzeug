@@ -5,7 +5,9 @@ export type CoinsErrorCode =
   | 'INVALID_ALLOCATION'
   | 'INVALID_CURRENCY'
   | 'INVALID_DECIMAL'
+  | 'INVALID_EXCHANGE_RATE'
   | 'INVALID_MONEY'
+  | 'INVALID_RANGE'
   | 'INVALID_ROUNDING';
 
 export class CoinsError extends Error {

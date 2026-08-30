@@ -1,19 +1,15 @@
-import type { SchemaDescriptor } from '../core';
+import type { CheckContext, SchemaDescriptor, SchemaMode, SchemaWalker, ValidateResult } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 
-export class BooleanSchema<Input = boolean, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
-  boolean,
-  Input,
-  Mode
-> {
+export class BooleanSchema<Input = boolean, Mode extends SchemaMode = 'sync'> extends Schema<boolean, Input, Mode> {
   protected override get _kind(): string {
     return 'boolean';
   }
 
   override checkAsync(
     this: BooleanSchema<Input, 'sync'>,
-    fn: (value: boolean, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+    fn: (value: boolean, ctx: CheckContext) => Promise<ValidateResult>,
   ): BooleanSchema<Input, 'async'> {
     return this._addCheck(fn, true) as unknown as BooleanSchema<Input, 'async'>;
   }
@@ -40,7 +36,7 @@ export class BooleanSchema<Input = boolean, Mode extends import('../core').Schem
     return { ...this._describeBase(), kind: 'boolean' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     if (visitor.boolean) return visitor.boolean(this);
 
     return super._walk(visitor);

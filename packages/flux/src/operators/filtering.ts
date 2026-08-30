@@ -5,14 +5,6 @@ import { stream } from '../core';
 import { FluxTimeoutError } from '../errors';
 import type { Operator, Stream, Subscription } from '../types';
 
-export type DebounceOptions = {
-  for: number;
-};
-
-export type TimeoutOptions = {
-  after: number;
-};
-
 export function take<T>(count: number): Operator<T, T> {
   assertNonNegativeInteger(count, 'take count');
 
@@ -95,8 +87,8 @@ export function takeUntil<T>(notifier: AbortSignal | Stream<unknown>): Operator<
     });
 }
 
-export function debounce<T>(options: DebounceOptions): Operator<T, T> {
-  assertDuration(options.for, 'Debounce duration');
+export function debounce<T>(duration: number): Operator<T, T> {
+  assertDuration(duration, 'Debounce duration');
 
   return (source) =>
     stream((sink, signal) => {
@@ -126,7 +118,7 @@ export function debounce<T>(options: DebounceOptions): Operator<T, T> {
             pending = value;
             hasPending = true;
             cancel?.();
-            cancel = defaultScheduler.delay(flush, options.for);
+            cancel = defaultScheduler.delay(flush, duration);
           },
         },
         signal,
@@ -139,15 +131,15 @@ export function debounce<T>(options: DebounceOptions): Operator<T, T> {
     });
 }
 
-export function timeout<T>(options: TimeoutOptions): Operator<T, T> {
-  assertDuration(options.after, 'Timeout duration');
+export function timeout<T>(duration: number): Operator<T, T> {
+  assertDuration(duration, 'Timeout duration');
 
   return (source) =>
     stream((sink, signal) => {
       let cancel: () => void;
 
       const start = (): void => {
-        cancel = defaultScheduler.delay(() => sink.error(new FluxTimeoutError(options.after)), options.after);
+        cancel = defaultScheduler.delay(() => sink.error(new FluxTimeoutError(duration)), duration);
       };
 
       start();

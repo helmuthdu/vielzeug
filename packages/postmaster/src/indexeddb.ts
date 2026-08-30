@@ -1,5 +1,6 @@
 import { table } from '@vielzeug/vault';
 import { createIndexedDB } from '@vielzeug/vault/indexeddb';
+import { normalize } from './_store-utils.ts';
 import { PostmasterError } from './errors.ts';
 import type { EntryFilter, PostmasterStats, PostmasterStore, StoredJob, StoreTx } from './types.ts';
 
@@ -10,16 +11,6 @@ type PostmasterSchema = {
 type IndexedDbPostmasterStoreOptions = {
   readonly name: string;
 };
-
-function normalize(entry: StoredJob): StoredJob {
-  const { failure, leaseExpiresAt, ownerId, ...rest } = entry;
-  return {
-    ...rest,
-    ...(failure !== undefined ? { failure } : {}),
-    ...(leaseExpiresAt !== undefined ? { leaseExpiresAt } : {}),
-    ...(ownerId !== undefined ? { ownerId } : {}),
-  };
-}
 
 function wrap<T>(operation: string, fn: () => Promise<T>): Promise<T> {
   return fn().catch((cause: unknown) => {

@@ -349,3 +349,5 @@ interface ClassifyExpiryInput<K extends string> extends TimeZoneOptions {
 | `TempoInvalidTzError` | Invalid IANA zone or offset | Extends `TempoError` |
 | `TempoMissingTzError` | Wall time without required `timeZone` | Extends `TempoError` |
 | `TempoUnsupportedInputError` | Non-Temporal input passed to conversion | Extends `TempoError` |
+
+Every Tempo error thrown from `parse()`, `parseDuration()`, and timezone validation carries the original Temporal error on its `cause` property (ES2022). Inspect `err.cause` for root-cause details when debugging.

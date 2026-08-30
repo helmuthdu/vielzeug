@@ -1,3 +1,4 @@
+import { PostmasterJobError } from './errors.ts';
 import type { PostmasterEntry, RemoveResult, RetryResult, StoredFailure, StoredJob, StoreTx } from './types.ts';
 
 export interface ClaimParams {
@@ -128,7 +129,7 @@ export async function removeJob(tx: StoreTx, id: string): Promise<RemoveResult> 
 /** Enqueue a new job. Rejects duplicate ids. */
 export async function enqueueJob(tx: StoreTx, entry: StoredJob): Promise<void> {
   const existing = await tx.get(entry.id);
-  if (existing) throw new Error(`Postmaster entry "${entry.id}" already exists`);
+  if (existing) throw new PostmasterJobError(`Postmaster entry "${entry.id}" already exists`);
   await tx.put(entry);
 }
 

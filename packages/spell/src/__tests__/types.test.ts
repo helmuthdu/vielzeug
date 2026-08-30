@@ -54,6 +54,10 @@ describe('public type contracts', () => {
       chained.parse('value');
       // @ts-expect-error Chained async schemas require safeParseAsync().
       chained.safeParse('value');
+      // @ts-expect-error Async schemas do not support is() — use safeParseAsync().
+      asyncString.is('value');
+      // @ts-expect-error Async schemas do not support assert() — use parseAsync().
+      asyncString.assert('value');
     };
 
     expectTypeOf(assertSyncParsersAreUnavailable).toBeFunction();

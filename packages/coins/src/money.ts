@@ -1,17 +1,18 @@
+import { decimal, roundDivision, toDecimalString } from './_decimal';
 import { isCurrency } from './currency';
-import { decimal, roundDivision, toDecimalString } from './decimal';
 import { CoinsError, CurrencyMismatchError } from './errors';
 import type { Currency, Money, RoundingMode } from './types';
 
+const canonicalMoney = new WeakSet<object>();
+
 const defaultRounding: RoundingMode = 'halfAwayFromZero';
 
-export function money<C extends Currency>(amount: string, currency: C): Money<C>;
-export function money<C extends Currency>(amount: string, currency: C, options: { rounding: RoundingMode }): Money<C>;
+export function money<C extends Currency>(amount: string, currency: C, options?: { rounding?: RoundingMode }): Money<C>;
 export function money<C extends Currency>(amount: bigint, currency: C, options: { unit: 'minor' }): Money<C>;
 export function money<C extends Currency>(
   amount: bigint | string,
   currency: C,
-  options?: { rounding: RoundingMode } | { unit: 'minor' },
+  options?: { rounding?: RoundingMode } | { unit: 'minor' },
 ): Money<C> {
   assertCurrency(currency);
 
@@ -30,13 +31,14 @@ export function money<C extends Currency>(
   const scaled = value.numerator * 10n ** BigInt(currency.minorUnit);
   const remainder = scaled % value.denominator;
 
-  if (remainder !== 0n && !options) {
+  if (remainder !== 0n && options?.rounding === undefined) {
     throw new CoinsError('INVALID_MONEY', `Amount "${amount}" exceeds ${currency.code} precision; provide rounding`);
   }
 
   return createMoney(roundDivision(scaled, value.denominator, options?.rounding ?? defaultRounding), currency);
 }
 
+/** Validates a plain data object and returns canonical money. Use for untrusted input; use `isMoney()` for trusted values. */
 export function parseMoney(value: unknown): Money {
   if (!isPlainDataObject(value)) throw new CoinsError('INVALID_MONEY', 'Money must be a plain data object');
 
@@ -56,13 +58,7 @@ export function parseMoney(value: unknown): Money {
 }
 
 export function isMoney(value: unknown): value is Money {
-  try {
-    parseMoney(value);
-
-    return true;
-  } catch {
-    return false;
-  }
+  return typeof value === 'object' && value !== null && canonicalMoney.has(value);
 }
 
 export function add<C extends Currency>(left: Money<C>, right: Money<NoInfer<C>>): Money<C> {
@@ -103,15 +99,15 @@ export function divide<C extends Currency>(
 
   if (scalar.numerator === 0n) throw new CoinsError('DIVISION_BY_ZERO', 'Cannot divide money by zero');
 
-  const negative = scalar.numerator < 0n;
-  const absoluteDivisor = negative ? -scalar.numerator : scalar.numerator;
+  const divisorMagnitude = scalar.numerator < 0n ? -scalar.numerator : scalar.numerator;
+  const dividend = value.amount * scalar.denominator;
   const quotient = roundDivision(
-    value.amount * scalar.denominator,
-    absoluteDivisor,
+    scalar.numerator < 0n ? -dividend : dividend,
+    divisorMagnitude,
     options.rounding ?? defaultRounding,
   );
 
-  return createMoney(negative ? -quotient : quotient, value.currency);
+  return createMoney(quotient, value.currency);
 }
 
 export function compare<C extends Currency>(left: Money<C>, right: Money<NoInfer<C>>): -1 | 0 | 1 {
@@ -125,7 +121,7 @@ export function clamp<C extends Currency>(
   options: { max: Money<NoInfer<C>>; min: Money<NoInfer<C>> },
 ): Money<C> {
   if (compare(options.min, options.max) === 1) {
-    throw new CoinsError('INVALID_MONEY', 'Clamp minimum cannot exceed maximum');
+    throw new CoinsError('INVALID_RANGE', 'Clamp minimum cannot exceed maximum');
   }
 
   return compare(value, options.min) === -1 ? options.min : compare(value, options.max) === 1 ? options.max : value;
@@ -166,19 +162,17 @@ export function toDecimal(value: Money): string {
   return toDecimalString(value.amount, value.currency.minorUnit);
 }
 
-export function withMinor<C extends Currency>(amount: bigint, currency: C): Money<C> {
-  assertCurrency(currency);
+export function createMoney<C extends Currency>(amount: bigint, currency: C): Money<C> {
+  const value = Object.freeze({ amount, currency }) as Money<C>;
 
-  return createMoney(amount, currency);
+  canonicalMoney.add(value);
+
+  return value;
 }
 
-function createMoney<C extends Currency>(amount: bigint, currency: C): Money<C> {
-  return Object.freeze({ amount, currency }) as Money<C>;
-}
-
-function assertMoney(value: Money): void {
-  if (!Object.isFrozen(value) || !isCurrency(value.currency)) {
-    throw new CoinsError('INVALID_MONEY', 'Money must be a canonical Coins value');
+export function assertMoney(value: unknown): asserts value is Money {
+  if (!isMoney(value)) {
+    throw new CoinsError('INVALID_MONEY', 'Money must be a canonical @vielzeug/coins value');
   }
 }
 
@@ -191,7 +185,7 @@ function assertSameCurrency(left: Money, right: Money): void {
   }
 }
 
-function assertCurrency(value: Currency): void {
+function assertCurrency(value: unknown): asserts value is Currency {
   if (!isCurrency(value)) throw new CoinsError('INVALID_CURRENCY', 'Money requires a registered currency');
 }
 

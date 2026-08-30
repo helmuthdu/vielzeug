@@ -1,7 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { toInstant, toZoned } from './_convert';
 import { inferTimeZone } from './_tz';
-import { fail } from './errors';
+import { fail, TempoInvalidInputError } from './errors';
 import type {
   DurationFormatOptions,
   FormatOptions,
@@ -355,8 +355,12 @@ export function formatRelative(input: RelativeTimeInput, options: RelativeFormat
 export function parseDuration(input: string | Temporal.DurationLike): Temporal.Duration {
   try {
     return Temporal.Duration.from(input);
-  } catch {
-    fail(`Invalid duration input: "${String(input)}". Expected an ISO 8601 duration string or Temporal.DurationLike.`);
+  } catch (error) {
+    fail(
+      `Invalid duration input: "${String(input)}". Expected an ISO 8601 duration string or Temporal.DurationLike.`,
+      TempoInvalidInputError,
+      { cause: error },
+    );
   }
 }
 

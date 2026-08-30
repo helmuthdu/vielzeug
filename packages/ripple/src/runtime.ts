@@ -350,6 +350,10 @@ export class ReactiveRuntime {
     return this.isDisposed;
   }
 
+  get disposalSignal(): AbortSignal {
+    return this.rootScope.disposalSignal;
+  }
+
   readonly signal = <T>(initial: T, options?: SignalOptions<T>): Signal<T> => {
     this.assertActive();
 

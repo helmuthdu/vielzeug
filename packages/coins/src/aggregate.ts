@@ -1,6 +1,6 @@
-import { decimal, lcm } from './decimal';
+import { decimal, lcm } from './_decimal';
 import { CoinsError, CurrencyMismatchError } from './errors';
-import { isMoney, withMinor } from './money';
+import { assertMoney, createMoney } from './money';
 import type { Currency, Money } from './types';
 
 export function sum<C extends Currency>(values: readonly Money<C>[]): Money<C>;
@@ -10,7 +10,7 @@ export function sum<C extends Currency>(values: Iterable<Money<C>>, options?: { 
   let currency: C | undefined = options?.currency;
 
   for (const value of values) {
-    if (!isMoney(value)) throw new CoinsError('INVALID_MONEY', 'sum() requires canonical money values');
+    assertMoney(value);
 
     if (currency === undefined) {
       currency = value.currency;
@@ -23,13 +23,13 @@ export function sum<C extends Currency>(values: Iterable<Money<C>>, options?: { 
 
   if (currency === undefined) throw new CoinsError('INVALID_MONEY', 'sum() of empty iterable requires { currency }');
 
-  return withMinor(amount, currency);
+  return createMoney(amount, currency);
 }
 
 export function allocate<C extends Currency>(value: Money<C>, count: number): Money<C>[];
 export function allocate<C extends Currency>(value: Money<C>, weights: readonly string[]): Money<C>[];
 export function allocate<C extends Currency>(value: Money<C>, weightsOrCount: number | readonly string[]): Money<C>[] {
-  if (!isMoney(value)) throw new CoinsError('INVALID_MONEY', 'allocate() requires canonical money');
+  assertMoney(value);
 
   if (typeof weightsOrCount === 'number') return allocateEvenly(value, weightsOrCount);
 
@@ -65,7 +65,7 @@ export function allocate<C extends Currency>(value: Money<C>, weightsOrCount: nu
     remainder -= 1n;
   }
 
-  return shares.map((amount) => withMinor(amount * sign, value.currency));
+  return shares.map((amount) => createMoney(amount * sign, value.currency));
 }
 
 function allocateEvenly<C extends Currency>(value: Money<C>, countValue: number): Money<C>[] {
@@ -80,6 +80,6 @@ function allocateEvenly<C extends Currency>(value: Money<C>, countValue: number)
   const remainder = absolute % count;
 
   return Array.from({ length: countValue }, (_, index) =>
-    withMinor((base + (BigInt(index) < remainder ? 1n : 0n)) * sign, value.currency),
+    createMoney((base + (BigInt(index) < remainder ? 1n : 0n)) * sign, value.currency),
   );
 }

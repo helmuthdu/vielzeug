@@ -14,9 +14,8 @@ import { cleanup } from './mount';
 // see flush.ts). Exported here (not from the main `.` entry) so components with no interest
 // in the testing sub-path don't carry a testing-only error class in their public type surface.
 // Generic DOM interaction helpers belong to @vielzeug/assay, not this Ore-specific test API.
-export { OreTimeoutError } from '../errors';
 export { walkFlatTree } from './dom';
-export { debugFlush, type FlushOptions, flush } from './flush';
+export { debugFlush, type FlushOptions, flush, OreTimeoutError } from './flush';
 export { installFormInternalsPolyfill } from './form-internals-polyfill';
 export { cleanup, type Fixture, type MountOptions, type MountSetup, mock, mount, mountComponent } from './mount';
 export { type HookFixture, renderHook } from './render-hook';

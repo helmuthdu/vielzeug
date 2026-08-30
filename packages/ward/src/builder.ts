@@ -2,7 +2,7 @@ import type { WILDCARD } from './constants';
 import type { WardPredicate, WardRule } from './types';
 
 // ---------------------------------------------------------------------------
-// RuleOptions — shared options for allow/deny/ruleFor
+// RuleOptions — shared options for allow/deny
 // ---------------------------------------------------------------------------
 
 type RuleOptions<TData> = {
@@ -11,26 +11,15 @@ type RuleOptions<TData> = {
 };
 
 // ---------------------------------------------------------------------------
-// ruleFor — multi-action rule factory (low-level, effect as first arg)
+// buildRules — shared implementation
 // ---------------------------------------------------------------------------
 
-/**
- * Creates one `WardRule` per action for a given effect, role(s), and resource.
- *
- * Prefer `allow()` or `deny()` for ergonomic rule authoring.
- *
- * @example
- * ```ts
- * ruleFor('allow', 'viewer', 'posts', ['read'])
- * ruleFor('deny', 'blocked', 'posts', ['read', 'update'])
- * ```
- */
-export function ruleFor<TAction extends string = string, TData = unknown>(
+function buildRules<TAction extends string, TData>(
   effect: 'allow' | 'deny',
   role: string | readonly string[],
   resource: string | typeof WILDCARD,
   actions: readonly (TAction | NoInfer<typeof WILDCARD>)[],
-  options?: RuleOptions<TData>,
+  options: RuleOptions<TData> | undefined,
 ): WardRule<TAction, TData>[] {
   return actions.map((action) => ({
     action,
@@ -43,7 +32,7 @@ export function ruleFor<TAction extends string = string, TData = unknown>(
 }
 
 // ---------------------------------------------------------------------------
-// allow / deny — ergonomic factories (R12)
+// allow / deny — ergonomic factories
 // ---------------------------------------------------------------------------
 
 /**
@@ -63,7 +52,7 @@ export function allow<TAction extends string = string, TData = unknown>(
   actions: readonly (TAction | NoInfer<typeof WILDCARD>)[],
   options?: RuleOptions<TData>,
 ): WardRule<TAction, TData>[] {
-  return ruleFor('allow', role, resource, actions, options);
+  return buildRules('allow', role, resource, actions, options);
 }
 
 /**
@@ -83,7 +72,7 @@ export function deny<TAction extends string = string, TData = unknown>(
   actions: readonly (TAction | NoInfer<typeof WILDCARD>)[],
   options?: RuleOptions<TData>,
 ): WardRule<TAction, TData>[] {
-  return ruleFor('deny', role, resource, actions, options);
+  return buildRules('deny', role, resource, actions, options);
 }
 
 // ---------------------------------------------------------------------------
@@ -150,19 +139,3 @@ export const predicate = {
     };
   },
 } as const;
-
-// ---------------------------------------------------------------------------
-// owns — top-level re-export for backward-compatible usage
-// ---------------------------------------------------------------------------
-
-/**
- * Returns a `WardPredicate` that checks whether the data object's `attributeKey` field
- * matches the principal's `id`.
- *
- * Also available as `predicate.owns()` when using the grouped namespace.
- */
-export function owns<TData = unknown>(
-  attributeKey: [keyof TData] extends [never] ? string : keyof TData & string,
-): WardPredicate<TData> {
-  return predicate.owns(attributeKey);
-}

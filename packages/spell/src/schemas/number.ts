@@ -1,4 +1,4 @@
-import type { MessageFn, SchemaDescriptor } from '../core';
+import type { CheckContext, MessageFn, SchemaDescriptor, SchemaMode, SchemaWalker, ValidateResult } from '../core';
 
 import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 
@@ -13,18 +13,14 @@ interface NumberAnnotations extends Record<string, unknown> {
   typeHint?: 'integer';
 }
 
-export class NumberSchema<Input = number, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
-  number,
-  Input,
-  Mode
-> {
+export class NumberSchema<Input = number, Mode extends SchemaMode = 'sync'> extends Schema<number, Input, Mode> {
   protected override get _kind(): string {
     return 'number';
   }
 
   override checkAsync(
     this: NumberSchema<Input, 'sync'>,
-    fn: (value: number, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+    fn: (value: number, ctx: CheckContext) => Promise<ValidateResult>,
   ): NumberSchema<Input, 'async'> {
     return this._addCheck(fn, true) as unknown as NumberSchema<Input, 'async'>;
   }
@@ -233,7 +229,7 @@ export class NumberSchema<Input = number, Mode extends import('../core').SchemaM
     return NumberSchema.coerce();
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     if (visitor.number) return visitor.number(this);
 
     return super._walk(visitor);

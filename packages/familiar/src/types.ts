@@ -38,33 +38,25 @@ export type DrainOptions = {
   timeout?: number;
 };
 
-export interface WorkerPool<TInput, TOutput> {
+export interface PoolBase {
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
   drain(options?: DrainOptions): Promise<void>;
   prime(): Promise<void>;
+  readonly stats: WorkerStats;
+  readonly status: WorkerStatus;
+  [Symbol.asyncDispose](): Promise<void>;
+  [Symbol.dispose](): void;
+}
+
+export interface WorkerPool<TInput, TOutput> extends PoolBase {
   run(input: TInput, options?: RunOptions): Promise<TOutput>;
-  readonly stats: WorkerStats;
-  readonly status: WorkerStatus;
-  [Symbol.asyncDispose](): Promise<void>;
-  [Symbol.dispose](): void;
 }
 
-export interface StreamWorkerPool<TInput, TChunk> {
-  readonly disposalSignal: AbortSignal;
-  dispose(): void;
-  readonly disposed: boolean;
-  drain(options?: DrainOptions): Promise<void>;
-  prime(): Promise<void>;
+export interface StreamWorkerPool<TInput, TChunk> extends PoolBase {
   runStream(input: TInput, options?: RunOptions): AsyncIterable<TChunk>;
-  readonly stats: WorkerStats;
-  readonly status: WorkerStatus;
-  [Symbol.asyncDispose](): Promise<void>;
-  [Symbol.dispose](): void;
 }
-
-export type BatchOptions = RunOptions;
 
 export type TaskGroup<TInput, TOutput> = {
   abort(reason?: unknown): void;

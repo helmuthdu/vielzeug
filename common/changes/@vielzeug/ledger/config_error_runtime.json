@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add LedgerConfigurationError. Accept Ripple runtime injection for signal creation.",
+      "packageName": "@vielzeug/ledger",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ledger"
+}

@@ -1,5 +1,6 @@
 export type { ConsoleTheme, ConsoleThemeEntry, ConsoleTransportOptions, ResolvedTheme } from './console';
 export { consoleTransport, DEFAULT_THEME, resolveTheme } from './console';
+export { RuneConfigError, RuneError } from './errors';
 export type { LazyBinding } from './lazy';
 export { lazy } from './lazy';
 export { createLogger, defaultLogger } from './logger';

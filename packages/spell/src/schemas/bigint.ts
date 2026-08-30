@@ -1,19 +1,15 @@
 import { warn } from '../_dev';
-import type { MessageFn, SchemaDescriptor } from '../core';
+import type { CheckContext, MessageFn, SchemaDescriptor, SchemaMode, SchemaWalker, ValidateResult } from '../core';
 import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 
-export class BigIntSchema<Input = bigint, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
-  bigint,
-  Input,
-  Mode
-> {
+export class BigIntSchema<Input = bigint, Mode extends SchemaMode = 'sync'> extends Schema<bigint, Input, Mode> {
   protected override get _kind(): string {
     return 'bigint';
   }
 
   override checkAsync(
     this: BigIntSchema<Input, 'sync'>,
-    fn: (value: bigint, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+    fn: (value: bigint, ctx: CheckContext) => Promise<ValidateResult>,
   ): BigIntSchema<Input, 'async'> {
     return this._addCheck(fn, true) as unknown as BigIntSchema<Input, 'async'>;
   }
@@ -116,7 +112,7 @@ export class BigIntSchema<Input = bigint, Mode extends import('../core').SchemaM
     });
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     if (visitor.bigint) return visitor.bigint(this);
 
     return super._walk(visitor);

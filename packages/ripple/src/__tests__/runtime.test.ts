@@ -304,6 +304,32 @@ describe('ripple graph', () => {
     expect(disposed).toBe(true);
     ripple.dispose();
   });
+
+  it('returns last cached value from peek on disposed computed', () => {
+    const ripple = createRipple();
+    const source = ripple.signal(1);
+    const value = ripple.computed(() => source.value * 2);
+
+    expect(value.value).toBe(2);
+    ripple.dispose();
+
+    expect(value.peek()).toBe(2);
+  });
+
+  it('propagates derivation errors through computed peek', () => {
+    const ripple = createRipple();
+    const enabled = ripple.signal(false);
+    const value = ripple.computed(() => {
+      if (!enabled.value) throw new Error('disabled');
+
+      return 42;
+    });
+
+    expect(() => value.peek()).toThrow('disabled');
+    enabled.value = true;
+    expect(value.peek()).toBe(42);
+    ripple.dispose();
+  });
 });
 
 describe('bound helpers', () => {

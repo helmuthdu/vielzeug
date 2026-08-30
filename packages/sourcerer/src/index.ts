@@ -1,4 +1,5 @@
 export { createCursorSource } from './cursorSource';
+export { SourcererConfigurationError, SourcererError } from './errors';
 export { createInfiniteSource } from './infiniteSource';
 export { createLocalSource } from './localSource';
 export { createPageSource } from './pageSource';

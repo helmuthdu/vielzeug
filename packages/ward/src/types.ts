@@ -145,7 +145,6 @@ export type BoundWard<TAction extends string = string, TData = unknown> = {
  * Subscribe via `ward.tap(handler)` — handler errors are swallowed.
  */
 export type WardEvent<TAction extends string = string, TData = unknown> = {
-  readonly type: 'decision';
   readonly decision: WardDecision<TAction, TData>;
   readonly action: TAction;
   readonly data?: TData;

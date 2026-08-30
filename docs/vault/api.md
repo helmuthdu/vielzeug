@@ -360,12 +360,11 @@ type AnySchema = Record<string, {
   indexes?: readonly string[];
   key: string;
 }>;
-type SchemaEntry<T extends object, Key extends keyof T & string = keyof T & string> =
-  T[Key] extends VaultKey ? {
-    defaultTtl?: number;
-    indexes?: readonly (keyof T & string)[];
-    key: Key;
-  } : never;
+type SchemaEntry<T extends object, Key extends keyof T & string = keyof T & string> = {
+  defaultTtl?: number;
+  indexes?: readonly (keyof T & string)[];
+  key: Key;
+};
 type RecordOf<S extends AnySchema, K extends keyof S> =
   S[K] extends SchemaEntry<infer R, infer _Key> ? R : never;
 type KeyOf<S extends AnySchema, K extends keyof S> =
@@ -462,14 +461,6 @@ interface TransactionContext<S extends AnySchema, K extends keyof S & string = k
 ```
 
 `TransactionContext` has the same CRUD, query, and TTL methods as `VaultStore`, narrowed to the tables declared in `batch()`. Import it from `@vielzeug/vault/indexeddb` or `@vielzeug/vault/sqlite`.
-
-```ts
-// Adapter-specific type aliases — both resolve to TransactionalVaultStore.
-type SQLiteVaultStore<S extends AnySchema> = TransactionalVaultStore<S>;
-type IndexedDbVaultStore<S extends AnySchema> = TransactionalVaultStore<S>;
-```
-
-`SQLiteVaultStore` is exported from `@vielzeug/vault/sqlite`. `IndexedDbVaultStore` is exported from `@vielzeug/vault/indexeddb`.
 
 ## Errors
 

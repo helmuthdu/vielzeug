@@ -334,7 +334,7 @@ const virt = createVirtualizer(scrollEl, {
 
 ## Reactive Integration
 
-Any virtualizer can emit state to a reactive `Signal` from `@vielzeug/ripple` by providing a `signal` option:
+Any virtualizer can emit state to a reactive `Signal` from `@vielzeug/ripple` by providing a `toSignal` option:
 
 ```ts
 import { createVirtualizer } from '@vielzeug/scroll';
@@ -343,7 +343,7 @@ import { signal, effect } from '@vielzeug/ripple';
 const virt = createVirtualizer(scrollEl, {
   count: 1000,
   estimateSize: 40,
-  signal: (init) => signal(init),  // Create and emit to a signal
+  toSignal: (init) => signal(init),  // Create and emit to a signal
 });
 
 effect(() => {
@@ -355,7 +355,7 @@ effect(() => {
 virt.dispose();
 ```
 
-The `signal` option works with all factories (`createDomVirtualList`, `createGroupedVirtualizer`, `createGridVirtualizer`, etc.) and works alongside the `onChange` callback if provided.
+The `toSignal` option works with all factories (`createDomVirtualList`, `createGroupedVirtualizer`, `createGridVirtualizer`, etc.) and works alongside the `onChange` callback if provided.
 
 ## Documentation
 

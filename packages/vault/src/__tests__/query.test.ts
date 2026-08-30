@@ -128,7 +128,7 @@ describe('QueryBuilder (via query)', () => {
       expect(rowsData).toContainEqual(result);
     });
 
-    test('first with only limit(1) uses short-circuit path', async () => {
+    test('first with limit(1) applies the op then returns the first item', async () => {
       const result = await db.query('rows').limit(1).first();
 
       expect(result).toBeDefined();

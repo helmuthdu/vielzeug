@@ -1,14 +1,25 @@
-import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import type {
+  AnySchema,
+  CheckContext,
+  InferOutput,
+  InferSchemaMode,
+  Issue,
+  MergeSchemaModes,
+  ParseContext,
+  ParseValue,
+  SchemaDescriptor,
+  SchemaMode,
+  SchemaWalker,
+  ValidateResult,
+} from '../core';
 
 import { _makeCtx, ErrorCode, prependIssuePath, Schema, SpellValidationError } from '../core';
-import { isUnsafeObjectKey } from '../safe-object';
+import { defineOwnProperty, isUnsafeObjectKey } from '../safe-object';
 
 export class RecordSchema<
   K extends AnySchema,
   V extends AnySchema,
-  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
-    import('../core').InferSchemaMode<K | V>
-  >,
+  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<K | V>>,
 > extends Schema<Record<InferOutput<K> & string, InferOutput<V>>, unknown, Mode> {
   readonly keySchema: K;
   readonly valueSchema: V;
@@ -19,10 +30,7 @@ export class RecordSchema<
 
   override checkAsync(
     this: RecordSchema<K, V, 'sync'>,
-    fn: (
-      value: Record<InferOutput<K> & string, InferOutput<V>>,
-      ctx: import('../core').CheckContext,
-    ) => Promise<import('../core').ValidateResult>,
+    fn: (value: Record<InferOutput<K> & string, InferOutput<V>>, ctx: CheckContext) => Promise<ValidateResult>,
   ): RecordSchema<K, V, 'async'> {
     return this._addCheck(fn, true) as unknown as RecordSchema<K, V, 'async'>;
   }
@@ -71,12 +79,7 @@ export class RecordSchema<
       const valResult = this.valueSchema._parseFullSync(obj[key], ctx);
 
       if (valResult.issues.length === 0) {
-        Object.defineProperty(output, parsedKey, {
-          configurable: true,
-          enumerable: true,
-          value: valResult.data,
-          writable: true,
-        });
+        defineOwnProperty(output, parsedKey, valResult.data);
       } else {
         issues.push(...prependIssuePath(valResult.issues, key));
       }
@@ -137,12 +140,7 @@ export class RecordSchema<
         if (isUnsafeObjectKey(parsedKey)) continue;
 
         if (valResult.issues.length === 0) {
-          Object.defineProperty(output, parsedKey, {
-            configurable: true,
-            enumerable: true,
-            value: valResult.data,
-            writable: true,
-          });
+          defineOwnProperty(output, parsedKey, valResult.data);
         } else {
           issues.push(...prependIssuePath(valResult.issues, key));
         }
@@ -166,7 +164,7 @@ export class RecordSchema<
     };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     const key = this.keySchema.walk(visitor);
     const value = this.valueSchema.walk(visitor);
 

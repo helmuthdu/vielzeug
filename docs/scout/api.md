@@ -26,13 +26,12 @@ description: Complete API reference for @vielzeug/scout — createIndex, createR
 | `toSearchMatcher()`            | Adapt `ScoutIndex` to Sourcerer's `match` callback    | Sync           | Recomputes cached query matches after index mutation          |
 | `toFilterPredicate()`     | Snapshot predicate from a one-time query              | Sync           | Re-call when query or corpus changes                          |
 | `segmentWords()`          | Split unsegmented-script text (CJK, Thai, ...) into words | Sync       | Uses native `Intl.Segmenter` — not applied inside `tokenize()` itself (see Pitfalls) |
-| `SearchState.tap()`       | Subscribe to `query`/`isSearching`/`results`/`dispose` events | Sync     | Returns an unsubscribe function; pass `{ signal }` to tie to an external lifecycle |
 
 ## Package Entry Point
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/scout` | All exports — index/search/highlighting/adapters, `ScoutConfigurationError`, `ScoutDisposedError`, `ScoutError`, `ScoutEvent`, and all types |
+| `@vielzeug/scout` | All exports — index/search/highlighting/adapters, `ScoutConfigurationError`, `ScoutDisposedError`, `ScoutError`, and all types |
 
 ---
 
@@ -185,7 +184,6 @@ function createSearch<T>(index: ScoutIndex<T>, options?: CreateSearchOptions): S
 | `disposed` | `boolean` | `true` after `dispose()` has been called. |
 | `clear()` | `() => void` | Resets query, cancels debounce, clears results synchronously. |
 | `dispose()` | `() => void` | Releases all reactive subscriptions. |
-| `tap()` | `(handler, options?) => () => void` | Subscribe to `ScoutEvent` transitions; returns an unsubscribe function. |
 | `[Symbol.dispose]()` | `() => void` | `using`-compatible disposal. |
 
 **Example**
@@ -396,43 +394,6 @@ const index = createIndex(documents, {
 
 ---
 
-## `search.tap(handler, options?)`
-
-Subscribes `handler` to `ScoutEvent` transitions emitted by a `SearchState` — `query` changes, `isSearching` transitions, `results` changes, and `dispose`. Returns an unsubscribe function; calling it removes the handler. Pass `{ signal }` to tie the subscription to an external `AbortSignal` — when the signal aborts (or `dispose()` is called, which aborts `disposalSignal`) the handler is removed automatically.
-
-```ts
-tap(
-  handler: (event: ScoutEvent<T>) => void,
-  options?: { signal?: AbortSignal },
-): () => void
-```
-
-**Example**
-
-```ts
-import { createIndex, createSearch } from '@vielzeug/scout';
-
-const index = createIndex([{ name: 'Ada Lovelace' }], { fields: ['name'] });
-const search = createSearch(index);
-
-const unsubscribe = search.tap((event) => {
-  if (event.type === 'query-change') console.debug('query:', event.query);
-  if (event.type === 'results-change') console.debug('results:', event.results.length);
-});
-
-search.query.value = 'alice';
-// query: alice
-// results: 1
-
-unsubscribe();
-```
-
-::: warning Development logging
-If your queries may carry PII (names, emails, medical/financial terms typed by end users), don't log `query-change` events in production.
-:::
-
----
-
 ## Types
 
 ### `SearchConstraints`
@@ -516,31 +477,11 @@ type SearchState<T> = {
   readonly disposed: boolean;
   clear(): void;
   dispose(): void;
-  tap(handler: (event: ScoutEvent<T>) => void, options?: { signal?: AbortSignal }): () => void;
   [Symbol.dispose](): void;
 };
 ```
 
 See `createSearch()` above for member descriptions.
-
-### `ScoutEvent<T>`
-
-Discriminated union of events emitted by `SearchState.tap()`. Each variant carries a `type` discriminant; narrow with a `switch` or `if` on `event.type`.
-
-```ts
-type ScoutEvent<T> =
-  | { type: 'query-change'; query: string }
-  | { type: 'searching-change'; isSearching: boolean }
-  | { type: 'results-change'; results: readonly SearchResult<T>[] }
-  | { type: 'dispose' };
-```
-
-| `type` | Payload | Emitted when |
-| --- | --- | --- |
-| `query-change` | `query: string` | The writable `query` signal's value changes. |
-| `searching-change` | `isSearching: boolean` | The debounce window opens (`true`) or closes (`false`). |
-| `results-change` | `results: readonly SearchResult<T>[]` | Committed results change after debounce. |
-| `dispose` | — | `dispose()` is called on the `SearchState`. |
 
 ### `ReactiveSearch<T>`
 

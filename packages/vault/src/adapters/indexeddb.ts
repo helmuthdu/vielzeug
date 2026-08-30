@@ -20,8 +20,6 @@ import type {
   TransactionContext,
 } from '../types';
 
-export type { TransactionalVaultStore as IndexedDbVaultStore };
-
 /** IndexedDB-only migration context supplied to `MigrationFn` during `onupgradeneeded`. */
 export type MigrationContext = {
   db: IDBDatabase;

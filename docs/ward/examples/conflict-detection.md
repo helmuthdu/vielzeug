@@ -14,7 +14,7 @@ As a policy grows, rules can inadvertently shadow each other. You want to detect
 Use `ward.detectConflicts()` to find duplicate or shadowed predicate-free rules. The result is lazily computed and cached, so calling it repeatedly is cheap after the first call.
 
 ```ts
-import { createWard, owns } from '@vielzeug/ward';
+import { createWard, predicate } from '@vielzeug/ward';
 
 const rules = [
   { role: 'editor', resource: 'posts', action: 'update', effect: 'allow' },
@@ -85,8 +85,8 @@ Rules with a `when` predicate are excluded from both `'duplicate'` and `'shadowe
 ```ts
 const ward = createWard([
   // NOT flagged — the predicate may fail and cause the rule to not match
-  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow', when: owns('authorId') },
-  { role: 'editor', resource: 'posts', action: 'update', effect: 'deny', when: owns('authorId') },
+  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow', when: predicate.owns('authorId') },
+  { role: 'editor', resource: 'posts', action: 'update', effect: 'deny', when: predicate.owns('authorId') },
 ]);
 
 ward.detectConflicts(); // []

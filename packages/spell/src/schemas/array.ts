@@ -1,4 +1,18 @@
-import type { AnySchema, InferOutput, Issue, MessageFn, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import type {
+  AnySchema,
+  CheckContext,
+  InferOutput,
+  InferSchemaMode,
+  Issue,
+  MergeSchemaModes,
+  MessageFn,
+  ParseContext,
+  ParseValue,
+  SchemaDescriptor,
+  SchemaMode,
+  SchemaWalker,
+  ValidateResult,
+} from '../core';
 
 import { _makeCtx, ErrorCode, fail, prependIssuePath, resolveMessage, Schema, SpellValidationError } from '../core';
 
@@ -11,7 +25,7 @@ interface ArrayAnnotations extends Record<string, unknown> {
 
 export class ArraySchema<
   T extends AnySchema,
-  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<import('../core').InferSchemaMode<T>>,
+  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T>>,
 > extends Schema<InferOutput<T>[], unknown, Mode> {
   readonly itemSchema: T;
 
@@ -21,7 +35,7 @@ export class ArraySchema<
 
   override checkAsync(
     this: ArraySchema<T, 'sync'>,
-    fn: (value: InferOutput<T>[], ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+    fn: (value: InferOutput<T>[], ctx: CheckContext) => Promise<ValidateResult>,
   ): ArraySchema<T, 'async'> {
     return this._addCheck(fn, true) as unknown as ArraySchema<T, 'async'>;
   }
@@ -233,7 +247,7 @@ export class ArraySchema<
     };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     const item = this.itemSchema.walk(visitor);
 
     if (visitor.array) return visitor.array(this, item);

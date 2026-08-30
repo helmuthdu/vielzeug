@@ -1,9 +1,9 @@
-import { isReactive } from '@vielzeug/ripple';
 import { resolveEasing } from '../../animation/easing';
 import { resolveMotion } from '../../animation/motion';
 import { tweenNumber } from '../../animation/tween';
 import type { ChartEventHandlers } from '../../core/chart-scaffold';
 import { createRadialScaffold } from '../../core/chart-scaffold';
+import { resolveMaybeSignal } from '../../core/resolve';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import { seriesColor } from '../../theme';
 import type { ChartHandle, PieChartConfig, PieSliceConfig } from '../../types';
@@ -22,6 +22,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
   const variant = config.variant ?? 'pie';
   const padPixels = config.padPixels ?? (variant === 'pie' ? 0 : 8);
   const cornerRadius = config.cornerRadius ?? (variant === 'pie' ? 0 : 8);
+  const dataSignal = resolveMaybeSignal(config.data);
 
   // Pie SVG elements live directly on the SVG (not inside chartArea groups).
   // We create them once and reuse across renders.
@@ -67,198 +68,205 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
     }
   }
 
-  const handle = createRadialScaffold(
-    container,
-    {
-      a11y: config.a11y,
-      legend: config.legend,
-      plugins: config.plugins,
-      tooltip: config.tooltip,
-    },
-    (ctx): ChartEventHandlers => {
-      const { legend, svg, tooltip } = ctx;
+  let handle: ReturnType<typeof createRadialScaffold> | undefined;
 
-      // Append pie groups to SVG on first render (idempotent).
-      if (!svg.contains(bgCircle)) {
-        svg.appendChild(bgCircle);
-        svg.appendChild(pieGroup);
-        svg.appendChild(labelGroup);
-      }
+  try {
+    handle = createRadialScaffold(
+      container,
+      {
+        a11y: config.a11y,
+        legend: config.legend,
+        plugins: config.plugins,
+        tooltip: config.tooltip,
+      },
+      (ctx): ChartEventHandlers => {
+        const { legend, svg, tooltip } = ctx;
 
-      const { height: h, width: w } = ctx.dimensions.value;
-      const isSemi = variant === 'semi';
-      const cx = w / 2;
-      const cy = isSemi ? h * 0.85 : h / 2;
-      const padding = 8;
-      const outer = isSemi ? Math.min(cx, cy) - padding : Math.min(w, h) / 2 - padding;
-      const defaultInner = variant === 'pie' ? 0 : Math.round(outer * 0.55);
-      const inner = config.innerRadius !== undefined ? config.innerRadius : defaultInner;
-      const outerR = Math.max(inner + 1, outer);
-
-      const slices = isReactive(config.data) ? config.data.value : config.data;
-      const { end, start } = semiAngles(variant);
-
-      currentArcs = computeArcs(
-        slices,
-        cx,
-        cy,
-        outerR,
-        inner,
-        start,
-        end,
-        padPixels,
-        cornerRadius,
-        (i) => seriesColor(i),
-        false,
-      );
-
-      setAttributes(bgCircle, { cx, cy, r: inner > 0 ? inner : 0 });
-      bgCircle.setAttribute('style', 'fill:var(--prism-bg,#fff)');
-
-      while (pieGroup.children.length > currentArcs.length) pieGroup.removeChild(pieGroup.lastChild!);
-
-      while (labelGroup.children.length > currentArcs.length) labelGroup.removeChild(labelGroup.lastChild!);
-
-      const motion = resolveMotion(config.transition, 0);
-      const dur = motion.duration;
-      const easing = resolveEasing(motion.easing);
-
-      for (let i = 0; i < currentArcs.length; i++) {
-        const arc = currentArcs[i];
-        let path = pieGroup.children[i] as SVGPathElement | undefined;
-
-        if (!path) {
-          path = createSvgElement('path', { class: 'prism-pie-slice' });
-          pieGroup.appendChild(path);
+        // Append pie groups to SVG on first render (idempotent).
+        if (!svg.contains(bgCircle)) {
+          svg.appendChild(bgCircle);
+          svg.appendChild(pieGroup);
+          svg.appendChild(labelGroup);
         }
 
-        path.setAttribute('fill', arc.color);
-        path.setAttribute('stroke', 'none');
-        path.style.cursor = config.onClick || config.onHover ? 'pointer' : '';
-      }
+        const { height: h, width: w } = ctx.dimensions.value;
+        const isSemi = variant === 'semi';
+        const cx = w / 2;
+        const cy = isSemi ? h * 0.85 : h / 2;
+        const padding = 8;
+        const outer = isSemi ? Math.min(cx, cy) - padding : Math.min(w, h) / 2 - padding;
+        const defaultInner = variant === 'pie' ? 0 : Math.round(outer * 0.55);
+        const inner = config.innerRadius !== undefined ? config.innerRadius : defaultInner;
+        const outerR = Math.max(inner + 1, outer);
 
-      if (activeRaf !== null) {
-        cancelAnimationFrame(activeRaf);
-        activeRaf = null;
-      }
+        const slices = dataSignal.value;
+        const { end, start } = semiAngles(variant);
 
-      if (dur > 0) {
-        let rafStart: number | null = null;
+        currentArcs = computeArcs(
+          slices,
+          cx,
+          cy,
+          outerR,
+          inner,
+          start,
+          end,
+          padPixels,
+          cornerRadius,
+          (i) => seriesColor(i),
+          false,
+        );
 
-        const frame = (ts: number) => {
-          if (rafStart === null) rafStart = ts;
+        setAttributes(bgCircle, { cx, cy, r: inner > 0 ? inner : 0 });
+        bgCircle.setAttribute('style', 'fill:var(--prism-bg,#fff)');
 
-          const t = easing(Math.min(1, (ts - rafStart) / dur));
-          const revealAngle = tweenNumber(start, end, t);
+        while (pieGroup.children.length > currentArcs.length) pieGroup.removeChild(pieGroup.lastChild!);
 
+        while (labelGroup.children.length > currentArcs.length) labelGroup.removeChild(labelGroup.lastChild!);
+
+        const motion = resolveMotion(config.transition, 0);
+        const dur = motion.duration;
+        const easing = resolveEasing(motion.easing);
+
+        for (let i = 0; i < currentArcs.length; i++) {
+          const arc = currentArcs[i];
+          let path = pieGroup.children[i] as SVGPathElement | undefined;
+
+          if (!path) {
+            path = createSvgElement('path', { class: 'prism-pie-slice' });
+            pieGroup.appendChild(path);
+          }
+
+          path.setAttribute('fill', arc.color);
+          path.setAttribute('stroke', 'none');
+          path.style.cursor = config.onClick || config.onHover ? 'pointer' : '';
+        }
+
+        if (activeRaf !== null) {
+          cancelAnimationFrame(activeRaf);
+          activeRaf = null;
+        }
+
+        if (dur > 0) {
+          let rafStart: number | null = null;
+
+          const frame = (ts: number) => {
+            if (rafStart === null) rafStart = ts;
+
+            const t = easing(Math.min(1, (ts - rafStart) / dur));
+            const revealAngle = tweenNumber(start, end, t);
+
+            for (let j = 0; j < currentArcs.length; j++) {
+              const a = currentArcs[j];
+              const el = pieGroup.children[j] as SVGPathElement | undefined;
+
+              if (!el) continue;
+
+              if (revealAngle <= a.startAngle) {
+                setAttributes(el, { d: '' });
+              } else {
+                const visibleEnd = Math.min(a.endAngle, revealAngle);
+
+                setAttributes(el, { d: arcPath({ ...a, endAngle: visibleEnd }) });
+              }
+            }
+
+            if (t < 1) {
+              activeRaf = requestAnimationFrame(frame);
+            } else {
+              activeRaf = null;
+              renderLabels(slices);
+            }
+          };
+
+          activeRaf = requestAnimationFrame(frame);
+        } else {
           for (let j = 0; j < currentArcs.length; j++) {
             const a = currentArcs[j];
             const el = pieGroup.children[j] as SVGPathElement | undefined;
 
-            if (!el) continue;
-
-            if (revealAngle <= a.startAngle) {
-              setAttributes(el, { d: '' });
-            } else {
-              const visibleEnd = Math.min(a.endAngle, revealAngle);
-
-              setAttributes(el, { d: arcPath({ ...a, endAngle: visibleEnd }) });
-            }
+            if (el) setAttributes(el, { d: arcPath(a) });
           }
 
-          if (t < 1) {
-            activeRaf = requestAnimationFrame(frame);
+          renderLabels(slices);
+        }
+
+        legend?.update(currentArcs.map((arc) => ({ color: arc.color, name: arc.slice.label ?? '' })));
+        tooltip?.hide();
+
+        const onMouseMove = (e: MouseEvent): void => {
+          const svgRect = svg.getBoundingClientRect();
+          const mx = e.clientX - svgRect.left;
+          const my = e.clientY - svgRect.top;
+          const hit = hitTestArc(currentArcs, mx, my, variant);
+
+          if (hit >= 0) {
+            const arc = currentArcs[hit];
+
+            config.onHover?.(arc.slice, hit);
+
+            const { x, y } = arcCentroid(arc);
+            const contR = container.getBoundingClientRect();
+
+            tooltip?.show(
+              x + (svgRect.left - contR.left),
+              y + (svgRect.top - contR.top),
+              { key: hit, value: arc.slice.value },
+              { color: arc.color, data: [], name: arc.slice.label ?? '' },
+            );
           } else {
-            activeRaf = null;
-            renderLabels(slices);
+            config.onHover?.(null, null);
+            tooltip?.hide();
           }
         };
 
-        activeRaf = requestAnimationFrame(frame);
-      } else {
-        for (let j = 0; j < currentArcs.length; j++) {
-          const a = currentArcs[j];
-          const el = pieGroup.children[j] as SVGPathElement | undefined;
-
-          if (el) setAttributes(el, { d: arcPath(a) });
-        }
-
-        renderLabels(slices);
-      }
-
-      legend?.update(currentArcs.map((arc) => ({ color: arc.color, name: arc.slice.label ?? '' })));
-      tooltip?.hide();
-
-      const onMouseMove = (e: MouseEvent): void => {
-        const svgRect = svg.getBoundingClientRect();
-        const mx = e.clientX - svgRect.left;
-        const my = e.clientY - svgRect.top;
-        const hit = hitTestArc(currentArcs, mx, my, variant);
-
-        if (hit >= 0) {
-          const arc = currentArcs[hit];
-
-          config.onHover?.(arc.slice, hit);
-
-          const { x, y } = arcCentroid(arc);
-          const contR = container.getBoundingClientRect();
-
-          tooltip?.show(
-            x + (svgRect.left - contR.left),
-            y + (svgRect.top - contR.top),
-            { key: hit, value: arc.slice.value },
-            { color: arc.color, data: [], name: arc.slice.label ?? '' },
-          );
-        } else {
+        const onMouseLeave = (): void => {
           config.onHover?.(null, null);
           tooltip?.hide();
+        };
+
+        const onClick = (e: MouseEvent): void => {
+          if (!config.onClick) return;
+
+          const svgRect = svg.getBoundingClientRect();
+          const mx = e.clientX - svgRect.left;
+          const my = e.clientY - svgRect.top;
+          const hit = hitTestArc(currentArcs, mx, my, variant);
+
+          if (hit >= 0) config.onClick(currentArcs[hit].slice, hit);
+        };
+
+        return { onClick, onMouseLeave, onMouseMove };
+      },
+    );
+
+    return {
+      get disposalSignal(): AbortSignal {
+        return handle!.disposalSignal;
+      },
+
+      dispose() {
+        if (activeRaf !== null) {
+          cancelAnimationFrame(activeRaf);
+          activeRaf = null;
         }
-      };
 
-      const onMouseLeave = (): void => {
-        config.onHover?.(null, null);
-        tooltip?.hide();
-      };
+        handle!.dispose();
+      },
 
-      const onClick = (e: MouseEvent): void => {
-        if (!config.onClick) return;
+      get disposed(): boolean {
+        return handle!.disposed;
+      },
 
-        const svgRect = svg.getBoundingClientRect();
-        const mx = e.clientX - svgRect.left;
-        const my = e.clientY - svgRect.top;
-        const hit = hitTestArc(currentArcs, mx, my, variant);
+      el: handle!.el,
 
-        if (hit >= 0) config.onClick(currentArcs[hit].slice, hit);
-      };
-
-      return { onClick, onMouseLeave, onMouseMove };
-    },
-  );
-
-  return {
-    get disposalSignal(): AbortSignal {
-      return handle.disposalSignal;
-    },
-
-    dispose() {
-      if (activeRaf !== null) {
-        cancelAnimationFrame(activeRaf);
-        activeRaf = null;
-      }
-
-      handle.dispose();
-    },
-
-    get disposed(): boolean {
-      return handle.disposed;
-    },
-
-    el: handle.el,
-
-    [Symbol.dispose]() {
-      this.dispose();
-    },
-  };
+      [Symbol.dispose]() {
+        this.dispose();
+      },
+    };
+  } catch (error) {
+    handle?.dispose();
+    throw error;
+  }
 }
 
 function hitTestArc(arcs: Arc[], mx: number, my: number, variant: PieChartConfig['variant']): number {

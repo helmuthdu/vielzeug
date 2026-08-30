@@ -1,5 +1,6 @@
 import { warn } from './_dev';
 import { isUnsafeObjectKey } from './_prototype';
+import { RuneConfigError } from './errors';
 import type {
   BatchHandle,
   BatchTransportOptions,
@@ -131,19 +132,19 @@ export function jsonTransport(options: JsonTransportOptions = {}): Transport {
 /* ─── Transport option validation ─── */
 
 function assertFiniteNumber(value: number, name: string): void {
-  if (!Number.isFinite(value)) throw new RangeError(`${name} must be a finite number`);
+  if (!Number.isFinite(value)) throw new RuneConfigError(`${name} must be a finite number`);
 }
 
 function assertNonNegativeInteger(value: number, name: string): void {
   assertFiniteNumber(value, name);
 
-  if (!Number.isInteger(value) || value < 0) throw new RangeError(`${name} must be a non-negative integer`);
+  if (!Number.isInteger(value) || value < 0) throw new RuneConfigError(`${name} must be a non-negative integer`);
 }
 
 function assertPositiveInteger(value: number, name: string): void {
   assertFiniteNumber(value, name);
 
-  if (!Number.isInteger(value) || value <= 0) throw new RangeError(`${name} must be a positive integer`);
+  if (!Number.isInteger(value) || value <= 0) throw new RuneConfigError(`${name} must be a positive integer`);
 }
 
 /* ─── batchTransport ─── */
@@ -177,7 +178,7 @@ export function batchTransport(options: BatchTransportOptions): BatchHandle {
 
   assertFiniteNumber(interval, 'batchTransport interval');
 
-  if (interval <= 0) throw new RangeError('batchTransport interval must be greater than zero');
+  if (interval <= 0) throw new RuneConfigError('batchTransport interval must be greater than zero');
 
   assertPositiveInteger(maxSize, 'batchTransport maxSize');
 
@@ -289,7 +290,7 @@ export function sampleTransport(options: SampleTransportOptions): Transport {
 
   assertFiniteNumber(rate, 'sampleTransport rate');
 
-  if (rate < 0 || rate > 1) throw new RangeError('sampleTransport rate must be between zero and one');
+  if (rate < 0 || rate > 1) throw new RuneConfigError('sampleTransport rate must be between zero and one');
 
   return (entry: LogEntry): void => {
     if (!isLevelEnabled(level, entry.level)) return;

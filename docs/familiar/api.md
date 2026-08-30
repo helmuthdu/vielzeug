@@ -74,7 +74,7 @@ Creates a stream-only pool for a worker module registered with `exposeStream()`.
 function batch<TInput, TOutput>(
   pool: WorkerPool<TInput, TOutput>,
   inputs: readonly TInput[],
-  options?: BatchOptions,
+  options?: RunOptions,
 ): AsyncIterable<TOutput>;
 ```
 
@@ -224,12 +224,6 @@ type RunningStream<TChunk> = {
 
 ```ts
 type WorkerStatus = 'idle' | 'running' | 'terminated';
-```
-
-### `BatchOptions`
-
-```ts
-type BatchOptions = RunOptions;
 ```
 
 ### `DrainOptions`

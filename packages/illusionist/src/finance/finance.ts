@@ -13,16 +13,16 @@ type CreditCardType = (typeof CREDIT_CARD_TYPES)[number];
 
 const IBAN_COUNTRIES = Object.keys(FINANCE_DATA.ibanCountryCodes) as (keyof typeof FINANCE_DATA.ibanCountryCodes)[];
 
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 function letters(count: number, ctx: IllusionistContext): string {
-  let result = '';
+  const out: string[] = [];
 
   for (let i = 0; i < count; i++) {
-    result += LETTERS[Math.floor(ctx.source.next() * LETTERS.length)];
+    out.push(pick(LETTERS, ctx.source)!);
   }
 
-  return result;
+  return out.join('');
 }
 
 /** Computes `n mod 97` for an arbitrarily long numeric string. */

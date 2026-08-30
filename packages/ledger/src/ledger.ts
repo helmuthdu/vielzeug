@@ -1,6 +1,7 @@
-import { signal } from '@vielzeug/ripple';
+import { signal as defaultSignal } from '@vielzeug/ripple';
 import {
   LedgerCancelledError,
+  LedgerConfigurationError,
   LedgerDisposedError,
   LedgerError,
   LedgerExecutionError,
@@ -72,10 +73,11 @@ function operationError(method: string, disposed: boolean): LedgerCancelledError
  * using ledger = createLedger();
  */
 export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Ledger<TMeta> {
-  const { maxHistory = 100 } = options;
+  const { maxHistory = 100, runtime } = options;
+  const signal = runtime?.signal ?? defaultSignal;
 
   if (!Number.isSafeInteger(maxHistory) || maxHistory < 0) {
-    throw new RangeError('maxHistory must be a non-negative safe integer');
+    throw new LedgerConfigurationError('maxHistory must be a non-negative safe integer');
   }
 
   const state = signal<LedgerState<TMeta>>(
@@ -121,7 +123,6 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
       : disposalController.signal;
 
     return new Promise<void>((resolve, reject) => {
-      const operation = {} as Operation;
       const onAbort = (): void => {
         if (operation.started || operation.settled || disposed) return;
 
@@ -129,7 +130,7 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
         settle(operation, operationError(method, false));
       };
 
-      Object.assign(operation, {
+      const operation: Operation = {
         cancel: () => abortSignal.removeEventListener('abort', onAbort),
         reject,
         resolve,
@@ -157,7 +158,7 @@ export function createLedger<TMeta = undefined>(options: LedgerOptions = {}): Le
           }
         },
         started: false,
-      });
+      };
 
       abortSignal.addEventListener('abort', onAbort, { once: true });
       operations.add(operation);

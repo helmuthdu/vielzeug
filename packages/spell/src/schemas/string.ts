@@ -1,5 +1,5 @@
 import { warn } from '../_dev';
-import type { MessageFn, SchemaDescriptor } from '../core';
+import type { CheckContext, MessageFn, SchemaDescriptor, SchemaMode, SchemaWalker, ValidateResult } from '../core';
 import { ErrorCode, fail, resolveMessage, Schema } from '../core';
 import {
   isBase64,
@@ -40,18 +40,14 @@ type UrlOptions = {
   protocols?: readonly string[];
 };
 
-export class StringSchema<Input = string, Mode extends import('../core').SchemaMode = 'sync'> extends Schema<
-  string,
-  Input,
-  Mode
-> {
+export class StringSchema<Input = string, Mode extends SchemaMode = 'sync'> extends Schema<string, Input, Mode> {
   protected override get _kind(): string {
     return 'string';
   }
 
   override checkAsync(
     this: StringSchema<Input, 'sync'>,
-    fn: (value: string, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+    fn: (value: string, ctx: CheckContext) => Promise<ValidateResult>,
   ): StringSchema<Input, 'async'> {
     return this._addCheck(fn, true) as unknown as StringSchema<Input, 'async'>;
   }
@@ -123,14 +119,6 @@ export class StringSchema<Input = string, Mode extends import('../core').SchemaM
       },
       (ann) => ({ ...ann, maxLength: exact, minLength: exact }),
     );
-  }
-
-  /**
-   * Alias for `.nonEmpty()` — validates that the string is not empty.
-   * Provided for discoverability alongside `ArraySchema.nonEmpty()`.
-   */
-  nonempty(message?: MessageFn<{ min: number; value: string }>): this {
-    return this.nonEmpty(message);
   }
 
   nonEmpty(message?: MessageFn<{ min: number; value: string }>): this {
@@ -559,7 +547,7 @@ export class StringSchema<Input = string, Mode extends import('../core').SchemaM
     return this.preprocess((v: unknown) => (typeof v === 'string' ? v.toUpperCase() : v));
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     if (visitor.string) return visitor.string(this);
 
     return super._walk(visitor);

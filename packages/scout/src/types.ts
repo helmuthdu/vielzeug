@@ -140,20 +140,4 @@ export type SearchState<T> = {
    * Updated after the debounce delay whenever `query` changes.
    */
   readonly results: Readable<SearchResult<T>[]>;
-  /**
-   * Observe runtime events (query-change, searching-change, results-change, dispose)
-   * without affecting search behavior. Handler errors are swallowed.
-   * Returns an unsubscribe function.
-   */
-  tap(handler: (event: ScoutEvent<T>) => void, options?: { readonly signal?: AbortSignal }): () => void;
 };
-
-/**
- * Runtime events emitted by {@link SearchState.tap}.
- * Handler errors are swallowed — observability never affects search behavior.
- */
-export type ScoutEvent<T> =
-  | { readonly query: string; readonly type: 'query-change' }
-  | { readonly isSearching: boolean; readonly type: 'searching-change' }
-  | { readonly results: readonly SearchResult<T>[]; readonly type: 'results-change' }
-  | { readonly type: 'dispose' };

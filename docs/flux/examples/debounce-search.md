@@ -21,7 +21,7 @@ const input = document.querySelector<HTMLInputElement>('#search')!;
 const results = pipe(
   fromEvent<InputEvent>(input, 'input'),
   map((event) => (event.target as HTMLInputElement).value.trim()),
-  debounce({ for: 300 }),
+  debounce(300),
   switchMap((query) => from(fetch(`/api/search?q=${encodeURIComponent(query)}`).then((response) => response.json()))),
 );
 

@@ -1,4 +1,4 @@
-import type { Readable } from '@vielzeug/ripple';
+import type { Readable, Ripple } from '@vielzeug/ripple';
 
 export interface CommandContext {
   readonly signal: AbortSignal;
@@ -22,6 +22,7 @@ export interface LedgerCallOptions {
 
 export interface LedgerOptions {
   maxHistory?: number;
+  runtime?: Pick<Ripple, 'signal'>;
 }
 
 export interface LedgerState<TMeta = undefined> {

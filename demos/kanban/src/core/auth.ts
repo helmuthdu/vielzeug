@@ -1,6 +1,6 @@
 import { signal } from '@vielzeug/ripple';
 import type { Principal } from '@vielzeug/ward';
-import { allow, createWard, owns, predicate } from '@vielzeug/ward';
+import { allow, createWard, predicate } from '@vielzeug/ward';
 import { seedUsers } from './seed-data';
 import type { Task, User } from './types';
 
@@ -10,7 +10,7 @@ type TaskAction = 'create' | 'delete' | 'move' | 'read' | 'update';
 // mostly Alice regardless of who a task is actually assigned to (see seed-data.ts), so an
 // owner-only rule here left every other member unable to edit tasks assigned to them — the
 // board's whole point (assign someone, they work on it) didn't hold up past "read-only".
-const isOwnerOrAssignee = predicate.or<Task>(owns('ownerId'), owns('assigneeId'));
+const isOwnerOrAssignee = predicate.or<Task>(predicate.owns('ownerId'), predicate.owns('assigneeId'));
 
 export const ward = createWard<TaskAction, Task>([
   // admin: full access to all task actions
@@ -23,7 +23,7 @@ export const ward = createWard<TaskAction, Task>([
   // destructive and irreversible (task-dialog.ts's `attemptDeleteTask` comment), so it stays
   // scoped to whoever created the task, not whoever's merely working on it.
   allow<TaskAction, Task>('member', 'task', ['update'], { when: isOwnerOrAssignee }),
-  allow<TaskAction, Task>('member', 'task', ['delete'], { when: owns('ownerId') }),
+  allow<TaskAction, Task>('member', 'task', ['delete'], { when: predicate.owns('ownerId') }),
 
   // viewer: read only
   allow('viewer', 'task', ['read']),

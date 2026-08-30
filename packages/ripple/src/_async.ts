@@ -30,7 +30,6 @@ export const createResource =
     const state = runtime.signal<AsyncState<Value>>({ status: 'pending' }, { name: options?.name });
     const reloadEpoch = runtime.signal(0);
     let active: AbortController | undefined;
-    let disposed = false;
 
     const run = (): void => {
       void reloadEpoch.value;
@@ -64,10 +63,10 @@ export const createResource =
 
       void request.then(
         (value) => {
-          if (!disposed && !next.signal.aborted) state.value = { status: 'success', value };
+          if (!stop.disposed && !next.signal.aborted) state.value = { status: 'success', value };
         },
         (error: unknown) => {
-          if (!disposed && !next.signal.aborted) {
+          if (!stop.disposed && !next.signal.aborted) {
             state.value = previous === undefined ? { error, status: 'error' } : { error, previous, status: 'error' };
           }
         },
@@ -83,28 +82,20 @@ export const createResource =
       { name: options?.name },
     );
 
-    stop.disposalSignal.addEventListener(
-      'abort',
-      () => {
-        disposed = true;
-      },
-      { once: true },
-    );
-
     const resource: Resource<Value> = {
       get disposalSignal() {
         return stop.disposalSignal;
       },
       dispose: () => stop.dispose(),
       get disposed() {
-        return disposed;
+        return stop.disposed;
       },
       get name() {
         return state.name;
       },
       peek: () => state.peek(),
       reload: () => {
-        if (disposed) return;
+        if (stop.disposed) return;
 
         reloadEpoch.value = reloadEpoch.peek() + 1;
       },

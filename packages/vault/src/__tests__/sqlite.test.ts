@@ -31,7 +31,7 @@ afterEach(() => {
   }
 });
 
-describe('SQLiteVaultStore', () => {
+describe('SQLite TransactionalVaultStore', () => {
   test('persists records with distinct numeric and string keys across stores', async () => {
     const database = createDatabase();
     const writer = createStore(database);

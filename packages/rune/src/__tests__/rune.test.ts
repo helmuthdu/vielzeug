@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { consoleTransport, DEFAULT_THEME, resolveTheme } from '../console';
+import { RuneConfigError } from '../errors';
 import { lazy } from '../lazy';
 import { createLogger, defaultLogger } from '../logger';
 import { batchTransport, jsonTransport, pipe, redactTransport, remoteTransport, sampleTransport } from '../transports';
@@ -885,7 +886,7 @@ describe('batchTransport', () => {
     ['maxBuffer', { maxBuffer: -1 }],
     ['maxBuffer', { maxBuffer: 1.5 }],
   ])('rejects invalid %s', (_name, options) => {
-    expect(() => batchTransport({ ...options, onFlush: () => {} })).toThrow(RangeError);
+    expect(() => batchTransport({ ...options, onFlush: () => {} })).toThrow(RuneConfigError);
   });
 });
 
@@ -938,7 +939,7 @@ describe('sampleTransport', () => {
   it.each([-0.1, 1.1, Infinity, Number.NaN])('rejects invalid rate %s', (rate) => {
     const { transport } = createTestTransport();
 
-    expect(() => sampleTransport({ rate, transport })).toThrow(RangeError);
+    expect(() => sampleTransport({ rate, transport })).toThrow(RuneConfigError);
   });
 });
 
@@ -1027,7 +1028,7 @@ describe('redactTransport', () => {
   it.each([-1, 1.5, Infinity, Number.NaN])('rejects invalid maxDepth %s', (maxDepth) => {
     const { transport } = createTestTransport();
 
-    expect(() => redactTransport({ keys: [], maxDepth, transport })).toThrow(RangeError);
+    expect(() => redactTransport({ keys: [], maxDepth, transport })).toThrow(RuneConfigError);
   });
 });
 

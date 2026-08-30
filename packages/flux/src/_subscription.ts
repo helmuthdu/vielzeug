@@ -1,6 +1,7 @@
 import type { Observer, Sink, Subscription, Teardown } from './types';
 
-function reportUnhandledError(reason: unknown): void {
+/** @internal Reports an unhandled stream error through the platform's error reporting channel. */
+export function reportUnhandledError(reason: unknown): void {
   const reportError = (globalThis as { reportError?: (value: unknown) => void }).reportError;
 
   if (reportError) {

@@ -83,7 +83,7 @@ export type DomVirtualListOptions<T> = {
   /** Mark items as sticky headers. Receives the item index and the item data. */
   sticky?: (index: number, item: T) => boolean;
   /** Optional signal factory for reactive state. */
-  signal?: (init: VirtualizerState) => Signal<VirtualizerState>;
+  toSignal?: (init: VirtualizerState) => Signal<VirtualizerState>;
 };
 
 /**
@@ -181,15 +181,15 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
   }
 
   let currentItems: T[] = [];
-  let isDestroyed = false;
+  let disposed = false;
   const ac = new AbortController();
   const listEl = options.listElement;
 
   // Optional signal for reactive state
   let stateSignal: Signal<VirtualizerState> | null = null;
-  if (options.signal) {
+  if (options.toSignal) {
     const initialState: VirtualizerState = { items: [], stickyItems: [], totalSize: 0 };
-    stateSignal = options.signal(initialState);
+    stateSignal = options.toSignal(initialState);
   }
 
   // Helper to emit state to both callback and signal
@@ -324,9 +324,9 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
   }
 
   function _dispose(): void {
-    if (isDestroyed) return;
+    if (disposed) return;
 
-    isDestroyed = true;
+    disposed = true;
     ac.abort();
     virtualizer?.dispose();
     virtualizer = null;
@@ -346,11 +346,11 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     dispose: _dispose,
 
     get disposed() {
-      return isDestroyed;
+      return disposed;
     },
 
     invalidate() {
-      if (isDestroyed) return;
+      if (disposed) return;
 
       virtualizer?.invalidate();
     },
@@ -368,25 +368,25 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     },
 
     measure(index, size) {
-      if (isDestroyed) return;
+      if (disposed) return;
 
       virtualizer?.measure(index, size);
     },
 
     measureBatch(entries) {
-      if (isDestroyed) return;
+      if (disposed) return;
 
       virtualizer?.measureBatch(entries);
     },
 
     measureEl(index, el) {
-      if (isDestroyed) return () => {};
+      if (disposed) return () => {};
 
       return virtualizer?.measureEl(index, el) ?? (() => {});
     },
 
     refresh() {
-      if (isDestroyed) return;
+      if (disposed) return;
 
       virtualizer?.refresh();
     },
@@ -396,32 +396,32 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     },
 
     scrollToBottom(scrollOptions) {
-      if (isDestroyed) return;
+      if (disposed) return;
 
       virtualizer?.scrollToBottom(scrollOptions);
     },
 
     scrollToIndex(index, scrollOptions) {
-      if (isDestroyed) return;
+      if (disposed) return;
 
       virtualizer?.scrollToIndex(index, scrollOptions);
     },
 
     scrollToOffset(offset, scrollOptions) {
-      if (isDestroyed) return;
+      if (disposed) return;
 
       virtualizer?.scrollToOffset(offset, scrollOptions);
     },
 
     scrollToTop(scrollOptions) {
-      if (isDestroyed) return;
+      if (disposed) return;
 
       virtualizer?.scrollToTop(scrollOptions);
     },
 
     // ── DomVirtualList-specific ────────────────────────────────────────────
     setItems(items) {
-      if (isDestroyed) return;
+      if (disposed) return;
 
       // Read *before* mutating state — the "was the list already at the end?" check must
       // reflect the pre-update layout, not the one `render()` is about to produce below.

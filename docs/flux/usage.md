@@ -56,7 +56,7 @@ clicks.subscribe({
 });
 ```
 
-Use `switchMap()` for latest-only work, `mergeMap()` for concurrent work, and `concatMap()` for ordered work with bounded queue capacity.
+Use `switchMap()` for latest-only work, `mergeMap()` for concurrent work with bounded concurrency and queue capacity, and `concatMap()` for ordered work with bounded queue capacity.
 
 ```ts
 import { from, pipe, retry, switchMap } from '@vielzeug/flux';
@@ -83,7 +83,7 @@ try {
 }
 ```
 
-Use `first()` for first emission and `last()` for last value before completion. Pass `{ signal }` to cancel waiting; cancellation rejects with `AbortError`.
+Use `first()` for first emission and `last()` for last value before completion. Both reject with `FluxEmptyError` when the source completes without emitting; pass `{ defaultValue }` to resolve instead. Pass `{ signal }` to cancel waiting; cancellation rejects with `AbortError`.
 
 ## Channels
 
@@ -107,7 +107,7 @@ Convert push stream only when pull syntax is required. Capacity and overflow pol
 ```ts
 import { interval, toAsyncIterable } from '@vielzeug/flux';
 
-const values = toAsyncIterable(interval({ every: 100 }), {
+const values = toAsyncIterable(interval(100), {
   capacity: 32,
   overflow: 'error',
 });
@@ -130,7 +130,7 @@ import { first, pipe, stream, timeout } from '@vielzeug/flux';
 
 it('fails after inactivity', async () => {
   vi.useFakeTimers();
-  const result = first(pipe(stream(() => {}), timeout({ after: 500 })));
+  const result = first(pipe(stream(() => {}), timeout(500)));
   const expectation = expect(result).rejects.toThrow('Timeout after 500ms');
 
   await vi.advanceTimersByTimeAsync(500);
@@ -208,6 +208,7 @@ import { fromSignal, toSignal } from '@vielzeug/flux/ripple';
 - Pass `{ signal }` from component, request, or task owner.
 - Provide `error` when subscription can recover locally.
 - Use `pipe(source, ...)`; never mutate stream definitions.
+- Bound `mergeMap()` concurrency and queue capacity.
 - Bound `concatMap()` queue capacity.
 - Bound `toArray()` with realistic `maxItems`.
 - Choose async iterator overflow policy deliberately.

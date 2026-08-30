@@ -1,4 +1,4 @@
-export { allow, deny, owns, predicate, ruleFor } from './builder';
+export { allow, deny, predicate } from './builder';
 export { ANONYMOUS, WILDCARD } from './constants';
 export { WardConfigError, WardError, WardPredicateError } from './errors';
 export { createWard } from './factory';

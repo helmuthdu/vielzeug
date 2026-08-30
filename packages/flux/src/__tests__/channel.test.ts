@@ -62,4 +62,36 @@ describe('createChannel()', () => {
   it('rejects replay: 0 with initial — initial would be silently dropped', () => {
     expect(() => createChannel({ initial: 0, replay: 0 })).toThrow(RangeError);
   });
+
+  it('completes late subscribers without replaying retained values after disposal', () => {
+    const channel = createChannel<number>({ replay: 2 });
+    const late: number[] = [];
+    const lateComplete = vi.fn();
+
+    channel.send(1);
+    channel.send(2);
+    channel.dispose();
+    channel.stream.subscribe({ complete: lateComplete, next: (value) => late.push(value) });
+
+    expect(late).toEqual([]);
+    expect(lateComplete).toHaveBeenCalledOnce();
+  });
+
+  it('preserves FIFO order across listeners during reentrant sends', () => {
+    const channel = createChannel<number>();
+    const first: number[] = [];
+    const second: number[] = [];
+
+    channel.stream.subscribe((value) => {
+      first.push(value);
+
+      if (value === 1) channel.send(2);
+    });
+    channel.stream.subscribe((value) => second.push(value));
+
+    channel.send(1);
+
+    expect(first).toEqual([1, 2]);
+    expect(second).toEqual([1, 2]);
+  });
 });

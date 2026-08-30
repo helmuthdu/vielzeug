@@ -1,10 +1,10 @@
-import { isReactive } from '@vielzeug/ripple';
 import { warn } from '../../_dev';
 import { renderAxis, resolveTickCount } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
 import { buildXScale, buildYScale } from '../../core/cartesian-scales';
 import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
+import { resolveMaybeSignal } from '../../core/resolve';
 import { createCrosshair } from '../../interaction/crosshair';
 import { createSeriesInteraction } from '../../interaction/series-interaction';
 import { createSvgElement } from '../../svg/element';
@@ -15,102 +15,113 @@ import { computePoints, renderLine } from './line-renderer';
 
 export function createLineChart(container: HTMLElement, config: LineChartConfig): ChartHandle {
   let crosshair: ReturnType<typeof createCrosshair> | null = null;
+  const seriesSignal = resolveMaybeSignal(config.series);
 
-  return createChartScaffold(container, config, (ctx) => {
-    const { groups, legend, tooltip } = ctx;
-    const dims = ctx.dimensions.value;
-    const area = chartArea(dims.width, dims.height, dims.margin);
-    const seriesList = isReactive(config.series) ? config.series.value : config.series;
-    const allData = seriesList.map((s) => (isReactive(s.data) ? s.data.value : s.data));
-    const allX = allData.flat().map((d) => d.key as Date | number);
-    const allY = allData.flat().map((d) => d.value);
+  let scaffold: ChartHandle | undefined;
 
-    if (allX.length === 0) {
-      warn('createLineChart: no data');
-      clearCartesianDom(groups, legend, tooltip, crosshair);
+  try {
+    scaffold = createChartScaffold(container, config, (ctx) => {
+      const { groups, legend, tooltip } = ctx;
+      const dims = ctx.dimensions.value;
+      const area = chartArea(dims.width, dims.height, dims.margin);
+      const seriesList = seriesSignal.value;
+      const dataSignals = seriesList.map((s) => resolveMaybeSignal(s.data));
+      const allData = dataSignals.map((signal) => signal.value);
+      const allX = allData.flat().map((d) => d.key as Date | number);
+      const allY = allData.flat().map((d) => d.value);
 
-      return;
-    }
+      if (allX.length === 0) {
+        warn('createLineChart: no data');
+        clearCartesianDom(groups, legend, tooltip, crosshair);
 
-    if (config.crosshair && !crosshair) {
-      crosshair = createCrosshair(ctx.chartArea, config.crosshair);
-    }
-
-    const xScale = buildXScale(allX as (Date | number)[], area.width);
-    const yScale = buildYScale(allY, area.height);
-
-    if (config.yAxis?.grid) {
-      renderGrid(
-        groups.grid,
-        yScale,
-        config.yAxis.grid,
-        area.width,
-        'horizontal',
-        resolveTickCount(config.yAxis, area.height, 'left'),
-      );
-    }
-
-    if (config.xAxis?.grid) {
-      renderGrid(
-        groups.grid,
-        xScale,
-        config.xAxis.grid,
-        area.height,
-        'vertical',
-        resolveTickCount(config.xAxis, area.width, 'bottom'),
-      );
-    }
-
-    if (config.xAxis) {
-      groups.xAxis.setAttribute('transform', `translate(0,${area.height})`);
-      renderAxis(groups.xAxis, xScale, config.xAxis, area.width, 'bottom');
-    }
-
-    if (config.yAxis) renderAxis(groups.yAxis, yScale, config.yAxis, area.height, 'left');
-
-    while (groups.series.children.length > seriesList.length) {
-      groups.series.removeChild(groups.series.lastChild!);
-    }
-
-    const allPoints: Point[][] = [];
-
-    for (let i = 0; i < seriesList.length; i++) {
-      const series = seriesList[i];
-      let group = groups.series.children[i] as SVGGElement | undefined;
-
-      if (!group) {
-        group = createSvgElement('g', { class: 'prism-line-series' });
-        groups.series.appendChild(group);
+        return;
       }
 
-      const points = computePoints(allData[i], xScale, yScale);
+      if (config.crosshair && !crosshair) {
+        crosshair = createCrosshair(ctx.chartArea, config.crosshair);
+      }
 
-      allPoints.push(points);
+      const xScale = buildXScale(allX as (Date | number)[], area.width);
+      const yScale = buildYScale(allY, area.height);
 
-      renderLine(group, points, {
-        color: seriesColor(i, series.color),
-        curve: series.curve ?? 'linear',
-        disposalSignal: ctx.disposalSignal,
-        pointRadius: series.pointRadius ?? 3,
-        showPoints: series.showPoints ?? false,
-        strokeWidth: series.strokeWidth ?? 2,
-        transition: config.transition,
+      if (config.yAxis?.grid) {
+        renderGrid(
+          groups.grid,
+          yScale,
+          config.yAxis.grid,
+          area.width,
+          'horizontal',
+          resolveTickCount(config.yAxis, area.height, 'left'),
+        );
+      }
+
+      if (config.xAxis?.grid) {
+        renderGrid(
+          groups.grid,
+          xScale,
+          config.xAxis.grid,
+          area.height,
+          'vertical',
+          resolveTickCount(config.xAxis, area.width, 'bottom'),
+        );
+      }
+
+      if (config.xAxis) {
+        groups.xAxis.setAttribute('transform', `translate(0,${area.height})`);
+        renderAxis(groups.xAxis, xScale, config.xAxis, area.width, 'bottom');
+      }
+
+      if (config.yAxis) renderAxis(groups.yAxis, yScale, config.yAxis, area.height, 'left');
+
+      while (groups.series.children.length > seriesList.length) {
+        groups.series.removeChild(groups.series.lastChild!);
+      }
+
+      const allPoints: Point[][] = [];
+
+      for (let i = 0; i < seriesList.length; i++) {
+        const series = seriesList[i];
+        let group = groups.series.children[i] as SVGGElement | undefined;
+
+        if (!group) {
+          group = createSvgElement('g', { class: 'prism-line-series' });
+          groups.series.appendChild(group);
+        }
+
+        const points = computePoints(allData[i], xScale, yScale);
+
+        allPoints.push(points);
+
+        renderLine(group, points, {
+          color: seriesColor(i, series.color),
+          curve: series.curve ?? 'linear',
+          disposalSignal: ctx.disposalSignal,
+          pointRadius: series.pointRadius ?? 3,
+          showPoints: series.showPoints ?? false,
+          strokeWidth: series.strokeWidth ?? 2,
+          transition: config.transition,
+        });
+      }
+
+      legend?.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
+      tooltip?.hide();
+
+      return createSeriesInteraction({
+        crosshair,
+        dims: () => ctx.dimensions.value,
+        getData: () => allData,
+        getPoints: () => allPoints,
+        getSeriesList: () => seriesSignal.value,
+        onClick: config.onClick,
+        onHover: config.onHover,
+        svg: ctx.svg,
+        tooltip,
       });
-    }
-
-    legend?.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
-    tooltip?.hide();
-
-    return createSeriesInteraction({
-      crosshair,
-      dims: () => ctx.dimensions.value,
-      getData: () => allData,
-      getPoints: () => allPoints,
-      getSeriesList: () => (isReactive(config.series) ? config.series.value : config.series),
-      onClick: config.onClick,
-      onHover: config.onHover,
-      svg: ctx.svg,
-      tooltip,
     });
-  });
+
+    return scaffold;
+  } catch (error) {
+    scaffold?.dispose();
+    throw error;
+  }
 }

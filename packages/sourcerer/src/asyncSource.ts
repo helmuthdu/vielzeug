@@ -2,16 +2,19 @@ import { createRequestController, toError } from './requestController';
 import { createSourceStore } from './sourceStore';
 import type { AnyPagination, SourceSnapshot } from './types';
 
+type FetchOptions<T, TQuery, TPagination extends AnyPagination, TResult> = {
+  query: TQuery;
+  load(signal: AbortSignal): Promise<TResult>;
+  success(result: TResult): SourceSnapshot<T, TQuery, TPagination>;
+  pending?(previous: SourceSnapshot<T, TQuery, TPagination>): SourceSnapshot<T, TQuery, TPagination>;
+  failure?(previous: SourceSnapshot<T, TQuery, TPagination>, error: Error): SourceSnapshot<T, TQuery, TPagination>;
+};
+
 type AsyncSource<T, TQuery, TPagination extends AnyPagination> = Readonly<{
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
-  fetch<TResult>(options: {
-    failure(previous: SourceSnapshot<T, TQuery, TPagination>, error: Error): SourceSnapshot<T, TQuery, TPagination>;
-    load(signal: AbortSignal): Promise<TResult>;
-    pending(previous: SourceSnapshot<T, TQuery, TPagination>): SourceSnapshot<T, TQuery, TPagination>;
-    success(result: TResult): SourceSnapshot<T, TQuery, TPagination>;
-  }): Promise<void>;
+  fetch<TResult>(options: FetchOptions<T, TQuery, TPagination, TResult>): Promise<void>;
   readonly snapshot: SourceSnapshot<T, TQuery, TPagination>;
   subscribe(listener: (snapshot: SourceSnapshot<T, TQuery, TPagination>) => void): () => void;
 }>;
@@ -40,21 +43,24 @@ export function createAsyncSource<T, TQuery, TPagination extends AnyPagination>(
     async fetch(options) {
       if (store.disposed) return;
 
+      const { query, load, success, pending, failure } = options;
       const request = requests.begin();
       const previous = store.value;
 
-      store.set(options.pending(previous));
+      store.set(pending ? pending(previous) : { ...previous, error: null, isFetching: true, pendingQuery: query });
 
       let next: SourceSnapshot<T, TQuery, TPagination>;
 
       try {
-        next = options.success(await options.load(request.signal));
+        next = success(await load(request.signal));
       } catch (reason: unknown) {
         if (!request.isCurrent() || store.disposed) return;
 
         const error = toError(reason);
 
-        store.set(options.failure(previous, error));
+        store.set(
+          failure ? failure(previous, error) : { ...previous, error, isFetching: false, pendingQuery: undefined },
+        );
         throw error;
       } finally {
         request.finish();

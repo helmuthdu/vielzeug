@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: remove global custom currency registry. Replace defineCurrency() with currency({ code, minorUnit }). Remove withMinor() — use money(amount, currency, { unit: 'minor' }). Remove resolveBuiltinCurrency — parseMoneyJSON defaults to currency(). isMoney/isCurrency/isExchangeRate now use WeakSet canonical identity (rejects forged frozen objects). Add isExchangeRate type guard. Add INVALID_RANGE and INVALID_EXCHANGE_RATE error codes. Fix divide() floor/ceil rounding with negative divisors. Add assertMoney to toJSON. Add roundDivision exhaustiveness default.",
+      "packageName": "@vielzeug/coins",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/coins"
+}

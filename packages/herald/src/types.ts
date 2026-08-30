@@ -92,6 +92,8 @@ export type BusOptions<T extends EventMap = EventMap> = {
    * Receives the typed payload — use it to perform runtime validation with full type information.
    */
   validatePayload?: <K extends EventKey<T>>(event: K, payload: T[K]) => void;
+  /** @internal Called after middleware passes, before listeners run. Used by TestBus. */
+  _onDispatch?: (event: EventKey<T>, payload: unknown) => void;
 };
 
 /** Discriminated-union result type for `waitAny`. */

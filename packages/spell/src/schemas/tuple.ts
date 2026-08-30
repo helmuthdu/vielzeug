@@ -1,4 +1,16 @@
-import type { AnySchema, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import type {
+  AnySchema,
+  CheckContext,
+  InferSchemaMode,
+  Issue,
+  MergeSchemaModes,
+  ParseContext,
+  ParseValue,
+  SchemaDescriptor,
+  SchemaMode,
+  SchemaWalker,
+  ValidateResult,
+} from '../core';
 
 import { _makeCtx, ErrorCode, prependIssuePath, Schema, SpellValidationError } from '../core';
 
@@ -11,9 +23,7 @@ export type InferTuple<T extends TupleSchemas, R extends AnySchema | null = null
 export class TupleSchema<
   T extends TupleSchemas,
   R extends AnySchema | null = null,
-  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
-    import('../core').InferSchemaMode<T[number] | Exclude<R, null>>
-  >,
+  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T[number] | Exclude<R, null>>>,
 > extends Schema<InferTuple<T, R>, unknown, Mode> {
   readonly items: T;
   readonly restSchema: R;
@@ -24,7 +34,7 @@ export class TupleSchema<
 
   override checkAsync(
     this: TupleSchema<T, R, 'sync'>,
-    fn: (value: InferTuple<T, R>, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+    fn: (value: InferTuple<T, R>, ctx: CheckContext) => Promise<ValidateResult>,
   ): TupleSchema<T, R, 'async'> {
     return this._addCheck(fn, true) as unknown as TupleSchema<T, R, 'async'>;
   }
@@ -35,13 +45,11 @@ export class TupleSchema<
     this.restSchema = restSchema;
   }
 
-  rest<U extends AnySchema>(
-    schema: U,
-  ): TupleSchema<T, U, import('../core').MergeSchemaModes<Mode | import('../core').InferSchemaMode<U>>> {
+  rest<U extends AnySchema>(schema: U): TupleSchema<T, U, MergeSchemaModes<Mode | InferSchemaMode<U>>> {
     return this._copyStateTo(new TupleSchema(this.items, schema)) as unknown as TupleSchema<
       T,
       U,
-      import('../core').MergeSchemaModes<Mode | import('../core').InferSchemaMode<U>>
+      MergeSchemaModes<Mode | InferSchemaMode<U>>
     >;
   }
 
@@ -196,7 +204,7 @@ export class TupleSchema<
     };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     const items = this.items.map((s) => s.walk(visitor));
     const rest = this.restSchema !== null ? this.restSchema.walk(visitor) : null;
 

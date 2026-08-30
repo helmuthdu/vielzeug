@@ -10,6 +10,7 @@ export {
   CourierTimeoutError,
 } from './errors';
 export { withBearerAuth, withLogging, withRequestId } from './interceptors';
+export type { ResponseType } from './response';
 export type { StreamEvent, StreamOptions } from './stream';
 export type { FetchContext, Interceptor, TransportOptions } from './transport';
 export type {

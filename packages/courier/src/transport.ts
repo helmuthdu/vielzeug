@@ -147,16 +147,13 @@ export function createTransportCore(opts: TransportOptions = {}) {
     return { ...globalHeaders };
   }
 
-  /**
-   * Merge global headers with optional per-request and extra headers.
-   * Per-request keys are normalised to lowercase.
-   */
-  function mergeHeaders(perRequest?: Record<string, string>, extra?: Record<string, string>): Record<string, string> {
+  /** Merge global headers with optional per-request headers (normalised to lowercase). */
+  function mergeHeaders(perRequest?: Record<string, string>): Record<string, string> {
     const normalized = perRequest
       ? Object.fromEntries(Object.entries(perRequest).map(([k, v]) => [k.toLowerCase(), v]))
       : undefined;
 
-    return { ...globalHeaders, ...normalized, ...extra };
+    return { ...globalHeaders, ...normalized };
   }
 
   /** Register an AbortController for lifecycle tracking (cancelAll / dispose). Returns an untrack fn. */
@@ -209,12 +206,10 @@ export function createTransportCore(opts: TransportOptions = {}) {
       return disposed;
     },
     getHeaders,
-    /** Returns the configured request timeout in ms. */
-    getTimeout(): number {
-      return timeout;
-    },
     mergeHeaders,
     setHeaders,
+    /** Configured request timeout in ms. */
+    timeout,
     track,
     use,
   };

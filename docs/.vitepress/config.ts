@@ -2040,7 +2040,6 @@ export default defineConfig({
           items: [
             { link: '/vault/api#factories', text: 'Factories' },
             { link: '/vault/api#vaultstores', text: 'VaultStore' },
-            { link: '/vault/api#indexeddbvaultstores', text: 'IndexedDbVaultStore' },
             { link: '/vault/api#schema-and-ttl', text: 'Schema & TTL' },
             { link: '/vault/api#migration-from-vault-1', text: 'Migration' },
           ],

@@ -1,6 +1,6 @@
 ---
 title: 'Scroll Examples — Reactive Virtualizer'
-description: 'Use createVirtualizer with the signal option to integrate scroll state with @vielzeug/ripple signals.'
+description: 'Use createVirtualizer with the toSignal option to integrate scroll state with @vielzeug/ripple signals.'
 ---
 
 ## Reactive Virtualizer
@@ -11,7 +11,7 @@ You are building a component with `@vielzeug/ripple` or `@vielzeug/ore` and want
 
 ### Solution
 
-Pass a `signal` factory to `createVirtualizer`. The virtualizer calls it with the initial state and then updates the returned `Signal<VirtualizerState>` on every visible-window change. Use `effect` to re-render whenever the signal updates.
+Pass a `toSignal` to `createVirtualizer`. The virtualizer calls it with the initial state and then updates the returned `Signal<VirtualizerState>` on every visible-window change. Use `effect` to re-render whenever the signal updates.
 
 ```ts
 import { signal, effect } from '@vielzeug/ripple';
@@ -27,7 +27,7 @@ const state = signal({ items: [], stickyItems: [], totalSize: 0 });
 const virt = createVirtualizer(scrollEl, {
   count: rows.length,
   estimateSize: 36,
-  signal: (init) => state,
+  toSignal: (init) => state,
 });
 
 // Re-render whenever the visible window changes
@@ -78,7 +78,7 @@ effect(() => {
 
 ### Pitfalls
 
-- The `signal` factory is called once on construction with the initial state. The virtualizer then updates the signal's `.value` on every scroll cycle — do not replace the signal object after construction.
+- The `toSignal` is called once on construction with the initial state. The virtualizer then updates the signal's `.value` on every scroll cycle — do not replace the signal object after construction.
 - The signal updates synchronously within the scroll handler. Avoid heavy DOM operations directly inside `effect` — batch DOM writes with `requestAnimationFrame` if needed.
 - All live getters (`count`, `items`, `totalSize`, `scrollOffset`, `stickyItems`) remain current on the returned virtualizer through copied property descriptors rather than snapshotting.
 

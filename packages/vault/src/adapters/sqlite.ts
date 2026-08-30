@@ -55,9 +55,6 @@ export type SQLiteVaultOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
   name: string;
 };
 
-/** SQLite provides atomic batches and lazy keyset-paginated iteration. */
-export type SQLiteVaultStore<S extends AnySchema> = TransactionalVaultStore<S>;
-
 type ConnectionState = {
   batchActive: boolean;
   executor: ConnectionExecutor;
@@ -529,7 +526,7 @@ function createDirectCore<S extends AnySchema, K extends keyof S & string>(
  * Creates a SQLite-backed Vault store. The connection is caller-owned unless
  * `closeOnDispose` is explicitly enabled.
  */
-export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>): SQLiteVaultStore<S> {
+export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>): TransactionalVaultStore<S> {
   const { closeOnDispose = false, database, name, schema, validators } = options;
 
   assertName(name);
@@ -649,7 +646,7 @@ export function createSQLite<S extends AnySchema>(options: SQLiteVaultOptions<S>
 
   if (!batch) throw new VaultError('SQLite transaction capability was not initialized');
 
-  const store: SQLiteVaultStore<S> = {
+  const store: TransactionalVaultStore<S> = {
     ...adapter,
     batch,
     iterate<K extends keyof S & string>(table: K): AsyncIterable<RecordOf<S, K>> {

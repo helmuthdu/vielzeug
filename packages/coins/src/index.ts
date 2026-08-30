@@ -1,8 +1,8 @@
 export { allocate, sum } from './aggregate';
-export { BHD, currency, defineCurrency, EUR, GBP, isCurrency, JPY, KRW, KWD, USD } from './currency';
+export { BHD, currency, EUR, GBP, isCurrency, JPY, KRW, KWD, USD } from './currency';
 export type { CoinsErrorCode } from './errors';
 export { CoinsError, CurrencyMismatchError, InvalidCurrencyError } from './errors';
-export { exchange, exchangeRate } from './exchange';
+export { exchange, exchangeRate, isExchangeRate } from './exchange';
 export { format, formatParts } from './format';
 export {
   abs,

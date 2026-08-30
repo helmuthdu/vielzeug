@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "refactor: remove dead CompiledAfter.id field",
+      "packageName": "@vielzeug/clockwork",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/clockwork"
+}

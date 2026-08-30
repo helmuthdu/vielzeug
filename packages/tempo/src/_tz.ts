@@ -5,10 +5,11 @@ import type { CalendarUnit, TimeInput, TimeZoneOptions } from './types';
 export function validateTimeZone(timeZone: string): string {
   try {
     Temporal.Instant.fromEpochMilliseconds(0).toZonedDateTimeISO(timeZone);
-  } catch {
+  } catch (error) {
     fail(
       `Unknown or invalid timezone: "${timeZone}". Expected an IANA timezone name or UTC offset.`,
       TempoInvalidTzError,
+      { cause: error },
     );
   }
 

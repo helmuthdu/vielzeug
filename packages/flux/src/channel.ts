@@ -41,13 +41,15 @@ export function createChannel<T>(options: ChannelOptions<T> = {}): Channel<T> {
   if ('initial' in options && capacity > 0) replay.push(options.initial as T);
 
   const source = stream<T>((sink) => {
-    for (const value of replay) sink.next(value);
-
+    // Disposed channels complete new subscribers immediately without replaying
+    // retained values — a late subscriber never observes stale state.
     if (controller.signal.aborted) {
       sink.complete();
 
       return;
     }
+
+    for (const value of replay) sink.next(value);
 
     listeners.add(sink);
 
@@ -64,6 +66,29 @@ export function createChannel<T>(options: ChannelOptions<T> = {}): Channel<T> {
     listeners.clear();
   };
 
+  let dispatching = false;
+  const pending: T[] = [];
+
+  const flush = (): void => {
+    dispatching = true;
+
+    try {
+      while (pending.length > 0) {
+        const value = pending.shift()!;
+
+        if (capacity > 0) {
+          if (replay.length === capacity) replay.shift();
+
+          replay.push(value);
+        }
+
+        for (const listener of [...listeners]) listener.next(value);
+      }
+    } finally {
+      dispatching = false;
+    }
+  };
+
   return {
     get disposalSignal(): AbortSignal {
       return controller.signal;
@@ -75,13 +100,11 @@ export function createChannel<T>(options: ChannelOptions<T> = {}): Channel<T> {
     send(value: T): void {
       if (controller.signal.aborted) return;
 
-      if (capacity > 0) {
-        if (replay.length === capacity) replay.shift();
+      pending.push(value);
 
-        replay.push(value);
-      }
-
-      for (const listener of [...listeners]) listener.next(value);
+      // Reentrant sends (a listener calling `send` while receiving a previous
+      // value) are queued so every listener observes one global FIFO order.
+      if (!dispatching) flush();
     },
     stream: source,
     [Symbol.dispose]: dispose,

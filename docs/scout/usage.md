@@ -319,29 +319,32 @@ const parts = highlight(result.item.name, nameMatch?.ranges ?? []);
 
 ## Debug Logging
 
-`search.tap()` subscribes a handler to `ScoutEvent` transitions emitted by a `SearchState` — `query` changes, `isSearching` transitions, `results` changes, and `dispose`. It returns an unsubscribe function. Pass `{ signal }` to tie the subscription to an external `AbortSignal` (or to `search.disposalSignal`, which aborts when `dispose()` is called).
+Subscribe to the reactive signals directly via `@vielzeug/ripple` for observability:
 
 ```ts
 import { createIndex, createSearch } from '@vielzeug/scout';
 
 const search = createSearch(index, { debounce: 150 });
-const unsubscribe = search.tap((event) => {
-  if (event.type === 'query-change') console.debug('query:', event.query);
-  if (event.type === 'searching-change') console.debug('isSearching:', event.isSearching);
-  if (event.type === 'results-change') console.debug('results:', event.results.length);
-});
+
+const stopQuery = search.query.subscribe(() => console.debug('query:', search.query.peek()));
+const stopResults = search.results.subscribe(() => console.debug('results:', search.results.peek().length));
 
 search.query.value = 'alice';
 // query: alice
-// isSearching: true
-// isSearching: false
 // results: 1
 
-unsubscribe();
+stopQuery();
+stopResults();
+```
+
+For dispose notifications, subscribe to `search.disposalSignal`:
+
+```ts
+search.disposalSignal.addEventListener('abort', () => console.debug('disposed'));
 ```
 
 ::: warning Development logging
-`query-change` events carry the full, literal search query string — if your queries may carry PII (names, emails, medical/financial terms typed by end users), don't log them in production.
+`query` carries the full, literal search query string — if your queries may carry PII (names, emails, medical/financial terms typed by end users), don't log them in production.
 :::
 
 ## Framework Integration

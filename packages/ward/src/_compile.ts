@@ -1,20 +1,10 @@
 import { WILDCARD } from './constants';
 import { WardConfigError } from './errors';
-import type { WardRule } from './types';
+import type { NormalizedWardRule, WardRule } from './types';
 
 // ---------------------------------------------------------------------------
 // Internal types (shared across modules)
 // ---------------------------------------------------------------------------
-
-/** Normalized compiled rule — role always readonly string[], priority always number. */
-export type CompiledRule<TAction extends string, TData> = Readonly<{
-  action: TAction | typeof WILDCARD;
-  effect: 'allow' | 'deny';
-  priority: number;
-  resource: string | typeof WILDCARD;
-  role: readonly string[];
-  when?: WardRule<TAction, TData>['when'];
-}>;
 
 /** A compiled entry stores the normalized rule plus pre-computed lookup values. */
 export type CompiledEntry<TAction extends string, TData> = {
@@ -27,7 +17,7 @@ export type CompiledEntry<TAction extends string, TData> = {
   /** Normalized roles array (always an array). */
   roles: readonly string[];
   /** The normalized, frozen compiled rule. */
-  rule: CompiledRule<TAction, TData>;
+  rule: Readonly<NormalizedWardRule<TAction, TData>>;
   /** Specificity score (0–5): roleScore(0|1) + resourceScore(0|1|2) + actionScore(0|1|2). */
   score: number;
 };
@@ -99,7 +89,7 @@ export function patternScore(pattern: string): number {
  * Specificity: role(0|1) + resource(0|1|2) + action(0|1|2) = max 5.
  * Higher score = more specific = wins ties in priority.
  */
-function specificity<TAction extends string, TData>(rule: CompiledRule<TAction, TData>): number {
+function specificity<TAction extends string, TData>(rule: Readonly<NormalizedWardRule<TAction, TData>>): number {
   const roleScore = rule.role.includes(WILDCARD) ? 0 : 1;
 
   return roleScore + patternScore(rule.resource as string) + patternScore(rule.action as string);
@@ -125,7 +115,7 @@ export function compileEntry<TAction extends string, TData>(
     resource: input.resource,
     role: roles,
     ...(input.when !== undefined ? { when: input.when } : {}),
-  }) as CompiledRule<TAction, TData>;
+  }) as Readonly<NormalizedWardRule<TAction, TData>>;
 
   const score = specificity(rule);
   const priority = rule.priority;

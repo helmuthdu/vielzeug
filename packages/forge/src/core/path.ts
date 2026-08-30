@@ -2,6 +2,10 @@ import { ForgeConfigError } from '../errors';
 
 const unsafeKeys = new Set(['__proto__', 'constructor', 'prototype']);
 
+export function isUnsafeKey(key: string): boolean {
+  return !key || unsafeKeys.has(key);
+}
+
 type ErrorNode = string | ErrorTree | ErrorArray;
 export interface ErrorTree {
   readonly [key: string]: ErrorNode;
@@ -25,7 +29,7 @@ export function isRecord(value: unknown): value is RecordValue {
 }
 
 export function assertSafeKey(key: string): void {
-  if (!key || unsafeKeys.has(key)) throw new ForgeConfigError(`Invalid field key '${key}'.`);
+  if (isUnsafeKey(key)) throw new ForgeConfigError(`Invalid field key '${key}'.`);
 }
 
 function isAtomicLeaf(value: unknown): boolean {
@@ -262,7 +266,7 @@ function writeErrorNode(
     return arr;
   }
 
-  if (!key || unsafeKeys.has(key)) return node ?? {};
+  if (isUnsafeKey(key)) return node ?? {};
 
   const record: MutableErrorTree = isRecord(node) ? { ...node } : {};
 

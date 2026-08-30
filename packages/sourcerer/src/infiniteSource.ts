@@ -38,7 +38,6 @@ export function createInfiniteSource<T>(config: InfiniteSourceConfig<T>): Infini
     const loadedData = asyncSource.snapshot.data;
 
     return asyncSource.fetch({
-      failure: (previous, error) => ({ ...previous, error, isFetching: false, pendingQuery: undefined }),
       load: (signal) => config.load({ query: { page, pageSize: query.pageSize, search: query.search }, signal }),
       pending: (previous) => ({
         ...previous,
@@ -47,6 +46,7 @@ export function createInfiniteSource<T>(config: InfiniteSourceConfig<T>): Infini
         pagination: createPagination(previous.data.length, previous.pagination.total),
         ...(append ? {} : { pendingQuery: query }),
       }),
+      query,
       success: (result) => {
         const total = totalItems(result.total);
         const data = append ? [...loadedData, ...result.data] : result.data;

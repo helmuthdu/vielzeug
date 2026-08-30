@@ -5,7 +5,7 @@ package: ward
 category: auth
 keywords: [authorization, rbac, permissions, policy, roles, wildcard, predicates]
 related: [wayfinder, conduit, herald]
-exports: [createWard, allow, deny, ruleFor, owns, predicate, ANONYMOUS, WILDCARD, WardError, WardConfigError, WardPredicateError, NormalizedWardRule, matchesPattern, patternCovers]
+exports: [createWard, allow, deny, predicate, ANONYMOUS, WILDCARD, WardError, WardConfigError, WardPredicateError, NormalizedWardRule, matchesPattern, patternCovers]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -22,10 +22,10 @@ Ward keeps authorization policies declarative and decision ordering deterministi
 const canUpdate = user.roles.includes('editor') && post.authorId === user.id;
 
 // After
-import { allow, createWard, owns } from '@vielzeug/ward';
+import { allow, createWard, predicate } from '@vielzeug/ward';
 
 const ward = createWard([
-  allow('editor', 'posts', ['update'], { when: owns('authorId') }),
+  allow('editor', 'posts', ['update'], { when: predicate.owns('authorId') }),
 ]);
 
 const decision = ward.explain({ principal: user, resource: 'posts', action: 'update', data: post });
@@ -92,9 +92,9 @@ else console.log(decision.reason);
 <div class="features-grid">
 
 - `createWard()` creates immutable typed policy instances. Accepts `allow()`/`deny()` results directly — no spread needed.
-- `allow()`, `deny()`, and `ruleFor()` build role/resource/action rules.
+- `allow()` and `deny()` build role/resource/action rules.
 - `WILDCARD` and `ANONYMOUS` model broad or unauthenticated access explicitly.
-- `owns()` and `predicate` constrain rules with synchronous request data.
+- `predicate.owns()` constrains rules with synchronous request data.
 - `explain()`, `trace()`, and `detectConflicts()` make policy decisions diagnosable.
 - `tap()` subscribes to decision events for logging and diagnostics.
 - `forUser()` creates a principal-bound view for repeated checks.

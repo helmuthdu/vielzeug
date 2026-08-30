@@ -1,6 +1,19 @@
 import { isPlainObject } from '@vielzeug/arsenal/guards';
 
-import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import type {
+  AnySchema,
+  CheckContext,
+  InferOutput,
+  InferSchemaMode,
+  Issue,
+  MergeSchemaModes,
+  ParseContext,
+  ParseValue,
+  SchemaDescriptor,
+  SchemaMode,
+  SchemaWalker,
+  ValidateResult,
+} from '../core';
 
 import { _makeCtx, Schema, SpellValidationError } from '../core';
 import { cloneRecord, defineOwnProperty } from '../safe-object';
@@ -28,9 +41,7 @@ function deepMerge(target: unknown, source: unknown): unknown {
 /** All schemas must pass — intersection semantics. */
 export class IntersectSchema<
   T extends readonly AnySchema[],
-  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
-    import('../core').InferSchemaMode<T[number]>
-  >,
+  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T[number]>>,
 > extends Schema<UnionToIntersection<InferOutput<T[number]>>, unknown, Mode> {
   readonly schemas: T;
 
@@ -40,10 +51,7 @@ export class IntersectSchema<
 
   override checkAsync(
     this: IntersectSchema<T, 'sync'>,
-    fn: (
-      value: UnionToIntersection<InferOutput<T[number]>>,
-      ctx: import('../core').CheckContext,
-    ) => Promise<import('../core').ValidateResult>,
+    fn: (value: UnionToIntersection<InferOutput<T[number]>>, ctx: CheckContext) => Promise<ValidateResult>,
   ): IntersectSchema<T, 'async'> {
     return this._addCheck(fn, true) as unknown as IntersectSchema<T, 'async'>;
   }
@@ -117,7 +125,7 @@ export class IntersectSchema<
     return { ...this._describeBase(), branches: this.schemas.map((s) => s.definition()), kind: 'intersect' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     const branches = this.schemas.map((s) => s.walk(visitor));
 
     if (visitor.intersect) return visitor.intersect(this, branches);

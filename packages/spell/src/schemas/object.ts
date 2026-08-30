@@ -1,4 +1,18 @@
-import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
+import type {
+  AnySchema,
+  CheckContext,
+  InferInput,
+  InferOutput,
+  InferSchemaMode,
+  Issue,
+  MergeSchemaModes,
+  ParseContext,
+  ParseValue,
+  SchemaDescriptor,
+  SchemaMode,
+  SchemaWalker,
+  ValidateResult,
+} from '../core';
 
 import { _makeCtx, ErrorCode, prependIssuePath, Schema, SpellValidationError } from '../core';
 import { defineOwnProperty, isUnsafeObjectKey, objectFromEntries } from '../safe-object';
@@ -7,13 +21,11 @@ import { UnionSchema } from './union';
 
 export type ObjectShape = Record<string, AnySchema>;
 export type InferObject<T extends ObjectShape> = { [K in keyof T]: InferOutput<T[K]> };
-export type InferObjectInput<T extends ObjectShape> = { [K in keyof T]: import('../core').InferInput<T[K]> };
+export type InferObjectInput<T extends ObjectShape> = { [K in keyof T]: InferInput<T[K]> };
 
 export class ObjectSchema<
   T extends ObjectShape,
-  Mode extends import('../core').SchemaMode = import('../core').MergeSchemaModes<
-    import('../core').InferSchemaMode<T[keyof T]>
-  >,
+  Mode extends SchemaMode = MergeSchemaModes<InferSchemaMode<T[keyof T]>>,
 > extends Schema<InferObject<T>, InferObjectInput<T>, Mode> {
   readonly shape: T;
   private readonly _isRelaxed: boolean;
@@ -24,7 +36,7 @@ export class ObjectSchema<
 
   override checkAsync(
     this: ObjectSchema<T, 'sync'>,
-    fn: (value: InferObject<T>, ctx: import('../core').CheckContext) => Promise<import('../core').ValidateResult>,
+    fn: (value: InferObject<T>, ctx: CheckContext) => Promise<ValidateResult>,
   ): ObjectSchema<T, 'async'> {
     return this._addCheck(fn, true) as unknown as ObjectSchema<T, 'async'>;
   }
@@ -64,12 +76,7 @@ export class ObjectSchema<
       // prototype mutation on the output object.
       if (isUnsafeObjectKey(key)) continue;
 
-      Object.defineProperty(output, key, {
-        configurable: true,
-        enumerable: true,
-        value: obj[key],
-        writable: true,
-      });
+      defineOwnProperty(output, key, obj[key]);
     }
   }
 
@@ -100,7 +107,7 @@ export class ObjectSchema<
     };
   }
 
-  private _rebuildWith<U extends ObjectShape, NewMode extends import('../core').SchemaMode = Mode>(
+  private _rebuildWith<U extends ObjectShape, NewMode extends SchemaMode = Mode>(
     shape: U,
     isRelaxed = this._isRelaxed,
   ): ObjectSchema<U, NewMode> {
@@ -221,10 +228,7 @@ export class ObjectSchema<
 
   extend<U extends ObjectShape>(
     extra: U,
-  ): ObjectSchema<
-    Omit<T, keyof U> & U,
-    import('../core').MergeSchemaModes<Mode | import('../core').InferSchemaMode<U[keyof U]>>
-  > {
+  ): ObjectSchema<Omit<T, keyof U> & U, MergeSchemaModes<Mode | InferSchemaMode<U[keyof U]>>> {
     return this._rebuildWith(
       objectFromEntries([...Object.entries(this.shape), ...Object.entries(extra)]) as any,
       this._isRelaxed,
@@ -348,7 +352,7 @@ export class ObjectSchema<
     return { ...this._describeBase(), fields, kind: 'object', strict: !this._isRelaxed };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
+  protected override _walk<R>(visitor: SchemaWalker<R>): R | null {
     const fields = objectFromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.walk(visitor)]));
 
     if (visitor.object) return visitor.object(this, fields);
@@ -356,9 +360,9 @@ export class ObjectSchema<
     return super._walk(visitor);
   }
 
-  merge<U extends ObjectShape, OtherMode extends import('../core').SchemaMode>(
+  merge<U extends ObjectShape, OtherMode extends SchemaMode>(
     other: ObjectSchema<U, OtherMode>,
-  ): ObjectSchema<T & U, import('../core').MergeSchemaModes<Mode | OtherMode>> {
+  ): ObjectSchema<T & U, MergeSchemaModes<Mode | OtherMode>> {
     return this._rebuildWith(
       objectFromEntries([...Object.entries(this.shape), ...Object.entries(other.shape)]) as any,
       other._isRelaxed,

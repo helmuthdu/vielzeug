@@ -1,6 +1,7 @@
 export { compose } from './compose';
 export {
   LedgerCancelledError,
+  LedgerConfigurationError,
   LedgerDisposedError,
   LedgerError,
   LedgerExecutionError,

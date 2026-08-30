@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import { computed, createRipple, effect, resource, signal, watch } from '../index';
+import { computed, createRipple, effect, isReactive, resource, signal, watch } from '../index';
 
 describe('default graph exports', () => {
   it('exports all primitives from root', () => {
@@ -58,5 +58,20 @@ describe('default graph exports', () => {
     expect(second.isReactive(resource)).toBe(true);
     expect(second.isReactive({ [Symbol.for('@vielzeug/ripple/reactive')]: true })).toBe(false);
     ripple.dispose();
+  });
+
+  it('isReactive rejects non-readable values', () => {
+    const cases: unknown[] = [
+      null,
+      undefined,
+      42,
+      'text',
+      () => 0,
+      {},
+      { peek: () => 0 },
+      { peek: () => 0, subscribe: () => () => undefined },
+    ];
+
+    for (const value of cases) expect(isReactive(value)).toBe(false);
   });
 });

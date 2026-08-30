@@ -1,4 +1,3 @@
-import { combineSignals } from './_utils';
 import { PulseAbortError, PulseTimeoutError } from './errors';
 import type { Unsubscribe } from './types';
 
@@ -31,7 +30,7 @@ export function createWaitPromise<T>(
       signals.push(timeoutCtrl.signal);
     }
 
-    const combined = signals.length === 1 ? signals[0]! : combineSignals(signals[0]!, ...signals.slice(1));
+    const combined = AbortSignal.any(signals);
 
     if (combined.aborted) {
       clearTimeout(timeoutId);

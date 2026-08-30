@@ -9,8 +9,8 @@ export {
   FamiliarTimeoutError,
 } from './errors';
 export type {
-  BatchOptions,
   DrainOptions,
+  PoolBase,
   RunOptions,
   StreamWorkerPool,
   TaskGroup,

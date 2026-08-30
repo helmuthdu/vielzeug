@@ -1,5 +1,5 @@
 import { type Signal, signal } from '@vielzeug/ripple';
-import { combineSignals, deriveAbortController } from './_utils';
+import { deriveAbortController } from './_utils';
 import { PulseAbortError, PulseConnectionError, PulseDisposedError, PulseError, PulseRoomTimeoutError } from './errors';
 import { encode } from './protocol';
 import type { PresenceRoomScope, RoomOptions, RoomScopeBase, Unsubscribe } from './types';
@@ -165,7 +165,7 @@ export function createRoomRegistry(opts: RegistryOptions): RoomRegistry {
         signals.push(timeoutCtrl.signal);
       }
 
-      const combined = signals.length === 1 ? signals[0]! : combineSignals(signals[0]!, ...signals.slice(1));
+      const combined = AbortSignal.any(signals);
 
       // Presence state
       let presenceSignal: Signal<Map<string, unknown>> | undefined;

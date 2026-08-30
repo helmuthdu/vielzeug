@@ -1,5 +1,7 @@
 import type { RandomSource } from '@vielzeug/arsenal/random';
 
+import { nextFloat } from './next-float';
+
 /**
  * Generates a random float in `[min, max)`.
  * Pass `min` = `max` for a constant; the result is still `min` (not `max`).
@@ -7,10 +9,7 @@ import type { RandomSource } from '@vielzeug/arsenal/random';
 export function float(min: number, max: number, source?: RandomSource): number {
   if (min > max) return min;
 
-  const span = max - min;
-  const raw = source?.next() ?? crypto.getRandomValues(new Uint32Array(1))[0]! / 0x100000000;
-
-  return min + raw * span;
+  return min + nextFloat(source) * (max - min);
 }
 
 /** Generates a random float with a fixed number of decimal places. */

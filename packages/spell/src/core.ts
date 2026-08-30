@@ -497,11 +497,11 @@ export class Schema<Output = unknown, Input = Output, Mode extends SchemaMode = 
     return this.state.isNullable;
   }
 
-  is(value: unknown): value is Output {
-    return (this.safeParse as unknown as (value: unknown) => ParseResult<Output>)(value).success;
+  is(this: Schema<Output, Input, 'sync'>, value: unknown): value is Output {
+    return this.safeParse(value).success;
   }
 
-  assert(value: unknown, label?: string): asserts value is Output {
+  assert(this: Schema<Output, Input, 'sync'>, value: unknown, label?: string): asserts value is Output {
     const result = this._parseFullSync(value);
 
     if (result.issues.length === 0) return;

@@ -185,15 +185,10 @@ intersection.dispose();
 ### `Sentinel<T>`
 
 ```ts
-interface Sentinel<T> extends Readable<T> {
-  readonly disposalSignal: AbortSignal;
-  dispose(): void;
-  readonly disposed: boolean;
-  [Symbol.dispose](): void;
-}
+interface Sentinel<T> extends Readable<T>, Disposable {}
 ```
 
-`value`, `peek()`, and `subscribe()` follow Ripple's `Readable<T>` contract. `dispose()` stops the underlying browser observation. A subscription's returned function remains independently owned by the subscriber.
+`value`, `peek()`, and `subscribe()` follow Ripple's `Readable<T>` contract. `dispose()`, `disposed`, `disposalSignal`, and `[Symbol.dispose]()` follow Ripple's `Disposable` contract. `dispose()` stops the underlying browser observation. A subscription's returned function remains independently owned by the subscriber.
 
 | Member | Type | Description |
 | --- | --- | --- |

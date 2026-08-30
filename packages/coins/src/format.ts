@@ -1,6 +1,6 @@
-import { roundDivision } from './decimal';
+import { roundDivision } from './_decimal';
 import { CoinsError } from './errors';
-import { isMoney } from './money';
+import { assertMoney } from './money';
 import type { FormatOptions, Money, MoneyFormatPart, RoundingMode } from './types';
 
 const MAX_FRACTION_DIGITS = 20;
@@ -15,7 +15,7 @@ export function format(value: Money, options: FormatOptions = {}): string {
 }
 
 export function formatParts(value: Money, options: FormatOptions = {}): MoneyFormatPart[] {
-  if (!isMoney(value)) throw new CoinsError('INVALID_MONEY', 'format() requires canonical money');
+  assertMoney(value);
 
   const {
     locale = 'en-US',

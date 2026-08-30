@@ -1,5 +1,5 @@
 import type { HeraldEvent } from '../index';
-import { BusDisposedError, combineSignals, createBus, HeraldConfigError, HeraldError } from '../index';
+import { BusDisposedError, createBus, HeraldConfigError, HeraldError } from '../index';
 import { pipeEvents } from '../pipe';
 
 type TestEvents = {
@@ -1410,80 +1410,6 @@ describe('createBus - events() stream', () => {
   });
 });
 
-describe('combineSignals', () => {
-  it('returns a if b is not provided', () => {
-    const ctrl = new AbortController();
-
-    expect(combineSignals(ctrl.signal)).toBe(ctrl.signal);
-  });
-
-  it('returns a immediately if a is already aborted', () => {
-    const a = AbortSignal.abort('reason-a');
-    const b = new AbortController().signal;
-
-    expect(combineSignals(a, b)).toBe(a);
-  });
-
-  it('returns b immediately if b is already aborted', () => {
-    const a = new AbortController().signal;
-    const b = AbortSignal.abort('reason-b');
-
-    expect(combineSignals(a, b)).toBe(b);
-  });
-
-  it('aborts when a aborts', () => {
-    const ctrlA = new AbortController();
-    const ctrlB = new AbortController();
-    const combined = combineSignals(ctrlA.signal, ctrlB.signal);
-
-    expect(combined.aborted).toBe(false);
-    ctrlA.abort('from-a');
-    expect(combined.aborted).toBe(true);
-    expect(combined.reason).toBe('from-a');
-  });
-
-  it('aborts when b aborts', () => {
-    const ctrlA = new AbortController();
-    const ctrlB = new AbortController();
-    const combined = combineSignals(ctrlA.signal, ctrlB.signal);
-
-    ctrlB.abort('from-b');
-    expect(combined.aborted).toBe(true);
-    expect(combined.reason).toBe('from-b');
-  });
-
-  it('does not leak listeners when neither signal aborts', () => {
-    const ctrlA = new AbortController();
-    const ctrlB = new AbortController();
-    const combined = combineSignals(ctrlA.signal, ctrlB.signal);
-
-    ctrlA.abort();
-    expect(combined.aborted).toBe(true);
-  });
-
-  it('cleans up cross-listener on b when a aborts first', () => {
-    const ctrlA = new AbortController();
-    const ctrlB = new AbortController();
-
-    combineSignals(ctrlA.signal, ctrlB.signal);
-
-    // After a aborts the combined signal is done — the abort listener registered on b
-    // must be removed. Verify by checking that b aborting after does not cause double-abort errors.
-    ctrlA.abort('reason-a');
-    expect(() => ctrlB.abort('reason-b')).not.toThrow();
-  });
-
-  it('cleans up cross-listener on a when b aborts first', () => {
-    const ctrlA = new AbortController();
-    const ctrlB = new AbortController();
-
-    combineSignals(ctrlA.signal, ctrlB.signal);
-
-    ctrlB.abort('reason-b');
-    expect(() => ctrlA.abort('reason-a')).not.toThrow();
-  });
-});
-
 describe('createBus - name option', () => {
   it('BusDisposedError message includes the bus name', async () => {
     const bus = createBus<TestEvents>({ name: 'myBus' });
@@ -1543,66 +1469,6 @@ describe('createBus - middleware double-next with chain', () => {
     expect(order).toEqual(['mw1-before', 'mw2', 'listener', 'mw1-after']);
 
     bus.dispose();
-  });
-});
-
-describe('combineSignals - single argument', () => {
-  it('returns the same signal when only one argument is provided', () => {
-    const ctrl = new AbortController();
-
-    expect(combineSignals(ctrl.signal)).toBe(ctrl.signal);
-  });
-
-  it('returns already-aborted signal directly when only one argument is provided', () => {
-    const ctrl = new AbortController();
-
-    ctrl.abort('reason');
-
-    const result = combineSignals(ctrl.signal);
-
-    expect(result).toBe(ctrl.signal);
-    expect(result.aborted).toBe(true);
-  });
-});
-
-describe('combineSignals - varargs (3+ signals)', () => {
-  it('aborts when any of three signals aborts', () => {
-    const ctrlA = new AbortController();
-    const ctrlB = new AbortController();
-    const ctrlC = new AbortController();
-    const combined = combineSignals(ctrlA.signal, ctrlB.signal, ctrlC.signal);
-
-    expect(combined.aborted).toBe(false);
-
-    ctrlB.abort('from-b');
-
-    expect(combined.aborted).toBe(true);
-    expect(combined.reason).toBe('from-b');
-  });
-
-  it('returns first signal directly when called with one argument', () => {
-    const ctrl = new AbortController();
-
-    expect(combineSignals(ctrl.signal)).toBe(ctrl.signal);
-  });
-
-  it('returns already-aborted signal early when first of three is aborted', () => {
-    const aborted = AbortSignal.abort('first');
-    const ctrlB = new AbortController();
-    const ctrlC = new AbortController();
-    const combined = combineSignals(aborted, ctrlB.signal, ctrlC.signal);
-
-    expect(combined.aborted).toBe(true);
-    expect(combined.reason).toBe('first');
-  });
-
-  it('does not allocate intermediate controllers when tail is already-aborted', () => {
-    const ctrl = new AbortController();
-    const aborted = AbortSignal.abort('tail');
-    const combined = combineSignals(ctrl.signal, aborted);
-
-    expect(combined.aborted).toBe(true);
-    expect(combined.reason).toBe('tail');
   });
 });
 

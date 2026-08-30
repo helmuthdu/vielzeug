@@ -59,7 +59,7 @@ container.validate();
 
 ## Errors
 
-All errors extend `ConduitError`. Use `ConduitError.is(error)` for package-boundary guards.
+All errors extend `ConduitError`. Use `instanceof ConduitError` for package-boundary guards.
 
 - `ConduitError`
 - `ConduitProviderNotFoundError`
