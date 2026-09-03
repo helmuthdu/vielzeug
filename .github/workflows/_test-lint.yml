@@ -29,6 +29,15 @@ jobs:
       - name: Run unit tests
         run: pnpm test --run ${{ inputs.coverage && '--coverage' || '' }}
 
+      - name: Install demo workspaces
+        run: |
+          pnpm --dir demos/eshop install --frozen-lockfile
+          pnpm --dir demos/kanban install --frozen-lockfile
+          pnpm --dir demos/crm install --frozen-lockfile
+
+      - name: Build and test demos
+        run: pnpm validate:demos
+
       - name: Upload coverage report
         if: inputs.coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

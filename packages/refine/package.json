@@ -36,6 +36,39 @@
       "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
     },
+    "./styles/animation.css": {
+      "import": "./dist/styles/animation.css",
+      "default": "./dist/styles/animation.css"
+    },
+    "./styles/layers.css": {
+      "import": "./dist/styles/layer.css",
+      "default": "./dist/styles/layer.css"
+    },
+    "./styles/preflight.css": {
+      "import": "./dist/styles/preflight.css",
+      "default": "./dist/styles/preflight.css"
+    },
+    "./styles/theme.css": {
+      "import": "./dist/styles/theme.css",
+      "default": "./dist/styles/theme.css"
+    },
+    "./fouc.css": {
+      "import": "./dist/styles/fouc.css",
+      "default": "./dist/styles/fouc.css"
+    },
+    "./tokens.css": {
+      "import": "./dist/styles/tokens.css",
+      "default": "./dist/styles/tokens.css"
+    },
+    "./frameworks/elements": {
+      "types": "./dist/frameworks/elements.d.ts"
+    },
+    "./frameworks/react": {
+      "types": "./dist/frameworks/react.d.ts"
+    },
+    "./frameworks/vue": {
+      "types": "./dist/frameworks/vue.d.ts"
+    },
     "./accordion": {
       "import": "./dist/accordion.js",
       "require": "./dist/accordion.cjs",
@@ -171,15 +204,6 @@
       "require": "./dist/file-input.cjs",
       "types": "./dist/inputs/file-input/file-input.d.ts"
     },
-    "./frameworks/elements": {
-      "types": "./dist/frameworks/elements.d.ts"
-    },
-    "./frameworks/react": {
-      "types": "./dist/frameworks/react.d.ts"
-    },
-    "./frameworks/vue": {
-      "types": "./dist/frameworks/vue.d.ts"
-    },
     "./grid": {
       "import": "./dist/grid.js",
       "require": "./dist/grid.cjs",
@@ -305,6 +329,11 @@
       "require": "./dist/slider.cjs",
       "types": "./dist/inputs/slider/slider.d.ts"
     },
+    "./stats": {
+      "import": "./dist/stats.js",
+      "require": "./dist/stats.cjs",
+      "types": "./dist/content/stats/stats.d.ts"
+    },
     "./step": {
       "import": "./dist/step.js",
       "require": "./dist/step.cjs",
@@ -314,26 +343,6 @@
       "import": "./dist/stepper.js",
       "require": "./dist/stepper.cjs",
       "types": "./dist/content/stepper/stepper.d.ts"
-    },
-    "./styles/animation.css": {
-      "default": "./dist/styles/animation.css",
-      "import": "./dist/styles/animation.css"
-    },
-    "./styles/layers.css": {
-      "default": "./dist/styles/layer.css",
-      "import": "./dist/styles/layer.css"
-    },
-    "./fouc.css": {
-      "default": "./dist/styles/fouc.css",
-      "import": "./dist/styles/fouc.css"
-    },
-    "./styles/preflight.css": {
-      "default": "./dist/styles/preflight.css",
-      "import": "./dist/styles/preflight.css"
-    },
-    "./styles/theme.css": {
-      "default": "./dist/styles/theme.css",
-      "import": "./dist/styles/theme.css"
     },
     "./switch": {
       "import": "./dist/switch.js",
@@ -379,10 +388,6 @@
       "import": "./dist/toast.js",
       "require": "./dist/toast.cjs",
       "types": "./dist/feedback/toast/toast.d.ts"
-    },
-    "./tokens.css": {
-      "default": "./dist/styles/tokens.css",
-      "import": "./dist/styles/tokens.css"
     },
     "./tooltip": {
       "import": "./dist/tooltip.js",
@@ -643,7 +648,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
-    "@biomejs/biome": "2.5.8",
+    "@biomejs/biome": "^2.5.12",
     "@custom-elements-manifest/analyzer": "^0.11.0",
     "@playwright/test": "^1.62.1",
     "@types/culori": "^4.0.1",
@@ -653,8 +658,8 @@
     "culori": "^4.0.2",
     "lightningcss": "^1.33.0",
     "typescript": "^6.0.3",
-    "vite": "^8.2.1",
-    "vitest": "^4.1.10"
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
   },
   "customElements": "dist/custom-elements.json"
 }

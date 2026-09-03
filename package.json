@@ -22,6 +22,7 @@
     "setup": "rush install",
     "sync:package-manifests": "node scripts/sync-package-manifests.mjs",
     "test": "vitest",
+    "validate:demos": "pnpm --dir demos/eshop build && pnpm --dir demos/eshop test && pnpm --dir demos/kanban build && pnpm --dir demos/crm build && pnpm --dir demos/crm test",
     "validate:docs": "node --import jiti/register scripts/validate-docs.ts",
     "validate:repl": "node --import jiti/register scripts/validate-repl.ts",
     "verify:packed": "node scripts/verify-packed-packages.mjs",
@@ -31,20 +32,20 @@
     "worktree:remove": "node scripts/worktree.mjs remove"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.8",
+    "@biomejs/biome": "^2.5.12",
     "@types/node": "^26.2.0",
     "@vitest/coverage-v8": "^4.1.10",
     "browserslist": "^4.28.8",
-    "concurrently": "^10.0.4",
+    "concurrently": "^10.0.5",
     "jiti": "^2.7.0",
     "jsdom": "^30.0.1",
-    "lefthook": "^2.1.10",
+    "lefthook": "^2.1.12",
     "lightningcss": "^1.33.0",
     "monaco-editor": "0.56.0",
     "typescript": "^6.0.3",
-    "vite": "^8.2.1",
-    "vitepress": "^2.0.0-alpha.18",
-    "vitest": "^4.1.10",
-    "vue": "^3.5.41"
+    "vite": "^8.2.2",
+    "vitepress": "^2.0.0-alpha.19",
+    "vitest": "^4.1.11",
+    "vue": "^3.5.42"
   }
 }
