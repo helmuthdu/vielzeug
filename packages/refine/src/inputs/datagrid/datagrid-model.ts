@@ -1,3 +1,4 @@
+import type { HTMLResult } from '@vielzeug/ore';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
 export type SortDirection = 'asc' | 'desc' | 'none';
@@ -10,12 +11,17 @@ export type SortState = {
 export type DataGridColumn<T = Record<string, unknown>> = {
   align?: 'left' | 'center' | 'right';
   cell?: (item: T) => string;
+  filterLabel?: (item: T) => string;
+  filterValue?: (item: T) => number | string;
   headerLabel?: string;
   key: string;
   label: string;
+  /** Render trusted structured cell content with Ore's safe template result. */
+  renderCell?: (item: T) => HTMLResult;
   renderExpanded?: (item: T) => string;
   resizable?: boolean;
   sortable?: boolean;
+  sortType?: 'number' | 'text';
   sortValue?: (item: T) => number | string;
   width?: string;
 };
@@ -25,7 +31,7 @@ export type SelectionMode = 'multi' | 'none' | 'single';
 export type FilterOption = {
   key: string;
   label: string;
-  operators?: { label: string; value: string }[];
+  operators?: { label: string; value: FilterOperator }[];
   options: { label?: string; value: string }[];
 };
 
@@ -36,14 +42,18 @@ export type FilterRule = {
   values: Set<string>;
 };
 
-export type DataGridView = {
+export type DataGridView<T = Record<string, unknown>> = {
+  filter?: (item: T) => boolean;
   id: string;
   label: string;
 };
 
 export type DataGridModelOptions<T = Record<string, unknown>> = {
+  activeView?: Readable<DataGridView<T> | undefined>;
   clientSide: Readable<boolean>;
   columns: Readable<DataGridColumn<T>[]>;
+  emptyValueLabel?: Readable<string>;
+  filterOperators?: Readable<{ label: string; value: FilterOperator }[]>;
   filterOptions: Readable<FilterOption[] | undefined>;
   getRowKey: (item: T) => string;
   items: Readable<T[]>;
@@ -72,6 +82,7 @@ export type DataGridModel<T = Record<string, unknown>> = {
   readonly pageIndex: Readable<number>;
   prevPage(): void;
   removeFilter(key: string): void;
+  resetColumnVisibility(): void;
   resetFilters(): void;
   resetSearch(): void;
   readonly searchActive: Readable<boolean>;
@@ -104,7 +115,7 @@ const DEFAULT_OPERATORS: { label: string; value: FilterOperator }[] = [
 /**
  * Feature-owned state and transform pipeline for `ore-datagrid`.
  *
- * Rows flow through query, filters, sorting, and pagination in order. Selection
+ * Rows flow through the active view, query, filters, sorting, and pagination in order. Selection
  * and column visibility share the same model so every interactive grid concern
  * has one reactive owner. Source-backed grids retain their server-owned rows by
  * setting `clientSide` to false.
@@ -122,8 +133,27 @@ export const createDataGridModel = <T extends Record<string, unknown>>(
   const selectedKeys = signal(new Set<string>());
   const pageIndex = signal(0);
 
-  const columnKeys = computed(() => new Set(options.columns.value.map((column) => column.key)));
+  const filterKeys = computed(
+    () =>
+      new Set([
+        ...options.columns.value.map((column) => column.key),
+        ...(options.filterOptions.value ?? []).map((filter) => filter.key),
+      ]),
+  );
   const visibleColumns = computed(() => options.columns.value.filter((column) => !hiddenColumns.value.has(column.key)));
+  const viewedRows = computed(() => {
+    const rows = options.items.value;
+
+    if (!options.clientSide.value) return rows;
+
+    const filter = options.activeView?.value?.filter;
+    return filter ? rows.filter(filter) : rows;
+  });
+
+  const resolveFilterValue = (row: T, key: string): unknown => {
+    const column = options.columns.value.find((candidate) => candidate.key === key);
+    return column?.filterValue ? column.filterValue(row) : row[key];
+  };
 
   const colOptions = computed(() => {
     const externalKeys = new Set((options.filterOptions.value ?? []).map((filter) => filter.key));
@@ -134,16 +164,18 @@ export const createDataGridModel = <T extends Record<string, unknown>>(
     const derived = new Map<string, { label: string; value: string }[]>();
 
     for (const key of activeKeys) {
+      const column = options.columns.value.find((candidate) => candidate.key === key);
       const seen = new Set<string>();
       const values: { label: string; value: string }[] = [];
 
-      for (const row of options.items.value) {
-        const value = row[key];
+      for (const row of viewedRows.value) {
+        const value = resolveFilterValue(row, key);
         const stringValue = value == null ? '' : String(value);
+        const displayValue = column?.filterLabel?.(row) ?? column?.cell?.(row) ?? stringValue;
 
         if (!seen.has(stringValue)) {
           seen.add(stringValue);
-          values.push({ label: stringValue || '(empty)', value: stringValue });
+          values.push({ label: displayValue || options.emptyValueLabel?.value || '(empty)', value: stringValue });
         }
       }
 
@@ -156,6 +188,7 @@ export const createDataGridModel = <T extends Record<string, unknown>>(
   const filterDefs = computed<FilterOption[]>(() => {
     const provided = options.filterOptions.value ?? [];
     const providedKeys = new Set(provided.map((filter) => filter.key));
+    const activeProvided = provided.filter((filter) => activeFilterKeys.value.has(filter.key));
     const derived = [...activeFilterKeys.value]
       .filter((key) => !providedKeys.has(key))
       .map((key) => {
@@ -164,16 +197,22 @@ export const createDataGridModel = <T extends Record<string, unknown>>(
         return {
           key,
           label: column?.label ?? key,
-          operators: DEFAULT_OPERATORS,
+          operators: options.filterOperators?.value ?? DEFAULT_OPERATORS,
           options: colOptions.value.get(key) ?? [],
         };
       });
 
-    return [...provided.map((filter) => ({ ...filter, operators: filter.operators ?? DEFAULT_OPERATORS })), ...derived];
+    return [
+      ...activeProvided.map((filter) => ({
+        ...filter,
+        operators: filter.operators ?? options.filterOperators?.value ?? DEFAULT_OPERATORS,
+      })),
+      ...derived,
+    ];
   });
 
   const searchedRows = computed(() => {
-    const rows = options.items.value;
+    const rows = viewedRows.value;
 
     if (!options.clientSide.value) return rows;
 
@@ -182,7 +221,10 @@ export const createDataGridModel = <T extends Record<string, unknown>>(
     if (!query) return rows;
 
     return rows.filter((row) =>
-      Object.values(row).some((value) => value != null && String(value).toLowerCase().includes(query)),
+      options.columns.value.some((column) => {
+        const value = column.cell ? column.cell(row) : resolveFilterValue(row, column.key);
+        return value != null && String(value).toLowerCase().includes(query);
+      }),
     );
   });
 
@@ -193,9 +235,9 @@ export const createDataGridModel = <T extends Record<string, unknown>>(
 
     return rows.filter((row) => {
       for (const [key, rule] of filterValues.value) {
-        if (!rule.values.size || !columnKeys.value.has(key)) continue;
+        if (!rule.values.size || !filterKeys.value.has(key)) continue;
 
-        const value = row[key];
+        const value = resolveFilterValue(row, key);
         const stringValue = value == null ? '' : String(value);
 
         if (rule.operator === 'equals' && !rule.values.has(stringValue)) return false;
@@ -270,7 +312,7 @@ export const createDataGridModel = <T extends Record<string, unknown>>(
   );
 
   watch(
-    columnKeys,
+    filterKeys,
     (keys) => {
       const nextActiveKeys = new Set([...activeFilterKeys.value].filter((key) => keys.has(key)));
       const nextValues = new Map([...filterValues.value].filter(([key]) => keys.has(key)));
@@ -295,7 +337,8 @@ export const createDataGridModel = <T extends Record<string, unknown>>(
     const next = new Map(filterValues.value);
 
     if (values.length) {
-      next.set(key, { operator: next.get(key)?.operator ?? 'contains', values: new Set(values) });
+      const defaultOperator = filterDefs.value.find((filter) => filter.key === key)?.operators?.[0]?.value;
+      next.set(key, { operator: next.get(key)?.operator ?? defaultOperator ?? 'contains', values: new Set(values) });
     } else {
       next.delete(key);
     }
@@ -305,8 +348,10 @@ export const createDataGridModel = <T extends Record<string, unknown>>(
 
   const setFilterOperator = (key: string, operator: FilterOperator): void => {
     const rule = filterValues.value.get(key);
-
-    if (rule) filterValues.value = new Map(filterValues.value).set(key, { ...rule, operator });
+    filterValues.value = new Map(filterValues.value).set(key, {
+      operator,
+      values: rule?.values ?? new Set(),
+    });
   };
 
   const sortTo = (key: string, direction: SortDirection): void => {
@@ -358,6 +403,9 @@ export const createDataGridModel = <T extends Record<string, unknown>>(
 
       nextValues.delete(key);
       filterValues.value = nextValues;
+    },
+    resetColumnVisibility: () => {
+      hiddenColumns.value = new Set();
     },
     resetFilters: () => {
       activeFilterKeys.value = new Set();
@@ -414,7 +462,10 @@ export const createDataGridModel = <T extends Record<string, unknown>>(
       const next = new Set(hiddenColumns.value);
 
       if (next.has(key)) next.delete(key);
-      else next.add(key);
+      else {
+        if (visibleColumns.value.length <= 1) return;
+        next.add(key);
+      }
 
       hiddenColumns.value = next;
     },

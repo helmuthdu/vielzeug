@@ -1,6 +1,6 @@
 # Vielzeug Security Checklist
 
-Concrete vulnerability classes to check during the `security` module of a `validate` task. These are Vielzeug's own TypeScript packages — client-side and universal libraries, mostly zero external runtime dependencies, so the attack surface is largely the package's own code and how callers use it. Assume **untrusted user input can reach any public API**.
+Concrete vulnerability classes to check when `security` is selected in `.ai/tasks/review.md`. These are Vielzeug's own TypeScript packages — client-side and universal libraries, mostly zero external runtime dependencies, so the attack surface is largely the package's own code and how callers use it. Assume **untrusted user input can reach any public API**.
 
 Mindset: flag unsafe patterns even when not currently exploitable — future usage may create an exploit path. Default to flagging a risky pattern rather than calling it safe. Prefer secure-by-default designs over opt-in security. Any escape hatch (raw HTML, direct DOM access, `eval`-like behavior) must be justified, documented, and secured.
 

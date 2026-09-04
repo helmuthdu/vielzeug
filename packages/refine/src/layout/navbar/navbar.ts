@@ -146,6 +146,8 @@ export type OreNavbarProps = {
   floating?: boolean;
   /** Accessible nav landmark label */
   label?: string;
+  'menu-close-label'?: string;
+  'menu-open-label'?: string;
   /** CSS selector for an external sidebar toggled by the mobile button */
   'mobile-sidebar'?: string;
   /** Border radius size */
@@ -250,6 +252,8 @@ define<OreNavbarProps>(NAVBAR_TAG, {
     elevation: prop.number<ElevationLevel>(),
     floating: prop.bool(false),
     label: prop.string('Main navigation'),
+    'menu-close-label': prop.string('Close navigation menu'),
+    'menu-open-label': prop.string('Open navigation menu'),
     'mobile-sidebar': prop.string(),
     rounded: prop.string<RoundedSize>(),
     'scroll-threshold': prop.number(80),
@@ -363,7 +367,7 @@ define<OreNavbarProps>(NAVBAR_TAG, {
       const next =
         (mobileSidebarTarget.value && !hasMobileMenu.value ? isExternalMobileMode.value : false) ||
         mediaMatches.value ||
-        sizeMatches.value;
+        (Boolean(props['container-breakpoints'].value) && sizeMatches.value);
 
       isMobile.value = next;
 
@@ -734,13 +738,9 @@ define<OreNavbarProps>(NAVBAR_TAG, {
             part="mobile-toggle"
             type="button"
             aria-label="${() =>
-              hasMobileMenu.value
-                ? isMobileMenuOpen.value
-                  ? 'Close navigation menu'
-                  : 'Open navigation menu'
-                : isExternalMobileOpen.value
-                  ? 'Close navigation menu'
-                  : 'Open navigation menu'}"
+              (hasMobileMenu.value ? isMobileMenuOpen.value : isExternalMobileOpen.value)
+                ? props['menu-close-label'].value
+                : props['menu-open-label'].value}"
             aria-controls="mobile-menu-panel"
             aria-expanded="${() => String(hasMobileMenu.value ? isMobileMenuOpen.value : isExternalMobileOpen.value)}"
             ?hidden=${() => !isMobile.value || (!hasMobileMenu.value && !mobileSidebarTarget.value)}

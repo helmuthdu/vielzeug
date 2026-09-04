@@ -26,3 +26,19 @@ test.describe('Accessibility', () => {
     },
   );
 });
+
+test.describe('Disabled reason', () => {
+  test('shows and announces why an option is unavailable', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-select label="Plan">' +
+        '<option value="starter">Starter</option>' +
+        '<option value="enterprise" disabled data-disabled-reason="Contact sales to enable">Enterprise</option>' +
+        '</ore-select>',
+    );
+
+    await page.locator('ore-select[label="Plan"]').click();
+    const option = page.getByRole('option', { name: 'Enterprise Contact sales to enable' });
+    await expect(option).toBeVisible();
+    await expect(option.locator('.disabled-reason')).toHaveAttribute('title', 'Contact sales to enable');
+  });
+});

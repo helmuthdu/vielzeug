@@ -202,9 +202,10 @@ Do not hand-edit docs alias maps or generated package lists; `scripts/vielzeug-p
 | Public API                            | package validation plus affected docs and REPL validation          |
 | Tests only                            | focused tests; lint/build only when config or imports require them |
 | Documentation                         | docs validation, Codex build, docs build                           |
+| Demo or integration                   | owning-package validation when library behavior changes, affected demo tests/build, and `pnpm validate:demos` for shared or broad demo impact; add responsive/accessibility checks when relevant |
 | REPL                                  | REPL validation, docs build                                        |
 | Tooling                               | focused script tests and a direct smoke command                    |
-| AI metadata                           | `pnpm gen:ai-data`, then `pnpm check:ai-data`                      |
+| AI metadata                           | `pnpm check:ai-data`; run `pnpm gen:ai-data` first only when derived adapters or references must change |
 | Release metadata                      | scoped artifact format and package/version intent                  |
 | Cross-package call sites              | focused tests, lint, and build for every affected package          |
 | Production dev-warning gate           | `pnpm verify:prod-gate`                                            |

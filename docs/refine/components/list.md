@@ -75,6 +75,26 @@ Three sizes control the row padding, gap, and font size.
 
 </ComponentPreview>
 
+## Actionable Rows
+
+Set `actionable` when activating a row performs an action rather than selecting it. The row receives button semantics and emits `activate` from pointer clicks or <kbd>Enter</kbd>/<kbd>Space</kbd>, carrying the item and its optional value.
+
+```html
+<ore-list>
+  <ore-list-item actionable value="deal-1">
+    Enterprise renewal
+    <span slot="description">Acme Corporation</span>
+    <ore-badge slot="trailing">Proposal</ore-badge>
+  </ore-list-item>
+</ore-list>
+```
+
+```js
+list.addEventListener('activate', (event) => {
+  openDeal(event.detail.value);
+});
+```
+
 ## Selectable Listbox
 
 Set `selectable` to turn the list into a single-selection `role="listbox"` — clicking (or pressing
@@ -210,6 +230,7 @@ individual item (also excludes it from arrow-key navigation).
 
 | Attribute  | Type                 | Default | Description                                                |
 | ---------- | ---------------------- | --------- | -------------------------------------------------------------- |
+| `actionable` | `boolean`            | `false`   | Give the row button semantics and emit `activate` on pointer or keyboard activation |
 | `disabled` | `boolean`              | `false`   | Disable this item                                              |
 | `selected` | `boolean` (read-only)  | `false`   | Derived — `true` when this item's `value` matches the parent list's `value`. Not independently settable. |
 | `value`    | `string`               | —         | Opaque value compared against the parent list's `value` to derive `selected`; also reported in select/change events |
@@ -219,6 +240,7 @@ individual item (also excludes it from arrow-key navigation).
 
 | Event      | Detail                                        | Description                          |
 | ---------- | ------------------------------------------------ | ---------------------------------------- |
+| `activate` | `{ item: HTMLElement, value: string \| null }`   | Actionable row is activated by pointer or keyboard |
 | `select`   | `{ item: HTMLElement, value: string \| null }`   | Item becomes selected                    |
 | `deselect` | `{ item: HTMLElement, value: string \| null }`   | Item becomes deselected                  |
 | `reveal`   | `{ item: HTMLElement, side: 'left' \| 'right' }` | An action panel opens                    |
@@ -251,6 +273,7 @@ individual item (also excludes it from arrow-key navigation).
   `aria-label`/`aria-labelledby` on it in listbox mode, same as any native listbox or `ore-menu`.
 - `ore-list-item` exposes `role="listitem"` by default, or `role="option"` with `aria-selected`
   when its parent list is `selectable`.
+- `actionable` gives the focusable row `role="button"` and matching Enter/Space behavior without turning the list into a listbox.
 - Arrow keys / Home / End move focus between items when `selectable`; Enter/Space commits the
   selection on the focused item (manual activation, not selection-follows-focus).
 - Swipe-revealed action panels stay reachable from the keyboard independently of the gesture —

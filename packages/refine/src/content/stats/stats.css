@@ -1,0 +1,193 @@
+@layer refine.base {
+  :host {
+    --_bg: var(--stats-bg, var(--color-canvas));
+    --_color: var(--stats-color, var(--color-contrast-900));
+    --_border-color: var(--stats-border-color, var(--color-divider));
+    --_radius: var(--stats-radius, var(--rounded-lg));
+    --_padding: var(--stats-padding, var(--size-4));
+    --_min-height: var(--stats-min-height, var(--size-32));
+    --_value-size: var(--stats-value-size, var(--text-2xl));
+    --_icon-size: var(--size-9);
+    --_gap: var(--size-3);
+
+    display: block;
+    min-width: 0;
+  }
+
+  .stats {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--_gap);
+    width: 100%;
+    min-width: 0;
+    min-height: var(--_min-height);
+    padding: var(--_padding);
+    overflow: hidden;
+    color: var(--_color);
+    background: var(--_bg);
+    border: var(--border) solid var(--_border-color);
+    border-radius: var(--_radius);
+  }
+
+  .header,
+  .body,
+  .footer {
+    display: flex;
+    min-width: 0;
+  }
+
+  .header {
+    gap: var(--size-2);
+    align-items: center;
+  }
+
+  .icon {
+    display: grid;
+    flex: 0 0 var(--_icon-size);
+    place-items: center;
+    width: var(--_icon-size);
+    height: var(--_icon-size);
+    color: var(--_theme-base, var(--color-primary));
+    background: var(--stats-icon-bg, var(--_theme-backdrop, var(--color-contrast-100)));
+    border-radius: var(--rounded-md);
+  }
+
+  .label,
+  .description,
+  .trend {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--text-xs);
+    white-space: nowrap;
+  }
+
+  .label {
+    font-weight: var(--font-semibold);
+    color: var(--color-contrast-700);
+  }
+
+  .body {
+    flex: 1;
+    gap: var(--size-3);
+    align-items: end;
+    justify-content: space-between;
+  }
+
+  .value {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--_value-size);
+    font-variant-numeric: tabular-nums;
+    line-height: var(--leading-tight);
+    color: inherit;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+  }
+
+  .visual {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex: 0 1 45%;
+    align-items: end;
+    justify-content: end;
+    min-width: 50%;
+  }
+
+  .footer {
+    gap: var(--size-1);
+    align-items: center;
+  }
+
+  .trend {
+    flex-shrink: 0;
+    font-weight: var(--font-semibold);
+    color: var(--color-contrast-700);
+  }
+
+  .trend[data-direction='up'] {
+    color: var(--stats-trend-up, var(--color-success));
+  }
+
+  .trend[data-direction='down'] {
+    color: var(--stats-trend-down, var(--color-error));
+  }
+
+  .description {
+    min-width: 0;
+    color: var(--color-contrast-700);
+  }
+
+  .loading {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: none;
+    pointer-events: none;
+    background: linear-gradient(
+      100deg,
+      color-mix(in oklch, var(--_bg) 88%, var(--color-contrast-200)) 20%,
+      color-mix(in oklch, var(--_bg) 72%, var(--color-contrast-200)) 45%,
+      color-mix(in oklch, var(--_bg) 88%, var(--color-contrast-200)) 70%
+    );
+    background-size: 220% 100%;
+  }
+
+  [hidden] {
+    display: none;
+  }
+}
+
+@layer refine.variants {
+  :host([variant='plain']) .stats {
+    min-height: 0;
+    background: var(--stats-bg, transparent);
+    border: 0;
+    border-radius: 0;
+  }
+
+  :host([variant='solid']) {
+    --_bg: var(--stats-bg, var(--_theme-base));
+    --_color: var(--stats-color, var(--_theme-contrast));
+    --_border-color: var(--stats-border-color, var(--_theme-base));
+  }
+
+  :host([variant='solid']) .label,
+  :host([variant='solid']) .description,
+  :host([variant='solid']) .trend {
+    color: color-mix(in oklch, var(--_color) 78%, transparent);
+  }
+}
+
+@layer refine.overrides {
+  :host([loading]) .loading {
+    display: block;
+    animation: var(--_motion-animation, stats-loading 1.4s linear infinite);
+  }
+
+  :host([loading]) .header,
+  :host([loading]) .body,
+  :host([loading]) .footer {
+    visibility: hidden;
+  }
+
+  :host([disabled]) {
+    pointer-events: none;
+    opacity: 0.55;
+    filter: grayscale(0.35);
+  }
+}
+
+@keyframes stats-loading {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -120% 0;
+  }
+}

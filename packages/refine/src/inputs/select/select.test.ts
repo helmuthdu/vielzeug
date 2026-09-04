@@ -3,6 +3,8 @@ import { html } from '@vielzeug/ore';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 import { signal } from '@vielzeug/ripple';
 
+import type { OreSelectOptionInput } from './select';
+
 export const SELECT_OPTIONS = `
   <option value="apple">Apple</option>
   <option value="banana">Banana</option>
@@ -108,6 +110,32 @@ describe('ore-select', () => {
       await fixture.flush();
 
       expect(fixture.query('ore-input.trigger')?.getAttribute('variant')).toBe('text');
+    });
+
+    it('hides the visible label and exposes aria-label when hide-label is set', async () => {
+      fixture = await mount('ore-select', {
+        attrs: { 'hide-label': true, label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
+      await fixture.flush();
+
+      const trigger = fixture.query('ore-input.trigger');
+
+      expect(trigger?.getAttribute('label')).toBe('');
+      expect(trigger?.getAttribute('aria-label')).toBe('Fruit');
+    });
+
+    it('shows the visible label and omits aria-label when hide-label is not set', async () => {
+      fixture = await mount('ore-select', {
+        attrs: { label: 'Fruit' },
+        html: SELECT_OPTIONS,
+      });
+      await fixture.flush();
+
+      const trigger = fixture.query('ore-input.trigger');
+
+      expect(trigger?.getAttribute('label')).toBe('Fruit');
+      expect(trigger?.getAttribute('aria-label')).toBeNull();
     });
   });
 
@@ -273,6 +301,33 @@ describe('ore-select', () => {
         fireClick(disabledOption as HTMLElement);
         expect(changeHandler).not.toHaveBeenCalled();
       }
+    });
+
+    it('shows and announces why a slotted option is disabled', async () => {
+      fixture = await mount('ore-select', {
+        html: '<option value="admin" disabled data-disabled-reason="Requires administrator access">Admin</option>',
+      });
+
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
+      await fixture.flush();
+      const option = fixture.query<HTMLElement>('[role="option"]')!;
+
+      expect(option.textContent).toContain('Admin');
+      expect(option.textContent).toContain('Requires administrator access');
+      expect(option.querySelector('.disabled-reason')?.getAttribute('title')).toBe('Requires administrator access');
+    });
+
+    it('supports disabled reasons in structured options', async () => {
+      fixture = await mount('ore-select', {});
+      const select = fixture.element as HTMLElement & { options: OreSelectOptionInput[] };
+      select.options = [
+        { disabled: true, disabledReason: 'Plan upgrade required', label: 'Enterprise', value: 'enterprise' },
+      ];
+
+      fireClick(fixture.query<HTMLElement>('ore-input.trigger')!);
+      await fixture.flush();
+
+      expect(fixture.query('.disabled-reason')?.textContent).toBe('Plan upgrade required');
     });
   });
 

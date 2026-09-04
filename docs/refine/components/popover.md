@@ -169,6 +169,7 @@ Use `open` as the controlled state and update it from `open-change`. Use `defaul
 | --------------------- | ----------------------------------- |
 | `--popover-min-width` | Minimum width of the floating panel |
 | `--popover-max-width` | Maximum width of the floating panel |
+| `--popover-overflow`  | Panel overflow behavior; use `visible` for nested top-layer controls |
 
 ## Accessibility
 

@@ -67,6 +67,7 @@ export type OrePopoverProps = {
  * @fires open-change - When the panel state changes. detail: { open, reason }
  * @slot - The trigger element
  * @slot content - Panel content
+ * @cssprop --popover-overflow - Panel overflow behavior (default: auto)
  * @part panel - Panel container.
  *
  * @example

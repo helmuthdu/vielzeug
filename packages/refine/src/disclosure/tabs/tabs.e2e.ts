@@ -30,6 +30,31 @@ test.describe('Accessibility', () => {
   );
 });
 
+test.describe('Layout', () => {
+  test('compact density renders a smaller modern tab control', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-tabs id="standard" value="one" variant="ghost">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="two">Settings</ore-tab-item>' +
+        '</ore-tabs>' +
+        '<ore-tabs id="compact" value="one" variant="ghost" density="compact">' +
+        '<ore-tab-item slot="tabs" value="one">Overview</ore-tab-item>' +
+        '<ore-tab-item slot="tabs" value="two">Settings</ore-tab-item>' +
+        '</ore-tabs>',
+    );
+
+    const standardTab = page.locator('#standard ore-tab-item').first();
+    const compactTab = page.locator('#compact ore-tab-item').first();
+    const [standardBox, compactBox] = await Promise.all([standardTab.boundingBox(), compactTab.boundingBox()]);
+
+    expect(compactBox!.height).toBe(24);
+    expect(compactBox!.height).toBeLessThan(standardBox!.height);
+    expect(compactBox!.height).toBeGreaterThanOrEqual(24);
+    await page.locator('#compact ore-tab-item[value="two"]').click();
+    await expect(page.locator('#compact')).toHaveAttribute('value', 'two');
+  });
+});
+
 test.describe('Interaction', () => {
   test('clicking tab makes it active', async ({ page, refinePage }) => {
     // Tabs need value attributes for the active state to propagate from context

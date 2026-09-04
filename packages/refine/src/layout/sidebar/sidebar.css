@@ -24,6 +24,8 @@
     --_panel-radius: var(--sidebar-radius, var(--rounded-lg));
     --_panel-shadow: var(--sidebar-shadow, var(--shadow-md));
 
+    position: relative;
+    z-index: var(--sidebar-z-index, 1);
     box-sizing: border-box;
     display: block;
     width: 100%;
@@ -50,6 +52,10 @@
     background: var(--_panel-bg);
     border-inline-end: var(--border) solid var(--_panel-border-color);
     backdrop-filter: blur(var(--_panel-blur));
+  }
+
+  :host(:not([data-bottom-nav])) > nav {
+    overflow: visible;
   }
 
   .mobile-backdrop {
@@ -141,6 +147,7 @@
   }
 
   .bottom-bar {
+    box-sizing: border-box;
     display: flex;
     gap: var(--size-1);
     align-items: stretch;
@@ -159,6 +166,10 @@
       opacity var(--_sidebar-transition),
       transform var(--_sidebar-transition),
       display var(--_sidebar-transition) allow-discrete;
+  }
+
+  .bottom-bar[hidden] {
+    display: none;
   }
 
   :host([data-bottom-nav]) .bottom-bar {
@@ -249,12 +260,14 @@
   }
 
   .sidebar-header {
+    box-sizing: border-box;
     display: flex;
     gap: var(--size-2);
     align-items: center;
     justify-content: space-between;
-    min-height: var(--size-6);
-    padding: var(--size-4);
+    height: var(--sidebar-header-height, var(--size-16));
+    min-height: var(--sidebar-header-height, var(--size-16));
+    padding: var(--sidebar-header-padding, var(--size-3));
     border-bottom: var(--border) solid var(--color-contrast-200);
   }
 
@@ -270,9 +283,6 @@
     gap: var(--size-2);
     align-items: center;
     justify-content: flex-start;
-    min-height: unset;
-    padding-block: var(--size-2);
-    padding-inline: var(--size-2);
   }
 
   :host([data-collapsed]) .sidebar-header .sidebar-header-content {
@@ -318,56 +328,62 @@
 
   .toggle-btn {
     all: unset;
+    position: absolute;
+    inset-block-start: var(--sidebar-toggle-offset, var(--size-4));
+    inset-inline-end: 0;
+    z-index: 1;
     box-sizing: border-box;
     display: inline-flex;
-    flex-shrink: 0;
     align-items: center;
     justify-content: center;
     width: var(--size-8);
     height: var(--size-8);
-    color: var(--color-contrast-500);
+    color: var(--sidebar-toggle-color, var(--color-contrast-600));
     cursor: pointer;
-    border-radius: var(--rounded-sm);
+    background: var(--sidebar-toggle-bg, var(--_panel-bg));
+    border: var(--border) solid var(--sidebar-toggle-border-color, var(--_panel-border-color));
+    border-radius: var(--rounded-full);
+    box-shadow: var(--shadow-sm);
+    transform: translateX(50%);
     transition:
       color var(--transition-fast),
-      background var(--transition-fast);
+      background var(--transition-fast),
+      box-shadow var(--transition-fast);
+  }
+
+  :host(:dir(rtl)) .toggle-btn {
+    transform: translateX(-50%);
+  }
+
+  :host(:not([data-has-logo])) .toggle-btn {
+    position: static;
+    margin-inline-start: auto;
+    transform: none;
+  }
+
+  :host([data-collapsed]:not([data-has-logo])) .toggle-btn {
+    margin-inline-start: 0;
   }
 
   .toggle-btn:hover {
-    color: var(--color-contrast-800);
-    background: var(--color-contrast-200);
+    color: var(--sidebar-toggle-hover-color, var(--color-contrast-900));
+    background: var(--sidebar-toggle-hover-bg, var(--color-contrast-100));
+    box-shadow: var(--shadow-md);
   }
 
   .toggle-btn:focus-visible {
     outline: var(--focus-ring);
+    outline-offset: var(--size-0-5);
   }
 
   .toggle-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: var(--_motion-transition, transform var(--_sidebar-transition));
-  }
-
-  :host([data-collapsed]) .toggle-icon {
-    transform: rotate(180deg);
   }
 
   :host([data-bottom-nav]) .toggle-btn {
     display: none;
-  }
-
-  :host(:not([dir='rtl'])[data-collapsed]) .toggle-icon,
-  :host(:dir(ltr)[data-collapsed]) .toggle-icon {
-    transform: rotate(180deg);
-  }
-
-  :host(:dir(rtl)) .toggle-icon {
-    transform: rotate(180deg);
-  }
-
-  :host(:dir(rtl)[data-collapsed]) .toggle-icon {
-    transform: rotate(0deg);
   }
 }
 

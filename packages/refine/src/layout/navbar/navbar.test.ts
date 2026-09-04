@@ -305,6 +305,31 @@ describe('ore-navbar', () => {
     }
   });
 
+  it('uses custom labels for the mobile menu toggle', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-navbar', {
+        attrs: { 'menu-close-label': 'Close workspace', 'menu-open-label': 'Open workspace' },
+        html: '<div slot="mobile-menu">Menu</div>',
+      });
+      const toggle = fixture.query<HTMLButtonElement>('[part="mobile-toggle"]');
+
+      expect(toggle?.getAttribute('aria-label')).toBe('Open workspace');
+      toggle?.click();
+      await fixture.flush();
+      expect(toggle?.getAttribute('aria-label')).toBe('Close workspace');
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   it('does not open mobile menu when mobile-menu slot is empty', async () => {
     const originalMatchMedia = window.matchMedia;
 

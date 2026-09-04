@@ -207,18 +207,20 @@ Recommended app-shell pattern:
     container-breakpoints
     responsive="(max-width: 1200px)"
     bottom-nav-at="(max-width: 640px)">
-    <ore-sidebar-item href="#" active>
+    <ore-sidebar-item href="#" active bottom-nav>
       <ore-icon slot="icon" name="layout-dashboard" size="18"></ore-icon>
       Dashboard
     </ore-sidebar-item>
-    <ore-sidebar-item href="#">
-      <ore-icon slot="icon" name="folder" size="18"></ore-icon>
-      Projects
-    </ore-sidebar-item>
-    <ore-sidebar-item href="#">
-      <ore-icon slot="icon" name="bar-chart-3" size="18"></ore-icon>
-      Reports
-    </ore-sidebar-item>
+    <ore-sidebar-group label="Workspace">
+      <ore-sidebar-item href="#" bottom-nav>
+        <ore-icon slot="icon" name="folder" size="18"></ore-icon>
+        Projects
+      </ore-sidebar-item>
+      <ore-sidebar-item href="#" bottom-nav>
+        <ore-icon slot="icon" name="bar-chart-3" size="18"></ore-icon>
+        Reports
+      </ore-sidebar-item>
+    </ore-sidebar-group>
   </ore-sidebar>
 
   <section class="shell-panel">
@@ -297,6 +299,8 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | Attribute               | Type                                                                 | Default                | Description                                                                    |
 | ----------------------- | -------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------ |
 | `label`                 | `string`                                                             | `'Main navigation'`    | Accessible nav landmark label                                                  |
+| `menu-open-label`       | `string`                                                             | `'Open navigation menu'` | Accessible label for the closed mobile menu toggle                           |
+| `menu-close-label`      | `string`                                                             | `'Close navigation menu'` | Accessible label for the open mobile menu toggle                             |
 | `sticky`                | `boolean`                                                            | `false`                | Enables sticky mode                                                            |
 | `floating`              | `boolean`                                                            | `false`                | Enables floating mode                                                          |
 | `scroll-threshold`      | `number`                                                             | `80`                   | Scroll px threshold for floating+sticky transition                             |

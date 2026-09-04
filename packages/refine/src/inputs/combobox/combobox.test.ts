@@ -312,6 +312,49 @@ describe('ore-combobox', () => {
       expect(label?.hidden).toBe(false);
     });
 
+    it('hides the visible label while preserving the accessible name', async () => {
+      fixture = await mount('ore-combobox', {
+        attrs: { 'hide-label': '', label: 'Country' },
+        html: optionsHtml,
+      });
+
+      const trigger = fixture.element.shadowRoot?.querySelector('ore-input.trigger');
+      const label = trigger?.shadowRoot?.querySelector<HTMLLabelElement>('.label');
+      const input = trigger?.shadowRoot?.querySelector<HTMLInputElement>('input');
+
+      expect(label?.hidden).toBe(true);
+      expect(label?.hasAttribute('for')).toBe(false);
+      expect(input?.getAttribute('aria-label')).toBe('Country');
+    });
+
+    it('shows and announces why an option is disabled', async () => {
+      fixture = await mount('ore-combobox', {
+        attrs: { label: 'Country' },
+        html: '<ore-combobox-option value="restricted" disabled disabled-reason="Requires regional access">Restricted</ore-combobox-option>',
+      });
+
+      fireClick(getInput()!);
+      await fixture.flush();
+      const option = fixture.query<HTMLElement>('[role="option"]')!;
+
+      expect(option.textContent).toContain('Restricted');
+      expect(option.textContent).toContain('Requires regional access');
+      expect(option.querySelector('.disabled-reason')?.getAttribute('title')).toBe('Requires regional access');
+    });
+
+    it('supports disabled reasons in structured options', async () => {
+      fixture = await mount('ore-combobox', { attrs: { label: 'Plan' } });
+      const combobox = fixture.element as HTMLElement & { options: Array<Record<string, unknown>> };
+      combobox.options = [
+        { disabled: true, disabledReason: 'Contact sales', label: 'Enterprise', value: 'enterprise' },
+      ];
+
+      fireClick(getInput()!);
+      await fixture.flush();
+
+      expect(fixture.query('.disabled-reason')?.textContent).toBe('Contact sales');
+    });
+
     it('uses proper combobox and listbox roles', async () => {
       fixture = await mount('ore-combobox', {
         attrs: { label: 'Country' },

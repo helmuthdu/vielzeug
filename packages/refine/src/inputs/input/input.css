@@ -145,6 +145,7 @@
   input {
     flex: 1;
     min-width: 0;
+    min-height: var(--size-6);
     font: inherit;
     font-size: var(--_font-size);
     line-height: var(--leading-normal);

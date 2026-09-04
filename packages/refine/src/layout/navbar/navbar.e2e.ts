@@ -68,6 +68,20 @@ test.describe('Layout', () => {
     expect(box.width).toBeLessThan(box.height * 1.5);
   });
 
+  test('constrained containers stay desktop without container breakpoint opt-in', async ({ page, refinePage }) => {
+    await page.setViewportSize({ height: 768, width: 1024 });
+    await refinePage.mountComponent(
+      '<div style="width:360px">' +
+        '<ore-navbar id="viewport-navbar" breakpoint="(max-width: 640px)">' +
+        '<span slot="logo">Workspace</span>' +
+        '<ore-navbar-item href="#">Overview</ore-navbar-item>' +
+        '</ore-navbar>' +
+        '</div>',
+    );
+
+    await expect(page.locator('#viewport-navbar')).not.toHaveAttribute('data-mobile');
+  });
+
   test('mobile sidebar drawer stays within its positioned preview shell', async ({ page, refinePage }) => {
     await refinePage.mountComponent(`
       <div id="shell" style="position:relative;width:360px;height:460px;overflow:hidden;">

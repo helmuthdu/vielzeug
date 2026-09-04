@@ -14,7 +14,7 @@
       "key": "document"
     },
     {
-      "description": "Prepare delivery artifacts, change files, commits, pull requests, or release diagnostics.",
+      "description": "Prepare delivery artifacts, change files, approved commits or pull requests, or release diagnostics.",
       "key": "release"
     }
   ]

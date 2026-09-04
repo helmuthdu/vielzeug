@@ -710,6 +710,15 @@ describe('ore-input accessibility', () => {
       expect(labelEl).toBeTruthy();
     });
 
+    it('names the native input without associating its hidden label', async () => {
+      fixture = await mount('ore-input', { attrs: { 'aria-label': 'Search' } });
+
+      expect(fixture.query('input')?.getAttribute('aria-label')).toBe('Search');
+      expect(fixture.query('input')?.getAttribute('aria-labelledby')).toBeNull();
+      expect(fixture.query('label')?.hasAttribute('hidden')).toBe(true);
+      expect(fixture.query('label')?.hasAttribute('for')).toBe(false);
+    });
+
     it('sets aria-describedby when helper text is present', async () => {
       fixture = await mount('ore-input', {
         attrs: { helper: 'Enter your email', label: 'Email', 'label-placement': 'outside' },

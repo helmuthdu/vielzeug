@@ -206,7 +206,7 @@ body:has(#repl-container) {
   margin: 0;
 }
 
-.doc-links li + li {
+:where(.doc-links li + li) {
   margin-top: 0;
 }
 

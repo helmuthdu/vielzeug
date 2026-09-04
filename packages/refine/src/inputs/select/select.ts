@@ -17,6 +17,7 @@ import componentStyles from './select.css?inline';
 
 type OptionItem = {
   disabled: boolean;
+  disabledReason?: string;
   group?: string;
   label: string;
   value: string;
@@ -24,6 +25,8 @@ type OptionItem = {
 
 export type OreSelectOptionInput = {
   disabled?: boolean;
+  /** Explanation displayed and announced when the option is disabled. */
+  disabledReason?: string;
   group?: string;
   label?: string;
   value: string;
@@ -53,6 +56,8 @@ export type OreSelectEvents = {
 };
 
 export type OreSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'frost'>> & {
+  /** Hide the visible label while preserving the accessible name via `aria-label` */
+  'hide-label'?: boolean;
   /** Show loading state in dropdown */
   loading?: boolean;
   /** Allow selecting multiple options */
@@ -71,6 +76,7 @@ export type OreSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'frost'
  *
  * @attr {string} label - Label text
  * @attr {string} label-placement - 'inset' | 'outside'
+ * @attr {boolean} hide-label - Hide the visible label; the label text is exposed as `aria-label` on the trigger instead
  * @attr {string} value - Current selected value(s) (comma-separated for multiple)
  * @attr {string} placeholder - Placeholder when no option selected
  * @attr {string} name - Form field name
@@ -133,6 +139,7 @@ define<OreSelectProps>(SELECT_TAG, {
     error: prop.string(),
     fullwidth: prop.bool(false),
     helper: prop.string(),
+    'hide-label': prop.bool(false),
     label: prop.string(),
     'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
     multiple: prop.bool(false),
@@ -161,6 +168,7 @@ define<OreSelectProps>(SELECT_TAG, {
     function normalizeOption(option: OreSelectOptionInput): OptionItem {
       return {
         disabled: Boolean(option.disabled),
+        disabledReason: option.disabledReason,
         group: option.group,
         label: option.label ?? option.value,
         value: option.value,
@@ -259,7 +267,12 @@ define<OreSelectProps>(SELECT_TAG, {
         if (el.tagName === 'OPTION') {
           const opt = el as HTMLOptionElement;
 
-          items.push({ disabled: opt.disabled, label: opt.text || opt.value, value: opt.value });
+          items.push({
+            disabled: opt.disabled,
+            disabledReason: opt.dataset.disabledReason,
+            label: opt.text || opt.value,
+            value: opt.value,
+          });
         } else if (el.tagName === 'OPTGROUP') {
           const group = el as HTMLOptGroupElement;
           const groupLabel = group.label;
@@ -267,7 +280,13 @@ define<OreSelectProps>(SELECT_TAG, {
           for (const child of Array.from(group.querySelectorAll('option'))) {
             const opt = child as HTMLOptionElement;
 
-            items.push({ disabled: opt.disabled, group: groupLabel, label: opt.text || opt.value, value: opt.value });
+            items.push({
+              disabled: opt.disabled,
+              disabledReason: opt.dataset.disabledReason,
+              group: groupLabel,
+              label: opt.text || opt.value,
+              value: opt.value,
+            });
           }
         }
       }
@@ -411,7 +430,12 @@ define<OreSelectProps>(SELECT_TAG, {
 
     // ore-input prop helpers
     const inputValue = () => triggerText.value;
-    const inputLabel = () => props.label.value ?? '';
+    const hideLabel = () => props['hide-label'].value;
+    // When hide-label is set, suppress the visible label passed to ore-input (no inset
+    // label renders, avoiding extra trigger height) but expose the label text as
+    // aria-label on the trigger so the combobox retains its accessible name.
+    const inputLabel = () => (hideLabel() ? '' : (props.label.value ?? ''));
+    const triggerAriaLabel = () => (hideLabel() ? (props.label.value ?? '') : null);
     const inputPlaceholder = () => props.placeholder.value ?? '';
     const inputLabelPlacement = () => props['label-placement'].value ?? 'inset';
     const inputColor = () => props.color?.value ?? undefined;
@@ -475,6 +499,7 @@ define<OreSelectProps>(SELECT_TAG, {
         role="combobox"
         aria-haspopup="listbox"
         aria-controls="${listboxId}"
+        aria-label="${triggerAriaLabel}"
         aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
         aria-expanded="${() => String(isOpen.value)}"
         aria-invalid="${() => (props.error.value ? 'true' : null)}"
@@ -559,6 +584,11 @@ define<OreSelectProps>(SELECT_TAG, {
                         optionList.set(row.idx);
                       }}">
                       <span>${row.opt.label}</span>
+                      ${
+                        row.opt.disabled && row.opt.disabledReason
+                          ? html`<small class="disabled-reason" title="${row.opt.disabledReason}">${row.opt.disabledReason}</small>`
+                          : html``
+                      }
                       <span class="option-check" aria-hidden="true">
                         <ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>
                       </span>

@@ -40,12 +40,15 @@ describe('ore-sidebar', () => {
     fixture = await mount('ore-sidebar', { attrs: { collapsible: '' } });
 
     const handler = vi.fn();
+    const toggle = fixture.query<HTMLButtonElement>('[part="toggle-btn"]')!;
 
+    expect(toggle.querySelector('ore-icon')?.getAttribute('name')).toBe('panel-left-close');
     fixture.element.addEventListener('collapsed-change', handler);
-    fixture.query<HTMLButtonElement>('[part="toggle-btn"]')?.click();
+    toggle.click();
     await fixture.flush();
 
     expect(fixture.element.hasAttribute('data-collapsed')).toBe(true);
+    expect(toggle.querySelector('ore-icon')?.getAttribute('name')).toBe('panel-left-open');
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler.mock.calls[0][0].detail).toEqual({ collapsed: true, source: 'toggle' });
   });
@@ -216,6 +219,133 @@ describe('ore-sidebar', () => {
       expect(bar?.textContent).toContain('Home');
       expect(bar?.textContent).toContain('Search');
       expect(bar?.textContent).not.toContain('Nested');
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('promotes explicitly marked nested items into bottom navigation', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-sidebar', {
+        attrs: { 'bottom-nav-at': '(max-width: 768px)' },
+        html: `
+          <ore-sidebar-group label="Sales">
+            <ore-sidebar-item href="/pipeline" bottom-nav bottom-nav-label="Deals">Pipeline</ore-sidebar-item>
+            <ore-sidebar-item href="/leads">Leads</ore-sidebar-item>
+          </ore-sidebar-group>
+          <ore-sidebar-group label="Customers">
+            <ore-sidebar-item href="/companies" bottom-nav>Companies</ore-sidebar-item>
+          </ore-sidebar-group>
+        `,
+      });
+      await fixture.flush();
+
+      const bar = fixture.query('[part="bottom-bar"]');
+      const tabs = bar?.querySelectorAll('.bottom-tab') ?? [];
+
+      expect(tabs.length).toBe(2);
+      expect(bar?.textContent).toContain('Deals');
+      expect(bar?.textContent).toContain('Companies');
+      expect(bar?.textContent).not.toContain('Pipeline');
+      expect(bar?.textContent).not.toContain('Leads');
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('updates promoted bottom navigation labels and active state', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-sidebar', {
+        attrs: { 'bottom-nav-at': '(max-width: 768px)' },
+        html: '<ore-sidebar-item href="/" bottom-nav>Overview</ore-sidebar-item>',
+      });
+      const item = fixture.element.querySelector('ore-sidebar-item')!;
+
+      item.textContent = 'Übersicht';
+      item.setAttribute('active', '');
+      await fixture.flush();
+
+      const tab = fixture.query<HTMLElement>('[part="bottom-bar"] .bottom-tab');
+
+      expect(tab?.textContent).toContain('Übersicht');
+      expect(tab?.getAttribute('aria-current')).toBe('page');
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('uses custom labels for collapse and mobile close controls', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-sidebar', {
+        attrs: {
+          'bottom-nav-at': '(max-width: 768px)',
+          'collapse-label': 'Collapse navigation',
+          collapsible: '',
+          'default-collapsed': '',
+          'expand-label': 'Expand navigation',
+          'mobile-close-label': 'Close navigation',
+        },
+      });
+
+      expect(fixture.query('[part="toggle-btn"]')?.getAttribute('aria-label')).toBe('Expand navigation');
+      expect(fixture.query('[part="mobile-backdrop"]')?.getAttribute('aria-label')).toBe('Close navigation');
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('closes the mobile drawer on item selection and Escape when enabled', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-sidebar', {
+        attrs: { 'bottom-nav-at': '(max-width: 768px)', 'close-on-select': '' },
+        html: '<ore-sidebar-item>Dashboard</ore-sidebar-item>',
+      });
+      const sidebar = fixture.element as HTMLElement & { openMobile(): void };
+      const item = fixture.element.querySelector('ore-sidebar-item')!;
+
+      sidebar.openMobile();
+      await fixture.flush();
+      item.shadowRoot?.querySelector<HTMLButtonElement>('button')?.click();
+      await fixture.flush();
+      expect(sidebar.hasAttribute('data-mobile-open')).toBe(false);
+
+      sidebar.openMobile();
+      await fixture.flush();
+      sidebar.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+      await fixture.flush();
+      expect(sidebar.hasAttribute('data-mobile-open')).toBe(false);
     } finally {
       window.matchMedia = originalMatchMedia;
     }

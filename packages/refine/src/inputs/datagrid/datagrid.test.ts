@@ -1,5 +1,6 @@
 import { sleep } from '@vielzeug/arsenal/async';
 import { fireChange, fireClick, fireKeyDown } from '@vielzeug/assay';
+import { html } from '@vielzeug/ore';
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
 import { ariaSortValue, type OreDataGridProps, sortIconName } from './datagrid';
@@ -95,10 +96,23 @@ function getBodyRows(fixture: Fixture<HTMLElement>): Element[] {
   return Array.from(fixture.queryAll('.dg-body .dg-tr'));
 }
 
+function inputSearch(search: HTMLElement, value: string): void {
+  (search as HTMLElement & { value: string }).value = value;
+  search.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 function getCell(fixture: Fixture<HTMLElement>, rowIdx: number, colIdx: number): Element | null {
   const row = getBodyRows(fixture)[rowIdx];
 
   return row?.querySelectorAll('.dg-td')[colIdx] ?? null;
+}
+
+async function activateFilter(fixture: Fixture<HTMLElement>, key: string): Promise<void> {
+  const picker = fixture.query('.dg-pop-filter-fields ore-combobox') as HTMLElement & { value: string };
+
+  picker.value = key;
+  picker.dispatchEvent(new Event('change', { bubbles: true }));
+  await Promise.resolve();
 }
 
 /**
@@ -806,6 +820,25 @@ describe('ore-datagrid', () => {
   // ── Search ────────────────────────────────────────────────────────────────
 
   describe('Search', () => {
+    it('localizes built-in control labels', async () => {
+      fixture = await mountGrid({});
+      const el = fixture.element as HTMLElement & { labels: Record<string, string> };
+
+      el.labels = {
+        closeSearch: 'Suche schließen',
+        columnOptions: 'Spaltenoptionen',
+        filter: 'Filtern',
+        search: 'Suchen',
+        sort: 'Sortieren',
+      };
+      await Promise.resolve();
+
+      expect(fixture.query('[aria-label="Suchen"]')).toBeTruthy();
+      expect(fixture.query('[aria-label="Sortieren"]')).toBeTruthy();
+      expect(fixture.query('[aria-label="Filtern"]')).toBeTruthy();
+      expect(fixture.query('[aria-label="Spaltenoptionen"]')).toBeTruthy();
+    });
+
     it('renders a search toggle button always', async () => {
       fixture = await mountGrid({});
 
@@ -830,6 +863,7 @@ describe('ore-datagrid', () => {
       el.rows = ROWS;
       el.filterOptions = [{ key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] }];
       await Promise.resolve();
+      await activateFilter(fixture, 'role');
 
       expect(fixture.query('.dg-filter')).toBeTruthy();
     });
@@ -842,7 +876,7 @@ describe('ore-datagrid', () => {
 
       const search = fixture.query('.dg-search-input') as HTMLElement;
 
-      search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'alice' } }));
+      inputSearch(search, 'alice');
       await sleep(300);
       await Promise.resolve();
 
@@ -868,7 +902,7 @@ describe('ore-datagrid', () => {
 
       const search = fixture.query('.dg-search-input') as HTMLElement;
 
-      search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'a' } }));
+      inputSearch(search, 'a');
       await sleep(300);
       await Promise.resolve();
 
@@ -883,12 +917,12 @@ describe('ore-datagrid', () => {
 
       const search = fixture.query('.dg-search-input') as HTMLElement;
 
-      search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'alice' } }));
+      inputSearch(search, 'alice');
       await sleep(300);
       await Promise.resolve();
       expect(getBodyRows(fixture).length).toBe(1);
 
-      search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: '' } }));
+      inputSearch(search, '');
       await sleep(300);
       await Promise.resolve();
       expect(getBodyRows(fixture).length).toBe(ROWS.length);
@@ -902,7 +936,7 @@ describe('ore-datagrid', () => {
 
       const search = fixture.query('.dg-search-input') as HTMLElement;
 
-      search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'alice' } }));
+      inputSearch(search, 'alice');
       await sleep(300);
       await Promise.resolve();
       expect(getBodyRows(fixture).length).toBe(1);
@@ -1129,6 +1163,27 @@ describe('ore-datagrid', () => {
       await Promise.resolve();
 
       expect(getCell(fixture, 0, 1)?.textContent?.trim()).toBe('32 yrs');
+    });
+
+    it('renders structured cell content without an HTML string sink', async () => {
+      fixture = await mount('ore-datagrid', {});
+
+      const el = fixture.element as HTMLElement & {
+        columns: Array<{ key: string; label: string; renderCell?: (row: User) => ReturnType<typeof html> }>;
+        rows: User[];
+      };
+      el.columns = [
+        {
+          key: 'name',
+          label: 'Name',
+          renderCell: (row) => html`<button class="open-user" type="button">${row.name}</button>`,
+        },
+      ];
+      el.rows = ROWS;
+      await Promise.resolve();
+
+      expect(fixture.query('.open-user')?.textContent).toBe('Alice');
+      expect(getCell(fixture, 0, 0)?.title).toBe('Alice');
     });
 
     it('body cells have tabindex="-1" for keyboard navigation', async () => {
@@ -1415,7 +1470,7 @@ describe('ore-datagrid', () => {
 
       const search = fixture.query('.dg-search-input') as HTMLElement;
 
-      search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'alice' } }));
+      inputSearch(search, 'alice');
       await sleep(300);
       await Promise.resolve();
 
@@ -1435,6 +1490,7 @@ describe('ore-datagrid', () => {
       el.rows = ROWS;
       el.filterOptions = [{ key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] }];
       await Promise.resolve();
+      await activateFilter(fixture, 'role');
 
       fireClick(fixture.query('[aria-label="Next page"]') as HTMLElement);
       await Promise.resolve();
@@ -1461,6 +1517,7 @@ describe('ore-datagrid', () => {
       el.rows = ROWS;
       el.filterOptions = [{ key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] }];
       await Promise.resolve();
+      await activateFilter(fixture, 'role');
 
       const filterSelect = fixture.query('.dg-filter') as HTMLElement;
 
@@ -1482,6 +1539,7 @@ describe('ore-datagrid', () => {
       el.rows = ROWS;
       el.filterOptions = [{ key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] }];
       await new Promise((r) => setTimeout(r, 0));
+      await activateFilter(fixture, 'role');
 
       const filterSelect = fixture.query('.dg-filter') as HTMLElement;
 
@@ -1762,6 +1820,7 @@ describe('ore-datagrid', () => {
       el.rows = ROWS;
       el.filterOptions = [{ key: 'role', label: 'Role', options: [{ value: 'Admin' }] }];
       await new Promise((r) => setTimeout(r, 0));
+      await activateFilter(fixture, 'role');
 
       // Apply the role filter — only Admin rows should be visible.
       const filterSelect = fixture.query('.dg-filter') as HTMLElement;

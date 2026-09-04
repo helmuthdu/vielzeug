@@ -128,6 +128,7 @@ Before each minor release:
 | Component       | Role                      | Keyboard      | Key ARIA attrs               |
 | --------------- | ------------------------- | ------------- | ---------------------------- |
 | `ore-card`       | `button` (interactive)    | Enter / Space | `aria-disabled`, `aria-busy` |
+| `ore-stats` | `article`                 | —             | `aria-disabled`, `aria-busy` |
 | `ore-chat-message` | `article` (on the bubble) | — | `aria-label` describing sender; failed sends also announced via an assertive live region |
 | `ore-list`       | `list` or `listbox` (`selectable`) | Arrow / Home / End / Enter / Space (`selectable` only) | `aria-disabled`; needs `aria-label`/`aria-labelledby` in listbox mode | Manual activation — arrow keys move focus, Enter/Space commits selection |
 | `ore-stepper`    | `navigation` + `list`     | Arrow / Home / End (when `clickable`) | `aria-current="step"`, `aria-disabled` | Roving `tabindex` over navigable steps; message region uses `role="status"` + `aria-live="polite"` |

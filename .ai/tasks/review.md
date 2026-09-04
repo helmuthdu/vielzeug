@@ -87,6 +87,16 @@ For an independent pass (reviewing a PR fresh, not building on a prior review), 
 
 For security reviews, finish only after every raised finding is `[FIXED]`, `[DEFERRED]`, or explicitly open.
 
+## Cross-cutting completeness inventory
+
+Use an evidence inventory only for removals, migrations, workspace-wide renames, package deprecations, or similarly cross-cutting work where missed leftovers are a material risk. Do not require it for routine edits.
+
+1. Name the evidence classes that can retain the old behavior: dependencies and lockfiles, imports and exports, runtime/configuration names, generated artifacts, tests and fixtures, demos, documentation, and CI/release surfaces as applicable.
+2. Track each relevant item as `active`, `removed`, `replaced`, `retained`, or `unknown`. Every retained item needs a reason; every unknown remains `[VERIFY]` or `[BLOCKED]`.
+3. Re-run source searches and relevant validation after the change. Report commands actually executed separately from commands merely recommended.
+4. Keep the inventory in the task report or working plan by default. Create a durable artifact only when the user requests one or future verification genuinely depends on it.
+5. Do not claim completion without listing the evidence classes checked and unresolved exceptions.
+
 ## Severity
 
 Use this scale for every finding:

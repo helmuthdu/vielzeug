@@ -49,7 +49,7 @@ contents explicit.
 
 | Area | Components |
 | --- | --- |
-| Content | `accordion`, `accordion-item`, `avatar`, `avatar-group`, `badge`, `breadcrumb`, `card`, `carousel`, `chat-message`, `code-window`, `copy-command`, `icon`, `list`, `list-item`, `marquee`, `pagination`, `separator`, `step`, `stepper`, `table`, `text` |
+| Content | `accordion`, `accordion-item`, `avatar`, `avatar-group`, `badge`, `breadcrumb`, `card`, `carousel`, `chat-message`, `code-window`, `copy-command`, `icon`, `list`, `list-item`, `marquee`, `pagination`, `separator`, `stats`, `step`, `stepper`, `table`, `text` |
 | Feedback | `alert`, `async`, `chip`, `password-strength`, `progress`, `skeleton`, `toast`, `typing-indicator` |
 | Inputs | `button`, `button-group`, `calendar`, `checkbox`, `checkbox-group`, `combobox`, `datagrid`, `date-picker`, `file-input`, `input`, `message-composer`, `number-input`, `otp-input`, `radio`, `radio-group`, `rating`, `select`, `slider`, `switch`, `textarea`, `time-picker` |
 | Layout | `box`, `grid`, `grid-item`, `navbar`, `sidebar` |

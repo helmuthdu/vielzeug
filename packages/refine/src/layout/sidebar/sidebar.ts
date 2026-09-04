@@ -70,8 +70,20 @@ const readContainerWidth = (el: HTMLElement): number => {
   return el.offsetWidth;
 };
 
+const deepActiveElement = (): HTMLElement | null => {
+  let active = document.activeElement as HTMLElement | null;
+
+  while (active?.shadowRoot?.activeElement instanceof HTMLElement) {
+    active = active.shadowRoot.activeElement;
+  }
+
+  return active;
+};
+
 /** Context provided by `ore-sidebar` to its `ore-sidebar-group` and `ore-sidebar-item` children. */
 export type SidebarContext = {
+  closeMobile: () => void;
+  closeOnSelect: Readable<boolean>;
   collapsed: Readable<boolean>;
   mobileOpen: Readable<boolean>;
   mode: Readable<SidebarMode>;
@@ -112,20 +124,24 @@ export type OreSidebarGroupEvents = {
 export type OreSidebarProps = {
   /** CSS media query that switches the sidebar to bottom navigation mode */
   'bottom-nav-at'?: string;
+  'close-on-select'?: boolean;
   /** Controlled collapsed state */
   collapsed?: boolean;
   /** Whether the sidebar supports collapsing */
   collapsible?: boolean;
+  'collapse-label'?: string;
   /** Evaluate responsive and bottom-nav breakpoints against container width only. */
   'container-breakpoints'?: boolean;
   /** Initial collapsed state in uncontrolled mode */
   'default-collapsed'?: boolean;
+  'expand-label'?: string;
   /**
    * Accessible label for the navigation landmark.
    * Use to distinguish multiple navigation regions on a page.
    * @default 'Sidebar navigation'
    */
   label?: string;
+  'mobile-close-label'?: string;
   /**
    * CSS media query that, when it matches, automatically collapses the sidebar.
    * Unset by default — no automatic collapse.
@@ -195,11 +211,15 @@ export const SIDEBAR_TAG = 'ore-sidebar' as const;
 define<OreSidebarProps>(SIDEBAR_TAG, {
   props: {
     'bottom-nav-at': prop.string(),
+    'close-on-select': prop.bool(false),
+    'collapse-label': prop.string('Collapse sidebar'),
     collapsed: prop.bool(false),
     collapsible: prop.bool(false),
     'container-breakpoints': prop.bool(false),
     'default-collapsed': prop.bool(false),
+    'expand-label': prop.string('Expand sidebar'),
     label: prop.string('Sidebar navigation'),
+    'mobile-close-label': prop.string('Close sidebar'),
     responsive: prop.string(),
     variant: prop.string<SidebarVariant>(),
   },
@@ -225,6 +245,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     const bottomNavSizeMatches = signal(false);
     const bottomNavMaxWidthPx = signal<number | undefined>(parseMaxWidthPx(props['bottom-nav-at'].value));
     const isPreviewMode = signal(false);
+    let focusReturnTarget: HTMLElement | null = null;
 
     const isCollapsed = () => collapsedState.value;
     const mode = computed<SidebarMode>(() => {
@@ -259,34 +280,40 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
     };
 
     const readBottomNavItems = () => {
-      const next = slots
+      const directItems = slots
         .elements()
         .value.filter(
-          (el): el is HTMLElement => el instanceof HTMLElement && el.tagName.toLowerCase() === 'ore-sidebar-item',
-        )
-        .map((el, index) => {
-          const iconSlotEl =
-            (el.querySelector(':scope > [slot="icon"]') as HTMLElement | null) ??
-            (el.querySelector('[slot="icon"]') as HTMLElement | null);
-          const directIconName =
-            iconSlotEl?.tagName.toLowerCase() === 'ore-icon' ? iconSlotEl.getAttribute('name') : null;
-          const nestedIconName = iconSlotEl?.querySelector('ore-icon')?.getAttribute('name') ?? null;
-          const rawLabel = (el.textContent ?? '').trim();
+          (item): item is HTMLElement =>
+            item instanceof HTMLElement && item.tagName.toLowerCase() === 'ore-sidebar-item',
+        );
+      const promotedItems = [...el.querySelectorAll<HTMLElement>('ore-sidebar-item[bottom-nav]')];
+      const sourceItems = promotedItems.length > 0 ? promotedItems : directItems;
+      const next = sourceItems.map((item, index) => {
+        const el = item;
+        const iconSlotEl =
+          (el.querySelector(':scope > [slot="icon"]') as HTMLElement | null) ??
+          (el.querySelector('[slot="icon"]') as HTMLElement | null);
+        const directIconName =
+          iconSlotEl?.tagName.toLowerCase() === 'ore-icon' ? iconSlotEl.getAttribute('name') : null;
+        const nestedIconName = iconSlotEl?.querySelector('ore-icon')?.getAttribute('name') ?? null;
+        const rawLabel = (el.textContent ?? '').trim();
 
-          return {
-            active: el.hasAttribute('active'),
-            disabled: el.hasAttribute('disabled'),
-            href: el.getAttribute('href') ?? undefined,
-            iconName: directIconName ?? nestedIconName ?? undefined,
-            label: rawLabel || `Item ${index + 1}`,
-            source: el,
-          } satisfies BottomNavItem;
-        });
+        return {
+          active: el.hasAttribute('active'),
+          disabled: el.hasAttribute('disabled'),
+          href: el.getAttribute('href') ?? undefined,
+          iconName: directIconName ?? nestedIconName ?? undefined,
+          label: el.getAttribute('bottom-nav-label')?.trim() || rawLabel || `Item ${index + 1}`,
+          source: el,
+        } satisfies BottomNavItem;
+      });
 
       bottomNavItems.value = next;
     };
 
     provide(SIDEBAR_CTX, {
+      closeMobile: () => setMobileOpen(false, 'toggle'),
+      closeOnSelect: props['close-on-select'],
       collapsed: computed(() => !isBottomNav.value && collapsedState.value) as Readable<boolean>,
       mobileOpen: computed(() => isBottomNav.value && isMobileOpen.value) as Readable<boolean>,
       mode: mode as Readable<SidebarMode>,
@@ -320,11 +347,19 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
 
       if (isMobileOpen.value === open) return;
 
+      if (open) focusReturnTarget = deepActiveElement();
+
       isMobileOpen.value = open;
 
       // If closing, re-evaluate responsive state to potentially exit forced bottom-nav mode
       if (!open) {
         applyResponsiveState();
+        queueMicrotask(() => {
+          if (focusReturnTarget?.isConnected) focusReturnTarget.focus();
+          focusReturnTarget = null;
+        });
+      } else {
+        queueMicrotask(() => el.shadowRoot?.querySelector<HTMLElement>('nav')?.focus());
       }
 
       emit('mobile-open-change', { open, source });
@@ -346,6 +381,7 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
       attr: {
         'data-bottom-nav': () => (isBottomNav.value ? true : undefined),
         'data-collapsed': () => (isCollapsed() && !isBottomNav.value ? true : undefined),
+        'data-has-logo': () => (hasLogo() ? true : undefined),
         'data-mobile-open': () => (isBottomNav.value && isMobileOpen.value ? true : undefined),
         'data-preview-mode': () => (isPreviewMode.value ? true : undefined),
       },
@@ -381,6 +417,13 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         attributeFilter: ['collapsed'],
         attributes: true,
       });
+      const closeOnEscape = (event: KeyboardEvent) => {
+        if (event.key !== 'Escape' || !isMobileOpen.value) return;
+
+        event.preventDefault();
+        setMobileOpen(false, 'toggle');
+      };
+      el.addEventListener('keydown', closeOnEscape);
 
       watch(
         props.responsive,
@@ -565,30 +608,30 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
             }
           });
 
-          // Only watch attributes that affect bottom-nav rendering; skip childList/subtree/characterData
+          // Watch attributes and content that affect bottom-nav rendering.
           itemObserver.observe(item, {
-            attributeFilter: ['active', 'disabled', 'href'],
+            attributeFilter: ['active', 'bottom-nav', 'bottom-nav-label', 'disabled', 'href'],
             attributes: true,
+            characterData: true,
+            childList: true,
+            subtree: true,
           });
           itemObservers.set(item, itemObserver);
         }
       };
 
-      watch(
-        slots.elements(),
-        (elements) => {
-          const directItems = elements.filter(
-            (el): el is HTMLElement => el instanceof HTMLElement && el.tagName.toLowerCase() === 'ore-sidebar-item',
-          );
-
-          bindItemObservers(directItems);
-          readBottomNavItems();
-        },
-        { immediate: true },
-      );
+      const syncBottomNavItems = () => {
+        bindItemObservers([...el.querySelectorAll<HTMLElement>('ore-sidebar-item')]);
+        readBottomNavItems();
+      };
+      watch(slots.elements(), syncBottomNavItems, { immediate: true });
+      const nestedItemsObserver = new MutationObserver(syncBottomNavItems);
+      nestedItemsObserver.observe(el, { childList: true, subtree: true });
 
       return () => {
         observer.disconnect();
+        nestedItemsObserver.disconnect();
+        el.removeEventListener('keydown', closeOnEscape);
         mediaCleanup?.();
         bottomNavCleanup?.();
         stopResizeEffect?.dispose();
@@ -606,10 +649,10 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
         class="mobile-backdrop"
         part="mobile-backdrop"
         type="button"
-        aria-label="Close sidebar"
+        aria-label="${props['mobile-close-label']}"
         ?hidden=${() => !isBottomNav.value || !isMobileOpen.value}
         @click=${() => setMobileOpen(false, 'toggle')}></button>
-      <nav aria-label="${props.label}" part="nav">
+      <nav aria-label="${props.label}" part="nav" tabindex="-1">
         <div class="sidebar-header" part="header" ?hidden=${() => !hasHeader() && !props.collapsible.value}>
           <span class="sidebar-logo" ?hidden=${() => !hasLogo()}>
             <slot name="logo"></slot>
@@ -622,12 +665,15 @@ define<OreSidebarProps>(SIDEBAR_TAG, {
             part="toggle-btn"
             type="button"
             ?hidden=${() => !props.collapsible.value}
-            aria-label="${() => (isCollapsed() ? 'Expand sidebar' : 'Collapse sidebar')}"
+            aria-label="${() => (isCollapsed() ? props['expand-label'].value : props['collapse-label'].value)}"
             aria-expanded="${() => !isCollapsed()}"
             @click="${doToggle}">
-            <span class="toggle-icon" aria-hidden="true">
-              <ore-icon name="chevron-left" size="16" stroke-width="2" aria-hidden="true"></ore-icon>
-            </span>
+            <ore-icon
+              class="toggle-icon"
+              name=${() => (isCollapsed() ? 'panel-left-open' : 'panel-left-close')}
+              size="18"
+              stroke-width="2"
+              aria-hidden="true"></ore-icon>
           </button>
         </div>
         <div class="sidebar-content" part="content">
@@ -797,6 +843,8 @@ define<OreSidebarGroupProps>(SIDEBAR_GROUP_TAG, {
 export type OreSidebarItemProps = {
   /** Whether this item represents the current page/section */
   active?: boolean;
+  'bottom-nav'?: boolean;
+  'bottom-nav-label'?: string;
   /** Whether this item is disabled */
   disabled?: boolean;
   /** Navigation href — renders an `<a>` when set, otherwise a `<button>` */
@@ -861,6 +909,8 @@ export const SIDEBAR_ITEM_TAG = 'ore-sidebar-item' as const;
 define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
   props: {
     active: prop.bool(false),
+    'bottom-nav': prop.bool(false),
+    'bottom-nav-label': prop.string(),
     disabled: prop.bool(false),
     href: prop.string(),
     rel: prop.string(),
@@ -885,6 +935,12 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
 
     // Prevent reverse tabnapping: auto-inject noopener + noreferrer for _blank links.
     const effectiveRel = computed(() => computeSafeRel(props.rel.value, props.target.value));
+    const closeMobileOnSelect = (event: MouseEvent) => {
+      if (!sidebarCtx?.closeOnSelect.value || !sidebarCtx.mobileOpen.value) return;
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+      queueMicrotask(sidebarCtx.closeMobile);
+    };
 
     const renderItemContent = () => html`
       <span class="item-icon" part="item-icon" ?hidden=${() => !hasIcon()} aria-hidden="true">
@@ -906,7 +962,8 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
               href="${props.href}"
               rel="${effectiveRel}"
               target="${props.target}"
-              aria-current="${() => (props.active.value ? 'page' : null)}">
+              aria-current="${() => (props.active.value ? 'page' : null)}"
+              @click=${closeMobileOnSelect}>
               ${renderItemContent()}
             </a>
           `;
@@ -931,7 +988,8 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
             part="item"
             type="button"
             ?disabled="${props.disabled}"
-            aria-current="${() => (props.active.value ? 'page' : null)}">
+            aria-current="${() => (props.active.value ? 'page' : null)}"
+            @click=${closeMobileOnSelect}>
             ${renderItemContent()}
           </button>
         `;

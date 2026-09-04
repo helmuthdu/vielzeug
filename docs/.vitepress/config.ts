@@ -1509,6 +1509,7 @@ export default defineConfig({
                 { link: '/refine/components/marquee', text: 'Marquee' },
                 { link: '/refine/components/pagination', text: 'Pagination' },
                 { link: '/refine/components/separator', text: 'Separator' },
+                { link: '/refine/components/stats', text: 'Stats' },
                 { link: '/refine/components/stepper', text: 'Stepper' },
                 { link: '/refine/components/table', text: 'Table' },
                 { link: '/refine/components/text', text: 'Text' },

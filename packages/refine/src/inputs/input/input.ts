@@ -28,6 +28,8 @@ export type OreInputEvents = {
 };
 
 export type OreInputProps = TextFieldProps<Exclude<VisualVariant, 'frost'>> & {
+  /** Accessible name used when no visible label is rendered. */
+  'aria-label'?: string;
   /** Autocomplete hint */
   autocomplete?: string;
   /** Show a clear (×) button when the field has a value */
@@ -77,6 +79,7 @@ const VALID_INPUT_TYPES = [
  *
  * @element ore-input
  *
+ * @attr {string} aria-label - Accessible name used when no visible label is rendered
  * @attr {string} label - Label text
  * @attr {string} label-placement - Label placement: 'inset' | 'outside'
  * @attr {string} type - HTML input type: 'text' | 'email' | 'password' | 'number' | 'tel' | 'url' | 'search'
@@ -146,6 +149,7 @@ define<OreInputProps>(INPUT_TAG, {
     ...sizableBundle,
     ...disablableBundle,
     ...roundableBundle,
+    'aria-label': prop.string(),
     autocomplete: prop.string(),
     clearable: prop.bool(false),
     error: prop.string(),
@@ -300,7 +304,7 @@ define<OreInputProps>(INPUT_TAG, {
 
     return html`
       <div class="input-wrapper" part="wrapper">
-        <label class="label" for="${inputId}" id="${labelId}" part="label" ?hidden="${labelHidden}">
+        <label class="label" for="${() => (labelHidden() ? null : inputId)}" id="${labelId}" part="label" ?hidden="${labelHidden}">
           <slot name="label">${props.label}</slot>
         </label>
         <div class="field" part="field">
@@ -321,6 +325,7 @@ define<OreInputProps>(INPUT_TAG, {
               ?readonly="${props.readonly}"
               ?required="${props.required}"
               value="${live(fieldValue)}"
+              aria-label="${props['aria-label']}"
               aria-labelledby="${ariaLabelledBy}"
               aria-describedby="${ariaDescribedBy}"
               aria-errormessage="${ariaErrorMessage}"

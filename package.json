@@ -42,9 +42,10 @@
     "lefthook": "^2.1.12",
     "lightningcss": "^1.33.0",
     "monaco-editor": "0.56.0",
+    "prettier": "^3.9.6",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",
-    "vitepress": "^2.0.0-alpha.19",
+    "vitepress": "^2.0.0-alpha.20",
     "vitest": "^4.1.11",
     "vue": "^3.5.42"
   }

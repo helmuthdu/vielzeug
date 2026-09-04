@@ -5,6 +5,7 @@ export function parseSlottedOptions(elements: Element[]): ComboboxOptionItem[] {
     .filter((el) => el.localName === 'ore-combobox-option')
     .map((el) => ({
       disabled: el.hasAttribute('disabled'),
+      disabledReason: el.getAttribute('disabled-reason') ?? undefined,
       iconEl: el.querySelector('[slot="icon"]'),
       label:
         el.getAttribute('label') ||

@@ -31,6 +31,8 @@ export type { OrePaginationEvents, OrePaginationProps } from './pagination/pagin
 export { PAGINATION_TAG } from './pagination/pagination';
 export type { OreSeparatorProps } from './separator/separator';
 export { SEPARATOR_TAG } from './separator/separator';
+export type { OreStatsProps, StatsTrendDirection, StatsVariant } from './stats/stats';
+export { STATS_TAG } from './stats/stats';
 export type { OreStepProps } from './stepper/step';
 export { STEP_TAG } from './stepper/step';
 export type { OreStepperEvents, OreStepperProps, StepperContext } from './stepper/stepper';

@@ -33,6 +33,26 @@ describe('ore-list-item', () => {
       expect(fixture.element.querySelector('[slot="leading"]')).toBeTruthy();
       expect(fixture.element.querySelector('[slot="description"]')).toBeTruthy();
       expect(fixture.element.querySelector('[slot="trailing"]')).toBeTruthy();
+      expect(fixture.element.hasAttribute('data-two-line')).toBe(true);
+    });
+
+    it('hides empty edge slots and reacts to assigned content', async () => {
+      fixture = await mount('ore-list-item', { html: 'Inbox' });
+      const leading = fixture.query('[part="leading"]')!;
+      const trailing = fixture.query('[part="trailing"]')!;
+
+      expect(leading.hasAttribute('hidden')).toBe(true);
+      expect(trailing.hasAttribute('hidden')).toBe(true);
+
+      const icon = document.createElement('span');
+      icon.slot = 'leading';
+      fixture.element.append(icon);
+      await fixture.flush();
+      expect(leading.hasAttribute('hidden')).toBe(false);
+
+      icon.remove();
+      await fixture.flush();
+      expect(leading.hasAttribute('hidden')).toBe(true);
     });
   });
 
@@ -54,6 +74,38 @@ describe('ore-list-item', () => {
       fixture = await mount('ore-list-item');
 
       expect(fixture.query('.row')?.getAttribute('tabindex')).toBe('0');
+    });
+
+    it('gives actionable rows button semantics', async () => {
+      fixture = await mount('ore-list-item', { attrs: { actionable: '' } });
+
+      expect(fixture.query('.row')?.getAttribute('role')).toBe('button');
+    });
+  });
+
+  describe('Activation', () => {
+    it.each(['click', 'Enter', ' '])('emits activate with its value on %s', async (interaction) => {
+      fixture = await mount('ore-list-item', { attrs: { actionable: '', value: 'deal-1' } });
+      const row = fixture.query<HTMLElement>('.row')!;
+      const onActivate = vi.fn();
+
+      fixture.element.addEventListener('activate', onActivate);
+      if (interaction === 'click') row.click();
+      else row.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: interaction }));
+      await fixture.flush();
+
+      expect(onActivate).toHaveBeenCalledTimes(1);
+      expect(onActivate.mock.calls[0][0].detail).toMatchObject({ item: fixture.element, value: 'deal-1' });
+    });
+
+    it('does not activate while disabled', async () => {
+      fixture = await mount('ore-list-item', { attrs: { actionable: '', disabled: '' } });
+      const onActivate = vi.fn();
+
+      fixture.element.addEventListener('activate', onActivate);
+      fixture.query<HTMLElement>('.row')?.click();
+
+      expect(onActivate).not.toHaveBeenCalled();
     });
   });
 

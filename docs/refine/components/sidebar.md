@@ -4,7 +4,7 @@ A collapsible navigation sidebar with labelled groups and individual items. It u
 
 ## Collapsible Sidebar
 
-Add the `collapsible` attribute to show the collapse toggle button. Items will animate to icon-only mode when collapsed. When collapsed to icon-only mode, text labels are visually hidden (opacity 0, width 0) but the structural DOM remains accessible, and items remain keyboard reachable. Pair icon-only collapsed items with tooltips using `ore-tooltip` to surface the label for sighted keyboard and pointer users.
+Add the `collapsible` attribute to show the collapse control. Sidebars with a logo anchor it to the panel edge; text-only sidebars keep it inside the header so collapsed mode has no empty logo space. It uses `panel-left-close` when expanded and `panel-left-open` when collapsed. Header height and padding remain fixed across both states. Items animate to icon-only mode while their labels remain in the accessibility tree and keyboard reachable. Pair collapsed items with `ore-tooltip` to surface labels for sighted keyboard and pointer users.
 
 <ComponentPreview>
 
@@ -109,21 +109,21 @@ Use two breakpoints to get the full three-state behavior:
           <ore-icon slot="logo" name="rocket" size="20"></ore-icon>
           <span slot="header">Workspace</span>
 
-          <ore-sidebar-item href="#" active>
+          <ore-sidebar-item href="#" active bottom-nav>
             <ore-icon slot="icon" name="layout-dashboard" size="18"></ore-icon>
             Dashboard
           </ore-sidebar-item>
-          <ore-sidebar-item href="#">
+          <ore-sidebar-item href="#" bottom-nav>
             <ore-icon slot="icon" name="folder" size="18"></ore-icon>
             Projects
           </ore-sidebar-item>
-          <ore-sidebar-item href="#">
+          <ore-sidebar-item href="#" bottom-nav>
             <ore-icon slot="icon" name="bar-chart-3" size="18"></ore-icon>
             Reports
           </ore-sidebar-item>
 
           <ore-sidebar-group label="Admin" collapsible>
-            <ore-sidebar-item href="#">
+            <ore-sidebar-item href="#" bottom-nav bottom-nav-label="People">
               <ore-icon slot="icon" name="users" size="18"></ore-icon>
               Team
             </ore-sidebar-item>
@@ -150,7 +150,9 @@ Use two breakpoints to get the full three-state behavior:
 
 ### Integration Notes
 
-- Bottom navigation tabs are derived from direct `ore-sidebar-item` children only.
+- By default, bottom navigation tabs are derived from direct `ore-sidebar-item` children.
+- For grouped sidebars, mark any descendant item with `bottom-nav` to promote it. Once one item is marked, only marked items appear in the bottom bar.
+- Use `bottom-nav-label` when the mobile tab needs a shorter label than the desktop item.
 - `ore-sidebar-group` content remains available in the drawer opened by `openMobile()` or a linked `ore-navbar mobile-sidebar` trigger.
 - Use `responsive` for tablet compact mode and `bottom-nav-at` for mobile bottom-nav mode.
 
@@ -298,7 +300,7 @@ A subtle variant with a slightly tinted background and no visible border or elev
 
 ## Header and Footer Slots
 
-Use `slot="logo"` for the logo/icon and `slot="header"` for the app name or branding text. Use `slot="footer"` for user profile or secondary actions. When collapsed, only the logo/icon is shown above the toggle button.
+Use `slot="logo"` for the logo/icon and `slot="header"` for the app name or branding text. Use `slot="footer"` for user profile or secondary actions. When collapsed, a supplied logo remains centered and the toggle stays on the panel edge. Without a logo, the toggle occupies the header itself.
 
 <ComponentPreview>
 
@@ -455,6 +457,10 @@ ore-sidebar-item {
 | `collapsible`       | `boolean` | `false`                | Shows the collapse/expand toggle button in the header        |
 | `responsive`        | `string`  | —                      | Media query that enables compact (collapsed) sidebar mode    |
 | `bottom-nav-at`     | `string`  | —                      | Media query that switches to mobile bottom-nav + drawer mode |
+| `close-on-select`   | `boolean` | `false`                | Closes the mobile drawer after primary item activation       |
+| `collapse-label`    | `string`  | `'Collapse sidebar'`   | Accessible label for the collapse control                    |
+| `expand-label`      | `string`  | `'Expand sidebar'`     | Accessible label for the expand control                      |
+| `mobile-close-label`| `string`  | `'Close sidebar'`      | Accessible label for the mobile backdrop close control       |
 | `variant`           | `string`  | —                      | Visual variant: `'floating'` \| `'inset'`                    |
 | `label`             | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                        |
 
@@ -492,6 +498,15 @@ ore-sidebar-item {
 | `--sidebar-collapsed-width` | Collapsed (icon-only) width | `3.5rem` |
 | `--sidebar-bg`              | Sidebar background color    | canvas   |
 | `--sidebar-border-color`    | Border / divider color      | contrast |
+| `--sidebar-header-height`   | Header height in both states | `4rem`   |
+| `--sidebar-header-padding`  | Header padding in both states | `0.75rem` |
+| `--sidebar-z-index`         | Sidebar stacking level      | `1`      |
+| `--sidebar-toggle-offset`   | Toggle offset from the top  | `1rem`   |
+| `--sidebar-toggle-bg`       | Toggle background           | panel    |
+| `--sidebar-toggle-color`    | Toggle icon color           | contrast |
+| `--sidebar-toggle-border-color` | Toggle border color     | divider  |
+| `--sidebar-toggle-hover-bg` | Toggle hover background     | contrast |
+| `--sidebar-toggle-hover-color` | Toggle hover icon color  | contrast |
 
 ---
 
@@ -521,13 +536,15 @@ ore-sidebar-item {
 
 **`ore-sidebar-item` Attributes**
 
-| Attribute  | Type      | Default | Description                                                |
-| ---------- | --------- | ------- | ---------------------------------------------------------- |
-| `href`     | `string`  | —       | URL — renders an `<a>` when set, otherwise a `<button>`    |
-| `active`   | `boolean` | `false` | Marks the item as the current page (`aria-current="page"`) |
-| `disabled` | `boolean` | `false` | Disables the item and forces button rendering              |
-| `rel`      | `string`  | —       | `rel` attribute on the inner `<a>` (link items only)       |
-| `target`   | `string`  | —       | `target` attribute on the inner `<a>` (link items only)    |
+| Attribute          | Type      | Default | Description                                                |
+| ------------------ | --------- | ------- | ---------------------------------------------------------- |
+| `href`             | `string`  | —       | URL — renders an `<a>` when set, otherwise a `<button>`    |
+| `active`           | `boolean` | `false` | Marks the item as the current page (`aria-current="page"`) |
+| `bottom-nav`       | `boolean` | `false` | Promotes the item into an explicit mobile bottom-nav set   |
+| `bottom-nav-label` | `string`  | —       | Overrides the item text in its promoted mobile tab         |
+| `disabled`         | `boolean` | `false` | Disables the item and forces button rendering              |
+| `rel`              | `string`  | —       | `rel` attribute on the inner `<a>` (link items only)       |
+| `target`           | `string`  | —       | `target` attribute on the inner `<a>` (link items only)    |
 
 **`ore-sidebar-item` Slots**
 

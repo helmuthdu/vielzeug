@@ -281,6 +281,23 @@
     min-width: 0;
   }
 
+  @media (max-width: 40rem) {
+    .dg-tabs {
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+      scrollbar-width: none;
+    }
+
+    .dg-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .dg-tab {
+      flex: 0 0 auto;
+      min-width: max-content;
+    }
+  }
+
   .dg-tab--active {
     --button-color: var(--color-contrast-900);
     --button-bg: color-mix(in oklch, var(--color-contrast-500) 10%, transparent);
@@ -362,9 +379,12 @@
 
   .dg-pop-header {
     display: flex;
+    gap: var(--size-3);
     align-items: center;
     justify-content: space-between;
-    padding: var(--size-3) var(--size-3) var(--size-2);
+    min-height: var(--size-10);
+    padding: var(--size-2) var(--size-3);
+    border-block-end: var(--border) solid var(--_border-color);
   }
 
   .dg-pop-title {
@@ -374,31 +394,47 @@
     letter-spacing: 0.02em;
   }
 
+  .dg-pop-heading,
+  .dg-pop-heading > * {
+    display: block;
+    min-width: 0;
+  }
+
+  .dg-pop-heading small {
+    margin-block-start: var(--size-0-5);
+    font-size: var(--text-xs);
+    color: var(--color-contrast-500);
+  }
+
   /* ── Sort / Group by popover content ────────────────────────────────────── */
 
   .dg-pop-sort {
     display: flex;
     flex-direction: column;
-    padding-block-end: var(--size-2);
   }
 
   .dg-pop-sort-row {
     display: flex;
     gap: var(--size-2);
     align-items: center;
-    padding: var(--size-1) var(--size-3);
+    padding: var(--size-2) var(--size-3);
+  }
+
+  .dg-pop-select,
+  .dg-pop-dir-select {
+    --input-min-width: 0;
+    --select-min-width: 0;
+    width: 0;
+    min-width: 0;
   }
 
   .dg-pop-select {
-    --select-min-width: var(--size-20);
-
-    flex: 2;
+    flex: 2 1 0;
   }
 
   .dg-pop-dir-select {
-    --select-min-width: var(--size-10);
-
-    flex: 1;
+    flex: 0 0 var(--size-28);
+    width: var(--size-28);
   }
 
   /* ── Filter popover content ──────────────────────────────────────────────── */
@@ -410,7 +446,7 @@
 
   /* Field picker: select columns to add filter rules. */
   .dg-pop-filter-fields {
-    padding: 0 var(--size-3) var(--size-3);
+    padding: var(--size-2) var(--size-3);
   }
 
   /* ── Filter rules section ────────────────────────────────────────────────── */
@@ -445,36 +481,75 @@
   }
 
   .dg-pop-filter-op-select {
+    --input-min-width: 0;
     --select-min-width: 0;
     --select-height: var(--size-6);
     --select-font-size: var(--text-2xs);
     --select-padding-x: var(--size-1-5);
 
-    flex: 1;
+    flex: 1 1 0;
     min-width: 6rem;
   }
 
-  .dg-pop-col-item {
-    --button-radius: var(--rounded-md);
+  .dg-state-trigger {
+    position: relative;
+  }
 
-    justify-content: flex-start;
+  .dg-state-trigger[data-customized]::after {
+    position: absolute;
+    inset-block-start: var(--size-1);
+    inset-inline-end: var(--size-1);
+    width: var(--size-1-5);
+    height: var(--size-1-5);
+    content: '';
+    background: var(--color-primary);
+    border: var(--border) solid var(--_header-bg);
+    border-radius: 50%;
+  }
+
+  .dg-pop-col {
+    width: 18rem;
   }
 
   .dg-pop-col-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--size-1);
-    max-width: 25rem;
-    padding: var(--size-3);
+    display: grid;
+    gap: var(--size-0-5);
+    max-height: min(50vh, 24rem);
+    padding: var(--size-2) var(--size-3);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .dg-pop-col-item {
+    --checkbox-size: var(--size-4);
+    --checkbox-font-size: var(--text-sm);
+
+    width: 100%;
+    padding: var(--size-1) var(--size-2);
+    cursor: pointer;
+    border-radius: var(--rounded-md);
+  }
+
+  .dg-pop-col-item:hover {
+    background: var(--color-contrast-150);
+  }
+
+  .dg-pop-col-item::part(label) {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* ── Footer / pagination bar ─────────────────────────────────────────────── */
 
   .dg-footer {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--size-2);
     align-items: center;
-    padding: var(--size-2) var(--_cell-padding-x);
+    padding: var(--size-1) var(--_cell-padding-x);
     font-size: var(--text-xs);
     color: var(--color-contrast-500);
     background: var(--_header-bg);
@@ -484,30 +559,34 @@
     white-space: nowrap;
   }
 
-  .dg-footer-end {
+  .dg-footer-start {
     display: flex;
+    flex: 1 1 auto;
     gap: var(--size-2);
     align-items: center;
-    width: fit-content;
-    margin-inline-start: auto;
+    min-width: 0;
   }
 
   .dg-page-size-wrap {
     flex-shrink: 0;
-    width: 5rem;
+    order: -1;
+    width: var(--size-20);
   }
 
   .dg-page-size-select {
+    --input-height: var(--size-8);
+    --input-min-width: 0;
     --select-min-width: 0;
-    --select-height: var(--size-7);
     --select-font-size: var(--text-xs);
     --select-padding-x: var(--size-2);
   }
 
   .dg-pagination {
     display: flex;
+    flex-shrink: 0;
     gap: var(--size-1);
     align-items: center;
+    margin-inline-start: auto;
   }
 
   :host(:dir(rtl)) .dg-page-btn,

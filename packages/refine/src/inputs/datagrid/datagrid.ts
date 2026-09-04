@@ -1,5 +1,16 @@
 import { debounce } from '@vielzeug/arsenal/function';
-import { define, getHost, html, onCleanup, onMounted, prop, unsafeHtml, useEmit, useSlots } from '@vielzeug/ore';
+import {
+  define,
+  getHost,
+  type HTMLResult,
+  html,
+  onCleanup,
+  onMounted,
+  prop,
+  unsafeHtml,
+  useEmit,
+  useSlots,
+} from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import { warn } from '../../_dev';
@@ -28,8 +39,104 @@ import { createGridNav, type GridNavHandle } from './datagrid-nav';
 
 type SortMode = 'client' | 'server';
 
+export type DataGridLabels = {
+  activeFilters: (count: number) => string;
+  addFilter: string;
+  ascending: string;
+  clearAllFilters: string;
+  clearFiltersAndSearch: string;
+  clearSort: string;
+  closeSearch: string;
+  collapseRow: string;
+  columnOptions: string;
+  columnVisibility: string;
+  comfortableDensity: string;
+  compactDensity: string;
+  contains: string;
+  cozyDensity: string;
+  data: string;
+  descending: string;
+  emptyValue: string;
+  equals: string;
+  expandRow: string;
+  filter: string;
+  filterBy: string;
+  filterOperator: (field: string) => string;
+  greaterThan: string;
+  hiddenColumns: (count: number) => string;
+  lessThan: string;
+  nextPage: string;
+  numericAscending: string;
+  numericDescending: string;
+  pageNavigation: string;
+  pagination: string;
+  previousPage: string;
+  property: string;
+  range: (start: number, end: number, total: number) => string;
+  removeFilter: string;
+  resetColumns: string;
+  rowDetails: string;
+  rows: (count: number) => string;
+  rowsPerPage: string;
+  search: string;
+  selectAllRows: string;
+  selectRow: string;
+  sort: string;
+  sortBy: string;
+  views: string;
+  visibleColumns: (count: number, total: number) => string;
+};
+
+const DEFAULT_LABELS: DataGridLabels = {
+  activeFilters: (count) => `${count} active filter${count === 1 ? '' : 's'}`,
+  addFilter: 'Add filter…',
+  ascending: 'A → Z',
+  clearAllFilters: 'Clear all filters',
+  clearFiltersAndSearch: 'Clear all filters & search',
+  clearSort: 'Clear sort',
+  closeSearch: 'Close search',
+  collapseRow: 'Collapse row',
+  columnOptions: 'Column options',
+  columnVisibility: 'Column visibility',
+  comfortableDensity: 'Density: Comfortable',
+  compactDensity: 'Density: Compact',
+  contains: 'Contains',
+  cozyDensity: 'Density: Cozy',
+  data: 'Data',
+  descending: 'Z → A',
+  emptyValue: '(empty)',
+  equals: 'Equals',
+  expandRow: 'Expand row',
+  filter: 'Filter',
+  filterBy: 'Filter by',
+  filterOperator: (field) => `${field} operator`,
+  greaterThan: 'Greater than',
+  hiddenColumns: (count) => `${count} hidden column${count === 1 ? '' : 's'}`,
+  lessThan: 'Less than',
+  nextPage: 'Next page',
+  numericAscending: '0 → 9',
+  numericDescending: '9 → 0',
+  pageNavigation: 'Page navigation',
+  pagination: 'Pagination',
+  previousPage: 'Previous page',
+  property: 'Property',
+  range: (start, end, total) => `${start} to ${end} of ${total}`,
+  removeFilter: 'Remove filter',
+  resetColumns: 'Reset',
+  rowDetails: 'Row details',
+  rows: (count) => `${count} row${count === 1 ? '' : 's'}`,
+  rowsPerPage: 'Rows per page',
+  search: 'Search',
+  selectAllRows: 'Select all rows on this page',
+  selectRow: 'Select row',
+  sort: 'Sort',
+  sortBy: 'Sort by',
+  views: 'Views',
+  visibleColumns: (count, total) => `${count} of ${total} visible`,
+};
+
 export { COLUMN_TAG } from './datagrid-column';
-export type { DataGridView, FilterOperator, FilterOption } from './datagrid-model';
+export type { DataGridColumn, DataGridView, FilterOperator, FilterOption } from './datagrid-model';
 
 // ── Pure module-level helpers ─────────────────────────────────────────────────
 
@@ -51,6 +158,15 @@ export function ariaSortValue(state: SortState, key: string): 'ascending' | 'des
   if (state.key !== key || state.direction === 'none') return 'none';
 
   return state.direction === 'asc' ? 'ascending' : 'descending';
+}
+
+function controlValues(event: Event): string[] {
+  const detail = (event as CustomEvent<{ values?: string[] }>).detail;
+
+  if (Array.isArray(detail?.values)) return detail.values;
+
+  const value = (event.target as HTMLElement & { value?: string }).value ?? '';
+  return value.split(',').filter(Boolean);
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -125,6 +241,8 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
   getRowKey?: (row: T) => string;
   /** Accessible label for the grid. Recommended for screen readers. */
   label?: string;
+  /** Localized labels for built-in controls, filters, selection, and pagination. */
+  labels?: Partial<DataGridLabels>;
   /** Show a busy/loading state with reduced opacity. */
   loading?: boolean;
   /** Number of rows per page. Defaults to `10`. Set to `0` to disable pagination. */
@@ -180,8 +298,8 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
   striped?: boolean;
   /**
    * Named view definitions for the controls bar tab strip.
-   * Each view is a label displayed as a tab; switching tabs fires `view-change`.
-   * The consumer is responsible for restoring filter/sort state per view.
+   * Each view is displayed as a tab and may provide a client-side row filter.
+   * Switching tabs fires `view-change`; the consumer keeps `activeView` controlled.
    * @example
    * ```js
    * grid.views = [
@@ -192,7 +310,7 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
    * grid.activeView = 'all';
    * ```
    */
-  views?: DataGridView[];
+  views?: DataGridView<T>[];
 };
 
 /**
@@ -214,6 +332,7 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
  * @attr {string} density - Cell density: compact | cozy (default) | comfortable
  * @attr {string} empty-text - Text shown when there are no rows
  * @attr {string} label - Accessible label for the grid
+ * @attr {data} labels - Localized built-in control labels and formatters
  * @attr {string} active-view - ID of the currently active view tab
  *
  * @fires selection-change - Fired when row selection changes. detail: { keys: string[], rows: T[] }
@@ -329,11 +448,12 @@ define<OreDataGridProps>(DATAGRID_TAG, {
     fullwidth: prop.bool(false),
     getRowKey: prop.data<(row: Record<string, unknown>) => string>(),
     label: prop.string(),
+    labels: prop.data<Partial<DataGridLabels>>(),
     pageSize: prop.number(10),
     pageSizeOptions: prop.data<number[]>(),
     rows: prop.data<Record<string, unknown>[]>(),
     searchLabel: prop.data<[string, string]>(),
-    searchPlaceholder: prop.string('Search…'),
+    searchPlaceholder: prop.string(),
     selectedKeys: prop.data<string[]>(),
     selectionMode: prop.string<SelectionMode>('none'),
     sortMode: prop.string<SortMode>('client'),
@@ -346,6 +466,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
     const el = getHost();
     const emit = useEmit<OreDataGridEvents>();
     const slots = useSlots();
+    const labels = computed<DataGridLabels>(() => ({ ...DEFAULT_LABELS, ...props.labels.value }));
 
     const isDisabled = computed(() => props.disabled.value === true);
     const selectionMode = computed(() => props.selectionMode.value ?? 'none');
@@ -401,6 +522,16 @@ define<OreDataGridProps>(DATAGRID_TAG, {
       const propCols = props.columns.value;
 
       return propCols !== undefined ? propCols : declarativeColumns.value;
+    });
+    const availableFilterFields = computed(() => {
+      const fields = resolvedColumns.value.map((column) => ({ label: column.label, value: column.key }));
+      const seen = new Set(fields.map((field) => field.value));
+
+      for (const filter of props.filterOptions.value ?? []) {
+        if (!seen.has(filter.key)) fields.push({ label: filter.label, value: filter.key });
+      }
+
+      return fields;
     });
 
     // ── Key resolution ─────────────────────────────────────────────────────────
@@ -496,8 +627,16 @@ define<OreDataGridProps>(DATAGRID_TAG, {
     // Source-backed grids retain source-owned filtering, sorting, and pagination.
 
     const model: DataGridModel = createDataGridModel({
+      activeView: computed(() => (props.views.value ?? []).find((view) => view.id === props.activeView.value)),
       clientSide: computed(() => !hasSource.value),
       columns: resolvedColumns,
+      emptyValueLabel: computed(() => labels.value.emptyValue),
+      filterOperators: computed<Array<{ label: string; value: FilterOperator }>>(() => [
+        { label: labels.value.contains, value: 'contains' },
+        { label: labels.value.equals, value: 'equals' },
+        { label: labels.value.greaterThan, value: 'gt' },
+        { label: labels.value.lessThan, value: 'lt' },
+      ]),
       filterOptions: props.filterOptions,
       getRowKey: resolveKey,
       items: computed<Record<string, unknown>[]>(() =>
@@ -513,6 +652,26 @@ define<OreDataGridProps>(DATAGRID_TAG, {
       selectionMode,
       sortMode: computed(() => props.sortMode.value ?? 'client'),
     });
+
+    const activeSortType = computed<'number' | 'text'>(() => {
+      const column = resolvedColumns.value.find((candidate) => candidate.key === model.sortState.value.key);
+
+      if (column?.sortType) return column.sortType;
+
+      const row = model.filteredRows.value.find((item) => item[column?.key ?? ''] != null);
+      return row && typeof row[column?.key ?? ''] === 'number' ? 'number' : 'text';
+    });
+    const sortDirectionOptions = computed(() =>
+      activeSortType.value === 'number'
+        ? [
+            { label: labels.value.numericAscending, value: 'asc' },
+            { label: labels.value.numericDescending, value: 'desc' },
+          ]
+        : [
+            { label: labels.value.ascending, value: 'asc' },
+            { label: labels.value.descending, value: 'desc' },
+          ],
+    );
 
     const debouncedSearch = debounce((query: unknown) => {
       const source = props.source.value;
@@ -620,26 +779,26 @@ define<OreDataGridProps>(DATAGRID_TAG, {
         const { pageNumber, pageSize: pSize, totalItems } = sourceMeta.value;
         const safePSize = Math.max(1, pSize);
 
-        if (!paginationEnabled.value) return `${totalItems} row${totalItems !== 1 ? 's' : ''}`;
+        if (!paginationEnabled.value) return labels.value.rows(totalItems);
 
-        if (totalItems === 0) return '0 to 0 of 0';
+        if (totalItems === 0) return labels.value.range(0, 0, 0);
 
         const start = (pageNumber - 1) * safePSize + 1;
         const end = Math.min(start + safePSize - 1, totalItems);
 
-        return `${start} to ${end} of ${totalItems}`;
+        return labels.value.range(start, end, totalItems);
       }
 
       const total = model.totalItems.value;
 
-      if (!paginationEnabled.value) return `${total} row${total !== 1 ? 's' : ''}`;
+      if (!paginationEnabled.value) return labels.value.rows(total);
 
-      if (total === 0) return '0 to 0 of 0';
+      if (total === 0) return labels.value.range(0, 0, 0);
 
       const start = model.pageIndex.value * pageSize.value + 1;
       const end = Math.min(start + pageSize.value - 1, total);
 
-      return `${start} to ${end} of ${total}`;
+      return labels.value.range(start, end, total);
     });
 
     // ── Source-aware loading and pagination helpers ───────────────────────────
@@ -678,11 +837,11 @@ define<OreDataGridProps>(DATAGRID_TAG, {
       compact: 'rows-4',
       cozy: 'rows-3',
     };
-    const DENSITY_LABELS: Record<Density, string> = {
-      comfortable: 'Density: Comfortable',
-      compact: 'Density: Compact',
-      cozy: 'Density: Cozy',
-    };
+    const densityLabels = computed<Record<Density, string>>(() => ({
+      comfortable: labels.value.comfortableDensity,
+      compact: labels.value.compactDensity,
+      cozy: labels.value.cozyDensity,
+    }));
 
     const densitySignal = signal<Density>(props.density.value ?? 'cozy');
 
@@ -698,11 +857,6 @@ define<OreDataGridProps>(DATAGRID_TAG, {
       el.setAttribute('density', next);
       emit('density-change', { density: next });
     };
-
-    // ── Filter badge hover state ────────────────────────────────────────────
-    // Drives the dot↔count toggle on the filter toolbar badge: dot at rest,
-    // count on hover/focus so the number is revealed on interaction only.
-    const filterBadgeActive = signal(false);
 
     // ── Row expansion (toggle handler) ───────────────────────────────────────
 
@@ -755,7 +909,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
         <div
           class="dg-tabs"
           role="tablist"
-          aria-label="Views"
+          aria-label="${() => labels.value.views}"
           aria-controls="dg-tabpanel"
           @keydown="${(e: KeyboardEvent) => {
             if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
@@ -802,55 +956,66 @@ define<OreDataGridProps>(DATAGRID_TAG, {
     };
 
     const renderSortPopover = (): unknown => html`
-      <ore-popover class="dg-action-popover" placement="bottom-end" label="Sort" style="--popover-min-width:18rem">
-        <ore-button variant="ghost" size="sm" icon-only label="Sort">
+      <ore-popover class="dg-action-popover" placement="bottom-end" label="${() => labels.value.sort}" style="--popover-min-width:18rem;--popover-overflow:visible">
+        <ore-button
+          class="dg-icon-btn dg-state-trigger"
+          variant="ghost"
+          size="sm"
+          icon-only
+          ?data-customized="${() => model.sortState.value.direction !== 'none'}"
+          label="${() => labels.value.sort}">
           <ore-icon name="arrow-up-down" size="15" stroke-width="1.75" aria-hidden="true"></ore-icon>
         </ore-button>
         <div slot="content" class="dg-pop-sort">
           <div class="dg-pop-header">
-            <span class="dg-pop-title">Sort by</span>
-            <ore-button
-              class="dg-icon-btn"
-              variant="ghost"
-              size="sm"
-              icon-only
-              label="Clear sort"
-              disabled="${() => model.sortState.value.direction === 'none' || undefined}"
-              @click="${() => model.sortTo('', 'none')}">
-              <ore-icon name="trash-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
-            </ore-button>
+            <span class="dg-pop-title">${() => labels.value.sortBy}</span>
+            ${() =>
+              model.sortState.value.direction !== 'none'
+                ? html`
+                    <ore-button
+                      class="dg-icon-btn"
+                      variant="ghost"
+                      size="sm"
+                      icon-only
+                      label="${() => labels.value.clearSort}"
+                      @click="${() => model.sortTo('', 'none')}">
+                      <ore-icon name="trash-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
+                    </ore-button>
+                  `
+                : html``}
           </div>
           <div class="dg-pop-sort-row">
             <ore-select
               class="dg-pop-select"
+              hide-label
               variant="flat"
               size="sm"
               rounded="lg"
-              placeholder="Property"
+              label="${() => labels.value.property}"
+              placeholder="${() => labels.value.property}"
               fullwidth
               value="${() => model.sortState.value.key}"
               options="${() => resolvedColumns.value.map((c) => ({ label: c.label, value: c.key }))}"
-              @change="${(e: CustomEvent<{ values: string[] }>) => {
-                const key = e.detail.values[0] ?? '';
+              @change="${(event: Event) => {
+                const key = controlValues(event)[0] ?? '';
                 const dir = model.sortState.value.direction === 'none' ? 'asc' : model.sortState.value.direction;
 
                 model.sortTo(key, dir);
               }}"></ore-select>
             <ore-select
               class="dg-pop-dir-select"
+              hide-label
               variant="flat"
               size="sm"
               rounded="lg"
+              label="${() => labels.value.sort}"
               fullwidth
               disabled="${() => !model.sortState.value.key || undefined}"
               value="${() => (model.sortState.value.direction === 'none' ? 'asc' : model.sortState.value.direction)}"
-              options="${() => [
-                { label: 'A → Z', value: 'asc' },
-                { label: 'Z → A', value: 'desc' },
-              ]}"
-              @change="${(e: CustomEvent<{ values: string[] }>) => {
+              options="${sortDirectionOptions}"
+              @change="${(event: Event) => {
                 if (model.sortState.value.key) {
-                  model.sortTo(model.sortState.value.key, (e.detail.values[0] ?? 'asc') as 'asc' | 'desc');
+                  model.sortTo(model.sortState.value.key, (controlValues(event)[0] ?? 'asc') as 'asc' | 'desc');
                 }
               }}"></ore-select>
           </div>
@@ -862,37 +1027,23 @@ define<OreDataGridProps>(DATAGRID_TAG, {
       <ore-popover
         class="dg-action-popover"
         placement="bottom-end"
-        label="Filter"
-        style="--popover-min-width:16rem;--popover-max-height:min(90vh,48rem)">
-        ${() =>
-          model.filterDefs.value.length
-            ? html`
-                <ore-badge
-                  anchor="top-end"
-                  color="primary"
-                  size="xs"
-                  count="${() => (filterBadgeActive.value ? model.filterDefs.value.length : undefined)}"
-                  dot="${() => !filterBadgeActive.value || undefined}"
-                  label="${() =>
-                    `${model.filterDefs.value.length} active filter${model.filterDefs.value.length > 1 ? 's' : ''}`}"
-                  aria-hidden="true"
-                  @mouseenter="${() => (filterBadgeActive.value = true)}"
-                  @mouseleave="${() => (filterBadgeActive.value = false)}"
-                  @focusin="${() => (filterBadgeActive.value = true)}"
-                  @focusout="${() => (filterBadgeActive.value = false)}">
-                  <ore-button slot="target" variant="ghost" size="sm" icon-only label="Filter">
-                    <ore-icon name="filter" size="15" stroke-width="1.75" aria-hidden="true"></ore-icon>
-                  </ore-button>
-                </ore-badge>
-              `
-            : html`
-                <ore-button class="dg-icon-btn" variant="ghost" size="sm" icon-only label="Filter">
-                  <ore-icon name="filter" size="15" stroke-width="1.75" aria-hidden="true"></ore-icon>
-                </ore-button>
-              `}
+        label="${() => labels.value.filter}"
+        style="--popover-min-width:18rem;--popover-max-height:min(90vh,48rem)">
+        <ore-button
+          class="dg-icon-btn dg-state-trigger"
+          variant="ghost"
+          size="sm"
+          icon-only
+          ?data-customized="${() => model.filterDefs.value.length > 0}"
+          label="${() =>
+            model.filterDefs.value.length
+              ? `${labels.value.filter}: ${labels.value.activeFilters(model.filterDefs.value.length)}`
+              : labels.value.filter}">
+          <ore-icon name="filter" size="15" stroke-width="1.75" aria-hidden="true"></ore-icon>
+        </ore-button>
         <div slot="content" class="dg-pop-filter">
           <div class="dg-pop-header">
-            <span class="dg-pop-title">Filter by</span>
+            <span class="dg-pop-title">${() => labels.value.filterBy}</span>
             ${() =>
               model.filterDefs.value.length
                 ? html`
@@ -901,7 +1052,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                       variant="ghost"
                       size="sm"
                       icon-only
-                      label="Clear all filters"
+                      label="${() => labels.value.clearAllFilters}"
                       @click="${() => model.clearAllFilters()}">
                       <ore-icon name="trash-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
                     </ore-button>
@@ -912,18 +1063,18 @@ define<OreDataGridProps>(DATAGRID_TAG, {
           <!-- Always-visible field picker: select columns to add filter rules -->
           <div class="dg-pop-filter-fields">
             <ore-combobox
-              placeholder="Add filter…"
+              hide-label
+              label="${() => labels.value.addFilter}"
+              placeholder="${() => labels.value.addFilter}"
               multiple
               fullwidth
               autoclose
-              options="${() =>
-                resolvedColumns.value.map((col) => ({
-                  label: col.label,
-                  value: col.key,
-                }))}"
+              size="sm"
+              variant="flat"
+              options="${availableFilterFields}"
               value="${() => model.filterDefs.value.map((f) => f.key)}"
-              @change="${(e: CustomEvent<{ values: string[] }>) => {
-                model.setActiveFilterKeys(e.detail.values);
+              @change="${(event: Event) => {
+                model.setActiveFilterKeys(controlValues(event));
               }}"></ore-combobox>
           </div>
 
@@ -937,26 +1088,34 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                       <span class="dg-pop-filter-field">${f.label}</span>
                       <ore-select
                         class="dg-pop-filter-op-select"
+                        hide-label
                         variant="ghost"
                         size="sm"
+                        label="${() => labels.value.filterOperator(f.label)}"
                         fullwidth
                         value="${() => model.filterValues.value.get(f.key)?.operator ?? 'contains'}"
                         options="${() => f.operators ?? []}"
-                        @change="${(e: CustomEvent<{ values: string[] }>) => {
-                          model.setFilterOperator(f.key, e.detail.values[0] as FilterOperator);
+                        @change="${(event: Event) => {
+                          const operator = controlValues(event)[0] as FilterOperator | undefined;
+
+                          if (operator) model.setFilterOperator(f.key, operator);
                         }}"></ore-select>
                       <ore-button
                         class="dg-icon-btn"
                         variant="ghost"
                         size="sm"
                         icon-only
-                        label="Remove filter"
+                        label="${() => labels.value.removeFilter}"
                         @click="${() => model.removeFilter(f.key)}">
                         <ore-icon name="trash-2" size="13" stroke-width="1.75" aria-hidden="true"></ore-icon>
                       </ore-button>
                     </div>
                     <ore-combobox
                       class="dg-filter"
+                      hide-label
+                      size="sm"
+                      variant="flat"
+                      label="${() => f.label}"
                       placeholder="${() => f.label}"
                       options="${() => f.options}"
                       value="${() => [...(model.filterValues.value.get(f.key)?.values ?? [])]}"
@@ -964,8 +1123,8 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                       multiple
                       fullwidth
                       autoclose
-                      @change="${(e: CustomEvent<{ values: string[] }>) => {
-                        model.setFilter(f.key, e.detail.values);
+                      @change="${(event: Event) => {
+                        model.setFilter(f.key, controlValues(event));
                       }}"></ore-combobox>
                   </div>
                 `,
@@ -979,32 +1138,58 @@ define<OreDataGridProps>(DATAGRID_TAG, {
       <ore-popover
         class="dg-action-popover"
         placement="bottom-end"
-        label="Column options"
+        label="${() => labels.value.columnOptions}"
         style="--popover-min-width:18rem">
-        <ore-button class="dg-icon-btn" variant="ghost" size="sm" icon-only label="Column options">
+        <ore-button
+          class="dg-icon-btn dg-state-trigger dg-column-trigger"
+          variant="ghost"
+          size="sm"
+          icon-only
+          ?data-customized="${() => model.hiddenColumns.value.size > 0}"
+          label="${() =>
+            model.hiddenColumns.value.size
+              ? `${labels.value.columnOptions}: ${labels.value.hiddenColumns(model.hiddenColumns.value.size)}`
+              : labels.value.columnOptions}">
           <ore-icon name="columns-2" size="15" stroke-width="1.75" aria-hidden="true"></ore-icon>
         </ore-button>
-        <div slot="content" class="dg-pop-col-list" role="menu" aria-label="Column visibility">
-          ${() =>
-            resolvedColumns.value.map(
-              (col) => html`
-                <ore-button
-                  class="dg-pop-col-item"
-                  role="menuitemcheckbox"
-                  variant="ghost"
-                  size="sm"
-                  aria-checked="${() => String(!model.hiddenColumns.value.has(col.key))}"
-                  @click="${() => model.toggleColumnVisibility(col.key)}">
-                  <ore-icon
-                    slot="prefix"
-                    name="${() => (model.hiddenColumns.value.has(col.key) ? 'eye-off' : 'eye')}"
-                    size="13"
-                    stroke-width="2"
-                    aria-hidden="true"></ore-icon>
-                  ${col.label}
-                </ore-button>
-              `,
-            )}
+        <div slot="content" class="dg-pop-col">
+          <div class="dg-pop-header">
+            <span class="dg-pop-heading"><strong class="dg-pop-title">${() =>
+              labels.value.columnVisibility}</strong><small>${() =>
+              labels.value.visibleColumns(
+                model.visibleColumns.value.length,
+                resolvedColumns.value.length,
+              )}</small></span>
+            ${() =>
+              model.hiddenColumns.value.size
+                ? html`
+                    <ore-button
+                      class="dg-icon-btn"
+                      variant="ghost"
+                      size="sm"
+                      icon-only
+                      label="${() => labels.value.resetColumns}"
+                      @click="${() => model.resetColumnVisibility()}">
+                      <ore-icon name="trash-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
+                    </ore-button>
+                  `
+                : html``}
+          </div>
+          <div class="dg-pop-col-list" role="group" aria-label="${() => labels.value.columnVisibility}">
+            ${() =>
+              resolvedColumns.value.map(
+                (col) => html`
+                  <ore-checkbox
+                    class="dg-pop-col-item"
+                    checked="${() => !model.hiddenColumns.value.has(col.key)}"
+                    disabled="${() =>
+                      !model.hiddenColumns.value.has(col.key) && model.visibleColumns.value.length === 1
+                        ? true
+                        : undefined}"
+                    @change="${() => model.toggleColumnVisibility(col.key)}">${col.label}</ore-checkbox>
+                `,
+              )}
+          </div>
         </div>
       </ore-popover>
     `;
@@ -1027,7 +1212,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
             variant="ghost"
             size="sm"
             icon-only
-            label="${() => DENSITY_LABELS[densitySignal.value]}"
+            label="${() => densityLabels.value[densitySignal.value]}"
             @click="${cycleDensity}">
             <ore-icon
               name="${() => DENSITY_ICONS[densitySignal.value]}"
@@ -1051,13 +1236,14 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                       variant="flat"
                       size="sm"
                       rounded="full"
-                      placeholder="${() => props.searchPlaceholder.value ?? 'Search…'}"
+                      aria-label="${() => labels.value.search}"
+                      placeholder="${() => props.searchPlaceholder.value ?? `${labels.value.search}…`}"
                       disabled="${() => isDisabled.value || undefined}"
                       ref="${(inputEl: HTMLElement | null) => {
                         if (inputEl) requestAnimationFrame(() => (inputEl as HTMLElement).focus());
                       }}"
-                      @input="${(e: CustomEvent<{ value: string }>) => {
-                        debouncedSearch(e.detail.value);
+                      @input="${(event: Event) => {
+                        debouncedSearch((event.currentTarget as HTMLElement & { value: string }).value);
                       }}"
                       @keydown="${(e: KeyboardEvent) => {
                         if (e.key === 'Escape') {
@@ -1077,7 +1263,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
               size="sm"
               icon-only
               label="${() => {
-                const [open, close] = props.searchLabel.value ?? ['Search', 'Close search'];
+                const [open, close] = props.searchLabel.value ?? [labels.value.search, labels.value.closeSearch];
 
                 return model.searchActive.value ? close : open;
               }}"
@@ -1098,7 +1284,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
         </div>
       </div>
 
-      <div id="dg-tabpanel" class="dg-scroll" role="tabpanel" aria-label="Data">
+      <div id="dg-tabpanel" class="dg-scroll" role="tabpanel" aria-label="${() => labels.value.data}">
         <div class="dg-loading-overlay">
           <ore-icon name="loader-2" size="24" class="dg-spin" aria-hidden="true"></ore-icon>
         </div>
@@ -1130,7 +1316,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                           checked="${() => model.isAllSelected()}"
                           indeterminate="${isSomeSelected}"
                           ?disabled="${isDisabled}"
-                          aria-label="Select all rows on this page"
+                          aria-label="${() => labels.value.selectAllRows}"
                           @change="${() => {
                             if (!isDisabled.value) model.selectAll();
                           }}"></ore-checkbox>
@@ -1211,7 +1397,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                         class="dg-th dg-th-expand"
                         role="columnheader"
                         scope="col"
-                        aria-label="Row details"
+                        aria-label="${() => labels.value.rowDetails}"
                         tabindex="-1"></th>
                     `
                   : html``}
@@ -1238,7 +1424,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                                         model.resetSearch();
                                         model.resetFilters();
                                       }}">
-                                      Clear all filters & search
+                                      ${() => labels.value.clearFiltersAndSearch}
                                     </ore-button>
                                   </div>
                                 `
@@ -1297,7 +1483,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                                     class="dg-check"
                                     checked="${() => model.selectedKeys.value.has(key)}"
                                     ?disabled="${isDisabled}"
-                                    aria-label="Select row"
+                                    aria-label="${() => labels.value.selectRow}"
                                     tabindex="-1"
                                     @click="${(e: MouseEvent) => e.stopPropagation()}"
                                     @change="${() => {
@@ -1307,7 +1493,9 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                               `
                             : html``}
                         ${visibleColumns.value.map((col: DataGridColumn, colIdx: number) => {
-                          const value = getCellValue(col, item as Record<string, unknown>);
+                          const row = item as Record<string, unknown>;
+                          const value = getCellValue(col, row);
+                          const content: HTMLResult | string = col.renderCell?.(row) ?? value;
 
                           const isLastCol = colIdx === visibleColumns.value.length - 1;
 
@@ -1323,7 +1511,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                                 return ac.row === rowIdx && ac.col === colIdx + checkOffset.value ? '0' : '-1';
                               }}"
                               title="${value}">
-                              ${value}
+                              ${content}
                             </td>
                           `;
                         })}
@@ -1351,7 +1539,7 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                                     size="sm"
                                     icon-only
                                     tabindex="-1"
-                                    label="${() => (expandedKeys.value.has(key) ? 'Collapse row' : 'Expand row')}"
+                                    label="${() => (expandedKeys.value.has(key) ? labels.value.collapseRow : labels.value.expandRow)}"
                                     aria-expanded="${() => String(expandedKeys.value.has(key))}"
                                     disabled="${() => isDisabled.value || undefined}"
                                     @click="${(e: MouseEvent) => {
@@ -1402,16 +1590,11 @@ define<OreDataGridProps>(DATAGRID_TAG, {
       ${() =>
         paginationEnabled.value
           ? html`
-              <div class="dg-footer" part="footer" role="navigation" aria-label="Pagination">
-                ${() =>
-                  !(props.pageSizeOptions.value ?? []).length
-                    ? html`
-                        <span class="dg-footer-info" dir="ltr" aria-live="polite" aria-atomic="true">
-                          ${paginationInfo}
-                        </span>
-                      `
-                    : html``}
-                <div class="dg-footer-end">
+              <div class="dg-footer" part="footer" role="navigation" aria-label="${() => labels.value.pagination}">
+                <div class="dg-footer-start">
+                  <span class="dg-footer-info" dir="ltr" aria-live="polite" aria-atomic="true">
+                    ${paginationInfo}
+                  </span>
                   ${() => {
                     const opts = props.pageSizeOptions.value ?? [];
 
@@ -1421,12 +1604,13 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                             <ore-select
                               class="dg-page-size-select"
                               fullwidth
-                              aria-label="Rows per page"
+                              hide-label
+                              label="${() => labels.value.rowsPerPage}"
                               value="${() => String(pageSize.value)}"
                               options="${() => opts.map((n) => ({ label: String(n), value: String(n) }))}"
                               disabled="${() => isDisabled.value || undefined}"
-                              @change="${(e: CustomEvent<{ values: string[] }>) => {
-                                const n = parseInt(e.detail.values[0], 10);
+                              @change="${(event: Event) => {
+                                const n = parseInt(controlValues(event)[0] ?? '', 10);
 
                                 if (!Number.isNaN(n)) {
                                   pageSize.value = n;
@@ -1438,13 +1622,14 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                         `
                       : html``;
                   }}
-                  <div class="dg-pagination" role="group" aria-label="Page navigation">
+                </div>
+                <div class="dg-pagination" role="group" aria-label="${() => labels.value.pageNavigation}">
                     <ore-button
                       class="dg-page-btn"
                       variant="ghost"
                       size="sm"
                       icon-only
-                      label="Previous page"
+                      label="${() => labels.value.previousPage}"
                       disabled="${() => !effectiveHasPrev.value || isDisabled.value}"
                       @click="${() => handlePage('prev')}">
                       <ore-icon name="chevron-left" size="14" stroke-width="2" aria-hidden="true"></ore-icon>
@@ -1463,12 +1648,11 @@ define<OreDataGridProps>(DATAGRID_TAG, {
                       variant="ghost"
                       size="sm"
                       icon-only
-                      label="Next page"
+                      label="${() => labels.value.nextPage}"
                       disabled="${() => !effectiveHasNext.value || isDisabled.value}"
                       @click="${() => handlePage('next')}">
                       <ore-icon name="chevron-right" size="14" stroke-width="2" aria-hidden="true"></ore-icon>
                     </ore-button>
-                  </div>
                 </div>
               </div>
             `

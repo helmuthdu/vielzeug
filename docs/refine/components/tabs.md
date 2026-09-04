@@ -204,6 +204,26 @@ Set `color` on `ore-tabs` to apply a theme color — it propagates automatically
 
 </ComponentPreview>
 
+## Compact Density
+
+Use `density="compact"` for dense toolbars, filters, table controls, and secondary navigation. It renders a 24px tab target with tighter 4px/8px spacing and a smaller radius while preserving selection, focus, keyboard navigation, colors, and visual variants. Standard density remains the default for primary content navigation.
+
+<ComponentPreview>
+
+```html
+<ore-tabs value="all" density="compact" label="Issue views">
+  <ore-tab-item slot="tabs" value="all">All issues</ore-tab-item>
+  <ore-tab-item slot="tabs" value="open">Open</ore-tab-item>
+  <ore-tab-item slot="tabs" value="closed">Closed</ore-tab-item>
+
+  <ore-tab-panel value="all"><p>All issues.</p></ore-tab-panel>
+  <ore-tab-panel value="open"><p>Open issues.</p></ore-tab-panel>
+  <ore-tab-panel value="closed"><p>Closed issues.</p></ore-tab-panel>
+</ore-tabs>
+```
+
+</ComponentPreview>
+
 ## Vertical Tabs
 
 Use `orientation="vertical"` to place the tab list on the side. This works well for settings pages, account sections, or docs-style navigation.
@@ -343,6 +363,7 @@ Disabled tabs are skipped during keyboard navigation.
 | `value`       | `string`                                                                  | —              | Value of the currently selected tab                                   |
 | `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'glass' \| 'frost'`        | `'solid'`      | Visual style of the tab bar                                           |
 | `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`         | Size applied to all tab items                                         |
+| `density`     | `'default' \| 'compact'`                                                    | `'default'`    | Spatial density; compact renders a 24px tab control                   |
 | `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —              | Theme color propagated to all tab items                               |
 | `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Tab list layout direction                                             |
 | `activation`  | `'auto' \| 'manual'`                                                      | `'auto'`       | `auto`: arrow keys select immediately; `manual`: Enter/Space confirms |
@@ -367,6 +388,7 @@ Disabled tabs are skipped during keyboard navigation.
 | `value`    | `string`                                                                  | —         | **Required.** Must match the corresponding `ore-tab-panel` value |
 | `active`   | `boolean`                                                                 | `false`   | Whether this tab is selected (managed by `ore-tabs`)             |
 | `disabled` | `boolean`                                                                 | `false`   | Prevents the tab from being selected                            |
+| `density`  | `'default' \| 'compact'`                                                   | inherited | Inherited from parent `ore-tabs`                                |
 | `size`     | `'sm' \| 'md' \| 'lg'`                                                    | inherited | Inherited from parent `ore-tabs`                                 |
 | `variant`  | `string`                                                                  | inherited | Inherited from parent `ore-tabs`                                 |
 | `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | inherited | Inherited from parent `ore-tabs`                                 |

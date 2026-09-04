@@ -171,3 +171,16 @@
     }
   }
 }
+
+@layer refine.density {
+  :host([density='compact']) {
+    --tab-item-radius: var(--rounded-md);
+    --tab-item-font-size: var(--text-xs);
+    --tab-item-padding: var(--size-1) var(--size-2);
+  }
+
+  :host([density='compact']) button {
+    gap: var(--size-1);
+    min-height: var(--size-6);
+  }
+}

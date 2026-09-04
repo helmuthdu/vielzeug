@@ -21,6 +21,7 @@ import styles from './tabs.css?inline';
 /** Context provided by ore-tabs to its ore-tab-item and ore-tab-panel children. */
 export type TabsContext = {
   color: Readable<ThemeColor | undefined>;
+  density: Readable<'compact' | 'default'>;
   orientation: Readable<'horizontal' | 'vertical'>;
   size: Readable<ComponentSize | undefined>;
   value: Readable<string | undefined>;
@@ -42,6 +43,8 @@ export type OreTabsProps = {
   activation?: 'auto' | 'manual';
   /** Theme color */
   color?: ThemeColor;
+  /** Spatial density; compact renders a 24px tab control for dense interfaces. */
+  density?: 'compact' | 'default';
   /** Accessible label for the tablist (passed as aria-label). Use when there is no visible heading labelling the tabs. */
   label?: string;
   /** Tab list orientation */
@@ -64,6 +67,7 @@ export type OreTabsProps = {
  * @attr {string} value - The value of the currently selected tab
  * @attr {string} variant - Visual variant: 'solid' | 'flat' | 'bordered' | 'ghost' | 'glass' | 'frost'
  * @attr {string} size - Size: 'sm' | 'md' | 'lg'
+ * @attr {string} density - Spatial density: 'default' | 'compact'
  * @attr {string} color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  *
  * @fires change - Emitted when the active tab changes with detail: { value: string }
@@ -96,6 +100,7 @@ define<OreTabsProps>(TABS_TAG, {
     ...themableBundle,
     ...sizableBundle,
     activation: prop.oneOf(['auto', 'manual'] as const, 'auto'),
+    density: prop.oneOf(['compact', 'default'] as const, 'default'),
     label: prop.string(),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'horizontal'),
     value: prop.string(),
@@ -187,6 +192,7 @@ define<OreTabsProps>(TABS_TAG, {
 
     provide(TABS_CTX, {
       color: props.color,
+      density: computed(() => props.density.value ?? 'default'),
       orientation: computed(() => props.orientation.value ?? 'horizontal'),
       size: props.size,
       value: selectedValue,

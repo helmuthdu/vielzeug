@@ -11,6 +11,8 @@ export type OreComboboxEvents = {
 
 export type ComboboxOptionInput = {
   disabled?: boolean;
+  /** Explanation displayed and announced when the option is disabled. */
+  disabledReason?: string;
   iconEl?: Element | null;
   label?: string;
   value: string;
@@ -18,6 +20,7 @@ export type ComboboxOptionInput = {
 
 export type ComboboxOptionItem = {
   disabled: boolean;
+  disabledReason?: string;
   iconEl: Element | null;
   label: string;
   value: string;
@@ -32,6 +35,8 @@ export type OreComboboxProps = Omit<
   /** Allow typing a new value to create a new option */
   creatable?: boolean;
   'label-placement'?: 'outside' | 'inset';
+  /** Hide the visible label while preserving the combobox's accessible name. */
+  'hide-label'?: boolean;
   /** Show loading state in the dropdown */
   loading?: boolean;
   multiple?: boolean;
@@ -44,6 +49,8 @@ export type OreComboboxProps = Omit<
 
 export type OreComboboxOptionProps = {
   disabled?: boolean;
+  /** Explanation displayed and announced when the option is disabled. */
+  'disabled-reason'?: string;
   /** Explicit label text; falls back to the element's text content. */
   label?: string;
   value?: string;

@@ -68,6 +68,10 @@ When tests are primary scope:
 - New feature or test-only change: do not invent sibling work.
 - Do not propagate style-only similarity. Report searched scope and confirmed matches.
 
+## Cross-cutting removals and migrations
+
+When implementing work that meets `.ai/tasks/review.md`'s completeness-inventory criteria, create the evidence inventory before editing and reconcile it after validation. Keep it in the working plan or completion report unless a durable artifact is explicitly justified. A green test run does not replace checking applicable dependencies, generated artifacts, demos, docs, configuration, and release surfaces for leftovers.
+
 ## Validation
 
 Classify each changed file and apply the matching validation from the enforcement map in `.ai/core/conventions.md`. Run the narrowest useful validation for the changed surface — `quick` depth may combine checks for a trivial change, but never skips validation required by a public API or cross-package change.

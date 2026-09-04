@@ -29,6 +29,15 @@ describe('ore-tabs', () => {
       expect(fixture.query('.panels')).toBeTruthy();
     });
 
+    it('propagates compact density to tab items', async () => {
+      fixture = await mount('ore-tabs', { attrs: { density: 'compact', value: 'overview' }, html: htmlTabs });
+      await fixture.flush();
+
+      expect(
+        [...fixture.element.querySelectorAll('ore-tab-item')].every((tab) => tab.getAttribute('density') === 'compact'),
+      ).toBe(true);
+    });
+
     it('emits change when a different tab is clicked', async () => {
       fixture = await mount('ore-tabs', { attrs: { value: 'overview' }, html: htmlTabs });
 

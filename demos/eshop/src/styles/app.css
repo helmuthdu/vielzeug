@@ -408,13 +408,13 @@ body {
   border-radius: var(--rounded-full);
 }
 
-.catalog__price-option input:checked + span {
+:where(.catalog__price-option input:checked + span) {
   color: var(--color-contrast-50);
   background: var(--text-color-heading);
   border-color: var(--text-color-heading);
 }
 
-.catalog__price-option input:focus-visible + span {
+:where(.catalog__price-option input:focus-visible + span) {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }

@@ -200,7 +200,7 @@ Component registration happens through side-effect imports such as `@vielzeug/re
 
 ### Components
 
-**Content:** `ore-avatar`, `ore-avatar-group`, `ore-breadcrumb`, `ore-card`, `ore-carousel`, `ore-carousel-slide`, `ore-chat-message`, `ore-icon`, `ore-list`, `ore-list-item`, `ore-marquee`, `ore-pagination`, `ore-separator`, `ore-step`, `ore-stepper`, `ore-table`, `ore-text`
+**Content:** `ore-avatar`, `ore-avatar-group`, `ore-breadcrumb`, `ore-card`, `ore-carousel`, `ore-carousel-slide`, `ore-chat-message`, `ore-icon`, `ore-list`, `ore-list-item`, `ore-marquee`, `ore-pagination`, `ore-separator`, `ore-stats`, `ore-step`, `ore-stepper`, `ore-table`, `ore-text`
 
 **Disclosure:** `ore-accordion`, `ore-accordion-item`, `ore-tabs`, `ore-tab-item`, `ore-tab-panel`
 

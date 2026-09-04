@@ -1,0 +1,70 @@
+:host {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.company-mark__surface {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--company-mark-size, 36px);
+  height: var(--company-mark-size, 36px);
+  overflow: hidden;
+  color: var(--signal-cobalt);
+  background: var(--signal-cobalt-soft);
+  border: 1px solid color-mix(in srgb, var(--signal-cobalt) 40%, var(--signal-divider));
+  border-radius: var(--company-mark-radius, 8px);
+}
+
+.company-mark__initials {
+  position: absolute;
+  right: var(--company-mark-initials-inset, 2px);
+  bottom: var(--company-mark-initials-inset, 2px);
+  min-width: var(--company-mark-initials-width, 16px);
+  padding: 1px 3px;
+  font-size: var(--company-mark-initials-size, 8px);
+  font-weight: 800;
+  line-height: var(--company-mark-initials-height, 12px);
+  color: var(--color-primary-content);
+  text-align: center;
+  background: var(--signal-cobalt);
+  border-radius: 4px;
+}
+
+.company-mark__bars {
+  display: flex;
+  gap: var(--company-mark-bar-gap, 2px);
+  align-items: end;
+  height: var(--company-mark-bar-height, 18px);
+}
+
+.company-mark__bar {
+  width: var(--company-mark-bar-width, 3px);
+  height: 25%;
+  background: currentcolor;
+  border-radius: 3px 3px 1px 1px;
+}
+
+.company-mark__bar:nth-child(2) {
+  color: var(--signal-teal);
+}
+
+.company-mark__bar:nth-child(3) {
+  color: var(--signal-violet);
+}
+
+.company-mark__bar:nth-child(4) {
+  color: var(--signal-amber);
+}
+
+.company-mark__bar--level-2 {
+  height: 50%;
+}
+
+.company-mark__bar--level-3 {
+  height: 75%;
+}
+
+.company-mark__bar--level-4 {
+  height: 100%;
+}

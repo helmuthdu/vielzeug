@@ -14,6 +14,8 @@ export type OreTabItemProps = {
   color?: ThemeColor;
   /** Disable this tab */
   disabled?: boolean;
+  /** Spatial density (inherited from ore-tabs) */
+  density?: 'compact' | 'default';
   /** Size (inherited from ore-tabs) */
   size?: ComponentSize;
   /** Unique value identifier — must match a ore-tab-panel value */
@@ -30,6 +32,7 @@ export type OreTabItemProps = {
  * @attr {string} value - Unique identifier, matches the corresponding ore-tab-panel value
  * @attr {boolean} active - Set by the parent ore-tabs when this tab is selected
  * @attr {boolean} disabled - Prevents selection
+ * @attr {string} density - Inherited spatial density: 'default' | 'compact'
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {string} variant - Inherited from ore-tabs: 'solid' | 'flat' | 'bordered' | 'ghost' | 'glass' | 'frost'
  * @attr {string} color - Inherited from ore-tabs: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
@@ -60,6 +63,7 @@ define<OreTabItemProps>(TAB_ITEM_TAG, {
     ...disablableBundle,
     active: prop.bool(false),
     color: prop.string<ThemeColor>(),
+    density: prop.oneOf(['compact', 'default'] as const, 'default'),
     size: prop.string<ComponentSize>(),
     value: prop.string(''),
     variant: prop.string<SurfaceVariant>(),
@@ -73,10 +77,13 @@ define<OreTabItemProps>(TAB_ITEM_TAG, {
     if (tabsCtx) {
       watch(() => {
         const color = tabsCtx.color.value;
+        const density = tabsCtx.density.value;
         const size = tabsCtx.size.value;
         const variant = tabsCtx.variant.value;
 
         if (color !== undefined) el.setAttribute('color', color);
+
+        el.setAttribute('density', density);
 
         if (size !== undefined) el.setAttribute('size', size);
 

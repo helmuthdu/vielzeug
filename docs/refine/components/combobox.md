@@ -140,7 +140,7 @@ Add an `icon` named slot inside any `<ore-combobox-option>` for a leading icon. 
 
 ## Label Placement
 
-The label can be placed **inset** (inside the field, above the input — default) or **outside** (above the field border). Always provide a visible label so the purpose is clear when the list is hidden.
+The label can be placed **inset** (inside the field, above the input — default) or **outside** (above the field border). Use `hide-label` only when surrounding context and placeholder text make the purpose clear; the label remains the combobox's accessible name.
 
 <ComponentPreview height="400px">
 
@@ -150,6 +150,10 @@ The label can be placed **inset** (inside the field, above the input — default
   <ore-combobox-option value="b">Option B</ore-combobox-option>
 </ore-combobox>
 <ore-combobox label="Outside label" label-placement="outside">
+  <ore-combobox-option value="a">Option A</ore-combobox-option>
+  <ore-combobox-option value="b">Option B</ore-combobox-option>
+</ore-combobox>
+<ore-combobox label="Compact option" hide-label placeholder="Choose an option…">
   <ore-combobox-option value="a">Option A</ore-combobox-option>
   <ore-combobox-option value="b">Option B</ore-combobox-option>
 </ore-combobox>
@@ -227,7 +231,7 @@ Pair `error` text with `color="error"` for form validation feedback.
 
 ## Disabled Options
 
-Add the `disabled` attribute on a `<ore-combobox-option>` to prevent selection of individual options.
+Add the `disabled` attribute on a `<ore-combobox-option>` to prevent selection. Add `disabled-reason` to explain why the choice is unavailable; the reason remains visible and is included in the option's accessible name.
 
 <ComponentPreview height="400px">
 
@@ -235,12 +239,20 @@ Add the `disabled` attribute on a `<ore-combobox-option>` to prevent selection o
 <ore-combobox label="Role">
   <ore-combobox-option value="admin">Admin</ore-combobox-option>
   <ore-combobox-option value="editor">Editor</ore-combobox-option>
-  <ore-combobox-option value="viewer" disabled>Viewer (no permission)</ore-combobox-option>
-  <ore-combobox-option value="guest" disabled>Guest (no permission)</ore-combobox-option>
+  <ore-combobox-option value="viewer" disabled disabled-reason="Requires editor access">Viewer</ore-combobox-option>
+  <ore-combobox-option value="guest" disabled disabled-reason="Invitations are paused">Guest</ore-combobox-option>
 </ore-combobox>
 ```
 
 </ComponentPreview>
+
+The JavaScript `options` property uses the camelCase equivalent:
+
+```js
+combobox.options = [
+  { value: 'viewer', label: 'Viewer', disabled: true, disabledReason: 'Requires editor access' },
+];
+```
 
 ## Disabled State
 
@@ -412,6 +424,7 @@ cb.addEventListener('open-change', (e) => {
 | `name`            | `string`                                                                  | `''`      | Form field name                                             |
 | `label`           | `string`                                                                  | `''`      | Label text                                                  |
 | `label-placement` | `'inset' \| 'outside'`                                                    | `'inset'` | Label positioning                                           |
+| `hide-label`      | `boolean`                                                                  | `false`   | Hide the visual label while retaining its accessible name   |
 | `placeholder`     | `string`                                                                  | `''`      | Input placeholder text                                      |
 | `helper`          | `string`                                                                  | `''`      | Helper text shown below the field                           |
 | `error`           | `string`                                                                  | `''`      | Error message; overrides helper text                        |

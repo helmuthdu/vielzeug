@@ -225,6 +225,24 @@ select.options = [
 
 Assigning a new array to `options` at any time updates the dropdown immediately. When both `<option>` children and `options` are provided, the JS property takes precedence.
 
+## Disabled Option Reasons
+
+Explain unavailable choices instead of relying on a greyed-out state alone. For native options, use `data-disabled-reason`; for JavaScript options, use `disabledReason`. The reason appears beside the option, is included in its accessible name, and exposes the full text on hover when truncated.
+
+```html
+<ore-select label="Plan">
+  <option value="starter">Starter</option>
+  <option value="enterprise" disabled data-disabled-reason="Contact sales to enable">Enterprise</option>
+</ore-select>
+```
+
+```js
+select.options = [
+  { value: 'starter', label: 'Starter' },
+  { value: 'enterprise', label: 'Enterprise', disabled: true, disabledReason: 'Contact sales to enable' },
+];
+```
+
 ## In a Form
 
 `ore-select` is form-associated. Read the value via `FormData` or a `change` event. Supply a placeholder `<option value="">…</option>` when the field is not pre-selected.

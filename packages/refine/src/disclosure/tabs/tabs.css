@@ -212,3 +212,20 @@
     display: none;
   }
 }
+
+@layer refine.density {
+  :host([density='compact']) {
+    --tabs-radius: var(--rounded-md);
+
+    height: auto;
+  }
+
+  :host([density='compact']) [role='tablist'] {
+    gap: var(--size-1);
+    padding: var(--size-1);
+  }
+
+  :host([density='compact'][variant='ghost']) [role='tablist'] {
+    padding: 0;
+  }
+}

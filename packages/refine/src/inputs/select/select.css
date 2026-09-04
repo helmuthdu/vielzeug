@@ -167,6 +167,17 @@
     white-space: nowrap;
   }
 
+  .disabled-reason {
+    flex: 0 1 45%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--text-xs);
+    color: var(--text-color-tertiary);
+    text-align: end;
+    white-space: nowrap;
+  }
+
   .option:hover:not([data-disabled]) {
     background: var(--color-contrast-100);
   }
@@ -187,9 +198,8 @@
   }
 
   .option[data-disabled] {
-    color: var(--color-contrast-400);
+    color: var(--color-contrast-500);
     cursor: not-allowed;
-    opacity: 0.6;
   }
 
   .option-check {

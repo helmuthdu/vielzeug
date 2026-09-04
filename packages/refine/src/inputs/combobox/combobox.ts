@@ -40,6 +40,7 @@ export type { OreComboboxEvents, OreComboboxProps } from './combobox.types';
  * @attr {boolean} multiple - Enable multiple selection
  * @attr {boolean} creatable - Allow users to create custom options from search query
  * @attr {boolean} no-filter - Disable client-side filtering (useful for server-side search)
+ * @attr {boolean} hide-label - Hide the visible label while retaining its accessible name
  * @attr {string} placeholder - Placeholder text
  * @attr {boolean} required - Require a non-blank selection for native form validation
  * @attr {boolean} success - Show an inline success check icon (suppressed while `error` is set)
@@ -86,6 +87,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     error: prop.string(),
     fullwidth: prop.bool(false),
     helper: prop.string(),
+    'hide-label': prop.bool(false),
     label: prop.string(),
     'label-placement': prop.oneOf(['inset', 'outside'] as const, 'inset'),
     loading: prop.bool(false),
@@ -226,6 +228,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
     function normalizeOption(option: ComboboxOptionInput): ComboboxOptionItem {
       return {
         disabled: Boolean(option.disabled),
+        disabledReason: option.disabledReason,
         iconEl: option.iconEl ?? null,
         label: option.label ?? option.value,
         value: option.value,
@@ -550,7 +553,7 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
       });
 
       observer.observe(el, {
-        attributeFilter: ['disabled', 'label', 'value'],
+        attributeFilter: ['disabled', 'disabled-reason', 'label', 'value'],
         attributes: true,
         childList: true,
         subtree: true,
@@ -746,6 +749,9 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
       stopObserving();
     });
 
+    const hideLabel = () => props['hide-label'].value;
+    const inputAriaLabel = () => (hideLabel() ? (props.label.value ?? '') : null);
+    const inputLabel = () => (hideLabel() ? '' : (props.label.value ?? ''));
     const inputColor = () => props.color?.value ?? undefined;
     const inputSize = () => props.size?.value ?? undefined;
     const inputVariant = () => props.variant?.value ?? undefined;
@@ -757,7 +763,8 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
       <ore-input
         class="trigger"
         ref=${bitInputRef}
-        label="${() => props.label.value ?? ''}"
+        aria-label="${inputAriaLabel}"
+        label="${inputLabel}"
         placeholder="${inputPlaceholder}"
         label-placement="${() => props['label-placement'].value ?? 'inset'}"
         color="${inputColor}"
@@ -882,6 +889,11 @@ define<OreComboboxProps>(COMBOBOX_TAG, {
                     isMultiple() ? selectedValues.value.includes(option.value) : selectedValue.value === option.value}
                   ?data-disabled=${option.disabled}>
                   <span>${option.label}</span>
+                  ${
+                    option.disabled && option.disabledReason
+                      ? html`<small class="disabled-reason" title="${option.disabledReason}">${option.disabledReason}</small>`
+                      : html``
+                  }
                   <span class="option-check" aria-hidden="true">
                     <ore-icon name="check" size="14" stroke-width="2.5" aria-hidden="true"></ore-icon>
                   </span>

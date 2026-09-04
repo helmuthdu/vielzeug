@@ -19,6 +19,16 @@ test.describe('Accessibility', () => {
     expect(results.violations).toEqual([]);
   });
 
+  test('actionable list passes a11y checks', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-list><ore-list-item actionable value="deal-1">Enterprise deal<span slot="description">Acme</span></ore-list-item></ore-list>',
+    );
+
+    const results = await axeCheck(page);
+
+    expect(results.violations).toEqual([]);
+  });
+
   test('plain (non-selectable) list with a swipe-revealed action panel passes a11y checks', async ({
     page,
     refinePage,
@@ -58,6 +68,25 @@ test.describe('Accessibility', () => {
       expect(results.violations).toEqual([]);
     },
   );
+});
+
+test.describe('Layout', () => {
+  test('empty edge slots do not add gaps around content', async ({ page, refinePage }) => {
+    await refinePage.mountComponent(
+      '<ore-list style="width:300px"><ore-list-item id="item">Inbox</ore-list-item></ore-list>',
+    );
+
+    const insets = await page.locator('#item').evaluate((item) => {
+      const root = item.shadowRoot!;
+      const row = root.querySelector<HTMLElement>('[part="row"]')!.getBoundingClientRect();
+      const content = root.querySelector<HTMLElement>('[part="content"]')!.getBoundingClientRect();
+
+      return { end: row.right - content.right, start: content.left - row.left };
+    });
+
+    expect(insets.start).toBeCloseTo(16, 0);
+    expect(insets.end).toBeCloseTo(24, 0);
+  });
 });
 
 test.describe('Selection', () => {

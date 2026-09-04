@@ -59,11 +59,12 @@ describe('parseSlottedOptions', () => {
 
   it('reads disabled attribute', () => {
     const enabled = makeOption({ value: 'a' }, 'A');
-    const disabled = makeOption({ disabled: '', value: 'b' }, 'B');
+    const disabled = makeOption({ disabled: '', 'disabled-reason': 'Unavailable in this region', value: 'b' }, 'B');
     const results = parseSlottedOptions([enabled, disabled]);
 
     expect(results[0].disabled).toBe(false);
     expect(results[1].disabled).toBe(true);
+    expect(results[1].disabledReason).toBe('Unavailable in this region');
   });
 });
 

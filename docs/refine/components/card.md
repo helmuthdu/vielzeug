@@ -386,18 +386,14 @@ Set `interactive` to enable hover/active states, keyboard activation (Enter/Spac
 
 ### Stats Card
 
+Use the specialized [`ore-stats`](./stats.md) for labeled metrics, trends, icons, and compact visuals instead of rebuilding that structure from a generic card.
+
 <ComponentPreview center>
 
 ```html
-<ore-card elevation="2" padding="lg" style="max-width: 200px; text-align: center;">
-  <ore-text color="primary" variant="heading" size="xl" style="margin-bottom: var(--size-2); display: block;">
-    1,234
-  </ore-text>
-  <ore-text size="sm" color="secondary">Total Users</ore-text>
-  <ore-text size="sm" color="success" style="margin-top: var(--size-2); display: block;">
-    ↑ 12% from last month
-  </ore-text>
-</ore-card>
+<ore-stats label="Total users" value="1,234" trend="+12%" trend-direction="up" description="from last month">
+  <ore-icon slot="icon" name="users" aria-hidden="true"></ore-icon>
+</ore-stats>
 ```
 
 </ComponentPreview>

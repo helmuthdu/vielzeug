@@ -12,7 +12,14 @@ export { CHECKBOX_GROUP_CTX, CHECKBOX_GROUP_TAG } from './checkbox-group/checkbo
 export type { OreComboboxEvents, OreComboboxProps } from './combobox/combobox';
 export { COMBOBOX_TAG } from './combobox/combobox';
 export type { OreComboboxOptionProps } from './combobox/combobox.types';
-export type { DataGridSource, OreDataGridEvents, OreDataGridProps } from './datagrid/datagrid';
+export type {
+  DataGridColumn,
+  DataGridLabels,
+  DataGridSource,
+  DataGridView,
+  OreDataGridEvents,
+  OreDataGridProps,
+} from './datagrid/datagrid';
 export { DATAGRID_TAG } from './datagrid/datagrid';
 export type { OreDatePickerEvents, OreDatePickerProps } from './date-picker/date-picker';
 export { DATE_PICKER_TAG } from './date-picker/date-picker';

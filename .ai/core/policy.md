@@ -22,7 +22,17 @@ Stable repo-wide rules for AI-driven work. Task docs should reference this file 
 - Prefer direct code reading over speculation.
 - Prefer simple architecture over configurable architecture.
 - Prefer deleting obsolete patterns to wrapping them.
+- Treat demos as first-party integration harnesses for validating packages in realistic use. When a demo exposes a library gap, fix the owning package contract or implementation instead of adding a demo-only workaround, then cover both the package behavior and demo integration.
+- Treat the whole Vielzeug monorepo as one owned system: propagate changes across packages, demos, tests, and docs when required for correctness and coherence.
 - When valid approaches conflict, choose one definitive design favoring lower coupling, fewer moving parts, explicit behavior, and idiomatic TypeScript. Do not ship parallel alternatives unless explicitly required.
+
+## Decision ownership and delegation
+
+- Keep one decision owner for each task. Delegated work gathers bounded evidence or implements an independently owned surface; it does not make conflicting product or architecture decisions.
+- Delegate only when the subtask is self-contained enough to name its scope, required evidence, expected output, and write authority.
+- Run delegated work concurrently only when the scopes do not depend on or modify the same files. Sequence dependent decisions and overlapping writes.
+- Treat delegated reports as evidence, not authority. The decision owner verifies implementation-sensitive claims against source before editing or reporting completion.
+- Prefer direct work when delegation would cost more coordination than it saves.
 
 ## Escalate before proceeding when
 

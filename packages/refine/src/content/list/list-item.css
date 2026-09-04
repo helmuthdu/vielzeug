@@ -38,11 +38,24 @@
     transition: var(--_motion-transition, transform var(--transition-fast), background var(--transition-fast));
   }
 
+  :host([data-two-line]) .row {
+    min-height: var(--_min-height-two-line, var(--size-18));
+  }
+
+  :host([actionable]) .row {
+    cursor: pointer;
+  }
+
   .leading,
   .trailing {
     display: flex;
     flex-shrink: 0;
     align-items: center;
+  }
+
+  .leading[hidden],
+  .trailing[hidden] {
+    display: none;
   }
 
   .content {
@@ -65,7 +78,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: var(--text-xs);
-    color: var(--color-contrast-400);
+    color: var(--color-contrast-600);
     white-space: nowrap;
   }
 

@@ -24,6 +24,8 @@ export type ListItemRevealSide = 'left' | 'right';
 
 /** Events emitted by the list-item component */
 export type OreListItemEvents = {
+  /** Emitted when an actionable item is activated by pointer or keyboard. */
+  activate: { item: HTMLElement; value: null | string };
   /** Emitted when the revealed action panel closes (gesture, tap, or programmatic). */
   conceal: { item: HTMLElement };
   /**
@@ -41,6 +43,8 @@ export type OreListItemEvents = {
 
 /** List-item component properties */
 export type OreListItemProps = {
+  /** Enable pointer and Enter/Space activation with button semantics. */
+  actionable?: boolean;
   /** Disable this item — blocks pointer interaction, swipe actions, and selection */
   disabled?: boolean;
   /** Which action panel is revealed: 'left' | 'right' (absent = closed). Settable programmatically. */
@@ -77,11 +81,13 @@ const actionSlot = (side: ListItemRevealSide): 'actions-left' | 'actions-right' 
  *
  * @element ore-list-item
  *
+ * @attr {boolean} actionable - Enable pointer and Enter/Space activation with button semantics
  * @attr {boolean} disabled - Disable this item
  * @attr {boolean} selected - Read-only reflected attribute: `true` when this item's `value` matches the parent `ore-list`'s `value`. Not independently settable.
  * @attr {string}  value    - Opaque value compared against the parent list's `value` to derive `selected`; also reported in select/change events
  * @attr {string}  revealed - Which action panel is revealed: 'left' | 'right'
  *
+ * @fires activate - Actionable item is activated. detail: { item: HTMLElement, value: string | null }
  * @fires select   - Item becomes selected. detail: { item: HTMLElement, value: string | null }
  * @fires deselect - Item becomes deselected. detail: { item: HTMLElement, value: string | null }
  * @fires reveal   - An action panel opens. detail: { item: HTMLElement, side: 'left' | 'right' }
@@ -125,6 +131,7 @@ export const LIST_ITEM_TAG = 'ore-list-item' as const;
 define<OreListItemProps>(LIST_ITEM_TAG, {
   props: {
     ...disablableBundle,
+    actionable: prop.bool(false),
     revealed: prop.oneOf<ListItemRevealSide | undefined>(['left', 'right'], undefined),
     value: prop.string(),
   },
@@ -133,6 +140,9 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
     const el = getHost();
     const emit = useEmit<OreListItemEvents>();
     const slots = useSlots<'actions-left' | 'actions-right' | 'description' | 'leading' | 'trailing'>();
+    const hasDescription = slots.has('description');
+    const hasLeading = slots.has('leading');
+    const hasTrailing = slots.has('trailing');
 
     const listCtx = inject(LIST_CTX);
     const isSelectable = computed(() => Boolean(listCtx?.selectable.value));
@@ -217,6 +227,7 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
         return;
       }
 
+      if (props.actionable.value) emit('activate', { item: el, value: props.value.value ?? null });
       if (!isSelectable.value) return;
 
       const value = props.value.value;
@@ -229,7 +240,7 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
     const handleRowKeydown = (event: KeyboardEvent): void => {
       if (event.key !== 'Enter' && event.key !== ' ') return;
 
-      if (props.disabled.value || (!props.revealed.value && !isSelectable.value)) return;
+      if (props.disabled.value || (!props.revealed.value && !isSelectable.value && !props.actionable.value)) return;
 
       event.preventDefault();
       handleActivate(event);
@@ -239,6 +250,7 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
       attr: {
         'aria-disabled': () => (props.disabled.value ? 'true' : null),
         'aria-selected': () => (isSelectable.value ? String(isSelected.value) : null),
+        'data-two-line': () => (hasDescription.value ? true : undefined),
         role: () => (isSelectable.value ? 'option' : 'listitem'),
       },
     });
@@ -247,15 +259,16 @@ define<OreListItemProps>(LIST_ITEM_TAG, {
       <div
         class="row"
         part="row"
+        role="${() => (props.actionable.value ? 'button' : null)}"
         tabindex="${() => (props.disabled.value ? '-1' : '0')}"
         @click="${handleActivate}"
         @keydown="${handleRowKeydown}">
-        <span class="leading" part="leading"><slot name="leading"></slot></span>
+        <span class="leading" part="leading" ?hidden="${() => !hasLeading.value}"><slot name="leading"></slot></span>
         <span class="content" part="content">
           <span class="title" part="title"><slot></slot></span>
           <span class="description" part="description"><slot name="description"></slot></span>
         </span>
-        <span class="trailing" part="trailing"><slot name="trailing"></slot></span>
+        <span class="trailing" part="trailing" ?hidden="${() => !hasTrailing.value}"><slot name="trailing"></slot></span>
       </div>
       <span class="actions actions-left" part="actions-start"><slot name="actions-left"></slot></span>
       <span class="actions actions-right" part="actions-end"><slot name="actions-right"></slot></span>
