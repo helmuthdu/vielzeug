@@ -71,6 +71,7 @@ const MENU_COLUMNS = NAVBAR_COLUMNS;
   --navigation-menu-panel-max-height: calc(100dvh - var(--size-16));
   --navigation-menu-panel-width: 72rem;
   display: inline-flex;
+  height: 100%;
 }
 
 ore-navigation-menu-panel::part(content) {

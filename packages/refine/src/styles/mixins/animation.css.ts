@@ -125,12 +125,14 @@ export const rainbowEffectMixin = (selector: string) => {
         conic-gradient(red 0 0) no-clip subtract,
         conic-gradient(red 0 0) padding-box;
 
+      opacity: var(--rainbow-border-opacity, 0.7);
       pointer-events: none;
       animation: rainbow-rotate 4s linear infinite;
     }
 
     /* Turn one pseudo layer into glow halo */
     :host([effect='rainbow']) ${selector}::after {
+      opacity: var(--rainbow-glow-opacity, 0.18);
       filter: blur(var(--blur-xl));
     }
 

@@ -15,13 +15,6 @@ import { activeRoute, activeRouteParams, router } from '../core/router';
 import { modelIndex } from '../core/search-index';
 import { openCompareDrawer } from './components/compare-drawer';
 import './components/share-build-dialog';
-import { createAdminView } from './views/admin';
-import { createCartView } from './views/cart';
-import { createCatalogView } from './views/catalog';
-import { createCheckoutView } from './views/checkout';
-import { createModelDetailView } from './views/model-detail';
-import { createOrdersView } from './views/orders';
-import { createSettingsView } from './views/settings';
 
 interface PaletteItem {
   group: string;
@@ -115,7 +108,7 @@ function renderBrowseItem(item: BrowseItem) {
     <ore-navbar-item
       ?active=${() => item.kind === 'route' && activeRoute.value === item.route}
       @click=${() => activateBrowseItem(item)}>
-      <ore-icon slot="icon" name=${item.icon} size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
+      <ore-icon slot="icon" name=${item.icon} size="16" stroke-width="1.75" aria-hidden="true"></ore-icon>
       ${() => browseItemLabel(item)}
       ${when(
         () => item.kind === 'compare' && compareModels.value.length > 0,
@@ -139,7 +132,7 @@ function renderUtilityAction(action: UtilityAction, compact: boolean) {
       ?active=${() => action.isActive?.() ?? false}
       ?icon-only=${() => compact}
       @click=${action.activate}>
-      <ore-icon slot="icon" name=${action.icon} size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
+      <ore-icon slot="icon" name=${action.icon} size="16" stroke-width="1.75" aria-hidden="true"></ore-icon>
       ${when(
         () => !compact,
         () => html`
@@ -166,7 +159,7 @@ function renderAccountItem(compact: boolean) {
       ?active=${() => activeRoute.value === 'settings'}
       ?icon-only=${() => compact}
       @click=${() => void router.navigate({ name: 'settings' })}>
-      <ore-icon slot="icon" name="user" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
+      <ore-icon slot="icon" name="user" size="16" stroke-width="1.75" aria-hidden="true"></ore-icon>
       ${when(
         () => !compact,
         () => html`
@@ -213,6 +206,26 @@ function renderFooterColumn(headingKey: string, links: FooterLink[] | (() => Foo
   `;
 }
 
+async function createRouteView(routeName: string | null, params: Record<string, unknown>): Promise<HTMLElement> {
+  if (routeName === 'catalog') return (await import('./views/catalog')).createCatalogView();
+  if (routeName === 'modelDetail')
+    return (await import('./views/model-detail')).createModelDetailView(String(params.slug ?? ''));
+  if (routeName === 'cart') return (await import('./views/cart')).createCartView();
+  if (routeName?.startsWith('checkout')) return (await import('./views/checkout')).createCheckoutView(routeName);
+  if (routeName === 'orders') return (await import('./views/orders')).createOrdersView();
+  if (routeName === 'admin') return (await import('./views/admin')).createAdminView();
+  if (routeName === 'settings') return (await import('./views/settings')).createSettingsView();
+  const missing = document.createElement('p');
+  missing.textContent = t('common.notFound');
+  return missing;
+}
+
+function routeTitle(routeName: string | null): string {
+  if (routeName === 'modelDetail') return t('nav.catalog');
+  if (routeName?.startsWith('checkout')) return t('cart.checkout');
+  return t(`nav.${routeName ?? 'catalog'}`);
+}
+
 define('app-shell', {
   setup() {
     toast.configure({ position: 'bottom-right' });
@@ -225,7 +238,7 @@ define('app-shell', {
 
     const paletteQuery = signal('');
     const paletteItems = computed(() => itemsForQuery(paletteQuery.value));
-    const paletteRef = ref<HTMLElement & { open: boolean }>();
+    const paletteOpen = signal(false);
 
     const onPaletteSelect = (e: Event): void => {
       const value = (e as CustomEvent<{ value: string }>).detail.value;
@@ -238,10 +251,7 @@ define('app-shell', {
 
     const openPalette = (): void => {
       paletteQuery.value = '';
-
-      const palette = paletteRef.value;
-
-      if (palette) palette.open = true;
+      paletteOpen.value = true;
     };
 
     // Search is a utility action alongside cart/orders/admin, not a separately-styled button —
@@ -313,28 +323,28 @@ define('app-shell', {
       return routeName ?? 'not-found';
     };
 
-    function renderView(routeName: string | null, params: Record<string, unknown>): void {
+    let renderId = 0;
+    async function renderView(routeName: string | null, params: Record<string, unknown>): Promise<void> {
       const view = viewRef.value;
-
       if (!view) return;
 
-      view.replaceChildren();
-
-      if (routeName === 'catalog') view.appendChild(createCatalogView());
-      else if (routeName === 'modelDetail') view.appendChild(createModelDetailView(String(params.slug ?? '')));
-      else if (routeName === 'cart') view.appendChild(createCartView());
-      else if (routeName?.startsWith('checkout')) view.appendChild(createCheckoutView(routeName));
-      else if (routeName === 'orders') view.appendChild(createOrdersView());
-      else if (routeName === 'admin') view.appendChild(createAdminView());
-      else if (routeName === 'settings') view.appendChild(createSettingsView());
-      else view.appendChild(document.createTextNode('Not found'));
-
-      // Nothing resets scroll position by default: swapping the view's children here doesn't
-      // touch `.app-main`'s own scrollTop, so navigating in from a scrolled-down list (e.g. the
-      // catalog) landed on the new view already scrolled to wherever the old one left off.
-      const scroller = scrollRef.value;
-
-      if (scroller) scroller.scrollTop = 0;
+      const id = ++renderId;
+      view.ariaBusy = 'true';
+      try {
+        const nextView = await createRouteView(routeName, params);
+        if (id !== renderId) return;
+        view.replaceChildren(nextView);
+        document.title = `${routeTitle(routeName)} · Vielzeug Motors`;
+        if (scrollRef.value) scrollRef.value.scrollTop = 0;
+      } catch {
+        if (id !== renderId) return;
+        const error = document.createElement('p');
+        error.className = 'route-error';
+        error.textContent = t('common.routeLoadFailed');
+        view.replaceChildren(error);
+      } finally {
+        if (id === renderId) view.ariaBusy = 'false';
+      }
     }
 
     let renderedViewKey: string | null = null;
@@ -350,13 +360,14 @@ define('app-shell', {
       if (!viewRef.value || key === renderedViewKey) return;
 
       renderedViewKey = key;
-      renderView(routeName, params);
+      void renderView(routeName, params);
     });
 
     const currentYear = new Date().getFullYear();
 
     return html`
-      <ore-navbar sticky elevation="1">
+      <a class="skip-link" href="#main-content">${() => t('common.skipToContent')}</a>
+      <ore-navbar class="app-navbar" sticky elevation="1">
         <span slot="logo" class="brand-logo">Vielzeug Motors</span>
 
         ${each(BROWSE_ITEMS, browseItemKey, (n) => renderBrowseItem(n.value))}
@@ -380,7 +391,7 @@ define('app-shell', {
           ${renderAccountItem(false)}
         </div>
       </ore-navbar>
-      <main class="app-main" ref=${scrollRef}>
+      <main id="main-content" class="app-main" tabindex="-1" ref=${scrollRef}>
         <div class="app-content">
           <div class="app-view" ref=${viewRef}></div>
         </div>
@@ -404,11 +415,14 @@ define('app-shell', {
         </footer>
       </main>
       <ore-command-palette
-        ref=${paletteRef}
         label="Command palette"
         placeholder="Search models, jump to a view…"
         no-filter
         items=${paletteItems}
+        ?open=${paletteOpen}
+        @open-change=${(event: CustomEvent<{ open: boolean }>) => {
+          paletteOpen.value = event.detail.open;
+        }}
         @search=${(e: Event) => {
           paletteQuery.value = (e as CustomEvent<{ query: string }>).detail.query;
         }}

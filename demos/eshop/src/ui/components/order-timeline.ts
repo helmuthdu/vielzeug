@@ -1,4 +1,5 @@
-import '@vielzeug/refine/icon';
+import '@vielzeug/refine/step';
+import '@vielzeug/refine/stepper';
 import { define, html, prop, when } from '@vielzeug/ore';
 import { formatOrderStatus } from '../../core/format';
 import { t } from '../../core/i18n';
@@ -33,34 +34,23 @@ define<OrderTimelineProps>('order-timeline', {
         () => html`
           <p class="order-timeline__cancelled">${() => t('orders.timeline.cancelledNote')}</p>
         `,
-        () => {
-          const currentIndex = () => TIMELINE_STATUSES.indexOf(props.status.value);
-
-          return html`
-            <ol class="checkout-stepper order-timeline" aria-label=${() => t('orders.timeline.ariaLabel')}>
-              ${TIMELINE_STATUSES.map((status, i) => {
-                const state = () => (i < currentIndex() ? 'done' : i === currentIndex() ? 'active' : 'upcoming');
-
-                return html`
-                  <li class="checkout-stepper__step" data-state=${state}>
-                    <span class="checkout-stepper__marker">
-                      ${when(
-                        () => state() === 'done',
-                        () => html`
-                          <ore-icon name="check" size="12" aria-hidden="true"></ore-icon>
-                        `,
-                        () => html`
-                          ${i + 1}
-                        `,
-                      )}
-                    </span>
-                    <span class="checkout-stepper__label">${() => formatOrderStatus(status)}</span>
-                  </li>
-                `;
-              })}
-            </ol>
-          `;
-        },
+        () => html`
+          <div class="order-progress">
+            <ore-stepper
+              class="order-timeline"
+              size="sm"
+              color="primary"
+              label=${() => t('orders.timeline.ariaLabel')}
+              value=${() => props.status.value}>
+              ${TIMELINE_STATUSES.map(
+                (status) => html`
+                  <ore-step value=${status}>${() => formatOrderStatus(status)}</ore-step>
+                `,
+              )}
+            </ore-stepper>
+            <p class="order-progress__current">${() => formatOrderStatus(props.status.value)}</p>
+          </div>
+        `,
       )}
     `;
   },

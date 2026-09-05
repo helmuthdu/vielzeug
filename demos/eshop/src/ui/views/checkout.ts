@@ -1,5 +1,7 @@
 import '@vielzeug/refine/input';
 import '@vielzeug/refine/select';
+import '@vielzeug/refine/step';
+import '@vielzeug/refine/stepper';
 import '@vielzeug/refine/radio-group';
 import '@vielzeug/refine/radio';
 import '@vielzeug/refine/number-input';
@@ -124,33 +126,29 @@ const STEP_LABEL_KEYS: Record<CheckoutStep, string> = {
  * update in place.
  */
 function checkoutStepper(current: CheckoutStep) {
-  const currentIndex = STEP_ORDER.indexOf(current);
+  const steps = ['vehicle', ...STEP_ORDER] as const;
 
   return html`
-    <ol class="checkout-stepper" aria-label=${() => t('checkout.steps.ariaLabel')}>
-      <li class="checkout-stepper__step" data-state="done">
-        <span class="checkout-stepper__marker"><ore-icon name="check" size="12" aria-hidden="true"></ore-icon></span>
-        <span class="checkout-stepper__label">${() => t('checkout.steps.vehicle')}</span>
-      </li>
-      ${STEP_ORDER.map((step, i) => {
-        const state = i < currentIndex ? 'done' : i === currentIndex ? 'active' : 'upcoming';
-
-        return html`
-          <li class="checkout-stepper__step" data-state=${state}>
-            <span class="checkout-stepper__marker">
-              ${
-                state === 'done'
-                  ? html`
-                      <ore-icon name="check" size="12" aria-hidden="true"></ore-icon>
-                    `
-                  : `${i + 2}`
-              }
-            </span>
-            <span class="checkout-stepper__label">${() => t(STEP_LABEL_KEYS[step])}</span>
-          </li>
-        `;
-      })}
-    </ol>
+    <div class="checkout-progress">
+      <ore-stepper
+        class="checkout-stepper"
+        size="sm"
+        color="primary"
+        label=${() => t('checkout.steps.ariaLabel')}
+        value=${current}>
+        ${steps.map(
+          (step) => html`
+            <ore-step value=${step}>
+              ${() => (step === 'vehicle' ? t('checkout.steps.vehicle') : t(STEP_LABEL_KEYS[step]))}
+            </ore-step>
+          `,
+        )}
+      </ore-stepper>
+      <p class="checkout-progress__current">
+        ${() => t('checkout.steps.current', { current: STEP_ORDER.indexOf(current) + 2, total: steps.length })}
+        · ${() => t(STEP_LABEL_KEYS[current])}
+      </p>
+    </div>
   `;
 }
 

@@ -175,8 +175,7 @@ export const models: Model[] = [
     basePrice: '94900.00',
     bodyType: 'sedan',
     colors: colorsStartingWith('obsidian-black'),
-    description:
-      'The Vielzeug flagship — a full-size sovereign sedan engineered for those in the back seat as much as those behind the wheel.',
+    description: 'A full-size sovereign sedan engineered for those in the back seat as much as those behind the wheel.',
     features: ['panoramicRoof', 'massageSeats', 'premiumAudio', 'matrixLed', 'headUpDisplay'],
     fuelEconomyLPer100Km: 9.6,
     heroHue: 235,

@@ -1,3 +1,4 @@
+import '@vielzeug/refine/box';
 import '@vielzeug/refine/button';
 import '@vielzeug/refine/chip';
 import '@vielzeug/refine/grid';
@@ -54,15 +55,13 @@ function isSortOrder(value: string): value is SortOrder {
 type ActiveFilter =
   | { kind: 'body'; value: BodyType }
   | { kind: 'powertrain'; value: Powertrain }
-  | { kind: 'price'; value: PriceBand }
-  | { kind: 'query'; value: string };
+  | { kind: 'price'; value: PriceBand };
 
 function activeFilters(filters: CatalogFilters): ActiveFilter[] {
   return [
     ...filters.bodyTypes.map((value) => ({ kind: 'body' as const, value })),
     ...filters.powertrains.map((value) => ({ kind: 'powertrain' as const, value })),
     ...(filters.priceBand ? [{ kind: 'price' as const, value: filters.priceBand }] : []),
-    ...(filters.query.trim() ? [{ kind: 'query' as const, value: filters.query.trim() }] : []),
   ];
 }
 
@@ -89,9 +88,7 @@ function priceBandLabel(value: PriceBand): string {
 function filterLabel(filter: ActiveFilter): string {
   if (filter.kind === 'body') return bodyTypeLabel(filter.value);
   if (filter.kind === 'powertrain') return powertrainLabel(filter.value);
-  if (filter.kind === 'price') return priceBandLabel(filter.value);
-
-  return `“${filter.value}”`;
+  return priceBandLabel(filter.value);
 }
 
 type FilterOption<T> = { count: number; value: T };
@@ -108,14 +105,17 @@ define('catalog-view', {
   setup() {
     const filters = signal(filtersFromQuery(activeRouteQuery.value));
     const featuredModel = computed(() => modelMap.value.get(FEATURED_MODEL_ID));
-    const results = computed(() => {
-      const current = filters.value;
-      const searched = current.query.trim()
-        ? modelIndex.search(current.query.trim(), { limit: modelsSignal.value.length }).map((result) => result.item)
-        : modelsSignal.value;
-      const filtered = filterModels(searched, current);
+    const searchedModels = computed(() => {
+      const query = filters.value.query.trim();
 
-      return current.query.trim() ? filtered : sortModels(filtered, current.sortOrder);
+      return query
+        ? modelIndex.search(query, { limit: modelsSignal.value.length }).map((result) => result.item)
+        : modelsSignal.value;
+    });
+    const results = computed(() => {
+      const filtered = filterModels(searchedModels.value, filters.value);
+
+      return filters.value.query.trim() ? filtered : sortModels(filtered, filters.value.sortOrder);
     });
     const gridResults = computed(() =>
       hasActiveFilters(filters.value) ? results.value : results.value.filter((model) => model.id !== FEATURED_MODEL_ID),
@@ -123,23 +123,23 @@ define('catalog-view', {
     const selectedFilters = computed(() => activeFilters(filters.value));
     const bodyTypeOptions = computed<FilterOption<BodyType>[]>(() =>
       BODY_TYPES.map((value) => ({
-        count: modelsSignal.value.filter((model) => model.bodyType === value).length,
+        count: filterModels(searchedModels.value, { ...filters.value, bodyTypes: [value] }).length,
         value,
-      })).filter((option) => option.count > 0),
+      })),
     );
     const powertrainOptions = computed<FilterOption<Powertrain>[]>(() =>
       POWERTRAINS.map((value) => ({
-        count: modelsSignal.value.filter((model) => model.powertrain === value).length,
+        count: filterModels(searchedModels.value, { ...filters.value, powertrains: [value] }).length,
         value,
-      })).filter((option) => option.count > 0),
+      })),
     );
     const priceBandOptions = computed<FilterOption<PriceBand>[]>(() =>
       PRICE_BANDS.map((value) => ({
-        count: filterModels(modelsSignal.value, { ...DEFAULT_CATALOG_FILTERS, priceBand: value }).length,
+        count: filterModels(searchedModels.value, { ...filters.value, priceBand: value }).length,
         value,
-      })).filter((option) => option.count > 0),
+      })),
     );
-    const filtersOpen = signal(hasActiveFilters(filters.value));
+    const filtersOpen = signal(false);
 
     const syncUrl = (next: CatalogFilters): void => {
       void router.navigate({ name: 'catalog', query: filtersToQuery(next) }, { replace: true });
@@ -192,13 +192,19 @@ define('catalog-view', {
           return { ...current, bodyTypes: current.bodyTypes.filter((value) => value !== filter.value) };
         if (filter.kind === 'powertrain')
           return { ...current, powertrains: current.powertrains.filter((value) => value !== filter.value) };
-        if (filter.kind === 'price') return { ...current, priceBand: null };
-
-        return { ...current, query: '' };
+        return { ...current, priceBand: null };
       });
     };
 
-    const clearFilters = (): void => {
+    const clearRefinements = (): void => {
+      updateFilters((current) => ({
+        ...DEFAULT_CATALOG_FILTERS,
+        query: current.query,
+        sortOrder: current.sortOrder,
+      }));
+    };
+
+    const resetDiscovery = (): void => {
       filters.value = { ...DEFAULT_CATALOG_FILTERS };
       syncUrl(filters.value);
     };
@@ -208,87 +214,49 @@ define('catalog-view', {
     };
 
     return html`
-      <header class="catalog__intro">
-        <div>
-          <h1>${() => t('catalog.title')}</h1>
-          <p>${() => t('catalog.intro')}</p>
+      <section class="catalog__opening">
+        <div class="catalog__intro-media">
+          <ore-skeleton striped width="100%" height="clamp(320px, 34vw, 440px)" aria-hidden="true"></ore-skeleton>
+          <header class="catalog__intro">
+            <h1>${() => t('catalog.title')}</h1>
+            <p>${() => t('catalog.intro')}</p>
+          </header>
         </div>
-      </header>
 
-      ${when(
-        () => featuredModel.value !== undefined && !hasActiveFilters(filters.value),
-        () => html`
-          <section class="catalog__hero" style=${() => `--model-hue: ${featureModel().heroHue}deg`}>
-            <div class="catalog__hero-media">
-              <ore-skeleton striped width="100%" height="360px" aria-hidden="true"></ore-skeleton>
-            </div>
-            <div class="catalog__hero-content">
-              <h2 class="catalog__hero-name">${() => featureModel().name}</h2>
-              <p class="catalog__hero-tagline">${() => featureModel().tagline}</p>
-              <p class="catalog__hero-description">${() => featureModel().description}</p>
-              <div class="catalog__hero-specs">
-                <div class="spec">
-                  <span class="spec__label">${() => t('model.topSpeed')}</span>
-                  <strong>${() => `${featureModel().topSpeedKph} km/h`}</strong>
-                </div>
-                <div class="spec">
-                  <span class="spec__label">${() => t('model.zeroToHundred')}</span>
-                  <strong>${() => `${featureModel().zeroToHundredSec}s`}</strong>
-                </div>
-                <div class="spec">
-                  <span class="spec__label">${() => t('common.startingAt')}</span>
-                  <strong>${() => formatPrice(featureModel().basePrice)}</strong>
-                </div>
-              </div>
-              <div class="catalog__hero-actions">
-                <ore-button
-                  rounded
-                  variant="solid"
-                  color="secondary"
-                  size="lg"
-                  @click=${() => void router.navigate({ name: 'modelDetail', params: { slug: featureModel().slug } })}>
-                  ${() => t('common.viewDetails')}
-                </ore-button>
-                <ore-button 
-                  size="lg"
-                  icon-only 
-                  rounded
-                  color=${() => (compareModelIds.value.includes(featureModel().id) ? 'primary' : 'secondary')}
-                  variant=${() => (compareModelIds.value.includes(featureModel().id) ? 'flat' : 'outline')}
-                  @click=${() => toggleCompare(featureModel().id)}>
-                  
-                  <ore-icon name="git-compare" size="16" aria-hidden="true"></ore-icon>
-                </ore-button>
-              </div>
-            </div>
-          </section>
-        `,
-      )}
-
-      <section class="catalog__discovery" aria-label=${() => t('catalog.discoveryLabel')}>
-        <div class="catalog__search-rail">
+        <section class="catalog__discovery" aria-label=${() => t('catalog.discoveryLabel')}>
+        <ore-box class="catalog__search-rail" effect="rainbow" fullwidth padding="none">
           <ore-input
             class="catalog__search"
-            type="search"
+            type="text"
             clearable
             variant="text"
-            label=${() => t('catalog.searchLabel')}
+            aria-label=${() => t('catalog.searchLabel')}
             placeholder=${() => t('catalog.searchPlaceholder')}
             value=${() => filters.value.query}
-            @input=${onSearchInput}></ore-input>
+            @input=${onSearchInput}>
+            <ore-icon slot="prefix" name="search" size="16" aria-hidden="true"></ore-icon>
+          </ore-input>
           <div class="catalog__rail-actions">
             <div class="catalog__sort-control">
-              <ore-select
-                class="catalog__sort"
-                variant="text"
-                label=${() => t('catalog.sortLabel')}
-                options=${() => sortOptions()}
-                value=${() => filters.value.sortOrder}
-                ?disabled=${() => Boolean(filters.value.query.trim())}
-                @change=${onSortChange}></ore-select>
               ${when(
                 () => Boolean(filters.value.query.trim()),
-                () => html`<p class="catalog__sort-hint">${() => t('catalog.relevanceHint')}</p>`,
+                () => html`
+                  <div class="catalog__relevance-sort" aria-label=${() => t('catalog.sortedByRelevance')}>
+                    <span>${() => t('catalog.sortLabel')}</span>
+                    <strong>${() => t('catalog.sortedByRelevance')}</strong>
+                  </div>
+                `,
+                () => html`
+                  <ore-select
+                    class="catalog__sort"
+                    fullwidth
+                    rounded="lg"
+                    variant="text"
+                    label=${() => t('catalog.sortLabel')}
+                    options=${() => sortOptions()}
+                    value=${() => filters.value.sortOrder}
+                    @change=${onSortChange}></ore-select>
+                `,
               )}
             </div>
             <ore-button
@@ -296,19 +264,40 @@ define('catalog-view', {
               fullwidth
               class="catalog__filter-toggle"
               color="secondary"
-              aria-controls="catalog-filter-panel"
-              aria-expanded=${() => String(filtersOpen.value)}
-              @click=${toggleFilters}>
-              <ore-icon slot="icon" name="sliders-horizontal" size="15" aria-hidden="true"></ore-icon>
-              ${() =>
+              variant=${() => (selectedFilters.value.length ? 'flat' : 'ghost')}
+              aria-label=${() =>
                 selectedFilters.value.length
                   ? t('catalog.refineWithCount', { count: selectedFilters.value.length })
                   : t('catalog.refine')}
+              aria-controls="catalog-filter-panel"
+              aria-expanded=${() => String(filtersOpen.value)}
+              @click=${toggleFilters}>
+              <ore-icon slot="prefix" name="sliders-horizontal" size="15" aria-hidden="true"></ore-icon>
+              ${() => t('catalog.refine')}
+              ${when(
+                () => selectedFilters.value.length > 0,
+                () => html`
+                  <ore-badge slot="suffix" size="sm" color="primary">${() => selectedFilters.value.length}</ore-badge>
+                `,
+              )}
             </ore-button>
           </div>
-        </div>
+        </ore-box>
 
         <div class="catalog__popular-filters" aria-label=${() => t('catalog.popularFiltersLabel')}>
+          <p class="catalog__search-meta" role="status" aria-live="polite" aria-atomic="true">
+            ${() =>
+              t(
+                results.value.length === 1
+                  ? filters.value.query.trim()
+                    ? 'catalog.searchResultCountOne'
+                    : 'catalog.resultCountOne'
+                  : filters.value.query.trim()
+                    ? 'catalog.searchResultCount'
+                    : 'catalog.resultCount',
+                { count: results.value.length },
+              )}
+          </p>
           <span>${() => t('catalog.popularFiltersLabel')}</span>
           <div>
             <ore-chip
@@ -348,9 +337,6 @@ define('catalog-view', {
               ${() => priceBandLabel('under-60000')}
             </ore-chip>
           </div>
-          <p class="catalog__count" role="status" aria-live="polite" aria-atomic="true">
-            ${() => t('catalog.resultCount', { count: results.value.length })}
-          </p>
         </div>
 
         ${when(
@@ -372,12 +358,11 @@ define('catalog-view', {
                     </ore-chip>
                   `,
                 )}
-                <ore-button variant="ghost" @click=${clearFilters}>${() => t('catalog.clearFilters')}</ore-button>
+                <ore-button variant="ghost" @click=${clearRefinements}>${() => t('catalog.clearFilters')}</ore-button>
               </div>
             </div>
           `,
         )}
-
         ${when(
           () => filtersOpen.value,
           () => html`
@@ -396,6 +381,7 @@ define('catalog-view', {
                           label=${() => filterLabelWithCount(bodyTypeLabel(option.value), option.count)}
                           value=${option.value}
                           ?checked=${() => filters.value.bodyTypes.includes(option.value)}
+                          ?disabled=${() => option.count === 0 && !filters.value.bodyTypes.includes(option.value)}
                           @change=${() => toggleBodyType(option.value)}>
                           ${() => filterLabelWithCount(bodyTypeLabel(option.value), option.count)}
                         </ore-chip>
@@ -417,6 +403,7 @@ define('catalog-view', {
                           label=${() => filterLabelWithCount(powertrainLabel(option.value), option.count)}
                           value=${option.value}
                           ?checked=${() => filters.value.powertrains.includes(option.value)}
+                          ?disabled=${() => option.count === 0 && !filters.value.powertrains.includes(option.value)}
                           @change=${() => togglePowertrain(option.value)}>
                           ${() => filterLabelWithCount(powertrainLabel(option.value), option.count)}
                         </ore-chip>
@@ -445,6 +432,7 @@ define('catalog-view', {
                             name="catalog-price"
                             value=${option.value}
                             ?checked=${() => filters.value.priceBand === option.value}
+                            ?disabled=${() => option.count === 0 && filters.value.priceBand !== option.value}
                             @change=${() => setPriceBand(option.value)} />
                           <span>${() => filterLabelWithCount(priceBandLabel(option.value), option.count)}</span>
                         </label>
@@ -455,15 +443,72 @@ define('catalog-view', {
             </div>
           `,
         )}
+        </section>
       </section>
+
+      ${when(
+        () => featuredModel.value !== undefined && !hasActiveFilters(filters.value),
+        () => html`
+            <section class="catalog__hero" aria-labelledby="catalog-featured-name">
+              <div class="catalog__hero-media">
+                <ore-skeleton striped width="100%" height="clamp(220px, 22vw, 280px)" aria-hidden="true"></ore-skeleton>
+              </div>
+              <div class="catalog__hero-content">
+                <h2 class="catalog__hero-name" id="catalog-featured-name">${() => featureModel().name}</h2>
+                <p class="catalog__hero-classification">
+                  ${() =>
+                    `${bodyTypeLabel(featureModel().bodyType)} · ${powertrainLabel(featureModel().powertrain)} · ${t('catalog.seatCount', { count: featureModel().seats })}`}
+                </p>
+                <p class="catalog__hero-description">${() => featureModel().description}</p>
+                <div class="catalog__hero-specs">
+                  <div class="spec">
+                    <span class="spec__label">${() => t('model.topSpeed')}</span>
+                    <strong>${() => `${featureModel().topSpeedKph} km/h`}</strong>
+                  </div>
+                  <div class="spec">
+                    <span class="spec__label">${() => t('common.startingAt')}</span>
+                    <strong>${() => formatPrice(featureModel().basePrice)}</strong>
+                  </div>
+                </div>
+                <div class="catalog__hero-actions">
+                  <ore-button
+                    rounded
+                    variant="solid"
+                    color="secondary"
+                    size="lg"
+                    @click=${() => void router.navigate({ name: 'modelDetail', params: { slug: featureModel().slug } })}>
+                    ${() => t('common.viewDetails')}
+                  </ore-button>
+                  <ore-button
+                    size="lg"
+                    icon-only
+                    rounded
+                    color=${() => (compareModelIds.value.includes(featureModel().id) ? 'primary' : 'secondary')}
+                    variant=${() => (compareModelIds.value.includes(featureModel().id) ? 'flat' : 'outline')}
+                    label=${() =>
+                      `${t(compareModelIds.value.includes(featureModel().id) ? 'common.removeFromCompare' : 'common.addToCompare')}: ${featureModel().name}`}
+                    aria-pressed=${() => String(compareModelIds.value.includes(featureModel().id))}
+                    @click=${() => toggleCompare(featureModel().id)}>
+                    <ore-icon name="git-compare" size="16" aria-hidden="true"></ore-icon>
+                  </ore-button>
+                </div>
+              </div>
+            </section>
+          `,
+      )}
 
       ${when(
         () => results.value.length === 0,
         () => html`
           <section class="catalog__empty" aria-labelledby="catalog-empty-title">
             <h2 id="catalog-empty-title">${() => t('catalog.emptyTitle')}</h2>
-            <p>${() => t('catalog.emptyDescription', { query: filters.value.query.trim() })}</p>
-            <ore-button variant="outline" @click=${clearFilters}>${() => t('catalog.clearFilters')}</ore-button>
+            <p>
+              ${() =>
+                t(filters.value.query.trim() ? 'catalog.emptyDescription' : 'catalog.emptyFilteredDescription', {
+                  query: filters.value.query.trim(),
+                })}
+            </p>
+            <ore-button variant="outline" @click=${resetDiscovery}>${() => t('catalog.clearFilters')}</ore-button>
           </section>
         `,
         () => html`

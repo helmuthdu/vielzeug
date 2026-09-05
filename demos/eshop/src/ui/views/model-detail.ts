@@ -288,33 +288,33 @@ define<ModelConfiguratorProps>('model-configurator', {
             <div class="swatches">
               ${model().colors.map(
                 (c) => html`
-                <label class="swatch-control" aria-label=${() => `${c.name} — ${formatPrice(c.priceDelta)}`}>
-                  <input
-                    class="swatch-control__input"
-                    type="radio"
-                    name=${`paint-${model().id}`}
-                    value=${c.id}
-                    ?checked=${() => colorId.value === c.id}
-                    ref=${(input: HTMLInputElement | null) => {
-                      if (!input) return;
+                  <label class="swatch-control" aria-label=${() => `${c.name} — ${formatPrice(c.priceDelta)}`}>
+                    <input
+                      class="swatch-control__input"
+                      type="radio"
+                      name=${`paint-${model().id}`}
+                      value=${c.id}
+                      ?checked=${() => colorId.value === c.id}
+                      ref=${(input: HTMLInputElement | null) => {
+                        if (!input) return;
 
-                      queueMicrotask(() => {
-                        input.checked = colorId.value === c.id;
-                        input.value = c.id;
-                      });
-                    }}
-                    @change=${() => {
-                      colorId.value = c.id;
-                      announceConfigurationChange(
-                        t('model.selectedPaintWithPrice', {
-                          name: c.name,
-                          price: formatPrice(c.priceDelta),
-                        }),
-                      );
-                    }} />
-                  <span class="swatch" aria-hidden="true" style=${`--swatch-color: ${c.hex}`}></span>
-                </label>
-              `,
+                        queueMicrotask(() => {
+                          input.checked = colorId.value === c.id;
+                          input.value = c.id;
+                        });
+                      }}
+                      @change=${() => {
+                        colorId.value = c.id;
+                        announceConfigurationChange(
+                          t('model.selectedPaintWithPrice', {
+                            name: c.name,
+                            price: formatPrice(c.priceDelta),
+                          }),
+                        );
+                      }} />
+                    <span class="swatch" aria-hidden="true" style=${`--swatch-color: ${c.hex}`}></span>
+                  </label>
+                `,
               )}
             </div>
           </fieldset>
@@ -341,6 +341,7 @@ define<ModelConfiguratorProps>('model-configurator', {
               <animated-price value-usd=${() => breakdown.value.total}></animated-price>
             </span>
             <ore-button
+              effect="shine"
               variant="solid"
               color="primary"
               size="md"

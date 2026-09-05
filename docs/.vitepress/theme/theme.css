@@ -82,6 +82,10 @@
   backdrop-filter: saturate(50%) blur(24px);
 }
 
+.VPNavBar.has-sidebar .divider:before {
+  display: none;
+}
+
 .VPNavBar.fill .content-body,
 .VPNavBar.has-sidebar .content-body {
   background: none;

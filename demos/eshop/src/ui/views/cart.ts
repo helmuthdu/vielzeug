@@ -49,7 +49,12 @@ define('cart-view', {
       ${when(
         () => cartLineBreakdowns.value.length === 0,
         () => html`
-          <ore-async status="empty" empty-label=${() => t('cart.empty')}></ore-async>
+          <div class="cart-view__empty">
+            <ore-async status="empty" empty-label=${() => t('cart.empty')}></ore-async>
+            <ore-button color="primary" @click=${() => void router.navigate({ name: 'catalog' })}>
+              ${() => t('cart.emptyCta')}
+            </ore-button>
+          </div>
         `,
         () => html`
           <div class="cart-view__lines">

@@ -22,6 +22,7 @@ pnpm dev:local       # VIELZEUG_LOCAL_DEV=1 — resolves @vielzeug/* directly to
 pnpm build && pnpm preview
 pnpm build:local     # type-check and bundle against sibling package source
 pnpm test
+pnpm test:e2e        # desktop and mobile storefront regression tests
 ```
 
 ## Design direction
@@ -49,7 +50,7 @@ calculation.
 
 | Route | What it shows |
 | --- | --- |
-| `/catalog` | Editorial lineup — flagship first, compact search/sort/refinement controls, URL-persisted shortlist state |
+| `/catalog` | Editorial lineup — flagship first, distinct search/sort/refinement controls, URL-persisted discovery state |
 | `/models/:slug` | Configurator — trim-first build flow, visible build summary, accessible paint/wheel/package controls, live pricing and financing |
 | `/cart` | Line items, quantity, promo code, order summary |
 | `/checkout/*` | Shipping → Payment → Review → Confirmation, guarded by a state machine |

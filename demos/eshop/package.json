@@ -10,7 +10,8 @@
     "dev": "vite",
     "dev:local": "VIELZEUG_LOCAL_DEV=1 vite",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@vielzeug/arsenal": "workspace:*",
