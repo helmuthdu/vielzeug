@@ -2,6 +2,20 @@
   "entries": [
     {
       "comments": {
+        "minor": [
+          {
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "comment": "feat: add stats and improve accessible, responsive component interactions",
+            "commit": "0625dfb9a50dcbdcd02af83dbcecc43c7a09d77f"
+          }
+        ]
+      },
+      "date": "Sun, 06 Sep 2026 04:50:16 GMT",
+      "tag": "@vielzeug/refine_v2.4.0",
+      "version": "2.4.0"
+    },
+    {
+      "comments": {
         "dependency": [
           {
             "comment": "Updating dependency \"@vielzeug/orbit\" to `2.1.4`"

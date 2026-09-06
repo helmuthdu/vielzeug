@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Sun, 30 Aug 2026 13:16:08 GMT and should not be manually modified.
+This log was last generated on Sun, 06 Sep 2026 04:50:16 GMT and should not be manually modified.
+
+## 2.4.0
+Sun, 06 Sep 2026 04:50:16 GMT
+
+### Minor changes
+
+- feat: add stats and improve accessible, responsive component interactions
 
 ## 2.3.1
 Sun, 30 Aug 2026 13:16:08 GMT
