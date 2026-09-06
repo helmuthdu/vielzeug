@@ -82,12 +82,12 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "vite build && pnpm run build:bundle && pnpm run build:types && pnpm run verify:exports",
+    "build": "vite build && pnpm --silent run build:bundle && pnpm --silent run build:types && pnpm --silent run verify:exports",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "biome check --write src",
     "lint": "biome ci src",
-    "prepublishOnly": "pnpm run build",
+    "prepublishOnly": "pnpm --silent run build",
     "test": "vitest",
     "verify:exports": "node scripts/verify-exports.mjs && node scripts/verify-package-exports.mjs"
   },
@@ -112,13 +112,13 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.4.1",
     "@vielzeug/courier": "workspace:*",
     "@vielzeug/herald": "workspace:*",
     "@vielzeug/pulse": "workspace:*",
     "@vielzeug/ripple": "workspace:*",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   }
 }

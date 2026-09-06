@@ -33,21 +33,21 @@
     "fix": "biome check --write src",
     "gen:tool-docs": "node --experimental-strip-types ./scripts/generate-tool-docs.ts",
     "lint": "biome ci src",
-    "postbuild": "pnpm run gen:tool-docs",
-    "prebuild": "pnpm run prepare:data",
+    "postbuild": "pnpm --silent run gen:tool-docs",
+    "prebuild": "pnpm --silent run prepare:data",
     "prepare:data": "node --experimental-strip-types ./scripts/generate-bundled-data.ts",
-    "prepublishOnly": "pnpm run build",
+    "prepublishOnly": "pnpm --silent run build",
     "start": "node dist/cli.js",
-    "test": "pnpm run test:unit && pnpm run test:integration",
-    "test:integration": "pnpm run prepare:data && vitest run --project integration",
+    "test": "pnpm --silent run test:unit && pnpm --silent run test:integration",
+    "test:integration": "pnpm --silent run prepare:data && vitest run --project integration",
     "test:unit": "vitest run --project unit"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0"
   },
   "devDependencies": {
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.4.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   }
 }

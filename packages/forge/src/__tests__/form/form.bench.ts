@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest';
+import { describe, test } from 'vitest';
 
 import { createForm } from '../../index';
 
@@ -13,15 +13,17 @@ describe('immutable form updates', () => {
     validate: (value) => ({ fields: { profile: { email: value.profile.email ? undefined : 'Required' } } }),
   });
 
-  bench('nested field replacement', () => {
-    form.field('profile').field('email').set('ada@example.com');
-  });
-
-  bench('array updater', () => {
-    form.field('tags').set((tags) => [...tags, 'forge']);
-  });
-
-  bench('full validation', async () => {
-    await form.validate();
+  test('benchmarks', async ({ bench }) => {
+    await bench.compare(
+      bench('nested field replacement', () => {
+        form.field('profile').field('email').set('ada@example.com');
+      }),
+      bench('array updater', () => {
+        form.field('tags').set((tags) => [...tags, 'forge']);
+      }),
+      bench('full validation', async () => {
+        await form.validate();
+      }),
+    );
   });
 });

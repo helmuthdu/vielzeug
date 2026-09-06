@@ -62,12 +62,12 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "vite build && pnpm run build:bundle && mkdir -p dist/theme && cp src/theme/prism.css dist/theme/prism.css && pnpm run build:types",
+    "build": "vite build && pnpm --silent run build:bundle && mkdir -p dist/theme && cp src/theme/prism.css dist/theme/prism.css && pnpm --silent run build:types",
     "build:bundle": "vite build --config vite.bundle.config.ts",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "biome check --write src",
     "lint": "biome ci src",
-    "prepublishOnly": "pnpm run build",
+    "prepublishOnly": "pnpm --silent run build",
     "test": "vitest"
   },
   "dependencies": {
@@ -78,6 +78,6 @@
     "axe-core": "^4.13.0",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   }
 }

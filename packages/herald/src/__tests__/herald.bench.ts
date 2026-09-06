@@ -1,4 +1,4 @@
-import { bench, describe } from 'vitest';
+import { describe, test } from 'vitest';
 
 import { createBus } from '../index';
 
@@ -18,16 +18,18 @@ describe('emit throughput', () => {
   oneListener.on('tick', () => {});
   for (let i = 0; i < 10; i++) tenListeners.on('tick', () => {});
 
-  bench('0 listeners (no-op)', () => {
-    noListeners.emit('tick', 1);
-  });
-
-  bench('1 listener', () => {
-    oneListener.emit('tick', 1);
-  });
-
-  bench('10 listeners', () => {
-    tenListeners.emit('tick', 1);
+  test('benchmarks', async ({ bench }) => {
+    await bench.compare(
+      bench('0 listeners (no-op)', () => {
+        noListeners.emit('tick', 1);
+      }),
+      bench('1 listener', () => {
+        oneListener.emit('tick', 1);
+      }),
+      bench('10 listeners', () => {
+        tenListeners.emit('tick', 1);
+      }),
+    );
   });
 });
 
@@ -36,32 +38,38 @@ describe('emit throughput', () => {
 describe('subscription churn', () => {
   const bus = createBus<BenchEvents>();
 
-  bench('on + off (single cycle)', () => {
-    const unsub = bus.on('tick', () => {});
+  test('benchmarks', async ({ bench }) => {
+    await bench.compare(
+      bench('on + off (single cycle)', () => {
+        const unsub = bus.on('tick', () => {});
 
-    unsub();
-  });
-
-  bench('once + fire (single cycle)', () => {
-    bus.once('tick', () => {});
-    bus.emit('tick', 1);
+        unsub();
+      }),
+      bench('once + fire (single cycle)', () => {
+        bus.once('tick', () => {});
+        bus.emit('tick', 1);
+      }),
+    );
   });
 });
 
 // ─── Bus lifecycle ───────────────────────────────────────────────────────────
 
 describe('bus lifecycle', () => {
-  bench('createBus + dispose', () => {
-    const bus = createBus<BenchEvents>();
+  test('benchmarks', async ({ bench }) => {
+    await bench.compare(
+      bench('createBus + dispose', () => {
+        const bus = createBus<BenchEvents>();
 
-    bus.dispose();
-  });
+        bus.dispose();
+      }),
+      bench('createBus + 10 unsubscribes + dispose', () => {
+        const bus = createBus<BenchEvents>();
+        const unsubs = Array.from({ length: 10 }, () => bus.on('tick', () => {}));
 
-  bench('createBus + 10 unsubscribes + dispose', () => {
-    const bus = createBus<BenchEvents>();
-    const unsubs = Array.from({ length: 10 }, () => bus.on('tick', () => {}));
-
-    for (const unsub of unsubs) unsub();
-    bus.dispose();
+        for (const unsub of unsubs) unsub();
+        bus.dispose();
+      }),
+    );
   });
 });
